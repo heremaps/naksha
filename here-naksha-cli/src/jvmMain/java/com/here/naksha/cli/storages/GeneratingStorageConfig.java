@@ -8,7 +8,8 @@ import static java.util.Objects.requireNonNull;
 
 public final class GeneratingStorageConfig extends NakshaStorage {
     @Override
-    public @NotNull GeneratingStorageConfigProperties getProperties() {
+    @NotNull
+    public GeneratingStorageConfigProperties getProperties() {
         return requireNonNull(JvmBoxingUtil.box(super.getProperties(), GeneratingStorageConfigProperties.class));
     }
 }

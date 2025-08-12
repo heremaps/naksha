@@ -20,11 +20,13 @@ import static org.mockito.Mockito.*;
 class CopyServiceTest {
     private final NakshaStorage srcNakshaStorage = new NakshaStorage("src", "srcclassname");
     private final NakshaStorage targetNakshaStorage = new NakshaStorage("target", "targetclassname");
-    private final CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage, "srccol")
+    private final CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage)
             .setMapId("srcmap")
+            .setCollectionId("srccol")
             .build();
-    private final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage, "targetcol")
+    private final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
             .setMapId("targetmap")
+            .setCollectionId("targetcol")
             .build();
     private static SessionOptions sessionOptions;
 

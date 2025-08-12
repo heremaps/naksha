@@ -3,7 +3,7 @@ package com.here.naksha.cli.storages;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
 import com.here.naksha.lib.core.models.geojson.HQuad;
-import naksha.base.JvmList;
+import naksha.base.StringList;
 import naksha.geo.LineStringCoord;
 import naksha.geo.PointCoord;
 import naksha.geo.SpBoundingBox;
@@ -11,6 +11,7 @@ import naksha.geo.SpLineString;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.objects.NakshaFeature;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
@@ -23,18 +24,21 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 final class GeneratingStorageService {
+    public static final String DEFAULT_IDS_PREFIX = "gen";
     private final JsonFileParser jsonFileParser = new JsonFileParser();
 
-    List<NakshaFeature> generateFeatures(GeneratingStorageConfigProperties configProperties) {
+    @NotNull
+    List<NakshaFeature> generateFeatures(@NotNull GeneratingStorageConfigProperties configProperties) {
         int count = requireCount(configProperties.getCount());
-        List<String> tileIds = loadAndRequireTileIds(configProperties);
+        String idsPrefix = getIdsPrefixOrDefault(configProperties, DEFAULT_IDS_PREFIX);
+        List<String> tileIds = requireTileIds(configProperties);
         NakshaFeature templateFeature = loadTemplateFeatureOrEmpty(configProperties.getFeatureTemplateFilePath());
 
-        List<NakshaFeature> features = new ArrayList<>();
+        List<NakshaFeature> features = new ArrayList<>(count);
         Random random = ThreadLocalRandom.current();
 
         for (int i = 0; i < count; ++i) {
-            String featureId = Integer.toString(i);
+            String featureId = idsPrefix + i;
             String tileId = randomTileId(tileIds, random);
             NakshaFeature feature = generateFeature(templateFeature, featureId, tileId, random);
             features.add(feature);
@@ -49,6 +53,14 @@ final class GeneratingStorageService {
         }
 
         return count;
+    }
+
+    private String getIdsPrefixOrDefault(GeneratingStorageConfigProperties configProperties, String defaultPrefix) {
+        String idsPrefix = configProperties.getIdsPrefix();
+        if (idsPrefix == null) {
+            return defaultPrefix;
+        }
+        return idsPrefix;
     }
 
     private NakshaFeature loadTemplateFeatureOrEmpty(@Nullable String featureTemplateFilePath) {
@@ -76,6 +88,10 @@ final class GeneratingStorageService {
         NakshaFeature feature = baseFeature.copy(false);
         feature.setId(id);
         feature.setGeometry(randomLineInTile(tileId, random));
+//         Some storage implementations (e.g., psql) may use [naksha.model.Metadata.calculateHereTile] method
+//         to perform spatial queries. Therefore, randomly generated geometry and a reference point
+//         from the template may introduce inconsistencies.
+//         To avoid this, we have decided to remove the reference point.
         feature.setReferencePoint(null);
 
         return feature;
@@ -105,28 +121,24 @@ final class GeneratingStorageService {
         return new PointCoord(currentLon, currentLat);
     }
 
-    private List<String> loadAndRequireTileIds(GeneratingStorageConfigProperties configProperties) {
-        List<String> tileIds = new ArrayList<>();
-
-        if (configProperties.getTileIds() != null) {
-            JvmList tileIdsInJvmList = configProperties.getTileIds();
-
-            tileIdsInJvmList.forEach(o -> {
-                if (o instanceof String tileId) {
-                    tileIds.add(tileId);
-                }
-            });
+    private StringList requireTileIds(GeneratingStorageConfigProperties configProperties) {
+        if (configProperties.getTileIds() == null && configProperties.getTileIdsCsvFilePath() == null) {
+            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Provide tileIds in the config properties.");
+        }
+        if (configProperties.getTileIds() != null && configProperties.getTileIdsCsvFilePath() != null) {
+            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Provide only one source of tileIds.");
         }
 
+        StringList tileIds;
         if (configProperties.getTileIdsCsvFilePath() != null) {
-            List<String> loadedTileIds = loadTileIdsFromCsv(configProperties.getTileIdsCsvFilePath());
-            tileIds.addAll(loadedTileIds);
+            tileIds = StringList.fromList(loadTileIdsFromCsv(configProperties.getTileIdsCsvFilePath()));
+        } else {
+            tileIds = configProperties.getTileIds();
         }
 
         if (tileIds.isEmpty()) {
-            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Provide tileIds in the config properties.");
+            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Should be at least one tileId.");
         }
-
         return tileIds;
     }
 

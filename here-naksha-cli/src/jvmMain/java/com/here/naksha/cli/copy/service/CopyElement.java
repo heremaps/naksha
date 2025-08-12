@@ -1,47 +1,59 @@
 package com.here.naksha.cli.copy.service;
 
 import naksha.model.objects.NakshaStorage;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class CopyElement {
     private final NakshaStorage nakshaStorage;
-    @Nullable
     private final String mapId;
     private final String collectionId;
 
+    @NotNull
     public NakshaStorage getNakshaStorage() {
         return nakshaStorage;
     }
 
-    public @Nullable String getMapId() {
+    @Nullable
+    public String getMapId() {
         return mapId;
     }
 
+    @Nullable
     public String getCollectionId() {
         return collectionId;
     }
 
     public static final class Builder {
+        @NotNull
         private final NakshaStorage nakshaStorage;
-        private @Nullable String mapId;
-        private final String collectionId;
+        @Nullable
+        private String mapId;
+        @Nullable
+        private String collectionId;
 
         public Builder(
-                NakshaStorage nakshaStorage,
-                String collectionId
+                @NotNull NakshaStorage nakshaStorage
         ) {
             this.nakshaStorage = nakshaStorage;
-            this.collectionId = collectionId;
         }
 
+        @NotNull
         public CopyElement build() {
             return new CopyElement(
                     this
             );
         }
 
+        @NotNull
         public Builder setMapId(@Nullable String mapId) {
             this.mapId = mapId;
+            return this;
+        }
+
+        @NotNull
+        public Builder setCollectionId(@Nullable String collectionId) {
+            this.collectionId = collectionId;
             return this;
         }
     }

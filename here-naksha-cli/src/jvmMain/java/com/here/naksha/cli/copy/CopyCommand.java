@@ -6,6 +6,7 @@ import com.here.naksha.cli.parsers.JsonFileParserException;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import picocli.CommandLine;
 
@@ -35,8 +36,8 @@ public final class CopyCommand implements Callable<Integer> {
     private CommandLine.Model.CommandSpec commandSpec;
 
     public CopyCommand(
-            CopyServiceFactory copyServiceFactory,
-            StorageProvider storageProvider
+            @NotNull CopyServiceFactory copyServiceFactory,
+            @NotNull StorageProvider storageProvider
     ) {
         this.copyServiceFactory = copyServiceFactory;
         this.jsonFileParser = new JsonFileParser();
@@ -58,10 +59,9 @@ public final class CopyCommand implements Callable<Integer> {
 
     @CommandLine.Option(
             names = {"--srcCollectionId"},
-            description = "Id of source collection.",
-            defaultValue = "" // TODO
+            description = "Id of source collection."
     )
-    private String srcCollectionId;
+    private @Nullable String srcCollectionId;
 
     @CommandLine.Option(
             names = {"--targetStorageConfig"},
@@ -78,21 +78,22 @@ public final class CopyCommand implements Callable<Integer> {
 
     @CommandLine.Option(
             names = {"--targetCollectionId"},
-            description = "Id of target collection.",
-            defaultValue = "" // TODO
+            description = "Id of target collection."
     )
-    private String targetCollectionId;
+    private @Nullable String targetCollectionId;
 
     @Override
     public Integer call() throws JsonFileParserException, CopyServiceException {
         NakshaStorage srcNakshaStorage = jsonFileParser.parse(srcStorageConfig, NakshaStorage.class);
         NakshaStorage targetNakshaStorage = jsonFileParser.parse(targetStorageConfig, NakshaStorage.class);
 
-        CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage, srcCollectionId)
+        CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage)
                 .setMapId(srcMapId)
+                .setCollectionId(srcCollectionId)
                 .build();
-        CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage, targetCollectionId)
+        CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
                 .setMapId(targetMapId)
+                .setCollectionId(targetCollectionId)
                 .build();
 
         NakshaContext.currentContext().withAppId("nakshacli");

@@ -6,6 +6,7 @@ import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -17,16 +18,16 @@ public final class CopyService {
     private final StorageProvider storageProvider;
 
     public CopyService(
-            StorageProvider storageProvider,
-            SessionOptions sessionOptions
+            @NotNull StorageProvider storageProvider,
+            @NotNull SessionOptions sessionOptions
     ) {
         this.sessionOptions = sessionOptions;
         this.storageProvider = storageProvider;
     }
 
     public void copy(
-            CopyElement src,
-            CopyElement target
+            @NotNull CopyElement src,
+            @NotNull CopyElement target
     ) throws CopyServiceException {
         List<NakshaFeature> features = readFeaturesFromSrc(src);
         writeFeaturesToTarget(features, target);

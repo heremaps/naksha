@@ -46,13 +46,15 @@ class CopyCliTest {
         Path targetStorageConfig = Path.of(validStorageConfigPath);
 
         // And
-        CopyElement srcCopyElement = new CopyElement.Builder(loadStorage(srcStorageConfig), "srcc")
+        CopyElement srcCopyElement = new CopyElement.Builder(loadStorage(srcStorageConfig))
                 .setMapId("srcm")
+                .setCollectionId("srcc")
                 .build();
 
         // And
-        CopyElement targetCopyElement = new CopyElement.Builder(loadStorage(targetStorageConfig), "targetc")
+        CopyElement targetCopyElement = new CopyElement.Builder(loadStorage(targetStorageConfig))
                 .setMapId("targetm")
+                .setCollectionId("targetc")
                 .build();
 
         // And
