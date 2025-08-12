@@ -101,6 +101,7 @@ import naksha.model.NotModifiedResponse;
 import naksha.model.StreamInfo;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -595,20 +596,9 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
   public XyzFeatureCollection transformModifyResponse(@NotNull ModifyFeaturesResp modifyResponse) {
     final XyzFeatureCollection response = new XyzFeatureCollection();
     // add feature objects
-    response.getFeatures().addAll(modifyResponse.getInserted());
-    response.getFeatures().addAll(modifyResponse.getUpdated());
-    response.getFeatures().addAll(modifyResponse.getDeleted());
-    // add feature IDs
-    for (final NakshaFeature f : modifyResponse.getInserted()) {
-      response.appendInsertId(f.getId());
-    }
-    for (final NakshaFeature f : modifyResponse.getUpdated()) {
-      response.appendUpdateId(f.getId());
-    }
-    for (final NakshaFeature f : modifyResponse.getDeleted()) {
-      response.appendDeleteId(f.getId());
-    }
-
+    response.addInsertedFeatures(modifyResponse.getInserted());
+    response.addUpdatedFeatures(modifyResponse.getUpdated());
+    response.addDeletedFeatures(modifyResponse.getDeleted());
     return response;
   }
 
@@ -643,15 +633,14 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       }
       if (xyzResponse instanceof XyzFeatureCollection fc && responseType == HttpResponseType.FEATURE) {
         // If we should only send back a single feature.
-        final List<? extends NakshaFeature> features = fc.getFeatures();
-        if (features.size() == 0) {
+        final List<? extends NakshaFeature> features = fc.getFeatures(NakshaFeatureList.TYPE);
+        if (features.isEmpty()) {
           sendEmptyResponse(routingContext, OK);
           return xyzResponse;
-        } else {
-          final String content = Platform.toJson(features.get(0), ToJsonOptions.DEFAULT);
-          sendRawResponse(routingContext, OK, responseType, Buffer.buffer(content));
-          return xyzResponse;
         }
+        final String content = Platform.toJson(features.getFirst(), ToJsonOptions.DEFAULT);
+        sendRawResponse(routingContext, OK, responseType, Buffer.buffer(content));
+        return xyzResponse;
       }
       if (responseType == HttpResponseType.EMPTY) {
         sendEmptyResponse(routingContext, OK);
