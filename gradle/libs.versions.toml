@@ -110,6 +110,7 @@ shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
 spotless = { id = "spotless", version = "6.22.0" }
 vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.31.0" }
 #vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.1.0-SNAPSHOT" }
+jacoco = { id = "jacoco" }
 
 [bundles]
 vertx = [
