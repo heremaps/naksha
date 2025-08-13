@@ -24,6 +24,8 @@ jobs:
         ports:
           - 5432:5432
     steps:
+      - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
+      - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
       - name: Wait for Postgres
         shell: bash
         run: |
@@ -35,8 +37,6 @@ jobs:
           echo "Waiting for Postgres..."
           sleep 2
           done
-      - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
-      - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: Setup Gradle
