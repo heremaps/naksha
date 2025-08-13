@@ -3,7 +3,7 @@
     <ExternalSystemSettings>
       <option name="env">
         <map>
-          <entry key="NAKSHA_TEST_PSQL_DB_URL" value="jdbc:postgresql://localhost:5432/postgres?user=postgres&amp;password=XprclPDUTMsWpHvvtusuVCNDWsJZPVTP" />
+          <entry key="xNAKSHA_TEST_PSQL_DB_URL" value="jdbc:postgresql://localhost:5432/postgres?user=postgres&amp;password=XprclPDUTMsWpHvvtusuVCNDWsJZPVTP" />
         </map>
       </option>
       <option name="executionName" />
