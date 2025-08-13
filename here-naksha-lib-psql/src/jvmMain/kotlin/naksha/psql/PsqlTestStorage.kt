@@ -54,7 +54,7 @@ class PsqlTestStorage : PsqlStorage() {
          * Starts a local PostgresQL docker container.
          * @param id The docker container id.
          */
-        internal fun startDocker(id: String, port: Int?): PgInstanceConfig {
+        internal fun startDocker(id: String, user: String?, password: String?, port: Int?): PgInstanceConfig {
             lock.lock()
             try {
                 // If there is container running, use it.
@@ -63,12 +63,12 @@ class PsqlTestStorage : PsqlStorage() {
 
                 // Otherwise, start a docker container.
                 val db = PgInstanceConfig.DEFAULT_DB
-                val user = PgInstanceConfig.DEFAULT_USER
-                val password = PgInstanceConfig.DEFAULT_PASSWORD
+                val realUser = user ?: PgInstanceConfig.DEFAULT_USER
+                val realPassword = password ?: PgInstanceConfig.DEFAULT_PASSWORD
                 val container = GenericContainer(POSTGRES_IMAGE_URI)
                 val mappedPort = port ?: portById(id)
                 container.portBindings = listOf("$mappedPort:5432") // host : container
-                container.addEnv("PGPASSWORD", password)
+                container.addEnv("PGPASSWORD", realPassword)
                 container.setWaitStrategy(
                     LogMessageWaitStrategy()
                         .withRegEx(".*Future log output will appear in directory.*")
@@ -76,10 +76,10 @@ class PsqlTestStorage : PsqlStorage() {
                         .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS))
                 )
                 container.start()
-                val port = container.getMappedPort(5432)
-                logger.info("Docker container listening on port {}", port)
-                val instanceConfig = PgInstanceConfig().withDb(db).withUser(user).withPassword(password).withPort(port)
-                containerInfo = PsqlTestDockerContainerInfo(id, port, container, instanceConfig, Thread(::shutdownDocker))
+                val realPort = container.getMappedPort(5432)
+                logger.info("Docker container listening on port {}", realPort)
+                val instanceConfig = PgInstanceConfig().withDb(db).withUser(realUser).withPassword(realPassword).withPort(realPort)
+                containerInfo = PsqlTestDockerContainerInfo(id, realPort, container, instanceConfig, Thread(::shutdownDocker))
                 dockerContainerInfo[id] = containerInfo
                 Runtime.getRuntime().addShutdownHook(containerInfo.shutdownThread)
                 return instanceConfig
@@ -125,8 +125,10 @@ class PsqlTestStorage : PsqlStorage() {
             if (uri != null && uri.isNotEmpty()) master = PgInstanceConfig.fromUri(uri)
             // - otherwise start a docker container
             if (master == null) {
+                val user = config.getRaw("user")
+                val password = config.getRaw("password")
                 val port = config.getRaw("port")
-                master = startDocker(id, port as Int?)
+                master = startDocker(id, user as String?, password as String?, port as Int?)
             }
             config.master = master
         }
