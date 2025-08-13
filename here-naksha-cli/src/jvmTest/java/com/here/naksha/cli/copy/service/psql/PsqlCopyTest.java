@@ -7,7 +7,6 @@ import com.here.naksha.cli.copy.service.StorageProvider;
 import com.here.naksha.cli.storages.GeneratingStorage;
 import com.here.naksha.cli.storages.GeneratingStorageConfig;
 import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
-import naksha.base.JvmList;
 import naksha.base.StringList;
 import naksha.geo.HereTile;
 import naksha.model.IStorage;
@@ -50,7 +49,7 @@ class PsqlCopyTest {
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres() throws CopyServiceException {
         // Given: prepared source
         int countOfFeatures = 100;
-        JvmList tileIds = new JvmList("122013100013", "122013100020");
+        StringList tileIds = new StringList("122013100013", "122013100020");
         IStorage sourceStorage = generatingStorageWithGivenCountOfFeaturesAndTilesIds(countOfFeatures, tileIds);
         CopyElement source = copyElementForGeneratingStorage(sourceStorage);
 
@@ -128,10 +127,10 @@ class PsqlCopyTest {
     }
 
     private CopyElement copyElementForGeneratingStorage(IStorage storage) {
-        return new CopyElement.Builder(storage.getConfig(), "").build();
+        return new CopyElement.Builder(storage.getConfig()).build();
     }
 
-    private IStorage generatingStorageWithGivenCountOfFeaturesAndTilesIds(int count, JvmList tileIds) {
+    private IStorage generatingStorageWithGivenCountOfFeaturesAndTilesIds(int count, StringList tileIds) {
         GeneratingStorageConfig config = new GeneratingStorageConfig();
         config.setId("test_generating_storage");
         config.setClassName(GeneratingStorage.class.getCanonicalName());
@@ -153,8 +152,9 @@ class PsqlCopyTest {
     private CopyElement createMapWithEmptyCollection(IStorage storage, String collectionId) {
         String mapId = createUniqueMap(storage, sessionOptions);
         addCollectionToTheMap(storage, mapId, collectionId, sessionOptions);
-        return new CopyElement.Builder(storage.getConfig(), collectionId)
+        return new CopyElement.Builder(storage.getConfig())
                 .setMapId(mapId)
+                .setCollectionId(collectionId)
                 .build();
     }
 
@@ -179,10 +179,10 @@ class PsqlCopyTest {
             String mapId,
             String collectionId,
             SessionOptions sessionOptions,
-            JvmList tileIds
+            StringList tileIds
     ) {
         SpOr spOr = new SpOr();
-        tileIds.forEach(tileId -> spOr.add(new SpRefInHereTile(new HereTile((String) tileId))));
+        tileIds.forEach(tileId -> spOr.add(new SpRefInHereTile(new HereTile(tileId))));
 
         RequestQuery requestQuery = new RequestQuery();
         requestQuery.setSpatial(spOr);

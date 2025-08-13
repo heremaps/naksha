@@ -18,8 +18,8 @@ final class GeneratingSession implements IReadSession {
     private final SessionOptions sessionOptions;
 
     GeneratingSession(
-            GeneratingStorage storage,
-            SessionOptions sessionOptions
+            @NotNull GeneratingStorage storage,
+            @NotNull SessionOptions sessionOptions
     ) {
         this.storage = storage;
         this.sessionOptions = sessionOptions;
