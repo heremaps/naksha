@@ -37,6 +37,7 @@ import java.util.UUID;
 import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -153,7 +154,7 @@ class UpdateFeatureTest extends ApiTest {
     final XyzFeatureCollection responseFeatureCollection = parseJson(response.body(), XyzFeatureCollection.class);
     Assertions.assertNotNull(responseFeatureCollection);
     final List<String> inserted = responseFeatureCollection.getInserted();
-    final List<NakshaFeature> insertedFeatures = responseFeatureCollection.getFeatures();
+    final List<NakshaFeature> insertedFeatures = responseFeatureCollection.getFeatures(NakshaFeatureList.TYPE);
     JSONAssert.assertEquals(
         "{inserted:[" + inserted.size() + "]}",
         response.body(),
@@ -198,7 +199,7 @@ class UpdateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + Platform.toJSON(feature) + "]}",
+                """ + Platform.toJson(feature) + "]}",
             streamId);
 
     // Perform first assertions
@@ -207,8 +208,7 @@ class UpdateFeatureTest extends ApiTest {
     final XyzFeatureCollection responseFeatureCollection =
         parseJson(responseUpdateSuccess.body(), XyzFeatureCollection.class);
     Assertions.assertNotNull(responseFeatureCollection);
-    final NakshaFeature updatedFeature =
-        responseFeatureCollection.getFeatures().get(0);
+    final NakshaFeature updatedFeature = responseFeatureCollection.getFeatures(NakshaFeatureList.TYPE).get(0);
     Assertions.assertEquals("30", updatedFeature.getProperties().get("speedLimit"));
 
     // Execute request, outdated UUID, should fail
@@ -220,7 +220,7 @@ class UpdateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + Platform.toJSON(feature) + "]}",
+                """ + Platform.toJson(feature) + "]}",
             streamId);
 
     // Perform second assertions
@@ -235,14 +235,14 @@ class UpdateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + Platform.toJSON(feature) + "]}",
+                """ + Platform.toJson(feature) + "]}",
             streamId);
 
     // Perform third assertions
     assertEquals(200, responseOverriding.statusCode(), "ResCode mismatch");
     final XyzFeatureCollection featureCollection = parseJson(responseOverriding.body(), XyzFeatureCollection.class);
     Assertions.assertNotNull(featureCollection);
-    final NakshaFeature overridenFeature = featureCollection.getFeatures().get(0);
+    final NakshaFeature overridenFeature = featureCollection.getFeatures(NakshaFeatureList.TYPE).get(0);
     Assertions.assertEquals("yesyesyes", overridenFeature.getProperties().get("overriden"));
     // Old properties like speedLimit should no longer be available
     // The feature has been completely overwritten by the PUT request with null UUID
@@ -269,7 +269,7 @@ class UpdateFeatureTest extends ApiTest {
     // And: executing new properties update
     feature.setProperties(newPropsOldUuid);
     final HttpResponse<String> responseUpdateSuccess = getNakshaClient()
-        .put("hub/spaces/" + SPACE_ID + "/features/tc_506_test_feature", Platform.toJSON(feature), streamId);
+        .put("hub/spaces/" + SPACE_ID + "/features/tc_506_test_feature", Platform.toJson(feature), streamId);
 
     // Then: repsonse indicate success
     assertThat(responseUpdateSuccess)
@@ -286,7 +286,7 @@ class UpdateFeatureTest extends ApiTest {
     newPropsOutdatedUuid.put("speedLimit", "120");
     feature.setProperties(newPropsOutdatedUuid);
     final HttpResponse<String> responseUpdateFail = getNakshaClient()
-        .put("hub/spaces/" + SPACE_ID + "/features/tc_506_test_feature", Platform.toJSON(feature), streamId);
+        .put("hub/spaces/" + SPACE_ID + "/features/tc_506_test_feature", Platform.toJson(feature), streamId);
 
     // Then: update fails
     assertThat(responseUpdateFail).hasStatus(409);
@@ -297,7 +297,7 @@ class UpdateFeatureTest extends ApiTest {
     nullUuidProps.put("overriden", "yesyesyes");
     feature.setProperties(nullUuidProps);
     final HttpResponse<String> responseOverriding = getNakshaClient()
-        .put("hub/spaces/" + SPACE_ID + "/features/tc_506_test_feature", Platform.toJSON(feature), streamId);
+        .put("hub/spaces/" + SPACE_ID + "/features/tc_506_test_feature", Platform.toJson(feature), streamId);
 
     // Then: update suceeds
     assertThat(responseOverriding).hasStatus(200);

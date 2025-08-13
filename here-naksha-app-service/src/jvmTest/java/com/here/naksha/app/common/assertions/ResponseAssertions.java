@@ -31,6 +31,8 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Optional;
 import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.mom.v2.MomFeatureList;
 import naksha.mom.v2.MomReference;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -138,7 +140,7 @@ public class ResponseAssertions {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
     final List<String> insertedIds = collectionResponse.getInserted();
-    final List<NakshaFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> features = collectionResponse.getFeatures(NakshaFeatureList.TYPE);
     for (int i = 0; i < insertedIds.size(); i++) {
       if (prefixId != null) {
         assertTrue(
@@ -164,7 +166,7 @@ public class ResponseAssertions {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
     final List<String> updatedIds = collectionResponse.getUpdated();
-    final List<NakshaFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> features = collectionResponse.getFeatures(NakshaFeatureList.TYPE);
     for (int i = 0; i < updatedIds.size(); i++) {
       if (prefixId != null) {
         assertTrue(
@@ -183,8 +185,8 @@ public class ResponseAssertions {
     if (collectionResponse == null) {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
-    final List<NakshaFeature> features = collectionResponse.getFeatures();
-    final List<NakshaFeature> violations = collectionResponse.getViolations();
+    final var features = collectionResponse.getFeatures(NakshaFeatureList.TYPE);
+    final var violations = collectionResponse.getViolations(MomFeatureList.TYPE);
     // obtain feature Id
     final String fId = features.get(featureIdx).getId();
     assertNotNull(fId, "Feature Id at index " + featureIdx + " found null");
@@ -207,7 +209,7 @@ public class ResponseAssertions {
     if (collectionResponse == null) {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
-    final List<NakshaFeature> features = collectionResponse.getFeatures();
+    final List<NakshaFeature> features = collectionResponse.getFeatures(NakshaFeatureList.TYPE);
     for (final NakshaFeature feature : features) {
       assertNotNull(
           feature.getProperties().getXyz().getUuid(),
@@ -220,7 +222,7 @@ public class ResponseAssertions {
     if (collectionResponse == null) {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
-    assertNull(collectionResponse.getViolations(), "No violations were expected");
+    assertNull(collectionResponse.getViolations(MomFeatureList.TYPE), "No violations were expected");
     return this;
   }
 
@@ -236,7 +238,7 @@ public class ResponseAssertions {
     if (collectionResponse == null) {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
-    assertEquals(count, collectionResponse.getFeatures().size(), "Feature count in the response doesn't match");
+    assertEquals(count, collectionResponse.getFeatures(NakshaFeatureList.TYPE).size(), "Feature count in the response doesn't match");
     return this;
   }
 
@@ -244,7 +246,7 @@ public class ResponseAssertions {
     if (collectionResponse == null) {
       collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
-    for (final NakshaFeature feature : collectionResponse.getFeatures()) {
+    for (final NakshaFeature feature : collectionResponse.getFeatures(NakshaFeatureList.TYPE)) {
       assertTrue(fIds.contains(feature.getId()), "No matching feature found in response with given Id : " + feature.getId());
     }
     return this;

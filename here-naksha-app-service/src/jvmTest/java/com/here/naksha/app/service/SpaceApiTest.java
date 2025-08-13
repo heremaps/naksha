@@ -27,6 +27,7 @@ import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
@@ -35,8 +36,11 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+
+import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
@@ -160,8 +164,8 @@ class SpaceApiTest extends ApiTest {
     // Then: Expect all saved spaces are returned
     assertEquals(200, response.statusCode(), "ResCode mismatch");
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
-    List<NakshaFeature> returnedXyzFeatures =
-        parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
+    List<NakshaFeature> returnedXyzFeatures = requireNonNull(Platform.fromJson(response.body(), XyzFeatureCollection.TYPE))
+         .getFeatures(NakshaFeatureList.TYPE);
     List<String> spaceIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(spaceIds.containsAll(expectedSpaceIds));

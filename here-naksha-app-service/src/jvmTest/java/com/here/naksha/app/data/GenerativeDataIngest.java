@@ -23,6 +23,7 @@ import naksha.geo.PointCoord;
 import naksha.geo.BBox;
 import naksha.geo.SpLineString;
 import naksha.model.objects.NakshaFeature;
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.slf4j.Logger;
@@ -132,7 +133,7 @@ class GenerativeDataIngest extends AbstractDataIngest {
       this.baseFeature = TestUtil.parseJsonFileOrFail(SAMPLES_DIR, BASE_JSON, NakshaFeature.class);
     }
 
-    NakshaFeature randomFeatureForTile(String tileId) {
+    @NotNull NakshaFeature randomFeatureForTile(String tileId) {
       NakshaFeature generated = new NakshaFeature(ID_PREFIX + COUNTER.incrementAndGet());
       generated.setProperties(baseFeature.getProperties());
       generated.setGeometry(randomLineInTile(tileId));

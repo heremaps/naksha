@@ -1,16 +1,17 @@
 package com.here.naksha.app.common;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 
 public record FeatureMetadata(String featureId, String uuid, long createdAt, long updatedAt) {
 
@@ -28,7 +29,8 @@ public record FeatureMetadata(String featureId, String uuid, long createdAt, lon
     private ExtractionUtil() {}
 
     public static FeatureMetadata featureMetadataFromFeatureResp(String featureResponse) {
-      NakshaFeature feature = JvmBoxingUtil.box(Platform.fromJSON(featureResponse), NakshaFeature.class);
+      final var feature = Platform.fromJson(featureResponse, NakshaFeature.TYPE);
+      assertNotNull(feature);
       return FeatureMetadata.from(feature);
     }
 
@@ -44,9 +46,9 @@ public record FeatureMetadata(String featureId, String uuid, long createdAt, lon
     }
 
     private static Stream<FeatureMetadata> featuresMetadata(String featureCollectionResponseJson) {
-      XyzFeatureCollection featureCollection = JvmBoxingUtil.box(Platform.fromJSON(featureCollectionResponseJson),
-          XyzFeatureCollection.class);
-      return featureCollection.getFeatures().stream().map(FeatureMetadata::from);
+      final var featureCollection = Platform.fromJson(featureCollectionResponseJson, XyzFeatureCollection.TYPE);
+      assertNotNull(featureCollection);
+      return featureCollection.getFeatures(NakshaFeatureList.TYPE).stream().map(FeatureMetadata::from);
     }
   }
 }

@@ -38,7 +38,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.UUID;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
@@ -244,7 +243,7 @@ class CreateFeatureTest extends ApiTest {
 
     // Given: Space (without EventHandler) configured in Admin storage
     final String spaceJson = loadFileOrFail("CreateFeatures/TC0307_createFeaturesWithNoHandler/create_space.json");
-    final Space space = JvmBoxingUtil.box(Platform.fromJson(spaceJson), Space.class);
+    final Space space = Platform.fromJson(spaceJson, Space.TYPE);
     HttpResponse<String> response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 

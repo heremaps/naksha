@@ -23,6 +23,7 @@ import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,8 +34,11 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+
+import naksha.base.Platform;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
@@ -171,8 +175,8 @@ class StorageApiTest extends ApiTest {
     // Then: Expect all saved storages are returned
     assertEquals(200, response.statusCode(), "ResCode mismatch");
     assertEquals(streamId, getHeader(response, HDR_STREAM_ID), "StreamId mismatch");
-    List<NakshaFeature> returnedXyzFeatures =
-        parseJson(response.body(), XyzFeatureCollection.class).getFeatures();
+    List<NakshaFeature> returnedXyzFeatures = requireNonNull(Platform.fromJson(response.body(), XyzFeatureCollection.TYPE))
+        .getFeatures(NakshaFeatureList.TYPE);
     List<String> storageIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(storageIds.containsAll(expectedStorageIds));

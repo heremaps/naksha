@@ -19,6 +19,7 @@
 package com.here.naksha.app.common;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static naksha.base.Platform.forClass;
 
 import com.here.naksha.app.init.TestStorageConfig;
 import com.here.naksha.app.init.TestStorageConfigs;
@@ -39,7 +40,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.model.NakshaContext;
 import naksha.psql.PgConfig;
@@ -89,8 +89,16 @@ public class TestUtil {
     return loadFileOrFail(TEST_DATA_FOLDER, fileName);
   }
 
+  /**
+   * Should be replaced with <code><pre>
+   *   Platform.fromJson(json, ExpectedType.TYPE)
+   * or
+   *   Platform.fromJson(json, Platform.forClass(ExpectedType.class))
+   * </pre></code>
+   */
+  @Deprecated
   public static <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
-    return JvmBoxingUtil.box(Platform.fromJson(jsonStr, FromJsonOptions.DEFAULT), type);
+    return Platform.fromJson(jsonStr, forClass(type));
   }
 
   public static <T> T parseJsonFileOrFail(final @NotNull String fileName, final @NotNull Class<T> type) {
