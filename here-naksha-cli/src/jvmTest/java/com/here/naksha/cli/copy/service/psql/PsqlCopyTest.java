@@ -50,7 +50,7 @@ class PsqlCopyTest {
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres() throws CopyServiceException {
         // Given: prepared source
         int countOfFeatures = 100;
-        JvmList tileIds = new JvmList("122013100013", "122013100020");
+        final var tileIds = new StringList("122013100013", "122013100020");
         IStorage sourceStorage = generatingStorageWithGivenCountOfFeaturesAndTilesIds(countOfFeatures, tileIds);
         CopyElement source = copyElementForGeneratingStorage(sourceStorage);
 
@@ -131,7 +131,7 @@ class PsqlCopyTest {
         return new CopyElement.Builder(storage.getConfig(), "").build();
     }
 
-    private IStorage generatingStorageWithGivenCountOfFeaturesAndTilesIds(int count, JvmList tileIds) {
+    private IStorage generatingStorageWithGivenCountOfFeaturesAndTilesIds(int count, List<String> tileIds) {
         GeneratingStorageConfig config = new GeneratingStorageConfig();
         config.setId("test_generating_storage");
         config.setClassName(GeneratingStorage.class.getCanonicalName());
@@ -179,7 +179,7 @@ class PsqlCopyTest {
             String mapId,
             String collectionId,
             SessionOptions sessionOptions,
-            JvmList tileIds
+            List<String> tileIds
     ) {
         SpOr spOr = new SpOr();
         tileIds.forEach(tileId -> spOr.add(new SpRefInHereTile(new HereTile((String) tileId))));
@@ -247,7 +247,8 @@ class PsqlCopyTest {
     private void addMapToTheStorage(IStorage storage, String mapId, SessionOptions sessionOptions) {
         WriteRequest writeRequest = new WriteRequest();
 
-        NakshaMap map = new NakshaMap().withId(mapId);
+        NakshaMap map = new NakshaMap();
+        map.setId(mapId);
         Write createMap = new Write().createMap(map);
         writeRequest.add(createMap);
 

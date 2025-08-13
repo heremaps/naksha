@@ -18,11 +18,6 @@
  */
 package com.here.naksha.lib.core;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -30,17 +25,18 @@ import java.io.IOException;
 
 import naksha.base.*;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ErrorResponse;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 @SuppressWarnings("unused")
 public class JsonMappingTest {
 
   @Test
   public void testDeserializeFeature() {
-    final String json =
-        "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}, \"otherProperty\": \"123\"}";
-    JvmMap jvmMap = (JvmMap) Platform.fromJson(json, FromJsonOptions.DEFAULT);
-    final NakshaFeature obj = jvmMap.proxy(Platform.klassFor(NakshaFeature.class));
+    final String json = "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}, \"otherProperty\": \"123\"}";
+    final var obj = Platform.fromJson(json, NakshaFeature.TYPE);
     assertNotNull(obj);
 
     assertEquals(5, (int) obj.getProperties().get("x"));
@@ -50,8 +46,8 @@ public class JsonMappingTest {
   @Test
   public void testSerializeFeature() throws Exception {
       final String raw = "{\"type\":\"Feature\", \"id\": \"xyz123\", \"properties\":{\"x\":5}}";
-      JvmMap jvmMap = (JvmMap) Platform.fromJson(raw, FromJsonOptions.DEFAULT);
-      final NakshaFeature obj = jvmMap.proxy(Platform.klassFor(NakshaFeature.class));      assertNotNull(obj);
+      final NakshaFeature obj = Platform.fromJson(raw, NakshaFeature.TYPE);
+      assertNotNull(obj);
 
       obj.getProperties().put("y", 7);
       String result = Platform.toJson(obj, ToJsonOptions.DEFAULT);
@@ -70,14 +66,16 @@ public class JsonMappingTest {
 
   @Test
   public void testResponseParsing() {
-    final String json =
-        "{\"type\":\"ErrorResponse\",\"error\":\"NotImplemented\",\"errorMessage\":\"Hello World!\"}";
-    JvmObject jvmMap = (JvmObject) Platform.fromJson(json, FromJsonOptions.DEFAULT);
-    //TODO(lib-core test)
-//    final ErrorResponse obj = jvmMap.proxy(Platform.klassFor(ErrorResponse.class));
-//    assertNotNull(obj);
-//    assertSame(NakshaErrorCode.NOT_IMPLEMENTED, obj.error.code);
-//    assertEquals("Hello World!", obj.error.message);
+    // TODO: This should work without initializing the ErrorResponse, we need to add the same hack into lib-model, that we did in lib-geo !!!
+    ErrorResponse.TYPE.initialize();
+    // final var json = "{\"type\":\"ErrorResponse\",\"error\":\"NotImplemented\",\"errorMessage\":\"Hello World!\"}";
+    final var json = "{\"type\":\"ErrorResponse\",\"error\":{\"code\":\"NotImplemented\",\"msg\":\"Hello World!\"}}";
+    final var some = Platform.fromJson(json);
+    assertNotNull(some);
+    final var response = assertInstanceOf(ErrorResponse.class, some);
+    final var error = response.getError();
+    assertEquals(NakshaError.NOT_IMPLEMENTED, error.getCode());
+    assertEquals("Hello World!", error.getMsg());
   }
 
 //  @Test

@@ -44,7 +44,7 @@ public class XyzFeatureCollection extends XyzResponse {
   }
 
   public static final String INSERTED = "inserted";
-  public static final String UPDATED = "inserted";
+  public static final String UPDATED = "updated";
   public static final String DELETED = "deleted";
   private static final NotNullProperty<XyzFeatureCollection, StringList> STRING_LIST$
       = new NotNullProperty<>(StringList.TYPE, null, (self, name) -> new StringList() );
@@ -221,7 +221,9 @@ public class XyzFeatureCollection extends XyzResponse {
    * Appends the given feature ID into the list of updated
    *
    * @param updateId the ID to be inserted into the list
+   * @deprecated Replace with getUpdated().append(updateId)
    */
+  @Deprecated
   public void appendUpdateId(@NotNull String updateId) {
     STRING_LIST$.getValue(this, UPDATED).append(updateId);
   }

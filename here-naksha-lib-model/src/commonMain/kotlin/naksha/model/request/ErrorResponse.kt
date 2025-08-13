@@ -58,7 +58,7 @@ open class ErrorResponse() : Response() {
          */
         @JvmField
         @JsStatic
-        val TYPE = forKClass(ErrorResponse::class).withPackageName(PACKAGE_NAME)
+        val TYPE = forKClass(ErrorResponse::class).withPackageName(PACKAGE_NAME).withJsonType("ErrorResponse")
 
         private val ERROR = NotNullProperty<ErrorResponse, NakshaError>(NakshaError.TYPE) { _, _ ->
             NakshaError(NakshaError.EXCEPTION, "Unknown error")

@@ -1,5 +1,6 @@
 package com.here.naksha.cli.copy.service;
 
+import naksha.base.NakshaException;
 import naksha.base.fn.Fn1;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;

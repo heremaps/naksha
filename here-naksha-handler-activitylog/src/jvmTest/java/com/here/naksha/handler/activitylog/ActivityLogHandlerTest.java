@@ -1,8 +1,10 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogHandlerProperties.activityLogHandlerProperties;
+import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
 import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFeature;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
+import static com.here.naksha.test.common.assertions.PropertyQueryAssertions.assertThatPropertyQuery;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -29,12 +31,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import naksha.base.AnyList;
-import naksha.base.JvmInt64;
 import naksha.model.Action;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadCollections;
@@ -45,10 +46,8 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
-import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.IMetaQuery;
-import naksha.model.request.query.MetaColumn;
-import naksha.model.request.query.MetaQuery;
+import naksha.model.request.query.*;
+import naksha.mom.v2.MomProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -56,10 +55,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.mockito.ArgumentMatcher;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.mockito.*;
 
 class ActivityLogHandlerTest {
 
@@ -149,6 +145,8 @@ class ActivityLogHandlerTest {
     // And: result is successful
     assertInstanceOf(SuccessResponse.class, result);
   }
+
+  static final Property PROPERTY_UUID = new Property("uuid");
 
   @Test
   void shouldTransformReadRequest() {
@@ -299,7 +297,7 @@ class ActivityLogHandlerTest {
     ReadFeatures secondRequest = requestPassedToSpace.get(1);
     assertEquals(Integer.MAX_VALUE,secondRequest.getVersions());
     assertEquals(List.of(SPACE_ID), secondRequest.getCollectionIds());
-    PropertyQueryAssertions.assertThatPropertyQuery(secondRequest.getQuery().getProperties())
+    assertThatPropertyQuery(secondRequest.getQuery().getProperties())
         .isPOr()
         .hasChildrenThat(
             first -> first

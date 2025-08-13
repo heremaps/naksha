@@ -3,10 +3,10 @@ package com.here.naksha.cli.storages;
 import com.here.naksha.cli.TestUtils;
 import com.here.naksha.lib.core.models.geojson.HQuad;
 import naksha.base.JvmList;
-import naksha.geo.SpBoundingBox;
+import naksha.geo.BBox;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
@@ -37,7 +37,7 @@ class GeneratingStorageTest {
 
     @ParameterizedTest
     @MethodSource
-    void shouldRead(int countOfFeatures, JvmList tileIds, String tileIdsCsv) {
+    void shouldRead(int countOfFeatures, List<String> tileIds, String tileIdsCsv) {
         // Given: storage
         GeneratingStorage storage = new GeneratingStorage();
 
@@ -114,7 +114,7 @@ class GeneratingStorageTest {
         );
     }
 
-    private List<String> getExpectedTileIdsFromSources(JvmList tileIds, String tileIdsCsv) {
+    private List<String> getExpectedTileIdsFromSources(List<String> tileIds, String tileIdsCsv) {
         List<String> features = new ArrayList<>();
 
         if (tileIdsCsv != null) {
@@ -128,8 +128,8 @@ class GeneratingStorageTest {
         return features;
     }
 
-    private boolean doesBoundingBoxContainFeature(SpBoundingBox boundingBox, NakshaFeature feature) {
-        SpBoundingBox featureBbox = new SpBoundingBox(feature.getGeometry());
+    private boolean doesBoundingBoxContainFeature(BBox boundingBox, NakshaFeature feature) {
+        final var featureBbox = new BBox(feature.getGeometry());
 
         if (featureBbox.getMinLatitude() < boundingBox.getMinLatitude()) {
             return false;
@@ -150,14 +150,14 @@ class GeneratingStorageTest {
         return true;
     }
 
-    private boolean isFeatureInBboxes(NakshaFeature feature, List<SpBoundingBox> boundingBoxes) {
+    private boolean isFeatureInBboxes(NakshaFeature feature, List<BBox> boundingBoxes) {
         return boundingBoxes
                 .stream()
                 .anyMatch(tileBbox -> doesBoundingBoxContainFeature(tileBbox, feature));
     }
 
     private void assertFeaturesInTiles(List<NakshaFeature> features, List<String> tileIds) {
-        List<SpBoundingBox> tilesBboxes = tileIds.stream()
+        List<BBox> tilesBboxes = tileIds.stream()
                 .map(tileId -> new HQuad(tileId, true).getBoundingBox())
                 .toList();
 

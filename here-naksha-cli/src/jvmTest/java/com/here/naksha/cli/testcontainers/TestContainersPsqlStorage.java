@@ -1,5 +1,6 @@
 package com.here.naksha.cli.testcontainers;
 
+import naksha.base.Platform;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
@@ -49,36 +50,17 @@ public final class TestContainersPsqlStorage {
     }
 
     private NakshaStorage getNakshaStorage() {
-        return NakshaStorage.fromJSON(
-                """
-                        {
-                          "id": "storage",
-                          "type": "Storage",
-                          "create": true,
-                          "upgrade": true,
-                          "className": "naksha.psql.PsqlStorage",
-                          "master": {
-                            "host": "%s",
-                            "database": "%s",
-                            "port": %s,
-                            "user": "%s",
-                            "password": "%s",
-                            "readOnly": false
-                          }
-                        }
-                        """.formatted(
-                        postgres.getHost(),
-                        PgInstanceConfig.DEFAULT_DB,
-                        postgres.getMappedPort(exposedPort),
-                        PgInstanceConfig.DEFAULT_USER,
-                        PgInstanceConfig.DEFAULT_PASSWORD
-                )
-        );
+        return Platform.fromJson("""
+{
+    "id": "local_psql_test_storage",
+    "className": "naksha.psql.PsqlTestStorage"
+}
+""", NakshaStorage.TYPE);
     }
 
     private void setUpPostgres() {
         postgres.addExposedPort(exposedPort);
-        postgres.addEnv("PGPASSWORD", PgInstanceConfig.DEFAULT_PASSWORD);
+        //postgres.addEnv("PGPASSWORD", PgInstanceConfig.DEFAULT_PASSWORD);
         postgres.setWaitStrategy(
                 new LogMessageWaitStrategy()
                         .withRegEx(".*Future log output will appear in directory.*")

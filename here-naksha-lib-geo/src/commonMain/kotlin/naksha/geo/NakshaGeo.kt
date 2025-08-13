@@ -10,6 +10,7 @@ import naksha.base.Platform.Platform_C.forKClass
 import naksha.base.PlatformUtil.PlatformUtil_C.rd
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.math.round
 
 /**
@@ -174,6 +175,30 @@ fun sp_double(value: Any?): Double? = when(value) {
 }
 
 /**
+ * Convert the given value into a spatial component with 7 decimal digits _(does round)_.
+ * @param value The value to convert and round.
+ * @param alternative The optional alternative to return, when the value is no valid spatial component.
+ * @return the given `value`, rounded to 7 decimal digits, or `alternative`, if the value can't be converted.
+ * @see rd
+ */
+@JvmOverloads
+fun sp_double_or(value: Any?, alternative: Double = 0.0): Double = when(value) {
+    is Double -> if (value.isNaN()) alternative else rd(value)
+    is Float -> if (value.isNaN()) alternative else rd(value.toDouble())
+    is Int64 -> if (value < SP_COMPONENT_MIN_INT || value > SP_COMPONENT_MAX_INT) alternative else rd(value.toDouble())
+    is Long -> {
+        val i64 = Int64(value)
+        if (i64 < SP_COMPONENT_MIN_INT || i64 > SP_COMPONENT_MAX_INT) alternative else rd(value.toDouble())
+    }
+    is Number -> rd(value.toDouble())
+    is String -> {
+        val f64 = value.toDoubleOrNull()
+        if (f64 == null || f64.isNaN()) alternative else rd(f64)
+    }
+    else -> alternative
+}
+
+/**
  * Round and validate the given component to longitude _(does not round)_.
  * @param component The component to validate.
  * @return the longitude component or `null`, if the given component is out of range.
@@ -221,7 +246,7 @@ fun sp_int_to_double(fixed: Int): Double = rd(fixed.toDouble() / SP_COMPONENT_MU
 internal inline fun is_double(value: Any?): Boolean = value is Double && !value.isNaN()
 
 /**
- * Returns either the given value as double or `0.0`, if the value is no double or NaN _(does not round)_.
+ * Cast the given value to double or returns `0.0`, if the value is no double or NaN _(does not round)_.
  * @param value The value that should be a valid double.
  * @return the given value or `0.0`, if the value is no double or NaN.
  * @see rd
@@ -230,7 +255,7 @@ internal inline fun is_double(value: Any?): Boolean = value is Double && !value.
 internal inline fun as_double_or_zero(value: Any?): Double = if (value !is Double || value.isNaN()) 0.0 else value
 
 /**
- * Returns the given value as double or `null`, if the value is no double or NaN _(does not round)_.
+ * Cast the given value to double or return `null`, if the value is no double or NaN _(does not round)_.
  * @param value The value that should be a valid double.
  * @return the given value as double or `null`.
  * @see rd
@@ -259,6 +284,8 @@ internal fun initialize() {
 
         forKClass(MultiPolygonCoord::class).initialize()
         forKClass(SpMultiPolygon::class).initialize()
+
+        forKClass(SpGeometryCollection::class).initialize()
 
         forKClass(BBox::class).initialize()
         forKClass(GeoFeature::class).initialize()

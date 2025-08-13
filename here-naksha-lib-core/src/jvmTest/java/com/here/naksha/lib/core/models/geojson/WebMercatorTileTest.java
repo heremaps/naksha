@@ -23,6 +23,7 @@ import static com.here.naksha.lib.core.models.geojson.WebMercatorTile.forWeb;
 import static com.here.naksha.lib.core.models.geojson.WebMercatorTile.x;
 import static com.here.naksha.lib.core.models.geojson.WebMercatorTile.xy;
 import static com.here.naksha.lib.core.models.geojson.WebMercatorTile.y;
+import static naksha.geo.NakshaGeoKt.sp_double_or;
 import static org.junit.jupiter.api.Assertions.*;
 
 import naksha.geo.BBox;
@@ -121,11 +122,11 @@ public class WebMercatorTileTest {
   public void testGeometryFromTileId() {
     final String tileId = "120203302030322200";
     final double[][] expectedCoordinates = new double[][] {
-      {8.6572265625, 50.12321958080243, Double.NaN},
-      {8.6572265625, 50.124100042692376, Double.NaN},
-      {8.658599853515625, 50.124100042692376, Double.NaN},
-      {8.658599853515625, 50.12321958080243, Double.NaN},
-      {8.6572265625, 50.12321958080243, Double.NaN},
+      {sp_double_or(8.6572265625), sp_double_or(50.12321958080243), Double.NaN},
+      {sp_double_or(8.6572265625), sp_double_or(50.124100042692376), Double.NaN},
+      {sp_double_or(8.658599853515625), sp_double_or(50.124100042692376), Double.NaN},
+      {sp_double_or(8.658599853515625), sp_double_or(50.12321958080243), Double.NaN},
+      {sp_double_or(8.6572265625), sp_double_or(50.12321958080243), Double.NaN},
     };
     final Geometry geo = WebMercatorTile.forQuadkey(tileId).getAsPolygon().getGeometry();
     final Coordinate[] coordinates = geo.getCoordinates();
@@ -153,11 +154,11 @@ public class WebMercatorTileTest {
     final String tileId = "120203302030322200";
     final int margin = 20;
     final double[][] expectedCoordinates = new double[][] {
-            {8.657119274139404, 50.12315079403522, Double.NaN},
-            {8.657119274139404, 50.12416882809549, Double.NaN},
-            {8.65870714187622, 50.12416882809549, Double.NaN},
-            {8.65870714187622, 50.12315079403522, Double.NaN},
-            {8.657119274139404, 50.12315079403522, Double.NaN},
+            {sp_double_or(8.657119274139404), sp_double_or(50.12315079403522), Double.NaN},
+            {sp_double_or(8.6571192741394040), sp_double_or(50.12416882809549), Double.NaN},
+            {sp_double_or(8.65870714187622), sp_double_or(50.12416882809549), Double.NaN},
+            {sp_double_or(8.65870714187622), sp_double_or(50.12315079403522), Double.NaN},
+            {sp_double_or(8.657119274139404), sp_double_or(50.12315079403522), Double.NaN},
     };
     final Geometry geo = WebMercatorTile.forQuadkey(tileId).getExtendedBBoxAsPolygon(margin).getGeometry();
     final Coordinate[] coordinates = geo.getCoordinates();
