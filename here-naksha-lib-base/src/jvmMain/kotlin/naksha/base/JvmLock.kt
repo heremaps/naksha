@@ -4,7 +4,7 @@ import naksha.base.Platform.Platform_C.longToInt64
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.locks.ReentrantLock
 
-class JvmLock : ReentrantLock(), PlatformLock {
+internal class JvmLock : ReentrantLock(), PlatformLock {
     companion object {
         private val MIN_WAIT = longToInt64(1)
     }

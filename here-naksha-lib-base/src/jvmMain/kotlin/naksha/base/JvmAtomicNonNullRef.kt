@@ -4,7 +4,7 @@ package naksha.base
 
 import java.util.concurrent.atomic.AtomicReference
 
-class JvmAtomicNonNullRef<R: Any>(initial: R) : AtomicNonNullRef<R> {
+internal class JvmAtomicNonNullRef<R: Any>(initial: R) : AtomicNonNullRef<R> {
     init {
         require(initial != null)
     }

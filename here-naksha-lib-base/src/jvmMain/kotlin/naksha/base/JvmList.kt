@@ -9,7 +9,7 @@ import kotlin.reflect.jvm.internal.impl.load.kotlin.JvmType
 /**
  * The JVM implementation of a [PlatformList].
  */
-open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
+internal open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
 
     constructor(vararg entries: Any?) : this() {
         val list: ArrayList<Any?>?

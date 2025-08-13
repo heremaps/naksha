@@ -15,7 +15,7 @@ import kotlin.reflect.full.isSuperclassOf
  * The Java implementation of [JvmPlatformType].
  * @since 3.0
  */
-class JvmPlatformType<T : Any> internal constructor(
+internal class JvmPlatformType<T : Any> internal constructor(
     /**
      * The Java Class that represents this type, same as [nativeClass].
      * @since 3.0

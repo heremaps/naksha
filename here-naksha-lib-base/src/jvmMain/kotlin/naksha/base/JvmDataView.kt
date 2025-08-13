@@ -7,7 +7,7 @@ import java.nio.ByteOrder
  * The JVM implementation of [PlatformDataViewApi].
  */
 @Suppress("LeakingThis", "DEPRECATION")
-open class JvmDataView(
+internal open class JvmDataView(
     override val byteArray: ByteArray,
     override val byteOffset: Int = 0,
     override val byteLength: Int = byteArray.size - byteOffset

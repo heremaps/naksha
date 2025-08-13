@@ -1,6 +1,6 @@
 package naksha.base
 
-class JvmListIterator(val list: PlatformList) : PlatformIterator<Any?>()  {
+internal class JvmListIterator(val list: PlatformList) : PlatformIterator<Any?>()  {
 
     private val it: MutableIterator<Any?>? = if (list is JvmList) list.iterator() else null
     private val result: PlatformIteratorResult<Any?> = PlatformIteratorResult(true, null)

@@ -4,7 +4,7 @@ package naksha.base
  * The base class of all other platform objects.
  * @since 3.0
  */
-open class JvmObject : PlatformObject {
+internal open class JvmObject : PlatformObject {
     internal companion object {
         @JvmStatic
         internal val undefined = JvmObject()

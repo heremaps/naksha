@@ -6,7 +6,7 @@ import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_INFO
 import naksha.base.PlatformUtil.PlatformUtil_C.ENABLE_WARN
 import org.slf4j.LoggerFactory
 
-class JvmLogger : PlatformLogger {
+internal class JvmLogger : PlatformLogger {
     private val logger = LoggerFactory.getLogger("naksha.base")
     override fun debug(msg: String, vararg args: Any?) {
         if (ENABLE_DEBUG && logger.isDebugEnabled) logger.debug(msg, *args)

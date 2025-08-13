@@ -4,7 +4,7 @@ import java.util.LinkedHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
 
-open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
+internal open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
 
     constructor(vararg entries: Any?) : this() {
         var i = 0

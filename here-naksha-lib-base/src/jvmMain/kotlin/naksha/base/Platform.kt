@@ -394,14 +394,6 @@ actual class Platform {
         actual fun <T> box(raw: Any?, type: PlatformType<T>, alternative: T?, init: Fn0<T?>?): T?
             = boxInto(raw, type, alternative, init)
 
-        /**
-         * Returns the [JvmObject] of the given object.
-         * @param o Any object.
-         * @return The [JvmObject] or _null_.
-         */
-        @JvmStatic
-        fun toJvmObject(o: Any?): JvmObject? = if (o is Proxy) o.platformObject() as? JvmObject else if (o is JvmObject) o else null
-
         @JvmStatic
         actual fun toInt(value: Any): Int = when (value) {
             is Number -> value.toInt()
@@ -730,14 +722,14 @@ actual class Platform {
          * version that creates a correct initial thread local logger.
          */
         @JvmField
-        var loggerDefault = JvmLogger()
+        var loggerDefault: PlatformLogger = JvmLogger()
 
         /**
          * The thread local platform logger. Applications can replace this, if they want an own implementation that is different per
          * thread (e.g. requires thread local string builders or alike). By default, the thread local is initialized with [loggerDefault].
          */
         @JvmField
-        var loggerThreadLocal: JvmThreadLocal<PlatformLogger> = JvmThreadLocal { loggerDefault }
+        var loggerThreadLocal: ThreadLocal<PlatformLogger> = JvmThreadLocal { loggerDefault }
 
         /**
          * The [PlatformLogger], in Java redirected to [loggerThreadLocal].

@@ -1,6 +1,6 @@
 package naksha.base
 
-class JvmSymbol internal constructor(private val description: String = "") : Symbol {
+internal class JvmSymbol internal constructor(private val description: String = "") : Symbol {
 
     @Override
     override fun equals(other: Any?) : Boolean = this === other

@@ -8,7 +8,7 @@ import naksha.base.Platform.Platform_C.longToInt64
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
-object CustomDeserializer : JsonDeserializer<Any>() {
+internal object CustomDeserializer : JsonDeserializer<Any>() {
 
     @OptIn(ExperimentalEncodingApi::class)
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Any? {

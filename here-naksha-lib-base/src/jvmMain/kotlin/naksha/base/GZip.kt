@@ -4,7 +4,7 @@ import java.io.ByteArrayOutputStream
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 
-object GZip {
+internal object GZip {
 
     fun gzip(raw: ByteArray): ByteArray {
         val bos = ByteArrayOutputStream()

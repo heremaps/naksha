@@ -2,7 +2,7 @@ package naksha.base
 
 import java.util.concurrent.atomic.AtomicLong
 
-class JvmAtomicInt64 internal constructor(initialValue: Long): AtomicInt64 {
+internal class JvmAtomicInt64 internal constructor(initialValue: Long): AtomicInt64 {
 
     internal constructor(value: Int64) : this(value.toLong())
 

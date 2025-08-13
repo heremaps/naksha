@@ -5,7 +5,7 @@ import naksha.base.Platform.Platform_C.longToInt64
 /**
  * The JVM Int64 implementation. If an instance is needed use [Platform.longToInt64].
  */
-class JvmInt64 internal constructor(internal val value: Long) : Number(), Int64 {
+internal class JvmInt64 internal constructor(internal val value: Long) : Number(), Int64 {
     @Suppress("NOTHING_TO_INLINE")
     private inline fun l(lo: Any?): Long = if (lo is Number) lo.toLong() else throw IllegalArgumentException("Number expected")
     @Suppress("NOTHING_TO_INLINE")
