@@ -4,8 +4,6 @@ import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.ExtensionList;
 import com.here.naksha.lib.core.models.features.Extension;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
-import naksha.base.JvmListProxy;
 import naksha.base.Platform;
 
 import java.io.File;
@@ -24,7 +22,7 @@ public class BaseSetup {
     List<Extension> list;
     try {
       String data = Files.readAllLines(file).stream().collect(Collectors.joining());
-      list = JvmBoxingUtil.box(Platform.fromJson(data, FromJsonOptions.DEFAULT), ExtensionList.class);
+      list = Platform.fromJson(data, ExtensionList.TYPE);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
