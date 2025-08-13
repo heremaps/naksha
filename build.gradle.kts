@@ -7,7 +7,6 @@ plugins {
     alias(libs.plugins.kotlin.js.plain.objects) apply false
     alias(libs.plugins.foojay) apply false
     alias(libs.plugins.vanniktechMavenPublish)
-    alias(libs.plugins.jacoco)
 
     // Only need within root
     // see: https://github.com/johnrengelman/shadow
@@ -288,12 +287,5 @@ fun Task.publishToCentral() {
             PublishModule.CONFIG_ONLY -> {}
             else -> {}
         }
-    }
-}
-
-tasks.register("jacocoTestReport", JacocoReport::class){
-    dependsOn("cleanAndTestAll")
-    reports {
-        xml.required = true
     }
 }
