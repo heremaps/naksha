@@ -12,7 +12,9 @@ import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
-public final class TestContainersPsqlStorage {
+import static java.util.Objects.requireNonNull;
+
+final class TestContainersPsqlStorage {
     private final int exposedPort = 5432;
     private final String postgresImageUri = "ghcr.io/naksha-oss/naksha-postgres:v16.2-r4";
     private final GenericContainer<?> postgres = new GenericContainer<>(postgresImageUri);

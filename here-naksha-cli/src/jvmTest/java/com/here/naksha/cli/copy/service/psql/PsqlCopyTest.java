@@ -7,7 +7,7 @@ import com.here.naksha.cli.copy.service.StorageProvider;
 import com.here.naksha.cli.storages.GeneratingStorage;
 import com.here.naksha.cli.storages.GeneratingStorageConfig;
 import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
-import naksha.base.JvmList;
+import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.geo.HereTile;
 import naksha.model.IStorage;
@@ -17,6 +17,7 @@ import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import naksha.model.request.query.SpOr;
 import naksha.model.request.query.SpRefInHereTile;
@@ -26,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.UUID;
 
-import static com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool.InstanceIndex;
 import static naksha.model.RandomFeatures.randomFeatures;
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
@@ -55,8 +55,7 @@ class PsqlCopyTest {
         CopyElement source = copyElementForGeneratingStorage(sourceStorage);
 
         // And: prepared target
-        IStorage targetStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
-                .getStorage();
+        IStorage targetStorage = TestContainersPsqlStoragePool.TEST_STORAGE_1_API;
         CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
 
         // When: copying
@@ -74,8 +73,7 @@ class PsqlCopyTest {
     @Test
     void shouldCopyFeaturesBetweenMapsOnTheSameStorage() throws CopyServiceException {
         // Given: the same storage for source and target
-        IStorage storage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
-                .getStorage();
+        IStorage storage = TestContainersPsqlStoragePool.TEST_STORAGE_1_API;
 
         // Given: prepared source
         CopyElement source = createMapWithEmptyCollection(storage, srcCollectionId);
@@ -102,8 +100,7 @@ class PsqlCopyTest {
     @Test
     void shouldCopyFeaturesBetweenStorages() throws CopyServiceException {
         // Given: prepared source
-        IStorage sourceStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
-                .getStorage();
+        IStorage sourceStorage = TestContainersPsqlStoragePool.TEST_STORAGE_1_API;
         CopyElement source = createMapWithEmptyCollection(sourceStorage, srcCollectionId);
 
         // And: predefined features
@@ -111,8 +108,7 @@ class PsqlCopyTest {
         addFeatures(sourceStorage, source.getMapId(), source.getCollectionId(), sourceFeatures, sessionOptions);
 
         // And: prepared target
-        IStorage targetStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.SECOND_INSTANCE)
-                .getStorage();
+        IStorage targetStorage = TestContainersPsqlStoragePool.TEST_STORAGE_2_API;
         CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
 
         // When: copying
@@ -133,7 +129,6 @@ class PsqlCopyTest {
 
     private IStorage generatingStorageWithGivenCountOfFeaturesAndTilesIds(int count, List<String> tileIds) {
         GeneratingStorageConfig config = new GeneratingStorageConfig();
-        config.setId("test_generating_storage");
         config.setClassName(GeneratingStorage.class.getCanonicalName());
         config.getProperties()
                 .withCount(count)

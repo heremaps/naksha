@@ -2,7 +2,7 @@ package com.here.naksha.cli.storages;
 
 import com.here.naksha.cli.TestUtils;
 import com.here.naksha.lib.core.models.geojson.HQuad;
-import naksha.base.JvmList;
+import naksha.base.StringList;
 import naksha.geo.BBox;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
@@ -88,22 +88,22 @@ class GeneratingStorageTest {
         return Stream.of(
                 Arguments.of(
                         0,
-                        new JvmList("122013100013", "122013100020"),
+                        new StringList("122013100013", "122013100020"),
                         absolutePathCsvFile
                 ),
                 Arguments.of(
                         1,
-                        new JvmList("122013100013", "122013100020"),
+                        new StringList("122013100013", "122013100020"),
                         absolutePathCsvFile
                 ),
                 Arguments.of(
                         50,
-                        new JvmList("122013100013", "122013100020"),
+                        new StringList("122013100013", "122013100020"),
                         absolutePathCsvFile
                 ),
                 Arguments.of(
                         2137,
-                        new JvmList("122013100013", "122013100020", "122013100021"),
+                        new StringList("122013100013", "122013100020", "122013100021"),
                         null
                 ),
                 Arguments.of(
