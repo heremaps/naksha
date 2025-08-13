@@ -26,7 +26,6 @@ import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
 import naksha.model.IReadSession;
@@ -429,7 +428,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     NakshaCollection correctCollection() {
       return switch (validCollectionSource) {
         case HANDLER_PROPERTIES -> handlerProperties.getCollection();
-        case SPACE_PROPERTIES -> JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
+        case SPACE_PROPERTIES -> space.getProperties().getCollection();
         case SPACE_ID -> new NakshaCollection(space.getId()).withMapId(getMapId());
       };
     }

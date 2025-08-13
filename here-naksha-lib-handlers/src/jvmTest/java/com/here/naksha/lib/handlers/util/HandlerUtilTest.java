@@ -9,6 +9,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import org.junit.jupiter.api.Test;
 
 class HandlerUtilTest {
@@ -26,7 +27,7 @@ class HandlerUtilTest {
     ContextXyzFeatureResponse contextXyzFeatureResult = HandlerUtil.createContextResultFromFeatureList(features, context, violations);
 
     // Then
-    assertSameIds(features, contextXyzFeatureResult.getFeatures());
+    assertSameIds(features, contextXyzFeatureResult.getFeatures(NakshaFeatureList.TYPE));
     assertSameIds(context, contextXyzFeatureResult.getContext());
     assertSameIds(violations, contextXyzFeatureResult.getViolations());
   }

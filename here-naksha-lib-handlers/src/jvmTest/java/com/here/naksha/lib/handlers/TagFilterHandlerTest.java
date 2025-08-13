@@ -8,12 +8,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmMap;
 import naksha.base.Platform;
 import naksha.base.ToJsonOptions;
+import naksha.geo.GeoCollection;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
@@ -182,10 +183,11 @@ class TagFilterHandlerTest extends AbstractTest {
       final @Nullable List<String> removeTags,
       final @NotNull String outputFilePath) throws JSONException {
     // Given: WriteXyzFeatures request with some tags already part of features
+    GeoCollection.TYPE.initialize();
     final String featuresJson = FileUtil.loadFileOrFail(inputFilePath);
-    final JvmMap rawInputCollection = (JvmMap) Platform.fromJson(featuresJson, FromJsonOptions.DEFAULT);
-    final XyzFeatureCollection inputCollection = JvmBoxingUtil.box(rawInputCollection, XyzFeatureCollection.class);
-    final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_map", "some_space", inputCollection.getFeatures());
+    final XyzFeatureCollection inputCollection = Platform.fromJson(featuresJson, XyzFeatureCollection.TYPE);
+    final var features = inputCollection.getFeatures(NakshaFeatureList.TYPE);
+    final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_map", "some_space", features);
 
     // And: Expected feature collection JSON
     final String expectedJson = FileUtil.loadFileOrFail(outputFilePath);
@@ -203,8 +205,10 @@ class TagFilterHandlerTest extends AbstractTest {
     for (final @NotNull Write write : writes) {
       features.add(write.getFeature());
     }
-    final XyzFeatureCollection outputCollection = new XyzFeatureCollection().withFeatures(features);
-    return Platform.toJson(outputCollection, ToJsonOptions.DEFAULT);
+    final XyzFeatureCollection outputCollection = new XyzFeatureCollection();
+    outputCollection.setFeatures(features);
+    outputCollection.removeRaw("streamId");
+    return Platform.toJson(outputCollection);
   }
 
 }

@@ -10,6 +10,7 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.*;
 import naksha.model.request.query.*;
+import naksha.mom.v2.MomProperties;
 import org.json.JSONException;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,7 @@ class SourceIdHandlerUnitTest extends AbstractTest {
     @Test
     void tc2002_testMapEqToContainsTag() {
         //given
-        final Property property = new Property(PROPERTIES, NakshaProperties.META_KEY, "sourceId");
+        final Property property = new Property(PROPERTIES, MomProperties.META_KEY, "sourceId");
         final PQuery given = new PQuery(property, StringOp.EQUALS,"task_1");
         final ReadFeatures readFeatures = new ReadFeatures();
         readFeatures.getQuery().setProperties(given);
@@ -54,7 +55,7 @@ class SourceIdHandlerUnitTest extends AbstractTest {
     @Test
     void tc2003_testMapNotEqToNotContainsTag() {
         //given
-        final Property property = new Property(PROPERTIES, NakshaProperties.META_KEY, "sourceId");
+        final Property property = new Property(PROPERTIES, MomProperties.META_KEY, "sourceId");
         final IPropertyQuery given = new PNot(new PQuery(property, StringOp.EQUALS,"task_1"));
         final ReadFeatures readFeatures = new ReadFeatures();
         readFeatures.getQuery().setProperties(given);
@@ -75,7 +76,7 @@ class SourceIdHandlerUnitTest extends AbstractTest {
     @Test
     void tc2004_testMapContainsToContainsTag() {
         //given
-        final Property property = new Property(PROPERTIES, NakshaProperties.META_KEY, "sourceId");
+        final Property property = new Property(PROPERTIES, MomProperties.META_KEY, "sourceId");
         final PQuery given = new PQuery(property, StringOp.CONTAINS,"task_1");
         final ReadFeatures readFeatures = new ReadFeatures();
         readFeatures.getQuery().setProperties(given);
@@ -94,7 +95,7 @@ class SourceIdHandlerUnitTest extends AbstractTest {
     @Test
     void tc2005_testMapOnlyCorrectPref() {
         //given
-        final Property property = new Property(PROPERTIES, NakshaProperties.META_KEY, "WrongProperty");
+        final Property property = new Property(PROPERTIES, MomProperties.META_KEY, "WrongProperty");
         final PQuery given = new PQuery(property, StringOp.EQUALS,"task_1");
         final ReadFeatures readFeatures = new ReadFeatures();
         readFeatures.getQuery().setProperties(given);
@@ -111,8 +112,8 @@ class SourceIdHandlerUnitTest extends AbstractTest {
     @Test
     void tc2006_testMapsCorrectlyCombinedOperation () {
         //given
-        final Property property = new Property(PROPERTIES, NakshaProperties.META_KEY, "sourceId");
-        final Property property2 = new Property(PROPERTIES, NakshaProperties.META_KEY, "funnyTag");
+        final Property property = new Property(PROPERTIES, MomProperties.META_KEY, "sourceId");
+        final Property property2 = new Property(PROPERTIES, MomProperties.META_KEY, "funnyTag");
         final PAnd given = new PAnd();
         given.add(new PNot(new PQuery(property, StringOp.EQUALS,"task_1")));
         given.add(new PQuery(property2, StringOp.CONTAINS,"4"));
@@ -137,7 +138,7 @@ class SourceIdHandlerUnitTest extends AbstractTest {
     @Test
     void tc2007_testMapEqToContainsTagWithoutNormalization() {
         //given
-        final Property property = new Property(PROPERTIES, NakshaProperties.META_KEY, "sourceId");
+        final Property property = new Property(PROPERTIES, MomProperties.META_KEY, "sourceId");
         final PQuery given = new PQuery(property, StringOp.CONTAINS,"tAskK_1");
         final ReadFeatures readFeatures = new ReadFeatures();
         readFeatures.getQuery().setProperties(given);

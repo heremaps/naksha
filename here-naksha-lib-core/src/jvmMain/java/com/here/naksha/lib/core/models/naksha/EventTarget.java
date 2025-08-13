@@ -21,9 +21,10 @@ package com.here.naksha.lib.core.models.naksha;
 import java.util.List;
 import naksha.base.StringList;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaObject;
 import org.jetbrains.annotations.NotNull;
 
-public abstract class EventTarget<SELF extends EventTarget<SELF>> extends NakshaFeature {
+public abstract class EventTarget<SELF extends EventTarget<SELF>> extends NakshaObject {
   public static final String EVENT_HANDLER_IDS = "eventHandlerIds";
   public static final String ID = "id";
 
