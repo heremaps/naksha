@@ -74,6 +74,7 @@ class JsPlatformType<T : Any> internal constructor(
             return isAssignable
         }
 
+        private const val UNINITIALIZED_STRING = "not_initialized_string_fkjdhsfr7288737283r7f3fh";
     }
 
     private val objectConstructor = js("Object").getPrototypeOf(js("Object"))
@@ -136,7 +137,19 @@ class JsPlatformType<T : Any> internal constructor(
         this.symbol = symbol
         return this
     }
+    private var jsonTypeFromSuper: String? = UNINITIALIZED_STRING
     override var jsonType: String? = null
+        get() {
+            var value = field
+            if (value != null) return value
+            value = jsonTypeFromSuper
+            if (value === UNINITIALIZED_STRING) {
+                val s = superType
+                value = s?.jsonType
+                jsonTypeFromSuper = value
+            }
+            return value
+        }
         set(value) {
             if (field != value) {
                 val old = field
