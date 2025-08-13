@@ -12,26 +12,22 @@ import static java.util.Objects.requireNonNull;
 public final class JsonFileParser {
     @NotNull
     public <T> T parse(@NotNull Path path, @NotNull Class<T> clazz) throws JsonFileParserException {
-        try {
-            requireFileExists(path);
-            requireIsRegularFile(path);
-            String json = readFile(path);
-            Object raw = parseJsonToObject(json);
-            return box(raw, clazz);
-        } catch (JsonFileParserException exception) {
-            throw new JsonFileParserException(exception.getMessage(), path, exception.getCause());
-        }
+        requireFileExists(path);
+        requireIsRegularFile(path);
+        String json = readFile(path);
+        Object raw = parseJsonToObject(json, path);
+        return box(raw, clazz, path);
     }
 
     private void requireFileExists(Path path) throws JsonFileParserException {
         if (!Files.exists(path)) {
-            throw new JsonFileParserException("File does not exist!");
+            throw new JsonFileParserException("File does not exist!", path);
         }
     }
 
     private void requireIsRegularFile(Path path) throws JsonFileParserException {
         if (!Files.isRegularFile(path)) {
-            throw new JsonFileParserException("It is not a file!");
+            throw new JsonFileParserException("It is not a file!", path);
         }
     }
 
@@ -39,23 +35,23 @@ public final class JsonFileParser {
         try {
             return Files.readString(path);
         } catch (Exception e) {
-            throw new JsonFileParserException("Problem with reading!", e);
+            throw new JsonFileParserException("Problem with reading!", path, e);
         }
     }
 
-    private Object parseJsonToObject(String json) throws JsonFileParserException {
+    private Object parseJsonToObject(String json, Path path) throws JsonFileParserException {
         try {
             return requireNonNull(Platform.fromJSON(json));
         } catch (Exception e) {
-            throw new JsonFileParserException("Problem with json parsing!", e);
+            throw new JsonFileParserException("Problem with json parsing!", path, e);
         }
     }
 
-    private <T> T box(Object raw, Class<T> clazz) throws JsonFileParserException {
+    private <T> T box(Object raw, Class<T> clazz, Path path) throws JsonFileParserException {
         try {
             return requireNonNull(JvmBoxingUtil.box(raw, clazz));
         } catch (Exception e) {
-            throw new JsonFileParserException("Cannot be boxed!", e);
+            throw new JsonFileParserException("Cannot be boxed!", path, e);
         }
     }
 }

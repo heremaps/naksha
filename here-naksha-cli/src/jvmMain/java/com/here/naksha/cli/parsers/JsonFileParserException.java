@@ -13,12 +13,4 @@ public final class JsonFileParserException extends Exception {
     JsonFileParserException(@NotNull String message, @NotNull Path path) {
         super(message + " file: " + path);
     }
-
-    JsonFileParserException(@NotNull String message) {
-        super(message);
-    }
-
-    JsonFileParserException(@NotNull String message, @Nullable Throwable cause) {
-        super(message, cause);
-    }
 }
