@@ -40,10 +40,7 @@ class GeneratingStorageTest {
 
     @Test
     void shouldReadWithFeatureTemplate() {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = new GeneratingStorageConfig();
         int count = 10;
         StringList tileIds = StringList.of("122013100023", "122013100000", "122013100021");
@@ -53,8 +50,8 @@ class GeneratingStorageTest {
                 .withTileIds(tileIds)
                 .withFeatureTemplateFilePath(featureTemplateFile);
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // And: template
         NakshaFeature featureTemplate = loadFeatureTemplate(featureTemplateFile);
@@ -65,28 +62,19 @@ class GeneratingStorageTest {
         );
 
         // Then: success response
-        assertInstanceOf(SuccessResponse.class, response);
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> generatedFeatures = extractResponseItems((SuccessResponse) response, NakshaFeature.class);
-        assertEquals(count, generatedFeatures.size());
+        List<NakshaFeature> generatedFeatures = assertFeaturesReceived(successResponse, count);
 
-        // And: check features
-        for (NakshaFeature generatedFeature : generatedFeatures) {
-            assertIsGeneratedId(generatedFeature.getId(), defaultIdsPrefix);
-            assertFeatureInTiles(generatedFeature, tileIds);
-            assertNull(generatedFeature.getReferencePoint(), "Reference point should be null. But feature (id: %s) caused fail.");
-            assertFeatureUseTemplate(generatedFeature, featureTemplate);
-        }
+        // And: features properly generated
+        assertFeaturesProperlyGenerated(generatedFeatures, tileIds, featureTemplate, defaultIdsPrefix);
     }
 
     @Test
     void shouldReadWithCustomIdsPrefix() {
         // Given: custom idsPrefix
         String idsPrefix = defaultIdsPrefix + "test";
-
-        // And: storage
-        GeneratingStorage storage = new GeneratingStorage();
 
         // And: config
         GeneratingStorageConfig config = new GeneratingStorageConfig();
@@ -97,8 +85,8 @@ class GeneratingStorageTest {
                 .withTileIds(tileIds)
                 .withIdsPrefix(idsPrefix);
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // And: empty template because it is not provided
         NakshaFeature featureTemplate = new NakshaFeature();
@@ -109,35 +97,26 @@ class GeneratingStorageTest {
         );
 
         // Then: success response
-        assertInstanceOf(SuccessResponse.class, response);
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> generatedFeatures = extractResponseItems((SuccessResponse) response, NakshaFeature.class);
-        assertEquals(count, generatedFeatures.size());
+        List<NakshaFeature> generatedFeatures = assertFeaturesReceived(successResponse, count);
 
-        // And: check features
-        for (NakshaFeature generatedFeature : generatedFeatures) {
-            assertIsGeneratedId(generatedFeature.getId(), idsPrefix);
-            assertFeatureInTiles(generatedFeature, tileIds);
-            assertNull(generatedFeature.getReferencePoint(), "Reference point should be null. But feature (id: %s) caused fail.");
-            assertFeatureUseTemplate(generatedFeature, featureTemplate);
-        }
+        // And: features properly generated
+        assertFeaturesProperlyGenerated(generatedFeatures, tileIds, featureTemplate, idsPrefix);
     }
 
     @ParameterizedTest
     @MethodSource
     void shouldReadWithTileIdsList(int countOfFeatures, StringList tileIds) {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = new GeneratingStorageConfig();
         config.getProperties()
                 .withCount(countOfFeatures)
                 .withTileIds(tileIds);
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // And: empty template because it is not provided
         NakshaFeature featureTemplate = new NakshaFeature();
@@ -148,35 +127,26 @@ class GeneratingStorageTest {
         );
 
         // Then: success response
-        assertInstanceOf(SuccessResponse.class, response);
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> generatedFeatures = extractResponseItems((SuccessResponse) response, NakshaFeature.class);
-        assertEquals(countOfFeatures, generatedFeatures.size());
+        List<NakshaFeature> generatedFeatures = assertFeaturesReceived(successResponse, countOfFeatures);
 
-        // And: check features
-        for (NakshaFeature generatedFeature : generatedFeatures) {
-            assertIsGeneratedId(generatedFeature.getId(), defaultIdsPrefix);
-            assertFeatureInTiles(generatedFeature, tileIds);
-            assertNull(generatedFeature.getReferencePoint(), "Reference point should be null. But feature (id: %s) caused fail.");
-            assertFeatureUseTemplate(generatedFeature, featureTemplate);
-        }
+        // And: features properly generated
+        assertFeaturesProperlyGenerated(generatedFeatures, tileIds, featureTemplate, defaultIdsPrefix);
     }
 
     @ParameterizedTest
     @MethodSource
     void shouldReadWithTileIdsCsv(int countOfFeatures, String tileIdsFile) {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = new GeneratingStorageConfig();
         config.getProperties()
                 .withCount(countOfFeatures)
                 .withTileIdsCsvFilePath(tileIdsFile);
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // And: empty template because it is not provided
         NakshaFeature featureTemplate = new NakshaFeature();
@@ -190,35 +160,25 @@ class GeneratingStorageTest {
         );
 
         // Then: success response
-        assertInstanceOf(SuccessResponse.class, response);
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> generatedFeatures = extractResponseItems((SuccessResponse) response, NakshaFeature.class);
-        assertEquals(countOfFeatures, generatedFeatures.size());
+        List<NakshaFeature> generatedFeatures = assertFeaturesReceived(successResponse, countOfFeatures);
 
-        // And: check features
-        for (NakshaFeature generatedFeature : generatedFeatures) {
-            assertIsGeneratedId(generatedFeature.getId(), defaultIdsPrefix);
-            assertFeatureInTiles(generatedFeature, tileIds);
-            assertNull(generatedFeature.getReferencePoint(), "Reference point should be null. But feature (id: %s) caused fail.");
-            assertFeatureUseTemplate(generatedFeature, featureTemplate);
-        }
+        // And: features properly generated
+        assertFeaturesProperlyGenerated(generatedFeatures, tileIds, featureTemplate, defaultIdsPrefix);
     }
-
 
     @Test
     void shouldFailWhenTileIdsAreNotProvided() {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = getSampleConfig();
         config.getProperties()
                 .withTileIds(null)
                 .withTileIdsCsvFilePath(null);
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // When: read features
         NakshaException exception = assertThrows(
@@ -227,23 +187,19 @@ class GeneratingStorageTest {
                 ));
 
         // Then:
-        NakshaError nakshaError = exception.getError();
-        assertEquals("Provide tileIds in the config properties.", nakshaError.getMsg());
+        assertErrorMessageAndCode(exception, "Provide tileIds in the config properties.", NakshaError.ILLEGAL_ARGUMENT);
     }
 
     @Test
     void shouldFailWhenMoreThanOneSourceOfTileIds() {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = getSampleConfig();
         config.getProperties()
                 .withTileIds(StringList.of("0"))
                 .withTileIdsCsvFilePath(getSampleFeatureTemplateFile());
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // When: read features
         NakshaException exception = assertThrows(
@@ -252,22 +208,18 @@ class GeneratingStorageTest {
                 ));
 
         // Then:
-        NakshaError nakshaError = exception.getError();
-        assertEquals("Provide only one source of tileIds.", nakshaError.getMsg());
+        assertErrorMessageAndCode(exception, "Provide only one source of tileIds.", NakshaError.ILLEGAL_ARGUMENT);
     }
 
     @Test
     void shouldFailWhenTileIdsListIsEmpty() {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = getSampleConfig();
         config.getProperties()
                 .withTileIds(StringList.of());
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // When: read features
         NakshaException exception = assertThrows(
@@ -276,23 +228,19 @@ class GeneratingStorageTest {
                 ));
 
         // Then:
-        NakshaError nakshaError = exception.getError();
-        assertEquals("Should be at least one tileId.", nakshaError.getMsg());
+        assertErrorMessageAndCode(exception, "Should be at least one tileId.", NakshaError.ILLEGAL_ARGUMENT);
     }
 
     @Test
     void shouldFailWhenProblemWithTileIdsFile() {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = getSampleConfig();
         config.getProperties()
                 .withTileIds(null)
                 .withTileIdsCsvFilePath(getInvalidFile());
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // When: read features
         NakshaException exception = assertThrows(
@@ -301,22 +249,18 @@ class GeneratingStorageTest {
                 ));
 
         // Then:
-        NakshaError nakshaError = exception.getError();
-        assertEquals("Problem while loading tileIds from CSV file!", nakshaError.getMsg());
+        assertErrorMessageAndCode(exception, "Problem while loading tileIds from CSV file!", NakshaError.EXCEPTION);
     }
 
     @Test
     void shouldFailWhenProblemWithFeatureTemplateFile() {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = getSampleConfig();
         config.getProperties()
                 .withFeatureTemplateFilePath(getInvalidFile());
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // When: read features
         NakshaException exception = assertThrows(
@@ -325,22 +269,18 @@ class GeneratingStorageTest {
                 ));
 
         // Then:
-        NakshaError nakshaError = exception.getError();
-        assertEquals("Problem while loading the feature template!", nakshaError.getMsg());
+        assertErrorMessageAndCode(exception, "Problem while loading the feature template!", NakshaError.EXCEPTION);
     }
 
     @Test
     void shouldFailWhenCountIsNotProvided() {
-        // Given: storage
-        GeneratingStorage storage = new GeneratingStorage();
-
-        // And: config
+        // Given: config
         GeneratingStorageConfig config = getSampleConfig();
         config.getProperties()
                 .withCount(null);
 
-        // And: init storage with config
-        storage.initStorage(config, false, false);
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // When: read features
         NakshaException exception = assertThrows(
@@ -349,8 +289,7 @@ class GeneratingStorageTest {
                 ));
 
         // Then:
-        NakshaError nakshaError = exception.getError();
-        assertEquals("Provide count in the config properties.", nakshaError.getMsg());
+        assertErrorMessageAndCode(exception, "Provide count in the config properties.", NakshaError.ILLEGAL_ARGUMENT);
     }
 
     @Test
@@ -362,8 +301,7 @@ class GeneratingStorageTest {
         NakshaException exception = assertThrows(NakshaException.class, () -> storage.newWriteSession(sessionOptions));
 
         // Then: fail
-        assertEquals(NakshaError.UNSUPPORTED_OPERATION, exception.getError().getCode());
-        assertEquals("Read-only storage!", exception.getMessage());
+        assertErrorMessageAndCode(exception, "Read-only storage!", NakshaError.UNSUPPORTED_OPERATION);
     }
 
     private static Stream<Arguments> shouldReadWithTileIdsList() {
@@ -410,6 +348,12 @@ class GeneratingStorageTest {
         );
     }
 
+    private void assertErrorMessageAndCode(NakshaException exception, String message, String code) {
+        NakshaError nakshaError = exception.getError();
+        assertEquals(code, exception.getError().getCode());
+        assertEquals(message, nakshaError.getMsg());
+    }
+
     private GeneratingStorageConfig getSampleConfig() {
         GeneratingStorageConfig config = new GeneratingStorageConfig();
         config.getProperties()
@@ -418,30 +362,24 @@ class GeneratingStorageTest {
         return config;
     }
 
-    private void assertFeatureUseTemplate(NakshaFeature generatedFeature, NakshaFeature featureTemplate) {
-        assertPropertiesDeepEquals(featureTemplate, generatedFeature);
-        assertEquals(featureTemplate.getType(), generatedFeature.getType());
-        assertEquals(featureTemplate.getMomType(), generatedFeature.getMomType());
-        assertEquals(featureTemplate.getTitle(), generatedFeature.getTitle());
-        assertEquals(featureTemplate.getDescription(), generatedFeature.getDescription());
+    private void assertFeatureUseTemplate(NakshaFeature generatedFeature, NakshaFeature featureTemplate, String message) {
+        assertPropertiesDeepEquals(featureTemplate, generatedFeature, message);
+        assertEquals(featureTemplate.getType(), generatedFeature.getType(), message);
+        assertEquals(featureTemplate.getMomType(), generatedFeature.getMomType(), message);
+        assertEquals(featureTemplate.getTitle(), generatedFeature.getTitle(), message);
+        assertEquals(featureTemplate.getDescription(), generatedFeature.getDescription(), message);
     }
 
-    private void assertPropertiesDeepEquals(NakshaFeature expected, NakshaFeature actual) {
+    private void assertPropertiesDeepEquals(NakshaFeature expected, NakshaFeature actual, String message) {
         NakshaProperties expectedProperties = expected.getProperties();
         assertTrue(
                 expectedProperties.contentDeepEquals(actual.getProperties()),
-                "Properties should be deep equal to template's properties. But feature (id: %s) caused fail."
-                        .formatted(actual.getId())
+                "Properties are not equal." + message
         );
     }
 
-    private void assertIsGeneratedId(String id, String expectedIdsPrefix) {
-        assertTrue(
-                id.length() > expectedIdsPrefix.length(),
-                "Length of id (%s) should be > than expected prefix.".formatted(id)
-        );
-        String prefix = id.substring(0, expectedIdsPrefix.length());
-        assertEquals(expectedIdsPrefix, prefix);
+    private void assertIsGeneratedId(String id, String expectedIdsPrefix, String message) {
+        assertTrue(id.startsWith(expectedIdsPrefix), message);
     }
 
     private String getInvalidFile() {
@@ -485,14 +423,56 @@ class GeneratingStorageTest {
                 .anyMatch(tileBbox -> doesBoundingBoxContainFeature(tileBbox, feature));
     }
 
-    private void assertFeatureInTiles(NakshaFeature feature, List<String> tileIds) {
+    private void assertFeatureInTiles(NakshaFeature feature, List<String> tileIds, String message) {
         List<SpBoundingBox> tilesBboxes = tileIds.stream()
                 .map(tileId -> new HQuad(tileId, true).getBoundingBox())
                 .toList();
 
         assertTrue(
                 isFeatureInBboxes(feature, tilesBboxes),
-                "Feature(id: %s) is not in the tiles.".formatted(feature.getId())
+                message
         );
     }
+
+
+    private GeneratingStorage generatingStorageWithConfig(GeneratingStorageConfig config) {
+        GeneratingStorage storage = new GeneratingStorage();
+        storage.initStorage(config, false, false);
+        return storage;
+    }
+
+    private void assertFeaturesProperlyGenerated(
+            List<NakshaFeature> generatedFeatures,
+            List<String> tileIds,
+            NakshaFeature featureTemplate,
+            String idsPrefix
+    ) {
+        for (NakshaFeature generatedFeature : generatedFeatures) {
+            assertIsGeneratedId(
+                    generatedFeature.getId(),
+                    idsPrefix,
+                    "Id should have prefix. But feature (id: %s) caused fail.".formatted(generatedFeature.getId())
+            );
+            assertFeatureInTiles(
+                    generatedFeature,
+                    tileIds,
+                    "Feature(id: %s) is not in the tiles.".formatted(generatedFeature.getId())
+            );
+            assertNull(generatedFeature.getReferencePoint(),
+                    "Reference point should be null. But feature (id: %s) caused fail.".formatted(generatedFeature.getId())
+            );
+            assertFeatureUseTemplate(
+                    generatedFeature,
+                    featureTemplate,
+                    "Feature should use template. But feature (id: %s) caused fail.".formatted(generatedFeature.getId())
+            );
+        }
+    }
+
+    private List<NakshaFeature> assertFeaturesReceived(SuccessResponse response, int count) {
+        List<NakshaFeature> generatedFeatures = extractResponseItems(response, NakshaFeature.class);
+        assertEquals(count, generatedFeatures.size());
+        return generatedFeatures;
+    }
+
 }
