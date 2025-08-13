@@ -124,7 +124,7 @@ class PsqlCopyTest {
     }
 
     private CopyElement copyElementForGeneratingStorage(IStorage storage) {
-        return new CopyElement.Builder(storage.getConfig(), "").build();
+        return new CopyElement.Builder(storage.getConfig()).build();
     }
 
     private IStorage generatingStorageWithGivenCountOfFeaturesAndTilesIds(int count, List<String> tileIds) {
@@ -148,8 +148,9 @@ class PsqlCopyTest {
     private CopyElement createMapWithEmptyCollection(IStorage storage, String collectionId) {
         String mapId = createUniqueMap(storage, sessionOptions);
         addCollectionToTheMap(storage, mapId, collectionId, sessionOptions);
-        return new CopyElement.Builder(storage.getConfig(), collectionId)
+        return new CopyElement.Builder(storage.getConfig())
                 .setMapId(mapId)
+                .setCollectionId(collectionId)
                 .build();
     }
 

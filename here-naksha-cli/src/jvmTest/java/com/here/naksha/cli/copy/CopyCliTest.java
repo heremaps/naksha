@@ -3,6 +3,8 @@ package com.here.naksha.cli.copy;
 import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.parsers.JsonFileParser;
+import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -10,9 +12,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.io.File;
+import java.nio.file.Path;
 
 import static com.here.naksha.cli.TestUtils.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -35,31 +38,30 @@ class CopyCliTest {
     }
 
     @Test
-    void shouldCopy() throws CopyServiceException, NakshaStorageParserException {
+    void shouldCopy() throws CopyServiceException {
         // Given
-        File srcStorageConfig = new File(validStorageConfigPath);
+        Path srcStorageConfig = Path.of(validStorageConfigPath);
 
         // And
-        File targetStorageConfig = new File(validStorageConfigPath);
+        Path targetStorageConfig = Path.of(validStorageConfigPath);
 
         // And
-        NakshaStorageParser nakshaStorageParser = new NakshaStorageParser();
-
-        // And
-        CopyElement srcCopyElement = new CopyElement.Builder(nakshaStorageParser.get(srcStorageConfig), "srcc")
+        CopyElement srcCopyElement = new CopyElement.Builder(loadStorage(srcStorageConfig))
                 .setMapId("srcm")
+                .setCollectionId("srcc")
                 .build();
 
         // And
-        CopyElement targetCopyElement = new CopyElement.Builder(nakshaStorageParser.get(targetStorageConfig), "targetc")
+        CopyElement targetCopyElement = new CopyElement.Builder(loadStorage(targetStorageConfig))
                 .setMapId("targetm")
+                .setCollectionId("targetc")
                 .build();
 
         // And
         CliTestCase testCase = new CliTestCase(
                 new String[]{
-                        "--srcStorageConfig=%s".formatted(srcStorageConfig.getPath()),
-                        "--targetStorageConfig=%s".formatted(targetStorageConfig.getPath()),
+                        "--srcStorageConfig=%s".formatted(srcStorageConfig),
+                        "--targetStorageConfig=%s".formatted(targetStorageConfig),
                         "--srcMapId=%s".formatted(srcCopyElement.getMapId()),
                         "--srcCollectionId=%s".formatted(srcCopyElement.getCollectionId()),
                         "--targetMapId=%s".formatted(targetCopyElement.getMapId()),
@@ -87,17 +89,17 @@ class CopyCliTest {
     @Test
     void shouldFailWithBadSrcNakshaStorage() {
         // Given
-        File file = new File(invalidStorageConfigPath);
+        Path filePath = Path.of(invalidStorageConfigPath);
 
         // And
         CliTestCase testCase = new CliTestCase(
                 new String[]{
-                        "--srcStorageConfig=%s".formatted(file.getPath()),
+                        "--srcStorageConfig=%s".formatted(filePath),
                         "--targetStorageConfig=target"
                 },
                 EXECUTION_EXCEPTION_EXIT_CODE,
                 "",
-                nakshaStorageParserErrorMessage.formatted(file.getPath())
+                nakshaStorageParserErrorMessage.formatted(filePath)
         );
 
         // When
@@ -110,20 +112,20 @@ class CopyCliTest {
     @Test
     void shouldFailWithBadTargetNakshaStorage() {
         // Given
-        File targetFile = new File(invalidStorageConfigPath);
+        Path targetFilePath = Path.of(invalidStorageConfigPath);
 
         // And: valid src
-        File srcFile = new File(validStorageConfigPath);
+        Path srcFilePath = Path.of(validStorageConfigPath);
 
         // And
         CliTestCase testCase = new CliTestCase(
                 new String[]{
-                        "--srcStorageConfig=%s".formatted(srcFile.getPath()),
-                        "--targetStorageConfig=%s".formatted(targetFile.getPath())
+                        "--srcStorageConfig=%s".formatted(srcFilePath),
+                        "--targetStorageConfig=%s".formatted(targetFilePath)
                 },
                 EXECUTION_EXCEPTION_EXIT_CODE,
                 "",
-                nakshaStorageParserErrorMessage.formatted(targetFile.getPath())
+                nakshaStorageParserErrorMessage.formatted(targetFilePath)
         );
 
         // When
@@ -144,13 +146,13 @@ class CopyCliTest {
         when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
 
         // And
-        File validStorageConfig = new File(validStorageConfigPath);
+        Path validStorageConfig = Path.of(validStorageConfigPath);
 
         // And
         CliTestCase testCase = new CliTestCase(
                 new String[]{
-                        "--srcStorageConfig=%s".formatted(validStorageConfig.getPath()),
-                        "--targetStorageConfig=%s".formatted(validStorageConfig.getPath())
+                        "--srcStorageConfig=%s".formatted(validStorageConfig),
+                        "--targetStorageConfig=%s".formatted(validStorageConfig)
                 },
                 EXECUTION_EXCEPTION_EXIT_CODE,
                 "",
@@ -180,6 +182,11 @@ class CopyCliTest {
             
             }"; line: 3, column: 4]
             """;
+
+    private NakshaStorage loadStorage(Path storageConfig) {
+        JsonFileParser jsonFileParser = new JsonFileParser();
+        return assertDoesNotThrow(() -> jsonFileParser.parse(storageConfig, NakshaStorage.class));
+    }
 
     private void assertCopyElement(
             CopyElement expected,

@@ -9,39 +9,51 @@ public final class CopyElement {
     private final String mapId;
     private final String collectionId;
 
+    @NotNull
     public NakshaStorage getNakshaStorage() {
         return nakshaStorage;
     }
 
+    @Nullable
     public String getMapId() {
         return mapId;
     }
 
+    @Nullable
     public String getCollectionId() {
         return collectionId;
     }
 
-    public final static class Builder {
+    public static final class Builder {
+        @NotNull
         private final NakshaStorage nakshaStorage;
+        @Nullable
         private String mapId;
-        private final String collectionId;
+        @Nullable
+        private String collectionId;
 
         public Builder(
-                @NotNull NakshaStorage nakshaStorage,
-                @NotNull String collectionId
+                @NotNull NakshaStorage nakshaStorage
         ) {
             this.nakshaStorage = nakshaStorage;
-            this.collectionId = collectionId;
         }
 
+        @NotNull
         public CopyElement build() {
             return new CopyElement(
                     this
             );
         }
 
+        @NotNull
         public Builder setMapId(@Nullable String mapId) {
             this.mapId = mapId;
+            return this;
+        }
+
+        @NotNull
+        public Builder setCollectionId(@Nullable String collectionId) {
+            this.collectionId = collectionId;
             return this;
         }
     }

@@ -1,14 +1,17 @@
 package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.parsers.JsonFileParser;
+import com.here.naksha.cli.parsers.JsonFileParserException;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import picocli.CommandLine;
 
-import java.io.File;
 import java.io.PrintWriter;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -26,18 +29,18 @@ import java.util.concurrent.Callable;
 )
 public final class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;
-    private final NakshaStorageParser nakshaStorageParser;
+    private final JsonFileParser jsonFileParser;
     private final StorageProvider storageProvider;
 
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
     public CopyCommand(
-            CopyServiceFactory copyServiceFactory,
-            StorageProvider storageProvider
+            @NotNull CopyServiceFactory copyServiceFactory,
+            @NotNull StorageProvider storageProvider
     ) {
         this.copyServiceFactory = copyServiceFactory;
-        this.nakshaStorageParser = new NakshaStorageParser();
+        this.jsonFileParser = new JsonFileParser();
         this.storageProvider = storageProvider;
     }
 
@@ -46,7 +49,7 @@ public final class CopyCommand implements Callable<Integer> {
             description = "Path to file with source storage config.",
             required = true
     )
-    private File srcStorageConfig;
+    private Path srcStorageConfig;
 
     @CommandLine.Option(
             names = {"--srcMapId"},
@@ -56,17 +59,16 @@ public final class CopyCommand implements Callable<Integer> {
 
     @CommandLine.Option(
             names = {"--srcCollectionId"},
-            description = "Id of source collection.",
-            defaultValue = "" // TODO
+            description = "Id of source collection."
     )
-    private String srcCollectionId;
+    private @Nullable String srcCollectionId;
 
     @CommandLine.Option(
             names = {"--targetStorageConfig"},
             description = "Path to file with target storage config.",
             required = true
     )
-    private File targetStorageConfig;
+    private Path targetStorageConfig;
 
     @CommandLine.Option(
             names = {"--targetMapId"},
@@ -76,21 +78,22 @@ public final class CopyCommand implements Callable<Integer> {
 
     @CommandLine.Option(
             names = {"--targetCollectionId"},
-            description = "Id of target collection.",
-            defaultValue = "" // TODO
+            description = "Id of target collection."
     )
-    private String targetCollectionId;
+    private @Nullable String targetCollectionId;
 
     @Override
-    public Integer call() throws NakshaStorageParserException, CopyServiceException {
-        NakshaStorage srcNakshaStorage = nakshaStorageParser.get(srcStorageConfig);
-        NakshaStorage targetNakshaStorage = nakshaStorageParser.get(targetStorageConfig);
+    public Integer call() throws JsonFileParserException, CopyServiceException {
+        NakshaStorage srcNakshaStorage = jsonFileParser.parse(srcStorageConfig, NakshaStorage.class);
+        NakshaStorage targetNakshaStorage = jsonFileParser.parse(targetStorageConfig, NakshaStorage.class);
 
-        CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage, srcCollectionId)
+        CopyElement srcCopyElement = new CopyElement.Builder(srcNakshaStorage)
                 .setMapId(srcMapId)
+                .setCollectionId(srcCollectionId)
                 .build();
-        CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage, targetCollectionId)
+        CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
                 .setMapId(targetMapId)
+                .setCollectionId(targetCollectionId)
                 .build();
 
         NakshaContext.currentContext().withAppId("nakshacli");
