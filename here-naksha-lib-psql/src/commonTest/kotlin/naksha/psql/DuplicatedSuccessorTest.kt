@@ -2,6 +2,8 @@ package naksha.psql
 
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaFeatureList
+import naksha.model.objects.NakshaObjectList
 import naksha.model.request.ErrorResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -14,7 +16,7 @@ class DuplicatedSuccessorTest : PgTestBase(NakshaCollection("duplicate_successor
     @Test
     fun shouldNotAllowMultipleFeaturesToSucceedOneVersion() {
         // Given: created feature in DB
-        val initialFeature = insertFeatures(randomFeature()).features.first()!!
+        val initialFeature = insertFeatures(randomFeature()).getFeatures(NakshaObjectList.TYPE).first()!!
 
         // And: multiple features that want to succeed it
         val firstSuccessor = initialFeature.apply { title = "first successor" }
@@ -37,8 +39,8 @@ class DuplicatedSuccessorTest : PgTestBase(NakshaCollection("duplicate_successor
     @Test
     fun shouldNotAllowSuccessorsWithDifferentFeatureId() {
         // Given: created feature in DB
-        val initialFeatureA = insertFeatures(randomFeature("f_a")).features.first()!!
-        val initialFeatureB = insertFeatures(randomFeature("f_b")).features.first()!!
+        val initialFeatureA = insertFeatures(randomFeature("f_a")).getFeatures(NakshaObjectList.TYPE).first()!!
+        val initialFeatureB = insertFeatures(randomFeature("f_b")).getFeatures(NakshaObjectList.TYPE).first()!!
 
         // And: correct successor of A
         val firstSuccessor = initialFeatureA.apply { title = "successor of A" }

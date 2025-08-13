@@ -2,7 +2,9 @@
 
 package naksha.model
 
+import naksha.base.ListProxy
 import naksha.base.Platform
+import naksha.base.PlatformType
 import naksha.base.PlatformUtil
 import naksha.base.fn.Fn1
 import naksha.geo.PointCoord
@@ -92,12 +94,33 @@ class RandomFeatures private constructor() {
         fun randomFeatures(count: Int): List<NakshaFeature> = randomFeatures(count) { it }
 
         /**
+         * Generate random Naksha features and proxy them in the given type.
+         * @param count the amount of random features to generate.
+         * @param type the type of the list and features to return.
+         * @return a list of feature, randomly generated, and in specified type.
+         * @since 3.0
+         */
+        @JsName("randomFeatures")
+        @JsStatic
+        @JvmStatic
+        fun <F : NakshaFeature, LIST: ListProxy<F>> randomFeatures(count: Int, type: PlatformType<LIST>): LIST {
+            require(count > 0)
+            val list = type.newInstance()
+            for (i in 1..count) {
+                val f = randomFeature().proxy(list.elementType)
+                list.add(f)
+            }
+            return list
+        }
+
+        /**
          * Generate random features, invoking a mutator method that can modify them, and then shall return cast into some specific desired type.
          * @param count the amount of random features to generate.
          * @param mutator a function called with the random [NakshaFeature], which may mutate the features, and then return it, optionally as different type.
          * @return a list of feature, randomly generated, and mutated.
          * @since 3.0
          */
+        @JsName("randomFeaturesWith")
         @JsStatic
         @JvmStatic
         fun <T : NakshaFeature> randomFeatures(count: Int, mutator: Fn1<T, NakshaFeature>): List<T> {

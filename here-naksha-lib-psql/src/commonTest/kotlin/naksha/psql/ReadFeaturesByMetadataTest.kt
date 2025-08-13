@@ -390,7 +390,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val featuresToCreate = RandomFeatures.randomFeatures(count = 10)
 
         // When
-        insertFeatures(featuresToCreate, SessionOptions(appId = appId))
+        insertFeatureList(featuresToCreate, SessionOptions(appId = appId))
 
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {

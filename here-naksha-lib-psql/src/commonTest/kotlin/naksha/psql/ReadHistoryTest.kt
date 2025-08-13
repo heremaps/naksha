@@ -5,6 +5,7 @@ import naksha.model.Naksha
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
+import naksha.model.objects.NakshaObjectList
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -156,16 +157,16 @@ class ReadHistoryTest : PgTestBase() {
         }).apply {
             // We expect to have 4 versions, but only want the middle 2 back
             // As specified, we expect descending order: [deleted, ] updated2, updated1 [, created]
-            assertEquals(2, features.size)
+            assertEquals(2, getFeatures(NakshaObjectList.TYPE).size)
 
-            val update2 = assertNotNull(features[0])
-            val update1 = assertNotNull(features[1])
+            val update2 = assertNotNull(getFeatures(NakshaObjectList.TYPE)[0])
+            val update1 = assertNotNull(getFeatures(NakshaObjectList.TYPE)[1])
 
             assertEquals(featureId, update1.id)
-            assertEquals(Action.UPDATED, update1.properties.xyz.action)
+            assertEquals(Action.UPDATE, update1.properties.xyz.action)
 
             assertEquals(featureId, update2.id)
-            assertEquals(Action.UPDATED, update2.properties.xyz.action)
+            assertEquals(Action.UPDATE, update2.properties.xyz.action)
 
             assertEquals(update2.guid, update1.properties.xyz.nguid)
             assertEquals(update1.guid, update2.properties.xyz.pguid)

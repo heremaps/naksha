@@ -4,6 +4,8 @@ import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.RandomFeatures
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaObject
+import naksha.model.objects.NakshaObjectList
 import naksha.model.objects.StoreMode
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
@@ -22,11 +24,11 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
     @Test
     fun shouldFormCorrectUuidSequenceOnUpdate(){
         // Given:
-        val feature = RandomFeatures.randomFeature().apply { title = "initial_version" }
+        val feature = NakshaObject.TYPE.proxy(RandomFeatures.randomFeature()).apply { title = "initial_version" }
 
         // When:
         val createFeatureReq = WriteRequest().add(Write().createFeature(collection, feature))
-        val createdFeature = executeWrite(createFeatureReq).features.first()!!
+        val createdFeature = executeWrite(createFeatureReq).getFeatures(NakshaObjectList.TYPE).first()!!
 
         // And:
         val updateFeatureReq = WriteRequest().add(Write().updateFeature(collection, createdFeature.apply {
@@ -45,13 +47,13 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
             collectionIds += collection.id
             featureIds += feature.id
             queryHistory = true
-        }).features.filterNotNull()
+        }).getFeatures(NakshaObjectList.TYPE).filterNotNull()
 
         // Then:
         assertEquals(3, featureVersions.size)
-        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATED }!!
-        val retrievedUpdatedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATED }!!
-        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETED }!!
+        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATE }!!
+        val retrievedUpdatedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATE }!!
+        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETE }!!
 
         // And:
         assertNull(retrievedCreatedFeature.properties.xyz.puuid)
@@ -71,11 +73,11 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
     //@Test
     fun shouldFormCorrectUuidSequenceOnUpsert(){
         // Given:
-        val feature = RandomFeatures.randomFeature().apply { title = "initial_version" }
+        val feature = RandomFeatures.randomFeature().proxy(NakshaObject.TYPE).apply { title = "initial_version" }
 
         // When:
         val createFeatureReq = WriteRequest().add(Write().createFeature(collection, feature))
-        val createdFeature = executeWrite(createFeatureReq).features.first()!!
+        val createdFeature = executeWrite(createFeatureReq).getFeatures(NakshaObjectList.TYPE).first()!!
 
         // And:
         val upsertFeatureReq = WriteRequest().add(Write().upsertFeature(collection, createdFeature.apply {
@@ -94,13 +96,13 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
             collectionIds += collection.id
             featureIds += feature.id
             queryHistory = true
-        }).features.filterNotNull()
+        }).getFeatures(NakshaObjectList.TYPE).filterNotNull()
 
         // Then:
         assertEquals(3, featureVersions.size)
-        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATED }!!
-        val retrievedUpsertedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATED }!!
-        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETED }!!
+        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATE }!!
+        val retrievedUpsertedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATE }!!
+        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETE }!!
 
         // And:
         assertNull(retrievedCreatedFeature.properties.xyz.puuid)

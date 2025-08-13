@@ -1,14 +1,12 @@
 package naksha.psql
 
 import naksha.model.TagList
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.query.*
 import naksha.model.RandomFeatures
 import naksha.model.objects.NakshaFeatureList
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -117,7 +115,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         )
 
         // When:
-        insertFeatures(inputFeatures)
+        insertFeatureList(inputFeatures)
 
         // And:
         val featuresGt2 = executeTagsQuery(

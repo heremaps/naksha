@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.TupleNumberVariant
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaObjectList
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -22,9 +23,9 @@ class ReadFeaturesByOtherTns : PgTestBase(
     @Test
     fun shouldGetFeaturesByNextTns() {
         // Given: some freshly created features
-        val initialFeatures = insertFeatures(randomFeatures(5).apply {
-            forEachIndexed { ind, feature -> feature.title = "f_$ind" }
-        }).features
+        val initialFeatures = insertFeatureList(randomFeatures(5, NakshaObjectList.TYPE).apply {
+            forEachIndexed { ind, feature -> feature!!.title = "f_$ind" }
+        }).getFeatures(NakshaObjectList.TYPE)
 
         // And: updates to these features
         val update = WriteRequest()
@@ -40,7 +41,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
         val updateResp = executeWrite(update)
 
         // And: tuple numbers of updated version
-        val selectedUpdatedFeatures = updateResp.features.subList(2, 4) // take 2 features from the middle
+        val selectedUpdatedFeatures = updateResp.getFeatures(NakshaObjectList.TYPE).subList(2, 4) // take 2 features from the middle
         val selectedTns = selectedUpdatedFeatures.map { it!!.tupleNumber }
         val serializedTns: Array<ByteArray> = selectedTns
             .map { it.toByteArray(TupleNumberVariant.B96) } // `next_tn` is 96-bit encoded
@@ -60,7 +61,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
         })
 
         // Then: we fetched initial features based on `next_tn` pointing to updated features
-        val fetchedFeatures = byNextTnResp.features
+        val fetchedFeatures = byNextTnResp.getFeatures(NakshaObjectList.TYPE)
         assertEquals(2, fetchedFeatures.size)
         val expectedIds = selectedUpdatedFeatures.map { it!!.id }.toSet()
         fetchedFeatures.forEach { fetchedPredecessor ->

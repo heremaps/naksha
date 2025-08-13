@@ -15,7 +15,6 @@
       </option>
       <option name="taskNames">
         <list>
-          <option value=":here-naksha-lib-psql:cleanJvmTest" />
           <option value=":here-naksha-lib-psql:jvmTest" />
         </list>
       </option>

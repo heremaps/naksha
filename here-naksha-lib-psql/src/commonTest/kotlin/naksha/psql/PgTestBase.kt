@@ -188,20 +188,20 @@ abstract class PgTestBase(
     val SET_SEARTH_PATH_SQL
         get() = """SET search_path="${map.id}","naksha~admin",topology,hint_plan,public;"""
 
-    protected fun insertFeature(
-        feature: NakshaFeature,
+    protected fun <F: NakshaFeature> insertFeature(
+        feature: F,
         sessionOptions: SessionOptions? = newSessionOptions()
-    ): SuccessResponse = insertFeatures(listOf(feature), sessionOptions)
+    ): SuccessResponse = insertFeatureList(listOf(feature), sessionOptions)
 
     protected fun insertFeatures(vararg features: NakshaFeature): SuccessResponse =
-        insertFeatures(listOf(*features))
+        insertFeatureList(listOf(*features))
 
-    protected fun insertFeatures(
-        features: List<NakshaFeature>,
+    protected fun <F: NakshaFeature> insertFeatureList(
+        features: List<F?>,
         sessionOptions: SessionOptions? = newSessionOptions()
     ): SuccessResponse {
         val writeReq = WriteRequest()
-        features.forEach { feature -> writeReq.add(Write().createFeature(collection, feature)) }
+        features.forEach { feature -> writeReq.add(Write().createFeature(collection, feature!!)) }
         return executeWrite(writeReq, sessionOptions)
     }
 

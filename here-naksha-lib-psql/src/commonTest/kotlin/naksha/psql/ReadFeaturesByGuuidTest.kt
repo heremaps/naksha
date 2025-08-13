@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.model.GuidList
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaObjectList
 import naksha.model.request.ReadFeatures
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.Test
@@ -20,8 +21,8 @@ class ReadFeaturesByGuuidTest :
         val inputFeature3 = randomFeature("f3")
 
         // And
-        val createResp = insertFeatures(listOf(inputFeature1, inputFeature2, inputFeature3))
-        val guuidById = createResp.features.filterNotNull().associate { it.id to it.guid }
+        val createResp = insertFeatureList(listOf(inputFeature1, inputFeature2, inputFeature3))
+        val guuidById = createResp.getFeatures(NakshaObjectList.TYPE).filterNotNull().associate { it.id to it.guid }
 
         // When
         val readByGuid = ReadFeatures().apply {
@@ -35,7 +36,7 @@ class ReadFeaturesByGuuidTest :
         val readResp = executeRead(readByGuid)
 
         // Then
-        val fetchedFeatures = readResp.features
+        val fetchedFeatures = readResp.getFeatures(NakshaObjectList.TYPE)
         assertEquals(2, fetchedFeatures.size)
         val fetched1 = assertNotNull(fetchedFeatures.find { it!!.id == inputFeature1.id })
         val fetched3 = assertNotNull(fetchedFeatures.find { it!!.id == inputFeature3.id })

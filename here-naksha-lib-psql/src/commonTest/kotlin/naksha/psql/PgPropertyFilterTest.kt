@@ -1,7 +1,10 @@
 package naksha.psql
 
-import naksha.model.NakshaError
+import naksha.base.NakshaError
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaFeatureList
+import naksha.model.objects.NakshaObjectList
 import naksha.model.request.ErrorResponse
 import naksha.model.request.FeatureTuple
 import naksha.model.request.ReadFeatures
@@ -40,8 +43,8 @@ class PgPropertyFilterTest: PgTestBase() {
         val response = executeRead(readRequest)
 
         // Then: The response should contain only the filtered feature.
-        assertEquals(1, response.features.size, "Expected only one feature after filtering")
-        assertEquals(featureA.id, response.features[0]?.id)
+        assertEquals(1, response.getFeatures(NakshaFeatureList.TYPE).size, "Expected only one feature after filtering")
+        assertEquals(featureA.id, response.getFeatures(NakshaFeatureList.TYPE)[0]?.id)
     }
 
     @Test
@@ -73,8 +76,8 @@ class PgPropertyFilterTest: PgTestBase() {
         val response = executeRead(readRequest)
 
         // Then: The response contains only the feature matching the custom filter.
-        assertEquals(1, response.features.size, "Expected only one feature after custom filtering")
-        assertEquals(featureToKeep.id, response.features[0]?.id)
+        assertEquals(1, response.getFeatures(NakshaObjectList.TYPE).size, "Expected only one feature after custom filtering")
+        assertEquals(featureToKeep.id, response.getFeatures(NakshaObjectList.TYPE)[0]?.id)
     }
 
     @Test
@@ -90,8 +93,8 @@ class PgPropertyFilterTest: PgTestBase() {
 
         // Then: The response is successful and contains the created feature, proving no filtering occurred.
         assertIs<SuccessResponse>(response)
-        assertEquals(1, response.features.size, "Write response should contain the created feature")
-        assertEquals(feature.id, response.features[0]?.id)
+        assertEquals(1, response.getFeatures(NakshaObjectList.TYPE).size, "Write response should contain the created feature")
+        assertEquals(feature.id, response.getFeatures(NakshaObjectList.TYPE)[0]?.id)
     }
 
     @Test
@@ -114,7 +117,7 @@ class PgPropertyFilterTest: PgTestBase() {
 
         // Then: The response is successful and still contains the feature, proving the filter was ignored.
         assertIs<SuccessResponse>(response)
-        assertEquals(0, response.features.size, "Write response should not contain the created feature")
+        assertEquals(0, response.getFeatures(NakshaObjectList.TYPE).size, "Write response should not contain the created feature")
     }
 
 
@@ -155,8 +158,8 @@ class PgPropertyFilterTest: PgTestBase() {
 
         // Then: The response is successful and contains only the requested feature.
         assertIs<SuccessResponse>(response)
-        assertEquals(1, response.features.size)
-        assertEquals(feature.id, response.features[0]?.id)
+        assertEquals(1, response.getFeatures(NakshaObjectList.TYPE).size)
+        assertEquals(feature.id, response.getFeatures(NakshaObjectList.TYPE)[0]?.id)
     }
 
 }
