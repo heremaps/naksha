@@ -23,6 +23,8 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import com.here.naksha.lib.core.INaksha;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+
+import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,22 +34,22 @@ public class NakshaHubFactory {
    * Instantiate NakshaHub (INaksha compliant) instance by loading given {@link NakshaHubConfig#getHubClassName()}. If config or
    * hubClassName is not provided (i.e. null), then default NakshaHub implementation will be used.
    *
-   * @param adminPgMasterUrl Url with database used by Naksha Hub Admin
+   * @param adminStorage     The admin-db used by Naksha Hub Admin
    * @param config           The custom NakshaHub Config to be used
    * @param configId         The configId to be used for loading config from Storage (if custom config not provided)
    * @return NakshaHub (INaksha compliant) instance
    */
   public static @NotNull INaksha getInstance(
-      final @Nullable String adminPgMasterUrl,
+      final @Nullable NakshaStorage adminStorage,
       final @Nullable NakshaHubConfig config,
       final @Nullable String configId) {
     final String hubClassName = (config != null) ? config.getHubClassName() : NakshaHubConfig.defaultHubClassName();
-    INaksha hub = null;
+    final INaksha hub;
     try {
       final Class<?> theClass = Class.forName(hubClassName);
       if (INaksha.class.isAssignableFrom(theClass)) {
-        final Constructor<?> constructor = theClass.getConstructor(String.class, NakshaHubConfig.class, String.class);
-        hub = (INaksha) constructor.newInstance(adminPgMasterUrl, config, configId);
+        final Constructor<?> constructor = theClass.getConstructor(NakshaStorage.class, NakshaHubConfig.class, String.class);
+        hub = (INaksha) constructor.newInstance(adminStorage, config, configId);
       } else {
         throw unchecked(new Exception("Class '" + hubClassName + "' not INaksha compliant"));
       }

@@ -23,7 +23,6 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_MAP_ID;
-import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_STORAGE_ID;
 import static naksha.base.Platform.apply;
 import static naksha.model.Action.CREATE;
 import static naksha.model.NakshaContext.currentContext;
@@ -113,13 +112,12 @@ public class NakshaHub implements INaksha {
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public NakshaHub(
-      final @NotNull String adminPgMasterUrl,
+      final @NotNull NakshaStorage adminStorage,
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId) {
       this(
           DEFAULT_HUB_ADMIN_MAP_ID,
-          DEFAULT_HUB_ADMIN_STORAGE_ID,
-          adminPgMasterUrl,
+          adminStorage,
           customCfg,
           configId
       );
@@ -134,8 +132,7 @@ public class NakshaHub implements INaksha {
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
   public NakshaHub(
       final @NotNull String adminMapId,
-      final @NotNull String adminStorageId,
-      final @NotNull String adminPgMasterUrl,
+      final @NotNull NakshaStorage adminStorage,
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId) {
     this.adminMapId = adminMapId;
@@ -143,15 +140,12 @@ public class NakshaHub implements INaksha {
     logger.info("NakshaHub initialization started.");
 //    // TODO force create and update?
 //    // TODO CASL-657: support clustering
-    final NakshaStorage storageConfig = apply(new PgConfig(adminStorageId), (self) -> {
-      self.withMasterUri(adminPgMasterUrl);
-      self.setCreate(true);
-      self.setUpgrade(true);
-    });
+    adminStorage.setCreate(true);
+    adminStorage.setUpgrade(true);
 
     //    this.psqlStorage = new PsqlStorage(PsqlStorage.ADMIN_STORAGE_ID, appName, storageUrl);
     logger.info("Initializing Admin storage (if not already).");
-    this.psqlStorage = Naksha.useStorage(storageConfig);
+    this.psqlStorage = Naksha.useStorage(adminStorage);
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config

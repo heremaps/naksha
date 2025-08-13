@@ -3,15 +3,7 @@
   "type": "Storage",
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose - by design shared by other tests",
-  "className": "naksha.psql.PsqlStorage",
-  "master": {
-    "host": "${dataDb.host}",
-    "database": "${dataDb.db}",
-    "port": ${dataDb.port},
-    "user": "${dataDb.user}",
-    "password": "${dataDb.password}",
-    "readOnly": false
-  },
+  "className": "naksha.psql.PsqlTestStorage",
   "properties": {
     "schema": "${dataDb.schema}"
   }

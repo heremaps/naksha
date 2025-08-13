@@ -50,6 +50,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import naksha.model.NakshaVersion;
+import naksha.model.objects.NakshaStorage;
+import naksha.psql.PgConfig;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -143,14 +145,14 @@ public final class NakshaApp extends Thread {
         }
         log.info("Starting with config `{}` and custom database URL...", cfgId);
       }
-      default -> {
-        throw new IllegalArgumentException("Missing/Invalid argument. Check the usage.");
-      }
+      default -> throw new IllegalArgumentException("Missing/Invalid argument. Check the usage.");
     }
 
     // Potentially we could override the app-name:
     // NakshaHubConfig.APP_NAME = ?
-    return new NakshaApp(NakshaHubConfig.defaultAppName(), url, cfgId, null);
+    final var adminStorage = new PgConfig(cfgId);
+    adminStorage.withMasterUri(url);
+    return new NakshaApp(NakshaHubConfig.defaultAppName(), adminStorage, cfgId, null);
   }
 
   /**
@@ -172,17 +174,17 @@ public final class NakshaApp extends Thread {
    * Create a new Naksha-Hub instance, connect to the supplied database, initialize it and read the configuration from it, then bootstrap
    * the service.
    *
-   * @param appName    The name of the app
-   * @param storageUrl The PostgresQL storage url of the admin-db to connect to.
-   * @param configId   The identifier of the configuration to read.
-   * @param instanceId The (optional) instance identifier; if {@code null}, then a new unique random one created, or derived from the
-   *                   environment.
+   * @param appName       The name of the app
+   * @param adminStorage  The admin-db to connect to.
+   * @param configId      The identifier of the configuration to read.
+   * @param instanceId    The (optional) instance identifier; if {@code null}, then a new unique random one created, or derived from the
+   *                      environment.
    * @throws SQLException If any error occurred while accessing the database.
    * @throws IOException  If reading the SQL extensions from the resources fail.
    */
   public NakshaApp(
       @NotNull String appName,
-      @NotNull String storageUrl,
+      @NotNull NakshaStorage adminStorage,
       @NotNull String configId,
       @Nullable String instanceId) {
     super(hubs, "NakshaApp");
@@ -202,7 +204,7 @@ public final class NakshaApp extends Thread {
     }
     // Instantiate NakshaHub instance
     // TODO: what about appName?
-    this.hub = NakshaHubFactory.getInstance(storageUrl, nakshaHubConfig, configId);
+    this.hub = NakshaHubFactory.getInstance(adminStorage, nakshaHubConfig, configId);
     nakshaHubConfig = hub.getConfig(); // use the config finally set by NakshaHub instance
     log.info("Using server config : {}", nakshaHubConfig);
 
