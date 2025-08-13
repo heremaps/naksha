@@ -7,7 +7,6 @@ import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
 import java.time.Duration
 import java.time.temporal.ChronoUnit
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.math.max
@@ -45,11 +44,17 @@ class PsqlTestStorage : PsqlStorage() {
         private const val POSTGRES_IMAGE_URI = "ghcr.io/naksha-oss/naksha-postgres:v16.2-r4"
         private val dockerContainerInfo = ConcurrentHashMap<String, PsqlTestDockerContainerInfo>()
 
+        private fun portById(id: String): Int {
+            val idHashBytes = md5(id)
+            val idAsInt = Platform.newDataView(idHashBytes).getInt32(0)
+            return min(65535, max(1000, idAsInt and 65535))
+        }
+
         /**
          * Starts a local PostgresQL docker container.
          * @param id The docker container id.
          */
-        internal fun startDocker(id: String): PgInstanceConfig {
+        internal fun startDocker(id: String, port: Int?): PgInstanceConfig {
             lock.lock()
             try {
                 // If there is container running, use it.
@@ -61,8 +66,7 @@ class PsqlTestStorage : PsqlStorage() {
                 val user = PgInstanceConfig.DEFAULT_USER
                 val password = PgInstanceConfig.DEFAULT_PASSWORD
                 val container = GenericContainer(POSTGRES_IMAGE_URI)
-                val idHashBytes = md5(id)
-                val mappedPort = min(65535, max(2000, (Platform.newDataView(idHashBytes).getInt16(0).toInt())))
+                val mappedPort = port ?: portById(id)
                 container.portBindings = listOf("$mappedPort:5432") // host : container
                 container.addEnv("PGPASSWORD", password)
                 container.setWaitStrategy(
@@ -120,7 +124,10 @@ class PsqlTestStorage : PsqlStorage() {
             }
             if (uri != null && uri.isNotEmpty()) master = PgInstanceConfig.fromUri(uri)
             // - otherwise start a docker container
-            if (master == null) master = startDocker(id)
+            if (master == null) {
+                val port = config.getRaw("port")
+                master = startDocker(id, port as Int?)
+            }
             config.master = master
         }
         config.create = true

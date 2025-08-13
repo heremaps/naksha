@@ -93,6 +93,31 @@ val minAdminVersion = NakshaVersion.of("3.0.0-beta.24")
 val adminVersion = NakshaVersion.of("3.0.0-beta.24")
 
 /**
+ * The class-name of the PSQL storage.
+ * @since 3.0
+ */
+const val CLASS_NAME = "naksha.psql.PsqlStorage"
+
+/**
+ * The class-name of the PSQL storage that starts a docker container. Multiple containers can be run using different identifiers. This does not require any configuration next to `id` and `className`, like:
+ * ```kotlin
+ * Platform.fromJson("""{
+ *     "id": "local_psql_test_storage",
+ *     "className": "naksha.psql.PsqlTestStorage"
+ * }""", NakshaStorage.TYPE);
+ * ```
+ * If you want to assign a specific port, add it into the root:
+ * ```kotlin
+ * Platform.fromJson("""{
+ *     "id": "local_psql_test_storage",
+ *     "className": "naksha.psql.PsqlTestStorage",
+ *     "port": 15432
+ * }""", NakshaStorage.TYPE);
+ * ```
+ */
+const val TEST_CLASS_NAME = "naksha.psql.PsqlTestStorage"
+
+/**
  * `$`: The separation string used to flag internal tables.
  */
 internal const val PG_S = "\$"
