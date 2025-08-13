@@ -74,7 +74,7 @@ class PatchFeatureTest extends ApiTest {
                 .hasJsonBody(expectedBodyPart, "Patch Feature error response body doesn't match");
     }
 
-    // TODO: CASL-1156
+    // TODO: CASL-1166
     //@Test
     void testPatchOneFeatureByIdWrongUuid() throws Exception {
         // Test API : PATCH /hub/spaces/{spaceId}/features/{featureId}
