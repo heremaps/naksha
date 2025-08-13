@@ -22,10 +22,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+
+import static naksha.base.Platform.forClass;
 
 public class TestFileLoader {
 
@@ -46,7 +47,7 @@ public class TestFileLoader {
   public static <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
     T obj = null;
     try {
-      obj = JvmBoxingUtil.box(Platform.fromJson(jsonStr, FromJsonOptions.DEFAULT), type);
+      obj = Platform.fromJson(jsonStr, forClass(type));
     } catch (Exception ex) {
       Assertions.fail("Unable tor parse jsonStr " + jsonStr, ex);
       return null;

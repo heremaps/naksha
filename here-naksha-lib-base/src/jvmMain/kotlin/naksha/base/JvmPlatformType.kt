@@ -161,18 +161,23 @@ class JvmPlatformType<T : Any> internal constructor(
         lock.acquire().use {
             // If we're the first entering the initialization phase, do it.
             if (initCache.putIfAbsent(this, true) == null) {
-                // This code is required, because in Java 23 they removed unsafe.ensureClassInitialized, but
-                // the replacement method does not exist before Java 15, this is such a nonsense!
-                val _lookupInstance = lookupInstance
-                val _ensureInitialized = ensureInitialized
-                if (_ensureInitialized != null && _lookupInstance != null) {
-                    _ensureInitialized.invoke(_lookupInstance, nativeClass)
-                    // == MethodHandles.lookup().ensureInitialized(nativeType);
-                } else {
-                    val _ensureClassInitialized = ensureClassInitialized
-                    require(_ensureClassInitialized != null) { "Failed to use unsafe.ensureClassInitialized" }
-                    _ensureClassInitialized.invoke(unsafe, nativeClass)
-                    // == unsafe.ensureClassInitialized(nativeType)
+                // Avoid known initialization issue with Object, primitives and arrays, we anyway do not need to initialize them!
+                if (jvmClass !== Object::class.java && !jvmClass.isPrimitive && !jvmClass.isArray) try {
+                    // This code is required, because in Java 23 they removed unsafe.ensureClassInitialized, but
+                    // the replacement method does not exist before Java 15, this is such a nonsense!
+                    val _lookupInstance = lookupInstance
+                    val _ensureInitialized = ensureInitialized
+                    if (_ensureInitialized != null && _lookupInstance != null) {
+                        _ensureInitialized.invoke(_lookupInstance, nativeClass)
+                        // == MethodHandles.lookup().ensureInitialized(nativeType);
+                    } else {
+                        val _ensureClassInitialized = ensureClassInitialized
+                        require(_ensureClassInitialized != null) { "Failed to use unsafe.ensureClassInitialized" }
+                        _ensureClassInitialized.invoke(unsafe, nativeClass)
+                        // == unsafe.ensureClassInitialized(nativeType)
+                    }
+                } catch (t: Throwable) {
+                    // We ignore errors in initialization, it mainly happens for native classes.
                 }
             }
         }

@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="jvmTests in 'naksha.here-naksha-lib-psql.commonTest'" type="GradleRunConfiguration" factoryName="Gradle">
+  <configuration default="false" name="jvmTests in 'naksha.here-naksha-lib-psql'" type="GradleRunConfiguration" factoryName="Gradle">
     <ExternalSystemSettings>
       <option name="env">
         <map>

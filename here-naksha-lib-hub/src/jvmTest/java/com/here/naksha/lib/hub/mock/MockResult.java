@@ -26,10 +26,6 @@ import org.jetbrains.annotations.NotNull;
 
 public class MockResult<T extends NakshaFeature> extends SuccessResponse {
 
-  public void setFeatures(@NotNull List<T> features) {
-    setFeatures(NakshaFeatureList.fromList(features));
-  }
-
   public static <T extends NakshaFeature> MockResult<T> mockResultWithFeature(@NotNull T feature){
     return mockResultWithFeatures(List.of(feature));
   }

@@ -25,7 +25,8 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
-import naksha.geo.ProxyGeoUtil;
+
+import naksha.geo.GeoUtil;
 import naksha.geo.SpGeometry;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
@@ -207,8 +208,8 @@ public class NHAdminReaderMock implements IReadSession {
       return nakshaFeature -> {
         SpGeometry featureGeometry = nakshaFeature.getGeometry();
         if (featureGeometry != null) {
-          return ProxyGeoUtil.toJtsGeometry(featureGeometry)
-              .intersects(ProxyGeoUtil.toJtsGeometry(spIntersects.getGeometry()));
+          return GeoUtil.toJtsGeometry(featureGeometry)
+              .intersects(GeoUtil.toJtsGeometry(spIntersects.getGeometry()));
         }
         return false;
       };

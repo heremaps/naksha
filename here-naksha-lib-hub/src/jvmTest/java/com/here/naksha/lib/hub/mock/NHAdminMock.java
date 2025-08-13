@@ -22,6 +22,7 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_C
 import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_MAP_ID;
+import static naksha.base.Platform.forClass;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 
 import com.here.naksha.lib.hub.NakshaHubConfig;
@@ -30,15 +31,12 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import kotlin.reflect.KClass;
-import naksha.base.Int64;
-import naksha.base.Platform;
-import naksha.base.PlatformLock;
+import naksha.base.*;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
-import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -56,8 +54,8 @@ public class NHAdminMock extends AbstractStorage<Config> {
   protected static @NotNull NakshaHubConfig nakshaHubConfig;
 
   @Override
-  public @NotNull KClass<Config> getConfigType() {
-    return Platform.klassFor(Config.class);
+  public @NotNull PlatformType<Config> getConfigType() {
+    return Config.TYPE;
   }
 
   @Override
@@ -76,7 +74,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
   }
 
   public static class Config extends NakshaStorage {
-
+    public static final PlatformType<Config> TYPE = forClass(Config.class);
   }
 
   public NHAdminMock() {
