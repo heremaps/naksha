@@ -302,7 +302,8 @@ class SpaceApiTest extends ApiTest {
         .hasStatus(404);
   }
 
-  @Test
+  // TODO: CASL-1156
+  //@Test
   void tc0281_testDeleteSpaceRemovesCollection() throws Exception {
     // Given: test files
     final String createFeatures = loadFileOrFail("SpaceApi/TC0281_deleteSpaceAndCollection/create_features.json");

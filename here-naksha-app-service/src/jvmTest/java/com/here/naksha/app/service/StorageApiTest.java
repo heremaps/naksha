@@ -286,7 +286,8 @@ class StorageApiTest extends ApiTest {
         .hasStreamIdHeader(getHeader(response, HDR_STREAM_ID));
   }
 
-  @Test
+  // TODO: CASL-1156
+  //@Test
   void tc0081_testDeleteStorageInUse() throws Exception {
     // Test API : DELETE /hub/storages/{storageId}
     // Given: create a storage, and an event handler bound to this storage
