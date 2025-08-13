@@ -15,9 +15,7 @@ import naksha.model.Action;
 import naksha.model.Naksha;
 import naksha.model.SessionOptions;
 import naksha.model.Tuple;
-import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.StoreMode;
+import naksha.model.objects.*;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.MethodOrderer;
@@ -94,7 +92,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     Response response = writeSession.execute(readRequest);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    List<NakshaFeature> features = successResponse.getFeatures();
+    List<NakshaFeature> features = successResponse.getFeatures(NakshaFeatureList.TYPE);
 
     assertEquals(1, features.size());
     PointCoord coordinates = (PointCoord) features.get(0).getGeometry().getCoordinates();
@@ -109,7 +107,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     });
     SuccessResponse response1 = (SuccessResponse) writeSession.execute(writeRequest);
     assertNotNull(response1.getFeatureTupleList().get(0));
-    NakshaFeature feature = response1.getFeatures().get(0);
+    NakshaFeature feature = response1.getFeatures(NakshaFeatureList.TYPE).get(0);
     assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
     assertTrue(feature.getProperties().containsKey("testProperty"));
     assertEquals("test", feature.getProperties().get("testProperty").toString());
@@ -271,7 +269,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     Response response = view.newReadSession(null).execute(request);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    return successResponse.getFeatures();
+    return successResponse.getFeatures(NakshaFeatureList.TYPE);
   }
 
 }

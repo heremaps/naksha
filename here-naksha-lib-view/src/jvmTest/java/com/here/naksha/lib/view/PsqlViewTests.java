@@ -80,7 +80,7 @@ class PsqlViewTests extends PsqlTests {
     request.add(new Write().createCollection(COLLECTION_1_FEATURE));
     request.add(new Write().createCollection(COLLECTION_2_FEATURE));
     SuccessResponse response = executeWrite(request);
-    assertNotNull(response.getFeatures());
+    assertNotNull(response.getFeatures(NakshaFeatureList.TYPE));
   }
 
   @Test
@@ -267,7 +267,7 @@ class PsqlViewTests extends PsqlTests {
   private @NotNull NakshaFeatureList queryView(View view, ReadFeatures request) {
     try (var session = view.newReadSession(null)) {
       final @NotNull Response response = session.execute(request);
-      return assertSuccess(response).getFeatures();
+      return assertSuccess(response).getFeatures(NakshaFeatureList.TYPE);
     }
   }
 }

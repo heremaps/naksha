@@ -24,6 +24,7 @@ import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.NakshaMap;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
@@ -34,7 +35,7 @@ import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static naksha.base.Platform.javaProxy;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -94,9 +95,10 @@ abstract class PsqlTests {
   static void beforeTest() {
     nakshaContext = NakshaContext.currentContext().withAppId(TEST_APP_ID).withAuthor(TEST_AUTHOR).withSu(true);
     storage = Naksha.useStorage(
-      NakshaStorage.fromJSON(
-        "{\"id\":\"local_psql_test_storage\",\"className\":\"naksha.psql.PsqlTestStorage\"}"
-      )
+      requireNonNull(Platform.fromJson(
+        "{\"id\":\"local_psql_test_storage\",\"className\":\"naksha.psql.PsqlTestStorage\"}",
+        NakshaStorage.TYPE
+      ))
     );
     assertNotNull(storage);
 
@@ -105,9 +107,9 @@ abstract class PsqlTests {
 
     // Create the map.
     SuccessResponse response = executeWrite(new WriteRequest().add(new Write().createMap(new NakshaMap(TEST_MAP_ID))));
-    assertEquals(1, response.getFeatures().size());
-    NakshaFeature raw = response.getFeatures().get(0);
+    assertEquals(1, response.getFeatures(NakshaFeatureList.TYPE).size());
+    NakshaFeature raw = response.getFeatures(NakshaFeatureList.TYPE).get(0);
     assertNotNull(raw);
-    map = javaProxy(raw, NakshaMap.class);
+    map = NakshaMap.TYPE.proxy(raw);
   }
 }

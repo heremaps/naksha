@@ -58,6 +58,7 @@ import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaObjectList;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.RequestQuery;
@@ -142,7 +143,7 @@ public class ViewTest {
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
+    assertEquals(feature.getId(), successResponse.getFeatures(NakshaObjectList.TYPE).get(0).getId());
     assertEquals(Action.CREATE, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
@@ -216,7 +217,7 @@ public class ViewTest {
     // when only by id
     ReadFeatures request1 = RequestHelper.readFeaturesByIdsRequest(TEST_MAP_ID, TOPO, List.of("1"));
     SuccessResponse response = (SuccessResponse) view.newReadSession(sessionOptions).execute(request1);
-    assertNotNull(response.getFeatures());
+    assertNotNull(response.getFeatures(NakshaObjectList.TYPE));
     // then
     verify(readSession, times(1)).execute(any());
 
@@ -229,7 +230,7 @@ public class ViewTest {
     requestQuery.setProperties(propQuery);
     request2.setQuery(requestQuery);
     SuccessResponse response2 = (SuccessResponse) view.newReadSession(sessionOptions).execute(request2);
-    assertNotNull(response2.getFeatures());
+    assertNotNull(response2.getFeatures(NakshaObjectList.TYPE));
     verify(readSession, times(2)).execute(any());
   }
 
