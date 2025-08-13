@@ -2,13 +2,13 @@ package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.transformOriginalRequest;
+import static naksha.base.Platform.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Random;
-import naksha.base.JvmInt64;
 import naksha.base.StringList;
 import naksha.model.Guid;
 import naksha.model.GuidList;
@@ -53,7 +53,7 @@ class ActivityLogRequestTranslationUtilTest {
   @Test
   void shouldTranslateMultipleGuidsPassedAsFeatureIds() {
     // Given: multiple GUIDs passed in ReadFeatures
-    GuidList guids = GuidList.of(
+    final GuidList guids = new GuidList(
         guid("f1", randomVersion()),
         guid("f2", randomVersion()),
         guid("f3", randomVersion())
@@ -186,7 +186,7 @@ class ActivityLogRequestTranslationUtilTest {
 
   private Guid guid(String featureId, Version version) {
     return new Guid(featureId, new TupleNumber(
-        new JvmInt64(0), 0, 0, new JvmInt64(0), version, 0
+        toInt64(0), 0, 0, toInt64(0), version, 0
     ));
   }
 }

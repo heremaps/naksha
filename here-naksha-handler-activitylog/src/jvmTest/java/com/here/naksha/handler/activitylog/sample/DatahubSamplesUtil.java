@@ -1,7 +1,5 @@
 package com.here.naksha.handler.activitylog.sample;
 
-import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
-
 import com.here.naksha.handler.activitylog.ActivityLogComparator;
 import com.here.naksha.handler.activitylog.NakshaActivityLog;
 import com.here.naksha.handler.activitylog.Original;
@@ -11,6 +9,9 @@ import java.util.List;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
+
+import static naksha.mom.v2.MomProperties.XYZ_ACTIVITY_LOG_NS;
 
 public class DatahubSamplesUtil {
 
@@ -71,7 +72,7 @@ public class DatahubSamplesUtil {
 
   private static List<NakshaFeature> featuresFromCollectionJson(String featuresCollectionJson) {
     XyzFeatureCollection collection = JsonSerializable.deserialize(featuresCollectionJson, XyzFeatureCollection.class);
-    return collection.getFeatures();
+    return collection != null ? collection.getFeatures(NakshaFeatureList.TYPE) : null;
   }
 
   public record DatahubSample(List<NakshaFeature> historyFeatures, List<NakshaFeature> activityFeatures) {

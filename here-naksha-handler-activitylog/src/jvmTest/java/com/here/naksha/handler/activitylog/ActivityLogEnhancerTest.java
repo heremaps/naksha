@@ -7,15 +7,17 @@ import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.stream.Stream;
 import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.model.objects.NakshaFeature;
+import org.jetbrains.annotations.NotNull;
 import org.json.JSONException;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.skyscreamer.jsonassert.JSONCompareMode;
+
+import static java.util.Objects.requireNonNull;
 
 class ActivityLogEnhancerTest {
 
@@ -60,14 +62,12 @@ class ActivityLogEnhancerTest {
 
   private static NakshaFeature featureFromFile(String sampleDir, String fileName) {
     String fileContent = FileUtil.loadFileOrFail(sampleDir, fileName);
-    return JvmBoxingUtil.box(
-            Platform.fromJson(fileContent, FromJsonOptions.DEFAULT),
-            NakshaFeature.class
-    );
+    return Platform.fromJson(requireNonNull(fileContent), NakshaFeature.TYPE);
   }
 
-  private static Stream<Path> sampleDirs() {
-    Path samplesRoot = Paths.get(SAMPLES_DIR);
-    return Arrays.stream(samplesRoot.toFile().listFiles(File::isDirectory)).map(File::toPath);
+  private static @NotNull Stream<@NotNull Path> sampleDirs() {
+    final var samplesRoot = requireNonNull(Paths.get(SAMPLES_DIR));
+    final var fileArray = requireNonNull(samplesRoot.toFile().listFiles(File::isDirectory));
+    return Arrays.stream(fileArray).map(File::toPath);
   }
 }
