@@ -1,7 +1,6 @@
 package naksha.psql
 
 import kotlinx.coroutines.runBlocking
-import naksha.base.JvmMap
 import naksha.base.Platform
 import naksha.base.PlatformUtil
 import naksha.model.Naksha.Naksha_C.featureNumber
