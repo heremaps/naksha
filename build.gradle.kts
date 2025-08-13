@@ -289,3 +289,4 @@ fun Task.publishToCentral() {
         }
     }
 }
+tasks.register("publishToCentral") { publishToCentral() }
