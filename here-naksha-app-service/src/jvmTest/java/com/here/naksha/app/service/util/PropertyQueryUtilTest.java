@@ -2,6 +2,7 @@ package com.here.naksha.app.service.util;
 
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.test.common.assertions.PropertyQueryAssertions.assertThatPropertyQuery;
+import static naksha.base.Platform.toInt64;
 import static naksha.model.request.RequestQuery.TAGS_PROP_PATH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;

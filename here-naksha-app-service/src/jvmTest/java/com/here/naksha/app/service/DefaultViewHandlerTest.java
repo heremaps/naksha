@@ -30,11 +30,6 @@ public class DefaultViewHandlerTest extends ApiTest {
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
-        //create storages
-        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_sfw.json");
-        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_dlb.json");
-        createStorage(nakshaClient, "DefaultViewHandler/setup/create_storage_mod_delta.json");
-
         //create handlers
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_sfw.json");
         createHandler(nakshaClient, "DefaultViewHandler/setup/create_handler_mod_dlb.json");

@@ -51,6 +51,7 @@ open class GeoCollection() : AnyTypedObject() {
      * @since 3.0
      * @see getFeatures
      * @see setFeatures
+     * @see removeFeatures
      * @see clearFeatures
      */
     open fun <F : GeoFeature, LIST : ListProxy<F>> getFeatures(type: PlatformType<LIST>): LIST {
@@ -67,10 +68,27 @@ open class GeoCollection() : AnyTypedObject() {
      * @since 3.0
      * @see getFeatures
      * @see setFeatures
+     * @see removeFeatures
      * @see clearFeatures
      */
     open fun <F : GeoFeature, LIST : List<F?>> setFeatures(list: LIST) {
-        set(FEATURES, ListProxy.toNullable(GeoFeatureList.TYPE, list))
+        set(FEATURES, ListProxy.to(GeoFeatureList.TYPE, list))
+    }
+
+    /**
+     * Sets the features of the collection.
+     * @param type The type of the feature list to return.
+     * @return the previously set features cast to the given type or `null`, if no features where set.
+     * @since 3.0
+     * @see getFeatures
+     * @see setFeatures
+     * @see removeFeatures
+     * @see clearFeatures
+     */
+    open fun <F : GeoFeature, LIST : ListProxy<F>> removeFeatures(type: PlatformType<LIST>): LIST? {
+        val old = getFeatures(type)
+        removeRaw(FEATURES)
+        return old
     }
 
     /**
@@ -79,6 +97,7 @@ open class GeoCollection() : AnyTypedObject() {
      * @since 3.0
      * @see getFeatures
      * @see setFeatures
+     * @see removeFeatures
      * @see clearFeatures
      */
     open fun clearFeatures() {

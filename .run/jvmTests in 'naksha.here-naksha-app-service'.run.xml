@@ -3,8 +3,8 @@
     <ExternalSystemSettings>
       <option name="env">
         <map>
-          <entry key="naksha_admin_db" value="jdbc:postgresql://localhost:15432/postgres?user=postgres&amp;password=password" />
-          <entry key="test_data_db" value="jdbc:postgresql://localhost:25432/postgres?user=postgres&amp;password=password" />
+          <entry key="xnaksha_admin_db" value="jdbc:postgresql://localhost:15432/postgres?user=postgres&amp;password=password" />
+          <entry key="xtest_data_db" value="jdbc:postgresql://localhost:25432/postgres?user=postgres&amp;password=password" />
         </map>
       </option>
       <option name="executionName" />

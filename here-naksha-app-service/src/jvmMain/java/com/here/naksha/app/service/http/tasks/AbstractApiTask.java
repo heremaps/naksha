@@ -239,15 +239,12 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         return verticle.sendErrorResponse(
             routingContext, NakshaError.EXCEPTION, "Unexpected empty response");
       }
-      return verticle.sendXyzResponse(
-          routingContext,
-          HttpResponseType.FEATURE_COLLECTION,
-          apply(new XyzFeatureCollection(), (self) -> {
-              self.addInsertedFeatures(insertedFeatures);
-              self.addUpdatedFeatures(updatedFeatures);
-              self.addDeletedFeatures(deletedFeatures);
-              self.setViolations(violations);
-          }));
+      final var xyzResponse = new XyzFeatureCollection();
+      xyzResponse.addInsertedFeatures(insertedFeatures);
+      xyzResponse.addUpdatedFeatures(updatedFeatures);
+      xyzResponse.addDeletedFeatures(deletedFeatures);
+      xyzResponse.setViolations(violations);
+      return verticle.sendXyzResponse(routingContext, HttpResponseType.FEATURE_COLLECTION, xyzResponse);
     } else {
       return verticle.sendErrorResponse(
           routingContext,
@@ -265,8 +262,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     return naksha().getSpaceStorage().useWriteSession(SessionOptions.from(context(), true), writer -> writer.execute(writeRequest));
   }
 
-  XyzFeatureCollection emptyFeatureCollection() {
-    return apply(new XyzFeatureCollection(), (self) -> self.setFeatures(emptyList()) );
+  @NotNull XyzFeatureCollection emptyFeatureCollection() {
+    return new XyzFeatureCollection();
   }
 
   protected @Nullable XyzResponse validateErrorResultEmptyCollection(final @Nullable Response response) {

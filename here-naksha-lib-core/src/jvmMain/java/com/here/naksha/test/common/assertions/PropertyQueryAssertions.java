@@ -18,6 +18,7 @@
  */
 package com.here.naksha.test.common.assertions;
 
+import static naksha.base.Platform.toInt64;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
@@ -80,7 +81,11 @@ public class PropertyQueryAssertions {
 
   public PropertyQueryAssertions hasValue(Number value) {
     assertInstanceOf(PQuery.class, subject);
-    assertEquals(value, ((PQuery) subject).getValue());
+    if (value instanceof Long) {
+      assertEquals(toInt64(value), ((PQuery) subject).getValue());
+    } else {
+      assertEquals(value, ((PQuery) subject).getValue());
+    }
     return this;
   }
 

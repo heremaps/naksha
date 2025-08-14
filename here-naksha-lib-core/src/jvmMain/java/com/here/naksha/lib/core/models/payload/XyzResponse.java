@@ -18,19 +18,13 @@
  */
 package com.here.naksha.lib.core.models.payload;
 
-import naksha.base.ListProxy;
-import naksha.base.Platform;
 import naksha.base.PlatformType;
 import naksha.geo.GeoCollection;
-import naksha.geo.GeoFeature;
 import naksha.model.NakshaContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-
 import static naksha.base.NakshaBaseKt.String_TYPE;
-import static naksha.base.Platform.apply;
 import static naksha.base.Platform.forClass;
 
 /*

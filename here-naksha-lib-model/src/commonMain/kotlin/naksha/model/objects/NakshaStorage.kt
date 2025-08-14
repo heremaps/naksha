@@ -14,8 +14,6 @@ import kotlin.jvm.JvmField
  *
  * This class contains the minimal configuration needed for all storages, actual implementations may need more configuration properties.
  *
- * ### Note
- * There is no default-map configuration available, it's expected that clients provide the `mapId` explicitly.
  * @since 3.0
  * @see NakshaObject
  * @see NakshaStorage
