@@ -3,12 +3,13 @@ package com.here.naksha.cli.storages;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.lib.core.models.geojson.HQuad;
 import naksha.base.StringList;
-(??)import naksha.geo.SpBoundingBox;
+import naksha.geo.BBox;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaObject;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
@@ -54,7 +55,7 @@ class GeneratingStorageTest {
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // And: template
-        NakshaFeature featureTemplate = loadFeatureTemplate(featureTemplateFile);
+      NakshaObject featureTemplate = loadFeatureTemplate(featureTemplateFile);
 
         // When: read features
         Response response = storage.useReadSession(sessionOptions, reader ->
@@ -65,7 +66,7 @@ class GeneratingStorageTest {
         SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> generatedFeatures = assertFeaturesReceived(successResponse, count);
+        List<NakshaObject> generatedFeatures = assertFeaturesReceived(successResponse, count);
 
         // And: features properly generated
         assertFeaturesProperlyGenerated(generatedFeatures, tileIds, featureTemplate, defaultIdsPrefix);
@@ -89,7 +90,7 @@ class GeneratingStorageTest {
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // And: empty template because it is not provided
-        NakshaFeature featureTemplate = new NakshaFeature();
+        NakshaObject featureTemplate = new NakshaObject();
 
         // When: read features
         Response response = storage.useReadSession(sessionOptions, reader ->
@@ -100,7 +101,7 @@ class GeneratingStorageTest {
         SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> generatedFeatures = assertFeaturesReceived(successResponse, count);
+        List<NakshaObject> generatedFeatures = assertFeaturesReceived(successResponse, count);
 
         // And: features properly generated
         assertFeaturesProperlyGenerated(generatedFeatures, tileIds, featureTemplate, idsPrefix);
@@ -119,7 +120,7 @@ class GeneratingStorageTest {
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // And: empty template because it is not provided
-        NakshaFeature featureTemplate = new NakshaFeature();
+      NakshaObject featureTemplate = new NakshaObject();
 
         // When: read features
         Response response = storage.useReadSession(sessionOptions, reader ->
@@ -130,7 +131,7 @@ class GeneratingStorageTest {
         SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> generatedFeatures = assertFeaturesReceived(successResponse, countOfFeatures);
+        List<NakshaObject> generatedFeatures = assertFeaturesReceived(successResponse, countOfFeatures);
 
         // And: features properly generated
         assertFeaturesProperlyGenerated(generatedFeatures, tileIds, featureTemplate, defaultIdsPrefix);
@@ -149,7 +150,7 @@ class GeneratingStorageTest {
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
         // And: empty template because it is not provided
-        NakshaFeature featureTemplate = new NakshaFeature();
+      NakshaObject featureTemplate = new NakshaObject();
 
         // And:
         List<String> tileIds = getExpectedTileIdsFromSource(tileIdsFile);
@@ -163,7 +164,7 @@ class GeneratingStorageTest {
         SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
 
         // And: features received
-        List<NakshaFeature> generatedFeatures = assertFeaturesReceived(successResponse, countOfFeatures);
+        List<NakshaObject> generatedFeatures = assertFeaturesReceived(successResponse, countOfFeatures);
 
         // And: features properly generated
         assertFeaturesProperlyGenerated(generatedFeatures, tileIds, featureTemplate, defaultIdsPrefix);
@@ -362,10 +363,10 @@ class GeneratingStorageTest {
         return config;
     }
 
-    private void assertFeatureUseTemplate(NakshaFeature generatedFeature, NakshaFeature featureTemplate, String message) {
+    private void assertFeatureUseTemplate(NakshaObject generatedFeature, NakshaObject featureTemplate, String message) {
         assertPropertiesDeepEquals(featureTemplate, generatedFeature, message);
         assertEquals(featureTemplate.getType(), generatedFeature.getType(), message);
-        assertEquals(featureTemplate.getMomType(), generatedFeature.getMomType(), message);
+        //assertEquals(featureTemplate.getMomType(), generatedFeature.getMomType(), message);
         assertEquals(featureTemplate.getTitle(), generatedFeature.getTitle(), message);
         assertEquals(featureTemplate.getDescription(), generatedFeature.getDescription(), message);
     }
@@ -386,9 +387,9 @@ class GeneratingStorageTest {
         return "";
     }
 
-    private NakshaFeature loadFeatureTemplate(String featureTemplateFilePath) {
+    private NakshaObject loadFeatureTemplate(String featureTemplateFilePath) {
         Path path = Path.of(featureTemplateFilePath);
-        return assertDoesNotThrow(() -> jsonFileParser.parse(path, NakshaFeature.class));
+        return assertDoesNotThrow(() -> jsonFileParser.parse(path, NakshaObject.class));
     }
 
     private List<String> getExpectedTileIdsFromSource(String tileIdsCsv) {
@@ -442,12 +443,12 @@ class GeneratingStorageTest {
     }
 
     private void assertFeaturesProperlyGenerated(
-            List<NakshaFeature> generatedFeatures,
+            List<NakshaObject> generatedFeatures,
             List<String> tileIds,
-            NakshaFeature featureTemplate,
+            NakshaObject featureTemplate,
             String idsPrefix
     ) {
-        for (NakshaFeature generatedFeature : generatedFeatures) {
+        for (NakshaObject generatedFeature : generatedFeatures) {
             assertIsGeneratedId(
                     generatedFeature.getId(),
                     idsPrefix,
@@ -469,8 +470,8 @@ class GeneratingStorageTest {
         }
     }
 
-    private List<NakshaFeature> assertFeaturesReceived(SuccessResponse response, int count) {
-        List<NakshaFeature> generatedFeatures = extractResponseItems(response, NakshaFeature.class);
+    private List<NakshaObject> assertFeaturesReceived(SuccessResponse response, int count) {
+        List<NakshaObject> generatedFeatures = extractResponseItems(response, NakshaObject.class);
         assertEquals(count, generatedFeatures.size());
         return generatedFeatures;
     }

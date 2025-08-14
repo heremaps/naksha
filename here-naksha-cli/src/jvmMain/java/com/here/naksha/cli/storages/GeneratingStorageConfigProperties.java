@@ -1,9 +1,7 @@
 package com.here.naksha.cli.storages;
 
-import naksha.base.JvmBoxingUtil;
 import naksha.base.ListProxy;
 import naksha.base.PlatformType;
-import naksha.base.StringList;
 import naksha.base.StringList;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
