@@ -18,18 +18,6 @@
  */
 package com.here.naksha.lib.handlers;
 
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
-import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_COLLECTION_CREATION;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_MAP_CREATION;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_STORAGE_INITIALIZATION;
-import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
-import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static naksha.base.JvmAnyObjectUtil.getProperty;
-import static naksha.base.Platform.longToInt64;
-import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
-
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
@@ -37,10 +25,6 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.function.Supplier;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.model.IStorage;
@@ -66,6 +50,23 @@ import org.apache.commons.lang3.time.StopWatch;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Supplier;
+
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_COLLECTION_CREATION;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_MAP_CREATION;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_STORAGE_INITIALIZATION;
+import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
+import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static naksha.base.JvmAnyObjectUtil.getProperty;
+import static naksha.base.Platform.longToInt64;
+import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
 
@@ -239,7 +240,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
             "Received update collection request but autoCreate is not enabled, returning success without any action");
         return new SuccessResponse();
       }
-    } else if (isPurgeCollectionRequest((WriteRequest) operationData.request)) {
+    } else if (isDeleteCollectionRequest((WriteRequest) operationData.request)) {
       if (properties.getAutoDeleteCollection()) {
         return forwardWriteRequest(
             operationData,
@@ -257,10 +258,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
-  private boolean isPurgeCollectionRequest(@NotNull WriteRequest wc) {
+  private boolean isDeleteCollectionRequest(@NotNull WriteRequest wc) {
     return isOnlyWriteCollections(wc)
            && wc.getWrites().size() == 1
-           && WriteOp.PURGE.equals(wc.getWrites().get(0).getOp());
+           && WriteOp.DELETE.equals(wc.getWrites().get(0).getOp());
   }
 
   private boolean isUpdateCollectionRequest(@NotNull WriteRequest wc) {
@@ -320,14 +321,41 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationAttempt previousAttempt,
       final @NotNull ErrorResponse previousError,
       final @NotNull StopWatch storageTimer) {
-    if (previousAttempt == FIRST_ATTEMPT && indicateStorageNotInitialized(previousError)) {
+    return switch (previousAttempt) {
+      case FIRST_ATTEMPT -> reattemptCollectionRequestForTheFirstTime(operationData, previousError, storageTimer);
+      case ATTEMPT_AFTER_STORAGE_INITIALIZATION -> reattemptCollectionRequestAfterStorageInit(operationData, previousError, storageTimer);
+      case ATTEMPT_AFTER_MAP_CREATION, ATTEMPT_AFTER_COLLECTION_CREATION -> {
+        logger.warn(
+                "No further reattempt strategy available for WriteCollections request (collectionId: {}, previous attempt: {}. Rethrowing original exception",
+                operationData.collectionId,
+                previousAttempt);
+        yield previousError;
+      }
+    };
+  }
+
+  private @NotNull Response reattemptCollectionRequestForTheFirstTime(
+          final @NotNull OperationData operationData,
+          final @NotNull ErrorResponse previousError,
+          final @NotNull StopWatch storageTimer) {
+    if (indicateStorageNotInitialized(previousError)) {
       return retryDueToUninitializedStorage(operationData, storageTimer);
+    } else if (indicatesMissingMap(previousError)) {
+      return retryDueToMissingMap(operationData, storageTimer);
+    } else {
+      return previousError;
     }
-    logger.warn(
-        "No further reattempt strategy available for WriteCollections request (collectionId: {}, previous attempt: {}. Rethrowing original exception",
-        operationData.collectionId,
-        previousAttempt);
-    return previousError;
+  }
+
+  private @NotNull Response reattemptCollectionRequestAfterStorageInit(
+          final @NotNull OperationData operationData,
+          final @NotNull ErrorResponse previousError,
+          final @NotNull StopWatch storageTimer) {
+    if (indicatesMissingMap(previousError)) {
+      return retryDueToMissingMap(operationData, storageTimer);
+    } else {
+      return previousError;
+    }
   }
 
   private @NotNull Response reattemptFeatureRequestForTheFirstTime(
@@ -463,9 +491,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           collectionFromRequest.setId(collectionId);
         });
       }
+      String finalCollectionId = isOnlyWriteCollections(wr) ? Naksha.COLLECTIONS_COL : collectionId;
       wr.getWrites().forEach(write -> {
         write.setMapId(mapId);
-        write.setCollectionId(collectionId);
+        write.setCollectionId(finalCollectionId);
       });
     }
   }

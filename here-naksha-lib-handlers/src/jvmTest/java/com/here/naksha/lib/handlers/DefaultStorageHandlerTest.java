@@ -350,6 +350,115 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertEquals(handler.properties.getCollection().getId(), submittedWrite.getCollectionId());
   }
 
+  @Test
+  void shouldReattemptWriteCollectionsAfterMissingMapByCreatingMap() {
+    // Given
+    final String mapIdFromStorageProps = "map_from_storage_props";
+    configureStorageConfig(storageConfigWithMapId(mapIdFromStorageProps));
+
+    // And: First attempt of WriteCollections -> MAP_NOT_FOUND, map creation -> success, second attempt -> success
+    NakshaError missingMapError = new NakshaError(MAP_NOT_FOUND, "Missing map");
+    when(storageWriteSession.execute(argThat(RequestTypesUtil::isOnlyWriteCollections)))
+            .thenReturn(new ErrorResponse(missingMapError))
+            .thenReturn(new SuccessResponse());
+    when(storageWriteSession.execute(argThat(matchesCreateMapRequest(mapIdFromStorageProps))))
+            .thenReturn(new SuccessResponse());
+
+    // And: We get DefaultStorageHandler without collection in handler properties but event target as space with collectionId
+    DefaultStorageHandlerProperties hp = handlerProperties("storageId");
+    hp.setCollection(null);
+    DefaultStorageHandler handler = storageHandler(hp, space("spaceId", spacePropertiesWithCollection("target_collection")));
+
+    WriteRequest updateColReq = updateCollectionRequest("target_collection");
+
+    // When
+    Response response = handler.processEvent(event(updateColReq));
+
+    // Then
+    assertInstanceOf(SuccessResponse.class, response);
+
+    // We expect: 1) original WriteCollections (fails), 2) create map (success), 3) original WriteCollections (success)
+    ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession, times(3)).execute(captor.capture());
+    List<WriteRequest> calls = captor.getAllValues();
+
+    // 1st and 3rd are WriteCollections against COLLECTIONS_COL with map from storage props
+    assertTrue(RequestTypesUtil.isOnlyWriteCollections(calls.get(0)));
+    assertTrue(RequestTypesUtil.isOnlyWriteCollections(calls.get(2)));
+    assertEquals(Naksha.COLLECTIONS_COL, calls.get(0).getWrites().get(0).getCollectionId());
+    assertEquals(mapIdFromStorageProps, calls.get(0).getWrites().get(0).getMapId());
+    assertEquals("target_collection", calls.get(0).getWrites().get(0).getFeature().getId());
+    assertEquals(Naksha.COLLECTIONS_COL, calls.get(2).getWrites().get(0).getCollectionId());
+    assertEquals(mapIdFromStorageProps, calls.get(2).getWrites().get(0).getMapId());
+    assertEquals("target_collection", calls.get(2).getWrites().get(0).getFeature().getId());
+
+    // 2nd call is map creation in admin map / maps collection
+    Write mapCreate = calls.get(1).getWrites().get(0);
+    assertEquals(WriteOp.CREATE, mapCreate.getOp());
+    assertEquals(Naksha.ADMIN_MAP, mapCreate.getMapId());
+    assertEquals(Naksha.MAPS_COL, mapCreate.getCollectionId());
+    assertEquals(mapIdFromStorageProps, mapCreate.getId());
+  }
+
+
+  @Test
+  void shouldReturnSuccessWithoutActionWhenUpdateCollectionAndAutoCreateDisabled() {
+    // Given
+    DefaultStorageHandler handler = storageHandler();
+    handler.properties.setAutoCreateCollection(false);
+
+    // When
+    Response response = handler.processEvent(event(updateCollectionRequest("no_op_update_col")));
+
+    // Then
+    assertInstanceOf(SuccessResponse.class, response);
+    // No storage write should be performed
+    verify(storageWriteSession, never()).execute(any(WriteRequest.class));
+  }
+
+  @Test
+  void shouldReturnSuccessWithoutActionWhenDeleteCollectionAndAutoDeleteDisabled() {
+    // Given
+    DefaultStorageHandler handler = storageHandler();
+    handler.properties.setAutoDeleteCollection(false);
+
+    // When
+    Response response = handler.processEvent(event(deleteCollectionRequest("no_op_delete_col")));
+
+    // Then
+    assertInstanceOf(SuccessResponse.class, response);
+    // No storage write should be performed
+    verify(storageWriteSession, never()).execute(any(WriteRequest.class));
+  }
+
+  @Test
+  void shouldApplyMapIdAndCollectionsColForWriteCollections() {
+    // Given
+    final String mapIdFromStorageProps = "schema_for_col_ops";
+    configureStorageConfig(storageConfigWithMapId(mapIdFromStorageProps));
+    when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResponse());
+
+    // And: We get DefaultStorageHandler without collection in handler properties but event target as space with collectionId
+    DefaultStorageHandlerProperties hp = handlerProperties("storageId");
+    hp.setCollection(null);
+    DefaultStorageHandler handler = storageHandler(hp, space("spaceId", spacePropertiesWithCollection("apply_col")));
+
+    // When
+    Response response = handler.processEvent(event(updateCollectionRequest("apply_col")));
+
+    // Then
+    assertInstanceOf(SuccessResponse.class, response);
+
+    ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession).execute(captor.capture());
+    Write write = captor.getValue().getWrites().get(0);
+    assertTrue(RequestTypesUtil.isOnlyWriteCollections(captor.getValue()));
+    assertEquals(Naksha.COLLECTIONS_COL, write.getCollectionId(), "WriteCollections must target naksa~collections collection");
+    assertEquals(mapIdFromStorageProps, write.getMapId(), "MapId must be taken from storage props");
+    assertEquals("apply_col", write.getFeature().getId());
+  }
+
+
   private static Write findSingleCreateCollectionWrite(List<WriteRequest> writeRequests) {
     List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.COLLECTIONS_COL);
     assertEquals(1, collectionWrites.size(), "Expected single collection write");
@@ -503,6 +612,30 @@ class DefaultStorageHandlerTest extends AbstractTest {
     properties.setAutoDeleteCollection(true);
     properties.setAutoCreateCollection(true);
     return properties;
+  }
+
+  private static WriteRequest updateCollectionRequest(String collectionId) {
+    WriteRequest wr = new WriteRequest();
+    wr.add(new Write().upsertCollection(new NakshaCollection(collectionId)));
+    return wr;
+  }
+
+  private static WriteRequest deleteCollectionRequest(String collectionId) {
+    WriteRequest wr = new WriteRequest();
+    wr.add(new Write().deleteCollection(new NakshaCollection(collectionId), false));
+    return wr;
+  }
+
+  private static ArgumentMatcher<WriteRequest> matchesCreateMapRequest(String mapId) {
+    return wr -> {
+      WriteList writes = wr.getWrites();
+      if (writes.size() != 1) return false;
+      Write w = writes.get(0);
+      return WriteOp.CREATE.equals(w.getOp())
+              && Naksha.ADMIN_MAP.equals(w.getMapId())
+              && Naksha.MAPS_COL.equals(w.getCollectionId())
+              && mapId.equals(w.getId());
+    };
   }
 
   private DefaultStorageHandler storageHandler() {

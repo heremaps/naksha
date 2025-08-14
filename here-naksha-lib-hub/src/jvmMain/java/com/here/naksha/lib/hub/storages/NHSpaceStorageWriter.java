@@ -18,19 +18,12 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
-import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
-import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
-
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.hub.EventPipelineFactory;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import naksha.base.AtomicInt;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
@@ -53,11 +46,18 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+
+import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
+import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
+
 public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWriteSession {
 
   private static final NakshaException NOT_SUPPORTED_ERROR = new NakshaException(
       new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Operation not supported by NHSpaceStorageWriter"));
-  private static final String NULL_MAP_ID_TO_BE_OVERRIDDEN = null;
 
   private static final Logger logger = LoggerFactory.getLogger(NHSpaceStorageWriter.class);
 
@@ -161,12 +161,13 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeDeleteSpace(@NotNull WriteRequest deleteSpaceEntryReq) {
     Write originalWrite = deleteSpaceEntryReq.getWrites().get(0);
     String spaceId = originalWrite.getId();
-    WriteRequest purgeCollectionReq = new WriteRequest().add(new Write().deleteCollectionById(NULL_MAP_ID_TO_BE_OVERRIDDEN, spaceId));
-    Response purgeCollectionRes = executeSingleCollectionWrite(purgeCollectionReq, spaceId);
-    if (purgeCollectionRes instanceof SuccessResponse) {
+    WriteRequest deleteCollectionReq = new WriteRequest()
+            .add(new Write().deleteCollection(new NakshaCollection(spaceId), false));
+    Response deleteCollectionRes = executeSingleCollectionWrite(deleteCollectionReq, spaceId);
+    if (deleteCollectionRes instanceof SuccessResponse) {
       return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId());
     } else {
-      return purgeCollectionRes;
+      return deleteCollectionRes;
     }
   }
 

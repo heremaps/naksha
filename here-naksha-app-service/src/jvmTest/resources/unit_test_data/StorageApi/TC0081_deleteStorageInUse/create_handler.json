@@ -7,7 +7,7 @@
   "active": true,
   "extensionId": null,
   "properties": {
-    "storageId": "${dataDb.storageId}",
+    "storageId": "storage-still-with-handlers",
     "collection": {
       "maxAge": 2
     }
