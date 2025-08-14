@@ -31,7 +31,6 @@ public final class TestContainersPsqlStoragePool {
 
     private static final class PsqlStoragePoolHolder {
         private static final List<TestContainersPsqlStorage> POOL = List.of(
-                new TestContainersPsqlStorage(),
                 new TestContainersPsqlStorage()
         );
 
