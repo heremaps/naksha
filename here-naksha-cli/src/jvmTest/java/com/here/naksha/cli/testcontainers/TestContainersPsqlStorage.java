@@ -6,10 +6,13 @@ import naksha.model.NakshaContext;
 import naksha.model.objects.NakshaStorage;
 import naksha.psql.PgInstanceConfig;
 import org.testcontainers.containers.GenericContainer;
-import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy;
+import org.testcontainers.containers.wait.strategy.Wait;
+import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+
+import static org.testcontainers.containers.wait.strategy.WaitAllStrategy.Mode.WITH_MAXIMUM_OUTER_TIMEOUT;
 
 public final class TestContainersPsqlStorage {
     private final int exposedPort = 5432;
@@ -80,10 +83,10 @@ public final class TestContainersPsqlStorage {
         postgres.addExposedPort(exposedPort);
         postgres.addEnv("PGPASSWORD", PgInstanceConfig.DEFAULT_PASSWORD);
         postgres.setWaitStrategy(
-                new LogMessageWaitStrategy()
-                        .withRegEx(".*Future log output will appear in directory.*")
-                        .withTimes(2)
-                        .withStartupTimeout(Duration.of(60, ChronoUnit.SECONDS))
+                new WaitAllStrategy(WITH_MAXIMUM_OUTER_TIMEOUT)
+                        .withStartupTimeout(Duration.of(120, ChronoUnit.SECONDS))
+                        .withStrategy(Wait.forLogMessage(".*Future log output will appear in directory.*", 2))
+                        .withStrategy(Wait.forListeningPort())
         );
     }
 }
