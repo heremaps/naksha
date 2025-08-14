@@ -11,7 +11,7 @@
   },
   "properties": {
     "@ns:com:here:xyz": {
-      "operation": "UPDATED",
+      "operation": "UPDATE",
       "action": "UPDATE",
       "tags": [
         "three",

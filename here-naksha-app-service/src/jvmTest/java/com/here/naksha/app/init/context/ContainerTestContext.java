@@ -1,12 +1,9 @@
 package com.here.naksha.app.init.context;
 
 import com.here.naksha.app.service.NakshaApp;
-import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.hub.util.ConfigUtil;
 import naksha.model.Naksha;
 import naksha.model.objects.NakshaStorage;
-import naksha.psql.PgConfig;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

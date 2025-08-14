@@ -7,7 +7,7 @@
         "@ns:com:here:xyz": {
           "uuid": "${feature_2_updated_uuid}",
           "updatedAt": "${feature_2_updated_updated_at}",
-          "operation": "UPDATED",
+          "operation": "UPDATE",
           "action": "UPDATE",
           "puuid": "${feature_2_created_uuid}"
         },
@@ -52,7 +52,7 @@
           "uuid": "${feature_2_created_uuid}",
           "nuuid": "${feature_2_updated_uuid}",
           "updatedAt": "${feature_2_created_updated_at}",
-          "operation": "CREATED",
+          "operation": "CREATE",
           "action": "CREATE"
         },
         "@ns:com:here:xyz:log": {
@@ -86,7 +86,7 @@
           "changeCount": 1,
           "appId": "naksha",
           "author": "master-test-user",
-          "operation": "CREATED",
+          "operation": "CREATE",
           "action": "CREATE"
         },
         "@ns:com:here:xyz:log": {
