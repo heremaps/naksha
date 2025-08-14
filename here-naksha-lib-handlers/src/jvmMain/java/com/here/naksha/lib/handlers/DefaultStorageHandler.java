@@ -240,7 +240,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
             "Received update collection request but autoCreate is not enabled, returning success without any action");
         return new SuccessResponse();
       }
-    } else if (isPurgeCollectionRequest((WriteRequest) operationData.request)) {
+    } else if (isDeleteCollectionRequest((WriteRequest) operationData.request)) {
       if (properties.getAutoDeleteCollection()) {
         return forwardWriteRequest(
             operationData,
@@ -258,7 +258,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
-  private boolean isPurgeCollectionRequest(@NotNull WriteRequest wc) {
+  private boolean isDeleteCollectionRequest(@NotNull WriteRequest wc) {
     return isOnlyWriteCollections(wc)
            && wc.getWrites().size() == 1
            && WriteOp.DELETE.equals(wc.getWrites().get(0).getOp());

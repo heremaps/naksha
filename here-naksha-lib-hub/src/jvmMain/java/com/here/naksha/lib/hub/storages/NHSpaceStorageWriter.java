@@ -161,13 +161,13 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeDeleteSpace(@NotNull WriteRequest deleteSpaceEntryReq) {
     Write originalWrite = deleteSpaceEntryReq.getWrites().get(0);
     String spaceId = originalWrite.getId();
-    WriteRequest purgeCollectionReq = new WriteRequest()
+    WriteRequest deleteCollectionReq = new WriteRequest()
             .add(new Write().deleteCollection(new NakshaCollection(spaceId), false));
-    Response purgeCollectionRes = executeSingleCollectionWrite(purgeCollectionReq, spaceId);
-    if (purgeCollectionRes instanceof SuccessResponse) {
+    Response deleteCollectionRes = executeSingleCollectionWrite(deleteCollectionReq, spaceId);
+    if (deleteCollectionRes instanceof SuccessResponse) {
       return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId());
     } else {
-      return purgeCollectionRes;
+      return deleteCollectionRes;
     }
   }
 
