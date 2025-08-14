@@ -35,15 +35,13 @@ public final class TestContainersPsqlStoragePool {
         );
 
         static {
-            POOL.stream()
-                    .parallel()
-                    .forEach(TestContainersPsqlStorage::start);
+            POOL.forEach(TestContainersPsqlStorage::start);
         }
 
         static {
             Runtime.getRuntime().addShutdownHook(
                     new Thread(
-                            () -> POOL.stream().parallel().forEach(TestContainersPsqlStorage::stop)
+                            () -> POOL.forEach(TestContainersPsqlStorage::stop)
                     )
             );
         }
