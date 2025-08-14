@@ -1,5 +1,7 @@
 package com.here.naksha.cli.testcontainers;
 
+import org.testcontainers.lifecycle.Startables;
+
 import java.util.List;
 
 /**
@@ -31,19 +33,12 @@ public final class TestContainersPsqlStoragePool {
 
     private static final class PsqlStoragePoolHolder {
         private static final List<TestContainersPsqlStorage> POOL = List.of(
+                new TestContainersPsqlStorage(),
                 new TestContainersPsqlStorage()
         );
 
         static {
-            POOL.forEach(TestContainersPsqlStorage::start);
-        }
-
-        static {
-            Runtime.getRuntime().addShutdownHook(
-                    new Thread(
-                            () -> POOL.forEach(TestContainersPsqlStorage::stop)
-                    )
-            );
+            Startables.deepStart(POOL).join();
         }
     }
 }

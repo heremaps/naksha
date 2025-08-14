@@ -10,10 +10,11 @@ import naksha.psql.PgInstanceConfig;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.containers.wait.strategy.WaitAllStrategy;
+import org.testcontainers.lifecycle.Startable;
 
 import static org.testcontainers.containers.wait.strategy.WaitAllStrategy.Mode.WITH_MAXIMUM_OUTER_TIMEOUT;
 
-public final class TestContainersPsqlStorage {
+public final class TestContainersPsqlStorage implements Startable {
 
   private final int exposedPort = 5432;
   private final String postgresImageUri = "ghcr.io/naksha-oss/naksha-postgres:v16.2-r5";
@@ -31,7 +32,7 @@ public final class TestContainersPsqlStorage {
   /**
    * Should be called once before any operation.
    */
-  synchronized void start() {
+  public synchronized void start() {
     if (!isStarted) {
       setUpPostgres();
       postgres.start();
@@ -44,7 +45,7 @@ public final class TestContainersPsqlStorage {
   /**
    * Should be called once after all operations.
    */
-  synchronized void stop() {
+  public synchronized void stop() {
     if (isStarted) {
       postgres.stop();
       isStarted = false;
