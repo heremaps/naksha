@@ -1,7 +1,16 @@
 {
-  "id": "test-config",
   "type": "Config",
-
+  "id": "test-config",
+  "adminStorage": {
+    "id": "naksha_admin_db",
+    "className": "naksha.psql.PsqlStorage",
+    "master": {
+      "host": "localhost",
+      "port": 5432,
+      "user": "postgres",
+      "password": "password"
+    }
+  },
   "httpPort": 8080,
   "env": "local",
   "requestBodyLimit": 25,

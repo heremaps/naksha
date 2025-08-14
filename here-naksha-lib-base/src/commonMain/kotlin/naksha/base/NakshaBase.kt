@@ -984,7 +984,7 @@ inline fun <K, reified V> atomicMapArrayAdd(map: AtomicMap<K, Array<V>>, key: K,
 }
 
 /**
- * Default implementation of [Platform.toNative].
+ * Default implementation of [Platform.toPlatform].
  */
 internal fun to_platform(value: Any?, alternative: Any? = value): Any? {
     if (value == null) return null
@@ -994,7 +994,14 @@ internal fun to_platform(value: Any?, alternative: Any? = value): Any? {
         is Long -> Int64(unboxed)
         is Float -> unboxed.toDouble()
         // Array is typed, we can't convert, the rest is cross-platform conform.
-        is Int, is Int64, Double, is String, is PlatformMap, is PlatformList, is ByteArray, is Array<*> -> unboxed
+        is Int,
+        is Int64,
+        is Double,
+        is String,
+        is PlatformMap,
+        is PlatformList,
+        is ByteArray,
+        is Array<*> -> unboxed
         is Map<*,*> -> {
             val map = Platform.newMap()
             for (e in unboxed.entries) {

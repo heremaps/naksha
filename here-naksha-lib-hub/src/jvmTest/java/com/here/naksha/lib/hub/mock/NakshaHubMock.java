@@ -75,11 +75,7 @@ public class NakshaHubMock extends AbstractTest implements INaksha {
    */
   protected final @NotNull IStorage spaceStorageInstance;
 
-  public NakshaHubMock(
-      final @NotNull String appName,
-      final @NotNull String storageConfig,
-      final @NotNull NakshaHubConfig customCfg,
-      final @Nullable String configId) {
+  public NakshaHubMock(@NotNull NakshaHubConfig hubConfig) {
     throw new UnsupportedOperationException("NakshaHubMock should not be used"); // comment to use mock in local env
     //    mockCollection = new ConcurrentHashMap<>();
     //    // create storage instances upfront

@@ -602,16 +602,6 @@ actual class Platform {
             return box(raw, type ?: Any_TYPE) as T
         }
 
-        @JvmStatic
-        actual fun fromNative(obj: Any?, importers: List<PlatformImporter>): Any? {
-            TODO("Implement me!")
-        }
-
-        @JvmStatic
-        actual fun toNative(obj: Any?, exporters: List<PlatformExporter>): Any? {
-            TODO("Implement me!")
-        }
-
         /**
          * This is stronger than [unbox], as it will convert the given value into any valid platform type.
          *

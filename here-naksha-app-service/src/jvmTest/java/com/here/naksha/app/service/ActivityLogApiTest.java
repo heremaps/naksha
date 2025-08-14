@@ -111,8 +111,7 @@ class ActivityLogApiTest extends ApiTest {
     assertThat(createResp).hasStatus(200);
 
     // And: This feature is updated
-    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson,
-        streamId);
+    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson, streamId);
     assertThat(updateResp).hasStatus(200);
     FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
 

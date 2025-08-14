@@ -21,8 +21,8 @@ public class TestContextEntrypoint {
     log.info("Loading test context, checking {} environment variable", TEST_CONTEXT_ENV);
     String contextFromEnv = System.getenv(TEST_CONTEXT_ENV);
     if (contextFromEnv == null || isBlank(contextFromEnv)) {
-      log.info("Undefined environment variable {}, using local standalone context", TEST_CONTEXT_ENV);
-      return new LocalTestContext();
+      log.info("Undefined environment variable {}, using docker context", TEST_CONTEXT_ENV);
+      return new ContainerTestContext();
     }
     switch (contextFromEnv) {
       case MOCK_CONTEXT_ENV_VAL -> {

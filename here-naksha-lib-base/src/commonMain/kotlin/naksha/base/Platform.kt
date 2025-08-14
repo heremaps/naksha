@@ -596,30 +596,6 @@ expect class Platform private constructor() {
         fun <T> fromJson(json: String, type: PlatformType<T>, options: FromJsonOptions): T?
 
         /**
-         * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap], all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [PlatformList], and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard objects or when exchanging data with a platform specific library that does not like the multi-platform objects.
-         * @param obj The platform native objects to convert recursively.
-         * @param importers The importers to use.
-         * @return The given platform native objects converted into multi-platform objects.
-         */
-        @Deprecated(
-            message = "Actually not really deprecated, but not yet implemented!",
-            level = DeprecationLevel.ERROR
-        )
-        fun fromNative(obj: Any?, importers: List<PlatformImporter>): Any?
-
-        /**
-         * Convert the given multi-platform objects recursively into the default platform native objects, for example [PlatformMap] may become a pure `Object` in JavaScript. This is often useful when exchanging code with libraries that do not support `Map`. In Java this will convert to [PlatformMap] to [LinkedHashMap].
-         * @param obj The multi-platform objects to be converted into platform native objects.
-         * @param exporters The exporters to use.
-         * @return The platform native objects.
-         */
-        @Deprecated(
-            message = "Actually not really deprecated, but not yet implemented!",
-            level = DeprecationLevel.ERROR
-        )
-        fun toNative(obj: Any?, exporters: List<PlatformExporter>): Any?
-
-        /**
          * This is stronger than [unbox], as it will convert the given value into any valid platform type.
          *
          * The result must be any of the following:

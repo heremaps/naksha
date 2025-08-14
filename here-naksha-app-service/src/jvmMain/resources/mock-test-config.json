@@ -1,7 +1,10 @@
 {
-  "id": "mock-config",
   "type": "Config",
-
+  "id": "mock-config",
+  "adminStorage": {
+    "id": "naksha_admin_db",
+    "className": "naksha.psql.PsqlTestStorage"
+  },
   "httpPort": 8080,
   "env": "local",
   "jwtName": "jwt",

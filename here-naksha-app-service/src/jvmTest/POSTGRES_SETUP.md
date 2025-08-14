@@ -38,7 +38,7 @@ That is also the way our tests are executed on GH pipeline.
 #### Notes:
 - The schema used by tests: `naksha_data_schema`
 - This schema will dropped before test suite starts
-- When running tests with local standalone instance, tests don't expect any extensions enabled (see [test-config.json](../jvmMain/resources/test-config.json)
+- When running tests with local standalone instance, tests don't expect any extensions enabled (see [test-config.json](../jvmMain/resources/docker-test-config.json)
 - Related class: `com.here.naksha.app.init.context.LocalTestContext`
 
 ### Test Containers

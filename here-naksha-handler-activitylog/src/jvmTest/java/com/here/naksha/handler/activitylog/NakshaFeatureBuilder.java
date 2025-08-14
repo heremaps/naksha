@@ -8,30 +8,38 @@ import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationU
 import static naksha.model.XyzNs.NUUID;
 
 import java.util.Map;
-import naksha.base.JvmInt64;
+
+import naksha.base.Int64;
+import naksha.base.PlatformType;
 import naksha.model.Action;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
+import org.jetbrains.annotations.NotNull;
 
 class NakshaFeatureBuilder {
 
-  private final NakshaFeature feature;
+  private @NotNull NakshaFeature feature;
 
-  private NakshaFeatureBuilder(NakshaFeature feature) {
-    this.feature = feature;
-  }
-
-  static NakshaFeatureBuilder nakshaFeature(String id) {
-    NakshaFeature feature = new NakshaFeature(id);
+  NakshaFeatureBuilder(@NotNull String id) {
+    feature = new NakshaFeature(id);
     NakshaProperties properties = new NakshaProperties();
     properties.setXyz(new XyzNs());
     feature.setProperties(properties);
-    return new NakshaFeatureBuilder(feature);
   }
 
-  NakshaFeature build() {
-    return feature;
+  static NakshaFeatureBuilder nakshaFeature(String id) {
+    return new NakshaFeatureBuilder(id);
+  }
+
+  @NotNull NakshaFeature build() {
+    return build(NakshaFeature.TYPE);
+  }
+
+  <F extends NakshaFeature> @NotNull F build(@NotNull PlatformType<F> type) {
+    final var feature = this.feature;
+    this.feature = new NakshaFeature();
+    return feature.proxy(type);
   }
 
   NakshaFeatureBuilder withUuid(String uuid) {
@@ -54,17 +62,28 @@ class NakshaFeatureBuilder {
     return this;
   }
 
-  NakshaFeatureBuilder withCreatedAt(JvmInt64 createdAt) {
+  NakshaFeatureBuilder withCreatedAt(Int64 createdAt) {
     feature.getProperties().getXyz().put(CREATED_AT, createdAt);
     return this;
   }
 
-  NakshaFeatureBuilder withUpdatedAt(JvmInt64 updatedAt) {
+  NakshaFeatureBuilder withCreatedAt(long createdAt) {
+    feature.getProperties().getXyz().put(CREATED_AT, createdAt);
+    return this;
+  }
+
+  NakshaFeatureBuilder withUpdatedAt(Int64 updatedAt) {
     feature.getProperties().getXyz().put(UPDATED_AT, updatedAt);
     return this;
   }
 
-  NakshaFeatureBuilder withCustomProperties(Map properties) {
+  NakshaFeatureBuilder withUpdatedAt(long updatedAt) {
+    feature.getProperties().getXyz().put(UPDATED_AT, updatedAt);
+    return this;
+  }
+
+  @SuppressWarnings({"unchecked","rawtypes"})
+  NakshaFeatureBuilder withCustomProperties(@NotNull Map properties) {
     feature.getProperties().putAll(properties);
     return this;
   }

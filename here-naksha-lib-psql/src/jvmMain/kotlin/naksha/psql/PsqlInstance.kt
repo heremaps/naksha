@@ -5,8 +5,11 @@ import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 import org.postgresql.PGProperty.*
 import org.postgresql.util.HostSpec
+import org.postgresql.util.PSQLException
+import java.lang.System.currentTimeMillis
 import java.lang.ref.WeakReference
 import java.sql.ResultSet
+import java.sql.SQLException
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
@@ -311,7 +314,27 @@ SET SESSION $idle_in_transaction_session_timeout = '${toSeconds(options.idleTxTi
         //props.setProperty(RECEIVE_BUFFER_SIZE.getName(), receiveBufferSize.toString())
         //props.setProperty(SEND_BUFFER_SIZE.getName(), sendBufferSize.toString())
         props.setProperty(REWRITE_BATCHED_INSERTS.getName(), "true")
-        val jdbcConn = org.postgresql.jdbc.PgConnection(arrayOf(hostSpec), props, url)
+        val abortTime = currentTimeMillis() + options.connectTimeout
+        var jdbcConn: org.postgresql.jdbc.PgConnection? = null
+        do {
+            try {
+                val newConn = org.postgresql.jdbc.PgConnection(arrayOf(hostSpec), props, url)
+                jdbcConn = newConn
+            } catch (e: PSQLException) {
+                val msg = e.message
+                if (msg != null && msg.contains("the database system is starting up")) {
+                    if (currentTimeMillis() > abortTime) {
+                        logger.error("Failed to connect to database for 60 seconds, it is still starting")
+                        throw e
+                    }
+                    logger.info("Failed to connect to database, because it is starting, wait a short moment and try again")
+                    Thread.sleep(1000)
+                    continue
+                }
+                logger.error("Failed to connect to database: {}", e)
+                throw e
+            }
+        } while (jdbcConn == null)
         val pooledConn = PooledPgConnection(jdbcConn)
         psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
         check(pooledConn.setSession(psqlConn))

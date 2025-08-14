@@ -1,0 +1,20 @@
+{
+  "type": "Config",
+  "id": "test-config",
+  "adminStorage": {
+    "id": "naksha_admin_db",
+    "className": "naksha.psql.PsqlTestStorage"
+  },
+  "httpPort": 8080,
+  "env": "local",
+  "requestBodyLimit": 25,
+  "authMode": "DUMMY",
+  "jwtName": "jwt",
+  "maintenanceInitialDelayInMins": 60,
+  "maintenanceIntervalInMins": 720,
+  "maintenancePoolCoreSize": 5,
+  "maintenancePoolMaxSize": 20,
+  "maxParallelRequestsPerCPU": 30,
+  "maxPctParallelRequestsPerActor": 100,
+  "extensionConfigParams": null
+}

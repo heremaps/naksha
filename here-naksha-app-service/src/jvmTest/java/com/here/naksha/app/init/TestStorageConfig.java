@@ -1,13 +1,11 @@
 package com.here.naksha.app.init;
 
-import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_STORAGE_ID;
-
+import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
 import java.nio.charset.StandardCharsets;
 
 import naksha.base.Platform;
-import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaStorage;
 import naksha.psql.PgConfig;
 import org.jetbrains.annotations.NotNull;
@@ -24,7 +22,7 @@ public record TestStorageConfig(@NotNull String mapId, @NotNull NakshaStorage co
   private static @Nullable TestStorageConfig testStorageFromString(@NotNull String mapId, @Nullable String raw) {
     if (raw != null) try {
       if (raw.startsWith("jdbc:postgresql://")) {
-        PgConfig pgConfig = new PgConfig(DEFAULT_HUB_ADMIN_STORAGE_ID).withMasterUri(raw);
+        PgConfig pgConfig = new PgConfig(TestUtil.TEST_ADMIN_DB).withMasterUri(raw);
         return new TestStorageConfig(mapId, pgConfig);
       }
       // Or, alternatively, a complete configuration.
@@ -71,7 +69,7 @@ public record TestStorageConfig(@NotNull String mapId, @NotNull NakshaStorage co
     if (testStorage != null) return testStorage;
 
     // Eventually, create a docker container as storage.
-    final var pgConfig = new PgConfig(DEFAULT_HUB_ADMIN_STORAGE_ID);
+    final var pgConfig = new PgConfig(TestUtil.TEST_ADMIN_DB);
     pgConfig.setClassName("naksha.psql.PsqlTestStorage");
     final var user = System.getenv("TEST_NAKSHA_PSQL_USER");
     if (user != null) pgConfig.set("user", user);

@@ -31,7 +31,6 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
 
-import java.util.Objects;
 import java.util.Set;
 
 import naksha.base.Platform;

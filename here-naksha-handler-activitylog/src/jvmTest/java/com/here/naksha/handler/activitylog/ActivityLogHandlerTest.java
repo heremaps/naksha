@@ -6,6 +6,7 @@ import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFea
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static com.here.naksha.test.common.assertions.PropertyQueryAssertions.assertThatPropertyQuery;
 import static java.util.Collections.emptyList;
+import static naksha.base.Platform.toInt64;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
@@ -23,14 +24,13 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.test.common.assertions.PropertyQueryAssertions;
-import naksha.base.JvmInt64;
-import naksha.base.NakshaError;
+import naksha.base.*;
 import naksha.model.*;
 
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import naksha.base.AnyList;
+
 import naksha.model.Action;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
@@ -47,7 +47,6 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.request.query.*;
-import naksha.mom.v2.MomProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,8 +59,8 @@ import org.mockito.*;
 class ActivityLogHandlerTest {
 
   private static final String SPACE_ID = "test_activity_space";
-  private static final JvmInt64 T0 = new JvmInt64(1749477141945L);
-  private static final JvmInt64 T1 = new JvmInt64(1749477141955L);
+  private static final Int64 T0 = toInt64(1749477141945L);
+  private static final Int64 T1 = toInt64(1749477141955L);
 
   @Mock
   INaksha naksha;
@@ -196,28 +195,25 @@ class ActivityLogHandlerTest {
   void shouldComposeActivityFeatures() throws Exception {
     // Given: old version of feature
     String featureId = "featureId";
-    NakshaFeature oldFeature = nakshaFeature(
-        featureId,
-        "initial_uuid",
-        null,
-        Action.CREATE,
-        Map.of(
+    NakshaFeature oldFeature = nakshaFeature(featureId)
+        .withUuid("initial_uuid")
+        .withAction(Action.CREATE)
+        .withCustomProperties(Map.of(
             "op", "old feature",
             "magicNumber", 123
-        )
-    );
+        ))
+        .build();
 
     // And: new version of feature
-    NakshaFeature newFeature = nakshaFeature(
-        featureId,
-        "new_uuid",
-        "initial_uuid",
-        Action.UPDATE,
-        Map.of(
+    NakshaFeature newFeature = nakshaFeature(featureId)
+        .withUuid("new_uuid")
+        .withPuuid("initial_uuid")
+        .withAction(Action.UPDATE)
+        .withCustomProperties(Map.of(
             "op", "new feature",
             "magicBoolean", true
-        )
-    );
+        ))
+        .build();
 
     // And: space storage that returns these features for some ReadFeatures request
     ReadFeatures request = new ReadFeatures();
@@ -330,12 +326,8 @@ class ActivityLogHandlerTest {
     ReadFeatures request = new ReadFeatures();
 
     // And: space storage that returns some feature with 'CREATE' action for given request
-    spaceStorageSessionReturningHistoryFeatures(request, nakshaFeature(
-        "featureId",
-        "uuid",
-        null,
-        Action.CREATE
-    ));
+    final var someFeature = nakshaFeature("featureId").withUuid("uuid").withAction(Action.CREATE).build();
+    spaceStorageSessionReturningHistoryFeatures(request, someFeature);
 
     // When: handler processes event bearing such request
     Response result = handler.processEvent(eventWith(request));

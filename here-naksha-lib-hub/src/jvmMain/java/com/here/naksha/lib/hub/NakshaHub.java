@@ -22,8 +22,6 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_C
 import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_MAP_ID;
-import static naksha.base.Platform.apply;
 import static naksha.model.Action.CREATE;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
@@ -47,7 +45,7 @@ import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import naksha.base.FromJsonOptions;
+
 import naksha.base.Platform;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -68,7 +66,6 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.util.ResultHelper;
-import naksha.psql.PgConfig;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -110,55 +107,37 @@ public class NakshaHub implements INaksha {
 
   private final @NotNull String adminMapId;
 
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public NakshaHub(
-      final @NotNull NakshaStorage adminStorage,
-      final @Nullable NakshaHubConfig customCfg,
-      final @Nullable String configId) {
-      this(
-          DEFAULT_HUB_ADMIN_MAP_ID,
-          adminStorage,
-          customCfg,
-          configId
-      );
-  }
-
   /*
    * TODO CASL-657:
    *  - support PsqlCluster for more than 1 master instance
    *  - simplify configuraiton flow
    *  - consider switchign from `storageUrl` to `NakshaHubStorageCfg` or something
    */
-  @ApiStatus.AvailableSince(NakshaVersion.v2_0_7)
-  public NakshaHub(
-      final @NotNull String adminMapId,
-      final @NotNull NakshaStorage adminStorage,
-      final @Nullable NakshaHubConfig customCfg,
-      final @Nullable String configId) {
-    this.adminMapId = adminMapId;
-    // create storage instance upfront
+  public NakshaHub(final @NotNull NakshaHubConfig hubConfig) {
     logger.info("NakshaHub initialization started.");
-//    // TODO force create and update?
-//    // TODO CASL-657: support clustering
+    this.adminMapId = hubConfig.getAdminMapId();
+
+    logger.info("Read admin-storage configuration from hub-config.");
+    final var adminStorage = hubConfig.getAdminStorage();
     adminStorage.setCreate(true);
     adminStorage.setUpgrade(true);
 
-    //    this.psqlStorage = new PsqlStorage(PsqlStorage.ADMIN_STORAGE_ID, appName, storageUrl);
-    logger.info("Initializing Admin storage (if not already).");
+    logger.info("Bootstrap admin-storage.");
     this.psqlStorage = Naksha.useStorage(adminStorage);
+    this.nakshaHubConfig = hubConfig;
+
+    logger.info("Bootstrap NHAdminStorage and NHSpaceStorage using admin-storage.");
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
-    // setup backend storage DB and Hub config
-    NakshaContext nakshaContext = setupMapAndContext(adminMapId);
-    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, nakshaContext);
-    if (finalCfg == null) {
-      throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
-    }
-    this.nakshaHubConfig = finalCfg;
+
+    logger.info("Setup admin-storage collections, if not done already.");
+    setupMapAndContext();
+
+    logger.info("Setup extension-manager.");
     if (this.nakshaHubConfig.getExtensionConfigParams() != null) {
       this.extensionManager = ExtensionManager.getInstance(this);
     } else {
-      logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
+      logger.warn("Extension-manager is not initialised due to extensionConfigParams not found.");
     }
     // Setting Concurrency Thresholds
     logger.info("Value of maxParallelRequestsPerCPU is {}", nakshaHubConfig.getMaxParallelRequestsPerCPU());
@@ -167,7 +146,6 @@ public class NakshaHub implements INaksha {
         nakshaHubConfig.getMaxParallelRequestsPerCPU(), nakshaHubConfig.getMaxPctParallelRequestsPerActor());
     logger.info("Instance level limit is {}", requestLimitManager.getInstanceLevelLimit());
     AbstractTask.setConcurrencyLimitManager(requestLimitManager);
-
     logger.info("NakshaHub initialization done!");
   }
 
@@ -176,12 +154,10 @@ public class NakshaHub implements INaksha {
     return adminMapId;
   }
 
-  private NakshaContext setupMapAndContext(@NotNull String mapId) {
-    final NakshaMap map = apply(new NakshaMap(), (self) -> {
-      self.setId(mapId);
-    });
-    Write createMap = new Write().upsertMap(map, false);
-    NakshaContext initialContext = NakshaContext.currentContext().withAuthor(NakshaHubConfig.defaultAppName());
+  private NakshaContext setupMapAndContext() {
+    final NakshaMap map = new NakshaMap(adminMapId);
+    final Write createMap = new Write().upsertMap(map, false);
+    NakshaContext initialContext = NakshaContext.currentContext().withAuthor(NakshaHubConfig.defaultAppNameWithVersion());
     psqlStorage.runInWriteSession(SessionOptions.from(initialContext), writer -> {
       Response response = writer.execute(new WriteRequest().add(createMap));
       if(!(response instanceof SuccessResponse)) {
@@ -190,21 +166,10 @@ public class NakshaHub implements INaksha {
       }
       writer.commit();
     });
-    NakshaContext nakshaHubAdminContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName(), NakshaHubConfig.defaultAppName());
-    nakshaHubAdminContext.attachToCurrentThread();
-    return nakshaHubAdminContext;
-  }
-
-  private @Nullable NakshaHubConfig storageSetup(
-      final @Nullable NakshaHubConfig customCfg,
-      final @Nullable String configId,
-      final @NotNull NakshaContext nakshaContext
-  ) {
-    // 1. Create all Admin collections in Admin DB
+    final var appName = NakshaHubConfig.defaultAppNameWithVersion();
+    final var nakshaContext = NakshaContext.newInstance(appName, appName).attachToCurrentThread();
     createAdminCollections(nakshaContext);
-
-    // 2. fetch / add latest config
-    return configSetup(nakshaContext, customCfg, configId);
+    return nakshaContext;
   }
 
   private void createAdminCollections(NakshaContext nakshaContext) {
@@ -233,14 +198,19 @@ public class NakshaHub implements INaksha {
     });
   }
 
-  private static WriteRequest upsertAdminCollectionsRequest() {
+  private WriteRequest upsertAdminCollectionsRequest() {
     final WriteRequest writeRequest = new WriteRequest();
     for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
-      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, DEFAULT_HUB_ADMIN_MAP_ID)));
+      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, nakshaHubConfig.getAdminMapId())));
     }
     return writeRequest;
   }
 
+  // TODO: This needs to be improved ASAP, it causes a chicken-egg problem.
+  //       To bootstrap Naksha-Hub we need a configuration to know where the admin-storage is.
+  //       So, to load this configuration from admin-db, we need an external tool doing this for us.
+  //       We have this tool, it is NakshaApp. So, lets move this code into Naksha-App, so we can
+  //       start the bootstrap from NakshaApp rather than from NakshaHub itself!
   private @Nullable NakshaHubConfig configSetup(
       final @NotNull NakshaContext nakshaContext,
       final @Nullable NakshaHubConfig customCfg,
@@ -252,11 +222,11 @@ public class NakshaHub implements INaksha {
      * 3. DB default config - If Database has default config - "default-config", use the same
      * 3. Default config - Fallback to default config from file - "default-config"
      */
-    logger.info("Running config setup for Nakshs Hub against Admin storage.");
+    logger.info("Running config setup for Naksha-Hub against Admin storage.");
     return getAdminStorage().useWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       if (customCfg != null) {
         WriteRequest writeCustomCfg = new WriteRequest()
-            .add(new Write().upsertFeature(DEFAULT_HUB_ADMIN_MAP_ID, CONFIGS, customCfg));
+            .add(new Write().upsertFeature(NakshaHubConfig.DEFAULT_HUB_ADMIN_MAP_ID, CONFIGS, customCfg));
         Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();

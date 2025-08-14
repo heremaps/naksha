@@ -198,7 +198,7 @@ public final class IoHelp {
    * thread interrupted during the read, is highly input stream specific, and therefore not specified.
    *
    * <p>If an I/O error occurs reading from the input stream, then it may do so after some, but not
-   * all, bytes have been read. Consequently the input stream may not be at end of stream and may be in an inconsistent state. It is
+   * all, bytes have been read. Consequently, the input stream may not be at end of stream and may be in an inconsistent state. It is
    * strongly recommended that the stream be promptly closed if an I/O error occurs.
    *
    * @param is  the input stream to read from.

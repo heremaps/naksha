@@ -21,11 +21,10 @@ package com.here.naksha.app.common;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static naksha.base.Platform.forClass;
 
-import com.here.naksha.app.init.TestStorageConfig;
-import com.here.naksha.app.init.TestStorageConfigs;
 import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.IoHelp.LoadedBytes;
+import com.here.naksha.lib.hub.NakshaHub;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -42,15 +41,65 @@ import java.util.List;
 
 import naksha.base.Platform;
 import naksha.model.NakshaContext;
-import naksha.psql.PgConfig;
-import naksha.psql.PgInstanceConfig;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Assertions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TestUtil {
 
+  private static final @NotNull Logger logger = LoggerFactory.getLogger(TestUtil.class);
   private static final String TEST_DATA_FOLDER = "src/jvmTest/resources/unit_test_data/";
   public static final String HDR_STREAM_ID = "Stream-Id";
+
+/*
+Pre-Start databases via:
+
+export NAME=admin_db
+export IMG=ghcr.io/naksha-oss/naksha-postgres:v16.2-r4
+mkdir -p ~/$NAME
+mkdir -p ~/$NAME/pg_data
+mkdir -p ~/$NAME/pg_temp
+docker pull $IMG
+docker run --name $NAME \
+       -v ~/$NAME/pg_data:/usr/local/pgsql/data \
+       -v ~/$NAME/pg_temp:/usr/local/pgsql/temp \
+       -p 0.0.0.0:15432:5432 \
+       -e PGPASSWORD=password \
+       -d $IMG
+
+export NAME=data_db
+export IMG=ghcr.io/naksha-oss/naksha-postgres:v16.2-r4
+mkdir -p ~/$NAME
+mkdir -p ~/$NAME/pg_data
+mkdir -p ~/$NAME/pg_temp
+docker pull $IMG
+docker run --name $NAME \
+       -v ~/$NAME/pg_data:/usr/local/pgsql/data \
+       -v ~/$NAME/pg_temp:/usr/local/pgsql/temp \
+       -p 0.0.0.0:25432:5432 \
+       -e PGPASSWORD=password \
+       -d $IMG
+
+Run tests in IntelliJ with env-var:
+
+naksha_admin_db=jdbc:postgresql://localhost:15432/postgres?user=postgres&password=password;test_data_db=jdbc:postgresql://localhost:25432/postgres?user=postgres&password=password
+
+Or externally like:
+
+EXPORT naksha_admin_db=jdbc:postgresql://localhost:15432/postgres?user=postgres&password=password
+EXPORT test_data_db=jdbc:postgresql://localhost:25432/postgres?user=postgres&password=password
+... run tests
+
+*/
+
+  // Admin-db
+  public static final String TEST_ADMIN_DB = "naksha_admin_db";
+  public static final String TEST_ADMIN_MAP_ID = NakshaHubConfig.DEFAULT_HUB_ADMIN_MAP_ID;
+
+  // Data-db
+  public static final String TEST_DATA_DB = "test_data_db";
+  public static final String TEST_DATA_MAP_ID = "test_map";
 
   private TestUtil() {
   }
@@ -58,6 +107,8 @@ public class TestUtil {
   public static String loadFileOrFail(final @NotNull String rootPath, final @NotNull String fileName) {
     try {
       String json = new String(Files.readAllBytes(Paths.get(rootPath + fileName)));
+      json = json.replace("${dataDb.storageId}", TEST_DATA_DB);
+      json = json.replace("${dataDb.schema}", TEST_DATA_MAP_ID);
 //      final TestStorageConfig dataDbConfig = TestStorageConfigs.dataDbConfig;
 //      final PgConfig dataPgConfig = dataDbConfig.config().proxy(PgConfig.TYPE);
 //      final PgInstanceConfig dataMasterConfig = dataPgConfig.getMaster();
@@ -78,6 +129,7 @@ public class TestUtil {
 //      json = json.replace("${adminDb.schema}", adminDbConfig.mapId());
 //      json = json.replace("${adminDb.user}", adminMasterConfig.getUser());
 //      json = json.replace("${adminDb.password}", adminMasterConfig.getPassword());
+      logger.info("Loaded file {}{}: {}", rootPath, fileName, json);
       return json;
     } catch (IOException e) {
       Assertions.fail("Unable to read test file " + fileName, e);
@@ -111,7 +163,7 @@ public class TestUtil {
   }
 
   public static @NotNull NakshaContext newTestNakshaContext() {
-    final NakshaContext nakshaContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName());
+    final NakshaContext nakshaContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppNameWithVersion());
     nakshaContext.attachToCurrentThread();
     return nakshaContext;
   }

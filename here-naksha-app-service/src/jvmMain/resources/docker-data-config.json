@@ -1,0 +1,11 @@
+{
+  "type": "Feature",
+  "featureType": "naksha.PgConfig",
+  "id": "test_data_db",
+  "className": "naksha.psql.PsqlTestStorage",
+  "create": true,
+  "updated": true,
+  "properties": {
+    "schema": "test_map"
+  }
+}

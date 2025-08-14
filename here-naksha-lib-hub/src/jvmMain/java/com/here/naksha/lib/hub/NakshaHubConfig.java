@@ -32,6 +32,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.Objects.requireNonNull;
 import static naksha.base.NakshaBaseKt.Int_TYPE;
 import static naksha.base.NakshaBaseKt.String_TYPE;
 import static naksha.base.Platform.forClass;
@@ -68,22 +69,11 @@ public final class NakshaHubConfig extends NakshaStorage {
    *
    * @return The default application name.
    */
-  public static @NotNull String defaultAppName() {
+  public static @NotNull String defaultAppNameWithVersion() {
     return NAKSHA_APP_NAME + "/v" + NakshaVersion.current;
   }
 
-  /**
-   * Returns a className of default NakshaHub instance
-   *
-   * @return The default NakshaHub className
-   */
-  public static @NotNull String defaultHubClassName() {
-    return NakshaHub.class.getName();
-  }
-
-
   // property names
-  public static final String HUB_CLASS_NAME = "hubClassName";
   public static final String USER_AGENT = "userAgent";
   public static final String APP_ID = "appId";
   public static final String AUTHOR = "author";
@@ -196,12 +186,32 @@ public final class NakshaHubConfig extends NakshaStorage {
   /**
    * The hostname to use to refer to this instance, if {@code null}, then auto-detected.
    */
-  public @NotNull String getHostname() {
+  public @Nullable String getHostname() {
     return getAs(HOSTNAME, String_TYPE);
   }
 
   private void setHostname(@NotNull String hostname) {
     setRaw(HOSTNAME, hostname);
+  }
+
+  public static @NotNull String DEFAULT_HUB_ADMIN_MAP_ID = "naksha_admin_v3";
+
+  /**
+   * Returns the map-id that is used to store the admin collections of Naksha-Hub.
+   * @return the map-id that is used to store the admin collections of Naksha-Hub.
+   * @since 3.0
+   */
+  public @NotNull String getAdminMapId() {
+    return getOr("adminMap", DEFAULT_HUB_ADMIN_MAP_ID);
+  }
+
+  /**
+   * Returns the admin-storage to be used by Naksha-Hub.
+   * @return the admin storage.
+   * @throws NullPointerException if the configuration does not contain a valid admin-storage configuration.
+   */
+  public @NotNull NakshaStorage getAdminStorage() {
+    return requireNonNull(getAs("adminStorage", NakshaStorage.TYPE));
   }
 
   /**
@@ -211,12 +221,11 @@ public final class NakshaHubConfig extends NakshaStorage {
     return getOrSet(APP_ID, "naksha");
   }
 
-
   /**
    * The author to be used when modifying the admin-database.
    */
   public @Nullable String getAuthor() {
-    return getOrSet(AUTHOR, defaultAppName());
+    return getOrSet(AUTHOR, defaultAppNameWithVersion());
   }
 
   /**
@@ -255,7 +264,7 @@ public final class NakshaHubConfig extends NakshaStorage {
    * The user-agent to be used for external communication.
    */
   public @NotNull String getUserAgent() {
-    return getOrSet(USER_AGENT, defaultAppName());
+    return getOrSet(USER_AGENT, defaultAppNameWithVersion());
   }
 
   /**
@@ -272,8 +281,8 @@ public final class NakshaHubConfig extends NakshaStorage {
   /**
    * The fully qualified class name to be used to initiate NakshaHub instance
    */
-  public @NotNull String getHubClassName() {
-    return getOrSet(HUB_CLASS_NAME, defaultHubClassName());
+  public @Nullable String getHubClassName() {
+    return getAs("hubClassName", String_TYPE);
   }
 
   /**

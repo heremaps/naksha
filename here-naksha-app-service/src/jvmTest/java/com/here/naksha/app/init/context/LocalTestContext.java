@@ -18,10 +18,8 @@ public class LocalTestContext extends TestContext {
   private final NakshaContext nakshaContext;
 
   public LocalTestContext() {
-    super(() -> new NakshaApp("Naksha/Test", ADMIN_STORAGE.config(), CONFIG_ID, null));
-    nakshaContext = NakshaContext.newInstance("local-test")
-        .withSu(true)
-        .attachToCurrentThread();
+    super(() -> NakshaApp.newInstance("run", "localhost-test-config") );
+    nakshaContext = NakshaContext.newInstance("local-test") .withSu(true).attachToCurrentThread();
   }
 
   @Override

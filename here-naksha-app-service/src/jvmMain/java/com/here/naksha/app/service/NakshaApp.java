@@ -27,8 +27,8 @@ import com.here.naksha.app.service.http.auth.NakshaAuthProvider;
 import com.here.naksha.app.service.metrics.OTelMetrics;
 import com.here.naksha.app.service.util.UrlUtil;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.hub.NakshaHub;
 import com.here.naksha.lib.hub.NakshaHubConfig;
-import com.here.naksha.lib.hub.NakshaHubFactory;
 import com.here.naksha.lib.hub.util.ConfigUtil;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -39,7 +39,6 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.io.IOException;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -50,10 +49,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import naksha.model.NakshaVersion;
-import naksha.model.objects.NakshaStorage;
-import naksha.psql.PgConfig;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
@@ -65,15 +61,10 @@ import org.slf4j.MDC;
 public final class NakshaApp extends Thread {
 
   private static final Logger log = LoggerFactory.getLogger(NakshaApp.class);
+  @Deprecated
   private static final String DEFAULT_CONFIG_ID = "default-config";
-
+  @Deprecated
   private static final String DEFAULT_MAP_ID = "naksha";
-
-  private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd"
-                                            + "&schema=" + DEFAULT_MAP_ID
-                                            + "&app=" + NakshaHubConfig.defaultAppName();
-                                            //+ "&id=" + PgStorage.ADMIN_STORAGE_ID;
-                                            // Note: the `id` must be part of the storage-config now!
   private final AtomicReference<Boolean> stopInstance = new AtomicReference<>(false);
 
   /**
@@ -82,7 +73,7 @@ public final class NakshaApp extends Thread {
    * @param args The console arguments given.
    */
   public static void main(@NotNull String... args) {
-    if (args.length < 1) {
+    if (args.length < 2) {
       printUsage();
       System.exit(1);
     }
@@ -101,21 +92,47 @@ public final class NakshaApp extends Thread {
   }
 
   private static void printUsage() {
-    err.println(" ");
-    err.println("Syntax :");
-    err.println("    java -jar naksha.jar <configId> [<url>]");
-    err.println(" ");
-    err.println("Examples:");
-    err.println(" ");
-    err.println("    Example 1 : Start service with given config and default (local) database URL");
-    err.println("        java -jar naksha.jar default-config");
-    err.println(" ");
-    err.println("    Example 2 : Start service with given config and custom database URL");
-    err.println("        java -jar naksha.jar default-config '" + DEFAULT_URL + "'");
-    err.println(" ");
-    err.println("    Example 3 : Start service with mock config (with in-memory hub)");
-    err.println("        java -jar naksha.jar mock-config");
-    err.println(" ");
+// Do not print beyond column 78 !
+// -------------------------------------------------------------------------|
+    err.println("""
+Syntax :
+    java -jar naksha.jar [cmd]
+    
+Commands :
+    run <configId>
+
+    Bootstrap Naksha-Hub by reading its configuration from the file-system.
+    The `configId` is expanded to `${configId}.json` and then search in
+    the current working directory. When not found, it tries to read from
+    `$XDG_CONFIG_HOME/naksha/${configId}.json`. Beware that the
+    XDG_CONFIG_HOME environment variable defaults to `~/.config/`, and if
+    not set, Naksha will assume that it is `~/.config/`. So by
+    default it resolves into `~/.config/naksha/${configId}.json`.
+    
+    If `NAKSHA_CONFIG_PATH` environment variable is set, this directory
+    is searched before falling back to the XDG_CONFIG_HOME.
+
+
+    create <configId> [<sourceId>]
+    
+    Extract the a configuration from the resources and create a corresponding
+    new configuration file in `$XDG_CONFIG_HOME/naksha/`. If no
+    sourceId is given, then the default configuration for a localhost
+    PostgresQL admin-db is extracted (`default-localhost-psql`).
+    
+    If `NAKSHA_CONFIG_PATH` environment variable is set, the configuration
+    file is created there.
+""");
+// -------------------------------------------------------------------------|
+    // TODO: We should add support to store the configuration in a storage
+    //       and to read the service configuration from a map/collection
+    //       rather than from the file system !
+    //       Like `run-from <admin-db-uri> <configId>`
+    //       We have to plan the URI syntax carefully, because actually we
+    //       need to consider things like: which libraries have to be
+    //       loaded (so which lib contains support for the storage)
+    //       We want to stay storage agnostic, even admin-db is just a
+    //       normal storage!
     err.flush();
   }
 
@@ -131,28 +148,23 @@ public final class NakshaApp extends Thread {
     final String cfgId;
     final String url;
     switch (args.length) {
-      case 1 -> {
-        cfgId = args[0];
-        url = DEFAULT_URL;
-        log.info("Starting with config `{}` and default database...", cfgId);
-      }
-      case 2 -> {
-        cfgId = args[0];
-        url = args[1];
-        if (!url.startsWith("jdbc:postgresql://")) {
-          throw new IllegalArgumentException("Missing or invalid argument <url>, must be a value like '"
-                                             + DEFAULT_URL + "', got '" + url + "' instead");
+      case 2 -> { // run <configId>
+        final var cmd = args[0];
+        if (!"run".equalsIgnoreCase(cmd)) {
+          printUsage();
+          System.exit(1);
         }
-        log.info("Starting with config `{}` and custom database URL...", cfgId);
+        final var configId = args[1];
+        final var hubConfig = ConfigUtil.readConfigFile(configId, NakshaHubConfig.TYPE);
+        return new NakshaApp(hubConfig);
       }
-      default -> throw new IllegalArgumentException("Missing/Invalid argument. Check the usage.");
+      case 3 -> { // create <configId> [<sourceId>]
+        err.println("Not implemented yet");
+        err.flush();
+        System.exit(1);
+      }
     }
-
-    // Potentially we could override the app-name:
-    // NakshaHubConfig.APP_NAME = ?
-    final var adminStorage = new PgConfig(cfgId);
-    adminStorage.withMasterUri(url);
-    return new NakshaApp(NakshaHubConfig.defaultAppName(), adminStorage, cfgId, null);
+    throw new IllegalArgumentException("Missing/Invalid argument. Check the usage.");
   }
 
   /**
@@ -171,50 +183,38 @@ public final class NakshaApp extends Thread {
   }
 
   /**
-   * Create a new Naksha-Hub instance, connect to the supplied database, initialize it and read the configuration from it, then bootstrap
-   * the service.
-   *
-   * @param appName       The name of the app
-   * @param adminStorage  The admin-db to connect to.
-   * @param configId      The identifier of the configuration to read.
-   * @param instanceId    The (optional) instance identifier; if {@code null}, then a new unique random one created, or derived from the
-   *                      environment.
-   * @throws SQLException If any error occurred while accessing the database.
-   * @throws IOException  If reading the SQL extensions from the resources fail.
+   * Create a new Naksha-Hub instance using the given Naksha configuration.
+   * @param hubConfig The Naksha-Hub configuration to use.
    */
-  public NakshaApp(
-      @NotNull String appName,
-      @NotNull NakshaStorage adminStorage,
-      @NotNull String configId,
-      @Nullable String instanceId) {
+  public NakshaApp(@NotNull NakshaHubConfig hubConfig) {
     super(hubs, "NakshaApp");
     this.id = number.getAndIncrement();
-    setName("NakshaApp#" + id);
-    if (instanceId == null) {
-      instanceId = this.discoverInstanceId();
-    }
-    this.instanceId = instanceId;
+    this.instanceId = this.discoverInstanceId();
+    setName("NakshaApp#" + this.id);
 
-    // Read the custom configuration from file (if available)
-    NakshaHubConfig nakshaHubConfig = null;
-    try {
-      nakshaHubConfig = ConfigUtil.readConfigFile(configId, appName);
-    } catch (Exception ex) {
-      log.warn("No external config available, will attempt using default. Error was [{}]", ex.getMessage());
-    }
     // Instantiate NakshaHub instance
-    // TODO: what about appName?
-    this.hub = NakshaHubFactory.getInstance(adminStorage, nakshaHubConfig, configId);
-    nakshaHubConfig = hub.getConfig(); // use the config finally set by NakshaHub instance
-    log.info("Using server config : {}", nakshaHubConfig);
-
-    log.info("Naksha host/endpoint: {}", nakshaHubConfig.getEndpoint());
+    final var hubClassName = hubConfig.getHubClassName();
+    if (hubClassName == null) {
+      this.hub = new NakshaHub(hubConfig);
+    } else {
+      try {
+        final var hubClass = Class.forName(hubClassName);
+        final var constructor = hubClass.getDeclaredConstructor(NakshaHubConfig.class);
+        this.hub = (INaksha) constructor.newInstance(hubConfig);
+      } catch (RuntimeException re) {
+        throw re;
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+    log.info("Using server config : {}", hubConfig);
+    log.info("Naksha host/endpoint: {}", hubConfig.getEndpoint());
     // vertxMetricsOptions = new MetricsOptions().setEnabled(true).setFactory(new NakshaHubMetricsFactory());
     this.vertxOptions = new VertxOptions();
     // See: https://vertx.io/docs/vertx-core/java
     // vertxOptions.setMetricsOptions(vertxMetricsOptions);
     this.vertxOptions.setPreferNativeTransport(true);
-    if (nakshaHubConfig.isDebug()) {
+    if (hubConfig.isDebug()) {
       // If running in debug mode, we need to increase the warning time, because we might enter a break-point
       // for
       // some time!
@@ -229,11 +229,11 @@ public final class NakshaApp extends Thread {
     final String jwtKey;
     final String jwtPub;
     {
-      final String path = "auth/" + nakshaHubConfig.getJwtName() + ".key";
+      final String path = "auth/" + hubConfig.getJwtName() + ".key";
       jwtKey = readAuthKeyFile(path, NakshaHubConfig.NAKSHA_APP_NAME);
     }
     {
-      final String path = "auth/" + nakshaHubConfig.getJwtName() + ".pub";
+      final String path = "auth/" + hubConfig.getJwtName() + ".pub";
       jwtPub = readAuthKeyFile(path, NakshaHubConfig.NAKSHA_APP_NAME);
     }
     this.authOptions = new JWTAuthOptions()
@@ -243,7 +243,7 @@ public final class NakshaApp extends Thread {
     this.authProvider = new NakshaAuthProvider(this.vertx, this.authOptions);
 
     final WebClientOptions webClientOptions = new WebClientOptions();
-    webClientOptions.setUserAgent(nakshaHubConfig.getUserAgent());
+    webClientOptions.setUserAgent(hubConfig.getUserAgent());
     webClientOptions.setTcpKeepAlive(true).setTcpQuickAck(true).setTcpFastOpen(true);
     webClientOptions.setIdleTimeoutUnit(TimeUnit.MINUTES).setIdleTimeout(2);
     this.webClient = WebClient.create(this.vertx, webClientOptions);
