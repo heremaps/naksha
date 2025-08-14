@@ -9,7 +9,7 @@ public class TestContextEntrypoint {
 
   private static final Logger log = LoggerFactory.getLogger(TestContextEntrypoint.class);
 
-  private static final String TEST_CONTEXT_ENV = "NAKSHA_LOCAL_TEST_CONTEXT";
+  private static final String TEST_CONTEXT_ENV = "NAKSHA_APP_SERVICE_TEST_CONTEXT";
   private static final String MOCK_CONTEXT_ENV_VAL = "MOCK";
   private static final String LOCAL_STANDALONE_CONTEXT_ENV_VAL = "LOCAL_STANDALONE";
   private static final String TEST_CONTAINERS_CONTEXT_ENV_VAL = "TEST_CONTAINERS";

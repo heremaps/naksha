@@ -7,36 +7,16 @@ env:
   SERVICE_JAR_DIR: ${{ github.workspace }}/build/libs
   ARTIFACT_DIR: ${{ github.workspace }}/artifact
   GITHUB_ARTIFACT_NAME: artifact
-  NAKSHA_LOCAL_TEST_CONTEXT: LOCAL_STANDALONE
+  NAKSHA_APP_SERVICE_TEST_CONTEXT: TEST_CONTAINERS
   # TODO - Disabling tests that are too big to succeed for Github free pipeline capacity
   DISABLE_BIG_PAYLOAD_TESTS: true
 
 jobs:
   main:
     runs-on: ubuntu-24.04-arm
-    services:
-      postgres:
-        image: ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
-        env:
-          PGPASSWORD: password
-          POSTGRES_USER: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
     steps:
       - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
       - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
-      - name: Wait for Postgres
-        shell: bash
-        run: |
-          for i in {1..15}; do
-          if (echo > /dev/tcp/localhost/5432) >/dev/null 2>&1; then
-           echo "Postgres is ready!"
-           break
-          fi
-          echo "Waiting for Postgres..."
-          sleep 2
-          done
       - name: Check out repository code
         uses: actions/checkout@v4
       - name: Setup Gradle
