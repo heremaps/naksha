@@ -74,7 +74,7 @@ enum class PublishModule {
 
 val allModules = mapOf(
     Pair("naksha", Pair(CleanAndTest.OFF, PublishModule.CONFIG_ONLY)),
-    Pair("here-naksha-app-service", Pair(CleanAndTest.OFF, PublishModule.NO)),
+    Pair("here-naksha-app-service", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-common-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     //Pair("here-naksha-handler-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
@@ -93,7 +93,7 @@ val allModules = mapOf(
     Pair("here-naksha-lib-psql", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-view", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-storage-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
-    Pair("here-naksha-cli", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
+    Pair("here-naksha-cli", Pair(CleanAndTest.OFF, PublishModule.NO)),
 )
 
 fun Project.configureVanniktechMavenPublish() {

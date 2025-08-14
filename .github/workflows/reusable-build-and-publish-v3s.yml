@@ -7,32 +7,13 @@ env:
   SERVICE_JAR_DIR: ${{ github.workspace }}/build/libs
   ARTIFACT_DIR: ${{ github.workspace }}/artifact
   GITHUB_ARTIFACT_NAME: artifact
-  NAKSHA_LOCAL_TEST_CONTEXT: LOCAL_STANDALONE
+  NAKSHA_APP_SERVICE_TEST_CONTEXT: TEST_CONTAINERS
   # TODO - Disabling tests that are too big to succeed for Github free pipeline capacity
   DISABLE_BIG_PAYLOAD_TESTS: true
 
 jobs:
   main:
-    #runs-on: [self-hosted, naksha-x86]
-    runs-on: ubuntu-latest
-#    services:
-#      postgres:
-#        image: postgis/postgis
-#        env:
-#          POSTGRES_PASSWORD: password
-#          POSTGRES_USER: postgres
-#          POSTGRES_DB: postgres
-#        options: >-
-#          --health-cmd pg_isready
-#          --health-interval 10s
-#          --health-timeout 5s
-#          --health-retries 5
-#        ports:
-#          - 5432:5432
-#    strategy:
-#      matrix:
-#        ## current v3 target for testing: base, model, core, psql, view
-#        naksha-modules: ["here-naksha-lib-model","here-naksha-lib-base","here-naksha-lib-core","here-naksha-lib-psql","here-naksha-lib-view"]
+    runs-on: ubuntu-24.04-arm
     steps:
       - run: echo "[${{ github.triggering_actor }}] triggered [${{ github.event_name }}] event on ${{ github.ref_type }}/PR# [${{ github.ref_name }}]"
       - run: echo "🎉 This job is running on a ${{ runner.os }} server hosted by GitHub!"
@@ -56,17 +37,17 @@ jobs:
         shell: bash
         run: |
           gradle cleanAndTest
-#      - name: Upload Test Report (HTML)
-#        if: success() || failure()
-#        uses: actions/upload-artifact@v4
-#        with:
-#          name: jvm-test-report
-#          path: '**/build/reports/tests/jvmTest/**/*'
+      - name: Upload Test Report (HTML)
+        if: success() || failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-test-report
+          path: '**/build/reports/tests/jvmTest/**/*'
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v4
         if: success() || failure() # always run even if the previous step fails
         with:
-          report_paths: '**/build/test-results/test/TEST-*.xml'
+          report_paths: '**/build/test-results/jvmTest/TEST-*.xml'
 #      - name: Publish code coverage report as PR comment
 #        id: jacoco
 #        uses: madrapps/jacoco-report@v1.6.1

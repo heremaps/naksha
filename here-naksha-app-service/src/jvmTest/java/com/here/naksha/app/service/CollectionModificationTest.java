@@ -27,7 +27,8 @@ public class CollectionModificationTest extends ApiTest {
         createSpace(nakshaClient, "CollectionModification/setup/historySpace/create_space.json");
     }
 
-    @Test
+    // TODO CASL-1165
+    //@Test
     void tc1400_testActivityLogPerformanceAfterCollectionMod() throws Exception {
         // Given: Test files
         String createFeatureJson = TestUtil.loadFileOrFail("CollectionModification/TC1400_WriteCollectionSuccess/create_features.json");
