@@ -20,7 +20,6 @@ package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
-import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
@@ -65,7 +64,6 @@ class FeatureViolationSegregationTest extends ApiTest {
   */
   @BeforeAll
   static void setup() throws URISyntaxException, IOException, InterruptedException {
-    createStorage(nakshaClient, "FeatureViolationSegregation/setup/create_storage.json");
     createHandler(nakshaClient, "FeatureViolationSegregation/setup/handler_common_violations.json");
     createHandler(nakshaClient, "FeatureViolationSegregation/setup/handler_topology_violations.json");
     createHandler(nakshaClient, "FeatureViolationSegregation/setup/handler_sign_violations.json");

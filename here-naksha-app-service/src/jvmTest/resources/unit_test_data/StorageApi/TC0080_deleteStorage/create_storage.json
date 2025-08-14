@@ -6,12 +6,12 @@
   "className": "naksha.psql.PsqlStorage",
   "properties": {
     "dbConfig": {
-      "host": "${dataDb.host}",
-      "db": "${dataDb.db}",
-      "user": "${dataDb.user}",
-      "password": "${dataDb.password}",
-      "port": ${dataDb.port},
-      "schema": "${dataDb.schema}",
+      "host": "localhost",
+      "db": "no_existing_db",
+      "user": "foo",
+      "password": "bar",
+      "port": 4711,
+      "schema": "does_not_matter",
       "minPoolSize": 5,
       "maxPoolSize": 50
     }

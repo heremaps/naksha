@@ -20,12 +20,10 @@ package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
-import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.HDR_STREAM_ID;
 import static com.here.naksha.app.common.TestUtil.getHeader;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
-import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,7 +56,6 @@ class SpaceApiTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws Exception {
-    createStorage(nakshaClient, "SpaceApi/setup/create_storage.json");
     createHandler(nakshaClient, "SpaceApi/setup/create_event_handler.json");
   }
 
@@ -314,9 +311,6 @@ class SpaceApiTest extends ApiTest {
     final String expectedDeleteAResponse = loadFileOrFail("SpaceApi/TC0281_deleteSpaceAndCollection/delete_a_response.json");
     final String getFromBFailure = loadFileOrFail("SpaceApi/TC0281_deleteSpaceAndCollection/get_from_b_failure.json");
     final String streamId = UUID.randomUUID().toString();
-
-    // And: Created common storage
-    createStorage(getNakshaClient(), "SpaceApi/TC0281_deleteSpaceAndCollection/create_storage.json");
 
     // And: Created space A & handler - that auto-creates and auto-deletes collection
     createHandler(getNakshaClient(), "SpaceApi/TC0281_deleteSpaceAndCollection/create_handler_a.json");

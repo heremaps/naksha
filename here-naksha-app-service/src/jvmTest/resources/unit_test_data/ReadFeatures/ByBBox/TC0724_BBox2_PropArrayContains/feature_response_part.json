@@ -27,7 +27,7 @@
           "tid": "urn:here::here:Topology-Transaction:1866780",
           "owner": "topology_adapter_service",
           "sourceId": "Task_1",
-          "operation": "CREATED",
+          "operation": "CREATE",
           "modelVersion": "2.121.0",
           "lastUpdatedBy": "topology_adapter_service",
           "updatedByUser": "topology_adapter_service"
@@ -65,7 +65,7 @@
           "tid": "urn:here::here:Topology-Transaction:1866780",
           "owner": "topology_adapter_service",
           "sourceId": "Task_2",
-          "operation": "CREATED",
+          "operation": "CREATE",
           "modelVersion": "2.121.0",
           "lastUpdatedBy": "topology_adapter_service",
           "updatedByUser": "topology_adapter_service"

@@ -2,7 +2,6 @@ package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
-import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
@@ -23,7 +22,6 @@ public class SourceIdHandlerApiTest extends ApiTest {
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
-        createStorage(nakshaClient, "SourceHandlerId/setup/create_storage.json");
         createHandler(nakshaClient, "SourceHandlerId/setup/create_event_handler.json");
         createHandler(nakshaClient, "SourceHandlerId/setup/create_default_event_handler.json");
         createSpace(nakshaClient, "SourceHandlerId/setup/create_space.json");

@@ -2,7 +2,6 @@ package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.createSpace;
-import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
@@ -25,7 +24,6 @@ class MissingCollectionTest extends ApiTest {
 
   @BeforeAll
   static void setup() throws Exception {
-    createStorage(nakshaClient, "MissingCollection/setup/create_storage.json");
     createHandler(nakshaClient, "MissingCollection/setup/create_event_handler_with_auto_create.json");
     createHandler(nakshaClient, "MissingCollection/setup/create_event_handler_with_undefined_auto_create.json");
     createHandler(nakshaClient, "MissingCollection/setup/create_event_handler_without_auto_create.json");
