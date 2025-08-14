@@ -3,7 +3,6 @@ package com.here.naksha.app.init;
 import static org.testcontainers.containers.InternetProtocol.TCP;
 
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import naksha.model.NakshaVersion;
