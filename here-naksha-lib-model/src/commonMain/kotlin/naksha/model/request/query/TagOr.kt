@@ -13,7 +13,7 @@ import kotlin.js.JsName
 class TagOr() : ListProxy<ITagQuery>(ITagQuery::class), ITagQuery {
 
     /**
-     * Create a logical AND combination of the given queries.
+     * Create a logical OR combination of the given queries.
      * @param queries the queries to combine.
      */
     @JsName("of")
