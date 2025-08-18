@@ -350,7 +350,8 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
               spaceId, featuresFromRequest, responseType, addTags, removeTags, retry + 1);
         } else {
           logger.error("Received error result {}", er);
-          return verticle.sendErrorResponse(routingContext, er.getError());
+          return verticle.sendErrorResponse(routingContext, new NakshaError(er.getError().getCode(),
+                  "Error encountered while writing the patched features to storage"));
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
