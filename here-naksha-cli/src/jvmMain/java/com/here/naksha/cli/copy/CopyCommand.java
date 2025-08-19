@@ -3,12 +3,13 @@ package com.here.naksha.cli.copy;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
-import com.here.naksha.cli.results.ErrorResult;
-import com.here.naksha.cli.results.IResult;
-import com.here.naksha.cli.results.SuccessResult;
+import com.here.naksha.cli.results.CommandFailure;
+import com.here.naksha.cli.results.CommandResult;
+import com.here.naksha.cli.results.CommandSuccess;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import picocli.CommandLine;
 
@@ -76,8 +77,8 @@ public final class CopyCommand implements Callable<Integer> {
     private @Nullable String targetCollectionId;
 
     public CopyCommand(
-            CopyServiceFactory copyServiceFactory,
-            StorageProvider storageProvider
+            @NotNull CopyServiceFactory copyServiceFactory,
+            @NotNull StorageProvider storageProvider
     ) {
         this.copyServiceFactory = copyServiceFactory;
         this.jsonFileParser = new JsonFileParser();
@@ -92,7 +93,7 @@ public final class CopyCommand implements Callable<Integer> {
         NakshaContext.currentContext().withAppId("nakshacli");
         SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext());
 
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copy(
                 srcCopyElement,
                 targetCopyElement,
                 sessionOptions
@@ -101,7 +102,7 @@ public final class CopyCommand implements Callable<Integer> {
         CopyServiceSuccessResultPayload resultPayload = requireSuccessResultAndGetPayload(copyResult);
 
         PrintWriter commandLineOut = getCommandLineOut();
-        String successMessage = buildCopySuccessMessage(resultPayload);
+        String successMessage = buildCopySuccessMessage(srcCopyElement, targetCopyElement, resultPayload);
         commandLineOut.println(successMessage);
 
         return CommandLine.ExitCode.OK;
@@ -112,18 +113,24 @@ public final class CopyCommand implements Callable<Integer> {
         return commandLine.getOut();
     }
 
-    private String buildCopySuccessMessage(CopyServiceSuccessResultPayload resultPayload) {
-        return "Success! Copied %d features.".formatted(
-                resultPayload.numberOfCopiedElements()
+    private String buildCopySuccessMessage(
+            CopyElement src,
+            CopyElement target,
+            CopyServiceSuccessResultPayload resultPayload
+    ) {
+        return "Success! Copied %d features from %s to %s.".formatted(
+                resultPayload.numberOfCopiedElements(),
+                src,
+                target
         );
     }
 
     private CopyServiceSuccessResultPayload requireSuccessResultAndGetPayload(
-            IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult
+            CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult
     ) throws CopyServiceException {
         return switch (copyResult) {
-            case ErrorResult(CopyServiceException exception) -> throw exception;
-            case SuccessResult(CopyServiceSuccessResultPayload payload) -> payload;
+            case CommandFailure(CopyServiceException exception) -> throw exception;
+            case CommandSuccess(CopyServiceSuccessResultPayload payload) -> payload;
         };
     }
 
@@ -143,7 +150,7 @@ public final class CopyCommand implements Callable<Integer> {
                 .build();
     }
 
-    private IResult<CopyServiceSuccessResultPayload, CopyServiceException> copy(
+    private CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copy(
             CopyElement srcCopyElement,
             CopyElement targetCopyElement,
             SessionOptions sessionOptions

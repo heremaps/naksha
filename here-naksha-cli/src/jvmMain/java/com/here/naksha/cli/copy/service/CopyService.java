@@ -1,8 +1,8 @@
 package com.here.naksha.cli.copy.service;
 
-import com.here.naksha.cli.results.ErrorResult;
-import com.here.naksha.cli.results.IResult;
-import com.here.naksha.cli.results.SuccessResult;
+import com.here.naksha.cli.results.CommandFailure;
+import com.here.naksha.cli.results.CommandResult;
+import com.here.naksha.cli.results.CommandSuccess;
 import naksha.base.StringList;
 import naksha.model.IStorage;
 import naksha.model.NakshaException;
@@ -29,16 +29,16 @@ public final class CopyService {
     }
 
     @NotNull
-    public IResult<CopyServiceSuccessResultPayload, CopyServiceException> copy(
+    public CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copy(
             @NotNull CopyElement src,
             @NotNull CopyElement target
     ) {
         try {
             List<NakshaFeature> features = readFeaturesFromSrc(src);
             SuccessResponse _ = writeFeaturesToTarget(features, target);
-            return new SuccessResult<>(buildSuccessResultPayload(features));
+            return new CommandSuccess<>(buildSuccessResultPayload(features));
         } catch (CopyServiceException exception) {
-            return new ErrorResult<>(exception);
+            return new CommandFailure<>(exception);
         }
     }
 

@@ -4,8 +4,8 @@ import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.parsers.JsonFileParser;
-import com.here.naksha.cli.results.ErrorResult;
-import com.here.naksha.cli.results.SuccessResult;
+import com.here.naksha.cli.results.CommandFailure;
+import com.here.naksha.cli.results.CommandSuccess;
 import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -77,7 +77,11 @@ class CopyCliTest {
                         "--targetCollectionId=%s".formatted(targetCopyElement.getCollectionId())
                 },
                 SUCCESS_EXIT_CODE,
-                "Success! Copied %d features.".formatted(numberOfCopiedElement),
+                "Success! Copied %d features from %s to %s.".formatted(
+                        numberOfCopiedElement,
+                        srcCopyElement,
+                        targetCopyElement
+                ),
                 ""
         );
 
@@ -190,7 +194,7 @@ class CopyCliTest {
     private CopyService copyServiceReturningErrorResult(String exceptionMessage) {
         CopyService copyService = mock();
         when(copyService.copy(any(), any())).thenReturn(
-                new ErrorResult<>(new CopyServiceException(exceptionMessage))
+                new CommandFailure<>(new CopyServiceException(exceptionMessage))
         );
         return copyService;
     }
@@ -230,7 +234,7 @@ class CopyCliTest {
     private CopyService copyServiceReturningSuccessResult(int numberOfCopiedElements) {
         CopyService copyService = mock();
         when(copyService.copy(any(), any())).thenReturn(
-                new SuccessResult<>(
+                new CommandSuccess<>(
                         new CopyServiceSuccessResultPayload(numberOfCopiedElements)
                 )
         );

@@ -1,8 +1,8 @@
 package com.here.naksha.cli.copy.service;
 
-import com.here.naksha.cli.results.ErrorResult;
-import com.here.naksha.cli.results.IResult;
-import com.here.naksha.cli.results.SuccessResult;
+import com.here.naksha.cli.results.CommandFailure;
+import com.here.naksha.cli.results.CommandResult;
+import com.here.naksha.cli.results.CommandSuccess;
 import naksha.base.fn.Fn1;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
@@ -65,18 +65,18 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
 
         // Then: assert success result
-        SuccessResult<CopyServiceSuccessResultPayload, CopyServiceException> successResult = assertInstanceOf(
-                SuccessResult.class, copyResult
+        CommandSuccess<CopyServiceSuccessResultPayload, CopyServiceException> commandSuccess = assertInstanceOf(
+                CommandSuccess.class, copyResult
         );
 
         // And: assert result payload
-        CopyServiceSuccessResultPayload payload = successResult.payload();
+        CopyServiceSuccessResultPayload payload = commandSuccess.payload();
         assertEquals(features.size(), payload.numberOfCopiedElements());
 
         // Then: assert read request
@@ -106,7 +106,7 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
@@ -130,7 +130,7 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
@@ -151,7 +151,7 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
@@ -175,7 +175,7 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
@@ -202,7 +202,7 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
@@ -230,7 +230,7 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
@@ -259,7 +259,7 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
@@ -287,7 +287,7 @@ class CopyServiceTest {
         );
 
         // When
-        IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
                 srcCopyElement,
                 targetCopyElement
         );
@@ -300,15 +300,15 @@ class CopyServiceTest {
     }
 
     private void assertIsErrorResultWithGivenMessage(
-            IResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult,
+            CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult,
             String errorMessage
     ) {
-        ErrorResult<CopyServiceSuccessResultPayload, CopyServiceException> errorResult = assertInstanceOf(
-                ErrorResult.class, copyResult
+        CommandFailure<CopyServiceSuccessResultPayload, CopyServiceException> commandFailure = assertInstanceOf(
+                CommandFailure.class, copyResult
         );
 
         // And: assert result payload
-        CopyServiceException exception = errorResult.payload();
+        CopyServiceException exception = commandFailure.payload();
         assertEquals(errorMessage, exception.getMessage());
     }
 
