@@ -27,8 +27,7 @@ public class CollectionModificationTest extends ApiTest {
         createSpace(nakshaClient, "CollectionModification/setup/historySpace/create_space.json");
     }
 
-    // TODO CASL-1165
-    //@Test
+    @Test
     void tc1400_testActivityLogPerformanceAfterCollectionMod() throws Exception {
         // Given: Test files
         String createFeatureJson = TestUtil.loadFileOrFail("CollectionModification/TC1400_WriteCollectionSuccess/create_features.json");
@@ -68,8 +67,7 @@ public class CollectionModificationTest extends ApiTest {
         assertThat(getResp)
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
-                .hasJsonBody(expectedActivityResp)
-        ;
+                .hasJsonBody(expectedActivityResp);
 
         // When: Regular space is updated to disable activity history and enable autoPurge
         HttpResponse<String> updateSpaceResp2 = nakshaClient.put("hub/spaces/"+REGULAR_SPACE_ID, updateSpaceJson2, streamId);
