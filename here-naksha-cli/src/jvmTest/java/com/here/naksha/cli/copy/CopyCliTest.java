@@ -4,6 +4,8 @@ import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.parsers.JsonFileParser;
+import com.here.naksha.cli.results.CommandFailure;
+import com.here.naksha.cli.results.CommandSuccess;
 import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -38,7 +40,7 @@ class CopyCliTest {
     }
 
     @Test
-    void shouldCopy() throws CopyServiceException {
+    void shouldCopy() {
         // Given
         Path srcStorageConfig = Path.of(validStorageConfigPath);
 
@@ -57,6 +59,13 @@ class CopyCliTest {
                 .setCollectionId("targetc")
                 .build();
 
+        // And: copy service returns success result
+        int numberOfCopiedElement = 10;
+        CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
+
+        // And: factory returns the copy service
+        when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
+
         // And
         CliTestCase testCase = new CliTestCase(
                 new String[]{
@@ -68,13 +77,13 @@ class CopyCliTest {
                         "--targetCollectionId=%s".formatted(targetCopyElement.getCollectionId())
                 },
                 SUCCESS_EXIT_CODE,
-                "success!",
+                "Success! Copied %d features from %s to %s.".formatted(
+                        numberOfCopiedElement,
+                        srcCopyElement,
+                        targetCopyElement
+                ),
                 ""
         );
-
-        // And
-        CopyService copyService = mock();
-        when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
 
         // When: command executed with given args
         TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
@@ -87,7 +96,7 @@ class CopyCliTest {
     }
 
     @Test
-    void shouldFailWithBadSrcNakshaStorage() {
+    void shouldFailWithInvalidSrcNakshaStorage() {
         // Given
         Path filePath = Path.of(invalidStorageConfigPath);
 
@@ -110,7 +119,7 @@ class CopyCliTest {
     }
 
     @Test
-    void shouldFailWithBadTargetNakshaStorage() {
+    void shouldFailWithInvalidTargetNakshaStorage() {
         // Given
         Path targetFilePath = Path.of(invalidStorageConfigPath);
 
@@ -136,13 +145,12 @@ class CopyCliTest {
     }
 
     @Test
-    void shouldFailWhenCopyFail() throws CopyServiceException {
-        // Given
-        CopyService copyService = mock();
+    void shouldFailWhenCopyFail() {
+        // Given: copy service returns error result
         String exceptionMessage = "Test message";
-        doThrow(new CopyServiceException(exceptionMessage)).when(copyService).copy(any(), any());
+        CopyService copyService = copyServiceReturningErrorResult(exceptionMessage);
 
-        // And
+        // And: factory returns the copy service
         when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
 
         // And
@@ -183,6 +191,14 @@ class CopyCliTest {
             }"; line: 3, column: 4]
             """;
 
+    private CopyService copyServiceReturningErrorResult(String exceptionMessage) {
+        CopyService copyService = mock();
+        when(copyService.copy(any(), any())).thenReturn(
+                new CommandFailure<>(new CopyServiceException(exceptionMessage))
+        );
+        return copyService;
+    }
+
     private NakshaStorage loadStorage(Path storageConfig) {
         JsonFileParser jsonFileParser = new JsonFileParser();
         return assertDoesNotThrow(() -> jsonFileParser.parse(storageConfig, NakshaStorage.class));
@@ -201,7 +217,7 @@ class CopyCliTest {
             CopyService copyService,
             CopyElement srcCopyElement,
             CopyElement targetCopyElement
-    ) throws CopyServiceException {
+    ) {
         ArgumentCaptor<CopyElement> actualSrcCopyElements = ArgumentCaptor.forClass(CopyElement.class);
         ArgumentCaptor<CopyElement> actualTargetCopyElements = ArgumentCaptor.forClass(CopyElement.class);
         verify(copyService, only()).copy(actualSrcCopyElements.capture(), actualTargetCopyElements.capture());
@@ -213,5 +229,15 @@ class CopyCliTest {
                 targetCopyElement,
                 actualTargetCopyElements.getValue()
         );
+    }
+
+    private CopyService copyServiceReturningSuccessResult(int numberOfCopiedElements) {
+        CopyService copyService = mock();
+        when(copyService.copy(any(), any())).thenReturn(
+                new CommandSuccess<>(
+                        new CopyServiceSuccessResultPayload(numberOfCopiedElements)
+                )
+        );
+        return copyService;
     }
 }

@@ -9,6 +9,15 @@ public final class CopyElement {
     private final String mapId;
     private final String collectionId;
 
+    @Override
+    public String toString() {
+        return "CopyElement{storageId: \"%s\", mapId: \"%s\", collectionId: \"%s\"}".formatted(
+                nakshaStorage.getId(),
+                mapId,
+                collectionId
+        );
+    }
+
     @NotNull
     public NakshaStorage getNakshaStorage() {
         return nakshaStorage;
