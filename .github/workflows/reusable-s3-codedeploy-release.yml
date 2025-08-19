@@ -43,7 +43,7 @@ jobs:
       # create directory to download artifacts
       - run: mkdir download
       - name: Fetch CodeDeploy artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ inputs.pipeline-artifact-name }}
           path: download
