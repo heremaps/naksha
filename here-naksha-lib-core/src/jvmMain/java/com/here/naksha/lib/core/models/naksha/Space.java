@@ -19,6 +19,7 @@
 package com.here.naksha.lib.core.models.naksha;
 
 import com.fasterxml.jackson.annotation.*;
+import com.here.naksha.lib.core.CollectionRef;
 import com.here.naksha.lib.core.models.Copyright;
 import com.here.naksha.lib.core.models.License;
 import com.here.naksha.lib.core.models.indexing.Constraint;
@@ -27,10 +28,8 @@ import com.here.naksha.lib.core.models.indexing.Index;
 import java.util.List;
 
 import com.here.naksha.lib.core.models.indexing.IndexMap;
-import naksha.base.PlatformType;
-import naksha.base.StringList;
+import naksha.base.*;
 import naksha.model.NakshaVersion;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
@@ -47,7 +46,7 @@ import static naksha.base.Platform.forClass;
 @SuppressWarnings("unused")
 public final class Space extends EventTarget<Space> {
 
-  public static final PlatformType<Space> TYPE = forClass(Space.class);
+  public static final PlatformType<Space> TYPE = forClass(Space.class).withJsonType("naksha.Space");
 
   /**
    * Beta release date: 2018-10-01T00:00Z[UTC]
@@ -236,16 +235,72 @@ public final class Space extends EventTarget<Space> {
   }
 
   /**
-   * Returns the collection identifier of the collection in which to persist the space; if any.
+   * Returns the collection-id of the collection to use from <code>properties.collection.id</code>. Only used if the storage handler does not fix the collection.
    *
-   * @return the collection identifier.
+   * ### Note
+   * This method returns <code>null</code>, if there is no explicit collection defined.
+   *
+   * @return the collection-id of the collection to use.
    */
   @JsonIgnore
-  public @NotNull String getCollectionId() {
-    NakshaCollection collection = getProperties().getCollection();
-    if (collection != null) {
-      return collection.getId();
+  public @Nullable String getCollectionId() {
+    final var colRef = getProperties().getCollectionRef();
+    return colRef != null ? colRef.getId() : null;
+  }
+
+  /**
+   * Returns the map-id of the map to use from <code>properties.collection.mapId</code>. Only used if the storage handler does not fix the map.
+   * @return the map-id of the map to use.
+   */
+  public @Nullable String getMapId() {
+    final var colRef = getProperties().getCollectionRef();
+    return colRef != null ? colRef.getMapId() : null;
+  }
+
+  /**
+   * Returns the storage-id of the storage to use from <code>properties.collection.storageId</code>. Only used if the storage handler does not fix the storage.
+   * @return the storage-id of the storage to use.
+   */
+  public @Nullable String getStorageId() {
+    final var colRef = getProperties().getCollectionRef();
+    return colRef != null ? colRef.getStorageId() : null;
+  }
+
+  /**
+   * Generate the details of the Naksha collection to which this space is bound, so which storage, map and collection to operate upon.
+   *
+   * <p>Every value is first read from the {@link SpaceProperties}. If not being defined, the default value is read from the given <code>defaults</code>. Throws {@link NakshaException} with {@link NakshaError#ILLEGAL_STATE} if the storage, map, or collection can't be detected. Note that values defined within the {@link SpaceProperties} will always override the given <code>defaults</code>. The collection-id is a triple check, first {@link SpaceProperties} is tested, then the given <code>defaults</code>, and finally the <code>id</code> of this space is used.
+   *
+   * @param defaults The defaults to use, if no specific value is defined within the {@link SpaceProperties}.
+   * @throws NakshaException with {@link NakshaError#ILLEGAL_STATE}, if the full collection can't be extracted from space or defaults.
+   * @since 3.0
+   */
+  public @NotNull CollectionRef getCollectionRef(@Nullable CollectionRef defaults) {
+    // TODO: alweber: To review with Jakub
+    final var colRef = new CollectionRef();
+
+    // Storage.
+    var storageId = this.getStorageId();
+    if (storageId == null && defaults != null) storageId = defaults.getStorageId();
+    if (storageId == null) {
+      throw new NakshaException(ILLEGAL_STATE, "Missing storageId in storage handler config and space");
     }
-    return getId();
+    colRef.setStorageId(storageId);
+
+    // Map.
+    var mapId = this.getMapId();
+    if (mapId == null && defaults != null) mapId = defaults.getMapId();
+    if (mapId == null) {
+      throw new NakshaException(ILLEGAL_STATE, "Missing mapId in storage handler config and space");
+    }
+    colRef.setMapId(mapId);
+
+    // Collection.
+    var colId = this.getCollectionId();
+    if (colId == null && defaults != null) colId = defaults.getId();
+    if (colId == null) colId = this.getId();
+    colRef.setId(colId);
+
+    return colRef;
   }
 }

@@ -18,9 +18,9 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
+import com.here.naksha.lib.core.CollectionRef;
 import naksha.base.PlatformType;
 import naksha.model.NakshaVersion;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.Nullable;
@@ -35,17 +35,37 @@ public class SpaceProperties extends NakshaProperties {
 
   public static final PlatformType<SpaceProperties> TYPE = forClass(SpaceProperties.class);
 
-  @AvailableSince(NakshaVersion.v2_0_7)
-  public static final String NAKSHA_COLLECTION = "collection";
+  /**
+   * The constant string <code>collection</code>.
+   * @since 3.0
+   */
+  public static final String COLLECTION = "collection";
+
+  // TODO: alweber: To review with Jakub
 
   /**
-   * The backend storage collection details specified at space level
+   * Returns the explicit collection to which this space is bound, if any. Technically a simple JSON object like:
+   * <pre>{@code
+   * {
+   *   "id": {collection-id}
+   *   "mapId": {map-id}
+   *   "storageId": {storage-id}
+   * }
+   * }</pre>
+   * @return the collection reference or <code>null</code>, if no such information is available.
    */
-  public @Nullable NakshaCollection getCollection() {
-    return getAs(NAKSHA_COLLECTION, NakshaCollection.TYPE);
+  // TODO: alweber: Review with Jakub
+  public @Nullable CollectionRef getCollectionRef() {
+    return getAs(COLLECTION, CollectionRef.TYPE);
   }
 
-  public void setCollection(final @Nullable NakshaCollection collection) {
-    set(NAKSHA_COLLECTION, collection);
+  /**
+   * Sets the collection reference.
+   * @param ref the collection reference to set.
+   */
+  // TODO: alweber: Review with Jakub
+  public void setCollectionRef(final @Nullable CollectionRef ref) {
+    set(COLLECTION, ref);
   }
+
 }

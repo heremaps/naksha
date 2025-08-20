@@ -29,10 +29,7 @@ import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
-import com.here.naksha.lib.core.AbstractTask;
-import com.here.naksha.lib.core.DefaultRequestLimitManager;
-import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.IRequestLimitManager;
+import com.here.naksha.lib.core.*;
 import com.here.naksha.lib.core.exceptions.StorageNotFoundException;
 import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.features.Extension;
@@ -395,6 +392,13 @@ public class NakshaHub implements INaksha {
   @Override
   public @NotNull ClassLoader getClassLoader(@NotNull String extensionId) {
     return this.extensionManager.getClassLoader(extensionId);
+  }
+
+  private final NakshaQuickAccess nakshaQuickAccess = new NakshaQuickAccess(this);
+
+  @Override
+  public @NotNull INakshaQuickAccess quickAccess() {
+    return nakshaQuickAccess;
   }
 
   @Override

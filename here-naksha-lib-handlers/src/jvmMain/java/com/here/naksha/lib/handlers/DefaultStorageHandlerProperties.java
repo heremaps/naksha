@@ -18,16 +18,17 @@
  */
 package com.here.naksha.lib.handlers;
 
+import com.here.naksha.lib.core.CollectionRef;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import naksha.base.PlatformType;
-import naksha.model.IStorage;
+import naksha.model.Naksha;
 import naksha.model.NakshaVersion;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.NakshaBaseKt.String_TYPE;
 import static naksha.base.Platform.forClass;
 
 /**
@@ -40,6 +41,7 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
   private static final Boolean DEFAULT_AUTO_CREATE_COLLECTION = true;
   private static final Boolean DEFAULT_AUTO_DELETE_COLLECTION = true;
 
+  @Deprecated
   @AvailableSince(NakshaVersion.v2_0_7)
   public static final String STORAGE_ID = "storageId";
 
@@ -53,25 +55,60 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
   public static final String AUTO_DELETE_COLLECTION = "autoDeleteCollection";
 
   /**
-   * To associate EventHandler with specific {@link IStorage} that it should operate against.
+   * Read the collection reference defaults. To be used when the {@link SpaceProperties} do not explicitly define storage-id, map-id, and/or collection-id.
+   *
+   * <p>This method applies a downward compatibility hack, so that <code>v2</code> configurations will still work, next to the new configurations.
+   * @since 3.0
    */
-  public @Nullable String getStorageId() {
-    return (String) getRaw(STORAGE_ID);
-  }
-
-  public void setStorageId(final @Nullable String storageId) {
-    setRaw(STORAGE_ID, storageId);
+  // TODO: alweber: Review with Jakub
+  public @Nullable CollectionRef getCollectionRef() {
+    @Nullable CollectionRef colRef = getAs(COLLECTION, CollectionRef.TYPE);
+    if (colRef == null) {
+      // If a URN was provided as `collection`, support it.
+      final var string = getAs(COLLECTION, String_TYPE);
+      if (string != null) {
+        colRef = CollectionRef.fromString(string);
+      }
+    }
+    // If the new collection syntax is not used, fallback to v2 downward compatibility.
+    if (colRef == null) {
+      // In v2 we expect that there is a dedicated `storageId` property at the handler, and a schema at the storage config.
+      final var oldStorageId = getAs(STORAGE_ID, String_TYPE);
+      if (oldStorageId != null) {
+        colRef = new CollectionRef();
+        if (colRef.getStorageId() == null) {
+          colRef.setStorageId(oldStorageId);
+        }
+        // If that is the case, the default map is configured within the storage in a `schema` property.
+        final var storage = Naksha.getStorageById(oldStorageId);
+        if (storage == null) {
+          // Fallback to old default schema.
+          colRef.setMapId("unimap");
+        } else {
+          final var storageConfig = storage.getConfig();
+          final var props = storageConfig.getProperties();
+          final var schema = props.getAs("schema", String_TYPE);
+          if (schema != null) {
+            colRef.setMapId(schema);
+          } else {
+            // Fallback to old default schema.
+            colRef.setMapId("unimap");
+          }
+        }
+      }
+    }
+    return colRef;
   }
 
   /**
-   * Details of the backend xyz collection to use. If undefined, the collection defined at the {@link SpaceProperties} level will be used.
+   * Set the collection reference defaults.
+   * @param ref the reference to set.
+   * @since 3.0
+   * @see CollectionRef
    */
-  public @Nullable NakshaCollection getCollection() {
-    return getAs(COLLECTION, NakshaCollection.TYPE);
-  }
-
-  public void setCollection(final @Nullable NakshaCollection collection) {
-    setRaw(COLLECTION, collection);
+  // TODO: alweber: Review with Jakub
+  public void setCollectionRef(final @Nullable CollectionRef ref) {
+    set(COLLECTION, ref);
   }
 
   /**
