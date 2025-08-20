@@ -39,6 +39,8 @@ import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -49,6 +51,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+
+import naksha.model.NakshaContext;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -202,6 +206,7 @@ public final class NakshaApp extends Thread {
     }
     // Instantiate NakshaHub instance
     // TODO: what about appName?
+    NakshaContext.newInstance(appName).attachToCurrentThread();
     this.hub = NakshaHubFactory.getInstance(storageUrl, nakshaHubConfig, configId);
     nakshaHubConfig = hub.getConfig(); // use the config finally set by NakshaHub instance
     log.info("Using server config : {}", nakshaHubConfig);

@@ -8,7 +8,6 @@ import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.Flags
 import naksha.model.Naksha
-import naksha.model.NakshaContext
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic

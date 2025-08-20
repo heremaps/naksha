@@ -290,3 +290,7 @@ fun Task.publishToCentral() {
     }
 }
 tasks.register("publishToCentral") { publishToCentral() }
+
+tasks.register("shadowJar") {
+    dependsOn(":here-naksha-app-service:shadowJar")
+}

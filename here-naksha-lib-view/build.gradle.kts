@@ -5,6 +5,7 @@ plugins {
 description = gatherDescription()
 
 kotlin {
+    jvm {}
     sourceSets {
         jvmMain {
             jvmToolchain(23)
@@ -24,8 +25,6 @@ kotlin {
             }
         }
     }
-
-    jvm {}
 }
 
 tasks {
