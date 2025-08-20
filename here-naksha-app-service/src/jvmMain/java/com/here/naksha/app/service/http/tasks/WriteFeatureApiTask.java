@@ -159,6 +159,42 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
+    // TODO: alweber: Why do we send `naksha.model.request.WriteRequest`'s through the pipeline?
+    //       Naksha-Hub should define its own events (which may still extend the base Request).
+    //       The reason to internally NOT reuse the `naksha.model.request.WriteRequest` is simply
+    //       that a space has nothing to do with a storage. A space is a pipeline of handlers,
+    //       and the input into these handlers is a list of features with an instruction what to
+    //       do with them. This instruction could be any virtual one, like `moderate`, `verify`, ...
+    //       Clearly, it could be as well `create`, `update`, `upsert`, `patch`, `delete` or `purge`.
+    //       However, these are logical, while a `naksha.model.request.WriteRequest` has a concrete
+    //       `naksha.model.request.Write` instructions with precise requirement where to mutate
+    //       the feature, so it requires to know the storage, the map, and the collection where the
+    //       feature is located.
+    //       For all other handlers and the REST side, we do not really need to know this, we do not
+    //       even need to know if the feature is going to end up within a storage. We should actually
+    //       move the transformation from the logical instruction into a concrete storage write into
+    //       the storage handler.
+    //       IMHO, we need to change this to use logical events, like `ModifyFeatureRequest`. Within
+    //       that request, there should be no mentioning where the feature actually ends up, do not
+    //       mention something about storage, map, or collection. When a patch is needed, the
+    //       corresponding patch-handler will first issue a logical `ReadFeaturesRequest` and send it
+    //       through the pipeline, hoping that any other handler can resolve it and return a storage
+    //       `SuccessResponse`, with the requested features added. Beware, there can be multiple storages
+    //       attached to the space! After it has the result of the `ReadFeaturesRequest` it performs the
+    //       patch, three-way-merge, and all other operations supported by the handler, and eventually
+    //       turn the patch into an absolute instruction.
+    //       I believe, this is no short term change, but we should strongly plan this, and do it.
+    //       Technically, we need to be able to add multiple storage handlers into a single pipeline,
+    //       and except for the final storage handler, no other handler should bother about where a
+    //       feature is stored (unless itself has a specific reason). Therefore, lets change this and
+    //       send logical requests through the pipeline, with logical responses. This even makes testing
+    //       simpler, because a mock for a storage does only need to respond to the logical request with
+    //       a logical answer.
+    //       NOTE: The reason the `naksha.model.request.WriteRequest` is a JSON object is that handlers
+    //       can generate it, then serialize it, and send it to remove physical storage systems. This is
+    //       as well recommended for logical requests/responses, why both could extend the very basic
+    //       `naksha.model.request.Request` and `naksha.model.request.Response`.
+
     // as applicable, modify features based on parameters supplied
     final WriteRequest wrRequest = new WriteRequest();
     for (final NakshaFeature feature : features) {
