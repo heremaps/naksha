@@ -29,6 +29,12 @@ open class NakshaTx : NakshaObject() {
 
     companion object NakshaTx_C {
         /**
+         * The type-string: `naksha.Transaction`.
+         * @since 3.0
+         */
+        const val TYPE_STRING = "naksha.Transaction"
+
+        /**
          * The [PlatformType] of [NakshaTx].
          * @since 3.0
          */
@@ -36,7 +42,7 @@ open class NakshaTx : NakshaObject() {
         @JsStatic
         val TYPE = forKClass(NakshaTx::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType("naksha.Tx")
+            .withJsonType(TYPE_STRING)
 
         private val INT_0 = NotNullProperty<NakshaTx, Int>(Int_TYPE, init = { _, _ -> 0 })
         private val MAPS = NotNullProperty<NakshaTx, NakshaTxMapById>(NakshaTxMapById.TYPE)

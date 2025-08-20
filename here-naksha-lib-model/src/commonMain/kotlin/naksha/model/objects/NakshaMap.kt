@@ -36,6 +36,12 @@ open class NakshaMap() : NakshaObject() {
 
     companion object NakshaMap_C {
         /**
+         * The type-string: `naksha.Map`.
+         * @since 3.0
+         */
+        const val TYPE_STRING = "naksha.Map"
+
+        /**
          * The [PlatformType] of [NakshaMap].
          * @since 3.0
          */
@@ -43,7 +49,7 @@ open class NakshaMap() : NakshaObject() {
         @JsStatic
         val TYPE = forKClass(NakshaMap::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType("naksha.Map")
+            .withJsonType(TYPE_STRING)
 
         private val STORAGE_ID = NullableProperty<NakshaMap, String>(String_TYPE)
         private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Int_TYPE)

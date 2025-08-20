@@ -159,7 +159,7 @@ data class SessionOptions @JvmOverloads constructor(
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        fun from(context: NakshaContext?, authToken: String? = null, useMaster: Boolean = false): SessionOptions {
+        fun from(context: NakshaContext? = null, authToken: String? = null, useMaster: Boolean = false): SessionOptions {
             val c = context ?: NakshaContext.currentContext()
             return SessionOptions(
                 appName = c.appName,
@@ -177,6 +177,12 @@ data class SessionOptions @JvmOverloads constructor(
             )
         }
 
+        /**
+         * Helper for JavaScript and Java to create a new default instance without providing too many arguments.
+         * @param context the context, if being _null_, then [NakshaContext.currentContext] is called.
+         * @param useMaster _true_ if the master node should be used forcefully (if supported by the storage); only necessary in rare situations, generally the default _false_ is recommended.
+         * @return the session options.
+         */
         @JvmStatic
         @JsStatic
         @JsName("fromWithNullToken")

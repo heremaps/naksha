@@ -213,6 +213,21 @@ open class AnyTypedObject : AnyObject() {
         }
     }
 
+    /**
+     * Return the natural type that is detected by the `type`, `featureType`, and `momType` properties.
+     *
+     * ### Note
+     * This can differ from the current type, that is for example returned by `Platform.forInstance(object)`, because `forInstance` only returns the currently assigned type. However, as Naksha uses [duck-typing](https://de.wikipedia.org/wiki/Duck-Typing), anybody can cast any object into any type. This method helps to detect the real type that should be used. For example, for registered MOM types, it will return the corresponding MOM type, even while someone may have cast this object into a `Foo` instance, so `forInstance` would return `Foo`, while `detectType` may return a `MomRoadSegment`.
+     *
+     * In other words, objects can be `Foo` and `MomRoadSegment` at the same time, even with overlapping properties. This is the general concept behind [duck-typing](https://de.wikipedia.org/wiki/Duck-Typing) and essentially necessary for systems like Naksha-Hub, which allow extensions to perform type detection, data processing, and loading of arbitrary extensions, all at runtime. So, it allows introduction of handling for new custom types at runtime, without recompilation or redeployment of the whole service. It is what makes JavaScript essentially so powerful in many situations.
+     *
+     * @param rootType If not _null_, limit the detection to types extending this root type.
+     * @return the detected [PlatformType] or _null_, if no type could be detected.
+     */
+    fun detectType(rootType: PlatformType<*>? = null): PlatformType<*>? {
+        return Platform.forFirstJsonType(type, rootType ?: Any_TYPE)
+    }
+
     override fun onCreation() {
         super.onCreation()
         val type = forInstance(this)

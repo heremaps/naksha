@@ -657,49 +657,49 @@ class XyzNs : AnyObject() {
      * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
      * @since 3.0
      */
-    val cv0 by _DOUBLE_NULL
+    var cv0 by _DOUBLE_NULL
 
     /**
      * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
      * @since 3.0
      */
-    val cv1 by _DOUBLE_NULL
+    var cv1 by _DOUBLE_NULL
 
     /**
      * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
      * @since 3.0
      */
-    val cv2 by _DOUBLE_NULL
+    var cv2 by _DOUBLE_NULL
 
     /**
      * A customer value that is indexed, and which can be searched, _null_ or _undefined_ if not used.
      * @since 3.0
      */
-    val cv3 by _DOUBLE_NULL
+    var cv3 by _DOUBLE_NULL
 
     /**
      * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
      * @since 3.0
      */
-    val cs0 by _STRING_NULL
+    var cs0 by _STRING_NULL
 
     /**
      * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
      * @since 3.0
      */
-    val cs1 by _STRING_NULL
+    var cs1 by _STRING_NULL
 
     /**
      * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
      * @since 3.0
      */
-    val cs2 by _STRING_NULL
+    var cs2 by _STRING_NULL
 
     /**
      * A customer string that is indexed, and which can be searched, _null_ or _undefined_ if not used.
      * @since 3.0
      */
-    val cs3 by _STRING_NULL
+    var cs3 by _STRING_NULL
 
     /**
      * Returns 'true' if the tag was removed, 'false' if it was not present.

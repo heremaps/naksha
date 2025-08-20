@@ -434,7 +434,7 @@ open class PgWriter internal constructor(
     }
 
     /**
-     * Invoked when a [NakshaCollection][naksha.model.objects.NakshaCollection] should be physically created.
+     * Invoked when a [NakshaCollection][naksha.model.objects.NakshaCollection] should be physically deleted.
      * @param collection the collection that should be physically created.
      * @since 3.0
      */

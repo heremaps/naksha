@@ -41,6 +41,12 @@ open class NakshaDictionary() : NakshaObject() {
 
     companion object NakshaDictionary_C {
         /**
+         * The type-string: `naksha.Dictionary`.
+         * @since 3.0
+         */
+        const val TYPE_STRING = "naksha.Dictionary"
+
+        /**
          * The [PlatformType] of [NakshaDictionary].
          * @since 3.0
          */
@@ -48,13 +54,7 @@ open class NakshaDictionary() : NakshaObject() {
         @JsStatic
         val TYPE = forKClass(NakshaDictionary::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType("naksha.Dictionary")
-
-        /**
-         * The feature-type of this feature itself.
-         * @since 3.0
-         */
-        const val FEATURE_TYPE = "naksha.Dictionary"
+            .withJsonType(TYPE_STRING)
 
         /**
          * Convert the given JBON bytes into an in-memory dictionary.

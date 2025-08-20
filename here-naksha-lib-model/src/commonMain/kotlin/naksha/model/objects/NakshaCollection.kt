@@ -384,6 +384,12 @@ open class NakshaCollection() : NakshaObject() {
 
     companion object NakshaCollection_C {
         /**
+         * The type-string: `Collection`.
+         * @since 3.0
+         */
+        const val TYPE_STRING = "naksha.Collection"
+
+        /**
          * The [PlatformType] of [NakshaCollection].
          * @since 3.0
          */
@@ -391,7 +397,7 @@ open class NakshaCollection() : NakshaObject() {
         @JsStatic
         val TYPE = forKClass(NakshaCollection::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType("naksha.Collection")
+            .withJsonType(TYPE_STRING)
 
         /**
          * Index above the `id` property, includes `tn`, and `next_tn`.

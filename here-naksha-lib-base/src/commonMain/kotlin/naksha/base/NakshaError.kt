@@ -262,6 +262,12 @@ open class NakshaError() : AnyObject() {
          */
         const val STORAGE_NOT_FOUND = "StorageNotFound"
 
+        /**
+         * If a HERE URN is not well formatted.
+         * @since 3.0
+         */
+        const val INVALID_URN_FORMAT = "InvalidUrnFormat"
+
         private val CODE_FIELD = NotNullProperty<NakshaError, String>(String_TYPE) { _, _ -> EXCEPTION }
         private val MSG_FIELD = NotNullProperty<NakshaError, String>(String_TYPE) { self, _ -> self.code }
         private val THROWABLE_FIELD = NullableProperty<NakshaError, Throwable>(Throwable_TYPE)

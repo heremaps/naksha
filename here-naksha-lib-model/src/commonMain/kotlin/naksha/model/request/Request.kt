@@ -42,7 +42,7 @@ open class Request : AnyObject() {
      * The columns of a [tuple][naksha.model.Tuple] that are needed in the [resultFilters]. Actually, if any [resultFilters] are set, this causes the API to invoke [naksha.model.ISession.loadTuples] before delivering the [FeatureTuple] to the [resultFilters].
      * @since 3.0
      */
-    var returnColumns by RETURN_OPTIONS
+    var returnColumns: ReturnColumns by RETURN_OPTIONS
 
     /**
      * A list of lambdas, that should be invoked by the storage for every row that should be added into a result-set. The method can inspect the row, and should return either the unmodified row, a modified version to be added to the response, or _null_, if the row should be removed from the result-set.

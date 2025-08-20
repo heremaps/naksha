@@ -29,6 +29,12 @@ open class NakshaFeature() : GeoFeature() {
 
     companion object NakshaFeature_C {
         /**
+         * The type-string: `naksha.Feature`.
+         * @since 3.0
+         */
+        const val TYPE_STRING = "naksha.Feature"
+
+        /**
          * The [PlatformType] of [NakshaFeature].
          * @since 3.0
          */
@@ -36,7 +42,7 @@ open class NakshaFeature() : GeoFeature() {
         @JsStatic
         val TYPE = forKClass(NakshaFeature::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType(FEATURE)
+            .withJsonType(TYPE_STRING)
 
         const val PROPERTIES_KEY = "properties"
         private val REFERENCE_POINT_MEMBER = NullableProperty<NakshaFeature, SpPoint>(SpPoint.TYPE)

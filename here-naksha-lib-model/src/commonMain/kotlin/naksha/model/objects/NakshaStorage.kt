@@ -41,6 +41,12 @@ open class NakshaStorage() : NakshaObject() {
 
     companion object NakshaStorage_C {
         /**
+         * The type-string: `naksha.Storage`.
+         * @since 3.0
+         */
+        const val TYPE_STRING = "naksha.Storage"
+
+        /**
          * The [PlatformType] of [NakshaStorage].
          * @since 3.0
          */
@@ -48,7 +54,7 @@ open class NakshaStorage() : NakshaObject() {
         @JsStatic
         val TYPE = forKClass(NakshaStorage::class)
             .withPackageName(PACKAGE_NAME)
-            .withJsonType("naksha.Storage")
+            .withJsonType(TYPE_STRING)
 
         const val CLASSNAME_FIELD = "className"
 
