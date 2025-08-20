@@ -15,6 +15,8 @@ import picocli.CommandLine;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -76,6 +78,12 @@ public final class CopyCommand implements Callable<Integer> {
     )
     private @Nullable String targetCollectionId;
 
+    @CommandLine.Option(
+            names = {"--autoCreateTarget"},
+            description = "Auto create target's map and collection."
+    )
+    private boolean autoCreateTarget;
+
     public CopyCommand(
             @NotNull CopyServiceFactory copyServiceFactory,
             @NotNull StorageProvider storageProvider
@@ -118,11 +126,13 @@ public final class CopyCommand implements Callable<Integer> {
             CopyElement target,
             CopyServiceSuccessResultPayload resultPayload
     ) {
-        return "Success! Copied %d features from %s to %s.".formatted(
+        List<String> messages = new ArrayList<>(resultPayload.messages());
+        messages.add("Success! Copied %d features from %s to %s.".formatted(
                 resultPayload.numberOfCopiedElements(),
                 src,
                 target
-        );
+        ));
+        return String.join("\n", messages);
     }
 
     private CopyServiceSuccessResultPayload requireSuccessResultAndGetPayload(
@@ -162,7 +172,8 @@ public final class CopyCommand implements Callable<Integer> {
 
         return copyService.copy(
                 srcCopyElement,
-                targetCopyElement
+                targetCopyElement,
+                autoCreateTarget
         );
     }
 

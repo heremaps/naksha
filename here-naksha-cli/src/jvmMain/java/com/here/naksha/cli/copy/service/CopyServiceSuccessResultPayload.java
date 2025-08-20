@@ -1,4 +1,6 @@
 package com.here.naksha.cli.copy.service;
 
-public record CopyServiceSuccessResultPayload(int numberOfCopiedElements) {
+import java.util.List;
+
+public record CopyServiceSuccessResultPayload(int numberOfCopiedElements, List<String> messages) {
 }

@@ -15,6 +15,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.file.Path;
+import java.util.Collections;
 
 import static com.here.naksha.cli.TestUtils.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -40,7 +41,7 @@ class CopyCliTest {
     }
 
     @Test
-    void shouldCopy() {
+    void shouldCopyWithoutAutoCreateTarget() {
         // Given
         Path srcStorageConfig = Path.of(validStorageConfigPath);
 
@@ -89,7 +90,64 @@ class CopyCliTest {
         TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
 
         // Then
-        assertCopyServiceParams(copyService, srcCopyElement, targetCopyElement);
+        assertCopyServiceParams(copyService, srcCopyElement, targetCopyElement, false);
+
+        // And
+        testCase.assertMatches(result);
+    }
+
+    @Test
+    void shouldCopyWithAutoCreateTarget() {
+        // Given
+        Path srcStorageConfig = Path.of(validStorageConfigPath);
+
+        // And
+        Path targetStorageConfig = Path.of(validStorageConfigPath);
+
+        // And
+        CopyElement srcCopyElement = new CopyElement.Builder(loadStorage(srcStorageConfig))
+                .setMapId("srcm")
+                .setCollectionId("srcc")
+                .build();
+
+        // And
+        CopyElement targetCopyElement = new CopyElement.Builder(loadStorage(targetStorageConfig))
+                .setMapId("targetm")
+                .setCollectionId("targetc")
+                .build();
+
+        // And: copy service returns success result
+        int numberOfCopiedElement = 10;
+        CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
+
+        // And: factory returns the copy service
+        when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
+
+        // And
+        CliTestCase testCase = new CliTestCase(
+                new String[]{
+                        "--srcStorageConfig=%s".formatted(srcStorageConfig),
+                        "--targetStorageConfig=%s".formatted(targetStorageConfig),
+                        "--srcMapId=%s".formatted(srcCopyElement.getMapId()),
+                        "--srcCollectionId=%s".formatted(srcCopyElement.getCollectionId()),
+                        "--targetMapId=%s".formatted(targetCopyElement.getMapId()),
+                        "--targetCollectionId=%s".formatted(targetCopyElement.getCollectionId()),
+                        "--autoCreateTarget"
+                },
+                SUCCESS_EXIT_CODE,
+                "Success! Copied %d features from %s to %s.".formatted(
+                        numberOfCopiedElement,
+                        srcCopyElement,
+                        targetCopyElement
+                ),
+                ""
+        );
+
+        // When: command executed with given args
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        assertCopyServiceParams(copyService, srcCopyElement, targetCopyElement, true);
 
         // And
         testCase.assertMatches(result);
@@ -193,7 +251,7 @@ class CopyCliTest {
 
     private CopyService copyServiceReturningErrorResult(String exceptionMessage) {
         CopyService copyService = mock();
-        when(copyService.copy(any(), any())).thenReturn(
+        when(copyService.copy(any(), any(), anyBoolean())).thenReturn(
                 new CommandFailure<>(new CopyServiceException(exceptionMessage))
         );
         return copyService;
@@ -216,11 +274,12 @@ class CopyCliTest {
     private void assertCopyServiceParams(
             CopyService copyService,
             CopyElement srcCopyElement,
-            CopyElement targetCopyElement
+            CopyElement targetCopyElement,
+            boolean autoCreateTarget
     ) {
         ArgumentCaptor<CopyElement> actualSrcCopyElements = ArgumentCaptor.forClass(CopyElement.class);
         ArgumentCaptor<CopyElement> actualTargetCopyElements = ArgumentCaptor.forClass(CopyElement.class);
-        verify(copyService, only()).copy(actualSrcCopyElements.capture(), actualTargetCopyElements.capture());
+        verify(copyService, only()).copy(actualSrcCopyElements.capture(), actualTargetCopyElements.capture(), eq(autoCreateTarget));
         assertCopyElement(
                 srcCopyElement,
                 actualSrcCopyElements.getValue()
@@ -233,9 +292,9 @@ class CopyCliTest {
 
     private CopyService copyServiceReturningSuccessResult(int numberOfCopiedElements) {
         CopyService copyService = mock();
-        when(copyService.copy(any(), any())).thenReturn(
+        when(copyService.copy(any(), any(), anyBoolean())).thenReturn(
                 new CommandSuccess<>(
-                        new CopyServiceSuccessResultPayload(numberOfCopiedElements)
+                        new CopyServiceSuccessResultPayload(numberOfCopiedElements, Collections.emptyList())
                 )
         );
         return copyService;
