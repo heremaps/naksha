@@ -20,13 +20,16 @@ package com.here.naksha.lib.hub.util;
 
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.view.ViewDeserialize;
 import com.here.naksha.lib.hub.NakshaHubConfig;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class ConfigUtil {
 
@@ -36,8 +39,7 @@ public class ConfigUtil {
 
   private ConfigUtil() {}
 
-  public static NakshaHubConfig readConfigFile(final @NotNull String configId, final @NotNull String appName)
-      throws IOException {
+  public static NakshaHubConfig readConfigFile(final @NotNull String configId, final @NotNull String appName) {
     NakshaHubConfig cfg = null;
     try (final Json json = Json.get()) {
       // use the path provided in NAKSHA_CONFIG_PATH (if it is set)
@@ -46,9 +48,8 @@ public class ConfigUtil {
       // attempt loading config from file
       final IoHelp.LoadedBytes loaded =
           IoHelp.readBytesFromHomeOrResource(configId + ".json", false, appName, path);
-      cfg = json.reader(ViewDeserialize.Storage.class)
-          .forType(NakshaHubConfig.class)
-          .readValue(loaded.getBytes());
+      String loadedJson = new String(loaded.getBytes(), StandardCharsets.UTF_8);
+      cfg =  JvmBoxingUtil.box(Platform.fromJSON(loadedJson, FromJsonOptions.DEFAULT), NakshaHubConfig.class);
       logger.info("Fetched supplied server config from {}", loaded.getPath());
     }
     return cfg;
