@@ -18,12 +18,15 @@
  */
 package com.here.naksha.lib.core.models.naksha;
 
-import java.util.List;
+import com.here.naksha.lib.core.INaksha;
 import naksha.base.StringList;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaObject;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Event targets are all entities within Naksha-Hub that are able to receive events. This means, they have to define event-handlers, so that a pipeline can be created. When creating the handlers for the pipeline of the target, the constructor of event-handler implementation receives three arguments, being the {@link EventHandlerConfig}, {@link INaksha}, and the {@link EventTarget}, so for which the pipeline is created.
+ * @param <SELF>
+ */
 public abstract class EventTarget<SELF extends EventTarget<SELF>> extends NakshaObject {
   public static final String EVENT_HANDLER_IDS = "eventHandlerIds";
   public static final String ID = "id";
@@ -33,8 +36,8 @@ public abstract class EventTarget<SELF extends EventTarget<SELF>> extends Naksha
     return (SELF) this;
   }
 
-  public @NotNull List<@NotNull String> getEventHandlerIds() {
-    return getOrSet(EVENT_HANDLER_IDS, new StringList());
+  public @NotNull StringList getEventHandlerIds() {
+    return getOrCreate(EVENT_HANDLER_IDS, StringList.TYPE);
   }
 
   public @NotNull SELF addHandler(@NotNull String handlerId) {
