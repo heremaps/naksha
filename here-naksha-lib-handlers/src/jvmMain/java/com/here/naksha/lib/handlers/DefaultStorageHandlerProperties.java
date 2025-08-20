@@ -19,7 +19,9 @@
 package com.here.naksha.lib.handlers;
 
 import com.here.naksha.lib.core.CollectionRef;
+import com.here.naksha.lib.core.ValueOrErr;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import naksha.base.NakshaError;
 import naksha.base.PlatformType;
 import naksha.model.Naksha;
 import naksha.model.NakshaVersion;
@@ -61,7 +63,7 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
    * @since 3.0
    */
   // TODO: alweber: Review with Jakub
-  public @Nullable CollectionRef getCollectionRef() {
+  public @NotNull ValueOrErr<CollectionRef> getCollectionRef() {
     @Nullable CollectionRef colRef = getAs(COLLECTION, CollectionRef.TYPE);
     if (colRef == null) {
       // If a URN was provided as `collection`, support it.
@@ -97,7 +99,10 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
         }
       }
     }
-    return colRef;
+    if (colRef == null) {
+      return new ValueOrErr<>(NakshaError.ILLEGAL_STATE, "");
+    }
+    return new ValueOrErr<>(colRef);
   }
 
   /**
@@ -118,8 +123,8 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
     return getOrSet(AUTO_CREATE_COLLECTION, DEFAULT_AUTO_CREATE_COLLECTION);
   }
 
-  public void setAutoCreateCollection(Boolean autoCreateCollection) {
-    setRaw(AUTO_CREATE_COLLECTION, autoCreateCollection);
+  public void setAutoCreateCollection(@Nullable Boolean autoCreateCollection) {
+    set(AUTO_CREATE_COLLECTION, autoCreateCollection);
   }
 
   /**
@@ -129,7 +134,7 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
     return getOrSet(AUTO_DELETE_COLLECTION, DEFAULT_AUTO_DELETE_COLLECTION);
   }
 
-  public void setAutoDeleteCollection(Boolean autoDeleteCollection) {
-    setRaw(AUTO_DELETE_COLLECTION, autoDeleteCollection);
+  public void setAutoDeleteCollection(@Nullable Boolean autoDeleteCollection) {
+    set(AUTO_DELETE_COLLECTION, autoDeleteCollection);
   }
 }

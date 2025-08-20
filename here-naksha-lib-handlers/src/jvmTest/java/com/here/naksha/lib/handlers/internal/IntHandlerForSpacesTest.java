@@ -136,7 +136,7 @@ class IntHandlerForSpacesTest {
     Space space = space("space_id", "no_desc", "some_title", List.of("handler_1", "handler_2", "handler_3"));
     NakshaCollection collection = new NakshaCollection("test_collection");
     collection.setMapId("tes_map_id");
-    space.getProperties().setCollection(collection);
+    space.getProperties().setCollectionRef(collection);
     return Stream.of(
         named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
         named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(SPACES, space, false))),

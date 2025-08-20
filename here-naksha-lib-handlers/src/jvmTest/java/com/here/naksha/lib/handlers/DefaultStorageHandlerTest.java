@@ -16,6 +16,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.here.naksha.lib.core.CollectionRef;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
@@ -34,7 +35,6 @@ import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
@@ -195,7 +195,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
-    String collectionId = handler.properties.getCollection().getId();
+    String collectionId = handler.properties.getCollectionRef().getId();
     WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(collectionId, featureToCreate));
 
     // When: Processing write features
@@ -215,7 +215,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // And: passed Write Collection request was about creating collection defined in Handler properties
     assertEquals(WriteOp.CREATE, capturedCollectionWrite.getOp());
-    assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getId());
+    assertEquals(handler.properties.getCollectionRef().getId(), capturedCollectionWrite.getId());
   }
 
   @Test
@@ -346,7 +346,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     Write submittedWrite = subsmittedWrites.get(0);
     assertEquals(WriteOp.CREATE, submittedWrite.getOp());
     assertEquals(mapIdFromStorageProps, submittedWrite.getMapId());
-    assertEquals(handler.properties.getCollection().getId(), submittedWrite.getCollectionId());
+    assertEquals(handler.properties.getCollectionRef().getId(), submittedWrite.getCollectionId());
   }
 
   private static Write findSingleCreateCollectionWrite(List<WriteRequest> writeRequests) {
@@ -425,11 +425,11 @@ class DefaultStorageHandlerTest extends AbstractTest {
       SPACE_ID
     }
 
-    NakshaCollection correctCollection() {
+    @Nullable CollectionRef correctCollection() {
       return switch (validCollectionSource) {
-        case HANDLER_PROPERTIES -> handlerProperties.getCollection();
-        case SPACE_PROPERTIES -> space.getProperties().getCollection();
-        case SPACE_ID -> new NakshaCollection(space.getId()).withMapId(getMapId());
+        case HANDLER_PROPERTIES -> handlerProperties.getCollectionRef();
+        case SPACE_PROPERTIES -> space.getProperties().getCollectionRef();
+        case SPACE_ID -> new CollectionRef(null, getMapId(), space.getId());
       };
     }
   }
@@ -473,32 +473,32 @@ class DefaultStorageHandlerTest extends AbstractTest {
     if (collectionId == null) {
       return new SpaceProperties();
     }
-    final NakshaCollection nakshaCollection = new NakshaCollection();
-    nakshaCollection.setId(collectionId);
-    nakshaCollection.setMapId(getMapId());
+    final var colRef = new CollectionRef();
+    colRef.setId(collectionId);
+    colRef.setMapId(getMapId());
     SpaceProperties spaceProperties = new SpaceProperties();
-    spaceProperties.setCollection(nakshaCollection);
+    spaceProperties.setCollectionRef(colRef);
     return spaceProperties;
   }
 
   private static DefaultStorageHandlerProperties handlerPropertiesWithCollection(String collectionId) {
     DefaultStorageHandlerProperties properties = handlerProperties();
-    NakshaCollection collection = collectionId != null ? new NakshaCollection() : null;
-    if (collection != null) {
-      collection.setId(collectionId);
-      collection.setMapId(getMapId());
+    if (collectionId != null) {
+      final var colRef = new CollectionRef();
+      colRef.setId(collectionId);
+      colRef.setMapId(getMapId());
+      properties.setCollectionRef(colRef);
     }
-    properties.setCollection(collection);
     return properties;
   }
 
   private static DefaultStorageHandlerProperties handlerProperties(String storageId) {
-    final NakshaCollection nakshaCollection = new NakshaCollection();
-    nakshaCollection.setId("handler_collection");
-    nakshaCollection.setMapId(getMapId());
-    DefaultStorageHandlerProperties properties = new DefaultStorageHandlerProperties();
-    properties.setStorageId(storageId);
-    properties.setCollection(nakshaCollection);
+    final var colRef = new CollectionRef();
+    colRef.setId(storageId);
+    colRef.setId("handler_collection");
+    colRef.setMapId(getMapId());
+    final var properties = new DefaultStorageHandlerProperties();
+    properties.setCollectionRef(colRef);
     properties.setAutoDeleteCollection(true);
     properties.setAutoCreateCollection(true);
     return properties;

@@ -36,9 +36,7 @@ public class CommonApiTestSetup {
   }
 
   /**
-   * Convenience method that creates resources needed for feature-related operations (Storage, Handler, Space) Client needs to supply
-   * directory which contains corresponding json file for each of the resources (`create_storage.json`,`create_event_handler.json`,
-   * `create_space.json`)
+   * Convenience method that creates resources needed for feature-related operations (Storage, Handler, Space) Client needs to supply directory which contains corresponding json file for each of the resources (`create_space.json`, `create_event_handler.json`)
    *
    * @param nakshaClient Naksha http client used for creating resource via REST API
    * @param setupDir     subdirectory of 'src/jvmTest/resources/unit_test_data/' that contains resource definition in json format

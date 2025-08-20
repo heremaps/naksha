@@ -3,7 +3,8 @@
   "id": "test-config",
   "adminStorage": {
     "id": "naksha_admin_db",
-    "className": "naksha.psql.PsqlTestStorage"
+    "className": "naksha.psql.PsqlTestStorage",
+    "port": 15432
   },
   "httpPort": 8080,
   "env": "local",

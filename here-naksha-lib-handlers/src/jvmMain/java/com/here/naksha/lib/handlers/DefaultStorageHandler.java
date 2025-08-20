@@ -30,6 +30,7 @@ import static naksha.base.NakshaBaseKt.String_TYPE;
 import static naksha.base.Platform.longToInt64;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
+import com.here.naksha.lib.core.Err;
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.lambdas.F1;
@@ -71,9 +72,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   private static final Logger logger = LoggerFactory.getLogger(DefaultStorageHandler.class);
   private static final String STORAGE_PROPERTIES_SCHEMA_KEY = "schema";
 
-  protected @NotNull EventHandlerConfig eventHandlerConfig;
-  protected @NotNull EventTarget<?> eventTarget;
-  protected @NotNull DefaultStorageHandlerProperties properties;
+  protected final @NotNull EventHandlerConfig eventHandlerConfig;
+  protected final @NotNull EventTarget<?> eventTarget;
+  protected final @NotNull DefaultStorageHandlerProperties properties;
+  protected final @NotNull Space space;
 
   public DefaultStorageHandler(
       final @NotNull EventHandlerConfig eventHandlerConfig,
@@ -85,6 +87,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     this.properties = Objects.requireNonNull(
         eventHandlerConfig.getProperties(DefaultStorageHandlerProperties.TYPE)
     );
+    // Currently, the default storage handler can only be added into the pipeline of spaces, so eventTarget is always space!
+    this.space = (Space) eventTarget;
   }
 
   @Override
@@ -98,49 +102,43 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   @Override
   public @NotNull Response process(@NotNull IEvent event) {
-    final NakshaContext ctx = NakshaContext.currentContext();
-    final Request request = event.getRequest();
-
-    logger.info("Handler received request {}", request.getClass().getSimpleName());
-    // Obtain storageId from EventHandler object
-    final String storageId = properties.getStorageId();
-    if (storageId == null) {
-      logger.error("No storageId configured");
-      return new ErrorResponse(NakshaError.NOT_FOUND, "No storageId configured for handler.");
-    }
-    logger.info("Against Storage id={}", storageId);
-    addStorageIdToStreamInfo(storageId, ctx);
-
-    // Obtain IStorage implementation using NakshaHub
-    final IStorage storageImpl = nakshaHub().getStorageById(storageId); // TODO: analyze cache potential (CASL-928)
-    logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
-
-    StopWatch storageTimer = new StopWatch();
     try {
-      String collectionId = retrieveCollectionIdFromRequest(request);
-      String mapId = extractMapIdFromStorageProps(storageImpl);
-      applyMapIdAndCollectionId(request, mapId, collectionId);
-      OperationData operationData = new OperationData(ctx, storageImpl, mapId, collectionId, request);
-      return forwardRequestToStorage(operationData, FIRST_ATTEMPT, storageTimer);
+      final NakshaContext ctx = NakshaContext.currentContext();
+      final Request request = event.getRequest();
+
+      logger.info("Handler received request {}", request.getClass().getSimpleName());
+      // Obtain storageId from EventHandler object
+      final var colRef = space.getCollectionRef(properties.getCollectionRef().get());
+      final String storageId = colRef.getStorageId();
+      if (storageId == null) {
+        logger.error("No storageId configured");
+        return new ErrorResponse(NakshaError.NOT_FOUND, "No storageId configured for handler.");
+      }
+      logger.info("Against Storage id={}", storageId);
+      addStorageIdToStreamInfo(storageId, ctx);
+
+      // Obtain IStorage implementation using NakshaHub
+      final IStorage storageImpl = nakshaHub().getStorageById(storageId); // TODO: analyze cache potential (CASL-928)
+      logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
+
+      StopWatch storageTimer = new StopWatch();
+      try {
+        final String mapId = colRef.getMapId();
+        if (mapId == null) {
+          throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "No mapId configured");
+        }
+        final @NotNull String collectionId = colRef.getStorageId();
+        applyMapIdAndCollectionId(request, mapId, collectionId);
+        OperationData operationData = new OperationData(ctx, storageImpl, mapId, collectionId, request);
+        return forwardRequestToStorage(operationData, FIRST_ATTEMPT, storageTimer);
+      } finally {
+        addStorageTimeToStreamInfo(storageTimer, ctx);
+      }
     } catch (NakshaException ne) {
       return new ErrorResponse(ne.getError());
-    } finally {
-      addStorageTimeToStreamInfo(storageTimer, ctx);
+    } catch(Err err) {
+      return err.get();
     }
-  }
-
-  private String extractMapIdFromStorageProps(@NotNull IStorage storage) {
-    NakshaStorage storageConfig = storage.getConfig();
-    if(storageConfig == null) {
-      throw new NakshaException(NakshaError.ILLEGAL_STATE,
-          "Unable to determine 'mapId' for handler '" + eventHandlerConfig.getId() + "', storage '" + storage.getId() + "' has no config.");
-    }
-    NakshaProperties nakshaProperties = storage.getConfig().getProperties();
-    if(nakshaProperties == null) {
-      throw new NakshaException(NakshaError.ILLEGAL_STATE,
-          "Unable to determine 'mapId' for handler '" + eventHandlerConfig.getId() + "', config of storage '" + storage.getId() + "' has no properties.");
-    }
-    return nakshaProperties.getAs(STORAGE_PROPERTIES_SCHEMA_KEY, String_TYPE);
   }
 
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
@@ -468,43 +466,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         write.setCollectionId(collectionId);
       });
     }
-  }
-
-  // TODO: collectionId at handler level can be potentially removed in the future
-  private @NotNull String retrieveCollectionIdFromRequest(final Request request) {
-    // TODO: check if mapId is present
-    final NakshaCollection collectionDefinedInHandler = properties.getCollection();
-    if (collectionDefinedInHandler != null) {
-      logger.info(
-          "Using collection with id {} that is associated with EventHandler(id={})",
-          collectionDefinedInHandler.getId(),
-          eventHandlerConfig.getId());
-      return collectionDefinedInHandler.getId();
-    }
-    if (eventTarget instanceof Space s) {
-      NakshaCollection collectionDefinedInSpace = null;
-      if (request instanceof WriteRequest wc && isUpdateCollectionRequest(wc)) {
-        // use newly provided collection in the Update request itself
-        // to make sure that the newer collection id (if it has been changed) is used
-        collectionDefinedInSpace =
-            (NakshaCollection) wc.getWrites().get(0).getFeature();
-      } else {
-        // use existing Space collection (as it is not an Update request)
-        final SpaceProperties spaceProperties = s.getProperties(SpaceProperties.TYPE);
-        collectionDefinedInSpace = spaceProperties.getCollection();
-      }
-      if (collectionDefinedInSpace != null) {
-        logger.info(
-            "Using collection with id {} that is associated with Space(id={})",
-            collectionDefinedInSpace.getId(),
-            s.getId());
-        return collectionDefinedInSpace.getId();
-      }
-    }
-    logger.info(
-        "No collection definition found in Handler & Space properties, using default one with event target id: {}",
-        eventTarget.getId());
-    return eventTarget.getId();
   }
 
   private @NotNull List<@NotNull NakshaCollection> collectionsFrom(@NotNull WriteRequest wr) {

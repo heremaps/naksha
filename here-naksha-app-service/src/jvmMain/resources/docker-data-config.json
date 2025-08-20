@@ -3,6 +3,7 @@
   "featureType": "naksha.PgConfig",
   "id": "test_data_db",
   "className": "naksha.psql.PsqlTestStorage",
+  "port": 25432,
   "create": true,
   "updated": true,
   "properties": {

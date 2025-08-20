@@ -9,7 +9,7 @@ import org.jetbrains.annotations.Nullable;
  * A wrapper for an error response.
  * @since 3.0
  */
-public class Err extends Exception {
+public final class Err extends Exception {
   /**
    * Create a new error exception for the given error response.
    * @param errorResponse the error response.
