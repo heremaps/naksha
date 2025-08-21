@@ -21,14 +21,14 @@
       --platform linux/arm64 \
       -t ghcr.io/${NAMESPACE}/${IMAGE_NAME}-arm64:${TAG}
     ```
-    > [!NOTE]
-    > There are defaults targetMapId="genmap" and targetCollectionId="gencol".
-    > You can change target's mapId and collectionId using build-args:
-    > ```bash
-    > docker build . \
-    > --build-arg targetMapId="tarmap" \
-    > --build-arg targetCollectionId="tarcol"
-    > ```
+> [!NOTE]
+> There are defaults targetMapId="genmap" and targetCollectionId="gencol".
+> You can change target's mapId and collectionId using build-args:
+> ```bash
+> docker build . \
+> --build-arg targetMapId="tarmap" \
+> --build-arg targetCollectionId="tarcol"
+> ```
 - Create manifest
     ```bash
      docker manifest create ghcr.io/${NAMESPACE}/${IMAGE_NAME}:${TAG} \

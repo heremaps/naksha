@@ -26,7 +26,7 @@ EOF
 ENV GRADLE_HOME="/opt/gradle/${GRADLE_VERSION}"
 ENV PATH="${GRADLE_HOME}/bin:${PATH}"
 # fetch and build cli
-ARG COMMIT_SHA="a2cef769f70c9c14ecfd92c5122348458d74fdd3" NAKSHA_DIR
+ARG COMMIT_SHA="d11241e1599cb3746b00139b2164ca8bc25324a6" NAKSHA_DIR
 WORKDIR ${NAKSHA_DIR}
 RUN <<EOF
 # do it this way to fetch only specified commit
