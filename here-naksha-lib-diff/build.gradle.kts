@@ -10,6 +10,7 @@ plugins {
 description = gatherDescription()
 
 kotlin {
+    jvmToolchain(23)
     jvm {}
     js(IR) {
         outputModuleName = "naksha_diff"
@@ -50,7 +51,6 @@ kotlin {
             }
         }
         jvmTest {
-            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.kotlintest.runner.junit5)
@@ -66,8 +66,8 @@ kotlin {
 }
 
 configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_23
+    targetCompatibility = JavaVersion.VERSION_23
 }
 
 tasks {

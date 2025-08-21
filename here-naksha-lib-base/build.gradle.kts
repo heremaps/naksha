@@ -10,6 +10,7 @@ plugins {
 description = gatherDescription()
 
 kotlin {
+    jvmToolchain(23)
     sourceSets {
         commonMain {
             dependencies {
@@ -28,7 +29,6 @@ kotlin {
             }
         }
         jvmMain {
-            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(kotlin("reflect"))
@@ -74,8 +74,8 @@ kotlin {
 }
 
 configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_23
+    targetCompatibility = JavaVersion.VERSION_23
 }
 
 tasks {

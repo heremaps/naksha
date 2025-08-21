@@ -11,6 +11,7 @@ plugins {
 description = gatherDescription()
 
 kotlin {
+    jvmToolchain(23)
     jvm {
         compilerOptions {
             freeCompilerArgs = listOf("-Xjvm-default=all")
@@ -61,7 +62,6 @@ kotlin {
             }
         }
         jvmMain {
-            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 api(project(":here-naksha-lib-base"))
@@ -89,8 +89,8 @@ kotlin {
 }
 
 configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_23
+    targetCompatibility = JavaVersion.VERSION_23
 }
 
 tasks {

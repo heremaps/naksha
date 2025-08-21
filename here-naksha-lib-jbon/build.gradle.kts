@@ -10,6 +10,7 @@ plugins {
 description = gatherDescription()
 
 kotlin {
+    jvmToolchain(23)
     jvm {}
     js(IR) {
         outputModuleName = "naksha_jbon"
@@ -51,7 +52,6 @@ kotlin {
             }
         }
         jvmMain {
-            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 api(libs.lz4.java)
@@ -63,8 +63,8 @@ kotlin {
 }
 
 configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_23
+    targetCompatibility = JavaVersion.VERSION_23
 }
 
 tasks {
