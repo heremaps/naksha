@@ -1,10 +1,20 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.shadow)
 }
 
 description = gatherDescription()
+val mainApiClass = "com.here.naksha.app.service.NakshaApp"
+val fatJarBaseName = "naksha-app-service"
 
 kotlin {
+    jvm {
+        mainRun {
+            this.mainClass.set(mainApiClass)
+        }
+    }
     sourceSets {
         jvmMain {
             jvmToolchain(23)
@@ -38,8 +48,6 @@ kotlin {
             }
         }
     }
-
-    jvm {}
 }
 
 tasks {
@@ -48,6 +56,23 @@ tasks {
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "6g"
+    }
+    val shadowJar by registering(ShadowJar::class) {
+        archiveBaseName.set(fatJarBaseName)
+        archiveClassifier.set("")
+        archiveVersion.set(project.version.toString())
+
+//        mustRunAfter("testCodeCoverageReport")
+//
+//        mergeServiceFiles()
+//        isZip64 = true
+
+        manifest {
+            attributes["Main-Class"] = mainApiClass
+        }
+
+        from(kotlin.jvm().compilations.getByName("main").output)
+        configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
     }
 }
 setOverallCoverage(0.0) // only increasing allowed!

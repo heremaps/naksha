@@ -60,23 +60,25 @@ Apart from bare Postgres, Naksha needs [PostGIS]() extension which is mandatory.
 You can use standalone instance installed directly on your host machine but there's also a docker image that hosts Postgres 16 with all the extensions mentioned above already installed. You can find its definition in [this Dockerfile](here-naksha-app-service/src/jvmTest/psql_container/Dockerfile).
 
 To use the containerized Postgres with your locally runnning Naksha:
-1) Navigate to [Dockerfile directory](here-naksha-app-service/src/jvmTest/psql_container):
-   ```
-   cd here-naksha-app-service/src/jvmTest/psql_container
-   ```
-2) Build the image:
-   ```
-   docker build --no-cache -t <IMAGE_ID> . 
-   ```
-3) Run the container (supplied options omit all auth - use it only locally, tweak if needed):
-   ```
-   docker run -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_INITDB_ARGS="--auth-host=trust --auth-local=trust" -e POSTGRES_HOST_AUTH_METHOD=trust <IMAGE_ID>
-   ```
+1) Pull docker image:
+    ```bash
+    docker pull ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+    ```
+2) Run docker image with password set to default:
+    ```bash
+    docker run -p 5432:5432 -e PGPASSWORD=password ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+    ```
+
+3) When the docker container is started for the first time, it will generate a random password so to simplify local development we can change it to default.
+Also if you want locally persist your db changes refer to detailed containerized Postgres build.
+For more detailed containerized Postgres build refer to [this README](deployment/docker/README.md).
+
+
 4) Now your database should be available on `localhost` with port `5432` - you can start Naksha the same way as described in [Run App](#run-app) section.
 
 5) \[optional extension run\] Now you can run naksha jar and include [example config with additional extensions enabled](here-naksha-app-service/src/main/resources/test-config-with-extensions.json) like so:
 ```
-java -jar build/libs/naksha-2.0.6-all.jar test-config-with-extensions 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
+java -jar here-naksha-app-service/build/libs/naksha-app-service-3.0.0-beta.24.jar test-config-with-extensions 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
 ```
 
 ### Run App
@@ -102,11 +104,11 @@ To ramp up Naksha with the jar, run:
 java -jar <jar-file> <config-id> <database-url>
 
 # Example 1 : Start service with test config against default Database URL (useful for local env)
-java -jar build/libs/naksha-2.0.6-all.jar test-config
+java -jar here-naksha-app-service/build/libs/naksha-app-service-3.0.0-beta.24.jar test-config
 # Example 2 : Start service with given custom config and custom database URL (useful for cloud env)
-java -jar build/libs/naksha-2.0.6-all.jar cloud-config 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
+java -jar here-naksha-app-service/build/libs/naksha-app-service-3.0.0-beta.24.jar cloud-config 'jdbc:postgresql://localhost:5432/postgres?user=postgres&password=pswd&schema=naksha&app=naksha_local&id=naksha_admin_db'
 # Example 3 : Start service with given custom config and default (local) database URL
-java -jar build/libs/naksha-2.0.6-all.jar custom-config
+java -jar here-naksha-app-service/build/libs/naksha-app-service-3.0.0-beta.24.jar custom-config
 
 ```
 

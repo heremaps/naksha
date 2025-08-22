@@ -10,6 +10,7 @@ plugins {
 description = gatherDescription()
 
 kotlin {
+    jvm {}
     sourceSets {
         commonMain {
             dependencies {
@@ -50,7 +51,6 @@ kotlin {
         }
     }
 
-    jvm {}
     js(IR) {
         outputModuleName = "naksha_base"
         useEsModules()
