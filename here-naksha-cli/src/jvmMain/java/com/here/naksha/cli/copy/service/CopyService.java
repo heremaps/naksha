@@ -13,14 +13,16 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaMap;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
 public final class CopyService {
+    private static final Logger logger = LoggerFactory.getLogger(CopyService.class);
     private final SessionOptions sessionOptions;
     private final StorageProvider storageProvider;
 
@@ -39,9 +41,13 @@ public final class CopyService {
             boolean autoCreateTarget
     ) {
         try {
+            IStorage targetStorage = useTargetStorage(target);
+            if (autoCreateTarget) {
+                createTarget(targetStorage, target);
+            }
             List<NakshaFeature> features = readFeaturesFromSrc(src);
-            List<String> messages = writeFeaturesToTarget(features, target, autoCreateTarget);
-            return new CommandSuccess<>(buildSuccessResultPayload(features, messages));
+            writeFeaturesToTarget(features, target, targetStorage);
+            return new CommandSuccess<>(buildSuccessResultPayload(features));
         } catch (CopyServiceException exception) {
             return new CommandFailure<>(exception);
         }
@@ -57,20 +63,13 @@ public final class CopyService {
         return extractResponseItems(successResponse, NakshaFeature.class);
     }
 
-    private List<String> writeFeaturesToTarget(
+    private void writeFeaturesToTarget(
             List<NakshaFeature> features,
             CopyElement target,
-            boolean autoCreateTarget
+            IStorage storage
     ) throws CopyServiceException {
-        List<String> messages = new ArrayList<>();
-        IStorage storage = useTargetStorage(target);
-        if (autoCreateTarget) {
-            List<String> createTargetMessages = createTarget(storage, target);
-            messages.addAll(createTargetMessages);
-        }
         Response response = performCreateFeaturesRequest(storage, target, features);
         requireTargetSuccessResponse(response);
-        return messages;
     }
 
     private Response performCreateFeaturesRequest(
@@ -80,47 +79,57 @@ public final class CopyService {
         return performWriteRequest(storage, addFeaturesRequest);
     }
 
-    private List<String> createTarget(IStorage storage, CopyElement target) throws CopyServiceException {
-        String createMapMessage = createMapIfAbsent(storage, target.getMapId());
-        String createCollectionMessage = createCollectionIfAbsent(storage, target);
-        return List.of(
-                createMapMessage,
-                createCollectionMessage
-        );
+    private void createTarget(IStorage storage, CopyElement target) throws CopyServiceException {
+        if (target.getMapId() == null) {
+            throw new CopyServiceException("Target's mapId should not be null!");
+        }
+        if (target.getCollectionId() == null) {
+            throw new CopyServiceException("Target's collectionId should not be null!");
+        }
+        createMapIfAbsent(storage, target.getMapId());
+        createCollectionIfAbsent(storage, target);
     }
 
-    private String createMapIfAbsent(IStorage storage, String mapId) throws CopyServiceException {
+    private void createMapIfAbsent(IStorage storage, String mapId) throws CopyServiceException {
         Response response = performCreateMapRequest(storage, mapId);
-        return switch (response) {
-            case SuccessResponse _ ->
-                    "Map(id: \"%s\") was successfully created on storage(id: \"%s\")!".formatted(mapId, storage.getId());
+        switch (response) {
+            case SuccessResponse _ -> logger.info(
+                    "Map(id: \"{}\") was successfully created on storage(id: \"{}\")!", mapId, storage.getId()
+            );
             case ErrorResponse errorResponse -> {
                 NakshaError nakshaError = errorResponse.getError();
                 if (!nakshaError.getCode().equals(NakshaError.MAP_EXISTS)) {
                     throw new CopyServiceException("Problem with creating map!", new NakshaException(nakshaError));
                 }
-                yield "Map(id: \"%s\") is already present on storage(id: \"%s\")!".formatted(mapId, storage.getId());
+                logger.info("Map(id: \"{}\") is already present on storage(id: \"{}\")!", mapId, storage.getId());
             }
             default -> throw new CopyServiceException("Unexpected response while creating map!");
-        };
+        }
     }
 
-    private String createCollectionIfAbsent(IStorage storage, CopyElement target) throws CopyServiceException {
+    private void createCollectionIfAbsent(IStorage storage, CopyElement target) throws CopyServiceException {
         Response response = performCreateCollectionRequest(storage, target);
-        return switch (response) {
-            case SuccessResponse _ ->
-                    "Collection(id: \"%s\") was successfully created in map(id: \"%s\") on storage(id: \"%s\")!"
-                            .formatted(target.getCollectionId(), target.getMapId(), storage.getId());
+        switch (response) {
+            case SuccessResponse _ -> logger.info(
+                    "Collection(id: \"{}\") was successfully created in map(id: \"{}\") on storage(id: \"{}\")!",
+                    target.getCollectionId(),
+                    target.getMapId(),
+                    storage.getId()
+            );
             case ErrorResponse errorResponse -> {
                 NakshaError nakshaError = errorResponse.getError();
                 if (!nakshaError.getCode().equals(NakshaError.COLLECTION_EXISTS)) {
                     throw new CopyServiceException("Problem with creating collection!", new NakshaException(nakshaError));
                 }
-                yield "Collection(id: \"%s\") is already present in map(id: \"%s\") on storage(id: \"%s\")!"
-                        .formatted(target.getCollectionId(), target.getMapId(), storage.getId());
+                logger.info(
+                        "Collection(id: \"{}\") is already present in map(id: \"{}\") on storage(id: \"{}\")!",
+                        target.getCollectionId(),
+                        target.getMapId(),
+                        storage.getId()
+                );
             }
             default -> throw new CopyServiceException("Unexpected response while creating collection!");
-        };
+        }
     }
 
     private Response performCreateMapRequest(IStorage storage, String mapId) throws CopyServiceException {
@@ -200,8 +209,8 @@ public final class CopyService {
         }
     }
 
-    private CopyServiceSuccessResultPayload buildSuccessResultPayload(List<NakshaFeature> features, List<String> messages) {
-        return new CopyServiceSuccessResultPayload(features.size(), messages);
+    private CopyServiceSuccessResultPayload buildSuccessResultPayload(List<NakshaFeature> features) {
+        return new CopyServiceSuccessResultPayload(features.size());
     }
 
     private IStorage useSrcStorage(CopyElement source) throws CopyServiceException {

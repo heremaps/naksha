@@ -15,7 +15,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.nio.file.Path;
-import java.util.Collections;
 
 import static com.here.naksha.cli.TestUtils.*;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -294,7 +293,7 @@ class CopyCliTest {
         CopyService copyService = mock();
         when(copyService.copy(any(), any(), anyBoolean())).thenReturn(
                 new CommandSuccess<>(
-                        new CopyServiceSuccessResultPayload(numberOfCopiedElements, Collections.emptyList())
+                        new CopyServiceSuccessResultPayload(numberOfCopiedElements)
                 )
         );
         return copyService;

@@ -1,6 +1,7 @@
 package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.loggers.LoggingMixin;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
 import com.here.naksha.cli.results.CommandFailure;
@@ -15,8 +16,6 @@ import picocli.CommandLine;
 
 import java.io.PrintWriter;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -82,7 +81,10 @@ public final class CopyCommand implements Callable<Integer> {
             names = {"--autoCreateTarget"},
             description = "Auto create target's map and collection."
     )
-    private boolean autoCreateTarget;
+    private boolean autoCreateTarget = false;
+
+    @CommandLine.Mixin
+    private LoggingMixin loggingMixin;
 
     public CopyCommand(
             @NotNull CopyServiceFactory copyServiceFactory,
@@ -100,13 +102,11 @@ public final class CopyCommand implements Callable<Integer> {
 
         NakshaContext.currentContext().withAppId("nakshacli");
         SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext());
-
         CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copy(
                 srcCopyElement,
                 targetCopyElement,
                 sessionOptions
         );
-
         CopyServiceSuccessResultPayload resultPayload = requireSuccessResultAndGetPayload(copyResult);
 
         PrintWriter commandLineOut = getCommandLineOut();
@@ -126,13 +126,11 @@ public final class CopyCommand implements Callable<Integer> {
             CopyElement target,
             CopyServiceSuccessResultPayload resultPayload
     ) {
-        List<String> messages = new ArrayList<>(resultPayload.messages());
-        messages.add("Success! Copied %d features from %s to %s.".formatted(
+        return "Success! Copied %d features from %s to %s.".formatted(
                 resultPayload.numberOfCopiedElements(),
                 src,
                 target
-        ));
-        return String.join("\n", messages);
+        );
     }
 
     private CopyServiceSuccessResultPayload requireSuccessResultAndGetPayload(

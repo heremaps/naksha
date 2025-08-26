@@ -57,9 +57,7 @@ class CopyServiceTest {
         IReadSession readSession = createReadSessionForStorageReturningSuccessResponse(srcStorage, features);
 
         // And
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -116,9 +114,7 @@ class CopyServiceTest {
         IReadSession readSession = createReadSessionForStorageReturningSuccessResponse(srcStorage, features);
 
         // And
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -142,39 +138,21 @@ class CopyServiceTest {
         // And: assert result payload
         CopyServiceSuccessResultPayload payload = commandSuccess.payload();
         assertEquals(features.size(), payload.numberOfCopiedElements());
-        assertIterableEquals(
-                List.of(
-                        "Map(id: \"%s\") was successfully created on storage(id: \"%s\")!".formatted(
-                                targetCopyElement.getMapId(), targetStorage.getId()
-                        ),
-                        "Collection(id: \"%s\") was successfully created in map(id: \"%s\") on storage(id: \"%s\")!".formatted(
-                                targetCopyElement.getCollectionId(), targetCopyElement.getMapId(), targetStorage.getId()
-                        )
-                ),
-                payload.messages()
-        );
 
         // And: assert read request
         List<ReadFeatures> readFeaturesList = captureRequestsOfType(readSession, ReadFeatures.class);
         assertReadFeatures(readFeaturesList);
 
         // And: assert create map write
-        List<Write> createMapWrites = captureWrites(createMapWriteSession);
-        assertEquals(1, createMapWrites.size(), "Should be only one create map write");
-        Write createMapWrite = createMapWrites.getFirst();
-        assertCreateMapWrite(createMapWrite);
+        captureAndAssertCreateMapWrite(createMapWriteSession);
         verify(createMapWriteSession).commit();
 
         // And: assert create collection write
-        List<Write> createCollectionWrites = captureWrites(createCollectionWriteSession);
-        assertEquals(1, createCollectionWrites.size(), "Should be only one create collection write");
-        Write createCollectionWrite = createCollectionWrites.getFirst();
-        assertCreateCollectionWrite(createCollectionWrite);
+        captureAndAssertCreateCollectionWrite(createCollectionWriteSession);
         verify(createCollectionWriteSession).commit();
 
         // And: assert create features writes
-        List<Write> createFeaturesWrites = captureWrites(createFeaturesWriteSession);
-        assertCreateFeaturesWrites(createFeaturesWrites, features);
+        captureAndAssertCreateFeaturesWrites(createFeaturesWriteSession, features);
         verify(createFeaturesWriteSession).commit();
     }
 
@@ -199,10 +177,7 @@ class CopyServiceTest {
         IReadSession readSession = createReadSessionForStorageReturningSuccessResponse(srcStorage, features);
 
         // And
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
-
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
         // And
         CopyService copyService = new CopyService(
                 storageProvider,
@@ -225,39 +200,21 @@ class CopyServiceTest {
         // And: assert result payload
         CopyServiceSuccessResultPayload payload = commandSuccess.payload();
         assertEquals(features.size(), payload.numberOfCopiedElements());
-        assertIterableEquals(
-                List.of(
-                        "Map(id: \"%s\") is already present on storage(id: \"%s\")!".formatted(
-                                targetCopyElement.getMapId(), targetStorage.getId()
-                        ),
-                        "Collection(id: \"%s\") was successfully created in map(id: \"%s\") on storage(id: \"%s\")!".formatted(
-                                targetCopyElement.getCollectionId(), targetCopyElement.getMapId(), targetStorage.getId()
-                        )
-                ),
-                payload.messages()
-        );
 
         // And: assert read request
         List<ReadFeatures> readFeaturesList = captureRequestsOfType(readSession, ReadFeatures.class);
         assertReadFeatures(readFeaturesList);
 
         // And: assert create map write
-        List<Write> createMapWrites = captureWrites(createMapWriteSession);
-        assertEquals(1, createMapWrites.size(), "Should be only one create map write");
-        Write createMapWrite = createMapWrites.getFirst();
-        assertCreateMapWrite(createMapWrite);
+        captureAndAssertCreateMapWrite(createMapWriteSession);
         verify(createMapWriteSession).rollback();
 
         // And: assert create collection write
-        List<Write> createCollectionWrites = captureWrites(createCollectionWriteSession);
-        assertEquals(1, createCollectionWrites.size(), "Should be only one create collection write");
-        Write createCollectionWrite = createCollectionWrites.getFirst();
-        assertCreateCollectionWrite(createCollectionWrite);
+        captureAndAssertCreateCollectionWrite(createCollectionWriteSession);
         verify(createCollectionWriteSession).commit();
 
         // And: assert create features writes
-        List<Write> createFeaturesWrites = captureWrites(createFeaturesWriteSession);
-        assertCreateFeaturesWrites(createFeaturesWrites, features);
+        captureAndAssertCreateFeaturesWrites(createFeaturesWriteSession, features);
         verify(createFeaturesWriteSession).commit();
     }
 
@@ -282,10 +239,7 @@ class CopyServiceTest {
         IReadSession readSession = createReadSessionForStorageReturningSuccessResponse(srcStorage, features);
 
         // And
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
-
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
         // And
         CopyService copyService = new CopyService(
                 storageProvider,
@@ -308,39 +262,21 @@ class CopyServiceTest {
         // And: assert result payload
         CopyServiceSuccessResultPayload payload = commandSuccess.payload();
         assertEquals(features.size(), payload.numberOfCopiedElements());
-        assertIterableEquals(
-                List.of(
-                        "Map(id: \"%s\") is already present on storage(id: \"%s\")!".formatted(
-                                targetCopyElement.getMapId(), targetStorage.getId()
-                        ),
-                        "Collection(id: \"%s\") is already present in map(id: \"%s\") on storage(id: \"%s\")!".formatted(
-                                targetCopyElement.getCollectionId(), targetCopyElement.getMapId(), targetStorage.getId()
-                        )
-                ),
-                payload.messages()
-        );
 
         // And: assert read request
         List<ReadFeatures> readFeaturesList = captureRequestsOfType(readSession, ReadFeatures.class);
         assertReadFeatures(readFeaturesList);
 
         // And: assert create map write
-        List<Write> createMapWrites = captureWrites(createMapWriteSession);
-        assertEquals(1, createMapWrites.size(), "Should be only one create map write");
-        Write createMapWrite = createMapWrites.getFirst();
-        assertCreateMapWrite(createMapWrite);
+        captureAndAssertCreateMapWrite(createMapWriteSession);
         verify(createMapWriteSession).rollback();
 
         // And: assert create collection write
-        List<Write> createCollectionWrites = captureWrites(createCollectionWriteSession);
-        assertEquals(1, createCollectionWrites.size(), "Should be only one create collection write");
-        Write createCollectionWrite = createCollectionWrites.getFirst();
-        assertCreateCollectionWrite(createCollectionWrite);
+        captureAndAssertCreateCollectionWrite(createCollectionWriteSession);
         verify(createCollectionWriteSession).rollback();
 
         // And: assert create features writes
-        List<Write> createFeaturesWrites = captureWrites(createFeaturesWriteSession);
-        assertCreateFeaturesWrites(createFeaturesWrites, features);
+        captureAndAssertCreateFeaturesWrites(createFeaturesWriteSession, features);
         verify(createFeaturesWriteSession).commit();
     }
 
@@ -351,7 +287,10 @@ class CopyServiceTest {
         IStorage srcStorage = createFailingSrcStorage();
 
         // And
-        StorageProvider storageProvider = createStorageProviderReturningSrcStorage(srcStorage);
+        IStorage targetStorage = createValidTargetStorage();
+
+        // And
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -377,7 +316,10 @@ class CopyServiceTest {
         IStorage srcStorage = createStorageWithFailingReadSession();
 
         // And
-        StorageProvider storageProvider = createStorageProviderReturningSrcStorage(srcStorage);
+        IStorage targetStorage = createValidTargetStorage();
+
+        // And
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -399,8 +341,12 @@ class CopyServiceTest {
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
     void shouldFailWhenCanNotGetSourceStorage(boolean autoCreateTarget) {
-        // Given: failing storage provider
+        // Given: failing storage provider on using src storage
         StorageProvider storageProvider = createFailingStorageProvider(srcNakshaStorage);
+
+        // And: valid on using target storage
+        IStorage targetStorage = createValidTargetStorage();
+        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -426,7 +372,10 @@ class CopyServiceTest {
         IStorage srcStorage = createSrcStorageWithUnexpectedResponse();
 
         // And
-        StorageProvider storageProvider = createStorageProviderReturningSrcStorage(srcStorage);
+        IStorage targetStorage = createValidTargetStorage();
+
+        // And
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -579,9 +528,7 @@ class CopyServiceTest {
         IStorage srcStorage = createValidSrcStorage();
 
         // And
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -615,9 +562,7 @@ class CopyServiceTest {
         IStorage srcStorage = createValidSrcStorage();
 
         // And
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -653,9 +598,7 @@ class CopyServiceTest {
         IStorage srcStorage = createValidSrcStorage();
 
         // And
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -691,9 +634,7 @@ class CopyServiceTest {
         IStorage srcStorage = createValidSrcStorage();
 
         // And
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        when(storageProvider.useStorage(targetNakshaStorage)).thenReturn(targetStorage);
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
 
         // And
         CopyService copyService = new CopyService(
@@ -713,6 +654,72 @@ class CopyServiceTest {
 
         // And
         verify(createCollectionWriteSession).rollback();
+    }
+
+    @Test
+    void shouldFailWhenAutoCreateTargetAndTargetsMapIdNull() {
+        // Given: target copy element without mapId
+        CopyElement targetCopyElement = targetCopyElementWithoutMapId();
+
+        // And
+        IStorage targetStorage = createValidTargetStorage();
+        IStorage srcStorage = createValidSrcStorage();
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
+
+        // And
+        CopyService copyService = new CopyService(
+                storageProvider,
+                sessionOptions
+        );
+
+        // When
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+                srcCopyElement,
+                targetCopyElement,
+                true
+        );
+
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Target's mapId should not be null!");
+    }
+
+    @Test
+    void shouldFailWhenAutoCreateTargetAndTargetsCollectionIdNull() {
+        // Given: target copy element without collectionId
+        CopyElement targetCopyElement = targetCopyElementWithoutCollectionId();
+
+        // And
+        IStorage targetStorage = createValidTargetStorage();
+        IStorage srcStorage = createValidSrcStorage();
+        StorageProvider storageProvider = createStorageProvider(srcStorage, targetStorage);
+
+        // And
+        CopyService copyService = new CopyService(
+                storageProvider,
+                sessionOptions
+        );
+
+        // When
+        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copyService.copy(
+                srcCopyElement,
+                targetCopyElement,
+                true
+        );
+
+        // Then
+        assertIsErrorResultWithGivenMessage(copyResult, "Target's collectionId should not be null!");
+    }
+
+    private CopyElement targetCopyElementWithoutMapId() {
+        return new CopyElement.Builder(targetNakshaStorage)
+                .setCollectionId("col")
+                .build();
+    }
+
+    private CopyElement targetCopyElementWithoutCollectionId() {
+        return new CopyElement.Builder(targetNakshaStorage)
+                .setMapId("map")
+                .build();
     }
 
     private void assertIsErrorResultWithGivenMessage(
@@ -862,12 +869,6 @@ class CopyServiceTest {
         return srcStorage;
     }
 
-    private StorageProvider createStorageProviderReturningSrcStorage(IStorage srcStorage) {
-        StorageProvider storageProvider = mock();
-        when(storageProvider.useStorage(srcNakshaStorage)).thenReturn(srcStorage);
-        return storageProvider;
-    }
-
     private StorageProvider createFailingStorageProvider(NakshaStorage nakshaStorage) {
         StorageProvider storageProvider = mock();
         when(storageProvider.useStorage(nakshaStorage)).thenThrow(new NakshaException("", ""));
@@ -884,6 +885,12 @@ class CopyServiceTest {
         IStorage srcStorage = mock();
         when(srcStorage.useReadSession(eq(sessionOptions), any())).thenReturn(new SuccessResponse());
         return srcStorage;
+    }
+
+    private IStorage createValidTargetStorage() {
+        IStorage storage = mock();
+        when(storage.useWriteSession(eq(sessionOptions), any())).thenReturn(new SuccessResponse());
+        return storage;
     }
 
     private StorageProvider createStorageProvider(IStorage srcStorage, IStorage targetStorage) {
@@ -913,5 +920,24 @@ class CopyServiceTest {
             Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
             return lambda.call(writeSession);
         };
+    }
+
+    private void captureAndAssertCreateMapWrite(IWriteSession createMapWriteSession) {
+        List<Write> createMapWrites = captureWrites(createMapWriteSession);
+        assertEquals(1, createMapWrites.size(), "Should be only one create map write");
+        Write createMapWrite = createMapWrites.getFirst();
+        assertCreateMapWrite(createMapWrite);
+    }
+
+    private void captureAndAssertCreateCollectionWrite(IWriteSession createCollectionWriteSession) {
+        List<Write> createCollectionWrites = captureWrites(createCollectionWriteSession);
+        assertEquals(1, createCollectionWrites.size(), "Should be only one create collection write");
+        Write createCollectionWrite = createCollectionWrites.getFirst();
+        assertCreateCollectionWrite(createCollectionWrite);
+    }
+
+    private void captureAndAssertCreateFeaturesWrites(IWriteSession createFeaturesWriteSession, List<NakshaFeature> features) {
+        List<Write> createFeaturesWrites = captureWrites(createFeaturesWriteSession);
+        assertCreateFeaturesWrites(createFeaturesWrites, features);
     }
 }

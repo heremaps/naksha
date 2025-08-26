@@ -9,6 +9,10 @@ description = gatherDescription()
 val mainCliClass = "com.here.naksha.cli.Main"
 val fatJarBaseName = "naksha-cli"
 
+configurations.all {
+    exclude(group = "org.slf4j", module = "slf4j-simple")
+}
+
 kotlin {
     jvmToolchain(23)
 
@@ -22,6 +26,7 @@ kotlin {
         jvmMain {
             dependencies {
                 implementation(libs.picocli)
+                implementation(libs.bundles.logging)
                 implementation(project(":here-naksha-lib-base"))
                 implementation(project(":here-naksha-lib-model"))
                 implementation(project(":here-naksha-lib-psql"))
