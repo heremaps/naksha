@@ -273,26 +273,6 @@ class GeneratingStorageTest {
     }
 
     @Test
-    void shouldFailWhenCountIsNotProvided() {
-        // Given: config
-        GeneratingStorageConfig config = getSampleConfig();
-        config.getProperties()
-                .withCount(null);
-
-        // And: storage
-        GeneratingStorage storage = generatingStorageWithConfig(config);
-
-        // When: read features
-        NakshaException exception = assertThrows(
-                NakshaException.class, () -> storage.useReadSession(sessionOptions, reader ->
-                        reader.execute(new ReadFeatures())
-                ));
-
-        // Then:
-        assertErrorMessageAndCode(exception, "Provide count in the config properties.", NakshaError.ILLEGAL_ARGUMENT);
-    }
-
-    @Test
     void shouldFailWhenWrite() {
         // Given
         GeneratingStorage storage = new GeneratingStorage();

@@ -8,10 +8,10 @@ final class PrintExceptionMessageHandler implements CommandLine.IExecutionExcept
             CommandLine cmd,
             CommandLine.ParseResult parseResult
     ) {
-
-        cmd.getErr().println(cmd.getColorScheme().errorText(ex.getMessage()));
-        if (ex.getCause() != null) {
-            cmd.getErr().println(cmd.getColorScheme().errorText(ex.getCause().getMessage()));
+        Throwable cause = ex;
+        while (cause != null) {
+            cmd.getErr().println(cmd.getColorScheme().errorText(cause.getMessage()));
+            cause = cause.getCause();
         }
 
         return cmd.getExitCodeExceptionMapper() != null

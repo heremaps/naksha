@@ -1,8 +1,8 @@
 package com.here.naksha.cli.copy.service.psql;
 
 import com.here.naksha.cli.copy.service.*;
-import com.here.naksha.cli.results.CommandResult;
-import com.here.naksha.cli.results.CommandSuccess;
+import com.here.naksha.cli.results.Result;
+import com.here.naksha.cli.results.SuccessResult;
 import com.here.naksha.cli.storages.GeneratingStorage;
 import com.here.naksha.cli.storages.GeneratingStorageConfig;
 import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
@@ -299,7 +299,7 @@ class PsqlCopyTest {
         });
     }
 
-    private void assertCommandSuccessResult(CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> commandResult) {
-        assertInstanceOf(CommandSuccess.class, commandResult);
+    private void assertCommandSuccessResult(Result<CopyServiceSuccessResultPayload, CopyServiceException> commandResult) {
+        assertInstanceOf(SuccessResult.class, commandResult);
     }
 }

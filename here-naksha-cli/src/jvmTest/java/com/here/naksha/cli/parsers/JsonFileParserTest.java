@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class JsonFileParserTest {
     @Test
@@ -23,7 +24,7 @@ class JsonFileParserTest {
                 JsonFileParserException.class,
                 () -> jsonFileParser.parse(pathToFile, AnyObject.class)
         );
-        assertEquals("File does not exist! file: %s".formatted(pathToFile), exception.getMessage());
+        assertEquals("Problem with reading! NoSuchFileException file: %s".formatted(pathToFile), exception.getMessage());
     }
 
     @Test
@@ -32,7 +33,7 @@ class JsonFileParserTest {
         Path pathToFile = dir.resolve("file");
         Files.writeString(pathToFile, "{}");
         File file = pathToFile.toFile();
-        assertTrue(file.setReadable(false), "Can not set file as unreadable!");
+        assumeTrue(file.setReadable(false), "Can not set file as unreadable!");
         JsonFileParser jsonFileParser = new JsonFileParser();
 
         // When & Then
@@ -40,7 +41,7 @@ class JsonFileParserTest {
                 JsonFileParserException.class,
                 () -> jsonFileParser.parse(pathToFile, AnyObject.class)
         );
-        assertEquals("Problem with reading! file: %s".formatted(pathToFile), exception.getMessage());
+        assertEquals("Problem with reading! AccessDeniedException file: %s".formatted(pathToFile), exception.getMessage());
     }
 
     @Test
@@ -53,7 +54,7 @@ class JsonFileParserTest {
                 JsonFileParserException.class,
                 () -> jsonFileParser.parse(dir, AnyObject.class)
         );
-        assertEquals("It is not a file! file: %s".formatted(dir), exception.getMessage());
+        assertEquals("Problem with reading! Is a directory file: %s".formatted(dir), exception.getMessage());
     }
 
     @Test

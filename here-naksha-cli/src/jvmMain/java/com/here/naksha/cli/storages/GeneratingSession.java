@@ -1,5 +1,6 @@
 package com.here.naksha.cli.storages;
 
+import com.here.naksha.cli.validations.exceptions.FieldValidationException;
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -30,6 +31,7 @@ final class GeneratingSession implements IReadSession {
     public Response execute(@NotNull Request request) {
         GeneratingStorageService service = storage.getService();
         GeneratingStorageConfig config = storage.getConfig();
+        requireValidConfig(config);
         List<NakshaFeature> generatedFeatures = service.generateFeatures(config.getProperties());
         return new SuccessResponse(generatedFeatures);
     }
@@ -124,5 +126,13 @@ final class GeneratingSession implements IReadSession {
     @Override
     public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
+    }
+
+    private void requireValidConfig(GeneratingStorageConfig config) {
+        try {
+            config.validateFields();
+        } catch (FieldValidationException e) {
+            throw new NakshaException(NakshaError.EXCEPTION, "Generating storage config is invalid!", e);
+        }
     }
 }

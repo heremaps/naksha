@@ -4,9 +4,9 @@ import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.loggers.LoggingMixin;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
-import com.here.naksha.cli.results.CommandFailure;
-import com.here.naksha.cli.results.CommandResult;
-import com.here.naksha.cli.results.CommandSuccess;
+import com.here.naksha.cli.results.FailureResult;
+import com.here.naksha.cli.results.Result;
+import com.here.naksha.cli.results.SuccessResult;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
@@ -102,11 +102,13 @@ public final class CopyCommand implements Callable<Integer> {
 
         NakshaContext.currentContext().withAppId("nakshacli");
         SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext());
-        CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copy(
+
+        Result<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copy(
                 srcCopyElement,
                 targetCopyElement,
                 sessionOptions
         );
+
         CopyServiceSuccessResultPayload resultPayload = requireSuccessResultAndGetPayload(copyResult);
 
         PrintWriter commandLineOut = getCommandLineOut();
@@ -134,11 +136,11 @@ public final class CopyCommand implements Callable<Integer> {
     }
 
     private CopyServiceSuccessResultPayload requireSuccessResultAndGetPayload(
-            CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult
+            Result<CopyServiceSuccessResultPayload, CopyServiceException> copyResult
     ) throws CopyServiceException {
         return switch (copyResult) {
-            case CommandFailure(CopyServiceException exception) -> throw exception;
-            case CommandSuccess(CopyServiceSuccessResultPayload payload) -> payload;
+            case FailureResult(CopyServiceException exception) -> throw exception;
+            case SuccessResult(CopyServiceSuccessResultPayload payload) -> payload;
         };
     }
 
@@ -158,7 +160,7 @@ public final class CopyCommand implements Callable<Integer> {
                 .build();
     }
 
-    private CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copy(
+    private Result<CopyServiceSuccessResultPayload, CopyServiceException> copy(
             CopyElement srcCopyElement,
             CopyElement targetCopyElement,
             SessionOptions sessionOptions

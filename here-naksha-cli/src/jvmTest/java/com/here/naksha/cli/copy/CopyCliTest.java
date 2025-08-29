@@ -4,8 +4,8 @@ import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.parsers.JsonFileParser;
-import com.here.naksha.cli.results.CommandFailure;
-import com.here.naksha.cli.results.CommandSuccess;
+import com.here.naksha.cli.results.FailureResult;
+import com.here.naksha.cli.results.SuccessResult;
 import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -251,7 +251,7 @@ class CopyCliTest {
     private CopyService copyServiceReturningErrorResult(String exceptionMessage) {
         CopyService copyService = mock();
         when(copyService.copy(any(), any(), anyBoolean())).thenReturn(
-                new CommandFailure<>(new CopyServiceException(exceptionMessage))
+                new FailureResult<>(new CopyServiceException(exceptionMessage))
         );
         return copyService;
     }
@@ -292,7 +292,7 @@ class CopyCliTest {
     private CopyService copyServiceReturningSuccessResult(int numberOfCopiedElements) {
         CopyService copyService = mock();
         when(copyService.copy(any(), any(), anyBoolean())).thenReturn(
-                new CommandSuccess<>(
+                new SuccessResult<>(
                         new CopyServiceSuccessResultPayload(numberOfCopiedElements)
                 )
         );

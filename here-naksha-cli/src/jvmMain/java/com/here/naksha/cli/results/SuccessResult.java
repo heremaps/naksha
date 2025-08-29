@@ -1,0 +1,4 @@
+package com.here.naksha.cli.results;
+
+public record SuccessResult<T, S>(T payload) implements Result<T, S> {
+}

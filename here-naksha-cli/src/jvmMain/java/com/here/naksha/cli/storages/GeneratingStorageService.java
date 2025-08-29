@@ -2,6 +2,7 @@ package com.here.naksha.cli.storages;
 
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
+import com.here.naksha.cli.validations.exceptions.FieldValidationException;
 import com.here.naksha.lib.core.models.geojson.HQuad;
 import naksha.base.StringList;
 import naksha.geo.LineStringCoord;
@@ -29,7 +30,8 @@ final class GeneratingStorageService {
 
     @NotNull
     List<NakshaFeature> generateFeatures(@NotNull GeneratingStorageConfigProperties configProperties) {
-        int count = requireCount(configProperties.getCount());
+        requireValidConfigProperties(configProperties);
+        int count = configProperties.getCount();
         String idsPrefix = getIdsPrefixOrDefault(configProperties, DEFAULT_IDS_PREFIX);
         List<String> tileIds = requireTileIds(configProperties);
         NakshaFeature templateFeature = loadTemplateFeatureOrEmpty(configProperties.getFeatureTemplateFilePath());
@@ -47,12 +49,12 @@ final class GeneratingStorageService {
         return features;
     }
 
-    private int requireCount(@Nullable Integer count) {
-        if (count == null) {
-            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Provide count in the config properties.");
+    private void requireValidConfigProperties(GeneratingStorageConfigProperties configProperties) {
+        try {
+            configProperties.validateFields();
+        } catch (FieldValidationException exception) {
+            throw new NakshaException(NakshaError.EXCEPTION, "Generating storage config properties are invalid!", exception);
         }
-
-        return count;
     }
 
     private String getIdsPrefixOrDefault(GeneratingStorageConfigProperties configProperties, String defaultPrefix) {
