@@ -1,6 +1,7 @@
 package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.loggers.LoggingMixin;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
 import com.here.naksha.cli.results.CommandFailure;
@@ -76,6 +77,15 @@ public final class CopyCommand implements Callable<Integer> {
     )
     private @Nullable String targetCollectionId;
 
+    @CommandLine.Option(
+            names = {"--autoCreateTarget"},
+            description = "Auto create target's map and collection."
+    )
+    private boolean autoCreateTarget = false;
+
+    @CommandLine.Mixin
+    private LoggingMixin loggingMixin;
+
     public CopyCommand(
             @NotNull CopyServiceFactory copyServiceFactory,
             @NotNull StorageProvider storageProvider
@@ -92,13 +102,11 @@ public final class CopyCommand implements Callable<Integer> {
 
         NakshaContext.currentContext().withAppId("nakshacli");
         SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext());
-
         CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copy(
                 srcCopyElement,
                 targetCopyElement,
                 sessionOptions
         );
-
         CopyServiceSuccessResultPayload resultPayload = requireSuccessResultAndGetPayload(copyResult);
 
         PrintWriter commandLineOut = getCommandLineOut();
@@ -162,7 +170,8 @@ public final class CopyCommand implements Callable<Integer> {
 
         return copyService.copy(
                 srcCopyElement,
-                targetCopyElement
+                targetCopyElement,
+                autoCreateTarget
         );
     }
 

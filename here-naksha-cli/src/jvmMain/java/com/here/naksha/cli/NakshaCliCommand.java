@@ -1,6 +1,7 @@
 package com.here.naksha.cli;
 
 import com.here.naksha.cli.copy.CopyCommand;
+import com.here.naksha.cli.loggers.LoggingMixin;
 import picocli.CommandLine;
 
 @CommandLine.Command(
@@ -10,5 +11,7 @@ import picocli.CommandLine;
                 CopyCommand.class
         }
 )
-final class NakshaCliCommand {
+public final class NakshaCliCommand {
+    @CommandLine.Mixin
+    private LoggingMixin loggingMixin;
 }

@@ -39,7 +39,7 @@ class NakshaCliCommandTest {
                                 "",
                                 """
                                         Missing required subcommand
-                                        Usage: naksha-cli [-hV] [COMMAND]
+                                        Usage: naksha-cli [-hV] [--logLevel=<logLevel>] [COMMAND]
                                         Try 'naksha-cli --help' for more information.
                                         """
                         )
@@ -58,6 +58,7 @@ class NakshaCliCommandTest {
                                                                --targetStorageConfig=<targetStorageConfig>
                                                                [--targetMapId=<targetMapId>]
                                                                [--targetCollectionId=<targetCollectionId>]
+                                                               [--autoCreateTarget] [--logLevel=<logLevel>]
                                         Try 'naksha-cli copy --help' for more information.
                                         """
                         )
