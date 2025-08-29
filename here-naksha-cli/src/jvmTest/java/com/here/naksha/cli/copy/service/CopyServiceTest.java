@@ -3,7 +3,6 @@ package com.here.naksha.cli.copy.service;
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
-import naksha.base.fn.Fn1;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -14,7 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
-import org.mockito.stubbing.Answer;
 
 import java.util.List;
 
@@ -45,7 +43,7 @@ class CopyServiceTest {
     @Test
     void shouldSucceedWithExistingTargetMapAndCollection() {
         // Given: valid target storage with write session
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession writeSession = createWriteSessionForStorageReturningSuccessResponse(targetStorage);
 
         // And: valid source storage with read session
@@ -53,7 +51,7 @@ class CopyServiceTest {
                 new NakshaFeature("id1"),
                 new NakshaFeature("id2")
         );
-        IStorage srcStorage = mock();
+        IStorage srcStorage = createSourceStorage();
         IReadSession readSession = createReadSessionForStorageReturningSuccessResponse(srcStorage, features);
 
         // And
@@ -96,21 +94,21 @@ class CopyServiceTest {
     @Test
     void shouldSucceedWithAutoCreateTargetAndAbsentTargetMapAndCollection() {
         // Given: valid target storage with write sessions
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession createMapWriteSession = createWriteSessionReturningSuccessResponse();
         IWriteSession createCollectionWriteSession = createWriteSessionReturningSuccessResponse();
         IWriteSession createFeaturesWriteSession = createWriteSessionReturningSuccessResponse();
-        when(targetStorage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(useWriteSession(createMapWriteSession))
-                .thenAnswer(useWriteSession(createCollectionWriteSession))
-                .thenAnswer(useWriteSession(createFeaturesWriteSession));
+        when(targetStorage.newWriteSession(sessionOptions))
+                .thenReturn(createMapWriteSession)
+                .thenReturn(createCollectionWriteSession)
+                .thenReturn(createFeaturesWriteSession);
 
         // And: valid source storage with read session
         List<NakshaFeature> features = List.of(
                 new NakshaFeature("id1"),
                 new NakshaFeature("id2")
         );
-        IStorage srcStorage = mock();
+        IStorage srcStorage = createSourceStorage();
         IReadSession readSession = createReadSessionForStorageReturningSuccessResponse(srcStorage, features);
 
         // And
@@ -159,21 +157,21 @@ class CopyServiceTest {
     @Test
     void shouldSucceedWithAutoCreateTargetAndAbsentTargetCollection() {
         // Given: valid target storage with write sessions
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.MAP_EXISTS);
         IWriteSession createCollectionWriteSession = createWriteSessionReturningSuccessResponse();
         IWriteSession createFeaturesWriteSession = createWriteSessionReturningSuccessResponse();
-        when(targetStorage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(useWriteSession(createMapWriteSession))
-                .thenAnswer(useWriteSession(createCollectionWriteSession))
-                .thenAnswer(useWriteSession(createFeaturesWriteSession));
+        when(targetStorage.newWriteSession(sessionOptions))
+                .thenReturn(createMapWriteSession)
+                .thenReturn(createCollectionWriteSession)
+                .thenReturn(createFeaturesWriteSession);
 
         // And: valid source storage with read session
         List<NakshaFeature> features = List.of(
                 new NakshaFeature("id1"),
                 new NakshaFeature("id2")
         );
-        IStorage srcStorage = mock();
+        IStorage srcStorage = createSourceStorage();
         IReadSession readSession = createReadSessionForStorageReturningSuccessResponse(srcStorage, features);
 
         // And
@@ -221,21 +219,21 @@ class CopyServiceTest {
     @Test
     void shouldSucceedWithAutoCreateTargetAndExistingTargetMapAndCollection() {
         // Given: valid target storage with write sessions
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.MAP_EXISTS);
         IWriteSession createCollectionWriteSession = createWriteSessionReturningErrorResponse(NakshaError.COLLECTION_EXISTS);
         IWriteSession createFeaturesWriteSession = createWriteSessionReturningSuccessResponse();
-        when(targetStorage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(useWriteSession(createMapWriteSession))
-                .thenAnswer(useWriteSession(createCollectionWriteSession))
-                .thenAnswer(useWriteSession(createFeaturesWriteSession));
+        when(targetStorage.newWriteSession(sessionOptions))
+                .thenReturn(createMapWriteSession)
+                .thenReturn(createCollectionWriteSession)
+                .thenReturn(createFeaturesWriteSession);
 
         // And: valid source storage with read session
         List<NakshaFeature> features = List.of(
                 new NakshaFeature("id1"),
                 new NakshaFeature("id2")
         );
-        IStorage srcStorage = mock();
+        IStorage srcStorage = createSourceStorage();
         IReadSession readSession = createReadSessionForStorageReturningSuccessResponse(srcStorage, features);
 
         // And
@@ -427,7 +425,7 @@ class CopyServiceTest {
     @Test
     void shouldFailWhenWritingToTargetFails() {
         // Given: failing target storage with write session
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession writeSession = createWriteSessionForStorageReturningErrorResponse(targetStorage);
 
         // And: valid source storage
@@ -487,7 +485,7 @@ class CopyServiceTest {
     @Test
     void shouldFailOnUnexpectedResponseFromTargetWhileWritingFeatures() {
         // Given: unexpected response from target storage
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession writeSession = createWriteSessionForStorageReturningUnexpectedResponse(targetStorage);
 
         // And: valid source storage
@@ -519,10 +517,10 @@ class CopyServiceTest {
     @Test
     void shouldFailOnUnexpectedResponseFromTargetWhileCreatingMap() {
         // Given: valid target storage with write sessions
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession createMapWriteSession = createWriteSessionReturningUnexpectedResponse();
-        when(targetStorage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(useWriteSession(createMapWriteSession));
+        when(targetStorage.newWriteSession(sessionOptions))
+                .thenReturn(createMapWriteSession);
 
         // And: valid source storage
         IStorage srcStorage = createValidSrcStorage();
@@ -553,10 +551,10 @@ class CopyServiceTest {
     @Test
     void shouldFailOnErrorResponseFromTargetWhileCreatingMap() {
         // Given: valid target storage with write sessions
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.EXCEPTION);
-        when(targetStorage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(useWriteSession(createMapWriteSession));
+        when(targetStorage.newWriteSession(sessionOptions))
+                .thenReturn(createMapWriteSession);
 
         // And: valid source storage
         IStorage srcStorage = createValidSrcStorage();
@@ -587,12 +585,12 @@ class CopyServiceTest {
     @Test
     void shouldFailOnUnexpectedResponseFromTargetWhileCreatingCollection() {
         // Given: valid target storage with write sessions
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession createMapWriteSession = createWriteSessionReturningSuccessResponse();
         IWriteSession createCollectionWriteSession = createWriteSessionReturningUnexpectedResponse();
-        when(targetStorage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(useWriteSession(createMapWriteSession))
-                .thenAnswer(useWriteSession(createCollectionWriteSession));
+        when(targetStorage.newWriteSession(sessionOptions))
+                .thenReturn(createMapWriteSession)
+                .thenReturn(createCollectionWriteSession);
 
         // And: valid source storage
         IStorage srcStorage = createValidSrcStorage();
@@ -623,12 +621,12 @@ class CopyServiceTest {
     @Test
     void shouldFailOnErrorResponseFromTargetWhileCreatingCollection() {
         // Given: valid target storage with write sessions
-        IStorage targetStorage = mock();
+        IStorage targetStorage = createTargetStorage();
         IWriteSession createMapWriteSession = createWriteSessionReturningSuccessResponse();
         IWriteSession createCollectionWriteSession = createWriteSessionReturningErrorResponse(NakshaError.EXCEPTION);
-        when(targetStorage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(useWriteSession(createMapWriteSession))
-                .thenAnswer(useWriteSession(createCollectionWriteSession));
+        when(targetStorage.newWriteSession(sessionOptions))
+                .thenReturn(createMapWriteSession)
+                .thenReturn(createCollectionWriteSession);
 
         // And: valid source storage
         IStorage srcStorage = createValidSrcStorage();
@@ -710,6 +708,20 @@ class CopyServiceTest {
         assertIsErrorResultWithGivenMessage(copyResult, "Target's collectionId should not be null!");
     }
 
+    private IStorage createTargetStorage() {
+        IStorage targetStorage = mock();
+        when(targetStorage.useWriteSession(eq(sessionOptions), any())).thenCallRealMethod();
+        doCallRealMethod().when(targetStorage).runInWriteSession(eq(sessionOptions), any());
+        return targetStorage;
+    }
+
+    private IStorage createSourceStorage() {
+        IStorage sourceStorage = mock();
+        when(sourceStorage.useReadSession(eq(sessionOptions), any())).thenCallRealMethod();
+        doCallRealMethod().when(sourceStorage).runInReadSession(eq(sessionOptions), any());
+        return sourceStorage;
+    }
+
     private CopyElement targetCopyElementWithoutMapId() {
         return new CopyElement.Builder(targetNakshaStorage)
                 .setCollectionId("col")
@@ -744,30 +756,26 @@ class CopyServiceTest {
                 .toList();
     }
 
-    private IWriteSession createWriteSession(IStorage storage) {
+    private IWriteSession createWriteSessionForStorage(IStorage storage) {
         IWriteSession writeSession = mock();
-        when(storage.useWriteSession(eq(sessionOptions), any()))
-                .thenAnswer(invocation -> {
-                    Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
-                    return lambda.call(writeSession);
-                });
+        when(storage.newWriteSession(sessionOptions)).thenReturn(writeSession);
         return writeSession;
     }
 
     private IWriteSession createWriteSessionForStorageReturningErrorResponse(IStorage storage) {
-        IWriteSession writeSession = createWriteSession(storage);
+        IWriteSession writeSession = createWriteSessionForStorage(storage);
         when(writeSession.execute(any())).thenReturn(new ErrorResponse());
         return writeSession;
     }
 
     private IWriteSession createWriteSessionForStorageReturningUnexpectedResponse(IStorage storage) {
-        IWriteSession writeSession = createWriteSession(storage);
+        IWriteSession writeSession = createWriteSessionForStorage(storage);
         when(writeSession.execute(any())).thenReturn(new Response());
         return writeSession;
     }
 
     private IWriteSession createWriteSessionForStorageReturningSuccessResponse(IStorage storage) {
-        IWriteSession writeSession = createWriteSession(storage);
+        IWriteSession writeSession = createWriteSessionForStorage(storage);
         when(writeSession.execute(any())).thenReturn(new SuccessResponse());
         return writeSession;
     }
@@ -794,11 +802,7 @@ class CopyServiceTest {
 
     private IReadSession createReadSessionForStorageReturningSuccessResponse(IStorage storage, List<NakshaFeature> features) {
         IReadSession readSession = mock();
-        when(storage.useReadSession(eq(sessionOptions), any()))
-                .thenAnswer(invocation -> {
-                    Fn1<Response, IReadSession> lambda = invocation.getArgument(1);
-                    return lambda.call(readSession);
-                });
+        when(storage.newReadSession(sessionOptions)).thenReturn(readSession);
         when(readSession.execute(any())).thenReturn(
                 new SuccessResponse(
                         NakshaFeatureList.fromList(features)
@@ -809,15 +813,15 @@ class CopyServiceTest {
 
     private IStorage createStorageWithFailingWriteSession() {
         IStorage storage = mock();
-        when(storage.newWriteSession(any())).thenThrow(new RuntimeException());
-        when(storage.useWriteSession(any(), any())).thenCallRealMethod();
+        when(storage.newWriteSession(sessionOptions)).thenThrow(new RuntimeException());
+        when(storage.useWriteSession(eq(sessionOptions), any())).thenCallRealMethod();
         return storage;
     }
 
     private IStorage createStorageWithFailingReadSession() {
         IStorage storage = mock();
-        when(storage.newReadSession(any())).thenThrow(new RuntimeException());
-        when(storage.useReadSession(any(), any())).thenCallRealMethod();
+        when(storage.newReadSession(sessionOptions)).thenThrow(new RuntimeException());
+        when(storage.useReadSession(eq(sessionOptions), any())).thenCallRealMethod();
         return storage;
     }
 
@@ -905,6 +909,7 @@ class CopyServiceTest {
         assertEquals(Naksha.ADMIN_MAP, write.getMapId());
         assertEquals(Naksha.MAPS_COL, write.getCollectionId());
         assertEquals(WriteOp.CREATE, write.getOp());
+        assertNotNull(write.getFeature());
         assertEquals(targetCopyElement.getMapId(), write.getFeature().getId());
     }
 
@@ -912,14 +917,8 @@ class CopyServiceTest {
         assertEquals(targetCopyElement.getMapId(), write.getMapId());
         assertEquals(Naksha.COLLECTIONS_COL, write.getCollectionId());
         assertEquals(WriteOp.CREATE, write.getOp());
+        assertNotNull(write.getFeature());
         assertEquals(targetCopyElement.getCollectionId(), write.getFeature().getId());
-    }
-
-    private Answer<Response> useWriteSession(IWriteSession writeSession) {
-        return invocation -> {
-            Fn1<Response, IWriteSession> lambda = invocation.getArgument(1);
-            return lambda.call(writeSession);
-        };
     }
 
     private void captureAndAssertCreateMapWrite(IWriteSession createMapWriteSession) {
