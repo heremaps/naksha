@@ -3,6 +3,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.shadow)
+    alias(libs.plugins.asciiDoctorJvmConvert)
     alias(libs.plugins.axion.release)
 }
 
@@ -39,6 +40,7 @@ kotlin {
                 implementation(project(":here-naksha-lib-model"))
                 implementation(project(":here-naksha-lib-psql"))
                 implementation(project(":here-naksha-lib-core"))
+                compileOnly(libs.picocli.codegen)
             }
         }
         jvmTest {
@@ -86,6 +88,22 @@ tasks {
         from(kotlin.jvm().compilations.getByName("main").output)
         configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
     }
+
+    val generateManpageAsciiDoc by registering(JavaExec::class) {
+        group = "Documentation"
+        description = "Generate AsciiDoc manpage"
+        classpath(
+            kotlin.jvm().compilations["main"].output,
+            kotlin.jvm().compilations["main"].runtimeDependencyFiles,
+            kotlin.jvm().compilations["main"].compileDependencyFiles
+        )
+        mainClass = "picocli.codegen.docgen.manpage.ManPageGenerator"
+        args("com.here.naksha.cli.NakshaCliCommand", "--outdir=${layout.buildDirectory}/generated-picocli-docs", "-v", "-c=com.here.naksha.cli.CommandFactory")
+    }
+
+//    asciidoctor {
+//        dependsOn(generateManpageAsciiDoc)
+//    }
 }
 
 setOverallCoverage(0.0) // only increasing allowed!
