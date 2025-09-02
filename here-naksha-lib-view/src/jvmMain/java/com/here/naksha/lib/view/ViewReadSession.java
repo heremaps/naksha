@@ -192,7 +192,6 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     return false;
   }
 
-  // TODO CASL-739
   @Override
   public int getSocketTimeout() {
     return 0;
