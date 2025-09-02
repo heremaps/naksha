@@ -2,7 +2,7 @@
 set -e # exit on error
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
-gradle :here-naksha-cli:jvmJar > /dev/null 2>&1
+gradle :here-naksha-cli:shadowCreate > /dev/null 2>&1
 
 JAR=$(find "${DIR}/build/libs" -name "naksha-cli*.jar" -type f -exec ls -t {} + | head -n 1)
 
