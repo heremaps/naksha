@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e # exit on error
+
+# This script builds the CLI each time, unlike naksha-cli, making it useful for development purposes.
+
+DIR="$(cd "$(dirname "$0")" && pwd)"
+gradle :here-naksha-cli:shadowCreate
+JAR=$(find "${DIR}/build/libs" -name "naksha-cli*.jar" -type f -exec ls -t {} + | head -n 1)
+if [[ -f "$JAR" ]]; then
+  java -jar "$JAR" "$@"
+else
+  echo "Error: JAR file not found!" >&2
+  exit 1
+fi

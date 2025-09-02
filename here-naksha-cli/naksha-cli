@@ -2,12 +2,16 @@
 set -e # exit on error
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
-gradle :here-naksha-cli:shadowCreate > /dev/null 2>&1
-
-JAR=$(find "${DIR}/build/libs" -name "naksha-cli*.jar" -type f -exec ls -t {} + | head -n 1)
+version=$(gradle cV | grep "^Project version" | cut -d : -f 2 | xargs)
+JAR="${DIR}/build/libs/naksha-cli-${version}.jar"
+if ! [[ -f "$JAR" ]]; then
+  echo "Building..."
+  gradle :here-naksha-cli:shadowCreate > /dev/null 2>&1
+fi
 
 if [[ -f "$JAR" ]]; then
   java -jar "$JAR" "$@"
+  exit $?
 else
   echo "Error: JAR file not found!" >&2
   exit 1
