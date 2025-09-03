@@ -32,7 +32,19 @@ import java.util.concurrent.Callable;
         },
         sortSynopsis = false,
         sortOptions = false,
-        showDefaultValues = true
+        footerHeading = "Examples",
+        showDefaultValues = true,
+        footer = {
+                """
+                            ./naksha-cli copy \\
+                              --srcStorageConfig test_config.json \\
+                              --srcMapId "srcmapid" \\
+                              --srcCollectionId "srccolid" \\
+                              --targetStorageConfig test_config.json \\
+                              --targetMapId "targetmapid" \\
+                              --targetCollectionId "targetcolid"
+                        """
+        }
 )
 public final class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;

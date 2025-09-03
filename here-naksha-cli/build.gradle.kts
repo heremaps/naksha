@@ -98,12 +98,23 @@ tasks {
             kotlin.jvm().compilations["main"].compileDependencyFiles
         )
         mainClass = "picocli.codegen.docgen.manpage.ManPageGenerator"
-        args("com.here.naksha.cli.NakshaCliCommand", "--outdir=${layout.buildDirectory}/generated-picocli-docs", "-v", "-c=com.here.naksha.cli.CommandFactory")
+        args(
+            "com.here.naksha.cli.NakshaCliCommand",
+            "--outdir=${layout.buildDirectory.get()}/generated-picocli-docs",
+            "-v",
+            "-c=com.here.naksha.cli.CommandFactory"
+        )
     }
 
-//    asciidoctor {
-//        dependsOn(generateManpageAsciiDoc)
-//    }
+    asciidoctor {
+        dependsOn(generateManpageAsciiDoc)
+        sourceDir(file("${layout.buildDirectory.get()}/generated-picocli-docs"))
+        setOutputDir(file("${layout.buildDirectory.get()}/docs"))
+        logDocuments = true
+        outputOptions {
+            backends("manpage", "html5")
+        }
+    }
 }
 
 setOverallCoverage(0.0) // only increasing allowed!
