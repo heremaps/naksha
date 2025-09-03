@@ -32,6 +32,16 @@ public class PropertySearchSamples {
             Pair.of("properties.prop=null", "properties.prop=null"),
             Pair.of("properties.prop!=.null", "properties.prop!=.null"),
             Pair.of("f.id=1", "f.id=1"),
+            /*
+             * Naksha accepts both formats: f.id=1&f.id=2&f.id=3
+             * and the comma-separated f.id=1,2,3.
+             *
+             * We chose the comma-separated format for the output
+             * because it is more intuitive for its intended purpose (OR).
+             */
+            Pair.of("f.id=1&f.id=2&f.id=3", "f.id=1,2,3"),
+            Pair.of("f.id=1,2,3", "f.id=1,2,3"),
+            Pair.of("f.id=1&f.id=2,3", "f.id=1,2,3"),
             Pair.of("f.specProp=1", "properties.@ns:com:here:xyz.specProp=1"),
             Pair.of("properties.%40ns%3Acom%3Ahere%3Axyz.specProp=1", "properties.@ns:com:here:xyz.specProp=1"),
             Pair.of("p.propWithShortPrefix=1", "properties.propWithShortPrefix=1"),

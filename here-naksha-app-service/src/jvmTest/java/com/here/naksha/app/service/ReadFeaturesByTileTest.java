@@ -401,6 +401,19 @@ class ReadFeaturesByTileTest extends ApiTest {
             "ReadFeatures/ByTile/TC0826_TileWithFId/feature_response_part.json",
             200,
             false
+        ),
+        standardTestSpec(
+                // for given filter tileId and f.ids
+                "tc0827_testGetByTileAndIds",
+                TYPE_QUADKEY,
+                "1",
+                List.of(
+                        "f.id=my-custom-id-800-1",
+                        "f.id=my-custom-id-800-2,my-custom-id-800-3"
+                ),
+                "ReadFeatures/ByTile/TC0827_TileWithFIds/feature_response_part.json",
+                200,
+                false
         )
     );
   }
