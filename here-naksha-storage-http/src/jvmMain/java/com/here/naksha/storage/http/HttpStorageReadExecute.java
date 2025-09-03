@@ -109,7 +109,7 @@ class HttpStorageReadExecute {
       return "";
     } else {
       return featureIds.stream().collect(joining(
-          "&%s=".formatted(SHORT_FEATURE_ID), // delimeter
+          ",", // delimeter
           "&%s=".formatted(SHORT_FEATURE_ID), // prefix
           "" // suffix
       ));

@@ -188,6 +188,7 @@ open class ReadFeatures : ReadRequest() {
      * Add all features that match the given IDs into the result-set.
      * @since 3.0.0
      */
+    //TODO CASL-1149 should support custom queries
     var featureIds by STRING_LIST
 
     /**
