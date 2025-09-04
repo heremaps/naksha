@@ -6,8 +6,8 @@ import com.here.naksha.cli.results.CommandSuccess;
 import com.here.naksha.cli.storages.GeneratingStorage;
 import com.here.naksha.cli.storages.GeneratingStorageConfig;
 import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
+import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import naksha.base.StringList;
-import naksha.geo.HereTile;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
@@ -16,8 +16,8 @@ import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaMap;
 import naksha.model.request.*;
+import naksha.model.request.query.SpIntersects;
 import naksha.model.request.query.SpOr;
-import naksha.model.request.query.SpRefInHereTile;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -218,7 +218,11 @@ class PsqlCopyTest {
             StringList tileIds
     ) {
         SpOr spOr = new SpOr();
-        tileIds.forEach(tileId -> spOr.add(new SpRefInHereTile(new HereTile(tileId))));
+        tileIds.forEach(tileId -> spOr.add(
+                new SpIntersects(
+                        WebMercatorTile.forQuadkey(tileId).getBBox(false).toPolygon()
+                )
+        ));
 
         RequestQuery requestQuery = new RequestQuery();
         requestQuery.setSpatial(spOr);
