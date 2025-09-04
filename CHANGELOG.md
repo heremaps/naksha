@@ -1,5 +1,6 @@
 ## Naksha_2.2.12
-- *[CASL-1249](https://here-technologies.atlassian.net/browse/CASL-1249)* - Updated geo-hash generation logic: ST_GeoHash is now applied directly to the geometry.
+- Geo-hash is now generated directly from the geometry instead of centroid.
+- This fixes the error "Geohash requires inputs in decimal degrees" that occurred when using the centroid.
 
 ## Naksha_2.1.5
 
