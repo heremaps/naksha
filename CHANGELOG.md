@@ -1,3 +1,6 @@
+## Naksha_2.2.12
+- *[CASL-1249](https://here-technologies.atlassian.net/browse/CASL-1249)* - Updated geo-hash generation logic: ST_GeoHash is now applied directly to the geometry.
+
 ## Naksha_2.1.5
 
 - Fixed thread hanging issue fixed by avoiding indefinite locking in `FibLinearProbeTable.java`
