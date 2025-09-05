@@ -1,7 +1,7 @@
 package com.here.naksha.cli.storages;
 
 import com.here.naksha.cli.parsers.JsonFileParser;
-import com.here.naksha.lib.core.models.geojson.HQuad;
+import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import naksha.base.StringList;
 import naksha.geo.SpBoundingBox;
 import naksha.model.NakshaContext;
@@ -425,7 +425,7 @@ class GeneratingStorageTest {
 
     private void assertFeatureInTiles(NakshaFeature feature, List<String> tileIds, String message) {
         List<SpBoundingBox> tilesBboxes = tileIds.stream()
-                .map(tileId -> new HQuad(tileId, true).getBoundingBox())
+                .map(tileId -> WebMercatorTile.forQuadkey(tileId).getBBox(false))
                 .toList();
 
         assertTrue(

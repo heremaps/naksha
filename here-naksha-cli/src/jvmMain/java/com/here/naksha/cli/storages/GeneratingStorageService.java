@@ -2,7 +2,7 @@ package com.here.naksha.cli.storages;
 
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
-import com.here.naksha.lib.core.models.geojson.HQuad;
+import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import naksha.base.StringList;
 import naksha.geo.LineStringCoord;
 import naksha.geo.PointCoord;
@@ -98,9 +98,7 @@ final class GeneratingStorageService {
     }
 
     private SpLineString randomLineInTile(String tileId, Random random) {
-        HQuad hQuad = new HQuad(tileId, true);
-        SpBoundingBox tileBbox = hQuad.getBoundingBox();
-
+        SpBoundingBox tileBbox = WebMercatorTile.forQuadkey(tileId).getBBox(false);
         int pointsInLine = random.nextInt(2, 10);
         LineStringCoord coords = new LineStringCoord();
 
