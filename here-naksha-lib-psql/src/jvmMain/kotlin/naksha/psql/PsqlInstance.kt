@@ -248,7 +248,7 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
             jdbcConn.isReadOnly = readOnly
             jdbcConn.defaultFetchSize = 1000
             if (jdbcConn.networkTimeout != options.socketTimeout) {
-                jdbcConn.setNetworkTimeout(null, min(1000, options.socketTimeout))
+                jdbcConn.setNetworkTimeout(null, max(5_000, options.socketTimeout))
             }
             val query = """SET SESSION $search_path TO "naksha~admin", hint_plan, public, topology;
 SET SESSION $work_mem = '64MB';
