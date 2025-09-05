@@ -1,16 +1,39 @@
 #!/bin/bash
-set -e # exit on error
+
+# script's args have prefix --S (e.g., --Sbuild)
+args=("$@")
+java_args=()
+script_args=()
+for arg in "${args[@]}"; do
+  if [[ "${arg:0:3}" == "--S" ]]; then
+    script_args+=("$arg")
+  else
+    java_args+=("$arg")
+  fi
+done
+
+rebuild=false
+if [[ " ${script_args[*]} " =~ " --Sbuild " ]]; then
+  rebuild=true
+fi
 
 DIR="$(cd "$(dirname "$0")" && pwd)"
-version=$(gradle cV | grep "^Project version" | cut -d : -f 2 | xargs)
+version=$(gradle currentVersion | grep "^Project version" | cut -d : -f 2 | xargs)
 JAR="${DIR}/build/libs/naksha-cli-${version}.jar"
-if ! [[ -f "$JAR" ]]; then
+
+if [[ $rebuild == true ]] || ! [[ -f "$JAR" ]] ; then
   echo "Building..."
-  gradle :here-naksha-cli:shadowCreate > /dev/null 2>&1
+  stdErr=$(gradle :here-naksha-cli:shadowCreate 2>&1 >/dev/null)
+  gradle_exit=$?
+  if [[ $gradle_exit -ne 0 ]]; then
+    echo "Build failed!" >&2
+    echo $stdErr >&2
+    exit 1
+  fi
 fi
 
 if [[ -f "$JAR" ]]; then
-  java -jar "$JAR" "$@"
+  java -jar "$JAR" "${java_args[@]}"
   exit $?
 else
   echo "Error: JAR file not found!" >&2

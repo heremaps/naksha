@@ -58,15 +58,30 @@ tasks {
         maxHeapSize = "6g"
     }
 
-    val shadowCreate by registering(ShadowJar::class) {
+    register("shadowCreate", ShadowJar::class) {
         group = "Shadow"
-        description = "Creates fat jar"
+        description = "Creates fat jar."
         archiveBaseName.set(fatJarBaseName)
         archiveClassifier.set("")
         archiveVersion.set(scmVersion.version)
         manifest {
             attributes["Main-Class"] = mainCliClass
             attributes["Implementation-Version"] = scmVersion.version
+        }
+        from(kotlin.jvm().compilations.getByName("main").output)
+        configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
+    }
+
+    register("releaseAndShadow", ShadowJar::class) {
+        dependsOn(release)
+        group = "Release"
+        description = "Performs release and creates shadow jar."
+        archiveBaseName.set(fatJarBaseName)
+        archiveClassifier.set("")
+        archiveVersion.set(scmVersion.undecoratedVersion)
+        manifest {
+            attributes["Main-Class"] = mainCliClass
+            attributes["Implementation-Version"] = scmVersion.undecoratedVersion
         }
         from(kotlin.jvm().compilations.getByName("main").output)
         configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
