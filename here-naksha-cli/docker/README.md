@@ -12,6 +12,16 @@
 
 - Move to `here-naksha-cli/docker` dir.
 - To edit generation's parameters edit files in `naksha-cli-files` dir. Look at `here-naksha-cli/docs/GeneratingStorageConfig.md` to learn more.
+> [!NOTE]
+> There are defaults targetMapId="genmap" and targetCollectionId="gencol".
+> You can change target's mapId and collectionId using build-args:
+> ```bash
+> docker build . \
+> --build-arg targetMapId="tarmap" \
+> --build-arg targetCollectionId="tarcol"
+> ```
+> Script uses cli-v0.1.0. You can also change it using build-arg:
+> --build-arg CLI_GIT_TAG="cli-new-version"
 - Run commands bellow to build images for specified platforms
     ```bash
     docker build . \
@@ -21,14 +31,6 @@
       --platform linux/arm64 \
       -t ghcr.io/${NAMESPACE}/${IMAGE_NAME}-arm64:${TAG}
     ```
-> [!NOTE]
-> There are defaults targetMapId="genmap" and targetCollectionId="gencol".
-> You can change target's mapId and collectionId using build-args:
-> ```bash
-> docker build . \
-> --build-arg targetMapId="tarmap" \
-> --build-arg targetCollectionId="tarcol"
-> ```
 - Create manifest
     ```bash
      docker manifest create ghcr.io/${NAMESPACE}/${IMAGE_NAME}:${TAG} \
@@ -48,6 +50,9 @@
     ```
 
 ## Run container
+
+> [!NOTE]
+> Default credentials for the postgres `postgres`:`password`
 
 ```bash
    docker run -d \

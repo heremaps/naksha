@@ -26,15 +26,15 @@ EOF
 ENV GRADLE_HOME="/opt/gradle/${GRADLE_VERSION}"
 ENV PATH="${GRADLE_HOME}/bin:${PATH}"
 # fetch and build cli
-ARG COMMIT_SHA="d11241e1599cb3746b00139b2164ca8bc25324a6" NAKSHA_DIR
+ARG CLI_GIT_TAG="cli-v0.1.0" NAKSHA_DIR
 WORKDIR ${NAKSHA_DIR}
 RUN <<EOF
-# do it this way to fetch only specified commit
+# do it this way to fetch only specified tag
 git init
 git remote add origin https://github.com/heremaps/naksha
-git fetch origin ${COMMIT_SHA}
+git fetch origin ${CLI_GIT_TAG}
 git reset --hard FETCH_HEAD
-gradle :here-naksha-cli:jvmJar
+gradle :here-naksha-cli:shadowCreate
 EOF
 
 ###############
