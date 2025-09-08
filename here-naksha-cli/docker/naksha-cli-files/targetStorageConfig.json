@@ -1,0 +1,15 @@
+{
+  "id": "psql_storage",
+  "type": "Storage",
+  "create": true,
+  "upgrade": true,
+  "className": "naksha.psql.PsqlStorage",
+  "master": {
+    "host": "0.0.0.0",
+    "database": "postgres",
+    "port": "5432",
+    "user": "postgres",
+    "password": "password",
+    "readOnly": false
+  }
+}

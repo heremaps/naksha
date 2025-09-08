@@ -1,0 +1,10 @@
+{
+  "id": "generating_storage",
+  "className": "com.here.naksha.cli.storages.GeneratingStorage",
+  "properties": {
+    "count": 100000,
+    "idsPrefix": "genTest",
+    "featureTemplateFile": "naksha-cli-files/sample_topology_feature.json",
+    "tileIdsCsvFile": "naksha-cli-files/tile_ids.csv"
+  }
+}
