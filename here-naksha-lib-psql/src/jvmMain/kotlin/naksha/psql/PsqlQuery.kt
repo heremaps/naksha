@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.AnyList
 import naksha.base.Int64
+import naksha.base.Platform
 import naksha.model.illegalArg
 import naksha.psql.PgType.Companion.BOOLEAN
 import naksha.psql.PgType.Companion.BOOLEAN_ARRAY
@@ -22,8 +23,6 @@ import naksha.psql.PgType.Companion.STRING_ARRAY
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet.*
-import java.util.ArrayList
-import java.util.HashMap
 
 /**
  * A helper to parse SQL queries and find the dollar-placeholders, replacing them with `?`, escape question-marks, and finally provide a
@@ -42,40 +41,26 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
 
     init {
         val sb = StringBuilder()
-        var index = 1
+        var targetIndex = 1
         var charIndex = 0
         while (charIndex < query.length) {
-            val c = query[charIndex++]
-            if (c == '$') {
-                if (charIndex < query.length) {
-                    val next = query[charIndex]
-                    if (next in '1'..'9') {
-                        val afterNext = if (charIndex +1 < query.length) query[charIndex +1] else ';'
-                        val dollar:Int = if (afterNext in '0' .. '9') {
-                            "$next$afterNext".toInt()
-                        } else {
-                            next - '0'
-                        }
-
-                        check(dollar in 1..99)
-                        var indices = dollarToIndices[dollar]
-                        if (indices == null) {
-                            indices = ArrayList()
-                            dollarToIndices[dollar] = indices
-                        }
-                        sb.append('?')
-                        indices.add(index++)
-                        charIndex++
-                        if (dollar > 9) {
-                            charIndex++
-                        }
-                        continue
-                    }
+            if (query[charIndex] == '$' && charIndex < query.length - 1 && query[charIndex + 1] in positiveNums) {
+                charIndex++
+                var gatheredNum = "${query[charIndex++]}"
+                while (charIndex < query.length && query[charIndex] in nums) {
+                    gatheredNum += query[charIndex++]
                 }
+                sb.append("?")
+                val dollar = gatheredNum.toInt()
+                dollarToIndices.computeIfAbsent(dollar) { ArrayList() }.add(targetIndex++)
+            } else {
+                sb.append(query[charIndex++])
             }
-            sb.append(c)
         }
         sql = sb.toString()
+        if (dollarToIndices.size >= SUSPICIOUSLY_MANY_ARGS) {
+            Platform.logger.warn("Potentially inefficient query detected (${dollarToIndices.size} arguments): $sql")
+        }
     }
 
     private fun setArgument(stmt: PreparedStatement, arg: Any?, indices: ArrayList<Int>) {
@@ -96,7 +81,8 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                 is Array<*> -> {
                     // Note: Java array indices start at 0, NOT 1 !!!
                     val typeNameIndex = index - 1
-                    val typeName = if (typeNames != null && typeNameIndex < typeNames.size) typeNames[typeNameIndex] else null
+                    val typeName =
+                        if (typeNames != null && typeNameIndex < typeNames.size) typeNames[typeNameIndex] else null
                     var type = PgType.of(typeName)
                     if (type == null) {
                         if (arg.size == 0) throw illegalArg("Can't detect type of empty array, declared type: $typeName")
@@ -125,8 +111,12 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         FLOAT_ARRAY,
                         DOUBLE_ARRAY,
                         STRING_ARRAY -> {
-                            stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arg))
+                            stmt.setArray(
+                                index,
+                                stmt.connection.createArrayOf(type.childType!!.text, arg)
+                            )
                         }
+
                         BYTE_ARRAY_ARRAY -> {
                             // This is a hack, because we need a `Byte[][]`, JDBC does not support an `Object[][]`,
                             // even while the content may be the same, and it knows the type, still
@@ -134,8 +124,12 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                             //   helpers like `toString`, `toInt`, `toLong`, ... on them, but there is no such thing
                             //   for byte-arrays (byte[]), and instead of writing an own toByteArray, they fail!
                             val arr = Array(arg.size) { arg[it] as ByteArray? }
-                            stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arr))
+                            stmt.setArray(
+                                index,
+                                stmt.connection.createArrayOf(type.childType!!.text, arr)
+                            )
                         }
+
                         BOOLEAN,
                         SHORT,
                         INT,
@@ -144,10 +138,12 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         DOUBLE,
                         STRING,
                         BYTE_ARRAY -> throw illegalArg("The argument is $type, but an array was provided as value")
+
                         null -> throw illegalArg("Failed to detect array type, no type-name was provided (null)")
                         else -> throw illegalArg("Failed to detect array type, and invalid type-name was provided: $typeName")
                     }
                 }
+
                 is AnyList -> setArgument(stmt, arg.toArray(), indices)
                 null -> stmt.setNull(index, 0)
                 else -> throw illegalArg("Unable to set argument: args[${index - 1}], unknown type: ${arg.javaClass.name}")
@@ -160,13 +156,25 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
         while (i < args.size) {
             val arg = args[i]
             val indices = dollarToIndices[i + 1]
-            check(indices != null) { "Indices must not be null" }
+            check(indices != null) { "Indices must not be null - could not resolve index for \$${i + 1}" }
             setArgument(stmt, arg, indices)
             i++
         }
     }
 
     fun prepare(conn: Connection): PreparedStatement {
-        return conn.prepareStatement(sql, TYPE_FORWARD_ONLY, CONCUR_READ_ONLY, CLOSE_CURSORS_AT_COMMIT)
+        return conn.prepareStatement(
+            sql,
+            TYPE_FORWARD_ONLY,
+            CONCUR_READ_ONLY,
+            CLOSE_CURSORS_AT_COMMIT
+        )
     }
+
+    companion object {
+        private const val SUSPICIOUSLY_MANY_ARGS = 1_000
+        private val positiveNums = '1'..'9'
+        private val nums = '0'..'9'
+    }
+
 }
