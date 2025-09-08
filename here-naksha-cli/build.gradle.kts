@@ -3,9 +3,17 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.shadow)
+    alias(libs.plugins.axion.release)
+}
+
+scmVersion {
+    tag {
+        prefix.set("cli-v")
+    }
 }
 
 description = gatherDescription()
+version = scmVersion.version
 val mainCliClass = "com.here.naksha.cli.Main"
 val fatJarBaseName = "naksha-cli"
 
@@ -50,21 +58,33 @@ tasks {
         maxHeapSize = "6g"
     }
 
-    val shadowCreate by registering(ShadowJar::class) {
+    register("shadowCreate", ShadowJar::class) {
+        group = "Shadow"
+        description = "Creates fat jar."
         archiveBaseName.set(fatJarBaseName)
         archiveClassifier.set("")
-        archiveVersion.set(project.version.toString())
+        archiveVersion.set(scmVersion.version)
         manifest {
             attributes["Main-Class"] = mainCliClass
+            attributes["Implementation-Version"] = scmVersion.version
         }
-
         from(kotlin.jvm().compilations.getByName("main").output)
-
         configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
     }
 
-    named("jvmJar") {
-        dependsOn(shadowCreate)
+    register("releaseAndShadow", ShadowJar::class) {
+        dependsOn(release)
+        group = "Release"
+        description = "Performs release and creates shadow jar."
+        archiveBaseName.set(fatJarBaseName)
+        archiveClassifier.set("")
+        archiveVersion.set(scmVersion.undecoratedVersion)
+        manifest {
+            attributes["Main-Class"] = mainCliClass
+            attributes["Implementation-Version"] = scmVersion.undecoratedVersion
+        }
+        from(kotlin.jvm().compilations.getByName("main").output)
+        configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
     }
 }
 
