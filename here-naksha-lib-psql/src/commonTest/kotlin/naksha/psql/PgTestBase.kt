@@ -342,12 +342,14 @@ abstract class PgTestBase(
          * Create [SessionOptions] and mutate the current [NakshaContext] to actually use the [PgTest] constants for `appName`, `appId`, and `author`, to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or [PgStorage.newReadSession].
          * @param appId the `appId`, if modified, otherwise [PgTest.TEST_APP_ID]
          * @param author the `author`, if modified, otherwise [PgTest.TEST_APP_AUTHOR]
+         * @param logLevel the `logLevel`, if modified, otherwise `null`
          */
         @JvmStatic
         @JsStatic
         fun newSessionOptions(
             appId: String = PgTest.TEST_APP_ID,
             author: String? = PgTest.TEST_APP_AUTHOR,
+            logLevel: String? = null
         ): SessionOptions {
             val context = NakshaContext.currentContext()
             context.appName = PgTest.TEST_APP_NAME
@@ -358,6 +360,7 @@ abstract class PgTestBase(
                 appId = appId,
                 author = author,
                 useMaster = true,
+                logLevel = logLevel,
             )
         }
 

@@ -8,13 +8,13 @@ class PgReader(
     /**
      * The session to which this reader is linked.
      */
-    @JvmField val session: PgSession,
+    session: PgSession,
 
     /**
      * The read request to [execute].
      */
     @JvmField val request: ReadRequest,
-) {
+) : PgReaderWriterBase(session) {
 
     /**
      * The connection to use.
@@ -37,7 +37,13 @@ class PgReader(
             val query = PgQueryBuilder(session, request).build()
             val conn = session.useConnection()
             session.storage.adminMap.setSearchPath(conn)
-            // TODO: Use prepare, add arguments!
+            if (logQueries) {
+                log(query.sql)
+            }
+            if (logExplain) {
+                val explain = explain(conn, false, query.sql, query.argValues)
+                log(explain)
+            }
             conn.prepare(query.sql, query.argTypes).use { plan ->
                 // Start allocating around 8 KiB
                 val featureTuples = FeatureTupleList()

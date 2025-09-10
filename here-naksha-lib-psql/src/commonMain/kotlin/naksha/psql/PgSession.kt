@@ -3,6 +3,8 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.longToInt64
+import naksha.base.Platform.PlatformCompanion.newAtomicInt64
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaCollection
@@ -40,6 +42,17 @@ open class PgSession(
      */
     @JvmField val readOnly: Boolean
 ) : IWriteSession, IReadSession, ISession {
+
+    companion object PgSession_C {
+        private val nextSessionId = newAtomicInt64(longToInt64(0L))
+        private val ONE = longToInt64(1L)
+    }
+
+    /**
+     * A unique numerical identifier for the session.
+     * @since 3.0
+     */
+    val id: Int64 = nextSessionId.getAndAdd(ONE)
 
     override val storage = pgStorage
 
@@ -151,6 +164,13 @@ open class PgSession(
         }
         return conn
     }
+
+    /**
+     * If a connection is backing this session currently, return the [id][PgConnection.id] of the [connection][PgConnection], otherwise `null`.
+     * @since 3.0
+     */
+    val connectionId: Int64?
+        get() = pgConnection?.id
 
     /**
      * Internally invoked by [useConnection] to initialize the connection.

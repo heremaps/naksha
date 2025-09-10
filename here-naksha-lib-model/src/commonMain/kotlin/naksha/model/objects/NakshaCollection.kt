@@ -425,37 +425,13 @@ open class NakshaCollection() : NakshaFeature() {
          * Index above geometry, does not allow index-only scans or pre-ordering.
          * @since 3.0
          */
-        const val GIST_2D_IDX = "gist_geo_2d"
+        const val GIST_IDX = "gist_geo"
 
         /**
          * Index above geometry, does not allow index-only scans or pre-ordering.
          * @since 3.0
          */
-        const val GIST_3D_IDX = "gist_geo_3d"
-
-        /**
-         * Index above geometry, does not allow index-only scans or pre-ordering.
-         * @since 3.0
-         */
-        const val GIST_4D_IDX = "gist_geo_4d"
-
-        /**
-         * Index above geometry, does not allow index-only scans or pre-ordering.
-         * @since 3.0
-         */
-        const val SP_GIST_2D_IDX = "spgist_geo_2d"
-
-        /**
-         * Index above geometry, does not allow index-only scans or pre-ordering.
-         * @since 3.0
-         */
-        const val SP_GIST_3D_IDX = "spgist_geo_3d"
-
-        /**
-         * Index above geometry, does not allow index-only scans or pre-ordering.
-         * @since 3.0
-         */
-        const val SP_GIST_4D_IDX = "spgist_geo_4d"
+        const val SP_GIST_IDX = "spgist_geo"
 
         /**
          * Index above geometry, does not allow index-only scans or pre-ordering.
