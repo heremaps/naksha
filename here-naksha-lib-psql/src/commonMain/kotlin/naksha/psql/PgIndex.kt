@@ -309,13 +309,13 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_2d(`[PgColumn.geo], [PgColumn.flags]`)`.
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val gist_geo_2d = def(PgIndex::class, "g2d") { self ->
-            self.name = "gist_geo_2d"
+        val gist_geo = def(PgIndex::class, "g2d") { self ->
+            self.name = "gist_geo"
             self.columns = listOf(c_geo, c_tn, c_tn_next)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
@@ -328,95 +328,19 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A three-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_2d(`[PgColumn.geo], [PgColumn.flags]`)`.
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
         @JsStatic
-        val gist_geo_3d = def(PgIndex::class, "g3d") { self ->
-            self.name = "gist_geo_3d"
-            self.columns = listOf(c_geo, c_tn, c_tn_next)
-            self.createFn = Fx2 { conn, table ->
-                conn.execute(
-                    self.sql(
-                        """gist (naksha_3d($c_geo, $c_flags), $c_tn, $c_tn_next)""",
-                        table, unique = false, addFillFactor = true, where = "naksha_3d($c_geo, $c_flags) IS NOT NULL"
-                    )
-                ).close()
-            }
-        }
-
-        /**
-         * A four-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
-         * @see [PgAdminMap.createPgCollection]
-         */
-        @JvmField
-        @JsStatic
-        val gist_geo_4d = def(PgIndex::class, "g4d") { self ->
-            self.name = "gist_geo_4d"
-            self.columns = listOf(c_geo, c_tn, c_tn_next)
-            self.createFn = Fx2 { conn, table ->
-                conn.execute(
-                    self.sql(
-                        """gist (naksha_4d($c_geo, $c_flags), $c_tn, $c_tn_next)""",
-                        table, unique = false, addFillFactor = true, where = "naksha_4d($c_geo, $c_flags) IS NOT NULL"
-                    )
-                ).close()
-            }
-        }
-
-        /**
-         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
-         * @see [PgAdminMap.createPgCollection]
-         */
-        @JvmField
-        @JsStatic
-        val spgist_geo_2d = def(PgIndex::class, "s2d") { self ->
-            self.name = "spgist_geo_2d"
+        val spgist_geo = def(PgIndex::class, "s2d") { self ->
+            self.name = "spgist_geo"
             self.columns = listOf(c_geo)
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
                         """spgist (naksha_2d($c_geo, $c_flags))""",
                         table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
-                    )
-                ).close()
-            }
-        }
-
-        /**
-         * A three-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
-         * @see [PgAdminMap.createPgCollection]
-         */
-        @JvmField
-        @JsStatic
-        val spgist_geo_3d = def(PgIndex::class, "s3d") { self ->
-            self.name = "spgist_geo_3d"
-            self.columns = listOf(c_geo)
-            self.createFn = Fx2 { conn, table ->
-                conn.execute(
-                    self.sql(
-                        """spgist (naksha_3d($c_geo, $c_flags))""",
-                        table, unique = false, addFillFactor = true, where = "naksha_3d($c_geo, $c_flags) IS NOT NULL"
-                    )
-                ).close()
-            }
-        }
-
-        /**
-         * A four-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_geometry(`[PgColumn.geo], [PgColumn.flags]`)`.
-         * @see [PgAdminMap.createPgCollection]
-         */
-        @JvmField
-        @JsStatic
-        val spgist_geo_4d = def(PgIndex::class, "s4d") { self ->
-            self.name = "spgist_geo_4d"
-            self.columns = listOf(c_geo)
-            self.createFn = Fx2 { conn, table ->
-                conn.execute(
-                    self.sql(
-                        """spgist (naksha_4d($c_geo, $c_flags))""",
-                        table, unique = false, addFillFactor = true, where = "naksha_4d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -678,7 +602,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             cv0, cv1, cv2, cv3,
             cs0, cs1, cs2, cs3,
             ref_point,
-            gist_geo_2d,
+            gist_geo,
         )
     }
 

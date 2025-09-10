@@ -250,13 +250,33 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
             if (jdbcConn.networkTimeout != options.socketTimeout) {
                 jdbcConn.setNetworkTimeout(null, max(5_000, options.socketTimeout))
             }
+            // We need to ensure that, when reusing session, we fall back to defaults for most commonly modified session properties!
             val query = """SET SESSION $search_path TO "naksha~admin", hint_plan, public, topology;
-SET SESSION $work_mem = '64MB';
+SET SESSION $work_mem = '128MB';
 SET SESSION $idle_session_timeout = '600s';
 SET SESSION $statement_timeout = '${toSeconds(options.stmtTimeout)}s';
 SET SESSION $lock_timeout = '${toSeconds(options.lockTimeout, 0)}s';
 SET SESSION $idle_in_transaction_session_timeout = '${toSeconds(options.idleTxTimeout)}s';
+SET SESSION enable_async_append = on;
+SET SESSION max_parallel_workers = 128;
+SET SESSION max_parallel_workers_per_gather = 16;
+SET SESSION min_parallel_table_scan_size = 0;
+SET SESSION min_parallel_index_scan_size = 0;
+SET SESSION enable_partition_pruning = on;
+SET SESSION enable_partitionwise_join = on;
+SET SESSION enable_partitionwise_aggregate = on;
+SET SESSION enable_gathermerge = on;
+SET SESSION enable_seqscan = off;
+SET SESSION enable_bitmapscan = on;
+SET SESSION enable_indexscan = on;
+SET SESSION enable_indexonlyscan = on;
+SET SESSION enable_nestloop = off;
+SET SESSION enable_sort = off;
+SET SESSION pg_hint_plan.enable_hint = on;
+SET SESSION pg_hint_plan.enable_hint_table = on;
 """
+            // Note: bitmap scans can be become really bad, when combined with gather!
+            // We can tune things later, changing the session manually to other values, as anyway every session will reset to default now!
             if (init != null) init.call(psqlConn, query) else psqlConn.execute(query).close()
             return Pair(psqlConn, true)
         } catch (e: Exception) {

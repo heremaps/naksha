@@ -110,7 +110,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                     null -> queryGeometry
                     else -> resolveTransformation(transformation, queryGeometry)
                 }
-                where.append("ST_Intersects(naksha_geometry(${PgColumn.geo}, ${PgColumn.flags}), $geometryToCompare)")
+                where.append("ST_Intersects(naksha_2d(${PgColumn.geo}, ${PgColumn.flags}), $geometryToCompare)")
             }
 
             is SpRefInHereTile -> {
