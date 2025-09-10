@@ -157,7 +157,12 @@ data class SessionOptions @JvmOverloads constructor(
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        fun from(context: NakshaContext?, authToken: String? = null, useMaster: Boolean = false, logLevel: String? = null): SessionOptions {
+        fun from(
+            context: NakshaContext?,
+            authToken: String? = null,
+            useMaster: Boolean = false,
+            logLevel: String? = Naksha.DEFAULT_SESSION_LOG_LEVEL
+        ): SessionOptions {
             val c = context ?: NakshaContext.currentContext()
             return SessionOptions(
                 appName = c.appName,
