@@ -12,10 +12,10 @@ import kotlin.js.JsExport
 class PgLogLevel {
     companion object LogLevel_C {
         /**
-         * Logging disabled, same as `null`.
+         * Logging disabled, just `null`.
          * @since 3.0
          */
-        const val NONE = "none";
+        val NONE: String? = null
 
         /**
          * Log all queries.

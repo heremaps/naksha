@@ -128,7 +128,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         val flags = Flags().geoGzipOff().withGeoEncoding(geoEncoding)
         val geoBytes = Naksha.encodeGeometry(geometry, flags)
         val geoBytesPlaceholder = placeholderForArg(geoBytes, PgType.BYTE_ARRAY)
-        return "naksha_geometry($geoBytesPlaceholder, $flags)"
+        return "ST_Force2D(naksha_geometry($geoBytesPlaceholder, $flags))"
     }
 
     private fun resolveTransformation(

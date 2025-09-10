@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumnNames
@@ -32,7 +33,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
         }
     }
 
-    private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
+    private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         // All input provided by client (the updates)
@@ -115,7 +116,9 @@ ${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = ne
 LEFT JOIN head_deleted ON head_deleted.id = new_row.id
 LEFT JOIN inserted ON inserted.id = new_row.id
 ;"""
-        return conn.prepare(SQL, inRows.typeNames())
+        val typeNames = inRows.typeNames()
+        val pgPlan = conn.prepare(SQL, typeNames)
+        return PgWriterPlan(pgPlan, SQL, typeNames)
     }
 
     override fun doExecute(conn: PgConnection) {
@@ -131,8 +134,17 @@ LEFT JOIN inserted ON inserted.id = new_row.id
             .addColumn("attachment", PgType.BYTE_ARRAY)
         val plan = plan(conn, collection)
         val array = this.inRows.values()
+        if (PlatformUtil.ENABLE_INFO) {
+            if (session.logQueries) {
+                session.logAtInfo(plan.sql)
+            }
+            if (session.logExplain) {
+                val explain = session.explain(conn, false, plan.sql, plan.typeNames, array)
+                session.logAtInfo(explain)
+            }
+        }
         val start = Platform.currentNanos()
-        val cursor = plan.execute(array)
+        val cursor = plan.pgPlan.execute(array)
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {

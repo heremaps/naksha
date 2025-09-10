@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.request.*
 import kotlin.jvm.JvmField
@@ -34,15 +35,18 @@ class PgReader(
 
     fun execute(): Response {
         try {
+            val session = this.session
             val query = PgQueryBuilder(session, request).build()
             val conn = session.useConnection()
             session.storage.adminMap.setSearchPath(conn)
-            if (logQueries) {
-                log(query.sql)
-            }
-            if (logExplain) {
-                val explain = explain(conn, false, query.sql, query.argValues)
-                log(explain)
+            if (PlatformUtil.ENABLE_INFO) {
+                if (session.logQueries) {
+                    session.logAtInfo(query.sql)
+                }
+                if (session.logExplain) {
+                    val explain = session.explain(conn, false, query.sql, query.argTypes, query.argValues)
+                    session.logAtInfo(explain)
+                }
             }
             conn.prepare(query.sql, query.argTypes).use { plan ->
                 // Start allocating around 8 KiB

@@ -216,9 +216,14 @@ abstract class PgTestBase(
         return response
     }
 
+    /**
+     * Default log level to use for new sessions within the test.
+     */
+    protected var defaultLogLevel: String? = PgLogLevel.NONE
+
     protected fun executeWrite(
         request: WriteRequest,
-        sessionOptions: SessionOptions? = newSessionOptions()
+        sessionOptions: SessionOptions? = newSessionOptions(logLevel = defaultLogLevel)
     ): SuccessResponse = storage.newWriteSession(sessionOptions).use { session ->
         val response = assertSuccess(session.execute(request))
         val start = Platform.currentNanos()
