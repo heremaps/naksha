@@ -269,14 +269,16 @@ SET SESSION enable_partitionwise_join = on;
 SET SESSION enable_partitionwise_aggregate = on;
 SET SESSION enable_gathermerge = on;
 SET SESSION enable_seqscan = off;
-SET SESSION enable_bitmapscan = on;
+SET SESSION enable_bitmapscan = off;
 SET SESSION enable_indexscan = on;
 SET SESSION enable_indexonlyscan = on;
 SET SESSION enable_nestloop = off;
 SET SESSION enable_sort = off;
 SET SESSION pg_hint_plan.enable_hint = on;
 """
-            // SET SESSION pg_hint_plan.enable_hint_table = on;
+            // TODO: We need to fix this for our docker container, it complains about that the table does not exist
+            //       SET SESSION pg_hint_plan.enable_hint_table = on;
+
             // Note: bitmap scans can be become really bad, when combined with gather!
             // We can tune things later, changing the session manually to other values, as anyway every session will reset to default now!
             if (init != null) init.call(psqlConn, query) else psqlConn.execute(query).close()
