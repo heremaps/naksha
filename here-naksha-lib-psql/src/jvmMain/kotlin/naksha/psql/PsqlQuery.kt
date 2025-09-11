@@ -112,10 +112,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         FLOAT_ARRAY,
                         DOUBLE_ARRAY,
                         STRING_ARRAY -> {
-                            stmt.setArray(
-                                index,
-                                stmt.connection.createArrayOf(type.childType!!.text, arg)
-                            )
+                            stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arg))
                         }
                         BYTE_ARRAY_ARRAY -> {
                             // This is a hack, because we need a `Byte[][]`, JDBC does not support an `Object[][]`,
@@ -124,7 +121,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                             //   helpers like `toString`, `toInt`, `toLong`, ... on them, but there is no such thing
                             //   for byte-arrays (byte[]), and instead of writing an own toByteArray, they fail!
                             val arr = Array(arg.size) { arg[it] as ByteArray? }
-                            stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arr) )
+                            stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arr))
                         }
                         BOOLEAN,
                         SHORT,
@@ -138,7 +135,6 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         else -> throw illegalArg("Failed to detect array type, and invalid type-name was provided: $typeName")
                     }
                 }
-
                 is AnyList -> setArgument(stmt, arg.toArray(), indices)
                 null -> stmt.setNull(index, 0)
                 else -> throw illegalArg("Unable to set argument: args[${index - 1}], unknown type: ${arg.javaClass.name}")
