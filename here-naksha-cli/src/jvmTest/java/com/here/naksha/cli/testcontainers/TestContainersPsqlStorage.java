@@ -16,7 +16,7 @@ import static org.testcontainers.containers.wait.strategy.WaitAllStrategy.Mode.W
 
 public final class TestContainersPsqlStorage {
     private final int exposedPort = 5432;
-    private final String postgresImageUri = "ghcr.io/naksha-oss/naksha-postgres:v16.2-r4";
+    private final String postgresImageUri = "ghcr.io/naksha-oss/naksha-postgres:v16.2-r5";
     private final GenericContainer<?> postgres = new GenericContainer<>(postgresImageUri);
     private IStorage storage;
 
