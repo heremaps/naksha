@@ -1,7 +1,6 @@
 package naksha.diff
 
 import naksha.base.Platform
-import naksha.diff.*
 import org.json.JSONException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.*
@@ -11,7 +10,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import org.skyscreamer.jsonassert.JSONAssert
 import org.skyscreamer.jsonassert.JSONCompareMode
-import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
@@ -27,7 +25,7 @@ import kotlin.test.assertNull
  * - Java->Kotlin migration
  * - renamed & moved functions of tested code and other notable things:
  *  - `Patcher.getDifference` is [DifferenceCalculator.calculateDifference]
- *  - `PatcherUtils.removeAllRemoveOp` is [DifferenceFilter.removeAllRemoveOp]
+ *  - `PatcherUtils.removeAllRemoveOp` is [DifferenceFilter.removeAllRemoveOpExceptForList]
  *  - `Patcher.patch` remained as [Patcher.patch]
  *  - JSON (de)serialization happens via [Platform.toJSON] and [Platform.fromJSON]
  */
@@ -91,7 +89,7 @@ class MigratedJsonBasedDiffTest {
         assertIs<RemoveOp>((nestedArrayDiff34[2] as MapDiff)["willBeDeletedProperty"])
 
         // Modify the whole difference to get rid of all RemoveOp
-        DifferenceFilter.removeAllRemoveOp(mapDiff34)
+        DifferenceFilter.removeAllRemoveOpExceptForList(mapDiff34)
         val patchedf3 = Patcher.patch(f3, mapDiff34)
         assertNotNull(patchedf3)
         val expectedPatchedf3 = loadFeature("feature_3_patched_to_4_no_remove.json")
@@ -153,7 +151,7 @@ class MigratedJsonBasedDiffTest {
         assertNotNull(diff36)
 
         // Simulate REST API behaviour, ignore all RemoveOp type of Difference
-        DifferenceFilter.removeAllRemoveOp(diff36)
+        DifferenceFilter.removeAllRemoveOpExceptForList(diff36)
         val patchedf3Tof6 = Patcher.patch(f3, diff36)
         val expectedPatchedf3 = loadFeature("feature_3_patched_with_6_no_remove_op.json")
         assertNotNull(expectedPatchedf3)

@@ -3,6 +3,7 @@ package naksha.diff
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class DifferenceFilterTest {
 
@@ -21,15 +22,33 @@ class DifferenceFilterTest {
         mapDiff["nestedDiff"] = nestedDiff
 
         // When
-        DifferenceFilter.removeAllRemoveOp(mapDiff)
+        DifferenceFilter.removeAllRemoveOpExceptForList(mapDiff)
 
         // Then
         assertEquals(3, mapDiff.size)
         val filteredKeys = setOf("simpleUpdate", "simpleInsert", "nestedDiff")
         assertEquals(filteredKeys, mapDiff.keys.toSet())
         val filteredNestedList = (mapDiff["nestedDiff"] as MapDiff)["nestedList"] as ListDiff
-        assertEquals(1, filteredNestedList.size)
+        assertEquals(2, filteredNestedList.size)
         assertIs<UpdateOp>(filteredNestedList[0])
+    }
+
+    @Test
+    fun shouldNotRemoveOpsFromList() {
+        // Given
+        val listDiff = ListDiff()
+        listDiff.add(UpdateOp("old_1", "new_1"))
+        listDiff.add(RemoveOp("del_1"))
+        listDiff.add(InsertOp("in_1"))
+
+        // When
+        DifferenceFilter.removeAllRemoveOpExceptForList(listDiff)
+
+        // Then
+        assertEquals(3, listDiff.size)
+        assertTrue(listDiff.any { it is UpdateOp })
+        assertTrue(listDiff.any { it is RemoveOp })
+        assertTrue(listDiff.any { it is InsertOp })
     }
 
     @Test

@@ -14,19 +14,14 @@ class DifferenceFilter private constructor() {
          * @since 3.0.0
          */
         @JvmStatic
-        fun removeAllRemoveOp(difference: Difference?) {
+        fun removeAllRemoveOpExceptForList(difference: Difference?) {
             when (difference) {
                 is MapDiff -> removeAllRemoveOpFromMap(difference)
-                is ListDiff -> removeAllRemoveOpFromList(difference)
             }
         }
 
         private fun removeAllRemoveOpFromMap(mapDiff: MapDiff) {
             removeAllRemoveOpFromIterator(mapDiff.iterator()) { it.value }
-        }
-
-        private fun removeAllRemoveOpFromList(listDiff: ListDiff) {
-            removeAllRemoveOpFromIterator(listDiff.iterator()) { it }
         }
 
         private fun <T> removeAllRemoveOpFromIterator(
@@ -36,7 +31,7 @@ class DifferenceFilter private constructor() {
             while (iterator.hasNext()) {
                 when (val diff = diffRetrieval(iterator.next())) {
                     is RemoveOp -> iterator.remove()
-                    else -> removeAllRemoveOp(diff)
+                    else -> removeAllRemoveOpExceptForList(diff)
                 }
             }
         }
