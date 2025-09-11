@@ -52,7 +52,9 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                 }
                 sb.append("?")
                 val dollar = gatheredNum.toInt()
-                dollarToIndices.computeIfAbsent(dollar) { ArrayList() }.add(targetIndex++)
+                dollarToIndices
+                    .computeIfAbsent(dollar) { ArrayList() }
+                    .add(targetIndex++)
             } else {
                 sb.append(query[charIndex++])
             }
@@ -81,8 +83,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                 is Array<*> -> {
                     // Note: Java array indices start at 0, NOT 1 !!!
                     val typeNameIndex = index - 1
-                    val typeName =
-                        if (typeNames != null && typeNameIndex < typeNames.size) typeNames[typeNameIndex] else null
+                    val typeName = if (typeNames != null && typeNameIndex < typeNames.size) typeNames[typeNameIndex] else null
                     var type = PgType.of(typeName)
                     if (type == null) {
                         if (arg.size == 0) throw illegalArg("Can't detect type of empty array, declared type: $typeName")
@@ -116,7 +117,6 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                                 stmt.connection.createArrayOf(type.childType!!.text, arg)
                             )
                         }
-
                         BYTE_ARRAY_ARRAY -> {
                             // This is a hack, because we need a `Byte[][]`, JDBC does not support an `Object[][]`,
                             // even while the content may be the same, and it knows the type, still
@@ -124,12 +124,8 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                             //   helpers like `toString`, `toInt`, `toLong`, ... on them, but there is no such thing
                             //   for byte-arrays (byte[]), and instead of writing an own toByteArray, they fail!
                             val arr = Array(arg.size) { arg[it] as ByteArray? }
-                            stmt.setArray(
-                                index,
-                                stmt.connection.createArrayOf(type.childType!!.text, arr)
-                            )
+                            stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arr) )
                         }
-
                         BOOLEAN,
                         SHORT,
                         INT,
@@ -138,7 +134,6 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         DOUBLE,
                         STRING,
                         BYTE_ARRAY -> throw illegalArg("The argument is $type, but an array was provided as value")
-
                         null -> throw illegalArg("Failed to detect array type, no type-name was provided (null)")
                         else -> throw illegalArg("Failed to detect array type, and invalid type-name was provided: $typeName")
                     }
@@ -163,12 +158,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
     }
 
     fun prepare(conn: Connection): PreparedStatement {
-        return conn.prepareStatement(
-            sql,
-            TYPE_FORWARD_ONLY,
-            CONCUR_READ_ONLY,
-            CLOSE_CURSORS_AT_COMMIT
-        )
+        return conn.prepareStatement(sql, TYPE_FORWARD_ONLY, CONCUR_READ_ONLY, CLOSE_CURSORS_AT_COMMIT)
     }
 
     companion object {
@@ -176,5 +166,4 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
         private val positiveNums = '1'..'9'
         private val nums = '0'..'9'
     }
-
 }
