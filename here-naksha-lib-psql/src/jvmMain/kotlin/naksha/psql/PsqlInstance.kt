@@ -262,8 +262,6 @@ SET SESSION $idle_in_transaction_session_timeout = '${toSeconds(options.idleTxTi
 SET SESSION enable_async_append = on;
 SET SESSION max_parallel_workers = 128;
 SET SESSION max_parallel_workers_per_gather = 16;
-SET SESSION min_parallel_table_scan_size = 0;
-SET SESSION min_parallel_index_scan_size = 0;
 SET SESSION enable_partition_pruning = on;
 SET SESSION enable_partitionwise_join = on;
 SET SESSION enable_partitionwise_aggregate = on;
@@ -278,6 +276,10 @@ SET SESSION pg_hint_plan.enable_hint = on;
 """
             // TODO: We need to fix this for our docker container, it complains about that the table does not exist
             //       SET SESSION pg_hint_plan.enable_hint_table = on;
+
+            //TODO and these 2 cause extremely long collection creation time, and they might not even be relevant to postgres planner?
+            //   SET SESSION min_parallel_table_scan_size = 0;
+            //   SET SESSION min_parallel_index_scan_size = 0;
 
             // Note: bitmap scans can be become really bad, when combined with gather!
             // We can tune things later, changing the session manually to other values, as anyway every session will reset to default now!
