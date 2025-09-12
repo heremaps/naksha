@@ -1,8 +1,3 @@
-## Naksha_1.1.2
-
-- Fixes:
-  - Patch API (POST /features) fixed to `replace` entire array instead of `append` nodes during patch operation, which otherwise prevents removal of the node even-though is desired
-
 ## Naksha_1.1.1
 
 - Fixes:
