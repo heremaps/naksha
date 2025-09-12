@@ -20,6 +20,7 @@ package com.here.naksha.lib.handlers.util;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import com.here.naksha.lib.core.lambdas.F1;
@@ -63,18 +64,33 @@ public class PropertyOperationUtil {
       @NotNull IPropertyQuery current, @Nullable IPropertyQuery parent, F1<Boolean, PQuery> removalCondition, Set<PQuery> disabledProperties
   ) {
     switch (current) {
-      case PAnd pAnd -> pAnd.forEach(andChild -> disablePropertyInPropertyQueryTree(andChild, pAnd, removalCondition, disabledProperties));
-      case POr pOr -> pOr.forEach(orChild -> disablePropertyInPropertyQueryTree(orChild, pOr, removalCondition, disabledProperties));
-      case PNot pNot -> disablePropertyInPropertyQueryTree(pNot.getQuery(), pNot, removalCondition, disabledProperties);
+      case PAnd pAnd -> {
+        for (var andChild : pAnd) {
+          disablePropertyInPropertyQueryTree(andChild, pAnd, removalCondition, disabledProperties);
+        }
+      }
+      case POr pOr -> {
+        for (var orChild : pOr) {
+          disablePropertyInPropertyQueryTree(orChild, pOr, removalCondition, disabledProperties);
+        }
+      }
+      case PNot pNot -> {
+          disablePropertyInPropertyQueryTree(pNot.getQuery(), pNot, removalCondition, disabledProperties);
+
+      }
       case PQuery currentyPQuery when removalCondition.call(currentyPQuery) -> {
         if (parent instanceof PAnd pAndParent) {
-          pAndParent.remove(current);
-          pAndParent.add(PTrue.INSTANCE);
-          disabledProperties.add(currentyPQuery);
+          int idx = pAndParent.indexOf(current);
+          if (idx >= 0) {
+            pAndParent.set(idx, PTrue.INSTANCE);
+            disabledProperties.add(currentyPQuery);
+          }
         } else if (parent instanceof POr pOrParent) {
-          pOrParent.remove(current);
-          pOrParent.add(PTrue.INSTANCE);
-          disabledProperties.add(currentyPQuery);
+          int idx = pOrParent.indexOf(current);
+          if (idx >= 0) {
+            pOrParent.set(idx, PTrue.INSTANCE);
+            disabledProperties.add(currentyPQuery);
+          }
         } else if (parent instanceof PNot pNotParent) {
           pNotParent.setQuery(PFalse.INSTANCE);
           disabledProperties.add(currentyPQuery);
