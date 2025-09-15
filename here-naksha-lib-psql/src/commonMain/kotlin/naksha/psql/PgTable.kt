@@ -291,6 +291,7 @@ WITH (fillfactor=100,
 toast_tuple_target=8140,
 autovacuum_vacuum_scale_factor=0,
 autovacuum_vacuum_threshold=1000,
+autovacuum_vacuum_insert_scale_factor=0,
 autovacuum_vacuum_insert_threshold=10000,
 autovacuum_analyze_scale_factor=0, 
 autovacuum_analyze_threshold=5000)
