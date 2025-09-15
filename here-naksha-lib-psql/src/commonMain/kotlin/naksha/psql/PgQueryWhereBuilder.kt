@@ -336,7 +336,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                     // for tags without values we can utilize top-level-key based '?|' operand
                     // https://www.postgresql.org/docs/current/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
                     resolveTagNamesArrayOperation(
-                        jsonbOperator = "?|",
+                        jsonbOperator = "jsonb_exists_any", // equivalent of '?|'
                         tagNames = (tagQuery as ListProxy<TagExists>).mapNotNull { it?.name }
                     )
                 } else {
@@ -348,7 +348,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                     // for tags without values we can utilize top-level-key based '?&' operand
                     // https://www.postgresql.org/docs/current/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
                     resolveTagNamesArrayOperation(
-                        jsonbOperator = "?&",
+                        jsonbOperator = "jsonb_exists_all", // equivalent of '?&'
                         tagNames = (tagQuery as ListProxy<TagExists>).mapNotNull { it?.name }
                     )
                 } else {
@@ -363,9 +363,9 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         container.all { it is TagExists }
 
     private fun resolveTagNamesArrayOperation(jsonbOperator: String, tagNames: List<String>) {
-        val tagKeysArray = tagNames.joinToString(prefix = "array[", postfix = "]") { "'$it'" }
+        val tagKeysArray = tagNames.toTypedArray()
         val tagKeysPlaceholder = placeholderForArg(tagKeysArray, PgType.STRING_ARRAY)
-        where.append("$tagsAsJsonb $jsonbOperator $tagKeysPlaceholder")
+        where.append("$jsonbOperator($tagsAsJsonb, $tagKeysPlaceholder)")
     }
 
     private fun resolveSingleTagQuery(tagQuery: TagQuery) {
