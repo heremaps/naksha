@@ -1,5 +1,7 @@
 package naksha.psql
 
+import naksha.base.ListProxy
+import naksha.base.Proxy
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
 import naksha.model.*
@@ -329,10 +331,41 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     private fun whereNestedTags(tagQuery: ITagQuery) {
         when (tagQuery) {
             is TagNot -> not(tagQuery.query, this::whereNestedTags)
-            is TagOr -> or(tagQuery.filterNotNull(), this::whereNestedTags)
-            is TagAnd -> and(tagQuery.filterNotNull(), this::whereNestedTags)
+            is TagOr -> {
+                if(containsOnlyTagExists(tagQuery)){
+                    // for tags without values we can utilize top-level-key based '?|' operand
+                    // https://www.postgresql.org/docs/current/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
+                    resolveTagNamesArrayOperation(
+                        jsonbOperator = "?|",
+                        tagNames = (tagQuery as ListProxy<TagExists>).mapNotNull { it?.name }
+                    )
+                } else {
+                    or(tagQuery.filterNotNull(), this::whereNestedTags)
+                }
+            }
+            is TagAnd -> {
+                if(containsOnlyTagExists(tagQuery)){
+                    // for tags without values we can utilize top-level-key based '?&' operand
+                    // https://www.postgresql.org/docs/current/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
+                    resolveTagNamesArrayOperation(
+                        jsonbOperator = "?&",
+                        tagNames = (tagQuery as ListProxy<TagExists>).mapNotNull { it?.name }
+                    )
+                } else {
+                    and(tagQuery.filterNotNull(), this::whereNestedTags)
+                }
+            }
             is TagQuery -> resolveSingleTagQuery(tagQuery)
         }
+    }
+
+    private fun containsOnlyTagExists(container: ListProxy<ITagQuery>): Boolean =
+        container.all { it is TagExists }
+
+    private fun resolveTagNamesArrayOperation(jsonbOperator: String, tagNames: List<String>) {
+        val tagKeysArray = tagNames.joinToString(prefix = "array[", postfix = "]") { "'$it'" }
+        val tagKeysPlaceholder = placeholderForArg(tagKeysArray, PgType.STRING_ARRAY)
+        where.append("$tagsAsJsonb $jsonbOperator $tagKeysPlaceholder")
     }
 
     private fun resolveSingleTagQuery(tagQuery: TagQuery) {
