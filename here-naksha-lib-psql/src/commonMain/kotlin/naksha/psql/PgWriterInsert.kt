@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.PlatformUtil
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
@@ -23,7 +24,7 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
         }
     }
 
-    private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
+    private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {
         val new_row = """WITH new_row AS (
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
@@ -48,16 +49,27 @@ SELECT inserted.id AS id, inserted.tn AS tn${if (clear_shadow.isNotEmpty()) ", c
 FROM inserted
 ${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = inserted.id" else ""} 
 """
-        return conn.prepare(SQL, inRows.typeNames())
+        val typeNames = inRows.typeNames()
+        val pgPlan = conn.prepare(SQL, typeNames)
+        return PgWriterPlan(pgPlan, SQL, typeNames)
     }
 
     override fun doExecute(conn: PgConnection) {
         if (writes.isEmpty()) return
         val plan = plan(conn, collection)
         val array = inRows.values()
+        if (PlatformUtil.ENABLE_INFO) {
+            if (session.logQueries) {
+                session.logAtInfo(plan.sql)
+            }
+            if (session.logExplain) {
+                val explain = session.explain(conn, false, plan.sql, plan.typeNames, array)
+                session.logAtInfo(explain)
+            }
+        }
         val start = Platform.currentNanos()
         // We ignore the result, we know that if it didn't fail, it's okay.
-        plan.execute(array).close()
+        plan.pgPlan.execute(array).close()
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {

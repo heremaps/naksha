@@ -1,4 +1,3 @@
-@file:Suppress("NOTHING_TO_INLINE")
 @file:OptIn(ExperimentalJsStatic::class)
 
 package naksha.psql
@@ -57,6 +56,8 @@ abstract class PgTestBase(
         if (collection != null) {
             useCollection(collection)
         }
+        //PlatformUtil.ENABLE_INFO = true
+        //Naksha.DEFAULT_SESSION_LOG_LEVEL = PgLogLevel.EXPLAIN_AND_QUERIES
     }
 
     private var _defaultName: String? = null
@@ -342,12 +343,14 @@ abstract class PgTestBase(
          * Create [SessionOptions] and mutate the current [NakshaContext] to actually use the [PgTest] constants for `appName`, `appId`, and `author`, to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or [PgStorage.newReadSession].
          * @param appId the `appId`, if modified, otherwise [PgTest.TEST_APP_ID]
          * @param author the `author`, if modified, otherwise [PgTest.TEST_APP_AUTHOR]
+         * @param logLevel the `logLevel`, if modified, otherwise [Naksha.DEFAULT_SESSION_LOG_LEVEL]
          */
         @JvmStatic
         @JsStatic
         fun newSessionOptions(
             appId: String = PgTest.TEST_APP_ID,
             author: String? = PgTest.TEST_APP_AUTHOR,
+            logLevel: String? = Naksha.DEFAULT_SESSION_LOG_LEVEL
         ): SessionOptions {
             val context = NakshaContext.currentContext()
             context.appName = PgTest.TEST_APP_NAME
@@ -358,6 +361,7 @@ abstract class PgTestBase(
                 appId = appId,
                 author = author,
                 useMaster = true,
+                logLevel = logLevel,
             )
         }
 

@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
@@ -28,7 +29,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
         }
     }
 
-    private fun plan(conn: PgConnection, collection: PgCollection): PgPlan {
+    private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         // This is what we should INSERT or UPDATE.
@@ -124,7 +125,9 @@ LEFT JOIN head_inserted ON head_inserted.id = new_row.id
 ${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = new_row.id" else ""}
 ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.id = new_row.id" else ""}
 ;"""
-        return conn.prepare(SQL, inRows.typeNames())
+        val typeNames = inRows.typeNames();
+        val pgPlan = conn.prepare(SQL, typeNames);
+        return PgWriterPlan(pgPlan, SQL, typeNames)
     }
 
     override fun doExecute(conn: PgConnection) {
@@ -148,8 +151,18 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
         val plan = plan(conn, collection)
         // TupleNumber.fromB160(inRows.columns[11].values_field[0] as ByteArray, naksha.base.Int64(0), 0, 0).partitionNumber % 16
         val array = inRows.values()
+        val session = this.session
+        if (PlatformUtil.ENABLE_INFO) {
+            if (session.logQueries) {
+                session.logAtInfo(plan.sql)
+            }
+            if (session.logExplain) {
+                val explain = session.explain(conn, false, plan.sql, plan.typeNames, array)
+                session.logAtInfo(explain)
+            }
+        }
         val start = Platform.currentNanos()
-        val cursor = plan.execute(array)
+        val cursor = plan.pgPlan.execute(array)
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {

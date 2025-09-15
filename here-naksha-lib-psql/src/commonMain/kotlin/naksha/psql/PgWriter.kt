@@ -9,6 +9,7 @@ import naksha.model.objects.NakshaMap
 import naksha.model.objects.NakshaTx
 import naksha.model.request.*
 import kotlin.js.JsExport
+import kotlin.jvm.JvmField
 
 /**
  * A helper to write tuples into collections.
@@ -23,14 +24,15 @@ open class PgWriter internal constructor(
      * The session to which the writer is bound.
      * @since 3.0
      */
-    val session: PgSession,
+    session: PgSession,
 
     /**
      * If the writer should use save-point's.
      * @since 3.0
      */
+    @JvmField
     val useSavepoint: Boolean
-) {
+) : PgReaderWriterBase(session) {
     /**
      * The storage to operate on.
      * @since 3.0

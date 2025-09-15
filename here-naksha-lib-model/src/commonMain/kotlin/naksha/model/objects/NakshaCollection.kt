@@ -261,7 +261,7 @@ open class NakshaCollection() : NakshaFeature() {
      * - `author`: Index above `author`, includes `author_ts`, `id`, `tn`, and `tn_next`.
      * - `tags`: Index above tags, does not allow index-only scans or pre-ordering.
      * - `ref_point`: Index above reference point geometry, does not allow index-only scans or pre-ordering.
-     * - `gist_geo_(2d|3d|4d)` or `spgist_geo_(2d|3d|4d)`: Index above geometry, does not allow index-only scans or pre-ordering.
+     * - `gist_geo` or `spgist_geo`: Index above geometry, does not allow index-only scans or pre-ordering.
      * - `ft`: Index above `ft`, includes `id`, `tn`, and `next_tn`.
      * - `cv0`, `cv1`, `cv2`, and `cv3`: Index above `cvX`, includes `id`, `tn`, and `next_tn`, does not index `null` values.
      * - `cs0`, `cs1`, `cs2`, and `cs3`: Index above `csX`, includes `id`, `tn`, and `next_tn`, does not index `null` values.
@@ -425,37 +425,13 @@ open class NakshaCollection() : NakshaFeature() {
          * Index above geometry, does not allow index-only scans or pre-ordering.
          * @since 3.0
          */
-        const val GIST_2D_IDX = "gist_geo_2d"
+        const val GIST_IDX = "gist_geo"
 
         /**
          * Index above geometry, does not allow index-only scans or pre-ordering.
          * @since 3.0
          */
-        const val GIST_3D_IDX = "gist_geo_3d"
-
-        /**
-         * Index above geometry, does not allow index-only scans or pre-ordering.
-         * @since 3.0
-         */
-        const val GIST_4D_IDX = "gist_geo_4d"
-
-        /**
-         * Index above geometry, does not allow index-only scans or pre-ordering.
-         * @since 3.0
-         */
-        const val SP_GIST_2D_IDX = "spgist_geo_2d"
-
-        /**
-         * Index above geometry, does not allow index-only scans or pre-ordering.
-         * @since 3.0
-         */
-        const val SP_GIST_3D_IDX = "spgist_geo_3d"
-
-        /**
-         * Index above geometry, does not allow index-only scans or pre-ordering.
-         * @since 3.0
-         */
-        const val SP_GIST_4D_IDX = "spgist_geo_4d"
+        const val SP_GIST_IDX = "spgist_geo"
 
         /**
          * Index above geometry, does not allow index-only scans or pre-ordering.

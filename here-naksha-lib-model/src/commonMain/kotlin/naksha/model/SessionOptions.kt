@@ -122,6 +122,15 @@ data class SessionOptions @JvmOverloads constructor(
      */
     @JvmField
     val authToken: String? = null,
+
+    /**
+     * If the session should be used for debugging.
+     *
+     * The possible values are dependent on the implementation, and need to be supplied by the implementation. For example, for `lib-psql` you can log the queries and the real execution plans, for other implementations this may not be available, but maybe other debug hints.
+     * @since 3.0
+     */
+    @JvmField
+    val logLevel: String? = null,
 ) {
     /**
      * The stream-identifier for this session.
@@ -142,12 +151,18 @@ data class SessionOptions @JvmOverloads constructor(
          * @param context the context, if being _null_, then [NakshaContext.currentContext] is called.
          * @param authToken the authentication-token to use, if any.
          * @param useMaster _true_ if the master node should be used forcefully (if supported by the storage); only necessary in rare situations, generally the default _false_ is recommended.
+         * @param logLevel if logging should be enabled.
          * @return the session options.
          */
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        fun from(context: NakshaContext?, authToken: String? = null, useMaster: Boolean = false): SessionOptions {
+        fun from(
+            context: NakshaContext?,
+            authToken: String? = null,
+            useMaster: Boolean = false,
+            logLevel: String? = Naksha.DEFAULT_SESSION_LOG_LEVEL
+        ): SessionOptions {
             val c = context ?: NakshaContext.currentContext()
             return SessionOptions(
                 appName = c.appName,
@@ -162,6 +177,7 @@ data class SessionOptions @JvmOverloads constructor(
                 useMaster = useMaster,
                 streamInfo = c.streamInfo,
                 authToken = authToken,
+                logLevel = logLevel
             )
         }
 

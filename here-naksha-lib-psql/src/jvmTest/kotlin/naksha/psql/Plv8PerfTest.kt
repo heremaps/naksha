@@ -15,7 +15,7 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_2D_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
@@ -41,7 +41,7 @@ class Plv8PerfTest : PgTestBase(
         partitions = NUM_OF_PARTITIONS,
         storeHistory = StoreMode.ON,
         storeDeleted = StoreMode.ON
-    ).withIndices(ID_IDX, GIST_2D_IDX, TAGS_IDX, HERE_TILE_IDX)//.withIndices(ID_IDX)
+    ).withIndices(ID_IDX, GIST_IDX, TAGS_IDX, HERE_TILE_IDX)//.withIndices(ID_IDX)
 ) {
     companion object {
         val featureSource = JSON_TOPOLOGY_SMALL

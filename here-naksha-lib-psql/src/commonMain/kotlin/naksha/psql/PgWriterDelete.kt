@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
@@ -27,7 +28,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         }
     }
 
-    private fun plan(conn: PgConnection, collection: PgCollection, purge: Boolean): PgPlan {
+    private fun plan(conn: PgConnection, collection: PgCollection, purge: Boolean): PgWriterPlan {
         // We do not insert into shadow, if the table does not exist, is disabled, or we are asked to PURGE
         val insert_into_shadow = if (!purge && shadowTable != null && collection.head.storeDeleted == StoreMode.ON) shadowTable else null
         // We do not insert into history, if the table does not exist, or is disabled
@@ -151,7 +152,9 @@ LEFT JOIN head_select ON head_select.id = query.id
 LEFT JOIN head_row ON head_row.id = query.id
 LEFT JOIN head_deleted ON head_deleted.id = query.id
 ;"""
-        return conn.prepare(SQL, inRows.typeNames())
+        val typeNames = inRows.typeNames()
+        val pgPlan = conn.prepare(SQL, typeNames)
+        return PgWriterPlan(pgPlan, SQL, typeNames)
     }
 
     override fun doExecute(conn: PgConnection) {
@@ -172,8 +175,17 @@ LEFT JOIN head_deleted ON head_deleted.id = query.id
             .addColumn("query_version", PgType.INT64)
         val plan = plan(conn, collection, false)
         val array = inRows.values()
+        if (PlatformUtil.ENABLE_INFO) {
+            if (session.logQueries) {
+                session.logAtInfo(plan.sql)
+            }
+            if (session.logExplain) {
+                val explain = session.explain(conn, false, plan.sql, plan.typeNames, array)
+                session.logAtInfo(explain)
+            }
+        }
         val start = Platform.currentNanos()
-        val cursor = plan.execute(array)
+        val cursor = plan.pgPlan.execute(array)
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (writes.size != 1 || writes[0].isFeatureModification) {

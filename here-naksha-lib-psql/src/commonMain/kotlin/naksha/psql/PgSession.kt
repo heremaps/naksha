@@ -3,6 +3,9 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Platform.PlatformCompanion.longToInt64
+import naksha.base.Platform.PlatformCompanion.newAtomicInt64
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaCollection
@@ -40,6 +43,17 @@ open class PgSession(
      */
     @JvmField val readOnly: Boolean
 ) : IWriteSession, IReadSession, ISession {
+
+    companion object PgSession_C {
+        private val nextSessionId = newAtomicInt64(longToInt64(0L))
+        private val ONE = longToInt64(1L)
+    }
+
+    /**
+     * A unique numerical identifier for the session.
+     * @since 3.0
+     */
+    val id: Int64 = nextSessionId.getAndAdd(ONE)
 
     override val storage = pgStorage
 
@@ -151,6 +165,13 @@ open class PgSession(
         }
         return conn
     }
+
+    /**
+     * If a connection is backing this session currently, return the [id][PgConnection.id] of the [connection][PgConnection], otherwise `null`.
+     * @since 3.0
+     */
+    val connectionId: Int64?
+        get() = pgConnection?.id
 
     /**
      * Internally invoked by [useConnection] to initialize the connection.
@@ -494,4 +515,91 @@ open class PgSession(
     }
 
     override fun executeParallel(request: Request): Response = execute(request)
+
+    /**
+     * Start time of the session.
+     */
+    private val start = Platform.currentMillis()
+
+    private var _logOptions: SessionOptions? = null
+
+    /**
+     * If all queries should be logged.
+     * @since 3.0
+     */
+    internal var logQueries: Boolean = options?.logLevel?.contains(PgLogLevel.QUERIES) ?: false
+        get() {
+            val options = this.options
+            if (_logOptions != options) {
+                _logOptions = options
+                field = options.logLevel?.contains(PgLogLevel.QUERIES) ?: false
+            }
+            return field
+        }
+        private set
+
+    /**
+     * If all queries should be explained and then the "explain" should be logged.
+     * @since 3.0
+     */
+    internal var logExplain: Boolean = options?.logLevel?.contains(PgLogLevel.EXPLAIN) ?: false
+        get() {
+            val options = this.options
+            if (_logOptions != options) {
+                _logOptions = options
+                field = options.logLevel?.contains(PgLogLevel.EXPLAIN) ?: false
+            }
+            return field
+        }
+        private set
+
+    /**
+     * Executes an EXPLAIN above the given statement and returns the plain text for logging purpose.
+     * @param connection The connection to use to execute to explain.
+     * @param verbose If verbose is requested, which means with {@code ANALYZE, BUFFERS}.
+     * @param sql The SQL query to explain.
+     * @param typeNames The type names, if given the statement will be prepared, which is necessary for queries where type detection fails otherwise.
+     * @param args The arguments for the query, same as given to {@code execute}.
+     * @return The plain text EXPLAIN above the given statement.
+     * @since 11.9.22
+     */
+    fun explain(connection: PgConnection, verbose: Boolean, sql: String, typeNames: Array<String>?, args: Array<Any?>?) : String {
+        val EXPLAIN = (if (verbose) "EXPLAIN (ANALYZE, BUFFERS) " else "EXPLAIN (COSTS false) ") + sql;
+        try {
+            val c: PgCursor
+            if (typeNames == null) {
+                c = connection.execute(EXPLAIN, args)
+            } else {
+                val prepared = connection.prepare(EXPLAIN, typeNames)
+                c = prepared.execute(args)
+            }
+            c.use {
+                val sb = StringBuilder()
+                while (c.next()) {
+                    val map = c.map(AnyObject::class)
+                    for (value in map.values) {
+                        sb.append(value).append("\n");
+                    }
+                }
+                return sb.toString();
+            }
+        } catch (e: Exception) {
+            val msg = "Failed to execute 'EXPLAIN $sql'"
+            logger.error(msg, e.message)
+            return msg
+        }
+    }
+
+    /**
+     * Log some SQL as debug message for a connection.
+     * @param sql The message to log.
+     * @param args Arguments for placeholders ({@code {}}) within the given message.
+     * @since 11.9.22
+     */
+    fun logAtInfo(sql: String, vararg args: Any?) {
+        if (PlatformUtil.ENABLE_INFO) {
+            val delta = Platform.currentMillis() - start
+            logger.info("{}@{}:{}ms: $sql", id, connectionId, delta, *args)
+        }
+    }
 }

@@ -29,7 +29,6 @@ import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB
 import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
 import naksha.model.objects.NakshaFeature
@@ -146,6 +145,13 @@ class Naksha private constructor() {
          */
         @JvmField
         var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON)
+
+        /**
+         * Decides about the default log-level used when creating new [SessionOptions].
+         * @since 3.0
+         */
+        @JvmField
+        var DEFAULT_SESSION_LOG_LEVEL: String? = null
 
         /**
          * Tests if the given **id** is a valid identifier, so matches:

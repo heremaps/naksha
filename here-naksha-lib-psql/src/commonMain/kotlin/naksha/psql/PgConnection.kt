@@ -2,6 +2,7 @@
 
 package naksha.psql
 
+import naksha.base.Int64
 import naksha.model.SessionOptions
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -25,6 +26,12 @@ interface PgConnection : AutoCloseable {
      * If auto-commit should be enabled; defaults to false.
      */
     var autoCommit: Boolean
+
+    /**
+     * The unique connection identifier of this connection.
+     * @since 3.0
+     */
+    val id: Int64
 
     /**
      * The URI of the database connection.

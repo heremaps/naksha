@@ -18,7 +18,7 @@ import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV1_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV2_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV3_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.FEATURE_TYPE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_2D_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.REF_POINT_IDX
@@ -110,7 +110,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             AUTHOR_IDX,
             TAGS_IDX,
             REF_POINT_IDX,
-            GIST_2D_IDX,
+            GIST_IDX,
             FEATURE_TYPE_IDX,
             CV0_IDX,
             CV1_IDX,
@@ -148,7 +148,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 indices.forEach { indexName ->
                     check(indexName != null)
                     val pgIndex = PgIndex.of(indexName)
-                    check(pgIndex != null)
+                    check(pgIndex != null) { "pgIndex of $indexName should not be null" }
                     // Note: We know that the `id` index is replaced with `id_unique` internally for HEAD tables!
                     if (pgIndex == PgIndex.id) {
                         check(addedIndices.contains(pgIndex.id(tableName))
