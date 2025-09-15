@@ -368,7 +368,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       @NotNull NakshaFeature featureToPatchFromStorage
   ) {
     Difference difference = DifferenceCalculator.calculateDifference(featureToPatchFromStorage, featureFromRequest);
-    DifferenceFilter.removeAllRemoveOpExceptForList(difference);
+    DifferenceFilter.removeAllRemoveOpFromMaps(difference);
     return Patcher.patch(featureToPatchFromStorage, difference);
   }
 

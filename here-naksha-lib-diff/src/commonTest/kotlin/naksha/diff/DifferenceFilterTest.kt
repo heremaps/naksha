@@ -22,7 +22,7 @@ class DifferenceFilterTest {
         mapDiff["nestedDiff"] = nestedDiff
 
         // When
-        DifferenceFilter.removeAllRemoveOpExceptForList(mapDiff)
+        DifferenceFilter.removeAllRemoveOpFromMaps(mapDiff)
 
         // Then
         assertEquals(3, mapDiff.size)
@@ -42,7 +42,7 @@ class DifferenceFilterTest {
         listDiff.add(InsertOp("in_1"))
 
         // When
-        DifferenceFilter.removeAllRemoveOpExceptForList(listDiff)
+        DifferenceFilter.removeAllRemoveOpFromMaps(listDiff)
 
         // Then
         assertEquals(3, listDiff.size)

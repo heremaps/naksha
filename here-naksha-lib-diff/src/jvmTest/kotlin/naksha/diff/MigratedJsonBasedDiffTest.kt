@@ -25,7 +25,7 @@ import kotlin.test.assertNull
  * - Java->Kotlin migration
  * - renamed & moved functions of tested code and other notable things:
  *  - `Patcher.getDifference` is [DifferenceCalculator.calculateDifference]
- *  - `PatcherUtils.removeAllRemoveOp` is [DifferenceFilter.removeAllRemoveOpExceptForList]
+ *  - `PatcherUtils.removeAllRemoveOp` is [DifferenceFilter.removeAllRemoveOpFromMaps]
  *  - `Patcher.patch` remained as [Patcher.patch]
  *  - JSON (de)serialization happens via [Platform.toJSON] and [Platform.fromJSON]
  */
@@ -89,7 +89,7 @@ class MigratedJsonBasedDiffTest {
         assertIs<RemoveOp>((nestedArrayDiff34[2] as MapDiff)["willBeDeletedProperty"])
 
         // Modify the whole difference to get rid of all RemoveOp
-        DifferenceFilter.removeAllRemoveOpExceptForList(mapDiff34)
+        DifferenceFilter.removeAllRemoveOpFromMaps(mapDiff34)
         val patchedf3 = Patcher.patch(f3, mapDiff34)
         assertNotNull(patchedf3)
         val expectedPatchedf3 = loadFeature("feature_3_patched_to_4_no_remove.json")
@@ -151,7 +151,7 @@ class MigratedJsonBasedDiffTest {
         assertNotNull(diff36)
 
         // Simulate REST API behaviour, ignore all RemoveOp type of Difference
-        DifferenceFilter.removeAllRemoveOpExceptForList(diff36)
+        DifferenceFilter.removeAllRemoveOpFromMaps(diff36)
         val patchedf3Tof6 = Patcher.patch(f3, diff36)
         val expectedPatchedf3 = loadFeature("feature_3_patched_with_6_no_remove_op.json")
         assertNotNull(expectedPatchedf3)
