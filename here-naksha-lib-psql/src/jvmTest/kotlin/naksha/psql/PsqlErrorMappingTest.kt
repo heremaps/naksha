@@ -6,7 +6,6 @@ import naksha.model.request.ErrorResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
