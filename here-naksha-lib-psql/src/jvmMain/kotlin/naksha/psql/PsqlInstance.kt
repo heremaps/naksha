@@ -270,7 +270,7 @@ SET SESSION enable_seqscan = off;
 SET SESSION enable_bitmapscan = off;
 SET SESSION enable_indexscan = on;
 SET SESSION enable_indexonlyscan = on;
-SET SESSION enable_nestloop = off;
+SET SESSION enable_nestloop = on;
 SET SESSION enable_sort = off;
 SET SESSION pg_hint_plan.enable_hint = on;
 """

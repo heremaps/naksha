@@ -244,11 +244,11 @@ open class PgWriter internal constructor(
                 }
                 featuresModified += 1
             } else if (write.isMapModification) {
-                val map = write.pgMap
+                val map = write.asPgMap
                 if (map != null) transaction.useMap(map.id, map.number, write.action)
             } else if (write.isCollectionModification) {
                 val map = write.map
-                val col = write.pgCollection
+                val col = write.asPgCollection
                 if (col != null) transaction.useMap(map.id, map.number).useCollection(col.id, col.number, write.action)
             }
             if (tuple != null) tupleList.add(tuple)
@@ -266,15 +266,16 @@ open class PgWriter internal constructor(
     private fun prepareWrite(writes: ArrayList<PgWrite>) {
         for (write in writes) {
             val featureId = write.original.id
+
+            // Detect tbe map into which to write.
             val mapId = write.original.mapId ?: throw illegalArg("The given write does not have a map-id")
-            val map = storage.adminMap.getPgMapById(null, mapId) ?:
-                storage.adminMap.getPgMapById(conn, mapId) ?:
+            val map = storage.adminMap.getPgMapById(conn, mapId) ?:
                 throw mapNotFound("The write #${write.i} refers to not existing map '$mapId'")
             write.map = map
 
+            // Detect the collection into which to write.
             val colId = write.original.collectionId ?: throw illegalArg("The given write does not have a collection-id")
-            val collection = map.getPgCollectionById(null, colId) ?:
-                map.getPgCollectionById(conn, colId) ?:
+            val collection = map.getPgCollectionById(conn, colId) ?:
                 throw collectionNotFound("The write #${write.i} refers to not existing collection '$colId'")
             write.collection = collection
 
@@ -305,8 +306,8 @@ open class PgWriter internal constructor(
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
-                write.pgMap = pgMap
-                write.nakshaMap = nakshaMap
+                write.asPgMap = pgMap
+                write.asNakshaMap = nakshaMap
             }
 
             // If this operation modifies a collection.
@@ -339,11 +340,10 @@ open class PgWriter internal constructor(
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
-                write.pgCollection = pgCollection
-                write.nakshaCollection = nakshaCollection
+                write.asPgCollection = pgCollection
+                write.asNakshaCollection = nakshaCollection
             }
         }
-
     }
 
     private fun MutableMap<PgCollection, MutableList<PgWrite>>.getOrCreate(collection: PgCollection): MutableList<PgWrite> {
