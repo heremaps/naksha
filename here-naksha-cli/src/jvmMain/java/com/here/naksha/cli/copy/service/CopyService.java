@@ -1,5 +1,7 @@
 package com.here.naksha.cli.copy.service;
 
+import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutor;
+import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorInfo;
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
@@ -9,29 +11,26 @@ import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaMap;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-
-import static naksha.model.util.RequestHelper.createFeaturesRequest;
-import static naksha.model.util.ResultHelper.extractResponseItems;
-
 public final class CopyService {
-    private static final Logger logger = LoggerFactory.getLogger(CopyService.class);
+    private final FeaturesWriteExecutor featuresWriteExecutor;
+    private final Logger logger = LoggerFactory.getLogger(CopyService.class);
     private final SessionOptions sessionOptions;
     private final StorageProvider storageProvider;
 
     public CopyService(
+            @NotNull FeaturesWriteExecutor featuresWriteExecutor,
             @NotNull StorageProvider storageProvider,
             @NotNull SessionOptions sessionOptions
     ) {
-        this.sessionOptions = sessionOptions;
         this.storageProvider = storageProvider;
+        this.sessionOptions = sessionOptions;
+        this.featuresWriteExecutor = featuresWriteExecutor;
     }
 
     @NotNull
@@ -45,38 +44,99 @@ public final class CopyService {
             if (autoCreateTarget) {
                 createTarget(targetStorage, target);
             }
-            List<NakshaFeature> features = readFeaturesFromSrc(src);
-            writeFeaturesToTarget(features, target, targetStorage);
-            return new CommandSuccess<>(buildSuccessResultPayload(features));
+            FeatureTupleList featureTuples = readFeaturesTuplesFromSrc(src);
+            FeaturesWriteExecutorInfo featuresWriteExecutorInfo = writeFeaturesToTarget(featureTuples, target, targetStorage);
+            CopyServiceSuccessResultPayload successResultPayload = buildSuccessResultPayload(featuresWriteExecutorInfo);
+            return new CommandSuccess<>(successResultPayload);
         } catch (CopyServiceException exception) {
             return new CommandFailure<>(exception);
         }
     }
 
-    private List<NakshaFeature> readFeaturesFromSrc(
+    private FeaturesWriteExecutorInfo writeFeaturesToTarget(
+            FeatureTupleList featureTuples,
+            CopyElement target,
+            IStorage storage
+    ) throws CopyServiceException {
+        try {
+            logger.info("Writing to {}", target);
+            return featuresWriteExecutor.write(storage, target, featureTuples, sessionOptions);
+        } catch (Exception exception) {
+            throw new CopyServiceException("Problem with writing to target!", exception);
+        }
+    }
+
+    private IStorage useSrcStorage(CopyElement source) throws CopyServiceException {
+        try {
+            return storageProvider.useStorage(source.getNakshaStorage());
+        } catch (Exception e) {
+            throw new CopyServiceException("Can not get source storage!", e);
+        }
+    }
+
+    private FeatureTupleList readFeaturesTuplesFromSrc(
             CopyElement source
     ) throws CopyServiceException {
+        logger.info("Reading from {}", source);
         IStorage storage = useSrcStorage(source);
         ReadFeatures readFeatures = createReadFeaturesRequest(source);
         Response response = performReadRequest(storage, readFeatures);
         SuccessResponse successResponse = requireSourceSuccessResponse(response);
-        return extractResponseItems(successResponse, NakshaFeature.class);
+        FeatureTupleList featureTuples = successResponse.getFeatureTupleList();
+        logger.info("Successfully read {} feature's tuples from {}!", featureTuples.size(), source);
+        return successResponse.getFeatureTupleList();
     }
 
-    private void writeFeaturesToTarget(
-            List<NakshaFeature> features,
-            CopyElement target,
-            IStorage storage
-    ) throws CopyServiceException {
-        Response response = performCreateFeaturesRequest(storage, target, features);
-        requireTargetSuccessResponse(response);
+    private SuccessResponse requireSourceSuccessResponse(Response response) throws CopyServiceException {
+        return requireSuccessResponse(
+                response,
+                "Problem with reading from source!",
+                "Unexpected response from source!"
+        );
     }
 
-    private Response performCreateFeaturesRequest(
-            IStorage storage, CopyElement target, List<NakshaFeature> features
+    private SuccessResponse requireSuccessResponse(
+            Response response,
+            String errorResponseExceptionMessage,
+            String unexpectedResponseExceptionMessage
     ) throws CopyServiceException {
-        WriteRequest addFeaturesRequest = createFeaturesRequest(target.getMapId(), target.getCollectionId(), features);
-        return performWriteRequest(storage, addFeaturesRequest);
+        return switch (response) {
+            case SuccessResponse successResponse -> successResponse;
+            case ErrorResponse errorResponse -> throw new CopyServiceException(
+                    errorResponseExceptionMessage,
+                    new NakshaException(errorResponse.getError())
+            );
+            default -> throw new CopyServiceException(unexpectedResponseExceptionMessage);
+        };
+    }
+
+    private ReadFeatures createReadFeaturesRequest(CopyElement source) {
+        ReadFeatures readFeatures = new ReadFeatures();
+        readFeatures.setCollectionIds(
+                StringList.of(source.getCollectionId())
+        );
+        readFeatures.setMapId(source.getMapId());
+
+        return readFeatures;
+    }
+
+    private Response performReadRequest(IStorage storage, Request request) throws CopyServiceException {
+        try {
+            return storage.useReadSession(
+                    sessionOptions,
+                    reader -> reader.execute(request)
+            );
+        } catch (Exception e) {
+            throw new CopyServiceException("Problem while reading features from source!", e);
+        }
+    }
+
+    private IStorage useTargetStorage(CopyElement target) throws CopyServiceException {
+        try {
+            return storageProvider.useStorage(target.getNakshaStorage());
+        } catch (Exception e) {
+            throw new CopyServiceException("Can not get target storage!", e);
+        }
     }
 
     private void createTarget(IStorage storage, CopyElement target) throws CopyServiceException {
@@ -142,56 +202,10 @@ public final class CopyService {
         return performWriteRequest(storage, createCollectionRequest);
     }
 
-    private SuccessResponse requireTargetSuccessResponse(Response response) throws CopyServiceException {
-        return requireSuccessResponse(
-                response,
-                "Problem with writing to target!",
-                "Unexpected response from target!"
-        );
-    }
-
-    private SuccessResponse requireSourceSuccessResponse(Response response) throws CopyServiceException {
-        return requireSuccessResponse(
-                response,
-                "Problem with reading from source!",
-                "Unexpected response from source!"
-        );
-    }
-
-    private SuccessResponse requireSuccessResponse(
-            Response response,
-            String errorResponseExceptionMessage,
-            String unexpectedResponseExceptionMessage
+    private Response performWriteRequest(
+            IStorage storage,
+            WriteRequest writeRequest
     ) throws CopyServiceException {
-        return switch (response) {
-            case SuccessResponse successResponse -> successResponse;
-            case ErrorResponse errorResponse -> throw new CopyServiceException(
-                    errorResponseExceptionMessage,
-                    new NakshaException(errorResponse.getError())
-            );
-            default -> throw new CopyServiceException(unexpectedResponseExceptionMessage);
-        };
-    }
-
-    private ReadFeatures createReadFeaturesRequest(CopyElement source) {
-        ReadFeatures readFeatures = new ReadFeatures();
-        readFeatures.setCollectionIds(
-                StringList.of(source.getCollectionId())
-        );
-        readFeatures.setMapId(source.getMapId());
-
-        return readFeatures;
-    }
-
-    private IStorage useTargetStorage(CopyElement target) throws CopyServiceException {
-        try {
-            return storageProvider.useStorage(target.getNakshaStorage());
-        } catch (Exception e) {
-            throw new CopyServiceException("Can not get target storage!", e);
-        }
-    }
-
-    private Response performWriteRequest(IStorage storage, WriteRequest writeRequest) throws CopyServiceException {
         try {
             return storage.useWriteSession(
                     sessionOptions,
@@ -206,29 +220,6 @@ public final class CopyService {
                     });
         } catch (Exception e) {
             throw new CopyServiceException("Problem while writing features to target!", e);
-        }
-    }
-
-    private CopyServiceSuccessResultPayload buildSuccessResultPayload(List<NakshaFeature> features) {
-        return new CopyServiceSuccessResultPayload(features.size());
-    }
-
-    private IStorage useSrcStorage(CopyElement source) throws CopyServiceException {
-        try {
-            return storageProvider.useStorage(source.getNakshaStorage());
-        } catch (Exception e) {
-            throw new CopyServiceException("Can not get source storage!", e);
-        }
-    }
-
-    private Response performReadRequest(IStorage storage, Request request) throws CopyServiceException {
-        try {
-            return storage.useReadSession(
-                    sessionOptions,
-                    reader -> reader.execute(request)
-            );
-        } catch (Exception e) {
-            throw new CopyServiceException("Problem while reading features from source!", e);
         }
     }
 
@@ -247,5 +238,9 @@ public final class CopyService {
         Write write = new Write().createCollection(collection);
         writeRequest.add(write);
         return writeRequest;
+    }
+
+    private CopyServiceSuccessResultPayload buildSuccessResultPayload(FeaturesWriteExecutorInfo featuresWriteExecutorInfo) {
+        return new CopyServiceSuccessResultPayload(featuresWriteExecutorInfo.numberOfWrittenElements());
     }
 }

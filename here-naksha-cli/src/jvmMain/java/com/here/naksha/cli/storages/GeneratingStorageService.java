@@ -3,14 +3,17 @@ package com.here.naksha.cli.storages;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
+import naksha.base.Int64;
+import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.geo.LineStringCoord;
 import naksha.geo.PointCoord;
 import naksha.geo.SpBoundingBox;
 import naksha.geo.SpLineString;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.request.FeatureTuple;
+import naksha.model.request.FeatureTupleList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,17 +31,38 @@ final class GeneratingStorageService {
     private final JsonFileParser jsonFileParser = new JsonFileParser();
 
     @NotNull
-    List<NakshaFeature> generateFeatures(@NotNull GeneratingStorageConfigProperties configProperties) {
-        int count = requireCount(configProperties.getCount());
+    FeatureTupleList generateFeatureTuples(
+            @NotNull IStorage storage,
+            @NotNull GeneratingStorageConfigProperties configProperties
+    ) {
+        int numOfFeaturesToGenerate = requireCount(configProperties.getCount());
+        FeatureTupleList featureTuples = new FeatureTupleList();
+        featureTuples.setCapacity(numOfFeaturesToGenerate);
+        for (int i = 0; i < numOfFeaturesToGenerate; ++i) {
+            TupleNumber tupleNumber = new TupleNumber(
+                    storage.getNumber(), 0, 0, Platform.toInt64(i), new Version(0), i
+            );
+            FeatureTuple featureTuple = new FeatureTuple(tupleNumber, null);
+            featureTuples.add(featureTuple);
+        }
+        return featureTuples;
+    }
+
+    @NotNull
+    List<NakshaFeature> generateFeatures(
+            @NotNull GeneratingStorageConfigProperties configProperties,
+            @NotNull List<? extends FeatureTuple> featureTuples
+    ) {
         String idsPrefix = getIdsPrefixOrDefault(configProperties, DEFAULT_IDS_PREFIX);
         List<String> tileIds = requireTileIds(configProperties);
         NakshaFeature templateFeature = loadTemplateFeatureOrEmpty(configProperties.getFeatureTemplateFilePath());
 
-        List<NakshaFeature> features = new ArrayList<>(count);
+        List<NakshaFeature> features = new ArrayList<>(featureTuples.size());
         Random random = ThreadLocalRandom.current();
 
-        for (int i = 0; i < count; ++i) {
-            String featureId = idsPrefix + i;
+        for (FeatureTuple featureTuple : featureTuples) {
+            Int64 featureNumber = featureTuple.tupleNumber.featureNumber;
+            String featureId = idsPrefix + featureNumber;
             String tileId = randomTileId(tileIds, random);
             NakshaFeature feature = generateFeature(templateFeature, featureId, tileId, random);
             features.add(feature);

@@ -4,10 +4,7 @@ import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaMap;
-import naksha.model.request.FeatureTuple;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,8 +27,19 @@ final class GeneratingSession implements IReadSession {
     public Response execute(@NotNull Request request) {
         GeneratingStorageService service = storage.getService();
         GeneratingStorageConfig config = storage.getConfig();
-        List<NakshaFeature> generatedFeatures = service.generateFeatures(config.getProperties());
-        return new SuccessResponse(generatedFeatures);
+        GeneratingStorageConfigProperties configProperties = config.getProperties();
+        FeatureTupleList featureTuples = service.generateFeatureTuples(storage, configProperties);
+        return new SuccessResponse(featureTuples);
+    }
+
+    @Override
+    public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
+        GeneratingStorageService service = storage.getService();
+        GeneratingStorageConfig config = storage.getConfig();
+        List<NakshaFeature> generatedFeatures = service.generateFeatures(config.getProperties(), featureTuples);
+        for (int i = 0; i < featureTuples.size(); ++i) {
+            featureTuples.get(i).setFeature(generatedFeatures.get(i));
+        }
     }
 
     @NotNull
@@ -113,11 +121,6 @@ final class GeneratingSession implements IReadSession {
     @Nullable
     @Override
     public NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
-        throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
-    }
-
-    @Override
-    public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
