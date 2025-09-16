@@ -2,7 +2,6 @@
   "foo": "bar",
   "willBeUpdated": "updated",
   "firstToBeDeleted": "not yet",
-  "isAdded": true,
   "map": {
     "mapID": "retained",
     "willBeUpdated": "updated",
@@ -15,10 +14,8 @@
     {
       "id": "element1",
       "nestedShouldBeUpdated": "updated",
-      "willBeDeletedProperty": "not yet",
       "isAddedProperty": "yes"
-    },
-    "willBeDeletedElement"
+    }
   ],
   "speedLimit": [
     {
@@ -27,5 +24,6 @@
     {
       "valueKph": 60
     }
-  ]
+  ],
+  "isAdded" : true
 }

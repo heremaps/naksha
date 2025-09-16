@@ -7,26 +7,21 @@ class DifferenceFilter private constructor() {
     companion object DifferenceFilter_C {
 
         /**
-         * Removes all occurences of [RemoveOp] from composite [Difference] types as [ListDiff] or [MapDiff]
+         * Removes all occurrences of [RemoveOp] from [MapDiff] types within the supplied [Difference].
          * Note that supplied [difference] will be affected (it is also returned)
          *
          * @param difference [Difference] to be filtered
          * @since 3.0.0
          */
         @JvmStatic
-        fun removeAllRemoveOp(difference: Difference?) {
+        fun removeAllRemoveOpFromMaps(difference: Difference?) {
             when (difference) {
-                is MapDiff -> removeAllRemoveOpFromMap(difference)
-                is ListDiff -> removeAllRemoveOpFromList(difference)
+                is MapDiff -> filterOutMapRemovals(difference)
             }
         }
 
-        private fun removeAllRemoveOpFromMap(mapDiff: MapDiff) {
+        private fun filterOutMapRemovals(mapDiff: MapDiff) {
             removeAllRemoveOpFromIterator(mapDiff.iterator()) { it.value }
-        }
-
-        private fun removeAllRemoveOpFromList(listDiff: ListDiff) {
-            removeAllRemoveOpFromIterator(listDiff.iterator()) { it }
         }
 
         private fun <T> removeAllRemoveOpFromIterator(
@@ -36,7 +31,7 @@ class DifferenceFilter private constructor() {
             while (iterator.hasNext()) {
                 when (val diff = diffRetrieval(iterator.next())) {
                     is RemoveOp -> iterator.remove()
-                    else -> removeAllRemoveOp(diff)
+                    else -> removeAllRemoveOpFromMaps(diff)
                 }
             }
         }
