@@ -287,14 +287,7 @@ open class PgTable(
   CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (naksha_tn_partition_index(tn, $parentPartCount)=$partitionValue),
   CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1}) 
-WITH (fillfactor=100,
-toast_tuple_target=8140,
-autovacuum_vacuum_scale_factor=0,
-autovacuum_vacuum_threshold=1000,
-autovacuum_vacuum_insert_scale_factor=0,
-autovacuum_vacuum_insert_threshold=10000,
-autovacuum_analyze_scale_factor=0, 
-autovacuum_analyze_threshold=5000)
+WITH (fillfactor=100,toast_tuple_target=8140)
 $TABLESPACE"""
                 // trigger when > (threshold + scale_factor * current_table_size_in_tuples)
                 // autovacuum_vacuum_* means how often to vacuum dead tuples
