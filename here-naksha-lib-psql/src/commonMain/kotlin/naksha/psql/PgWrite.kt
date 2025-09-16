@@ -18,8 +18,8 @@ internal data class PgWrite(val original: Write, val i: Int) {
     /**
      * The map into which to write.
      *
-     * - If a map is modified, this is [Naksha.ADMIN_MAP][naksha.model.Naksha.ADMIN_MAP], [pgMap] and [nakshaMap] will be set.
-     * - If a collection is modified, this is the map in which [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL] is located, [pgCollection] and [nakshaCollection] will be set.
+     * - If a map is modified, this is [Naksha.ADMIN_MAP][naksha.model.Naksha.ADMIN_MAP], [asPgMap] and [asNakshaMap] will be set.
+     * - If a collection is modified, this is the map in which [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL] is located, [asPgCollection] and [asNakshaCollection] will be set.
      * @since 3.0
      */
     lateinit var map: PgMap
@@ -27,8 +27,8 @@ internal data class PgWrite(val original: Write, val i: Int) {
     /**
      * The collection into which to write.
      *
-     * - If a map is modified, this is [Naksha.MAPS_COL][naksha.model.Naksha.MAPS_COL], [pgMap] and [nakshaMap] will be set.
-     * - If a collection is modified, this is [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL], [pgCollection] and [nakshaCollection] will be set.
+     * - If a map is modified, this is [Naksha.MAPS_COL][naksha.model.Naksha.MAPS_COL], [asPgMap] and [asNakshaMap] will be set.
+     * - If a collection is modified, this is [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL], [asPgCollection] and [asNakshaCollection] will be set.
      * @since 3.0
      */
     lateinit var collection: PgCollection
@@ -40,7 +40,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
     var final_uid: Int? = null
 
     /**
-     * The write operation to perform.
+     * The write operation to perform, [WriteOp.CREATE], [WriteOp.UPDATE], [WriteOp.UPSERT], [WriteOp.DELETE], or [WriteOp.PURGE].
      * @since 3.0
      */
     val op: WriteOp
@@ -72,7 +72,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
     val partitionNumber: Int = Naksha.partitionNumber(id)
 
     /**
-     * The partition-index, being `-1` if the collection does not have any performance-partitions, otherwise a value between `0` and `collection.partitions` _(exclusive)_.
+     * The partition-index, being `-1` if the collection does not have any performance-partitions, otherwise a value between `0` and `collection.partitions` _(exclusive)_. Must not be called unless [collection] has been initialized _(as it is a `lateinit` variable)_.
      * @since 3.0
      * @see [partitionNumber]
      */
@@ -80,7 +80,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = if (collection.partitions > 1) partitionNumber % collection.partitions else -1
 
     /**
-     * The attachment as specified in the [Write] instruction, can be [Write.UNDEFINED].
+     * The attachment from the [Write] instruction, can be [Write.UNDEFINED]. If the attachment is [Write.UNDEFINED], an existing attachment should be retained.
      * @since 3.0
      */
     val attachment: ByteArray?
@@ -118,34 +118,34 @@ internal data class PgWrite(val original: Write, val i: Int) {
      * If the feature is a map, the [PgMap] representation.
      * @since 3.0
      */
-    var pgMap: PgMap? = null
+    var asPgMap: PgMap? = null
 
     /**
      * If this modifies a map, the feature cast to [NakshaMap].
      * @since 3.0
      */
-    var nakshaMap: NakshaMap? = null
+    var asNakshaMap: NakshaMap? = null
 
     /**
      * If the feature is a collection, the [PgCollection] representation.
      * @since 3.0
      */
-    var pgCollection: PgCollection? = null
+    var asPgCollection: PgCollection? = null
 
     /**
      * If this modifies a collection, the feature cast to [NakshaCollection].
      * @since 3.0
      */
-    var nakshaCollection: NakshaCollection? = null
+    var asNakshaCollection: NakshaCollection? = null
 
     /**
-     * Returns the target feature as correct type, so either [nakshaMap], [nakshaCollection], [`original.feature`][Write.feature] or `null`, if no feature is available, for [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE].
+     * Returns the target feature as correct type, so either [asNakshaMap], [asNakshaCollection], [`original.feature`][Write.feature] or `null`, if no feature is available, for [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE].
      *
      * @return the target feature.
      * @since 3.0
      */
     val feature: NakshaFeature?
-        get() = nakshaMap ?: nakshaCollection ?: original.feature
+        get() = asNakshaMap ?: asNakshaCollection ?: original.feature
 
     /**
      * If the operation was performed, this will be the [TupleNumber] of the new state.
