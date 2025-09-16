@@ -289,9 +289,6 @@ open class PgTable(
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1}) 
 WITH (fillfactor=100,toast_tuple_target=8140)
 $TABLESPACE"""
-                // trigger when > (threshold + scale_factor * current_table_size_in_tuples)
-                // autovacuum_vacuum_* means how often to vacuum dead tuples
-                // autovacuum_analyze_* means how often to update statistics
                 return Pair(SQL, TABLESPACE)
             }
 
