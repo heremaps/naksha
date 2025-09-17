@@ -74,6 +74,10 @@ tasks {
         configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
     }
 
+    release {
+        dependsOn(asciidoctor)
+    }
+
     register("releaseAndShadow", ShadowJar::class) {
         dependsOn(release)
         group = "Release"
@@ -109,11 +113,16 @@ tasks {
     asciidoctor {
         dependsOn(generateManpageAsciiDoc)
         sourceDir(file("${layout.buildDirectory.get()}/generated-picocli-docs"))
-        setOutputDir(file("${layout.buildDirectory.get()}/docs"))
+        setOutputDir(file("docs/commands"))
         logDocuments = true
         outputOptions {
-            backends("manpage", "html5")
+            backends("html5")
         }
+        attributes(
+            mapOf(
+                "revnumber" to scmVersion.undecoratedVersion
+            )
+        )
     }
 }
 

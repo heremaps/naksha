@@ -1,5 +1,6 @@
 package com.here.naksha.cli.copy;
 
+import com.here.naksha.cli.VersionInfo;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.WriteMode;
@@ -23,7 +24,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(
         name = "copy",
         mixinStandardHelpOptions = true,
-        description = "Copy data between storages.",
+        description = "Copy features between storages.",
         exitCodeListHeading = "Exit Codes:%n",
         exitCodeList = {
                 " 0:Successful program execution",
@@ -32,17 +33,48 @@ import java.util.concurrent.Callable;
         },
         sortSynopsis = false,
         sortOptions = false,
+        versionProvider = VersionInfo.class,
         footerHeading = "Examples",
         showDefaultValues = true,
         footer = {
                 """
                             ./naksha-cli copy \\
-                              --srcStorageConfig test_config.json \\
+                              --srcStorageConfig gen.json \\
                               --srcMapId "srcmapid" \\
                               --srcCollectionId "srccolid" \\
-                              --targetStorageConfig test_config.json \\
+                              --targetStorageConfig psql.json \\
                               --targetMapId "targetmapid" \\
-                              --targetCollectionId "targetcolid"
+                              --targetCollectionId "targetcolid" \\
+                              --autoCreateTarget
+                        
+                          Basic PsqlStorage's config:
+                              {
+                                "id": "psql_storage",
+                                "type": "Storage",
+                                "create": true,
+                                "upgrade": true,
+                                "className": "naksha.psql.PsqlStorage",
+                                "master": {
+                                  "host": "0.0.0.0",
+                                  "database": "postgres",
+                                  "port": "5432",
+                                  "user": "postgres",
+                                  "password": "password",
+                                  "readOnly": false
+                                }
+                              }
+                        
+                          Basic GeneratingStorage's config:
+                              {
+                                "id": "test_generating_storage",
+                                "className": "com.here.naksha.cli.storages.GeneratingStorage",
+                                "properties": {
+                                  "featureTemplateFile": "./sample_topology_feature.json",
+                                  "count": 40000,
+                                  "tileIdsCsvFile": "./tile_ids.csv",
+                                  "idsPrefix": "gen"
+                                }
+                              }
                         """
         }
 )

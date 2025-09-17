@@ -6,6 +6,7 @@ import picocli.CommandLine;
 
 @CommandLine.Command(
         name = "naksha-cli",
+        description = "CLI tool for Naksha",
         mixinStandardHelpOptions = true,
         subcommands = {
                 CopyCommand.class
