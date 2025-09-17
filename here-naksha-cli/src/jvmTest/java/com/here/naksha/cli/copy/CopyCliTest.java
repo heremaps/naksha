@@ -3,6 +3,7 @@ package com.here.naksha.cli.copy;
 import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandSuccess;
@@ -64,7 +65,7 @@ class CopyCliTest {
         CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any())).thenReturn(copyService);
 
         // And
         CliTestCase testCase = new CliTestCase(
@@ -120,7 +121,7 @@ class CopyCliTest {
         CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any())).thenReturn(copyService);
 
         // And
         CliTestCase testCase = new CliTestCase(
@@ -208,7 +209,7 @@ class CopyCliTest {
         CopyService copyService = copyServiceReturningErrorResult(exceptionMessage);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any())).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any())).thenReturn(copyService);
 
         // And
         Path validStorageConfig = Path.of(validStorageConfigPath);

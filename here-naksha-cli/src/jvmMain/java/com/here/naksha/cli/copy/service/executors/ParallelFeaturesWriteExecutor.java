@@ -30,7 +30,7 @@ import static naksha.model.util.RequestHelper.createFeaturesRequest;
  *   <li>Maximum batch size: 256</li>
  * </ul>
  */
-public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecutor {
+public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecutor, BatchableExecutor, ThreadableExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ParallelFeaturesWriteExecutor.class);
     private static final int CORES = Runtime.getRuntime().availableProcessors();
     private static final int QUEUE_MULTI = 4;
@@ -62,6 +62,24 @@ public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecuto
             );
         }
         return new FeaturesWriteExecutorInfo(copied);
+    }
+
+    @Override
+    public void setMaxBatchSize(int maxBatchSize) {
+        assertPositiveInteger(maxBatchSize);
+        this.maxBatchSize = maxBatchSize;
+    }
+
+    @Override
+    public void setThreads(int threads) {
+        assertPositiveInteger(threads);
+        this.threads = threads;
+    }
+
+    private void assertPositiveInteger(int integer) {
+        if (integer <= 0) {
+            throw new IllegalArgumentException("Parameter should be a positive integer.");
+        }
     }
 
     private int executeWritesInParallelBatches(

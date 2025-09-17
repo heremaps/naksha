@@ -58,7 +58,10 @@ class NakshaCliCommandTest {
                                                                --targetStorageConfig=<targetStorageConfig>
                                                                [--targetMapId=<targetMapId>]
                                                                [--targetCollectionId=<targetCollectionId>]
-                                                               [--autoCreateTarget] [--logLevel=<logLevel>]
+                                                               [--autoCreateTarget]
+                                                               [--featuresWriteExecutor=<featuresWriteExecutor>]
+                                                               [--logLevel=<logLevel>] [--maxBatchSize=<maxBatchSize>]
+                                                               [--threads=<threads>]
                                         Try 'naksha-cli copy --help' for more information.
                                         """
                         )

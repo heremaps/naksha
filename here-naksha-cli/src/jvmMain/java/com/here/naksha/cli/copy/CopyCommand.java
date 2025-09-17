@@ -1,6 +1,8 @@
 package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutors;
 import com.here.naksha.cli.loggers.LoggingMixin;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
@@ -29,7 +31,8 @@ import java.util.concurrent.Callable;
                 " 2:Invalid input"
         },
         sortSynopsis = false,
-        sortOptions = false
+        sortOptions = false,
+        showDefaultValues = true
 )
 public final class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;
@@ -83,6 +86,39 @@ public final class CopyCommand implements Callable<Integer> {
     )
     private boolean autoCreateTarget = false;
 
+    @CommandLine.Option(
+            names = {"--featuresWriteExecutor"},
+            description = {
+                    "Valid values:",
+                    "${COMPLETION-CANDIDATES}"
+            }
+    )
+    private FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.PARALLEL;
+
+    @CommandLine.Option(
+            names = {"--threads"},
+            description = {
+                    "Number of threads in the pool."
+            }
+    )
+    private void setThreads(Integer threads) {
+        requirePositiveIntegerOrNull(threads, "--threads");
+        this.threads = threads;
+    }
+
+    private Integer threads;
+
+    @CommandLine.Option(
+            names = {"--maxBatchSize"},
+            description = "Max number of features in the batch."
+    )
+    private void setMaxBatchSize(Integer maxBatchSize) {
+        requirePositiveIntegerOrNull(maxBatchSize, "--maxBatchSize");
+        this.maxBatchSize = maxBatchSize;
+    }
+
+    private Integer maxBatchSize;
+
     @CommandLine.Mixin
     private LoggingMixin loggingMixin;
 
@@ -99,7 +135,6 @@ public final class CopyCommand implements Callable<Integer> {
     public Integer call() throws JsonFileParserException, CopyServiceException {
         CopyElement srcCopyElement = buildSrcCopyElement();
         CopyElement targetCopyElement = buildTargetCopyElement();
-
         NakshaContext.currentContext().withAppId("nakshacli");
         SessionOptions sessionOptions = SessionOptions.from(NakshaContext.currentContext());
         CommandResult<CopyServiceSuccessResultPayload, CopyServiceException> copyResult = copy(
@@ -165,7 +200,10 @@ public final class CopyCommand implements Callable<Integer> {
     ) {
         CopyService copyService = copyServiceFactory.create(
                 storageProvider,
-                sessionOptions
+                sessionOptions,
+                featuresWriteExecutor,
+                threads,
+                maxBatchSize
         );
 
         return copyService.copy(
@@ -177,5 +215,20 @@ public final class CopyCommand implements Callable<Integer> {
 
     private NakshaStorage loadStorage(Path storageConfig) throws JsonFileParserException {
         return jsonFileParser.parse(storageConfig, NakshaStorage.class);
+    }
+
+    private void requirePositiveIntegerOrNull(
+            Integer value,
+            String optionName
+    ) {
+        if (value == null) {
+            return;
+        }
+        if (value <= 0) {
+            throw new CommandLine.ParameterException(
+                    commandSpec.commandLine(),
+                    "Invalid value '%s' for option '%s': value should be a positive integer".formatted(value, optionName)
+            );
+        }
     }
 }
