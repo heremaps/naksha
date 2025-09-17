@@ -84,8 +84,9 @@ public class ExtensionCache {
     });
 
     // Removing existing extension which has been removed from the configuration
-    List<String> extIds =
-        extensionConfig.getExtensions().stream().map(Extension::getId).toList();
+    List<String> extIds = extensionConfig.getExtensions().stream()
+            .map(extension -> extension.getEnv() + ":" + extension.getId())
+            .toList();
 
     for (String key : loaderCache.keySet()) {
       if (!extIds.contains(key)) {
@@ -98,6 +99,7 @@ public class ExtensionCache {
   private void publishIntoCache(KVPair<Extension, File> result, ExtensionConfig extensionConfig) {
     if (result != null && result.getValue() != null) {
       final Extension extension = result.getKey();
+      final String extensionIdWthEnv = extension.getEnv() + ":" + extension.getId();
       final File jarFile = result.getValue();
       IExtensionInit initObj = null;
       ClassLoader loader;
@@ -106,10 +108,10 @@ public class ExtensionCache {
         List<String> whitelistClasses = (List<String>) extension
                 .getProperties()
                 .getOr(WHITE_LIST_CLASSES, extensionConfig.getWhitelistDelegateClasses());
-        logger.info("Whitelist classes in use for extension {} are {}", extension.getId(), whitelistClasses);
+        logger.info("Whitelist classes in use for extension {} are {}", extensionIdWthEnv, whitelistClasses);
         loader = ClassLoaderHelper.getClassLoader(jarFile, whitelistClasses);
       } catch (Exception e) {
-        logger.error("Failed to load extension jar " + extension.getId(), e);
+        logger.error("Failed to load extension jar " + extensionIdWthEnv, e);
         return;
       }
 
@@ -122,32 +124,33 @@ public class ExtensionCache {
             initObj = initInstance;
             logger.info(
                     "Extension {} initialization using initClassName {} done successfully.",
-                    extension.getId(),
+                    extensionIdWthEnv,
                     extension.getInitClassName());
           } else {
-            logger.error("InitClassName {} does not implement IExtensionInit for Extension {}", extension.getInitClassName(), extension.getId());
+            logger.error("InitClassName {} does not implement IExtensionInit for Extension {}", extension.getInitClassName(), extensionIdWthEnv);
             return;
           }
         } catch (Exception e) {
           logger.error(
               "Failed to instantiate class {} for extension {} ",
               extension.getInitClassName(),
-              extension.getId(),
+              extensionIdWthEnv,
               e);
           return;
         }
       }
-      ValueTuple previousValue = loaderCache.put(extension.getId(), new ValueTuple(extension, loader, initObj));
+      ValueTuple previousValue = loaderCache.put(extensionIdWthEnv, new ValueTuple(extension, loader, initObj));
+      PluginCache.removeExtensionCache(extensionIdWthEnv);
       if (previousValue != null) {
         IExtensionInit previousInitObj = previousValue.getInstance();
-        closeExtensionInstance(extension.getId(), previousInitObj);
+        closeExtensionInstance(extensionIdWthEnv, previousInitObj);
       }
 
       logger.info(
-          "Extension id={}, version={} is successfully loaded into the cache, using Jar at {}.",
-          extension.getId(),
-          extension.getVersion(),
-          extension.getUrl().substring(extension.getUrl().lastIndexOf("/") + 1));
+              "Extension id={}, version={} is successfully loaded into the cache, using Jar at {}.",
+              extensionIdWthEnv,
+              extension.getVersion(),
+              extension.getUrl().substring(extension.getUrl().lastIndexOf("/") + 1));
     }
   }
 
@@ -173,7 +176,8 @@ public class ExtensionCache {
   }
 
   private boolean isLoaderMappingExist(Extension extension) {
-    ValueTuple existingMapping = loaderCache.get(extension.getId());
+    final String extensionIdWthEnv = extension.getEnv() + ":" + extension.getId();
+    ValueTuple existingMapping = loaderCache.get(extensionIdWthEnv);
     if (existingMapping == null) return false;
 
     final Extension exExtension = existingMapping.getExtension();

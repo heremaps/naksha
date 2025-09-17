@@ -16,11 +16,13 @@ class Extension() : NakshaFeature() {
 
     var initClassName by STRING_NULL
 
+    var env by STRING_NULL
+
     constructor(
         id: String,
         url: String,
         version: String,
-        initClassName: String?
+        initClassName: String?,
     ) : this() {
         this.id = id
         this.url = url

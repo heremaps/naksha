@@ -18,16 +18,6 @@
  */
 package com.here.naksha.lib.hub;
 
-import static naksha.base.JvmAnyObjectUtil.getOrSetProperty;
-import static naksha.base.JvmAnyObjectUtil.getProperty;
-import static naksha.base.JvmAnyObjectUtil.getPropertyOrReturnDefault;
-
-import com.here.naksha.lib.core.util.json.JsonSerializable;
-import java.net.InetAddress;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.UnknownHostException;
-import java.util.Map;
 import naksha.base.AnyObject;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
@@ -35,6 +25,16 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.UnknownHostException;
+import java.util.Map;
+
+import static naksha.base.JvmAnyObjectUtil.getOrSetProperty;
+import static naksha.base.JvmAnyObjectUtil.getProperty;
+import static naksha.base.JvmAnyObjectUtil.getPropertyOrReturnDefault;
 
 public final class NakshaHubConfig extends NakshaFeature {
 
@@ -89,7 +89,8 @@ public final class NakshaHubConfig extends NakshaFeature {
   public static final String ENV = "env";
   public static final String WEB_ROOT = "webRoot";
   public static final String NAKSHA_AUTH = "authMode";
-  public static final String JWT_NAME = "jwtName";
+  public static final String JWT_PVT_KEY_PATH = "jwtPvtKeyPath";
+  public static final String JWT_PUB_KEY_PATHS = "jwtPubKeyPaths";
   public static final String DEBUG = "debug";
   public static final String STORAGE_PARAMS = "storageParams";
   public static final String EXTENSION_CONFIG_PARAMS = "extensionConfigParams";
@@ -134,7 +135,7 @@ public final class NakshaHubConfig extends NakshaFeature {
   private void resolveInvalidEndpoint() {
     int httpPort = getOrSetProperty(this, HTTP_PORT, 8080);
     if (httpPort < 0 || httpPort > 65535) {
-      logger.atError()
+      logger.atWarn()
           .setMessage("Invalid port in Naksha configuration: {}, changing to default 8080")
           .addArgument(httpPort)
           .log();
@@ -148,7 +149,7 @@ public final class NakshaHubConfig extends NakshaFeature {
         logger.error("Naksha hostname is blank, changing to local host address: {}", hostname);
         setHostname(hostname);
       } catch (UnknownHostException e) {
-        logger.error("Unable to resolve the hostname using Java's API, changing to 'localhost'");
+        logger.warn("Unable to resolve the hostname using Java's API, changing to 'localhost'");
         hostname = "localhost";
         setHostname(hostname);
       }
@@ -241,10 +242,23 @@ public final class NakshaHubConfig extends NakshaFeature {
   }
 
   /**
-   * The JWT key files to be read from the disk ({@code "~/.config/naksha/auth/$<jwtName>.(key|pub)"}).
+   * The relative path to Private key file to support JWT signing (e.g. {@code "auth/jwt.key"}).
+   * The path should be relative to the directory where config file is supplied.
+   * For example - if config file is {@code "/home/config/cloud-config.json"} then the key path {@code "auth/jwt.key"}
+   * will be considered relative to {@code "/home/config"} folder, resulting into absolute path as {@code "/home/config/auth/jwt.key}"
    */
-  public @NotNull String getJwtName() {
-    return getOrSetProperty(this, JWT_NAME, "jwt");
+  public @NotNull String getPvtKeyPath() {
+    return getOrSetProperty(this, JWT_PVT_KEY_PATH, "auth/jwt.key");
+  }
+
+  /**
+   * The comma separated relative paths to Public key files to support JWT signature verification (e.g. {@code "auth/jwt.pub,auth/jwt_2.pub"}).
+   * The path should be relative to the directory where config file is supplied.
+   * For example - if config file is {@code "/home/config/cloud-config.json"} then the key path {@code "auth/jwt.pub"}
+   * will be considered relative to {@code "/home/config"} folder, resulting into absolute path as {@code "/home/config/auth/jwt.pub}"
+   */
+  public @NotNull String getPubKeyPath() {
+    return getOrSetProperty(this, JWT_PUB_KEY_PATHS, "auth/jwt.pub");
   }
 
   /**
