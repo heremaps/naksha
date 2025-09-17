@@ -26,3 +26,4 @@ release.properties
 /here-naksha-lib-log
 /vault/
 !/vault/README.md
+.DS_Store

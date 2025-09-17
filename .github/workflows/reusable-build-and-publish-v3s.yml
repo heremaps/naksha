@@ -33,7 +33,7 @@ jobs:
       ### Build, Test, Coverage Verification
       - name: Build fat jar, Run Unit tests, Verify code coverage
         ## original run clause for project wise
-#        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
+#        run: gradle shadowJar jacocoTestReport testCodeCoverageReport jacocoTestCoverageVerification
         shell: bash
         run: |
           gradle cleanAndTest
