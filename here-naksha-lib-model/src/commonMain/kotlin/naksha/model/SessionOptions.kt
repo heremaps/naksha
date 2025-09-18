@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.fn.Fn3
+import naksha.model.SessionOptions.SessionOptions_C.from
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -144,6 +145,20 @@ data class SessionOptions @JvmOverloads constructor(
      */
     val actor: String
         get() = author ?: appId
+
+    fun copyWithTimeouts(
+        socketTimeout: Int? = null,
+        connectTimeout: Int? = null,
+        stmtTimeout: Int? = null,
+        lockTimeout: Int? = null
+    ): SessionOptions {
+       return copy(
+           socketTimeout = socketTimeout ?: this.socketTimeout,
+           connectTimeout = connectTimeout ?: this.connectTimeout,
+           stmtTimeout = stmtTimeout ?: this.stmtTimeout,
+           lockTimeout = lockTimeout ?: this.lockTimeout,
+       )
+    }
 
     companion object SessionOptions_C {
         /**

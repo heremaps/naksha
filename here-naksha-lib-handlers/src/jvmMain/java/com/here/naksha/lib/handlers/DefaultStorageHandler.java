@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.model.IStorage;
@@ -36,7 +37,6 @@ import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
-import naksha.model.objects.NakshaProperties;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -64,14 +64,12 @@ import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttemp
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static naksha.base.JvmAnyObjectUtil.getProperty;
 import static naksha.base.Platform.longToInt64;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
 
   private static final Logger logger = LoggerFactory.getLogger(DefaultStorageHandler.class);
-  private static final String STORAGE_PROPERTIES_SCHEMA_KEY = "schema";
 
   protected @NotNull EventHandlerConfig eventHandlerConfig;
   protected @NotNull EventTarget<?> eventTarget;
@@ -99,7 +97,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   @Override
   public @NotNull Response process(@NotNull IEvent event) {
-    final NakshaContext ctx = NakshaContext.currentContext();
     final Request request = event.getRequest();
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
@@ -109,12 +106,15 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.error("No storageId configured");
       return new ErrorResponse(NakshaError.NOT_FOUND, "No storageId configured for handler.");
     }
-    logger.info("Against Storage id={}", storageId);
-    addStorageIdToStreamInfo(storageId, ctx);
 
     // Obtain IStorage implementation using NakshaHub
+    logger.info("Against Storage id={}", storageId);
     final IStorage storageImpl = nakshaHub().getStorageById(storageId); // TODO: analyze cache potential (CASL-928)
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
+
+    // prepare context - utilize current one and modify properties needed for session
+    final NakshaContext ctx = adjustedContext(NakshaContext.currentContext(), storageImpl.getConfig());
+    addStorageIdToStreamInfo(storageId, ctx);
 
     StopWatch storageTimer = new StopWatch();
     try {
@@ -136,12 +136,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       throw new NakshaException(NakshaError.ILLEGAL_STATE,
           "Unable to determine 'mapId' for handler '" + eventHandlerConfig.getId() + "', storage '" + storage.getId() + "' has no config.");
     }
-    NakshaProperties nakshaProperties = storage.getConfig().getProperties();
-    if(nakshaProperties == null) {
-      throw new NakshaException(NakshaError.ILLEGAL_STATE,
-          "Unable to determine 'mapId' for handler '" + eventHandlerConfig.getId() + "', config of storage '" + storage.getId() + "' has no properties.");
-    }
-    return getProperty(nakshaProperties, STORAGE_PROPERTIES_SCHEMA_KEY, String.class);
+    return CustomStoragePropertiesUtil.getSchema(storageConfig);
   }
 
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
@@ -571,6 +566,19 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return new ErrorResponse(NakshaError.EXCEPTION, msg);
       }
     });
+  }
+
+  private NakshaContext adjustedContext(NakshaContext baseContext, NakshaStorage storageConfig){
+    if(storageConfig == null){
+      return baseContext;
+    }
+    return NakshaContext.copy(
+        baseContext,
+        CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
+        CustomStoragePropertiesUtil.getSocketTimeoutMs(storageConfig),
+        CustomStoragePropertiesUtil.getStmtTimeoutMs(storageConfig),
+        CustomStoragePropertiesUtil.getLockTimeoutMs(storageConfig)
+    );
   }
 
   enum OperationAttempt {

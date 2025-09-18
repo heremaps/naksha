@@ -34,36 +34,43 @@ import kotlin.reflect.KClass
  * @see attachToCurrentThread
  */
 @JsExport
-open class NakshaContext protected constructor() {
+open class NakshaContext protected constructor(
     /**
      * The time in milliseconds to wait for the TCP handshake.
      * @since 3.0.0
      */
-    open var connectTimeout: Int = defaultConnectTimeout.get()
+    open val connectTimeout: Int = defaultConnectTimeout.get(),
 
     /**
      * The time in milliseconds to wait for the TCP socket when reading or writing from it.
      * @since 3.0.0
      */
-    open val socketTimeout: Int = defaultSocketTimeout.get()
+    open val socketTimeout: Int = defaultSocketTimeout.get(),
 
     /**
      * The statement-timeout in milliseconds, this means how long to wait for each CREATE, UPDATE or DELETE to be executed.
      * @since 3.0.0
      */
-    open val stmtTimeout: Int = defaultStmtTimeout.get()
+    open val stmtTimeout: Int = defaultStmtTimeout.get(),
 
     /**
      * The lock-timeout in milliseconds, when the storage has to use locking.
      * @since 3.0.0
      */
-    open val lockTimeout: Int = defaultLockTimeout.get()
+    open val lockTimeout: Int = defaultLockTimeout.get(),
 
     /**
      * The idle-transaction-timeout in milliseconds.
      * @since 3.0.0
      */
-    open val idleTxTimeout = defaultIdleTxTimeout.get()
+    open val idleTxTimeout: Int = defaultIdleTxTimeout.get(),
+
+    /**
+     * Arbitrary attachments.
+     */
+    @JvmField
+    val attachments: AtomicMap<Any, Any> = Platform.newAtomicMap()
+) {
 
     private var _appName: String? = null
 
@@ -272,12 +279,6 @@ open class NakshaContext protected constructor() {
      */
     open var excludeFn: Fn3<Boolean, NakshaFeature, List<String>, Any?>? = null
         get() = if (field == null) defaultExcludeFn.get() else field
-
-    /**
-     * Arbitrary attachments.
-     */
-    @JvmField
-    val attachments: AtomicMap<Any, Any> = Platform.newAtomicMap()
 
     /**
      * Returns the attachment of the given type.
@@ -541,5 +542,38 @@ open class NakshaContext protected constructor() {
         @JvmStatic
         @JsStatic
         open fun currentContext(): NakshaContext = threadLocal.get()
+
+        /**
+         * Creates new [NakshaContext] based on supply instance and properties.
+         * If given property is not defined, it is populated from [base]
+         */
+        @JvmStatic
+        @JvmOverloads
+        @JsStatic
+        fun copy(
+            base: NakshaContext,
+            connectTimeout: Int? = null,
+            socketTimeout: Int? = null,
+            stmtTimeout: Int? = null,
+            lockTimeout: Int? = null,
+            appName: String? = null
+        ): NakshaContext {
+            return NakshaContext(
+                connectTimeout = connectTimeout ?: base.connectTimeout,
+                socketTimeout = socketTimeout ?: base.socketTimeout,
+                stmtTimeout = stmtTimeout ?: base.stmtTimeout,
+                lockTimeout = lockTimeout ?: base.lockTimeout,
+                attachments = base.attachments
+            ).also { ctx ->
+                ctx.appName = appName ?: base.appName
+                ctx.appId = base.appId
+                ctx.streamInfo = base.streamInfo
+                ctx.streamId = base.streamId
+                ctx.author = base.author
+                ctx.su = base.su
+                ctx.urm = base.urm
+                ctx.excludeFn = base.excludeFn
+            }
+        }
     }
 }

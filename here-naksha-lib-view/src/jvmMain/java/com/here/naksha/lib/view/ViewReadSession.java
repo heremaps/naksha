@@ -31,11 +31,13 @@ import java.util.*;
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
+import naksha.model.util.CustomStoragePropertiesUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,15 +64,17 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
 
   protected final View view;
   protected final @NotNull ParallelQueryExecutor parallelQueryExecutor;
-  protected final SessionOptions options;
+  protected final SessionOptions baseOptions;
   private final @NotNull Map<@NotNull ViewLayer, @NotNull IReadSession> subSessions;
 
   ViewReadSession(@NotNull View view, SessionOptions options) {
     this.view = view;
-    this.options = options;
+    this.baseOptions = options;
     this.subSessions = new HashMap<>();
     for (final @NotNull ViewLayer layer : view.getViewCollection().getLayers()) {
-      subSessions.put(layer, layer.getStorage().newReadSession(options));
+      IStorage subStorage = layer.getStorage();
+      SessionOptions subSessionOptions = sessionWithStorageConfigProps(baseOptions, subStorage.getConfig());
+      subSessions.put(layer, subStorage.newReadSession(subSessionOptions));
     }
     this.parallelQueryExecutor = new ParallelQueryExecutor(view);
   }
@@ -273,5 +277,30 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   @Override
   public @NotNull SessionOptions getOptions() {
     throw new UnsupportedOperationException();
+  }
+
+  /**
+   * Prepares session options to be used within the layer. It combines original options with properties defined on the storage level.
+   * If storage config is missing, the original session options are used.
+   * If given storage property is missing (ie some timeout), the value from original options will be used
+   *
+   * @param options original session options
+   * @param storageConfig storage config potentially holding properties to be applied on the session options
+   * @return session options containing resolved properties
+   */
+  private static SessionOptions sessionWithStorageConfigProps(
+      @NotNull SessionOptions options,
+      @Nullable NakshaStorage storageConfig
+  ) {
+    if (storageConfig == null){
+      return options;
+    } else {
+      return options.copyWithTimeouts(
+          CustomStoragePropertiesUtil.getSocketTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getStmtTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getLockTimeoutMs(storageConfig)
+      );
+    }
   }
 }

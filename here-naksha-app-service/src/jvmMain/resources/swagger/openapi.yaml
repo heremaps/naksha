@@ -2120,6 +2120,21 @@ components:
           description: >-
             The application name to be used when connecting to the database.
           type: string
+        schema:
+          description: The name of the schema (mapId) to be used on this storage. Note that this property is applied per request, hence it must be respected by the handler that communicates with given storage.
+          type: string
+        connectTimeout:
+          description: The storage connect timeout (seconds). Note that this property is applied on session level, hence it must be respected by the handler that communicates with given storage.
+          type: integer
+          default: 5
+        stmtTimeout:
+          description: The statement timeout (seconds). Note that this property is applied on session level, hence it must be respected by the handler that communicates with given storage.
+          type: integer
+          default: 60
+        lockTimeout:
+          description: The lock timeout (seconds), applicable during concurrent operations. Note that this property is applied on session level, hence it must be respected by the handler that communicates with given storage.
+          type: integer
+          default: 1
     EventHandler:
       type: object
       description: >-
