@@ -24,21 +24,26 @@ import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerTest.CollectionPriorityTestCase.ValidCollectionSource;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.StringList;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
+import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
+import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -56,6 +61,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -112,7 +118,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature("different_map", "different_collection", featureToCreate));
+    WriteRequest writeXyzFeatures = new WriteRequest().add(
+        new Write().createFeature("different_map", "different_collection", featureToCreate));
 
     // And: Handler to test
     DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
@@ -359,10 +366,10 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: First attempt of WriteCollections -> MAP_NOT_FOUND, map creation -> success, second attempt -> success
     NakshaError missingMapError = new NakshaError(MAP_NOT_FOUND, "Missing map");
     when(storageWriteSession.execute(argThat(RequestTypesUtil::isOnlyWriteCollections)))
-            .thenReturn(new ErrorResponse(missingMapError))
-            .thenReturn(new SuccessResponse());
+        .thenReturn(new ErrorResponse(missingMapError))
+        .thenReturn(new SuccessResponse());
     when(storageWriteSession.execute(argThat(matchesCreateMapRequest(mapIdFromStorageProps))))
-            .thenReturn(new SuccessResponse());
+        .thenReturn(new SuccessResponse());
 
     // And: We get DefaultStorageHandler without collection in handler properties but event target as space with collectionId
     DefaultStorageHandlerProperties hp = handlerProperties("storageId");
@@ -458,6 +465,78 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertEquals("apply_col", write.getFeature().getId());
   }
 
+  @Test
+  void shouldRespectCustomStoragePropertiesOnWrite() {
+    // Given
+    int socketTimeoutSec = 2;
+    int connectionTimeoutSec = 4;
+    int stmtTimeoutSec = 7;
+
+    // And
+    NakshaStorage storageConfig = customStorageConfig(Map.of(
+        "socketTimeout", socketTimeoutSec,
+        "connectTimeout", connectionTimeoutSec,
+        "stmtTimeout", stmtTimeoutSec
+    ));
+
+    // And:
+    IStorage customStorage = registeredStorageWithConfig(storageConfig);
+
+    // And:
+    DefaultStorageHandler handler = storageHandler(handlerProperties(customStorage.getId()));
+
+    // When
+    handler.processEvent(event(writeRandomFeature()));
+
+    // Then
+    ArgumentCaptor<SessionOptions> sessionOptionsCaptor = ArgumentCaptor.forClass(SessionOptions.class);
+    verify(customStorage).useWriteSession(sessionOptionsCaptor.capture(), any());
+
+    // And
+    SessionOptions sessionOptions = sessionOptionsCaptor.getValue();
+    assertEquals(connectionTimeoutSec * 1000, sessionOptions.connectTimeout);
+    assertEquals(socketTimeoutSec * 1000, sessionOptions.socketTimeout);
+    assertEquals(stmtTimeoutSec * 1000, sessionOptions.stmtTimeout);
+    assertEquals(NakshaContext.defaultLockTimeout.get(), sessionOptions.lockTimeout); // was not set
+  }
+
+  @Test
+  void shouldRespectCustomStoragePropertiesOnRead() {
+    // Given
+    int lockTimeoutSec = 10;
+
+    // And
+    NakshaStorage storageConfig = customStorageConfig(Map.of("lockTimeout", lockTimeoutSec));
+
+    // And:
+    IStorage customStorage = registeredStorageWithConfig(storageConfig);
+
+    // And:
+    DefaultStorageHandler handler = storageHandler(handlerProperties(customStorage.getId()));
+
+    // When
+    handler.processEvent(event(readRandomFeature()));
+
+    // Then
+    ArgumentCaptor<SessionOptions> sessionOptionsCaptor = ArgumentCaptor.forClass(SessionOptions.class);
+    verify(customStorage).useReadSession(sessionOptionsCaptor.capture(), any());
+
+    // And
+    SessionOptions sessionOptions = sessionOptionsCaptor.getValue();
+    assertEquals(NakshaContext.defaultConnectTimeout.get(), sessionOptions.connectTimeout); // was not set
+    assertEquals(NakshaContext.defaultSocketTimeout.get(), sessionOptions.socketTimeout); // was not set
+    assertEquals(NakshaContext.defaultStmtTimeout.get(), sessionOptions.stmtTimeout); // was not set
+    assertEquals(lockTimeoutSec * 1000, sessionOptions.lockTimeout);
+  }
+
+  private IStorage registeredStorageWithConfig(NakshaStorage config) {
+    String customStorageId = "customStorageId_" + RandomUtils.nextInt();
+    IStorage customStorage = Mockito.mock(IStorage.class);
+    when(customStorage.getId()).thenReturn(customStorageId);
+    when(customStorage.getConfig()).thenReturn(config);
+    when(naksha.getStorageById(customStorageId)).thenReturn(customStorage);
+    return customStorage;
+  }
 
   private static Write findSingleCreateCollectionWrite(List<WriteRequest> writeRequests) {
     List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.COLLECTIONS_COL);
@@ -522,6 +601,15 @@ class DefaultStorageHandlerTest extends AbstractTest {
     );
   }
 
+  private NakshaStorage customStorageConfig(Map<String, Object> customProps) {
+    NakshaStorage storageConfig = new NakshaStorage();
+    NakshaProperties properties = storageConfig.getProperties();
+    customProps.forEach((key, value) -> {
+      properties.put(key, value);
+    });
+    return storageConfig;
+  }
+
   record CollectionPriorityTestCase(
       DefaultStorageHandlerProperties handlerProperties,
       Space space,
@@ -544,10 +632,11 @@ class DefaultStorageHandlerTest extends AbstractTest {
     }
   }
 
-  private Space space(SpaceProperties spaceProperties) {
-    Space space = testSpace();
-    space.setProperties(spaceProperties);
-    return space;
+  private static Stream<Named<Request>> randomReadAndWrite() {
+    return Stream.of(
+        named("Random write", writeRandomFeature()),
+        named("Random read", readRandomFeature())
+    );
   }
 
   private IEvent event(Request request) {
@@ -556,12 +645,20 @@ class DefaultStorageHandlerTest extends AbstractTest {
     return dummy;
   }
 
-  private Request writeRandomFeature() {
+  private static Request writeRandomFeature() {
     return new WriteRequest()
         .add(new Write().createFeature(
             "random_collection_" + RandomUtils.nextInt(),
             new NakshaFeature("random_feature_" + RandomUtils.nextInt())
         ));
+  }
+
+  private static Request readRandomFeature() {
+    ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.setMapId("random_map_" + RandomUtils.nextInt());
+    readFeatures.setCollectionIds(new StringList("random_collection_" + RandomUtils.nextInt()));
+    readFeatures.setFeatureIds(new StringList("random_feature_" + RandomUtils.nextInt()));
+    return readFeatures;
   }
 
   private static DefaultStorageHandlerProperties handlerProperties() {
@@ -629,12 +726,14 @@ class DefaultStorageHandlerTest extends AbstractTest {
   private static ArgumentMatcher<WriteRequest> matchesCreateMapRequest(String mapId) {
     return wr -> {
       WriteList writes = wr.getWrites();
-      if (writes.size() != 1) return false;
+      if (writes.size() != 1) {
+        return false;
+      }
       Write w = writes.get(0);
       return WriteOp.CREATE.equals(w.getOp())
-              && Naksha.ADMIN_MAP.equals(w.getMapId())
-              && Naksha.MAPS_COL.equals(w.getCollectionId())
-              && mapId.equals(w.getId());
+             && Naksha.ADMIN_MAP.equals(w.getMapId())
+             && Naksha.MAPS_COL.equals(w.getCollectionId())
+             && mapId.equals(w.getId());
     };
   }
 
