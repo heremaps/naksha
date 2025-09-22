@@ -28,13 +28,13 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 
 abstract class FeaturesWriteExecutorsCommonTest {
-    protected final FeaturesWriteExecutor featuresWriteExecutor = createFeaturesWriteExecutor();
-    protected final NakshaStorage targetNakshaStorage = new NakshaStorage("target", "targetclassname");
-    protected final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
+    private final FeaturesWriteExecutor featuresWriteExecutor = createFeaturesWriteExecutor();
+    private final NakshaStorage targetNakshaStorage = new NakshaStorage("target", "targetclassname");
+    private final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
             .setMapId("targetmap")
             .setCollectionId("targetcol")
             .build();
-    protected static SessionOptions sessionOptions;
+    private static SessionOptions sessionOptions;
 
     @BeforeAll
     static void beforeAll() {

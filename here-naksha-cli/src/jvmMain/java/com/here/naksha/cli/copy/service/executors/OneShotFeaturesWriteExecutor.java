@@ -30,8 +30,6 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
  *   <li>All features are loaded into memory</li>
  *   <li>Writes in a single transaction</li>
  * </ul>
- *
- * <p><em>ONE SHOT, ONE KILL (YOUR MEMORY)</em></p>
  */
 public final class OneShotFeaturesWriteExecutor implements FeaturesWriteExecutor {
     /**
