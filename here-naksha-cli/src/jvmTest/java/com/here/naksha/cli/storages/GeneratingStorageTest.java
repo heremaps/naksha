@@ -4,12 +4,10 @@ import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import naksha.base.StringList;
 import naksha.geo.SpBoundingBox;
-import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
-import naksha.model.SessionOptions;
+import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
+import naksha.model.request.FeatureTupleList;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -170,6 +168,34 @@ class GeneratingStorageTest {
     }
 
     @Test
+    void shouldOnlyReadFeatureTuplesNumbers() {
+        // Given: config
+        GeneratingStorageConfig config = new GeneratingStorageConfig();
+        config.getProperties()
+                .withCount(100)
+                .withTileIds(StringList.of("321321", "3211232"));
+
+        // And: storage
+        GeneratingStorage storage = generatingStorageWithConfig(config);
+
+        // When: read features
+        Response response = storage.useReadSession(sessionOptions, reader ->
+                reader.execute(new ReadFeatures())
+        );
+
+        // Then: success response
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
+
+        // And: only FeatureTuple's numbers defined
+        assertNull(successResponse.getRaw("features"));
+        FeatureTupleList featureTuples = successResponse.getFeatureTupleList();
+        featureTuples.forEach(featureTuple -> {
+            assertNotNull(featureTuple.tupleNumber);
+            assertNull(featureTuple.tuple);
+        });
+    }
+
+    @Test
     void shouldFailWhenTileIdsAreNotProvided() {
         // Given: config
         GeneratingStorageConfig config = getSampleConfig();
@@ -180,11 +206,16 @@ class GeneratingStorageTest {
         // And: storage
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
-        // When: read features
+        // And: success response
+        Response response = storage.useReadSession(sessionOptions, reader ->
+                reader.execute(new ReadFeatures())
+        );
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
+
+        // When: loading features from response
         NakshaException exception = assertThrows(
-                NakshaException.class, () -> storage.useReadSession(sessionOptions, reader ->
-                        reader.execute(new ReadFeatures())
-                ));
+                NakshaException.class, () -> extractResponseItems(successResponse, NakshaFeature.class)
+        );
 
         // Then:
         assertErrorMessageAndCode(exception, "Provide tileIds in the config properties.", NakshaError.ILLEGAL_ARGUMENT);
@@ -201,11 +232,16 @@ class GeneratingStorageTest {
         // And: storage
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
-        // When: read features
+        // And: success response
+        Response response = storage.useReadSession(sessionOptions, reader ->
+                reader.execute(new ReadFeatures())
+        );
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
+
+        // When: loading features from response
         NakshaException exception = assertThrows(
-                NakshaException.class, () -> storage.useReadSession(sessionOptions, reader ->
-                        reader.execute(new ReadFeatures())
-                ));
+                NakshaException.class, () -> extractResponseItems(successResponse, NakshaFeature.class)
+        );
 
         // Then:
         assertErrorMessageAndCode(exception, "Provide only one source of tileIds.", NakshaError.ILLEGAL_ARGUMENT);
@@ -221,11 +257,16 @@ class GeneratingStorageTest {
         // And: storage
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
-        // When: read features
+        // And: success response
+        Response response = storage.useReadSession(sessionOptions, reader ->
+                reader.execute(new ReadFeatures())
+        );
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
+
+        // When: loading features from response
         NakshaException exception = assertThrows(
-                NakshaException.class, () -> storage.useReadSession(sessionOptions, reader ->
-                        reader.execute(new ReadFeatures())
-                ));
+                NakshaException.class, () -> extractResponseItems(successResponse, NakshaFeature.class)
+        );
 
         // Then:
         assertErrorMessageAndCode(exception, "Should be at least one tileId.", NakshaError.ILLEGAL_ARGUMENT);
@@ -242,11 +283,16 @@ class GeneratingStorageTest {
         // And: storage
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
-        // When: read features
+        // And: success response
+        Response response = storage.useReadSession(sessionOptions, reader ->
+                reader.execute(new ReadFeatures())
+        );
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
+
+        // When: loading features from response
         NakshaException exception = assertThrows(
-                NakshaException.class, () -> storage.useReadSession(sessionOptions, reader ->
-                        reader.execute(new ReadFeatures())
-                ));
+                NakshaException.class, () -> extractResponseItems(successResponse, NakshaFeature.class)
+        );
 
         // Then:
         assertErrorMessageAndCode(exception, "Problem while loading tileIds from CSV file!", NakshaError.EXCEPTION);
@@ -262,18 +308,23 @@ class GeneratingStorageTest {
         // And: storage
         GeneratingStorage storage = generatingStorageWithConfig(config);
 
-        // When: read features
+        // And: success response
+        Response response = storage.useReadSession(sessionOptions, reader ->
+                reader.execute(new ReadFeatures())
+        );
+        SuccessResponse successResponse = assertInstanceOf(SuccessResponse.class, response);
+
+        // When: loading features from response
         NakshaException exception = assertThrows(
-                NakshaException.class, () -> storage.useReadSession(sessionOptions, reader ->
-                        reader.execute(new ReadFeatures())
-                ));
+                NakshaException.class, () -> extractResponseItems(successResponse, NakshaFeature.class)
+        );
 
         // Then:
         assertErrorMessageAndCode(exception, "Problem while loading the feature template!", NakshaError.EXCEPTION);
     }
 
     @Test
-    void shouldFailWhenCountIsNotProvided() {
+    void shouldFailWhenCountIsNotProvidedAndRequesting() {
         // Given: config
         GeneratingStorageConfig config = getSampleConfig();
         config.getProperties()
@@ -436,9 +487,9 @@ class GeneratingStorageTest {
 
 
     private GeneratingStorage generatingStorageWithConfig(GeneratingStorageConfig config) {
-        GeneratingStorage storage = new GeneratingStorage();
-        storage.initStorage(config, false, false);
-        return storage;
+        IStorage storage = Naksha.useStorage(config);
+        assertNotNull(storage);
+        return assertInstanceOf(GeneratingStorage.class, storage);
     }
 
     private void assertFeaturesProperlyGenerated(

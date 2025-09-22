@@ -17,20 +17,24 @@ if [[ " ${script_args[*]} " =~ " --Sbuild " ]]; then
   rebuild=true
 fi
 
-DIR="$(cd "$(dirname "$0")" && pwd)"
-version=$(gradle currentVersion | grep "^Project version" | cut -d : -f 2 | xargs)
-JAR="${DIR}/build/libs/naksha-cli-${version}.jar"
+CURRENT_DIR="$(pwd)"
+cd "$(dirname "$0")"
+MODULE_DIR="$(pwd)"
+JAR=$(find "${MODULE_DIR}/build/libs/" -name "naksha-cli*.jar" -type f -exec ls -t {} + 2> /dev/null | head -n 1)
 
 if [[ $rebuild == true ]] || ! [[ -f "$JAR" ]] ; then
   echo "Building..."
-  stdErr=$(gradle :here-naksha-cli:shadowCreate 2>&1 >/dev/null)
+  stdErr=$(gradle :here-naksha-cli:shadowCreate 2>&1 > /dev/null)
   gradle_exit=$?
   if [[ $gradle_exit -ne 0 ]]; then
     echo "Build failed!" >&2
     echo $stdErr >&2
     exit 1
   fi
+  JAR=$(find "${MODULE_DIR}/build/libs/" -name "naksha-cli*.jar" -type f -exec ls -t {} + | head -n 1)
 fi
+
+cd "$CURRENT_DIR"
 
 if [[ -f "$JAR" ]]; then
   java -jar "$JAR" "${java_args[@]}"

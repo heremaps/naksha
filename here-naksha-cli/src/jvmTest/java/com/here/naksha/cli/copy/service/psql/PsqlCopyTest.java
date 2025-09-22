@@ -1,6 +1,9 @@
 package com.here.naksha.cli.copy.service.psql;
 
 import com.here.naksha.cli.copy.service.*;
+import com.here.naksha.cli.copy.service.executors.OneShotFeaturesWriteExecutor;
+import com.here.naksha.cli.copy.service.executors.ParallelFeaturesWriteExecutor;
+import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutor;
 import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
 import com.here.naksha.cli.storages.GeneratingStorage;
@@ -19,10 +22,13 @@ import naksha.model.request.*;
 import naksha.model.request.query.SpIntersects;
 import naksha.model.request.query.SpOr;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool.InstanceIndex;
 import static naksha.model.RandomFeatures.randomFeatures;
@@ -32,7 +38,6 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
 import static org.junit.jupiter.api.Assertions.*;
 
 class PsqlCopyTest {
-    private CopyService copyService;
     private final String srcCollectionId = "srccolid";
     private final String targetCollectionId = "targetcolid";
     private SessionOptions sessionOptions;
@@ -41,11 +46,11 @@ class PsqlCopyTest {
     void beforeEach() {
         NakshaContext.currentContext().withAppId("testapp");
         sessionOptions = SessionOptions.from(NakshaContext.currentContext());
-        copyService = new CopyService(new StorageProvider(), sessionOptions);
     }
 
-    @Test
-    void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres() {
+    @ParameterizedTest
+    @MethodSource("featuresWriteExecutors")
+    void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: prepared source
         int countOfFeatures = 100;
         StringList tileIds = new StringList("122013100013", "122013100020");
@@ -56,6 +61,9 @@ class PsqlCopyTest {
         IStorage targetStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
                 .getStorage();
         CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
+
+        // And: copy service
+        CopyService copyService = new CopyService(featuresWriteExecutor, new StorageProvider(), sessionOptions);
 
         // When: copying
         assertCommandSuccessResult(copyService.copy(source, target, false));
@@ -69,8 +77,9 @@ class PsqlCopyTest {
         assertEquals(countOfFeatures, targetFeatures.size());
     }
 
-    @Test
-    void shouldCopyFeaturesBetweenMapsOnTheSameStorage() {
+    @ParameterizedTest
+    @MethodSource("featuresWriteExecutors")
+    void shouldCopyFeaturesBetweenMapsOnTheSameStorage(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: the same storage for source and target
         IStorage storage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
                 .getStorage();
@@ -85,6 +94,9 @@ class PsqlCopyTest {
         // And: prepared target
         CopyElement target = createMapWithEmptyCollection(storage, targetCollectionId);
 
+        // And: copy service
+        CopyService copyService = new CopyService(featuresWriteExecutor, new StorageProvider(), sessionOptions);
+
         // When: copying
         assertCommandSuccessResult(copyService.copy(source, target, false));
 
@@ -97,8 +109,9 @@ class PsqlCopyTest {
         assertSameFeatures(sourceFeatures, targetFeatures);
     }
 
-    @Test
-    void shouldCopyFeaturesBetweenStorages() {
+    @ParameterizedTest
+    @MethodSource("featuresWriteExecutors")
+    void shouldCopyFeaturesBetweenStorages(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: prepared source
         IStorage sourceStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
                 .getStorage();
@@ -113,6 +126,9 @@ class PsqlCopyTest {
                 .getStorage();
         CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
 
+        // And: copy service
+        CopyService copyService = new CopyService(featuresWriteExecutor, new StorageProvider(), sessionOptions);
+
         // When: copying
         assertCommandSuccessResult(copyService.copy(source, target, false));
 
@@ -125,8 +141,9 @@ class PsqlCopyTest {
         assertSameFeatures(sourceFeatures, targetFeatures);
     }
 
-    @Test
-    void shouldCreateMapAndCollectionThenCopy() {
+    @ParameterizedTest
+    @MethodSource("featuresWriteExecutors")
+    void shouldCreateMapAndCollectionThenCopy(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: the same storage for source and target
         IStorage storage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
                 .getStorage();
@@ -141,6 +158,9 @@ class PsqlCopyTest {
         // And: prepared target with no existing map and collection
         CopyElement target = createCopyElementWithNoExistingMapAndCollection(storage);
 
+        // And: copy service
+        CopyService copyService = new CopyService(featuresWriteExecutor, new StorageProvider(), sessionOptions);
+
         // When: copying with auto create target
         assertCommandSuccessResult(copyService.copy(source, target, true));
 
@@ -151,6 +171,13 @@ class PsqlCopyTest {
 
         // Then: target collection contains features from source
         assertSameFeatures(sourceFeatures, targetFeatures);
+    }
+
+    private static Stream<Arguments> featuresWriteExecutors() {
+        return Stream.of(
+                Arguments.of(new ParallelFeaturesWriteExecutor()),
+                Arguments.of(new OneShotFeaturesWriteExecutor())
+        );
     }
 
     private CopyElement copyElementForGeneratingStorage(IStorage storage) {

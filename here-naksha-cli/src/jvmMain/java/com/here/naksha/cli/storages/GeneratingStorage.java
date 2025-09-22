@@ -57,7 +57,7 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
             @Nullable Boolean create,
             @Nullable Boolean upgrade
     ) {
-        getConfigRef().set(storageConfig);
+        // nothing to do
     }
 
     @Override
