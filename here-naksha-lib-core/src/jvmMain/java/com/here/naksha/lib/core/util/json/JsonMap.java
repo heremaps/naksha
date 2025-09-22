@@ -42,7 +42,8 @@ import naksha.model.StringHelper;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 /**
  * A map that uses {@link String} key and arbitrary values. The map is thread safe for concurrent
  * access. All keys are deduplicated as intrinsic feature of the map. This reduces the memory
@@ -54,6 +55,8 @@ import org.jetbrains.annotations.Nullable;
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public class JsonMap
     implements Map<@NotNull String, @Nullable Object>, Iterable<Map.Entry<@NotNull String, @Nullable Object>> {
+
+  private static final Logger logger = LoggerFactory.getLogger(JsonMap.class);
 
   /**
    * Create a new empty map.
@@ -278,6 +281,7 @@ public class JsonMap
       final Object result =
           FibMap.put(key, oldValue, newValue, true, rootMutable(), this::intern, this::conflict);
       if (result instanceof FibMapConflict) {
+        logger.info("Concurrency conflict while setting value for key {}. Will retry...", key);
         continue;
       }
       assert result == oldValue;
@@ -305,6 +309,7 @@ public class JsonMap
       final Object result =
           FibMap.put(key, original, newValue, true, rootMutable(), this::intern, this::conflict);
       if (result instanceof FibMapConflict) {
+        logger.info("Concurrency conflict while setting value for key {}. Will retry...", key);
         continue;
       }
       assert result == original;
@@ -339,6 +344,7 @@ public class JsonMap
         final Object result =
             FibMap.put(key, original, UNDEFINED, true, rootMutable(), this::intern, this::conflict);
         if (result instanceof FibMapConflict) {
+          logger.info("Concurrency conflict while setting value for key {}. Will retry...", key);
           continue;
         }
         assert result == UNDEFINED;
@@ -468,6 +474,7 @@ public class JsonMap
         SIZE.getAndAdd(this, -oldSize);
         return;
       }
+      logger.info("Concurrency conflict while clearing map. Will retry...");
     }
   }
 
