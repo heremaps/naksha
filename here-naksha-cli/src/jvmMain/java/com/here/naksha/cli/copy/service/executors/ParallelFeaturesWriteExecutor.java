@@ -19,18 +19,31 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
-import static naksha.model.util.ResultHelper.extractResponseItems;
 
+/**
+ * Writes features in batches and in parallel, with each batch executed in a separate transaction.
+ * This implementation does not fail if a single batch fails; failed batches are skipped.
+ *
+ * <p>Default settings:</p>
+ * <ul>
+ *   <li>Number of threads in the pool: <code>Runtime.getRuntime().availableProcessors()</code></li>
+ *   <li>Maximum batch size: 256</li>
+ * </ul>
+ */
 public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecutor {
     private static final Logger logger = LoggerFactory.getLogger(ParallelFeaturesWriteExecutor.class);
-    private final int cores = Runtime.getRuntime().availableProcessors();
-    private final int queueMulti = 4;
-    private final int maxBatchSize = 256;
+    private static final int CORES = Runtime.getRuntime().availableProcessors();
+    private static final int QUEUE_MULTI = 4;
+    private static final int MAX_BATCH_SIZE = 256;
 
     /**
      * {@inheritDoc}
      * <p>
-     * This implementation always clears the {@code featureTuples} during execution to ensure memory efficiency.
+     * This implementation clears the contents of {@code featureTuples} during execution to facilitate garbage collection.
+     * This helps reduce memory usage by ensuring that references to the contained elements are removed as soon as possible.
+     * <p>
+     * <strong>Important:</strong> Ensure that no other code holds references to the elements of {@code featureTuples},
+     * as they will be eligible for garbage collection once cleared.
      */
     @Override
     public FeaturesWriteExecutorInfo write(
@@ -61,15 +74,15 @@ public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecuto
         AtomicInt copied = new JvmAtomicInt(0);
         int totalToCopy = featureTuples.size();
         try (ThreadPoolExecutor executorService = new ThreadPoolExecutor(
-                cores,
-                cores,
+                CORES,
+                CORES,
                 0,
                 TimeUnit.SECONDS,
-                new ArrayBlockingQueue<>(cores * queueMulti),
+                new ArrayBlockingQueue<>(CORES * QUEUE_MULTI),
                 new ThreadPoolExecutor.CallerRunsPolicy()
         )) {
             while (!featureTuples.isEmpty()) {
-                FeatureTupleList batch = popBatch(featureTuples, maxBatchSize);
+                FeatureTupleList batch = popBatch(featureTuples, MAX_BATCH_SIZE);
                 executorService.execute(
                         writeBatch(storage, target, context, copied, totalToCopy, batch, sessionOptions)
                 );
@@ -90,9 +103,7 @@ public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecuto
         return () -> {
             try {
                 context.attachToCurrentThread();
-                List<NakshaFeature> nakshaFeatures = extractResponseItems(
-                        new SuccessResponse(batch), NakshaFeature.class
-                );
+                List<NakshaFeature> nakshaFeatures = loadFeatures(batch);
                 logger.debug("Batch on thread: {}", Thread.currentThread().getName());
                 Response response = addFeatures(storage, target.getMapId(), target.getCollectionId(), nakshaFeatures, sessionOptions);
                 requireSuccessResponse(response);
@@ -164,5 +175,10 @@ public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecuto
         } catch (Exception e) {
             throw new FeaturesWriteExecutorException("Problem while writing features to target!", e);
         }
+    }
+
+    private List<NakshaFeature> loadFeatures(FeatureTupleList featureTuples) {
+        featureTuples.loadAll(0, featureTuples.size(), true, true);
+        return featureTuples.stream().map(FeatureTuple::getFeature).toList();
     }
 }

@@ -16,6 +16,23 @@ import java.util.List;
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
+/**
+ * Writes all features in a single transaction without batching or multi-threading.
+ * <p>
+ * This implementation loads all features into memory before writing — a one-shot operation.
+ * </p>
+ * <p><strong>Note:</strong> This approach may consume a large amount of memory depending on the data size.</p>
+ *
+ * <p>Characteristics:</p>
+ * <ul>
+ *   <li>No batching</li>
+ *   <li>No multi-threading</li>
+ *   <li>All features are loaded into memory</li>
+ *   <li>Writes in a single transaction</li>
+ * </ul>
+ *
+ * <p><em>ONE SHOT, ONE KILL (YOUR MEMORY)</em></p>
+ */
 public final class OneShotFeaturesWriteExecutor implements FeaturesWriteExecutor {
     /**
      * {@inheritDoc}
@@ -29,11 +46,16 @@ public final class OneShotFeaturesWriteExecutor implements FeaturesWriteExecutor
             @NotNull FeatureTupleList featureTuples,
             @NotNull SessionOptions sessionOptions
     ) throws FeaturesWriteExecutorException {
-        List<NakshaFeature> nakshaFeatures = extractResponseItems(new SuccessResponse(featureTuples), NakshaFeature.class);
+        List<NakshaFeature> nakshaFeatures = loadFeatures(featureTuples);
         WriteRequest addFeaturesRequest = createFeaturesRequest(target.getMapId(), target.getCollectionId(), nakshaFeatures);
         Response response = performWriteRequest(storage, addFeaturesRequest, sessionOptions);
         requireSuccessResponse(response);
         return new FeaturesWriteExecutorInfo(nakshaFeatures.size());
+    }
+
+    private List<NakshaFeature> loadFeatures(FeatureTupleList featureTuples) {
+        featureTuples.loadAll(0, featureTuples.size(), true, true);
+        return featureTuples.stream().map(FeatureTuple::getFeature).toList();
     }
 
     private void requireSuccessResponse(Response response) throws FeaturesWriteExecutorException {

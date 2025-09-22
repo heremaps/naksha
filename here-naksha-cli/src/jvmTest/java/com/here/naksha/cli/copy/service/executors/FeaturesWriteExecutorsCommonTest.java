@@ -14,6 +14,7 @@ import naksha.model.objects.NakshaStorage;
 import naksha.model.request.FeatureTupleList;
 import naksha.model.request.Write;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -26,13 +27,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verify;
 
-class WriteExecutorsCommonTest {
-    private final NakshaStorage targetNakshaStorage = new NakshaStorage("target", "targetclassname");
-    private final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
+abstract class FeaturesWriteExecutorsCommonTest {
+    protected final FeaturesWriteExecutor featuresWriteExecutor = createFeaturesWriteExecutor();
+    protected final NakshaStorage targetNakshaStorage = new NakshaStorage("target", "targetclassname");
+    protected final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
             .setMapId("targetmap")
             .setCollectionId("targetcol")
             .build();
-    private static SessionOptions sessionOptions;
+    protected static SessionOptions sessionOptions;
 
     @BeforeAll
     static void beforeAll() {
@@ -40,9 +42,8 @@ class WriteExecutorsCommonTest {
         sessionOptions = SessionOptions.from(nakshaContext);
     }
 
-    @ParameterizedTest
-    @MethodSource("writeExecutors")
-    void shouldWrite(FeaturesWriteExecutor featuresWriteExecutor) throws FeaturesWriteExecutorException {
+    @Test
+    final void shouldWrite() throws FeaturesWriteExecutorException {
         // Given:
         IStorage storage = createTargetStorage(sessionOptions);
         IWriteSession writeSession = createWriteSessionForStorageReturningSuccessResponse(storage, sessionOptions);
@@ -67,9 +68,8 @@ class WriteExecutorsCommonTest {
         verify(writeSession).commit();
     }
 
-    @ParameterizedTest
-    @MethodSource("writeExecutors")
-    void shouldThrowWhenErrorResponse(FeaturesWriteExecutor featuresWriteExecutor) {
+    @Test
+    final void shouldThrowWhenErrorResponse() {
         // Given:
         IStorage storage = createTargetStorage(sessionOptions);
         IWriteSession writeSession = createWriteSessionForStorageReturningErrorResponse(storage, sessionOptions);
@@ -88,9 +88,8 @@ class WriteExecutorsCommonTest {
         verify(writeSession).rollback();
     }
 
-    @ParameterizedTest
-    @MethodSource("writeExecutors")
-    void shouldThrowWhenUnexpectedResponse(FeaturesWriteExecutor featuresWriteExecutor) {
+    @Test
+    final void shouldThrowWhenUnexpectedResponse() {
         // Given:
         IStorage storage = createTargetStorage(sessionOptions);
         IWriteSession writeSession = createWriteSessionForStorageReturningUnexpectedResponse(storage, sessionOptions);
@@ -109,9 +108,8 @@ class WriteExecutorsCommonTest {
         verify(writeSession).rollback();
     }
 
-    @ParameterizedTest
-    @MethodSource("writeExecutors")
-    void shouldThrowWhenWriteSessionThrows(FeaturesWriteExecutor featuresWriteExecutor) {
+    @Test
+    final void shouldThrowWhenWriteSessionThrows() {
         // Given:
         IStorage storage = createTargetStorage(sessionOptions);
         createThrowingWriteSessionForStorage(storage, sessionOptions);
@@ -129,12 +127,7 @@ class WriteExecutorsCommonTest {
         ));
     }
 
-    private static Stream<Arguments> writeExecutors() {
-        return Stream.of(
-                Arguments.of(new OneShotFeaturesWriteExecutor()),
-                Arguments.of(new ParallelFeaturesWriteExecutor())
-        );
-    }
+    protected abstract FeaturesWriteExecutor createFeaturesWriteExecutor();
 
     private NakshaFeatureList sampleNakshaFeatures() {
         return NakshaFeatureList.of(
