@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.ListProxy
-import naksha.base.Proxy
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
 import naksha.model.*

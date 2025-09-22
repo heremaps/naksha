@@ -11,21 +11,19 @@ class ExtensionConfig() : AnyObject() {
         private val EXTENSIONS_NULL = NullableProperty<ExtensionConfig, ExtensionList>(ExtensionList::class)
         private val WHITELIST_DELEGATE_CLASSES_NULL = NullableProperty<ExtensionConfig, StringList>(StringList::class)
         private val LONG = NotNullProperty<ExtensionConfig, Long>(Long::class)
-        private val STRING = NotNullProperty<ExtensionConfig, String>(String::class)
     }
 
     var expiry by LONG
     var extensions by EXTENSIONS_NULL
     var whitelistDelegateClasses by WHITELIST_DELEGATE_CLASSES_NULL
-    var env by STRING
 
-    constructor(expiry: Long,
-        extensions: List<Extension>,
-                whitelistDelegateClasses: List<String>,
-        env: String) : this() {
+    constructor(
+        expiry: Long,
+        extensions: List<Extension>?=null,
+        whitelistDelegateClasses: List<String>?=null
+    ) : this() {
         this.expiry = expiry
-        this.extensions = ExtensionList.fromList(extensions)
-        this.whitelistDelegateClasses = StringList.fromList(whitelistDelegateClasses)
-        this.env = env
+        this.extensions = extensions?.let(ExtensionList::fromList)
+        this.whitelistDelegateClasses = whitelistDelegateClasses?.let(StringList::fromList)
     }
 }

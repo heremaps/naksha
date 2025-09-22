@@ -1,6 +1,6 @@
 {
   "id": "default-config",
-  "type": "Config",
+  "type": "Feature",
 
   "httpPort": 8080,
   "env": "local",
