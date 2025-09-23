@@ -22,6 +22,9 @@ import static com.here.naksha.lib.view.PsqlTests.TEST_MAP_ID;
 import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
 import static com.here.naksha.lib.view.Sample.sampleXyzWriteResponse;
 import static java.util.Collections.emptyList;
+import static naksha.model.util.CustomStoragePropertiesUtil.getConnectTimeoutMs;
+import static naksha.model.util.CustomStoragePropertiesUtil.getSocketTimeoutMs;
+import static naksha.model.util.CustomStoragePropertiesUtil.getStmtTimeoutMs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -48,17 +51,23 @@ import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import naksha.base.MapProxy;
+import naksha.base.StringList;
 import naksha.model.Action;
 import naksha.model.IReadSession;
+import naksha.model.ISession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.FeatureTuple;
+import naksha.model.request.FeatureTupleList;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.Response;
@@ -69,8 +78,11 @@ import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
+import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.model.util.RequestHelper;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedConstruction;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -307,4 +319,77 @@ public class ViewTest {
     }
   }
 
+  @Test
+  void shouldApplyCustomTimeoutsPerLayer() {
+    // Given
+    NakshaStorage firstConfig = customStorageConfig(Map.of(
+        "socketTimeout", 1000,
+        "connectTimeout", 1010,
+        "stmtTimeout", 1111
+    ));
+    NakshaStorage secondConfig = customStorageConfig(Map.of(
+        "socketTimeout", 2000,
+        "connectTimeout", 2020,
+        "stmtTimeout", 2222
+    ));
+    NakshaStorage thirdConfig = customStorageConfig(Map.of(
+        "socketTimeout", 3000,
+        "connectTimeout", 3030,
+        "stmtTimeout", 3333
+    ));
+
+    // And
+    IStorage firstStorage = mockStorageFor(firstConfig);
+    IStorage secondStorage = mockStorageFor(secondConfig);
+    IStorage thirdStorage = mockStorageFor(thirdConfig);
+
+    // And
+    ViewLayer firstLayer = new ViewLayer(firstStorage, TEST_MAP_ID, "first_col");
+    ViewLayer secondLayer = new ViewLayer(secondStorage, TEST_MAP_ID, "second_col");
+    ViewLayer thirdLayer = new ViewLayer(thirdStorage, TEST_MAP_ID, "third_col");
+
+    // And
+    ViewLayerCollection viewLayerCollection = new ViewLayerCollection("test_custom_layered_collection", firstLayer, secondLayer, thirdLayer);
+
+    // And
+    ReadFeatures readFeatures = new ReadFeatures();
+    readFeatures.setMapId(TEST_MAP_ID);
+    readFeatures.setCollectionIds(new StringList(firstLayer.getCollectionId(), secondLayer.getCollectionId(), thirdLayer.getCollectionId()));
+
+    // When
+    new View(viewLayerCollection).newReadSession(sessionOptions).execute(readFeatures);
+
+    // Then
+    ArgumentCaptor<SessionOptions> sessionCaptor = ArgumentCaptor.forClass(SessionOptions.class);
+    verify(firstStorage).newReadSession(sessionCaptor.capture());
+    verify(secondStorage).newReadSession(sessionCaptor.capture());
+    verify(thirdStorage).newReadSession(sessionCaptor.capture());
+
+    // And
+    List<SessionOptions> capturedSessions = sessionCaptor.getAllValues();
+    Assertions.assertEquals(3, capturedSessions.size());
+    Assertions.assertEquals(getSocketTimeoutMs(firstConfig), capturedSessions.get(0).socketTimeout);
+    Assertions.assertEquals(getConnectTimeoutMs(firstConfig), capturedSessions.get(0).connectTimeout);
+    Assertions.assertEquals(getStmtTimeoutMs(firstConfig), capturedSessions.get(0).stmtTimeout);
+    Assertions.assertEquals(getSocketTimeoutMs(secondConfig), capturedSessions.get(1).socketTimeout);
+    Assertions.assertEquals(getConnectTimeoutMs(secondConfig), capturedSessions.get(1).connectTimeout);
+    Assertions.assertEquals(getStmtTimeoutMs(secondConfig), capturedSessions.get(1).stmtTimeout);
+    Assertions.assertEquals(getSocketTimeoutMs(thirdConfig), capturedSessions.get(2).socketTimeout);
+    Assertions.assertEquals(getConnectTimeoutMs(thirdConfig), capturedSessions.get(2).connectTimeout);
+    Assertions.assertEquals(getStmtTimeoutMs(thirdConfig), capturedSessions.get(2).stmtTimeout);
+  }
+
+  private static IStorage mockStorageFor(NakshaStorage config) {
+    IStorage storage = mock(IStorage.class);
+    when(storage.getConfig()).thenReturn(config);
+    when(storage.newReadSession(any())).thenReturn(new MockReadSession(new FeatureTupleList()));
+    return storage;
+  }
+
+  private static NakshaStorage customStorageConfig(Map<String, Object> customProps) {
+    NakshaStorage storageConfig = new NakshaStorage();
+    NakshaProperties storageProperties = storageConfig.getProperties();
+    customProps.forEach(storageProperties::put);
+    return storageConfig;
+  }
 }

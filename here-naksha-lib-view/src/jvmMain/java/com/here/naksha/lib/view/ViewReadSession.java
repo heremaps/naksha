@@ -31,11 +31,13 @@ import java.util.*;
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
+import naksha.model.util.CustomStoragePropertiesUtil;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,15 +64,17 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
 
   protected final View view;
   protected final @NotNull ParallelQueryExecutor parallelQueryExecutor;
-  protected final SessionOptions options;
+  protected final SessionOptions baseOptions;
   private final @NotNull Map<@NotNull ViewLayer, @NotNull IReadSession> subSessions;
 
   ViewReadSession(@NotNull View view, SessionOptions options) {
     this.view = view;
-    this.options = options;
+    this.baseOptions = options;
     this.subSessions = new HashMap<>();
     for (final @NotNull ViewLayer layer : view.getViewCollection().getLayers()) {
-      subSessions.put(layer, layer.getStorage().newReadSession(options));
+      IStorage subStorage = layer.getStorage();
+      SessionOptions subSessionOptions = CustomStoragePropertiesUtil.mergeSessionOptionsWithStorageConfig(baseOptions, subStorage);
+      subSessions.put(layer, subStorage.newReadSession(subSessionOptions));
     }
     this.parallelQueryExecutor = new ParallelQueryExecutor(view);
   }
@@ -186,7 +190,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
       if (propertyQuery instanceof PQuery) {
         final PQuery query = ((PQuery) propertyQuery);
         return query.getProperty().getPath().contains(Property.ID)
-            && query.getOp().equals(AnyOp.IS_ANY_OF);
+               && query.getOp().equals(AnyOp.IS_ANY_OF);
       }
     }
     return false;
@@ -198,7 +202,8 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   }
 
   @Override
-  public void setSocketTimeout(int i) {}
+  public void setSocketTimeout(int i) {
+  }
 
   @Override
   public int getStmtTimeout() {
@@ -206,7 +211,8 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   }
 
   @Override
-  public void setStmtTimeout(int i) {}
+  public void setStmtTimeout(int i) {
+  }
 
   @Override
   public int getLockTimeout() {
