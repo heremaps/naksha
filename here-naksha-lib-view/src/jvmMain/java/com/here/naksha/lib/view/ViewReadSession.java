@@ -73,7 +73,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     this.subSessions = new HashMap<>();
     for (final @NotNull ViewLayer layer : view.getViewCollection().getLayers()) {
       IStorage subStorage = layer.getStorage();
-      SessionOptions subSessionOptions = sessionWithStorageConfigProps(baseOptions, subStorage.getConfig());
+      SessionOptions subSessionOptions = resolveStorageSessionOptions(baseOptions, subStorage);
       subSessions.put(layer, subStorage.newReadSession(subSessionOptions));
     }
     this.parallelQueryExecutor = new ParallelQueryExecutor(view);
@@ -282,25 +282,29 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   /**
    * Prepares session options to be used within the layer. It combines original options with properties defined on the storage level.
    * If storage config is missing, the original session options are used.
-   * If given storage property is missing (ie some timeout), the value from original options will be used
+   * If given storage property is missing (ie some timeout) or the custom config is not available, the value from original options will be used
    *
-   * @param options original session options
-   * @param storageConfig storage config potentially holding properties to be applied on the session options
+   * @param baseOptions original session options
+   * @param storage storage for which the session options will apply upon session opening, potentially holding custom configuration
    * @return session options containing resolved properties
    */
-  private static SessionOptions sessionWithStorageConfigProps(
-      @NotNull SessionOptions options,
-      @Nullable NakshaStorage storageConfig
+  private static SessionOptions resolveStorageSessionOptions(
+      @NotNull SessionOptions baseOptions,
+      @NotNull IStorage storage
   ) {
-    if (storageConfig == null){
-      return options;
-    } else {
-      return options.copyWithTimeouts(
+    try {
+      NakshaStorage storageConfig = storage.getConfig();
+      if(storageConfig == null) {
+        return baseOptions;
+      }
+      return baseOptions.copyWithTimeouts(
           CustomStoragePropertiesUtil.getSocketTimeoutMs(storageConfig),
           CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
           CustomStoragePropertiesUtil.getStmtTimeoutMs(storageConfig),
           CustomStoragePropertiesUtil.getLockTimeoutMs(storageConfig)
       );
+    } catch (Exception e) {
+      return baseOptions;
     }
   }
 }
