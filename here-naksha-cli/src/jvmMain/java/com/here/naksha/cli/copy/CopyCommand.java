@@ -98,6 +98,7 @@ public final class CopyCommand implements Callable<Integer> {
     @CommandLine.Option(
             names = {"--threads"},
             description = {
+                    "Positive integer.",
                     "Number of threads in the pool."
             }
     )
@@ -111,6 +112,7 @@ public final class CopyCommand implements Callable<Integer> {
     @CommandLine.Option(
             names = {"--queueMulti"},
             description = {
+                    "Positive integer.",
                     "Sets the multiplier used to calculate the size of the executor's task queue.",
                     "The queue size is computed as: threads * queueMulti."
             }
@@ -124,7 +126,10 @@ public final class CopyCommand implements Callable<Integer> {
 
     @CommandLine.Option(
             names = {"--maxBatchSize"},
-            description = "Max number of features in the batch."
+            description = {
+                    "Positive integer.",
+                    "Max number of features in the batch."
+            }
     )
     private void setMaxBatchSize(Integer maxBatchSize) {
         requirePositiveIntegerOrNull(maxBatchSize, "--maxBatchSize");
