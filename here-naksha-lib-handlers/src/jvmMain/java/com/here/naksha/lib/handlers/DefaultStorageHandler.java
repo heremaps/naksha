@@ -112,16 +112,18 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     final IStorage storageImpl = nakshaHub().getStorageById(storageId); // TODO: analyze cache potential (CASL-928)
     logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
-    // prepare context - utilize current one and modify properties needed for session
-    final NakshaContext ctx = adjustedContext(NakshaContext.currentContext(), storageImpl.getConfig());
+    // populate stream info data
+    final NakshaContext ctx = NakshaContext.currentContext();
     addStorageIdToStreamInfo(storageId, ctx);
+    // prepare session options for storage interactions (default options are fetched from context, then if applicable - they are patched with storage config)
+    SessionOptions sessionOptions = adjustedSessionOptions(SessionOptions.from(ctx), storageImpl);
 
     StopWatch storageTimer = new StopWatch();
     try {
       String collectionId = retrieveCollectionIdFromRequest(request);
       String mapId = extractMapIdFromStorageProps(storageImpl);
       applyMapIdAndCollectionId(request, mapId, collectionId);
-      OperationData operationData = new OperationData(ctx, storageImpl, mapId, collectionId, request);
+      OperationData operationData = new OperationData(sessionOptions, storageImpl, mapId, collectionId, request);
       return forwardRequestToStorage(operationData, FIRST_ATTEMPT, storageTimer);
     } catch (NakshaException ne) {
       return new ErrorResponse(ne.getError());
@@ -195,7 +197,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull StopWatch storageTimer) {
     logger.info("Processing ReadFeatures against {}", operationData.collectionId);
     Response response = measuredStorageSupplier(
-        () -> singleRead(operationData.context, operationData.storageImpl, (ReadFeatures) operationData.request), storageTimer);
+        () -> singleRead(operationData.sessionOptions, operationData.storageImpl, (ReadFeatures) operationData.request), storageTimer);
     if (response instanceof ErrorResponse errorResponse) {
       return reattemptFeatureRequest(operationData, currentAttempt, errorResponse, storageTimer);
     } else {
@@ -203,9 +205,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
-  private @NotNull Response singleRead(
-      final @NotNull NakshaContext ctx, final @NotNull IStorage storageImpl, final @NotNull ReadFeatures rf) {
-    return storageImpl.useReadSession(SessionOptions.from(ctx), reader -> reader.execute(rf));
+  private @NotNull Response singleRead( @NotNull SessionOptions sessionOptions, @NotNull IStorage storageImpl, @NotNull ReadFeatures rf) {
+    if(sessionOptions.useMaster){
+      sessionOptions = sessionOptions.copyWithUseMaster(false);
+    }
+    return storageImpl.useReadSession(sessionOptions, reader -> reader.execute(rf));
   }
 
   private @NotNull Response forwardWriteFeatures(
@@ -272,7 +276,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull final F1<Response, ErrorResponse> reattempt,
       final @NotNull StopWatch storageTimer) {
     Response response = measuredStorageSupplier(
-        () -> singleWrite(operationData.context, operationData.storageImpl, (WriteRequest) operationData.request), storageTimer);
+        () -> singleWrite(operationData.sessionOptions, operationData.storageImpl, (WriteRequest) operationData.request), storageTimer);
     if (response instanceof ErrorResponse errorResponse) {
       return reattempt.call(errorResponse);
     } else {
@@ -281,8 +285,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   private @NotNull Response singleWrite(
-      @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
-    return storageImpl.useWriteSession(SessionOptions.from(ctx, true), writer -> {
+      @NotNull SessionOptions sessionOptions, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
+    if(!sessionOptions.useMaster){
+      sessionOptions = sessionOptions.copyWithUseMaster(true);
+    }
+    return storageImpl.useWriteSession(sessionOptions, writer -> {
       final Response result = writer.execute(wr);
       if (result instanceof SuccessResponse) {
         writer.commit();
@@ -411,7 +418,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     logger.info("Creating map '{}'", operationData.mapId);
     WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaMap(operationData.mapId)));
     Response createMapResponse = measuredStorageSupplier(
-        () -> singleWrite(operationData.context, operationData.storageImpl, createMapRequest), storageTimer);
+        () -> singleWrite(operationData.sessionOptions, operationData.storageImpl, createMapRequest), storageTimer);
     if (createMapResponse instanceof SuccessResponse) {
       logger.info("Successfully created map '{}'", operationData.mapId);
       return forwardRequestToStorage(operationData, ATTEMPT_AFTER_MAP_CREATION, storageTimer);
@@ -436,7 +443,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           operationData.collectionId);
       Response createCollectionResp = measuredStorageSupplier(
-          () -> createXyzCollection(operationData.context, operationData.storageImpl, operationData.mapId, operationData.collectionId),
+          () -> createXyzCollection(operationData.sessionOptions, operationData.storageImpl, operationData.mapId, operationData.collectionId),
           storageTimer);
       if (createCollectionResp instanceof SuccessResponse) {
         logger.info("Created collection {}, forwarding the request once again", operationData.collectionId);
@@ -542,12 +549,15 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   private Response createXyzCollection(
-      final @NotNull NakshaContext ctx,
-      final @NotNull IStorage storageImpl,
-      final @NotNull String mapId,
-      final @NotNull String collectionId
+      @NotNull SessionOptions sessionOptions,
+      @NotNull IStorage storageImpl,
+      @NotNull String mapId,
+      @NotNull String collectionId
   ) {
-    return storageImpl.useWriteSession(SessionOptions.from(ctx, true), writer -> {
+    if(!sessionOptions.useMaster){
+      sessionOptions = sessionOptions.copyWithUseMaster(true);
+    }
+    return storageImpl.useWriteSession(sessionOptions, writer -> {
       final Response result = writer.execute(createWriteCollectionsRequest(new NakshaCollection(collectionId, mapId)));
       if (result instanceof SuccessResponse) {
         writer.commit();
@@ -568,17 +578,21 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     });
   }
 
-  private NakshaContext adjustedContext(NakshaContext baseContext, NakshaStorage storageConfig){
-    if(storageConfig == null){
-      return baseContext;
+  private SessionOptions adjustedSessionOptions(SessionOptions baseSessionOptions, IStorage storage){
+    try {
+      NakshaStorage storageConfig = storage.getConfig(); // this might throw exception for some implementations
+      if(storageConfig == null){
+        return baseSessionOptions;
+      }
+      return baseSessionOptions.copyWithTimeouts(
+          CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getSocketTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getStmtTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getLockTimeoutMs(storageConfig)
+      );
+    } catch (Exception e) {
+      return baseSessionOptions;
     }
-    return NakshaContext.copy(
-        baseContext,
-        CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
-        CustomStoragePropertiesUtil.getSocketTimeoutMs(storageConfig),
-        CustomStoragePropertiesUtil.getStmtTimeoutMs(storageConfig),
-        CustomStoragePropertiesUtil.getLockTimeoutMs(storageConfig)
-    );
   }
 
   enum OperationAttempt {
@@ -591,14 +605,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   /**
    * Immutable wrapper for data used in each operation attempt
    *
-   * @param context
+   * @param sessionOptions
    * @param storageImpl
    * @param mapId
    * @param collectionId
    * @param request
    */
   private record OperationData(
-      NakshaContext context,
+      SessionOptions sessionOptions,
       IStorage storageImpl,
       String mapId,
       String collectionId,
