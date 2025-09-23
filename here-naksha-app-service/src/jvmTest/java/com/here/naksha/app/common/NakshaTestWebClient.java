@@ -129,6 +129,18 @@ public class NakshaTestWebClient {
     return sendOnce(putRequest);
   }
 
+  public HttpResponse<String> options(String subPath, String originHeader, String requestMethod, String reqHeaderKeys)
+          throws URISyntaxException, IOException, InterruptedException {
+    HttpRequest optionsRequest = requestBuilder(SOCKET_TIMEOUT)
+            .uri(nakshaPath(subPath))
+            .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
+            .header("Origin", originHeader)
+            .header("Access-Control-Request-Method", requestMethod)
+            .header("Access-Control-Request-Headers", reqHeaderKeys)
+            .build();
+    return sendOnce(optionsRequest);
+  }
+
   public HttpResponse<String> patch(String subPath, String jsonBody, String streamId)
           throws URISyntaxException, IOException, InterruptedException {
     HttpRequest patchRequest = requestBuilder(SOCKET_TIMEOUT)
