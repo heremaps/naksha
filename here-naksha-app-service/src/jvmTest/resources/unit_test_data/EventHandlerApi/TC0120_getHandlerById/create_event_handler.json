@@ -9,6 +9,9 @@
     "storageId": "${dataDb.storageId}",
     "collection": {
       "maxAge": 2
+    },
+    "customValProperties": {
+      "mod.extension-database.password": "pwd"
     }
   }
 }

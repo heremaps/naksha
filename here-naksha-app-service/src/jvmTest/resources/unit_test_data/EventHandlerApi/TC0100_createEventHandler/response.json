@@ -8,9 +8,15 @@
     "autoDeleteCollection": false,
     "autoCreateCollection": true,
     "collection": {
-      "maxAge": 2
+      "maxAge": 2,
+      "sensitiveObject": {
+        "authorization": "xxxxxx"
+      }
     },
-    "storageId": "${dataDb.storageId}"
+    "storageId": "${dataDb.storageId}",
+    "customValProperties": {
+      "mod.extension-database.password": "xxxxxx"
+    }
   },
   "title": "Test Handler"
 }

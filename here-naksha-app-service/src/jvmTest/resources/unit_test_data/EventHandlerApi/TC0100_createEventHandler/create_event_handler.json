@@ -9,7 +9,13 @@
   "properties": {
     "storageId": "${dataDb.storageId}",
     "collection": {
-      "maxAge": 2
+      "maxAge": 2,
+      "sensitiveObject": {
+        "authorization": "testAuthorization"
+      }
+    },
+    "customValProperties": {
+      "mod.extension-database.password": "pwd"
     },
     "autoCreateCollection": true,
     "autoDeleteCollection": false

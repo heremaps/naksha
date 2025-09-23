@@ -62,6 +62,32 @@ class MaskingUtilTest {
     ));
   }
 
+  @Test
+  void shouldMaskPropertiesWithFlatKeys(){
+    // Given
+    NakshaFeature feature = featureWithProps(mutableMapOf(
+        "sensitiveObject.some_entry_1", 123,
+        "sensitiveObject.some_entry_2", "lorem ipsum",
+        "headers.Authorization", "secret stuff, do not look",
+        "headers.Content-Type", "application/json",
+        "very.nested.map.to.sensitiveObject.foo", "bar"
+    ));
+
+    // And:
+    Set<String> lowercasedSensitiveProperties = Set.of("sensitiveobject", "authorization");
+
+    // When:
+    MaskingUtil.maskProperties(feature, lowercasedSensitiveProperties);
+
+    // Then:
+    assertPropertiesMatch(feature.getProperties(), Map.of(
+        "sensitiveObject.some_entry_1", MaskingUtil.MASK,
+        "sensitiveObject.some_entry_2", MaskingUtil.MASK,
+        "headers.Authorization", MaskingUtil.MASK,
+        "headers.Content-Type", "application/json",
+        "very.nested.map.to.sensitiveObject.foo", MaskingUtil.MASK
+    ));
+  }
 
   private static void assertPropertiesMatch(Map actual, Map<String, Object> expected) {
     assertEquals(actual.size(), expected.size(), "Size mismatch when comparing properties");
