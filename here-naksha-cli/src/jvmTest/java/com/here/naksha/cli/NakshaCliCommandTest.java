@@ -39,8 +39,19 @@ class NakshaCliCommandTest {
                                 "",
                                 """
                                         Missing required subcommand
-                                        Usage: naksha-cli [-hV] [--logLevel=<logLevel>] [COMMAND]
                                         Try 'naksha-cli --help' for more information.
+                                        """
+                        )
+                ),
+                Named.named(
+                        "Copy command without options",
+                        new CliTestCase(
+                                new String[]{"copy"},
+                                INVALID_INPUT_EXIT_CODE,
+                                "",
+                                """
+                                        Missing required options: '--srcStorageConfig=<srcStorageConfig>', '--targetStorageConfig=<targetStorageConfig>'
+                                        Try 'naksha-cli copy --help' for more information.
                                         """
                         )
                 )

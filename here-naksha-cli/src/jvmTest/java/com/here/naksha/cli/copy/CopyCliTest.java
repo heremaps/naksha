@@ -4,6 +4,7 @@ import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutorsBuilders;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandSuccess;
@@ -11,6 +12,9 @@ import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -30,6 +34,19 @@ class CopyCliTest {
     @Mock
     private StorageProvider storageProvider;
     private TestCommandLine commandLine;
+    private final String storageConfigsPath = "storage_configs/";
+    private final String validStorageConfigPath = getAbsolutePathOfResource(storageConfigsPath + "valid");
+    private final String invalidStorageConfigPath = getAbsolutePathOfResource(storageConfigsPath + "invalid");
+    private final Path pathToValidStorageConfig = Path.of(validStorageConfigPath);
+    private final Path pathToInvalidStorageConfig = Path.of(invalidStorageConfigPath);
+    private final CopyElement validSrcCopyElement = new CopyElement.Builder(loadStorage(pathToValidStorageConfig))
+            .setMapId("srcm")
+            .setCollectionId("srcc")
+            .build();
+    private final CopyElement validTargetCopyElement = new CopyElement.Builder(loadStorage(pathToValidStorageConfig))
+            .setMapId("targetm")
+            .setCollectionId("targetc")
+            .build();
 
     @BeforeEach
     void beforeEach() {
@@ -42,46 +59,34 @@ class CopyCliTest {
 
     @Test
     void shouldCopyWithoutAutoCreateTarget() {
-        // Given
-        Path srcStorageConfig = Path.of(validStorageConfigPath);
-
-        // And
-        Path targetStorageConfig = Path.of(validStorageConfigPath);
-
-        // And
-        CopyElement srcCopyElement = new CopyElement.Builder(loadStorage(srcStorageConfig))
-                .setMapId("srcm")
-                .setCollectionId("srcc")
-                .build();
-
-        // And
-        CopyElement targetCopyElement = new CopyElement.Builder(loadStorage(targetStorageConfig))
-                .setMapId("targetm")
-                .setCollectionId("targetc")
-                .build();
-
-        // And: copy service returns success result
+        // Given: copy service returns success result
         int numberOfCopiedElement = 10;
         CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any(), any())).thenReturn(copyService);
+        copyServiceFactoryReturningGivenCopyService(
+                copyService,
+                FeaturesWriteExecutorsBuilders.PARALLEL,
+                null,
+                null,
+                null
+        );
 
         // And
         CliTestCase testCase = new CliTestCase(
                 new String[]{
-                        "--srcStorageConfig=%s".formatted(srcStorageConfig),
-                        "--targetStorageConfig=%s".formatted(targetStorageConfig),
-                        "--srcMapId=%s".formatted(srcCopyElement.getMapId()),
-                        "--srcCollectionId=%s".formatted(srcCopyElement.getCollectionId()),
-                        "--targetMapId=%s".formatted(targetCopyElement.getMapId()),
-                        "--targetCollectionId=%s".formatted(targetCopyElement.getCollectionId())
+                        "--srcStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--targetStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--srcMapId=%s".formatted(validSrcCopyElement.getMapId()),
+                        "--srcCollectionId=%s".formatted(validSrcCopyElement.getCollectionId()),
+                        "--targetMapId=%s".formatted(validTargetCopyElement.getMapId()),
+                        "--targetCollectionId=%s".formatted(validTargetCopyElement.getCollectionId())
                 },
                 SUCCESS_EXIT_CODE,
                 "Success! Copied %d features from %s to %s.".formatted(
                         numberOfCopiedElement,
-                        srcCopyElement,
-                        targetCopyElement
+                        validSrcCopyElement,
+                        validTargetCopyElement
                 ),
                 ""
         );
@@ -90,7 +95,7 @@ class CopyCliTest {
         TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
 
         // Then
-        assertCopyServiceParams(copyService, srcCopyElement, targetCopyElement, false);
+        assertCopyServiceParams(copyService, validSrcCopyElement, validTargetCopyElement, false);
 
         // And
         testCase.assertMatches(result);
@@ -98,47 +103,35 @@ class CopyCliTest {
 
     @Test
     void shouldCopyWithAutoCreateTarget() {
-        // Given
-        Path srcStorageConfig = Path.of(validStorageConfigPath);
-
-        // And
-        Path targetStorageConfig = Path.of(validStorageConfigPath);
-
-        // And
-        CopyElement srcCopyElement = new CopyElement.Builder(loadStorage(srcStorageConfig))
-                .setMapId("srcm")
-                .setCollectionId("srcc")
-                .build();
-
-        // And
-        CopyElement targetCopyElement = new CopyElement.Builder(loadStorage(targetStorageConfig))
-                .setMapId("targetm")
-                .setCollectionId("targetc")
-                .build();
-
-        // And: copy service returns success result
+        // Given: copy service returns success result
         int numberOfCopiedElement = 10;
         CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any(), any())).thenReturn(copyService);
+        copyServiceFactoryReturningGivenCopyService(
+                copyService,
+                FeaturesWriteExecutorsBuilders.PARALLEL,
+                null,
+                null,
+                null
+        );
 
         // And
         CliTestCase testCase = new CliTestCase(
                 new String[]{
-                        "--srcStorageConfig=%s".formatted(srcStorageConfig),
-                        "--targetStorageConfig=%s".formatted(targetStorageConfig),
-                        "--srcMapId=%s".formatted(srcCopyElement.getMapId()),
-                        "--srcCollectionId=%s".formatted(srcCopyElement.getCollectionId()),
-                        "--targetMapId=%s".formatted(targetCopyElement.getMapId()),
-                        "--targetCollectionId=%s".formatted(targetCopyElement.getCollectionId()),
+                        "--srcStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--targetStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--srcMapId=%s".formatted(validSrcCopyElement.getMapId()),
+                        "--srcCollectionId=%s".formatted(validSrcCopyElement.getCollectionId()),
+                        "--targetMapId=%s".formatted(validTargetCopyElement.getMapId()),
+                        "--targetCollectionId=%s".formatted(validTargetCopyElement.getCollectionId()),
                         "--autoCreateTarget"
                 },
                 SUCCESS_EXIT_CODE,
                 "Success! Copied %d features from %s to %s.".formatted(
                         numberOfCopiedElement,
-                        srcCopyElement,
-                        targetCopyElement
+                        validSrcCopyElement,
+                        validTargetCopyElement
                 ),
                 ""
         );
@@ -147,7 +140,103 @@ class CopyCliTest {
         TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
 
         // Then
-        assertCopyServiceParams(copyService, srcCopyElement, targetCopyElement, true);
+        assertCopyServiceParams(copyService, validSrcCopyElement, validTargetCopyElement, true);
+
+        // And
+        testCase.assertMatches(result);
+    }
+
+    @ParameterizedTest
+    @EnumSource(FeaturesWriteExecutorsBuilders.class)
+    void shouldCopyWithGivenFeaturesWriteExecutor(FeaturesWriteExecutorsBuilders featuresWriteExecutorsBuilder) {
+        // Given: copy service returns success result
+        int numberOfCopiedElement = 10;
+        CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
+
+        // And: factory returns the copy service
+        copyServiceFactoryReturningGivenCopyService(
+                copyService,
+                featuresWriteExecutorsBuilder,
+                null,
+                null,
+                null
+        );
+
+        // And
+        CliTestCase testCase = new CliTestCase(
+                new String[]{
+                        "--srcStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--targetStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--srcMapId=%s".formatted(validSrcCopyElement.getMapId()),
+                        "--srcCollectionId=%s".formatted(validSrcCopyElement.getCollectionId()),
+                        "--targetMapId=%s".formatted(validTargetCopyElement.getMapId()),
+                        "--targetCollectionId=%s".formatted(validTargetCopyElement.getCollectionId()),
+                        "--featuresWriteExecutor=%s".formatted(featuresWriteExecutorsBuilder.name())
+                },
+                SUCCESS_EXIT_CODE,
+                "Success! Copied %d features from %s to %s.".formatted(
+                        numberOfCopiedElement,
+                        validSrcCopyElement,
+                        validTargetCopyElement
+                ),
+                ""
+        );
+
+        // When: command executed with given args
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        assertCopyServiceParams(copyService, validSrcCopyElement, validTargetCopyElement, false);
+
+        // And
+        testCase.assertMatches(result);
+    }
+
+    @Test
+    void shouldCopyWithGivenParams() {
+        // Given: copy service returns success result
+        int numberOfCopiedElement = 10;
+        CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
+
+        // And: factory returns the copy service
+        int threads = 10;
+        int queueMulti = 6;
+        int maxBatchSize = 1024;
+        copyServiceFactoryReturningGivenCopyService(
+                copyService,
+                FeaturesWriteExecutorsBuilders.PARALLEL,
+                threads,
+                queueMulti,
+                maxBatchSize
+        );
+
+        // And
+        CliTestCase testCase = new CliTestCase(
+                new String[]{
+                        "--srcStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--targetStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--srcMapId=%s".formatted(validSrcCopyElement.getMapId()),
+                        "--srcCollectionId=%s".formatted(validSrcCopyElement.getCollectionId()),
+                        "--targetMapId=%s".formatted(validTargetCopyElement.getMapId()),
+                        "--targetCollectionId=%s".formatted(validTargetCopyElement.getCollectionId()),
+                        "--threads=%s".formatted(threads),
+                        "--queueMulti=%s".formatted(queueMulti),
+                        "--maxBatchSize=%s".formatted(maxBatchSize)
+                },
+                SUCCESS_EXIT_CODE,
+                "Success! Copied %d features from %s to %s.".formatted(
+                        numberOfCopiedElement,
+                        validSrcCopyElement,
+                        validTargetCopyElement
+                ),
+                ""
+        );
+
+        // When: command executed with given args
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        assertCopyServiceParams(copyService, validSrcCopyElement, validTargetCopyElement, false);
 
         // And
         testCase.assertMatches(result);
@@ -156,7 +245,7 @@ class CopyCliTest {
     @Test
     void shouldFailWithInvalidSrcNakshaStorage() {
         // Given
-        Path filePath = Path.of(invalidStorageConfigPath);
+        Path filePath = pathToInvalidStorageConfig;
 
         // And
         CliTestCase testCase = new CliTestCase(
@@ -179,10 +268,10 @@ class CopyCliTest {
     @Test
     void shouldFailWithInvalidTargetNakshaStorage() {
         // Given
-        Path targetFilePath = Path.of(invalidStorageConfigPath);
+        Path targetFilePath = pathToInvalidStorageConfig;
 
         // And: valid src
-        Path srcFilePath = Path.of(validStorageConfigPath);
+        Path srcFilePath = pathToValidStorageConfig;
 
         // And
         CliTestCase testCase = new CliTestCase(
@@ -209,10 +298,16 @@ class CopyCliTest {
         CopyService copyService = copyServiceReturningErrorResult(exceptionMessage);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any(), any())).thenReturn(copyService);
+        copyServiceFactoryReturningGivenCopyService(
+                copyService,
+                FeaturesWriteExecutorsBuilders.PARALLEL,
+                null,
+                null,
+                null
+        );
 
         // And
-        Path validStorageConfig = Path.of(validStorageConfigPath);
+        Path validStorageConfig = pathToValidStorageConfig;
 
         // And
         CliTestCase testCase = new CliTestCase(
@@ -232,9 +327,81 @@ class CopyCliTest {
         testCase.assertMatches(result);
     }
 
-    private final String storageConfigsPath = "storage_configs/";
-    private final String validStorageConfigPath = getAbsolutePathOfResource(storageConfigsPath + "valid");
-    private final String invalidStorageConfigPath = getAbsolutePathOfResource(storageConfigsPath + "invalid");
+    @ParameterizedTest
+    @ValueSource(ints = {-10, -1, 0})
+    void shouldFailWhenNonPositiveValueForThreadsOption(int nonPositiveThreads) {
+        // Given
+        CliTestCase testCase = new CliTestCase(
+                new String[]{
+                        "--srcStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--targetStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--threads=%s".formatted(nonPositiveThreads)
+                },
+                INVALID_INPUT_EXIT_CODE,
+                "",
+                """
+                        Invalid value '%s' for option '--threads': value should be a positive integer
+                        Try 'copy --help' for more information.
+                        """.formatted(nonPositiveThreads)
+        );
+
+        // When
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        testCase.assertMatches(result);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-10, -1, 0})
+    void shouldFailWhenNonPositiveValueForMaxBatchSizeOption(int nonPositiveMaxBatchSize) {
+        // Given
+        CliTestCase testCase = new CliTestCase(
+                new String[]{
+                        "--srcStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--targetStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--maxBatchSize=%s".formatted(nonPositiveMaxBatchSize)
+                },
+                INVALID_INPUT_EXIT_CODE,
+                "",
+                """
+                        Invalid value '%s' for option '--maxBatchSize': value should be a positive integer
+                        Try 'copy --help' for more information.
+                        """.formatted(nonPositiveMaxBatchSize)
+        );
+
+        // When
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        testCase.assertMatches(result);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {-10, -1, 0})
+    void shouldFailWhenNonPositiveValueForQueueMultiOption(int nonPositiveQueueMulti) {
+        // Given
+        CliTestCase testCase = new CliTestCase(
+                new String[]{
+                        "--srcStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--targetStorageConfig=%s".formatted(pathToValidStorageConfig),
+                        "--queueMulti=%s".formatted(nonPositiveQueueMulti)
+                },
+                INVALID_INPUT_EXIT_CODE,
+                "",
+                """
+                        Invalid value '%s' for option '--queueMulti': value should be a positive integer
+                        Try 'copy --help' for more information.
+                        """.formatted(nonPositiveQueueMulti)
+        );
+
+        // When
+        TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
+
+        // Then
+        testCase.assertMatches(result);
+    }
+
     private final String nakshaStorageParserErrorMessage = """
             Problem with json parsing! file: %s
             Unexpected character ('c' (code 99)): was expecting double-quote to start field name
@@ -298,5 +465,22 @@ class CopyCliTest {
                 )
         );
         return copyService;
+    }
+
+    private void copyServiceFactoryReturningGivenCopyService(
+            CopyService copyService,
+            FeaturesWriteExecutorsBuilders featuresWriteExecutorsBuilder,
+            Integer threads,
+            Integer queueMulti,
+            Integer maxBatchSize
+    ) {
+        when(copyServiceFactory.create(
+                eq(storageProvider),
+                any(),
+                eq(featuresWriteExecutorsBuilder),
+                eq(threads),
+                eq(queueMulti),
+                eq(maxBatchSize)
+        )).thenReturn(copyService);
     }
 }

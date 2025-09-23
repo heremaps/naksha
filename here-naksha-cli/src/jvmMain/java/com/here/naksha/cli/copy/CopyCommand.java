@@ -107,7 +107,7 @@ public final class CopyCommand implements Callable<Integer> {
         this.threads = threads;
     }
 
-    private Integer threads;
+    private @Nullable Integer threads;
 
     @CommandLine.Option(
             names = {"--queueMulti"},
@@ -118,11 +118,11 @@ public final class CopyCommand implements Callable<Integer> {
             }
     )
     private void setQueueMulti(Integer queueMulti) {
-        requirePositiveIntegerOrNull(threads, "--queueMulti");
+        requirePositiveIntegerOrNull(queueMulti, "--queueMulti");
         this.queueMulti = queueMulti;
     }
 
-    private Integer queueMulti;
+    private @Nullable Integer queueMulti;
 
     @CommandLine.Option(
             names = {"--maxBatchSize"},
@@ -136,7 +136,7 @@ public final class CopyCommand implements Callable<Integer> {
         this.maxBatchSize = maxBatchSize;
     }
 
-    private Integer maxBatchSize;
+    private @Nullable Integer maxBatchSize;
 
     @CommandLine.Mixin
     private LoggingMixin loggingMixin;
