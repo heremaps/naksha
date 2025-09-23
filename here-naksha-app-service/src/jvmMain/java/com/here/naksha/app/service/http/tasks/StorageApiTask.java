@@ -18,6 +18,7 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
+import static com.here.naksha.app.service.http.ops.CommonPropertiesToMask.COMMON_PROPERTIES_TO_MASK;
 import static com.here.naksha.app.service.http.ops.MaskingUtil.maskProperties;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
@@ -26,6 +27,7 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.ops.CommonPropertiesToMask;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
@@ -48,7 +50,6 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(StorageApiTask.class);
 
-  private static final Set<String> SENSITIVE_PROPERTIES_LOWERCASED = Set.of("password", "authorization");
   private final @NotNull StorageApiReqType reqType;
 
   public enum StorageApiReqType {
@@ -158,7 +159,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   private NakshaStorage maskSensitiveProperties(NakshaStorage storageConfig) {
-    maskProperties(storageConfig, StorageApiTask.SENSITIVE_PROPERTIES_LOWERCASED);
+    maskProperties(storageConfig, COMMON_PROPERTIES_TO_MASK);
     return storageConfig;
   }
 

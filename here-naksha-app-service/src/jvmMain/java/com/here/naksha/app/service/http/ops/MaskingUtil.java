@@ -37,7 +37,7 @@ public class MaskingUtil {
 
   private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMaskLowercase) {
     for (Entry<String, Object> entry : propertiesAsMap.entrySet()) {
-      if (propertiesToMaskLowercase.contains(entry.getKey().toLowerCase())) {
+      if (shouldBeMasked(entry.getKey(), propertiesToMaskLowercase)) {
         entry.setValue(MASK);
       } else if (entry.getValue() instanceof Map) {
         maskProperties((Map<String, Object>) entry.getValue(), propertiesToMaskLowercase);
@@ -48,5 +48,10 @@ public class MaskingUtil {
         }
       }
     }
+  }
+
+  private static boolean shouldBeMasked(String propertyKey, Set<String> propertiesToMaskLowercase) {
+    String lowerCasedKey = propertyKey.toLowerCase();
+    return propertiesToMaskLowercase.stream().anyMatch(lowerCasedKey::contains);
   }
 }
