@@ -22,6 +22,9 @@ import static com.here.naksha.lib.view.PsqlTests.TEST_MAP_ID;
 import static com.here.naksha.lib.view.Sample.sampleXyzResponse;
 import static com.here.naksha.lib.view.Sample.sampleXyzWriteResponse;
 import static java.util.Collections.emptyList;
+import static naksha.model.util.CustomStoragePropertiesUtil.getConnectTimeoutMs;
+import static naksha.model.util.CustomStoragePropertiesUtil.getSocketTimeoutMs;
+import static naksha.model.util.CustomStoragePropertiesUtil.getStmtTimeoutMs;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -61,8 +64,10 @@ import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.FeatureTuple;
+import naksha.model.request.FeatureTupleList;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.Response;
@@ -73,6 +78,7 @@ import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
+import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.model.util.RequestHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -362,30 +368,28 @@ public class ViewTest {
     // And
     List<SessionOptions> capturedSessions = sessionCaptor.getAllValues();
     Assertions.assertEquals(3, capturedSessions.size());
-    Assertions.assertEquals(((int) firstConfig.get("socketTimeout")) * 1000, capturedSessions.get(0).socketTimeout);
-    Assertions.assertEquals(((int) firstConfig.get("connectTimeout")) * 1000, capturedSessions.get(0).connectTimeout);
-    Assertions.assertEquals(((int) firstConfig.get("stmtTimeout")) * 1000, capturedSessions.get(0).stmtTimeout);
-    Assertions.assertEquals(((int) secondConfig.get("socketTimeout")) * 1000, capturedSessions.get(1).socketTimeout);
-    Assertions.assertEquals(((int) secondConfig.get("connectTimeout")) * 1000, capturedSessions.get(1).connectTimeout);
-    Assertions.assertEquals(((int) secondConfig.get("stmtTimeout")) * 1000, capturedSessions.get(1).stmtTimeout);
-    Assertions.assertEquals(((int) thirdConfig.get("socketTimeout")) * 1000, capturedSessions.get(2).socketTimeout);
-    Assertions.assertEquals(((int) thirdConfig.get("connectTimeout")) * 1000, capturedSessions.get(2).connectTimeout);
-    Assertions.assertEquals(((int) thirdConfig.get("stmtTimeout")) * 1000, capturedSessions.get(2).stmtTimeout);
+    Assertions.assertEquals(getSocketTimeoutMs(firstConfig), capturedSessions.get(0).socketTimeout);
+    Assertions.assertEquals(getConnectTimeoutMs(firstConfig), capturedSessions.get(0).connectTimeout);
+    Assertions.assertEquals(getStmtTimeoutMs(firstConfig), capturedSessions.get(0).stmtTimeout);
+    Assertions.assertEquals(getSocketTimeoutMs(secondConfig), capturedSessions.get(1).socketTimeout);
+    Assertions.assertEquals(getConnectTimeoutMs(secondConfig), capturedSessions.get(1).connectTimeout);
+    Assertions.assertEquals(getStmtTimeoutMs(secondConfig), capturedSessions.get(1).stmtTimeout);
+    Assertions.assertEquals(getSocketTimeoutMs(thirdConfig), capturedSessions.get(2).socketTimeout);
+    Assertions.assertEquals(getConnectTimeoutMs(thirdConfig), capturedSessions.get(2).connectTimeout);
+    Assertions.assertEquals(getStmtTimeoutMs(thirdConfig), capturedSessions.get(2).stmtTimeout);
   }
 
   private static IStorage mockStorageFor(NakshaStorage config) {
     IStorage storage = mock(IStorage.class);
     when(storage.getConfig()).thenReturn(config);
-    // TODO WIP
-    when(storage.newReadSession(any())).thenReturn(new MockReadSession());
+    when(storage.newReadSession(any())).thenReturn(new MockReadSession(new FeatureTupleList()));
     return storage;
   }
 
   private static NakshaStorage customStorageConfig(Map<String, Object> customProps) {
     NakshaStorage storageConfig = new NakshaStorage();
-    customProps.forEach((key, value) -> {
-      storageConfig.put(key, value);
-    });
+    NakshaProperties storageProperties = storageConfig.getProperties();
+    customProps.forEach(storageProperties::put);
     return storageConfig;
   }
 }
