@@ -4,9 +4,10 @@ Extension Manager is a Naksha component within Naksha framework to load Naksha c
 
 ## Configuration
 
-Extension manager configuration is defined by `extensionConfigParams` attribute as part of Naksha startup config [NakshaHubConfig](../here-naksha-lib-hub/src/main/java/com/here/naksha/lib/hub/NakshaHubConfig.java)
+Extension manager configuration is defined by `extensionConfigParams` attribute as part of Naksha startup config [NakshaHubConfig](../here-naksha-lib-hub/src/main/java/com/here/naksha/lib/hub/NakshaHubConfig.java).<br>
+Below are the possible configurations for loading extensions from a S3 bucket or a local machine:
 
-Sample config:
+### S3 Bucket
 
 ```json
 {
@@ -28,6 +29,32 @@ Sample config:
     }
 }
 ```
+### Local Machine
+
+```json
+{
+    "id": "local-config",
+    "type": "Config",
+    // ... other config parameters
+    "extensionConfigParams": {
+        "whitelistClasses": [
+            "java.*",
+            "javax.*",
+            "com.here.*",
+            "jdk.internal.reflect.*",
+            "com.sun.*",
+            "org.w3c.dom.*",
+            "sun.misc.*"
+        ],
+        "intervalms": 30000,
+        "extensionsRootPath": "file:///Users/User/Desktop/extensions/"
+    }
+}
+```
+Note:
+- On Windows, the equivalent extensionsRootPath would be: `file:///C:/Users/User/Desktop/extensions/`
+- The local path must always begin with `file://`, regardless of the operating system.
+
 
 It contains below fields:- 
 
@@ -35,10 +62,10 @@ It contains below fields:-
 |--------------------|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | whitelistClasses   | String[]         | It contains the list of classes which have common implementation and can be exposed by parent classloader (Naksha service) to child classloader (Extension Jars) during runtime. Default values are "java.*", "javax.*", "com.here.*", "jdk.internal.reflect.*", "com.sun.*", "org.w3c.dom.*", "sun.misc.*". |
 | intervalms         | Long             | Value in Milliseconds, It is being used to create Extension config expiry when the previously loaded config gets expired and so after that, system should make another attempt to refresh the extension config. i.e expiry = System.currentMillis + intervalms                                               |
-| extensionsRootPath | String           | It represents the extension root path where all extension jars are placed. (currently supports only AWS s3 path)                                                                                                                                                                                             |
+| extensionsRootPath | String           | It represents the extension root path where all extension jars are placed. It can be either local or AWS S3 folder path.                                                                                                                                                                                     |
 
 
-## S3 Folder Structure
+## Folder Structure
 
 Extension manager expects all extension should have a folder under configured extension root path. All Extension should have an ID and it's folder should be created with the same ID. Every extension folder should contain below files:-
 
@@ -52,7 +79,10 @@ Extension manager expects all extension should have a folder under configured ex
   - initClassName - optional - Full class name. If configured the Extension manager will load this class and instantiate it.   
   - properties - optional - Extension specific custom/private properties which is required specifically for that extension. For example, remote URL or Database details. 
 
-Below is the sample structure of extension directory. where Root path is `s3://naksha-pvt-releases/extensions/`. And Extension `foo` is deployed on `dev` environment. 
+### Sample Folder Structure
+
+#### AWS S3
+The Root path is `s3://naksha-pvt-releases/extensions/`, and the extension `foo` is deployed in the `dev` environment.
 
 ```text
 S3 folder structure:
@@ -78,6 +108,35 @@ Contents of foo-1.0.0.dev.json ->
 }
 
 ```
+#### Local
+The Root path is `file:///Users/User/Desktop/extensions/`, and the extension `foo` is deployed in the `dev` environment.
+
+```text
+Local folder structure:
+  Desktop
+  |___extensions
+      |___foo
+          |___latest-dev.txt  
+          |___foo-1.0.0.dev.json
+          |___foo-1.0.0.jar
+
+Contents of latest-dev.txt -> 1.0.0
+
+Contents of foo-1.0.0.dev.json ->
+{
+  "id" : "foo",
+  "type": "Extension",
+  "url":"file:///Users/User/Desktop/extensions/foo/foo-1.0.0.jar",
+  "version": "1.0.0",
+  "initClassName":"",
+  "properties": {
+    // custom/private properties relevant for that extension
+  }
+}
+
+```
+Note:
+- On Windows, the equivalent url would be: `file:///C:/Users/User/Desktop/extensions/foo/foo-1.0.0.jar`
 
 ## Extension Loading
 

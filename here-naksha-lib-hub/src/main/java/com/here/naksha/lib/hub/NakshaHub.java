@@ -54,6 +54,10 @@ import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import com.here.naksha.lib.psql.PsqlStorage;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -331,52 +335,73 @@ public class NakshaHub implements INaksha {
     }
 
     final ExtensionConfigParams extensionConfigParams = nakshaHubConfig.extensionConfigParams;
-    if (!extensionConfigParams.extensionRootPath.startsWith("s3://"))
-      throw new UnsupportedOperationException(
-          "ExtensionRootPath must be a valid s3 bucket url which should be prefixed with s3://");
+    final String rootPath = extensionConfigParams.extensionRootPath;
+    boolean isLocal = rootPath.startsWith("file://");
 
-    List<Extension> extList = loadExtensionConfigFromS3(extensionConfigParams.getExtensionRootPath(), extensionIds);
+    if (!isLocal && !rootPath.startsWith("s3://")) {
+      throw new UnsupportedOperationException(
+          "ExtensionRootPath must be a URL path prefixed with either s3:// or file://.");
+    }
+
+    List<Extension> extList = loadExtensionConfig(rootPath, extensionIds, isLocal);
+
     return new ExtensionConfig(
         System.currentTimeMillis() + extensionConfigParams.getIntervalMs(),
         extList,
         extensionConfigParams.getWhiteListClasses());
   }
 
-  private List<Extension> loadExtensionConfigFromS3(String extensionRootPath, Set<String> extensionIds) {
-    AmazonS3Helper s3Helper = new AmazonS3Helper();
+  private List<Extension> loadExtensionConfig(String extensionRootPath, Set<String> extensionIds, boolean isLocal) {
     List<Extension> extList = new ArrayList<>();
-    extensionIds.forEach(extensionId -> {
-      String env = extensionId.split(":")[0];
-      String extensionIdWotEnv = extensionId.split(":")[1];
-      String filePath = extensionRootPath + extensionIdWotEnv + "/" + "latest-" + env.toLowerCase() + ".txt";
-      String version;
-      try {
-        version = s3Helper.getFileContent(filePath);
-      } catch (Exception e) {
-        logger.error("Failed to read extension content from {}", filePath, e);
-        return;
-      }
+    URI rootUri = null;
+    AmazonS3Helper s3Helper = null;
 
-      filePath = extensionRootPath + extensionIdWotEnv + "/" + extensionIdWotEnv + "-" + version + "."
-          + env.toLowerCase() + ".json";
-      String exJson;
+    if (isLocal) {
       try {
-        exJson = s3Helper.getFileContent(filePath);
+        rootUri = new URI(extensionRootPath);
+        if (!Files.exists(Paths.get(rootUri))) {
+          throw new UnsupportedOperationException(
+              "Local extension root path does not exist: " + extensionRootPath);
+        }
       } catch (Exception e) {
-        logger.error("Failed to read extension meta data from {} ", filePath, e);
-        return;
+        throw new UnsupportedOperationException("Invalid local extension root path: " + extensionRootPath, e);
       }
-      Extension extension;
+    } else {
+      s3Helper = new AmazonS3Helper();
+    }
+
+    for (String extensionId : extensionIds) {
+      String extEnv = extensionId.split(":")[0];
+      String extensionIdWotEnv = extensionId.split(":")[1];
+      String version, exJson;
       try {
-        extension = new ObjectMapper().readValue(exJson, Extension.class);
-        extension.setEnv(env);
+        if (isLocal) {
+          version = readLocalFile(
+              rootUri.resolve(extensionIdWotEnv + "/latest-" + extEnv.toLowerCase() + ".txt"));
+          exJson = readLocalFile(rootUri.resolve(extensionIdWotEnv + "/" + extensionIdWotEnv + "-" + version
+              + "." + extEnv.toLowerCase() + ".json"));
+        } else {
+          version = s3Helper.getFileContent(
+              extensionRootPath + extensionIdWotEnv + "/latest-" + extEnv.toLowerCase() + ".txt");
+          exJson = s3Helper.getFileContent(extensionRootPath + extensionIdWotEnv + "/" + extensionIdWotEnv
+              + "-" + version + "." + extEnv.toLowerCase() + ".json");
+        }
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        Extension extension = objectMapper.readValue(exJson, Extension.class);
+        extension.setEnv(extEnv);
         extList.add(extension);
+
       } catch (Exception e) {
-        logger.error("Failed to convert extension meta data to Extension object. {} ", exJson, e);
-        return;
+        logger.error("Failed loading extension {} at {}", extensionId, extensionRootPath, e);
       }
-    });
+    }
+
     return extList;
+  }
+
+  private String readLocalFile(URI fileUri) throws IOException {
+    return Files.readString(Paths.get(fileUri)).trim();
   }
 
   @Override
