@@ -160,10 +160,6 @@ data class SessionOptions @JvmOverloads constructor(
        )
     }
 
-    fun copyWithUseMaster(useMaster: Boolean? = null): SessionOptions {
-        return copy(useMaster = useMaster ?: this.useMaster)
-    }
-
     companion object SessionOptions_C {
         /**
          * Helper for JavaScript and Java to create a new default instance without providing too many arguments.

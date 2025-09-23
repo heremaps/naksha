@@ -116,7 +116,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     final NakshaContext ctx = NakshaContext.currentContext();
     addStorageIdToStreamInfo(storageId, ctx);
     // prepare session options for storage interactions (default options are fetched from context, then if applicable - they are patched with storage config)
-    SessionOptions sessionOptions = adjustedSessionOptions(SessionOptions.from(ctx), storageImpl);
+    SessionOptions sessionOptions = CustomStoragePropertiesUtil.mergeSessionOptionsWithStorageConfig(SessionOptions.from(ctx), storageImpl);
 
     StopWatch storageTimer = new StopWatch();
     try {
@@ -206,9 +206,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   private @NotNull Response singleRead( @NotNull SessionOptions sessionOptions, @NotNull IStorage storageImpl, @NotNull ReadFeatures rf) {
-    if(sessionOptions.useMaster){
-      sessionOptions = sessionOptions.copyWithUseMaster(false);
-    }
     return storageImpl.useReadSession(sessionOptions, reader -> reader.execute(rf));
   }
 
@@ -284,11 +281,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
-  private @NotNull Response singleWrite(
-      @NotNull SessionOptions sessionOptions, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
-    if(!sessionOptions.useMaster){
-      sessionOptions = sessionOptions.copyWithUseMaster(true);
-    }
+  private @NotNull Response singleWrite(@NotNull SessionOptions sessionOptions, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
     return storageImpl.useWriteSession(sessionOptions, writer -> {
       final Response result = writer.execute(wr);
       if (result instanceof SuccessResponse) {
@@ -554,9 +547,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull String mapId,
       @NotNull String collectionId
   ) {
-    if(!sessionOptions.useMaster){
-      sessionOptions = sessionOptions.copyWithUseMaster(true);
-    }
     return storageImpl.useWriteSession(sessionOptions, writer -> {
       final Response result = writer.execute(createWriteCollectionsRequest(new NakshaCollection(collectionId, mapId)));
       if (result instanceof SuccessResponse) {
@@ -576,23 +566,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return new ErrorResponse(NakshaError.EXCEPTION, msg);
       }
     });
-  }
-
-  private SessionOptions adjustedSessionOptions(SessionOptions baseSessionOptions, IStorage storage){
-    try {
-      NakshaStorage storageConfig = storage.getConfig(); // this might throw exception for some implementations
-      if(storageConfig == null){
-        return baseSessionOptions;
-      }
-      return baseSessionOptions.copyWithTimeouts(
-          CustomStoragePropertiesUtil.getSocketTimeoutMs(storageConfig),
-          CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
-          CustomStoragePropertiesUtil.getStmtTimeoutMs(storageConfig),
-          CustomStoragePropertiesUtil.getLockTimeoutMs(storageConfig)
-      );
-    } catch (Exception e) {
-      return baseSessionOptions;
-    }
   }
 
   enum OperationAttempt {

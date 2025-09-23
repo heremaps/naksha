@@ -1409,6 +1409,9 @@ components:
                   readOnly: true
               appName: app_name
               schema: schema_name
+              connectTimeout: 5 # seconds
+              stmtTimeout: 60   # seconds
+              lockTimeout: 1    # seconds
     HandlerRequest:
       required: true
       content:

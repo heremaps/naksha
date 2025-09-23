@@ -2,6 +2,8 @@ package naksha.model.util;
 
 import java.util.Optional;
 import naksha.base.JvmAnyObjectUtil;
+import naksha.model.IStorage;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,6 +23,33 @@ import org.jetbrains.annotations.Nullable;
 public class CustomStoragePropertiesUtil {
 
   private CustomStoragePropertiesUtil() {
+  }
+
+
+  /**
+   * Prepares session options based on custom storage configuration. It combines original options with properties defined on the storage level.
+   * If storage config is missing, the original session options are used.
+   * If given storage property is missing (ie some timeout) or the custom config is not available, the value from original options will be used
+   *
+   * @param baseOptions original session options
+   * @param storage storage for which the session options will apply upon session opening, potentially holding custom configuration
+   * @return session options containing resolved properties
+   */
+  public static SessionOptions mergeSessionOptionsWithStorageConfig(SessionOptions baseOptions, IStorage storage) {
+    try {
+      NakshaStorage storageConfig = storage.getConfig(); // this might throw exception for some implementations
+      if (storageConfig == null) {
+        return baseOptions;
+      }
+      return baseOptions.copyWithTimeouts(
+          CustomStoragePropertiesUtil.getSocketTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getStmtTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getLockTimeoutMs(storageConfig)
+      );
+    } catch (Exception e) {
+      return baseOptions;
+    }
   }
 
   public static @Nullable Integer getConnectTimeoutMs(NakshaStorage storageConfig) {
