@@ -2,7 +2,7 @@ package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
-import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutors;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutorsBuilders;
 import com.here.naksha.cli.loggers.LoggingMixin;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
@@ -93,7 +93,7 @@ public final class CopyCommand implements Callable<Integer> {
                     "${COMPLETION-CANDIDATES}"
             }
     )
-    private FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.PARALLEL;
+    private FeaturesWriteExecutorsBuilders featuresWriteExecutor = FeaturesWriteExecutorsBuilders.PARALLEL;
 
     @CommandLine.Option(
             names = {"--threads"},
@@ -107,6 +107,20 @@ public final class CopyCommand implements Callable<Integer> {
     }
 
     private Integer threads;
+
+    @CommandLine.Option(
+            names = {"--queueMulti"},
+            description = {
+                    "Sets the multiplier used to calculate the size of the executor's task queue.",
+                    "The queue size is computed as: threads * queueMulti."
+            }
+    )
+    private void setQueueMulti(Integer queueMulti) {
+        requirePositiveIntegerOrNull(threads, "--queueMulti");
+        this.queueMulti = queueMulti;
+    }
+
+    private Integer queueMulti;
 
     @CommandLine.Option(
             names = {"--maxBatchSize"},
@@ -203,6 +217,7 @@ public final class CopyCommand implements Callable<Integer> {
                 sessionOptions,
                 featuresWriteExecutor,
                 threads,
+                queueMulti,
                 maxBatchSize
         );
 

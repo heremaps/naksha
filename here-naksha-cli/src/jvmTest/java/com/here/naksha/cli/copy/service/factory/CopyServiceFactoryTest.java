@@ -2,9 +2,9 @@ package com.here.naksha.cli.copy.service.factory;
 
 import com.here.naksha.cli.copy.service.CopyService;
 import com.here.naksha.cli.copy.service.StorageProvider;
-import com.here.naksha.cli.copy.service.executors.model.BatchableExecutor;
-import com.here.naksha.cli.copy.service.executors.model.ThreadableExecutor;
-import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutors;
+import com.here.naksha.cli.copy.service.executors.model.BatchableBuilder;
+import com.here.naksha.cli.copy.service.executors.model.ThreadableBuilder;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutorsBuilders;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,15 +29,13 @@ class CopyServiceFactoryTest {
     }
 
     @ParameterizedTest
-    @EnumSource(FeaturesWriteExecutors.class)
-    void shouldCreate(FeaturesWriteExecutors featuresWriteExecutor) {
+    @EnumSource(FeaturesWriteExecutorsBuilders.class)
+    void shouldCreate(FeaturesWriteExecutorsBuilders featuresWriteExecutor) {
         // When
         CopyService copyService = copyServiceFactory.create(
                 storageProvider,
                 sessionOptions,
-                featuresWriteExecutor,
-                null,
-                null
+                featuresWriteExecutor
         );
 
         // Then
@@ -47,14 +45,35 @@ class CopyServiceFactoryTest {
     @Test
     void shouldSetThreadsForThreadable() {
         // Given: threadable feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.PARALLEL;
-        assumeTrue(featuresWriteExecutor.createInstance() instanceof ThreadableExecutor);
+        FeaturesWriteExecutorsBuilders featuresWriteExecutor = FeaturesWriteExecutorsBuilders.PARALLEL;
+        assumeTrue(featuresWriteExecutor.createInstance() instanceof ThreadableBuilder);
 
         // When
         CopyService copyService = copyServiceFactory.create(
                 storageProvider,
                 sessionOptions,
                 featuresWriteExecutor,
+                10,
+                null,
+                null
+        );
+
+        // Then
+        assertNotNull(copyService);
+    }
+
+    @Test
+    void shouldSetQueueMultiForThreadable() {
+        // Given: threadable feature write executor
+        FeaturesWriteExecutorsBuilders featuresWriteExecutor = FeaturesWriteExecutorsBuilders.PARALLEL;
+        assumeTrue(featuresWriteExecutor.createInstance() instanceof ThreadableBuilder);
+
+        // When
+        CopyService copyService = copyServiceFactory.create(
+                storageProvider,
+                sessionOptions,
+                featuresWriteExecutor,
+                null,
                 10,
                 null
         );
@@ -66,14 +85,15 @@ class CopyServiceFactoryTest {
     @Test
     void shouldSetMaxBatchSizeForBatchable() {
         // Given: batchable feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.PARALLEL;
-        assumeTrue(featuresWriteExecutor.createInstance() instanceof BatchableExecutor);
+        FeaturesWriteExecutorsBuilders featuresWriteExecutor = FeaturesWriteExecutorsBuilders.PARALLEL;
+        assumeTrue(featuresWriteExecutor.createInstance() instanceof BatchableBuilder);
 
         // When
         CopyService copyService = copyServiceFactory.create(
                 storageProvider,
                 sessionOptions,
                 featuresWriteExecutor,
+                null,
                 null,
                 10
         );
@@ -85,8 +105,8 @@ class CopyServiceFactoryTest {
     @Test
     void shouldThrowWhenSettingThreadsForNonThreadable() {
         // Given: non-threadable feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.ONE_SHOT;
-        assumeFalse(featuresWriteExecutor.createInstance() instanceof ThreadableExecutor);
+        FeaturesWriteExecutorsBuilders featuresWriteExecutor = FeaturesWriteExecutorsBuilders.ONE_SHOT;
+        assumeFalse(featuresWriteExecutor.createInstance() instanceof ThreadableBuilder);
 
         // When & Then
         assertThrows(CopyServiceFactoryException.class, () -> copyServiceFactory.create(
@@ -94,6 +114,7 @@ class CopyServiceFactoryTest {
                 sessionOptions,
                 featuresWriteExecutor,
                 10,
+                null,
                 null
         ));
     }
@@ -101,8 +122,8 @@ class CopyServiceFactoryTest {
     @Test
     void shouldThrowWhenSettingMaxBatchSizeForNonBatchable() {
         // Given: non-batchable feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.ONE_SHOT;
-        assumeFalse(featuresWriteExecutor.createInstance() instanceof BatchableExecutor);
+        FeaturesWriteExecutorsBuilders featuresWriteExecutor = FeaturesWriteExecutorsBuilders.ONE_SHOT;
+        assumeFalse(featuresWriteExecutor.createInstance() instanceof BatchableBuilder);
 
         // When & Then
         assertThrows(CopyServiceFactoryException.class, () -> copyServiceFactory.create(
@@ -110,7 +131,25 @@ class CopyServiceFactoryTest {
                 sessionOptions,
                 featuresWriteExecutor,
                 null,
+                null,
                 10
+        ));
+    }
+
+    @Test
+    void shouldThrowWhenSettingQueueMultiForNonThreadable() {
+        // Given: non-threadable feature write executor
+        FeaturesWriteExecutorsBuilders featuresWriteExecutor = FeaturesWriteExecutorsBuilders.ONE_SHOT;
+        assumeFalse(featuresWriteExecutor.createInstance() instanceof ThreadableBuilder);
+
+        // When & Then
+        assertThrows(CopyServiceFactoryException.class, () -> copyServiceFactory.create(
+                storageProvider,
+                sessionOptions,
+                featuresWriteExecutor,
+                null,
+                10,
+                null
         ));
     }
 }

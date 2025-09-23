@@ -139,8 +139,8 @@ class PsqlCopyTest {
 
     private static Stream<Arguments> featuresWriteExecutors() {
         return Stream.of(
-                Arguments.of(new ParallelFeaturesWriteExecutor()),
-                Arguments.of(new OneShotFeaturesWriteExecutor())
+                Arguments.of(new ParallelFeaturesWriteExecutor.Builder().build()),
+                Arguments.of(new OneShotFeaturesWriteExecutor.Builder().build())
         );
     }
 

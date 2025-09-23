@@ -65,7 +65,7 @@ class CopyCliTest {
         CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any())).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any(), any())).thenReturn(copyService);
 
         // And
         CliTestCase testCase = new CliTestCase(
@@ -121,7 +121,7 @@ class CopyCliTest {
         CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any())).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any(), any())).thenReturn(copyService);
 
         // And
         CliTestCase testCase = new CliTestCase(
@@ -209,7 +209,7 @@ class CopyCliTest {
         CopyService copyService = copyServiceReturningErrorResult(exceptionMessage);
 
         // And: factory returns the copy service
-        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any())).thenReturn(copyService);
+        when(copyServiceFactory.create(eq(storageProvider), any(), any(), any(), any(), any())).thenReturn(copyService);
 
         // And
         Path validStorageConfig = Path.of(validStorageConfigPath);
