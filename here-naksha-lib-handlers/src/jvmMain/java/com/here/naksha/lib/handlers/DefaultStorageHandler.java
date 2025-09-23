@@ -585,8 +585,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         return baseSessionOptions;
       }
       return baseSessionOptions.copyWithTimeouts(
-          CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
           CustomStoragePropertiesUtil.getSocketTimeoutMs(storageConfig),
+          CustomStoragePropertiesUtil.getConnectTimeoutMs(storageConfig),
           CustomStoragePropertiesUtil.getStmtTimeoutMs(storageConfig),
           CustomStoragePropertiesUtil.getLockTimeoutMs(storageConfig)
       );
