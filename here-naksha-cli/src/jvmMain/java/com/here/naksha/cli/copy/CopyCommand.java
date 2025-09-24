@@ -2,7 +2,7 @@ package com.here.naksha.cli.copy;
 
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
-import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutorsBuilders;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutors;
 import com.here.naksha.cli.loggers.LoggingMixin;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.parsers.JsonFileParserException;
@@ -93,7 +93,7 @@ public final class CopyCommand implements Callable<Integer> {
                     "${COMPLETION-CANDIDATES}"
             }
     )
-    private FeaturesWriteExecutorsBuilders featuresWriteExecutor = FeaturesWriteExecutorsBuilders.PARALLEL;
+    private FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.PARALLEL;
 
     @CommandLine.Option(
             names = {"--threads"},

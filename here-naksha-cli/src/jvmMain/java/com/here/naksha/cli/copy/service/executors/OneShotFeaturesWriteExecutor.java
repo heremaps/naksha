@@ -2,7 +2,6 @@ package com.here.naksha.cli.copy.service.executors;
 
 import com.here.naksha.cli.copy.service.CopyElement;
 import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutor;
-import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorBuilder;
 import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorException;
 import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorInfo;
 import naksha.model.IStorage;
@@ -32,9 +31,6 @@ import static naksha.model.util.RequestHelper.createFeaturesRequest;
  * </ul>
  */
 public final class OneShotFeaturesWriteExecutor implements FeaturesWriteExecutor {
-    private OneShotFeaturesWriteExecutor() {
-    }
-
     /**
      * {@inheritDoc}
      * <p>
@@ -53,13 +49,6 @@ public final class OneShotFeaturesWriteExecutor implements FeaturesWriteExecutor
         Response response = performWriteRequest(storage, addFeaturesRequest, sessionOptions);
         requireSuccessResponse(response);
         return new FeaturesWriteExecutorInfo(nakshaFeatures.size());
-    }
-
-    public static class Builder implements FeaturesWriteExecutorBuilder {
-        @Override
-        public FeaturesWriteExecutor build() {
-            return new OneShotFeaturesWriteExecutor();
-        }
     }
 
     private List<NakshaFeature> loadFeatures(FeatureTupleList featureTuples) {

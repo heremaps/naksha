@@ -4,7 +4,7 @@ import com.here.naksha.cli.CliTestCase;
 import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
-import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutorsBuilders;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutors;
 import com.here.naksha.cli.parsers.JsonFileParser;
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandSuccess;
@@ -66,7 +66,7 @@ class CopyCliTest {
         // And: factory returns the copy service
         copyServiceFactoryReturningGivenCopyService(
                 copyService,
-                FeaturesWriteExecutorsBuilders.PARALLEL,
+                FeaturesWriteExecutors.PARALLEL,
                 null,
                 null,
                 null
@@ -110,7 +110,7 @@ class CopyCliTest {
         // And: factory returns the copy service
         copyServiceFactoryReturningGivenCopyService(
                 copyService,
-                FeaturesWriteExecutorsBuilders.PARALLEL,
+                FeaturesWriteExecutors.PARALLEL,
                 null,
                 null,
                 null
@@ -147,8 +147,8 @@ class CopyCliTest {
     }
 
     @ParameterizedTest
-    @EnumSource(FeaturesWriteExecutorsBuilders.class)
-    void shouldCopyWithGivenFeaturesWriteExecutor(FeaturesWriteExecutorsBuilders featuresWriteExecutorsBuilder) {
+    @EnumSource(FeaturesWriteExecutors.class)
+    void shouldCopyWithGivenFeaturesWriteExecutor(FeaturesWriteExecutors featuresWriteExecutorsBuilder) {
         // Given: copy service returns success result
         int numberOfCopiedElement = 10;
         CopyService copyService = copyServiceReturningSuccessResult(numberOfCopiedElement);
@@ -204,7 +204,7 @@ class CopyCliTest {
         int maxBatchSize = 1024;
         copyServiceFactoryReturningGivenCopyService(
                 copyService,
-                FeaturesWriteExecutorsBuilders.PARALLEL,
+                FeaturesWriteExecutors.PARALLEL,
                 threads,
                 queueMulti,
                 maxBatchSize
@@ -300,7 +300,7 @@ class CopyCliTest {
         // And: factory returns the copy service
         copyServiceFactoryReturningGivenCopyService(
                 copyService,
-                FeaturesWriteExecutorsBuilders.PARALLEL,
+                FeaturesWriteExecutors.PARALLEL,
                 null,
                 null,
                 null
@@ -469,7 +469,7 @@ class CopyCliTest {
 
     private void copyServiceFactoryReturningGivenCopyService(
             CopyService copyService,
-            FeaturesWriteExecutorsBuilders featuresWriteExecutorsBuilder,
+            FeaturesWriteExecutors featuresWriteExecutor,
             Integer threads,
             Integer queueMulti,
             Integer maxBatchSize
@@ -477,7 +477,7 @@ class CopyCliTest {
         when(copyServiceFactory.create(
                 eq(storageProvider),
                 any(),
-                eq(featuresWriteExecutorsBuilder),
+                eq(featuresWriteExecutor),
                 eq(threads),
                 eq(queueMulti),
                 eq(maxBatchSize)

@@ -26,11 +26,11 @@ import static org.mockito.Mockito.verify;
 abstract class FeaturesWriteExecutorsCommonTest {
     private final FeaturesWriteExecutor featuresWriteExecutor = createFeaturesWriteExecutor();
     private final NakshaStorage targetNakshaStorage = new NakshaStorage("target", "targetclassname");
-    private final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
+    protected final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
             .setMapId("targetmap")
             .setCollectionId("targetcol")
             .build();
-    private static SessionOptions sessionOptions;
+    protected static SessionOptions sessionOptions;
 
     @BeforeAll
     static void beforeAll() {

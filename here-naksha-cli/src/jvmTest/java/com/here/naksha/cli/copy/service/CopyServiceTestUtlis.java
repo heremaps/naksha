@@ -5,7 +5,6 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.*;
 import org.mockito.ArgumentCaptor;
 
@@ -38,7 +37,7 @@ public final class CopyServiceTestUtlis {
         return writeSession;
     }
 
-    public static FeatureTupleList nakshaFeatureListToFeatureTupleList(NakshaFeatureList nakshaFeatures) {
+    public static FeatureTupleList nakshaFeatureListToFeatureTupleList(List<NakshaFeature> nakshaFeatures) {
         SuccessResponse successResponse = new SuccessResponse(nakshaFeatures);
         return successResponse.getFeatureTupleList();
     }

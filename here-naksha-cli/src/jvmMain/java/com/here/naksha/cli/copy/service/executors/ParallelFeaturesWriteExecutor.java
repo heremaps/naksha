@@ -1,7 +1,9 @@
 package com.here.naksha.cli.copy.service.executors;
 
 import com.here.naksha.cli.copy.service.CopyElement;
-import com.here.naksha.cli.copy.service.executors.model.*;
+import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutor;
+import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorException;
+import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorInfo;
 import naksha.base.AtomicInt;
 import naksha.base.JvmAtomicInt;
 import naksha.model.*;
@@ -23,12 +25,20 @@ import static naksha.model.util.RequestHelper.createFeaturesRequest;
  * This implementation does not fail if a single batch fails; failed batches are skipped.
  */
 public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecutor {
+    public static final int DEFAULT_THREADS = Runtime.getRuntime().availableProcessors();
+    public static final int DEFAULT_QUEUE_MULTI = 4;
+    public static final int DEFAULT_MAX_BATCH_SIZE = 256;
     private static final Logger logger = LoggerFactory.getLogger(ParallelFeaturesWriteExecutor.class);
     private final int threads;
     private final int queueMulti;
     private final int maxBatchSize;
 
-    private ParallelFeaturesWriteExecutor(
+    /**
+     * @param threads      the number of threads to be used; must be a positive integer
+     * @param queueMulti   the queue multiplier; must be a positive integer; the queue size is computed as: threads * queueMulti
+     * @param maxBatchSize the maximum batch size; must be a positive integer
+     */
+    public ParallelFeaturesWriteExecutor(
             int threads,
             int queueMulti,
             int maxBatchSize
@@ -36,6 +46,17 @@ public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecuto
         this.threads = threads;
         this.queueMulti = queueMulti;
         this.maxBatchSize = maxBatchSize;
+    }
+
+    /**
+     * Calls {@link ParallelFeaturesWriteExecutor#ParallelFeaturesWriteExecutor(int, int, int)} with defaults
+     */
+    public ParallelFeaturesWriteExecutor() {
+        this(
+                DEFAULT_THREADS,
+                DEFAULT_QUEUE_MULTI,
+                DEFAULT_MAX_BATCH_SIZE
+        );
     }
 
     /**
@@ -64,58 +85,6 @@ public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecuto
             );
         }
         return new FeaturesWriteExecutorInfo(copied);
-    }
-
-    /**
-     * Builder class for constructing instances of {@link ParallelFeaturesWriteExecutor}.
-     * <p>
-     * This builder allows customization of the number of threads, queue multiplier, and maximum batch size.
-     * Default configuration:
-     * <ul>
-     *     <li><b>threads</b>: <code>Runtime.getRuntime().availableProcessors()</code>/li>
-     *     <li><b>queueMulti</b>: 4</li>
-     *     <li><b>maxBatchSize</b>: 256</li>
-     * </ul>
-     */
-    public static class Builder implements FeaturesWriteExecutorBuilder, ThreadableBuilder, BatchableBuilder {
-        private int maxBatchSize = 256;
-        private int threads = Runtime.getRuntime().availableProcessors();
-        private int queueMulti = 4;
-
-        public ParallelFeaturesWriteExecutor build() {
-            return new ParallelFeaturesWriteExecutor(
-                    threads,
-                    queueMulti,
-                    maxBatchSize
-            );
-        }
-
-        @Override
-        public Builder withMaxBatchSize(int maxBatchSize) {
-            assertPositiveInteger(maxBatchSize);
-            this.maxBatchSize = maxBatchSize;
-            return this;
-        }
-
-        @Override
-        public Builder withQueueMulti(int queueMulti) {
-            assertPositiveInteger(queueMulti);
-            this.queueMulti = queueMulti;
-            return this;
-        }
-
-        @Override
-        public Builder withThreads(int threads) {
-            assertPositiveInteger(threads);
-            this.threads = threads;
-            return this;
-        }
-
-        private void assertPositiveInteger(int integer) {
-            if (integer <= 0) {
-                throw new IllegalArgumentException("Parameter should be a positive integer.");
-            }
-        }
     }
 
     private int executeWritesInParallelBatches(
