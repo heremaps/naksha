@@ -96,8 +96,7 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
         if (i >= path.size) return true
         val pkey = path[i]
         @Suppress("CascadeIf")
-        if (pkey is String) {
-            if (r.unitType() != TYPE_MAP) return false
+        if(r.unitType() == TYPE_MAP && pkey is String){
             val end = r.pos + r.unitSize()
             r.enterStruct()
             while (r.pos < end) {
@@ -115,20 +114,27 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
             }
             // Not found
             return false
-        } else if (pkey is Int) {
-            if (r.unitType() != TYPE_ARRAY) return false
+        } else if(r.unitType() == TYPE_ARRAY){
+            val pkeyAsIndex = when (pkey) {
+                is Int -> pkey
+                is String -> pkey.toIntOrNull() ?: return false // pkey is String but does not represent a number -> not found
+                else -> return false // unable to treat pkey as index -> not found
+            }
             val end = r.pos + r.unitSize()
             r.enterStruct()
             var index = 0
             while (r.pos < end) {
-                if (pkey == index) return _selectPath(r, i + 1, path)
+                if (pkeyAsIndex == index) return _selectPath(r, i + 1, path)
                 // Skip over value
                 r.nextUnit()
                 index++
             }
             // Not found
             return false
-        } else return false
+        } else {
+            // neither Struct nor Array -> not found
+            return false
+        }
     }
 
     /**
