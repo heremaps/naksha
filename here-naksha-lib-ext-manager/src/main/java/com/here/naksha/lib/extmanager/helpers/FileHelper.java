@@ -24,26 +24,29 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.stream.Collectors;
 
 public class FileHelper implements FileClient {
   @Override
   public File getFile(String path) throws IOException {
-    File file;
-    if (path.startsWith("file://")) {
-      file = new File(URI.create(path).getPath());
-      if (!file.exists()) {
-        throw new IOException("Local file not found: " + file.getAbsolutePath());
-      }
-    } else {
-      file = new File(path);
+    Path filePath = toPath(path);
+    if (!Files.exists(filePath)) {
+      throw new IOException("Local file not found: " + filePath.toAbsolutePath());
     }
-    return file;
+    return filePath.toFile();
   }
 
   @Override
   public String getFileContent(String path) throws IOException {
-    Path file = new File(path).toPath();
-    return Files.readAllLines(file).stream().collect(Collectors.joining());
+    Path filePath = toPath(path);
+    return Files.readAllLines(filePath).stream().collect(Collectors.joining());
+  }
+
+  private Path toPath(String path) {
+    if (path.startsWith("file://")) {
+      return Paths.get(URI.create(path));
+    }
+    return Paths.get(path);
   }
 }
