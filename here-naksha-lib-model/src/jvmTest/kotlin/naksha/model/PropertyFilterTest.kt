@@ -1,90 +1,62 @@
 package naksha.model
 
-import naksha.base.AnyObject
 import naksha.base.Int64
+import naksha.base.Platform
+import naksha.base.Proxy
 import naksha.jbon.JbEncoder
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.objects.NakshaFeature
+import naksha.model.request.FeatureTuple
 import naksha.model.request.PropertyFilter
 import naksha.model.request.ReadFeatures
-import naksha.model.request.FeatureTuple
 import naksha.model.request.query.*
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 class PropertyFilterTest {
 
-    companion object {
-        lateinit var featureTuple : FeatureTuple
-        val nestedJson = AnyObject()
-
-        @JvmStatic
-        @BeforeAll
-        fun setupTuple() {
-            // create the feature
-            val feature = NakshaFeature()
-            feature["eventHandlerIds"] = arrayOf("handler-abc", "handler-xyz")
-            feature.properties["foo"] = "bar"
-            feature.properties["number"] = 1.1
-            nestedJson["bool"] = true
-            nestedJson["nullProps"] = null
-            val innerJson = AnyObject()
-            innerJson["a"] = 1
-            nestedJson["array"] = arrayOf("one", "two", "three", innerJson)
-            feature.properties["json"] = nestedJson
-            val references = arrayOf(
-                AnyObject().apply {
-                    put("id", "ref-1")
-                    put("type", "primary")
-                },
-                AnyObject().apply {
-                    put("id", "ref-2")
-                    put("type", "secondary")
-                    put("active", true)
-                }
-            )
-            feature.properties["references"] = references
-            val nestedArray = arrayOf(1, arrayOf("a", "b", arrayOf(100, 200)), "c")
-            feature.properties["nestedArray"] = nestedArray
-            // build tuple containing the feature
-            val encoder = JbEncoder()
-            val featureBytes = encoder.buildFeatureFromMap(feature)
-            val storageNumber = Int64(1)
-            val mapNumber = 0
-            val collectionNumber = 0
-            val version = Version(0)
-            val flags = Flags()
-            val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber(feature.id), version,0)
-            val tuple = Tuple(
-                meta = Metadata(
-                    tupleNumber = tupleNumber,
-                    updatedAt = Int64(0),
-                    id = feature.id,
-                    appId = "",
-                    author = null,
-                    flags = flags,
-                ),
-                feature = featureBytes
-            )
-            featureTuple = FeatureTuple(tupleNumber, tuple)
+    // tuple to run filter against
+    private val featureTuple = wrapInTuple(featureJson = """
+       {
+          "eventHandlerIds": [ "handler-abc", "handler-xyz" ],
+          "properties": {
+            "foo": "bar",
+            "number": 1.1,
+            "json": {
+              "bool": true,
+              "nullProps": null,
+              "array": [ "one", "two", "three", { "a": 1 } ]
+            },
+            "references": [
+              {
+                "id": "ref-1",
+                "type": "primary"
+              },
+              {
+                "id": "ref-2",
+                "type": "secondary",
+                "active": true
+              }
+            ],
+            "nestedArray": [ 1, [ "a", "b", [ 100, 200 ] ], "c" ]
+          }
         }
-    }
+    """.trimIndent() )
 
     @Test
     fun stringEqual() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("properties","foo"),StringOp.EQUALS,"bar")
-        assertEquals(featureTuple,filter.filter(featureTuple))
+        request.query.properties = PQuery(Property("properties", "foo"), StringOp.EQUALS, "bar")
+        assertEquals(featureTuple, filter.filter(featureTuple))
     }
 
     @Test
     fun stringNotEqual() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("properties","foo"),StringOp.EQUALS,"foooooo")
-        assertEquals(null,filter.filter(featureTuple))
+        request.query.properties = PQuery(Property("properties", "foo"), StringOp.EQUALS, "foooooo")
+        assertEquals(null, filter.filter(featureTuple))
     }
 
     @Test
@@ -295,7 +267,14 @@ class PropertyFilterTest {
     fun valueContainsJson() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        request.query.properties = PQuery(Property("properties","json"),AnyOp.CONTAINS, nestedJson.copy(true))
+        val nestedJson = Platform.fromJSON("""
+            {
+              "bool": true,
+              "nullProps": null,
+              "array": [ "one", "two", "three", { "a": 1 } ]
+            }
+        """.trimIndent())
+        request.query.properties = PQuery(Property("properties","json"),AnyOp.CONTAINS, nestedJson)
         assertEquals(featureTuple,filter.filter(featureTuple))
     }
 
@@ -304,7 +283,7 @@ class PropertyFilterTest {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
         request.query.properties = null
-        assertEquals(featureTuple,filter.filter(featureTuple))
+        assertEquals(featureTuple, filter.filter(featureTuple))
     }
 
     @Test
@@ -418,5 +397,92 @@ class PropertyFilterTest {
         val queryJson = "[]"
         request.query.properties = PQuery(Property("properties", "references"), AnyOp.CONTAINS, queryJson)
         assertEquals(featureTuple, filter.filter(featureTuple), "Should match when the contains query is an empty array")
+    }
+
+    @Test
+    fun arrayElementEqualityQuery() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties =
+            PQuery(Property("properties", "nestedArray", "2"), StringOp.EQUALS, "c")
+        assertEquals(
+            featureTuple,
+            filter.filter(featureTuple),
+            "Should allow querying (EQUALS) against specific element in the array"
+        )
+    }
+
+    @Test
+    fun arrayNestedElementEqualityQuery() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties =
+            PQuery(Property("properties", "nestedArray", "1", "2", "0"), DoubleOp.EQ, 100)
+        assertEquals(
+            featureTuple,
+            filter.filter(featureTuple),
+            "Should allow querying (EQUALS) against specific element in the array"
+        )
+    }
+
+    @Test
+    fun arrayNestedContainsQuery() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties =
+            PQuery(Property("properties", "nestedArray", "1", "2"), AnyOp.CONTAINS, 100)
+        assertEquals(
+            featureTuple,
+            filter.filter(featureTuple),
+            "Should allow querying against nested array"
+        )
+    }
+
+    @Test
+    fun arrayElementsCompoundQuery() {
+        val request = ReadFeatures()
+        val filter = PropertyFilter(request)
+        request.query.properties = PAnd(
+            PQuery(Property("properties", "json", "array", "1"), StringOp.STARTS_WITH, "tw"),
+            PQuery(Property("properties", "json", "array", "2"), StringOp.STARTS_WITH, "thr"),
+        )
+        assertEquals(
+            featureTuple,
+            filter.filter(featureTuple),
+            "Should allow compound queries against specific elements in the array"
+        )
+    }
+
+    companion object {
+        private fun wrapInTuple(featureJson: String): FeatureTuple {
+            val feature = Proxy.box(Platform.fromJSON(featureJson), NakshaFeature::class)!!
+            val encoder = JbEncoder()
+            val featureBytes = encoder.buildFeatureFromMap(feature)
+            val storageNumber = Int64(1)
+            val mapNumber = 0
+            val collectionNumber = 0
+            val version = Version(0)
+            val flags = Flags()
+            val tupleNumber = TupleNumber(
+                storageNumber,
+                mapNumber,
+                collectionNumber,
+                featureNumber(feature.id),
+                version,
+                0
+            )
+            val tuple = Tuple(
+                meta = Metadata(
+                    tupleNumber = tupleNumber,
+                    updatedAt = Int64(0),
+                    id = feature.id,
+                    appId = "",
+                    author = null,
+                    flags = flags,
+                ),
+                feature = featureBytes
+            )
+            return FeatureTuple(tupleNumber, tuple)
+        }
     }
 }
