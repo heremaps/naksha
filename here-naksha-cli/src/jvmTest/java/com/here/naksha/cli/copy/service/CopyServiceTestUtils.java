@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-public final class CopyServiceTestUtlis {
-    private CopyServiceTestUtlis() {
+public final class CopyServiceTestUtils {
+    private CopyServiceTestUtils() {
     }
 
     public static IWriteSession createThrowingWriteSessionForStorage(IStorage storage, SessionOptions sessionOptions) {
@@ -55,7 +55,11 @@ public final class CopyServiceTestUtlis {
     }
 
     public static List<Write> captureWrites(IWriteSession writeSession) {
-        return captureRequestsOfType(writeSession, WriteRequest.class).stream()
+        return writeRequestsToWrites(captureRequestsOfType(writeSession, WriteRequest.class));
+    }
+
+    public static List<Write> writeRequestsToWrites(List<WriteRequest> writeRequests) {
+        return writeRequests.stream()
                 .flatMap(wr -> wr.getWrites().stream())
                 .toList();
     }

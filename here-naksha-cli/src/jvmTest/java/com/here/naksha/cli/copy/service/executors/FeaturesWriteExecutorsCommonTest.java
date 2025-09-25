@@ -9,18 +9,20 @@ import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.FeatureTupleList;
 import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import static com.here.naksha.cli.copy.service.CopyServiceTestUtlis.*;
+import static com.here.naksha.cli.copy.service.CopyServiceTestUtils.*;
+import static naksha.model.RandomFeatures.randomFeatures;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 abstract class FeaturesWriteExecutorsCommonTest {
@@ -45,7 +47,7 @@ abstract class FeaturesWriteExecutorsCommonTest {
         IWriteSession writeSession = createWriteSessionForStorageReturningSuccessResponse(storage, sessionOptions);
 
         // And: features
-        NakshaFeatureList nakshaFeatures = sampleNakshaFeatures();
+        List<NakshaFeature> nakshaFeatures = randomFeatures(10_000);
         int expectedNumOfFeatures = nakshaFeatures.size();
         FeatureTupleList featureTuples = nakshaFeatureListToFeatureTupleList(nakshaFeatures);
 
@@ -57,11 +59,14 @@ abstract class FeaturesWriteExecutorsCommonTest {
                 sessionOptions
         );
 
+        // And
+        List<WriteRequest> writeRequests = captureRequestsOfType(writeSession, WriteRequest.class);
+        List<Write> writes = writeRequestsToWrites(writeRequests);
+
         // Then:
         assertEquals(expectedNumOfFeatures, info.numberOfWrittenElements());
-        List<Write> writes = captureWrites(writeSession);
         assertCreateFeaturesWrites(writes, nakshaFeatures, targetCopyElement);
-        verify(writeSession).commit();
+        verify(writeSession, times(writeRequests.size())).commit();
     }
 
     @Test
@@ -71,17 +76,20 @@ abstract class FeaturesWriteExecutorsCommonTest {
         IWriteSession writeSession = createWriteSessionForStorageReturningErrorResponse(storage, sessionOptions);
 
         // And: features
-        NakshaFeatureList nakshaFeatures = sampleNakshaFeatures();
+        List<NakshaFeature> nakshaFeatures = randomFeatures(10_000);
         FeatureTupleList featureTuples = nakshaFeatureListToFeatureTupleList(nakshaFeatures);
 
-        // When & Then:
+        // When:
         assertThrows(FeaturesWriteExecutorException.class, () -> featuresWriteExecutor.write(
                 storage,
                 targetCopyElement,
                 featureTuples,
                 sessionOptions
         ));
-        verify(writeSession).rollback();
+
+        // Then
+        List<WriteRequest> writeRequests = captureRequestsOfType(writeSession, WriteRequest.class);
+        verify(writeSession, times(writeRequests.size())).rollback();
     }
 
     @Test
@@ -91,17 +99,20 @@ abstract class FeaturesWriteExecutorsCommonTest {
         IWriteSession writeSession = createWriteSessionForStorageReturningUnexpectedResponse(storage, sessionOptions);
 
         // And: features
-        NakshaFeatureList nakshaFeatures = sampleNakshaFeatures();
+        List<NakshaFeature> nakshaFeatures = randomFeatures(10_000);
         FeatureTupleList featureTuples = nakshaFeatureListToFeatureTupleList(nakshaFeatures);
 
-        // When & Then:
+        // When:
         assertThrows(FeaturesWriteExecutorException.class, () -> featuresWriteExecutor.write(
                 storage,
                 targetCopyElement,
                 featureTuples,
                 sessionOptions
         ));
-        verify(writeSession).rollback();
+
+        // Then
+        List<WriteRequest> writeRequests = captureRequestsOfType(writeSession, WriteRequest.class);
+        verify(writeSession, times(writeRequests.size())).rollback();
     }
 
     @Test
@@ -111,7 +122,7 @@ abstract class FeaturesWriteExecutorsCommonTest {
         createThrowingWriteSessionForStorage(storage, sessionOptions);
 
         // And: features
-        NakshaFeatureList nakshaFeatures = sampleNakshaFeatures();
+        List<NakshaFeature> nakshaFeatures = randomFeatures(10_000);
         FeatureTupleList featureTuples = nakshaFeatureListToFeatureTupleList(nakshaFeatures);
 
         // When & Then:
@@ -125,11 +136,7 @@ abstract class FeaturesWriteExecutorsCommonTest {
 
     protected abstract FeaturesWriteExecutor createFeaturesWriteExecutor();
 
-    private NakshaFeatureList sampleNakshaFeatures() {
-        return NakshaFeatureList.of(
-                new NakshaFeature("1"),
-                new NakshaFeature("2"),
-                new NakshaFeature("3")
-        );
+    protected FeatureTupleList generateFeatureTuples(int numberOfTuples) {
+        return nakshaFeatureListToFeatureTupleList(randomFeatures(numberOfTuples));
     }
 }

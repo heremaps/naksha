@@ -11,10 +11,9 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
-import static com.here.naksha.cli.copy.service.CopyServiceTestUtlis.*;
+import static com.here.naksha.cli.copy.service.CopyServiceTestUtils.*;
 import static com.here.naksha.cli.copy.service.executors.ParallelFeaturesWriteExecutor.DEFAULT_QUEUE_MULTI;
 import static com.here.naksha.cli.copy.service.executors.ParallelFeaturesWriteExecutor.DEFAULT_THREADS;
-import static naksha.model.RandomFeatures.randomFeatures;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -68,9 +67,5 @@ class ParallelFeaturesWriteExecutorTest extends FeaturesWriteExecutorsCommonTest
     @Override
     protected FeaturesWriteExecutor createFeaturesWriteExecutor() {
         return new ParallelFeaturesWriteExecutor();
-    }
-
-    private FeatureTupleList generateFeatureTuples(int numberOfTuples) {
-        return nakshaFeatureListToFeatureTupleList(randomFeatures(numberOfTuples));
     }
 }
