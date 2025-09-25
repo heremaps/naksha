@@ -14,7 +14,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.List;
 
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
-import static naksha.model.util.ResultHelper.extractResponseItems;
 
 /**
  * Writes all features in a single transaction without batching or multi-threading.

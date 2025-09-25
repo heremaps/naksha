@@ -51,7 +51,7 @@ class PsqlCopyTest {
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: prepared source
-        int countOfFeatures = 100;
+        int countOfFeatures = 10_000;
         StringList tileIds = new StringList("122013100013", "122013100020");
         IStorage sourceStorage = generatingStorageWithGivenCountOfFeaturesAndTilesIds(countOfFeatures, tileIds);
         CopyElement source = copyElementForGeneratingStorage(sourceStorage);
@@ -85,7 +85,7 @@ class PsqlCopyTest {
         CopyElement source = createMapWithEmptyCollection(storage, srcCollectionId);
 
         // And: predefined features
-        List<NakshaFeature> sourceFeatures = randomFeatures(100);
+        List<NakshaFeature> sourceFeatures = randomFeatures(10_000);
         addFeatures(storage, source.getMapId(), source.getCollectionId(), sourceFeatures, sessionOptions);
 
         // And: prepared target
@@ -116,7 +116,7 @@ class PsqlCopyTest {
         CopyElement source = createMapWithEmptyCollection(storage, srcCollectionId);
 
         // And: predefined features
-        List<NakshaFeature> sourceFeatures = randomFeatures(100);
+        List<NakshaFeature> sourceFeatures = randomFeatures(10_000);
         addFeatures(storage, source.getMapId(), source.getCollectionId(), sourceFeatures, sessionOptions);
 
         // And: prepared target with no existing map and collection
@@ -152,6 +152,7 @@ class PsqlCopyTest {
                 .setCollectionId(collectionId)
                 .build();
     }
+
     private CopyElement copyElementForGeneratingStorage(IStorage storage) {
         return new CopyElement.Builder(storage.getConfig()).build();
     }
