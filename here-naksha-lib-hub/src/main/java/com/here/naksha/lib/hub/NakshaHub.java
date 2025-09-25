@@ -71,6 +71,8 @@ public class NakshaHub implements INaksha {
 
   private static final @NotNull Logger logger = LoggerFactory.getLogger(NakshaHub.class);
 
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+
   /**
    * The NakshaHub config.
    */
@@ -353,7 +355,6 @@ public class NakshaHub implements INaksha {
             extensionRootPath + extensionIdWotEnv + "/latest-" + extEnv.toLowerCase() + ".txt");
         String exJson = fileClient.getFileContent(extensionRootPath + extensionIdWotEnv + "/"
             + extensionIdWotEnv + "-" + version + "." + extEnv.toLowerCase() + ".json");
-        ObjectMapper objectMapper = new ObjectMapper();
         Extension extension = objectMapper.readValue(exJson, Extension.class);
         extension.setEnv(extEnv);
         extList.add(extension);

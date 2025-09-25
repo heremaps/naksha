@@ -71,10 +71,15 @@ Root path: <extensionsRootPath> (S3 or local)
     |___latest-dev.txt  
     |___foo-1.0.0.dev.json
     |___foo-1.0.0.jar
+```
 
-Contents of latest-dev.txt -> 1.0.0
+Content of `latest-dev.txt`:
+```text
+1.0.0
+```
 
-Contents of foo-1.0.0.dev.json ->
+Content of `foo-1.0.0.dev.json`:
+```json
 {
   "id" : "foo",
   "type": "Extension",
@@ -82,15 +87,16 @@ Contents of foo-1.0.0.dev.json ->
   "version": "1.0.0",
   "initClassName":"",
   "properties": {
+    "whitelistClasses": ["java.*", "javax.*", "com.here.*", "jdk.internal.reflect.*", "com.sun.*", "org.w3c.dom.*", "sun.misc.*", "org.locationtech.jts.*", "org.xml.sax.*", "org.slf4j.*"]
     // custom/private properties relevant for that extension
   }
 }
-
 ```
 
 **Notes:**
 - For S3: `<extensionsRootPath>` would be something like `s3://naksha-pvt-releases/extensions`.
 - For local: `<extensionsRootPath>` would be something like `file:///Users/User/Desktop/extensions`(Windows example: `file:///C:/Users/User/Desktop/extensions`).
+- The whitelistClasses defined at the Extension level take precedence over those defined in the Naksha startup configuration.
 
 ## Extension Loading
 
