@@ -9,6 +9,8 @@ import static naksha.model.NakshaContext.newInstance;
 import com.here.naksha.app.service.NakshaApp;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +76,8 @@ public abstract class TestContext {
   private void stopNaksha() {
     nakshaRef.get().stopInstance();
   }
+
+  public @Nullable NakshaApp getNakshaAppInstance() { return nakshaRef.get(); }
 
   enum State {
     NOT_STARTED,

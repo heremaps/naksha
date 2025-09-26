@@ -24,6 +24,10 @@ import static org.junit.jupiter.api.extension.ExtensionContext.Namespace.GLOBAL;
 import com.here.naksha.app.init.context.TestContext;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import com.here.naksha.app.service.NakshaApp;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,7 +36,7 @@ import org.slf4j.LoggerFactory;
  * <p>
  * See <a href="https://stackoverflow.com/a/51556718/7033439">this SO answer</a> for some context
  */
-public class ApiTestMaintainer implements BeforeAllCallback, ExtensionContext.Store.CloseableResource {
+public class ApiTestMaintainer implements BeforeAllCallback, ExtensionContext.Store.CloseableResource, ParameterResolver {
 
   private static final Logger log = LoggerFactory.getLogger(ApiTestMaintainer.class);
 
@@ -60,5 +64,20 @@ public class ApiTestMaintainer implements BeforeAllCallback, ExtensionContext.St
    */
   private void registerCloseCallback(ExtensionContext context) {
     context.getRoot().getStore(GLOBAL).put(API_TEST_MAINTAINER_CONTEXT, this);
+  }
+
+  /*
+    Using supportsParameter and resolveParameter functions, we inject running instance of NakshaApp into the eligible JUnits.
+    First function is to identify which JUnit test is interested in NakshaApp instance.
+    Second function is to actually inject the running instance of NakshaApp.
+  */
+  @Override
+  public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+    return parameterContext.isAnnotated(NakshaAppInjection.class) && parameterContext.getParameter().getType() == NakshaApp.class;
+  }
+
+  @Override
+  public NakshaApp resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
+    return TEST_CONTEXT.getNakshaAppInstance();
   }
 }

@@ -55,9 +55,19 @@ public final class NakshaHubConfig extends NakshaFeature {
   public static final Integer DEF_REQ_BODY_LIMIT = 25;
 
   /**
-   * The maximum Http request body limit in MB.
+   * The maximum supported Http request body limit in MB.
    */
   public static final Integer MAX_REQ_BODY_LIMIT = Math.max(25, DEF_REQ_BODY_LIMIT);
+
+  /**
+   * The default Http request header limit in KB.
+   */
+  public static final Integer DEF_REQ_HEADER_LIMIT = 8;
+
+  /**
+   * The maximum supported Http request header limit in KB.
+   */
+  public static final Integer MAX_REQ_HEADER_LIMIT = Math.max(16, DEF_REQ_HEADER_LIMIT);
 
   /**
    * Returns a default application name used at many placed.
@@ -95,6 +105,7 @@ public final class NakshaHubConfig extends NakshaFeature {
   public static final String STORAGE_PARAMS = "storageParams";
   public static final String EXTENSION_CONFIG_PARAMS = "extensionConfigParams";
   public static final String REQUEST_BODY_LIMIT = "requestBodyLimit";
+  public static final String REQUEST_HEADER_LIMIT = "requestHeaderLimit";
   public static final String MAX_PARALLEL_REQUESTS_PER_CPU = "maxParallelRequestsPerCPU";
   public static final String MAX_PCT_PARALLEL_REQUESTS_PER_ACTOR = "maxPctParallelRequestsPerActor";
 
@@ -103,12 +114,20 @@ public final class NakshaHubConfig extends NakshaFeature {
     setEndpointDetailsIfInvalid();
     resolveEnv();
     Integer requestBodyLimit = getProperty(this, REQUEST_BODY_LIMIT, Integer.class);
-    if (requestBodyLimit != null && requestBodyLimit > MAX_REQ_BODY_LIMIT) {
+    if (requestBodyLimit <= 0 || requestBodyLimit > MAX_REQ_BODY_LIMIT) {
       logger.warn(
-          "Configured request body limit {} MB not supported. Falling back to default limit of {} MB",
-          requestBodyLimit,
-          DEF_REQ_BODY_LIMIT);
+              "Configured request body limit {} MB not supported. Falling back to max limit of {} MB",
+              requestBodyLimit,
+              MAX_REQ_BODY_LIMIT);
       setRequestBodyLimit(DEF_REQ_BODY_LIMIT);
+    }
+    Integer requestHeaderLimit = getProperty(this, REQUEST_HEADER_LIMIT, Integer.class);
+    if (requestHeaderLimit <= 0 || requestHeaderLimit > MAX_REQ_HEADER_LIMIT) {
+      logger.warn(
+              "Configured request header limit {} KB not supported. Falling back to max limit of {} KB",
+              requestHeaderLimit,
+              MAX_REQ_HEADER_LIMIT);
+      setRequestHeaderLimit(MAX_REQ_HEADER_LIMIT);
     }
   }
 
@@ -309,6 +328,17 @@ public final class NakshaHubConfig extends NakshaFeature {
 
   private void setRequestBodyLimit(@NotNull Integer bodyLimit) {
     setRaw(REQUEST_BODY_LIMIT, bodyLimit);
+  }
+
+  /**
+   * Optional Http header body limit in MB. Default is {@link #DEF_REQ_HEADER_LIMIT}.
+   */
+  public Integer getRequestHeaderLimit() {
+    return getOrSetProperty(this, REQUEST_HEADER_LIMIT, DEF_REQ_HEADER_LIMIT);
+  }
+
+  private void setRequestHeaderLimit(@NotNull Integer headerLimit) {
+    setRaw(REQUEST_HEADER_LIMIT, headerLimit);
   }
 
   /**
