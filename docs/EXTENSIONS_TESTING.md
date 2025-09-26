@@ -3,6 +3,10 @@
 This guide explains how to test Naksha service with custom extensions, including configuration, running the service, and verifying extension behavior.
 For demonstration purposes, we will use a sample `test` extension that adds the tag `test_tag_v1` to the feature provided in the writeFeature request.
 
+The Naksha Service receives requests through API endpoints, processes them via a pipeline of inbuilt and custom handlers. Extensions are dynamically loaded from the Extension Registry, enabling flexible customization of the event pipeline.
+
+![extensions_loading.png](diagrams%2Fextensions_loading.png)
+
 ---
 
 ## 1. Define custom startup config for Naksha
@@ -246,4 +250,21 @@ For **cloud deployments**, these changes are automatically handled by the GitLab
 
 Debugging support is essential when working with dynamically loaded extensions. Since Naksha loads extensions at runtime, you will need to attach a remote debugger.
 
-Refer to the [IntelliJ Remote Debugging Guide](https://www.baeldung.com/intellij-remote-debugging) for step-by-step instructions on setting up and attaching the debugger.
+### Running the Naksha Service with Debugging
+Use the following command to start the Naksha service with remote debugging enabled:
+
+```bash
+java -Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8888,suspend=y -jar naksha-2.2.12-all.jar test-config
+```
+**Explanation of the Flags:**
+
+- `-Xdebug` → Enables debugging.
+- `-Xrunjdwp:server=y,transport=dt_socket,address=8888,suspend=y` → Starts a remote debugging server on port `8888` and waits for the debugger to attach before running.
+- `-jar naksha-2.2.2-all.jar` → Specifies the Naksha service JAR to run.
+- `test-config` → The configuration file.
+
+
+### Attaching IntelliJ Debugger
+
+Open your extension project in IntelliJ. Attaching the IntelliJ remote debugger allows you to debug dynamically loaded extensions. For more details, refer to the [IntelliJ Remote Debugging Guide](https://www.baeldung.com/intellij-remote-debugging).
+
