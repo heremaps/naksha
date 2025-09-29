@@ -621,7 +621,7 @@ ${if (where==null) "" else "WHERE $where"};"""
      */
     var name: String
         get() = _name ?: text
-        private set(value) {
+        protected set(value) {
             _name = value
         }
 
@@ -652,7 +652,7 @@ ${if (where==null) "" else "WHERE $where"};"""
      * This is only informational purpose, because the index can be much more complicated, for example it could be a partial index, and it does not contain columns only included in the index, see [includes].
      */
     var columns: List<PgColumn> = emptyList()
-        private set
+        protected set
 
     /**
      * The natural sort order of the index, should hold one entry for each one in [columns].
@@ -660,13 +660,13 @@ ${if (where==null) "" else "WHERE $where"};"""
      * **Note**: If the sort-order is empty, but [columns] is not, this means that the index does not support sorting, e.g. `GIN` or `GIST` indices.
      */
     var naturalOrder: List<SortOrder> = emptyList()
-        private set
+        protected set
 
     /**
      * The columns being included only in the index.
      */
     var includes: List<PgColumn> = emptyList()
-        private set
+        protected set
 
     protected var createFn: Fx2<PgConnection, PgTable>? = null
     internal fun create(conn: PgConnection, table: PgTable) {
