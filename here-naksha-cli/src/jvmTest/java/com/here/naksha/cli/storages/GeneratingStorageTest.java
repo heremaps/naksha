@@ -462,10 +462,7 @@ class GeneratingStorageTest {
         if (featureBbox.getMaxLatitude() > boundingBox.getMaxLatitude()) {
             return false;
         }
-        if (featureBbox.getMaxLongitude() > boundingBox.getMaxLongitude()) {
-            return false;
-        }
-        return true;
+        return !(featureBbox.getMaxLongitude() > boundingBox.getMaxLongitude());
     }
 
     private boolean isFeatureInBboxes(NakshaFeature feature, List<SpBoundingBox> boundingBoxes) {
