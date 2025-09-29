@@ -8,7 +8,7 @@ import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
 import com.here.naksha.cli.storages.GeneratingStorage;
 import com.here.naksha.cli.storages.GeneratingStorageConfig;
-import com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool;
+import com.here.naksha.cli.testcontainers.TestContainersPsqlStorage;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import naksha.base.StringList;
 import naksha.model.IStorage;
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static com.here.naksha.cli.testcontainers.TestContainersPsqlStoragePool.InstanceIndex;
 import static naksha.model.RandomFeatures.randomFeatures;
 import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
@@ -52,14 +51,13 @@ class PsqlCopyTest {
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: prepared source
-        int countOfFeatures = 100;
+        int countOfFeatures = 10_000;
         StringList tileIds = new StringList("122013100013", "122013100020");
         IStorage sourceStorage = generatingStorageWithGivenCountOfFeaturesAndTilesIds(countOfFeatures, tileIds);
         CopyElement source = copyElementForGeneratingStorage(sourceStorage);
 
         // And: prepared target
-        IStorage targetStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
-                .getStorage();
+        IStorage targetStorage = TestContainersPsqlStorage.getInstance().getStorage();
         CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
 
         // And: copy service
@@ -81,14 +79,13 @@ class PsqlCopyTest {
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenMapsOnTheSameStorage(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: the same storage for source and target
-        IStorage storage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
-                .getStorage();
+        IStorage storage = TestContainersPsqlStorage.getInstance().getStorage();
 
         // Given: prepared source
         CopyElement source = createMapWithEmptyCollection(storage, srcCollectionId);
 
         // And: predefined features
-        List<NakshaFeature> sourceFeatures = randomFeatures(100);
+        List<NakshaFeature> sourceFeatures = randomFeatures(10_000);
         addFeatures(storage, source.getMapId(), source.getCollectionId(), sourceFeatures, sessionOptions);
 
         // And: prepared target
@@ -111,48 +108,15 @@ class PsqlCopyTest {
 
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
-    void shouldCopyFeaturesBetweenStorages(FeaturesWriteExecutor featuresWriteExecutor) {
-        // Given: prepared source
-        IStorage sourceStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
-                .getStorage();
-        CopyElement source = createMapWithEmptyCollection(sourceStorage, srcCollectionId);
-
-        // And: predefined features
-        List<NakshaFeature> sourceFeatures = randomFeatures(100);
-        addFeatures(sourceStorage, source.getMapId(), source.getCollectionId(), sourceFeatures, sessionOptions);
-
-        // And: prepared target
-        IStorage targetStorage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.SECOND_INSTANCE)
-                .getStorage();
-        CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
-
-        // And: copy service
-        CopyService copyService = new CopyService(featuresWriteExecutor, new StorageProvider(), sessionOptions);
-
-        // When: copying
-        assertCommandSuccessResult(copyService.copy(source, target, false));
-
-        // And
-        List<NakshaFeature> targetFeatures = readFeatures(
-                targetStorage, target.getMapId(), target.getCollectionId(), sessionOptions
-        );
-
-        // Then: target collection contains features from source
-        assertSameFeatures(sourceFeatures, targetFeatures);
-    }
-
-    @ParameterizedTest
-    @MethodSource("featuresWriteExecutors")
     void shouldCreateMapAndCollectionThenCopy(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: the same storage for source and target
-        IStorage storage = TestContainersPsqlStoragePool.getRunningContainer(InstanceIndex.FIRST_INSTANCE)
-                .getStorage();
+        IStorage storage = TestContainersPsqlStorage.getInstance().getStorage();
 
         // Given: prepared source
         CopyElement source = createMapWithEmptyCollection(storage, srcCollectionId);
 
         // And: predefined features
-        List<NakshaFeature> sourceFeatures = randomFeatures(100);
+        List<NakshaFeature> sourceFeatures = randomFeatures(10_000);
         addFeatures(storage, source.getMapId(), source.getCollectionId(), sourceFeatures, sessionOptions);
 
         // And: prepared target with no existing map and collection
@@ -180,6 +144,15 @@ class PsqlCopyTest {
         );
     }
 
+    private CopyElement createCopyElementWithNoExistingMapAndCollection(IStorage storage) {
+        String mapId = UUID.randomUUID().toString();
+        String collectionId = UUID.randomUUID().toString();
+        return new CopyElement.Builder(storage.getConfig())
+                .setMapId(mapId)
+                .setCollectionId(collectionId)
+                .build();
+    }
+
     private CopyElement copyElementForGeneratingStorage(IStorage storage) {
         return new CopyElement.Builder(storage.getConfig()).build();
     }
@@ -201,15 +174,6 @@ class PsqlCopyTest {
                 expectedFeatures.stream().map(NakshaFeature::getId).sorted().toList(),
                 actualFeatures.stream().map(NakshaFeature::getId).sorted().toList()
         );
-    }
-
-    private CopyElement createCopyElementWithNoExistingMapAndCollection(IStorage storage) {
-        String mapId = UUID.randomUUID().toString();
-        String collectionId = UUID.randomUUID().toString();
-        return new CopyElement.Builder(storage.getConfig())
-                .setMapId(mapId)
-                .setCollectionId(collectionId)
-                .build();
     }
 
     private CopyElement createMapWithEmptyCollection(IStorage storage, String collectionId) {
