@@ -3,7 +3,7 @@
   "type": "Feature",
 
   "httpPort": 8080,
-  "env": "dev",
+  "env": "local",
   "requestBodyLimit": 25,
   "requestHeaderLimit": 16,
   "authMode": "DUMMY",
@@ -15,9 +15,5 @@
     "pg_hint_plan": false,
     "pg_stat_statements": false
   },
-  "extensionConfigParams": {
-    "whitelistClasses": ["java.*","javax.*","com.here.*","jdk.internal.reflect.*","com.sun.*","org.w3c.dom.*","sun.misc.*"],
-    "intervalms": 10000,
-    "extensionsRootPath": "file:///Users/lakde/Desktop/extensions/"
-  }
+  "extensionConfigParams": null
 }
