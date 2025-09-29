@@ -11,8 +11,7 @@ public final class LoggingMixin {
             names = {"--logLevel"},
             description = {
                     "Valid values: ${COMPLETION-CANDIDATES}"
-            },
-            showDefaultValue = CommandLine.Help.Visibility.ALWAYS
+            }
     )
     private static Level logLevel = Level.INFO;
 

@@ -34,7 +34,8 @@ public final class OneShotFeaturesWriteExecutor implements FeaturesWriteExecutor
     /**
      * {@inheritDoc}
      * <p>
-     * This implementation calls {@link naksha.model.util.ResultHelper#extractResponseItems(SuccessResponse, Class)} on the {@code featureTuples},so may be modified.
+     * This implementation calls {@link naksha.model.util.ResultHelper#extractResponseItems(SuccessResponse, Class)} on the {@code featureTuples},
+     * so may be modified.
      */
     @Override
     public FeaturesWriteExecutorInfo write(

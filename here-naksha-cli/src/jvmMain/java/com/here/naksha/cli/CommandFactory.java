@@ -1,8 +1,8 @@
 package com.here.naksha.cli;
 
 import com.here.naksha.cli.copy.CopyCommand;
-import com.here.naksha.cli.copy.service.CopyServiceFactory;
 import com.here.naksha.cli.copy.service.StorageProvider;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
 import picocli.CommandLine;
 
 final class CommandFactory implements CommandLine.IFactory {
