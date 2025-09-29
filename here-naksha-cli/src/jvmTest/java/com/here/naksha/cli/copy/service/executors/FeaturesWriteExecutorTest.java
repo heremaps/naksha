@@ -15,6 +15,8 @@ import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
@@ -25,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-abstract class FeaturesWriteExecutorsCommonTest {
+abstract class FeaturesWriteExecutorTest {
     private final FeaturesWriteExecutor featuresWriteExecutor = createFeaturesWriteExecutor();
     private final NakshaStorage targetNakshaStorage = new NakshaStorage("target", "targetclassname");
     protected final CopyElement targetCopyElement = new CopyElement.Builder(targetNakshaStorage)
@@ -40,15 +42,15 @@ abstract class FeaturesWriteExecutorsCommonTest {
         sessionOptions = SessionOptions.from(nakshaContext);
     }
 
-    @Test
-    final void shouldWrite() throws FeaturesWriteExecutorException {
+    @ParameterizedTest
+    @ValueSource(ints = {256, 299, 10_000})
+    final void shouldWrite(int numOfFeatures) throws FeaturesWriteExecutorException {
         // Given:
         IStorage storage = createTargetStorage(sessionOptions);
         IWriteSession writeSession = createWriteSessionForStorageReturningSuccessResponse(storage, sessionOptions);
 
         // And: features
-        List<NakshaFeature> nakshaFeatures = randomFeatures(10_000);
-        int expectedNumOfFeatures = nakshaFeatures.size();
+        List<NakshaFeature> nakshaFeatures = randomFeatures(numOfFeatures);
         FeatureTupleList featureTuples = nakshaFeatureListToFeatureTupleList(nakshaFeatures);
 
         // When:
@@ -64,7 +66,7 @@ abstract class FeaturesWriteExecutorsCommonTest {
         List<Write> writes = writeRequestsToWrites(writeRequests);
 
         // Then:
-        assertEquals(expectedNumOfFeatures, info.numberOfWrittenElements());
+        assertEquals(numOfFeatures, info.numberOfWrittenElements());
         assertCreateFeaturesWrites(writes, nakshaFeatures, targetCopyElement);
         verify(writeSession, times(writeRequests.size())).commit();
     }

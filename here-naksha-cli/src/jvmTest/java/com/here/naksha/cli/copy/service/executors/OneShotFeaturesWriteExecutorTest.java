@@ -6,16 +6,18 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.request.FeatureTupleList;
 import naksha.model.request.WriteRequest;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.List;
 
 import static com.here.naksha.cli.copy.service.CopyServiceTestUtils.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-class OneShotFeaturesWriteExecutorTest extends FeaturesWriteExecutorsCommonTest {
-    @Test
-    void shouldCopyInOneBatch() throws FeaturesWriteExecutorException {
+class OneShotFeaturesWriteExecutorTest extends FeaturesWriteExecutorTest {
+    @ParameterizedTest
+    @ValueSource(ints = {256, 299, 10_000})
+    void shouldCopyInOneBatch(int numOfTuples) throws FeaturesWriteExecutorException {
         // Given
         FeaturesWriteExecutor parallelFeaturesWriteExecutor = createFeaturesWriteExecutor();
 
@@ -24,11 +26,7 @@ class OneShotFeaturesWriteExecutorTest extends FeaturesWriteExecutorsCommonTest 
         IWriteSession writeSession = createWriteSessionForStorageReturningSuccessResponse(storage, sessionOptions);
 
         // And
-        int numOfTuples = 10_000;
         FeatureTupleList featureTuples = generateFeatureTuples(numOfTuples);
-
-        // And
-        int expectedNumOfBatches = 1;
 
         // When
         parallelFeaturesWriteExecutor.write(
@@ -42,7 +40,7 @@ class OneShotFeaturesWriteExecutorTest extends FeaturesWriteExecutorsCommonTest 
         List<WriteRequest> writeRequests = captureRequestsOfType(writeSession, WriteRequest.class);
 
         // Then: should copy in the one batch
-        assertEquals(expectedNumOfBatches, writeRequests.size());
+        assertEquals(1, writeRequests.size());
     }
 
     @Override

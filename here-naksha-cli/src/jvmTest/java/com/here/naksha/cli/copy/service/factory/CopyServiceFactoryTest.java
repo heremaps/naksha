@@ -2,7 +2,7 @@ package com.here.naksha.cli.copy.service.factory;
 
 import com.here.naksha.cli.copy.service.CopyService;
 import com.here.naksha.cli.copy.service.StorageProvider;
-import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.FeaturesWriteExecutors;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.WriteMode;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,8 +25,8 @@ class CopyServiceFactoryTest {
     }
 
     @ParameterizedTest
-    @EnumSource(FeaturesWriteExecutors.class)
-    void shouldCreate(FeaturesWriteExecutors featuresWriteExecutor) {
+    @EnumSource(WriteMode.class)
+    void shouldCreate(WriteMode featuresWriteExecutor) {
         // When
         CopyService copyService = copyServiceFactory.create(
                 storageProvider,
@@ -41,7 +41,7 @@ class CopyServiceFactoryTest {
     @Test
     void shouldCreateWhenSettingThreadsForParallel() {
         // Given: parallel feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.PARALLEL;
+        WriteMode featuresWriteExecutor = WriteMode.PARALLEL;
 
         // When
         CopyService copyService = copyServiceFactory.create(
@@ -60,7 +60,7 @@ class CopyServiceFactoryTest {
     @Test
     void shouldCreateWhenSettingQueueMultiForParallel() {
         // Given: parallel feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.PARALLEL;
+        WriteMode featuresWriteExecutor = WriteMode.PARALLEL;
 
         // When
         CopyService copyService = copyServiceFactory.create(
@@ -79,7 +79,7 @@ class CopyServiceFactoryTest {
     @Test
     void shouldCreateWhenSettingMaxBatchSizeForParallel() {
         // Given: parallel feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.PARALLEL;
+        WriteMode featuresWriteExecutor = WriteMode.PARALLEL;
 
         // When
         CopyService copyService = copyServiceFactory.create(
@@ -98,7 +98,7 @@ class CopyServiceFactoryTest {
     @Test
     void shouldThrowWhenSettingThreadsForOneShot() {
         // Given: one shot feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.ONE_SHOT;
+        WriteMode featuresWriteExecutor = WriteMode.ONE_SHOT;
 
         // When & Then
         assertThrows(CopyServiceFactoryException.class, () -> copyServiceFactory.create(
@@ -114,7 +114,7 @@ class CopyServiceFactoryTest {
     @Test
     void shouldThrowWhenSettingMaxBatchSizeForOneShot() {
         // Given: one shot feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.ONE_SHOT;
+        WriteMode featuresWriteExecutor = WriteMode.ONE_SHOT;
 
         // When & Then
         assertThrows(CopyServiceFactoryException.class, () -> copyServiceFactory.create(
@@ -130,7 +130,7 @@ class CopyServiceFactoryTest {
     @Test
     void shouldThrowWhenSettingQueueMultiForOneShot() {
         // Given: one shot feature write executor
-        FeaturesWriteExecutors featuresWriteExecutor = FeaturesWriteExecutors.ONE_SHOT;
+        WriteMode featuresWriteExecutor = WriteMode.ONE_SHOT;
 
         // When & Then
         assertThrows(CopyServiceFactoryException.class, () -> copyServiceFactory.create(

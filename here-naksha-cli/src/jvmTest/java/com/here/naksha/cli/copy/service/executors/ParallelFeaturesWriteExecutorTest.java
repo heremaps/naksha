@@ -7,9 +7,11 @@ import naksha.model.IWriteSession;
 import naksha.model.request.FeatureTupleList;
 import naksha.model.request.WriteRequest;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import static com.here.naksha.cli.copy.service.CopyServiceTestUtils.*;
 import static com.here.naksha.cli.copy.service.executors.ParallelFeaturesWriteExecutor.DEFAULT_QUEUE_MULTI;
@@ -17,10 +19,10 @@ import static com.here.naksha.cli.copy.service.executors.ParallelFeaturesWriteEx
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class ParallelFeaturesWriteExecutorTest extends FeaturesWriteExecutorsCommonTest {
+class ParallelFeaturesWriteExecutorTest extends FeaturesWriteExecutorTest {
     @ParameterizedTest
-    @ValueSource(ints = {100, 200, 666, 10_000, 20_000})
-    void shouldCopyInBatches(int maxBatchSize) throws FeaturesWriteExecutorException {
+    @MethodSource
+    void shouldCopyInBatches(int maxBatchSize, int numOfTuples, int expectedNumOfBatches) throws FeaturesWriteExecutorException {
         // Given
         ParallelFeaturesWriteExecutor parallelFeaturesWriteExecutor = new ParallelFeaturesWriteExecutor(
                 DEFAULT_THREADS,
@@ -33,11 +35,7 @@ class ParallelFeaturesWriteExecutorTest extends FeaturesWriteExecutorsCommonTest
         IWriteSession writeSession = createWriteSessionForStorageReturningSuccessResponse(storage, sessionOptions);
 
         // And
-        int numOfTuples = 10_000;
         FeatureTupleList featureTuples = generateFeatureTuples(numOfTuples);
-
-        // And
-        int expectedNumOfBatches = Math.ceilDiv(numOfTuples, maxBatchSize);
 
         // When
         parallelFeaturesWriteExecutor.write(
@@ -61,6 +59,16 @@ class ParallelFeaturesWriteExecutorTest extends FeaturesWriteExecutorsCommonTest
                             "Batch size should be <= maxBatchSize, but %s > %s".formatted(batchSize, maxBatchSize)
                     );
                 }
+        );
+    }
+
+    private static Stream<Arguments> shouldCopyInBatches() {
+        return Stream.of(
+                // maxBatchSize, numOfTuples, expectedNumOfBatches
+                Arguments.of(100, 10_000, 100),
+                Arguments.of(10, 10_000, 1000),
+                Arguments.of(1000, 999, 1),
+                Arguments.of(666, 2137, 4)
         );
     }
 

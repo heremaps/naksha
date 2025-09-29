@@ -12,10 +12,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Optional;
 
 public final class CopyServiceFactory {
-    public enum FeaturesWriteExecutors {
+    public enum WriteMode {
         PARALLEL("Each batch in a new transaction. " +
                 "Multi-threaded. " +
-                "Default number of threads Runtime.getRuntime().availableProcessors(). " +
+                "Default number of threads %s. ".formatted(ParallelFeaturesWriteExecutor.DEFAULT_THREADS) +
                 "Default max batch size %s. ".formatted(ParallelFeaturesWriteExecutor.DEFAULT_MAX_BATCH_SIZE) +
                 "Default queue multiplier %s. ".formatted(ParallelFeaturesWriteExecutor.DEFAULT_QUEUE_MULTI)
         ),
@@ -26,7 +26,7 @@ public final class CopyServiceFactory {
 
         private final String description;
 
-        FeaturesWriteExecutors(@NotNull String description) {
+        WriteMode(@NotNull String description) {
             this.description = description;
         }
 
@@ -39,21 +39,21 @@ public final class CopyServiceFactory {
     /**
      * Creates {@link CopyService}'s instance for your needs!
      *
-     * @param storageProvider       the storage provider for the {@link CopyService}
-     * @param sessionOptions        the session options for the {@link CopyService}
-     * @param featuresWriteExecutor the type of executor to be used in the {@link CopyService}
-     * @param threads               the number of threads in the pool for {@link CopyService}'s {@link FeaturesWriteExecutor};
-     *                              If not applicable, just pass {@code null} and default wil be used.
-     *                              Otherwise, if the {@code featuresWriteExecutor} is not accepting this parameter,
-     *                              a {@link CopyServiceFactoryException} is thrown.
-     * @param queueMulti            the multiplier used to calculate the size of the {@link CopyService}'s {@link FeaturesWriteExecutor} task queue;
-     *                              If not applicable, just pass {@code null} and default wil be used.
-     *                              Otherwise, if the {@code featuresWriteExecutor} is not accepting this parameter,
-     *                              a {@link CopyServiceFactoryException} is thrown.
-     * @param maxBatchSize          the max batch size for {@link CopyService}'s {@link FeaturesWriteExecutor};
-     *                              If not applicable, just pass {@code null} and default wil be used.
-     *                              Otherwise, if the {@code featuresWriteExecutor} is not accepting this parameter,
-     *                              a {@link CopyServiceFactoryException} is thrown.
+     * @param storageProvider the storage provider for the {@link CopyService}
+     * @param sessionOptions  the session options for the {@link CopyService}
+     * @param writeMode       the type of executor to be used in the {@link CopyService}
+     * @param threads         the number of threads in the pool for {@link CopyService}'s {@link FeaturesWriteExecutor};
+     *                        If not applicable, just pass {@code null} and default wil be used.
+     *                        Otherwise, if the {@code featuresWriteExecutor} is not accepting this parameter,
+     *                        a {@link CopyServiceFactoryException} is thrown.
+     * @param queueMulti      the multiplier used to calculate the size of the {@link CopyService}'s {@link FeaturesWriteExecutor} task queue;
+     *                        If not applicable, just pass {@code null} and default wil be used.
+     *                        Otherwise, if the {@code featuresWriteExecutor} is not accepting this parameter,
+     *                        a {@link CopyServiceFactoryException} is thrown.
+     * @param maxBatchSize    the max batch size for {@link CopyService}'s {@link FeaturesWriteExecutor};
+     *                        If not applicable, just pass {@code null} and default wil be used.
+     *                        Otherwise, if the {@code featuresWriteExecutor} is not accepting this parameter,
+     *                        a {@link CopyServiceFactoryException} is thrown.
      * @return configured {@link CopyService} instance
      * @throws CopyServiceFactoryException if the {@link CopyService} cannot be created
      */
@@ -61,12 +61,12 @@ public final class CopyServiceFactory {
     public CopyService create(
             @NotNull StorageProvider storageProvider,
             @NotNull SessionOptions sessionOptions,
-            @NotNull CopyServiceFactory.FeaturesWriteExecutors featuresWriteExecutor,
+            @NotNull CopyServiceFactory.WriteMode writeMode,
             @Nullable Integer threads,
             @Nullable Integer queueMulti,
             @Nullable Integer maxBatchSize
     ) {
-        FeaturesWriteExecutor fwe = switch (featuresWriteExecutor) {
+        FeaturesWriteExecutor fwe = switch (writeMode) {
             case PARALLEL -> {
                 threads = Optional.ofNullable(threads).orElse(ParallelFeaturesWriteExecutor.DEFAULT_THREADS);
                 queueMulti = Optional.ofNullable(queueMulti).orElse(ParallelFeaturesWriteExecutor.DEFAULT_QUEUE_MULTI);
@@ -78,9 +78,9 @@ public final class CopyServiceFactory {
                 );
             }
             case ONE_SHOT -> {
-                requireThreadsIsNull(threads, featuresWriteExecutor);
-                requireQueueMultiIsNull(queueMulti, featuresWriteExecutor);
-                requireMaxBatchSizeIsNull(maxBatchSize, featuresWriteExecutor);
+                requireThreadsIsNull(threads, writeMode);
+                requireQueueMultiIsNull(queueMulti, writeMode);
+                requireMaxBatchSizeIsNull(maxBatchSize, writeMode);
                 yield new OneShotFeaturesWriteExecutor();
             }
         };
@@ -94,35 +94,35 @@ public final class CopyServiceFactory {
 
     /**
      * Creates a {@link CopyService} by calling
-     * {@link CopyServiceFactory#create(StorageProvider, SessionOptions, FeaturesWriteExecutors, Integer, Integer, Integer)},
+     * {@link CopyServiceFactory#create(StorageProvider, SessionOptions, WriteMode, Integer, Integer, Integer)},
      * passing {@code null} for the three optional {@code Integer} parameters.
      */
     public CopyService create(
             @NotNull StorageProvider storageProvider,
             @NotNull SessionOptions sessionOptions,
-            @NotNull CopyServiceFactory.FeaturesWriteExecutors featuresWriteExecutorBuilder
+            @NotNull CopyServiceFactory.WriteMode writeMode
     ) {
         return create(
                 storageProvider,
                 sessionOptions,
-                featuresWriteExecutorBuilder,
+                writeMode,
                 null, null, null
         );
     }
 
-    private void requireThreadsIsNull(Integer threads, FeaturesWriteExecutors featuresWriteExecutor) {
+    private void requireThreadsIsNull(Integer threads, WriteMode featuresWriteExecutor) {
         if (threads != null) {
             throw new CopyServiceFactoryException("%s does not accept threads as parameter!".formatted(featuresWriteExecutor.name()));
         }
     }
 
-    private void requireQueueMultiIsNull(Integer queueMulti, FeaturesWriteExecutors featuresWriteExecutor) {
+    private void requireQueueMultiIsNull(Integer queueMulti, WriteMode featuresWriteExecutor) {
         if (queueMulti != null) {
             throw new CopyServiceFactoryException("%s does not accept queueMulti as parameter!".formatted(featuresWriteExecutor.name()));
         }
     }
 
-    private void requireMaxBatchSizeIsNull(Integer maxBatchSize, FeaturesWriteExecutors featuresWriteExecutor) {
+    private void requireMaxBatchSizeIsNull(Integer maxBatchSize, WriteMode featuresWriteExecutor) {
         if (maxBatchSize != null) {
             throw new CopyServiceFactoryException("%s does not accept maxBatchSize as parameter!".formatted(featuresWriteExecutor.name()));
         }
