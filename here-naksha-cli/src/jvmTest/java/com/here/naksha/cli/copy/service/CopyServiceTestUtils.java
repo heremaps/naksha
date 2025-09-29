@@ -5,7 +5,6 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.*;
 import org.mockito.ArgumentCaptor;
 
@@ -16,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-public final class CopyServiceTestUtlis {
-    private CopyServiceTestUtlis() {
+public final class CopyServiceTestUtils {
+    private CopyServiceTestUtils() {
     }
 
     public static IWriteSession createThrowingWriteSessionForStorage(IStorage storage, SessionOptions sessionOptions) {
@@ -38,7 +37,7 @@ public final class CopyServiceTestUtlis {
         return writeSession;
     }
 
-    public static FeatureTupleList nakshaFeatureListToFeatureTupleList(NakshaFeatureList nakshaFeatures) {
+    public static FeatureTupleList nakshaFeatureListToFeatureTupleList(List<NakshaFeature> nakshaFeatures) {
         SuccessResponse successResponse = new SuccessResponse(nakshaFeatures);
         return successResponse.getFeatureTupleList();
     }
@@ -56,7 +55,11 @@ public final class CopyServiceTestUtlis {
     }
 
     public static List<Write> captureWrites(IWriteSession writeSession) {
-        return captureRequestsOfType(writeSession, WriteRequest.class).stream()
+        return writeRequestsToWrites(captureRequestsOfType(writeSession, WriteRequest.class));
+    }
+
+    public static List<Write> writeRequestsToWrites(List<WriteRequest> writeRequests) {
+        return writeRequests.stream()
                 .flatMap(wr -> wr.getWrites().stream())
                 .toList();
     }

@@ -10,7 +10,8 @@ import picocli.CommandLine;
         subcommands = {
                 CopyCommand.class
         },
-        versionProvider = VersionInfo.class
+        versionProvider = VersionInfo.class,
+        showDefaultValues = true
 )
 public final class NakshaCliCommand {
     @CommandLine.Mixin

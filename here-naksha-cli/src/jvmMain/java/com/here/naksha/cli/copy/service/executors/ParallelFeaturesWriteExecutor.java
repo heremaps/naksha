@@ -23,18 +23,41 @@ import static naksha.model.util.RequestHelper.createFeaturesRequest;
 /**
  * Writes features in batches and in parallel, with each batch executed in a separate transaction.
  * This implementation does not fail if a single batch fails; failed batches are skipped.
- *
- * <p>Default settings:</p>
- * <ul>
- *   <li>Number of threads in the pool: <code>Runtime.getRuntime().availableProcessors()</code></li>
- *   <li>Maximum batch size: 256</li>
- * </ul>
  */
 public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecutor {
+    public static final int DEFAULT_THREADS = Runtime.getRuntime().availableProcessors();
+    public static final int DEFAULT_QUEUE_MULTI = 4;
+    public static final int DEFAULT_MAX_BATCH_SIZE = 256;
     private static final Logger logger = LoggerFactory.getLogger(ParallelFeaturesWriteExecutor.class);
-    private static final int CORES = Runtime.getRuntime().availableProcessors();
-    private static final int QUEUE_MULTI = 4;
-    private static final int MAX_BATCH_SIZE = 256;
+    private final int threads;
+    private final int queueMulti;
+    private final int maxBatchSize;
+
+    /**
+     * @param threads      the number of threads to be used; must be a positive integer
+     * @param queueMulti   the queue multiplier; must be a positive integer; the queue size is computed as: threads * queueMulti
+     * @param maxBatchSize the maximum batch size; must be a positive integer
+     */
+    public ParallelFeaturesWriteExecutor(
+            int threads,
+            int queueMulti,
+            int maxBatchSize
+    ) {
+        this.threads = threads;
+        this.queueMulti = queueMulti;
+        this.maxBatchSize = maxBatchSize;
+    }
+
+    /**
+     * Calls {@link ParallelFeaturesWriteExecutor#ParallelFeaturesWriteExecutor(int, int, int)} with defaults
+     */
+    public ParallelFeaturesWriteExecutor() {
+        this(
+                DEFAULT_THREADS,
+                DEFAULT_QUEUE_MULTI,
+                DEFAULT_MAX_BATCH_SIZE
+        );
+    }
 
     /**
      * {@inheritDoc}
@@ -74,15 +97,15 @@ public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecuto
         AtomicInt copied = new JvmAtomicInt(0);
         int totalToCopy = featureTuples.size();
         try (ThreadPoolExecutor executorService = new ThreadPoolExecutor(
-                CORES,
-                CORES,
+                threads,
+                threads,
                 0,
                 TimeUnit.SECONDS,
-                new ArrayBlockingQueue<>(CORES * QUEUE_MULTI),
+                new ArrayBlockingQueue<>(threads * queueMulti),
                 new ThreadPoolExecutor.CallerRunsPolicy()
         )) {
             while (!featureTuples.isEmpty()) {
-                FeatureTupleList batch = popBatch(featureTuples, MAX_BATCH_SIZE);
+                FeatureTupleList batch = popBatch(featureTuples, maxBatchSize);
                 executorService.execute(
                         writeBatch(storage, target, context, copied, totalToCopy, batch, sessionOptions)
                 );
