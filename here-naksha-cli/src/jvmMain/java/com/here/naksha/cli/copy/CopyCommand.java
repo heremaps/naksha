@@ -86,8 +86,7 @@ public final class CopyCommand implements Callable<Integer> {
                 description = {
                         "URI for target storage.",
                         "Formats:",
-                        "jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}",
-                        "gen://{count}[:{idsPrefix}]?tileIds={tileId1}[,{tileId2},...]"
+                        "jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}"
                 },
                 required = true
         )
