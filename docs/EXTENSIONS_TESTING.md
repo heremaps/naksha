@@ -3,7 +3,8 @@
 This guide explains how to test Naksha service with custom extensions, including configuration, running the service, and verifying extension behavior.
 For demonstration purposes, we will use a sample `test` extension that adds the tag `test_tag_v1` to the feature provided in the writeFeature request.
 
-The Naksha Service receives requests through API endpoints, processes them via a pipeline of inbuilt and custom handlers. Extensions are dynamically loaded from the Extension Registry, enabling flexible customization of the event pipeline.
+The Naksha Hub (REST Service) receives requests through API endpoints, processes them via internal synchronous pipeline by invoking pre-configured inbuilt / custom Event Handlers.
+When pipeline encounters custom handler, the respective EventHandler implementation is loaded from the cached copy of Extension. The Extensions are (un)cached dynamically (via background job) from the external Extension Registry (S3 bucket or local folder). The setup thus, allows flexibility in injecting the custom business logic as part of pipeline execution.
 
 ![extensions_loading.png](diagrams%2Fextensions_loading.png)
 
@@ -43,7 +44,7 @@ Start Naksha Service with your custom configuration. Follow the steps below:
 1. **Prepare the config directory** as per the configuration instructions: [Naksha Service Configuration](../README.md#configuration).
 2. **Start Naksha Service using the custom config**. For example, you can run:  
 ```bash
-java -jar build/libs/naksha-2.2.12-all.jar test-config
+java -jar build/libs/naksha-2.2.12-all.jar extension-config
 ```
 
 ## 3. Releasing a Custom Extension for Specific Environment
@@ -72,7 +73,8 @@ Contents of `naksha-test-extension-1.0.0.local.json`:
       "type": "Extension",
       "url": "file:///app/naksha/extensions/naksha-test-extension/naksha-test-extension-1.0.0-shaded.jar",
       "version": "1.0.0",
-      "initClassName": "",
+      // Optional : if extension supports initialization / shutdown hook
+      // "initClassName": "com.here.naksha.ext.tag.SampleInit"
       "properties": {
         "whitelistClasses": ["java.*", "javax.*", "com.here.*", "jdk.internal.reflect.*", "com.sun.*", "org.w3c.dom.*", "sun.misc.*", "org.locationtech.jts.*", "org.xml.sax.*", "org.slf4j.*"]
       }
@@ -207,29 +209,6 @@ Example relevant log entries:
 2025-09-24 15:30:48.465 -0500 [INFO ]  [NakshaWorker#2] - app.service.util.logging.AccessLogUtil (writeAccessLog:225) {streamId=3Yr6hZRsTSS9} - [REST API stats => spaceId,storageId,method,uri,status,timeTakenMs,resSize,timeWithoutStorageMs] - RESTAPIStats test_space - POST /hub/spaces/test_space/features 200 37 68 37 
 ```
 
-<details> <summary>Complete logs </summary>
-
-```text
-2025-09-24 15:30:48.426 -0500 [INFO ]  [vert.x-eventloop-thread-16] - app.service.util.logging.AccessLogUtil (addRequestInfo:159) {streamId=3Yr6hZRsTSS9} - Request POST - /hub/spaces/test_space/features 
-2025-09-24 15:30:48.440 -0500 [INFO ]  [NakshaWorker#2] - app.service.http.tasks.WriteFeatureApiTask (execute:88) {streamId=3Yr6hZRsTSS9} - Received Http request CREATE_FEATURES 
-2025-09-24 15:30:48.447 -0500 [INFO ]  [NakshaWorker#2] - lib.hub.storages.NHSpaceStorageReader (executeReadFeatures:216) {streamId=3Yr6hZRsTSS9} - ReadFeatures Request against spaceId=test_space 
-2025-09-24 15:30:48.447 -0500 [INFO ]  [NakshaWorker#2] - lib.psql.PostgresStorage (initSession:327) {streamId=3Yr6hZRsTSS9} - Init session using stmtTimeout=60000ms, lockTimeout=1000ms 
-2025-09-24 15:30:48.449 -0500 [INFO ]  [NakshaWorker#2] - lib.hub.storages.NHSpaceStorageReader (setupEventPipelineForSpaceId:289) {streamId=3Yr6hZRsTSS9} - Handler IDs identified [test_handler] 
-2025-09-24 15:30:48.451 -0500 [INFO ]  [NakshaWorker#2] - lib.hub.storages.NHSpaceStorageReader (setupEventPipelineForSpaceId:338) {streamId=3Yr6hZRsTSS9} - Handler types identified [TestHandler] 
-2025-09-24 15:30:48.451 -0500 [INFO ]  [NakshaWorker#2] - ext.test.handlers.TestHandler (processEvent:45) {streamId=3Yr6hZRsTSS9} - Handler received request ReadFeaturesProxyWrapper 
-2025-09-24 15:30:48.451 -0500 [INFO ]  [NakshaWorker#2] - lib.hub.storages.NHSpaceStorageWriter (executeWriteFeatures:101) {streamId=3Yr6hZRsTSS9} - WriteFeatures Request against spaceId=test_space 
-2025-09-24 15:30:48.452 -0500 [INFO ]  [NakshaWorker#2] - lib.psql.PostgresStorage (initSession:327) {streamId=3Yr6hZRsTSS9} - Init session using stmtTimeout=60000ms, lockTimeout=1000ms 
-2025-09-24 15:30:48.454 -0500 [INFO ]  [NakshaWorker#2] - lib.hub.storages.NHSpaceStorageReader (setupEventPipelineForSpaceId:289) {streamId=3Yr6hZRsTSS9} - Handler IDs identified [test_handler] 
-2025-09-24 15:30:48.455 -0500 [INFO ]  [NakshaWorker#2] - lib.hub.storages.NHSpaceStorageReader (setupEventPipelineForSpaceId:338) {streamId=3Yr6hZRsTSS9} - Handler types identified [TestHandler] 
-2025-09-24 15:30:48.455 -0500 [INFO ]  [NakshaWorker#2] - ext.test.handlers.TestHandler (processEvent:45) {streamId=3Yr6hZRsTSS9} - Handler received request WriteXyzFeatures 
-2025-09-24 15:30:48.465 -0500 [INFO ]  [NakshaWorker#2] - app.service.util.logging.AccessLogUtil (writeAccessLog:219) {streamId=3Yr6hZRsTSS9} - {"time":"2025-09-24T20:30:48,464","clientInfo":{"appId":"naksha","ip":"0:0:0:0:0:0:0:1","realm":null,"remoteAddress":"0:0:0:0:0:0:0:1:60076","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36","userId":"master-test-user"},"ms":37,"ns":37950490,"reqInfo":{"accept":"application/geo+json","contentType":"application/geo+json","method":"POST","origin":"http://localhost:8080","referer":"http://localhost:8080/hub/swagger/index.html","size":540,"uri":"/hub/spaces/test_space/features"},"respInfo":{"contentType":"application/geo+json","size":68,"statusCode":200,"statusMsg":"OK"},"src":null,"streamId":"3Yr6hZRsTSS9","streamInfo":{"spaceId":"test_space","timeInStorageMs":0},"t":"STREAM","timeWithoutStorageMs":37,"unixtime":1758745848464} 
-2025-09-24 15:30:48.465 -0500 [INFO ]  [NakshaWorker#2] - app.service.util.logging.AccessLogUtil (writeAccessLog:225) {streamId=3Yr6hZRsTSS9} - [REST API stats => spaceId,storageId,method,uri,status,timeTakenMs,resSize,timeWithoutStorageMs] - RESTAPIStats test_space - POST /hub/spaces/test_space/features 200 37 68 37 
-2025-09-24 15:30:48.465 -0500 [INFO ]  [NakshaWorker#2] - app.service.http.NakshaHttpVerticle (sendRawResponse:694) {streamId=3Yr6hZRsTSS9} - Returned Http status 200 
-2025-09-24 15:30:50.815 -0500 [INFO ]  [Thread-1] - lib.extmanager.ExtensionCache (run:40) {} - Extension cache refresh job started
-```
-
-</details>
-
 ## 8. Releasing New Versions
 
 When releasing a new version of an extension, Naksha will automatically detect changes and reload the extension if any of the following fields differ from the currently loaded version **by unloading the previously loaded extension version (if any)**:
@@ -254,17 +233,17 @@ Debugging support is essential when working with dynamically loaded extensions. 
 Use the following command to start the Naksha service with remote debugging enabled:
 
 ```bash
-java -Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8888,suspend=y -jar naksha-2.2.12-all.jar test-config
+java -Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8888,suspend=y -jar naksha-2.2.12-all.jar extension-config
 ```
 **Explanation of the Flags:**
 
 - `-Xdebug` → Enables debugging.
 - `-Xrunjdwp:server=y,transport=dt_socket,address=8888,suspend=y` → Starts a remote debugging server on port `8888` and waits for the debugger to attach before running.
 - `-jar naksha-2.2.2-all.jar` → Specifies the Naksha service JAR to run.
-- `test-config` → The configuration file.
+- `extension-config` → The configuration file.
 
 
 ### Attaching IntelliJ Debugger
 
-Open your extension project in IntelliJ. Attaching the IntelliJ remote debugger allows you to debug dynamically loaded extensions. For more details, refer to the [IntelliJ Remote Debugging Guide](https://www.baeldung.com/intellij-remote-debugging).
+Open your extension project in IntelliJ. Attaching the IntelliJ remote debugger allows you to debug dynamically loaded extensions. For more details, refer to the [IntelliJ Remote Debugging Guide](https://www.jetbrains.com/help/idea/tutorial-remote-debug.html).
 
