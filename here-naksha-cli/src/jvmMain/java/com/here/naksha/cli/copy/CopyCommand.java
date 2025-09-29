@@ -1,5 +1,6 @@
 package com.here.naksha.cli.copy;
 
+import com.here.naksha.cli.copy.resolvers.GeneralStorageUriResolver;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.WriteMode;
@@ -17,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import picocli.CommandLine;
 
 import java.io.PrintWriter;
+import java.net.URI;
 import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
@@ -35,19 +37,62 @@ import java.util.concurrent.Callable;
         showDefaultValues = true
 )
 public final class CopyCommand implements Callable<Integer> {
+    private final JsonFileParser jsonFileParser = new JsonFileParser();
+    private final GeneralStorageUriResolver storageUriResolver = new GeneralStorageUriResolver();
     private final CopyServiceFactory copyServiceFactory;
-    private final JsonFileParser jsonFileParser;
     private final StorageProvider storageProvider;
 
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec commandSpec;
 
-    @CommandLine.Option(
-            names = {"--srcStorageConfig"},
-            description = "Path to file with source storage config.",
-            required = true
-    )
-    private Path srcStorageConfig;
+    @CommandLine.ArgGroup(multiplicity = "1")
+    private SourceConfig sourceConfig;
+
+    private static class SourceConfig {
+        @CommandLine.Option(
+                names = {"--srcStorageConfig"},
+                description = "Path to file with source storage config.",
+                required = true
+        )
+        private @Nullable Path config;
+
+
+        @CommandLine.Option(
+                names = {"--srcStorageUri"},
+                description = {
+                        "URI for source storage.",
+                        "Formats:",
+                        "jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}",
+                        "gen://{count}[:{idsPrefix}]?tileIds={tileId1}[,{tileId2},...]"
+                },
+                required = true
+        )
+        private @Nullable URI uri;
+    }
+
+    @CommandLine.ArgGroup(multiplicity = "1")
+    private TargetConfig targetConfig;
+
+    private static class TargetConfig {
+        @CommandLine.Option(
+                names = {"--targetStorageConfig"},
+                description = "Path to file with target storage config.",
+                required = true
+        )
+        private @Nullable Path config;
+
+        @CommandLine.Option(
+                names = {"--targetStorageUri"},
+                description = {
+                        "URI for target storage.",
+                        "Formats:",
+                        "jdbc:postgresql://{host}[:{port}]/{db}?user={user}&password={password}",
+                        "gen://{count}[:{idsPrefix}]?tileIds={tileId1}[,{tileId2},...]"
+                },
+                required = true
+        )
+        private @Nullable URI uri;
+    }
 
     @CommandLine.Option(
             names = {"--srcMapId"},
@@ -60,13 +105,6 @@ public final class CopyCommand implements Callable<Integer> {
             description = "Id of source collection."
     )
     private @Nullable String srcCollectionId;
-
-    @CommandLine.Option(
-            names = {"--targetStorageConfig"},
-            description = "Path to file with target storage config.",
-            required = true
-    )
-    private Path targetStorageConfig;
 
     @CommandLine.Option(
             names = {"--targetMapId"},
@@ -146,7 +184,6 @@ public final class CopyCommand implements Callable<Integer> {
             @NotNull StorageProvider storageProvider
     ) {
         this.copyServiceFactory = copyServiceFactory;
-        this.jsonFileParser = new JsonFileParser();
         this.storageProvider = storageProvider;
     }
 
@@ -196,16 +233,40 @@ public final class CopyCommand implements Callable<Integer> {
         };
     }
 
+    private NakshaStorage resolveSrcConfig() throws JsonFileParserException {
+        if (sourceConfig.config != null) {
+            return loadStorage(sourceConfig.config);
+        }
+        if (sourceConfig.uri == null) {
+            throw new CommandLine.ParameterException(
+                    commandSpec.commandLine(), "Either --srcStorageConfig or --srcStorageUri should be provided!"
+            );
+        }
+        return storageUriResolver.resolve(sourceConfig.uri);
+    }
+
     private CopyElement buildSrcCopyElement() throws JsonFileParserException {
-        NakshaStorage srcNakshaStorage = loadStorage(srcStorageConfig);
+        NakshaStorage srcNakshaStorage = resolveSrcConfig();
         return new CopyElement.Builder(srcNakshaStorage)
                 .setMapId(srcMapId)
                 .setCollectionId(srcCollectionId)
                 .build();
     }
 
+    private NakshaStorage resolveTargetConfig() throws JsonFileParserException {
+        if (targetConfig.config != null) {
+            return loadStorage(targetConfig.config);
+        }
+        if (targetConfig.uri == null) {
+            throw new CommandLine.ParameterException(
+                    commandSpec.commandLine(), "Either --targetStorageConfig or --targetStorageUri should be provided!"
+            );
+        }
+        return storageUriResolver.resolve(targetConfig.uri);
+    }
+
     private CopyElement buildTargetCopyElement() throws JsonFileParserException {
-        NakshaStorage targetNakshaStorage = loadStorage(targetStorageConfig);
+        NakshaStorage targetNakshaStorage = resolveTargetConfig();
         return new CopyElement.Builder(targetNakshaStorage)
                 .setMapId(targetMapId)
                 .setCollectionId(targetCollectionId)

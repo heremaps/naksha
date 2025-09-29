@@ -63,7 +63,7 @@ public final class TestContainersPsqlStorage {
         return NakshaStorage.fromJSON(
                 """
                         {
-                          "id": "storage",
+                          "id": "psql_storage",
                           "type": "Storage",
                           "create": true,
                           "upgrade": true,

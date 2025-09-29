@@ -1,9 +1,12 @@
 package com.here.naksha.cli.copy.service.psql;
 
+import com.here.naksha.cli.TestCommandLine;
+import com.here.naksha.cli.copy.CopyCommand;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.executors.OneShotFeaturesWriteExecutor;
 import com.here.naksha.cli.copy.service.executors.ParallelFeaturesWriteExecutor;
 import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutor;
+import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
 import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
 import com.here.naksha.cli.storages.GeneratingStorage;
@@ -21,7 +24,9 @@ import naksha.model.objects.NakshaMap;
 import naksha.model.request.*;
 import naksha.model.request.query.SpIntersects;
 import naksha.model.request.query.SpOr;
+import naksha.psql.PgConfig;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -35,6 +40,7 @@ import static naksha.model.util.RequestHelper.createFeaturesRequest;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class PsqlCopyTest {
     private final String srcCollectionId = "srccolid";
@@ -45,6 +51,44 @@ class PsqlCopyTest {
     void beforeEach() {
         NakshaContext.currentContext().withAppId("testapp");
         sessionOptions = SessionOptions.from(NakshaContext.currentContext());
+    }
+
+    @Test
+    void shouldCopyUsingUris() {
+        // Given: command line
+        CopyCommand copyCommand = new CopyCommand(
+                new CopyServiceFactory(),
+                new StorageProvider()
+        );
+        TestCommandLine commandLine = new TestCommandLine(copyCommand);
+
+        // And: prepared target
+        IStorage targetStorage = TestContainersPsqlStorage.getInstance().getStorage();
+        CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
+        assumeTrue(target.getNakshaStorage() instanceof PgConfig);
+        PgConfig targetConfig = (PgConfig) target.getNakshaStorage();
+
+        // And
+        int countOfFeatures = 10_000;
+        String tileId = "01221";
+        String[] args = {
+                "--srcStorageUri=gen://%s?tileIds=%s".formatted(countOfFeatures, tileId),
+                "--targetStorageUri=%s".formatted(targetConfig.getMasterUri()),
+                "--targetMapId=%s".formatted(target.getMapId()),
+                "--targetCollectionId=%s".formatted(target.getCollectionId()),
+                "--autoCreateTarget"
+        };
+
+        // When
+        commandLine.execute(args);
+
+        // And
+        List<NakshaFeature> targetFeatures = readFeaturesInTheGivenTiles(
+                targetStorage, target.getMapId(), target.getCollectionId(), sessionOptions, StringList.of(tileId)
+        );
+
+        // Then
+        assertEquals(countOfFeatures, targetFeatures.size());
     }
 
     @ParameterizedTest
