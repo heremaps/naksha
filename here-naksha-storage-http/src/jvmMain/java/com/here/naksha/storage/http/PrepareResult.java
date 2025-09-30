@@ -18,7 +18,20 @@
  */
 package com.here.naksha.storage.http;
 
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import naksha.base.AnyObject;
+import naksha.base.FromJsonOptions;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.model.NakshaError;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
+import naksha.model.request.ErrorResponse;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -30,24 +43,7 @@ import java.util.List;
 import java.util.function.Function;
 import java.util.zip.GZIPInputStream;
 
-import com.here.naksha.lib.core.util.json.JsonSerializable;
-import naksha.base.AnyObject;
-import naksha.base.FromJsonOptions;
-import naksha.base.JvmBoxingUtil;
-import naksha.base.JvmMap;
-import naksha.base.JvmMapProxy;
-import naksha.base.Platform;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
-import naksha.model.XyzFeatureCollection;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
 /**
  * Builds a {@link Response} from {@link HttpResponse}
