@@ -21,6 +21,7 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(libs.bundles.testing)
+                implementation(libs.rest.assured)
             }
         }
     }
@@ -32,6 +33,9 @@ tasks {
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "6g"
+        if (System.getenv("runConnectorIntegrationTests")?.toBoolean() != true) {
+            exclude("**/integration/**")
+        }
     }
 }
 setOverallCoverage(0.0) // only increasing allowed!

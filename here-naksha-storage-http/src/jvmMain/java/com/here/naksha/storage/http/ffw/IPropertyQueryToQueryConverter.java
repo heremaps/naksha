@@ -1,4 +1,4 @@
-package com.here.naksha.storage.http;
+package com.here.naksha.storage.http.ffw;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;

@@ -1,5 +1,6 @@
-package com.here.naksha.storage.http;
+package com.here.naksha.storage.http.connector.ffw;
 
+import com.here.naksha.storage.http.ffw.IPropertyQueryToQueryConverter;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.DoubleOp;
 import naksha.model.request.query.IPropertyQuery;

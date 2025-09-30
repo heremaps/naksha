@@ -41,45 +41,35 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
   private  KeyProperties defaultKeyProperties;
 
   private  NakshaStorage storageConfig;
+  private  HttpStorageProperties httpStorageProperties;
 
   public HttpStorage() {
 
   }
 
-  public HttpStorage(@NotNull NakshaStorage storageConfig) {
-    this.storageConfig = storageConfig;
-    HttpStorageProperties properties = HttpStorage.getProperties(storageConfig);
-    if (properties == null) {
-        throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
+  private static @NotNull HttpStorageProperties getProperties(@NotNull NakshaStorage storage) {
+    HttpStorageProperties storageProperties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
+    if (storageProperties == null) {
+      throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
     }
-    defaultKeyProperties = new KeyProperties(
-        storageConfig.getId(),
-        properties.getUrl(),
-        properties.getHeaders(),
-        properties.getConnectTimeout(),
-        properties.getSocketTimeout());
-  }
-
-  private static @Nullable HttpStorageProperties getProperties(@NotNull NakshaStorage storage) {
-    return JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
+    return storageProperties;
   }
 
   @Override
   protected void initStorage(@NotNull NakshaStorage config, @Nullable Boolean create, @Nullable Boolean upgrade) {
-    HttpStorageProperties properties = getProperties(config);
-    if (properties == null || properties.getUrl() == null) {
+    this.storageConfig = config;
+    this.httpStorageProperties = getProperties(config);
+    if (httpStorageProperties == null || httpStorageProperties.getUrl() == null) {
       throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
     }
     this.defaultKeyProperties = new KeyProperties(
             config.getId(),
-            properties.getUrl(),
-            properties.getHeaders(),
-            properties.getConnectTimeout(),
-            properties.getSocketTimeout()
+            httpStorageProperties.getUrl(),
+            httpStorageProperties.getHeaders(),
+            httpStorageProperties.getConnectTimeout(),
+            httpStorageProperties.getSocketTimeout()
     );
   }
-
-
 
   @NotNull
   @Override
@@ -97,13 +87,26 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
                     defaultKeyProperties.connectionTimeoutSec(),
                     defaultKeyProperties.socketTimeoutSec()
             ));
-    return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender);
+    return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender, httpStorageProperties.getProtocol());
   }
 
   @NotNull
   @Override
   public IWriteSession newWriteSession(@Nullable SessionOptions options) {
-    throw new NotImplementedException("Not yet supported");
+    useInitialized();
+    if (defaultKeyProperties == null) {
+      throw new IllegalStateException("HttpStorage is not initialized.");
+    }
+
+    final RequestSender requestSender = RequestSenderCache.getInstance()
+            .getSenderWith(new KeyProperties(
+                    getId(),
+                    defaultKeyProperties.hostUrl(),
+                    defaultKeyProperties.defaultHeaders(),
+                    defaultKeyProperties.connectionTimeoutSec(),
+                    defaultKeyProperties.socketTimeoutSec()
+            ));
+    return new HttpStorageWriteSession(NakshaContext.currentContext(), requestSender, httpStorageProperties.getProtocol());
   }
 
   @NotNull
