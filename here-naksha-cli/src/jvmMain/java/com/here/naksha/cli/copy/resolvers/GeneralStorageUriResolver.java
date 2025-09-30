@@ -4,9 +4,11 @@ import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 
-public class GeneralStorageUriResolver implements StorageUriResolver {
+public final class GeneralStorageUriResolver implements StorageUriResolver {
+    private final StorageUriResolver jdbcResolver = new JdbcStorageUriResolver();
+    private final StorageUriResolver generatingResolver = new GeneratingStorageUriResolver();
+
     @Override
     public @NotNull NakshaStorage resolve(@NotNull URI uri) {
         String protocol = uri.getScheme();
@@ -14,29 +16,10 @@ public class GeneralStorageUriResolver implements StorageUriResolver {
             throw new StorageUriResolverException("Protocol should be provided!", uri);
         }
         StorageUriResolver resolver = switch (protocol) {
-            case "jdbc" -> resolveJdbc(uri);
-            case "gen" -> new GeneratingStorageUriResolver();
+            case "jdbc" -> jdbcResolver;
+            case "gen" -> generatingResolver;
             default -> throw new StorageUriResolverException("Unexpected protocol!", uri);
         };
         return resolver.resolve(uri);
-    }
-
-    private StorageUriResolver resolveJdbc(URI uri) {
-        uri = cutScheme(uri);
-        String protocol = uri.getScheme();
-        if ("postgresql".equals(protocol)) {
-            return new PostgresStorageUriResolver();
-        } else {
-            throw new StorageUriResolverException("Unexpected protocol!", uri);
-        }
-    }
-
-    private URI cutScheme(URI uri) {
-        String schemeSpecificPart = uri.getSchemeSpecificPart();
-        try {
-            return new URI(schemeSpecificPart);
-        } catch (URISyntaxException e) {
-            throw new StorageUriResolverException("An error occurred when resolving URI!", uri, e);
-        }
     }
 }

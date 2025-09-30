@@ -4,10 +4,13 @@ import com.here.naksha.cli.storages.GeneratingStorageConfig;
 import naksha.model.objects.NakshaStorage;
 import naksha.psql.PgConfig;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -16,29 +19,16 @@ class GeneralStorageUriResolverTest {
     private final GeneralStorageUriResolver resolver = new GeneralStorageUriResolver();
 
     @ParameterizedTest
-    @ValueSource(strings = {"jdbc:postgresql://localhost:100/db?user=u&password=p"})
-    void shouldResolvePostgres(String rawUrl) throws URISyntaxException {
+    @MethodSource("uriArgs")
+    void shouldResolvePostgres(String rawUri, Class<? extends NakshaStorage> clazz) throws URISyntaxException {
         // Given
-        URI uri = new URI(rawUrl);
+        URI uri = new URI(rawUri);
 
         // When
         NakshaStorage nakshaStorage = resolver.resolve(uri);
 
         // Then
-        assertInstanceOf(PgConfig.class, nakshaStorage);
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"gen://100:pref?tileIds=012,33210"})
-    void shouldResolveGenerating(String rawUrl) throws URISyntaxException {
-        // Given
-        URI uri = new URI(rawUrl);
-
-        // When
-        NakshaStorage nakshaStorage = resolver.resolve(uri);
-
-        // Then
-        assertInstanceOf(GeneratingStorageConfig.class, nakshaStorage);
+        assertInstanceOf(clazz, nakshaStorage);
     }
 
     @ParameterizedTest
@@ -59,5 +49,19 @@ class GeneralStorageUriResolverTest {
 
         // When & Then
         assertThrows(StorageUriResolverException.class, () -> resolver.resolve(uri));
+    }
+
+    private static Stream<Arguments> uriArgs() {
+        return Stream.of(
+                // uri, CONFIG_CLASS
+                Arguments.of(
+                        "gen://100:pref?tileIds=012,33210",
+                        GeneratingStorageConfig.class
+                ),
+                Arguments.of(
+                        "jdbc:postgresql://localhost:100/db?user=u&password=p",
+                        PgConfig.class
+                )
+        );
     }
 }

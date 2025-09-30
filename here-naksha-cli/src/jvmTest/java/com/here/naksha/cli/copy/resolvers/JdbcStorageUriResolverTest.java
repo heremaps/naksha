@@ -10,8 +10,8 @@ import java.net.URISyntaxException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class PostgresStorageUriResolverTest {
-    private final PostgresStorageUriResolver resolver = new PostgresStorageUriResolver();
+class JdbcStorageUriResolverTest {
+    private final JdbcStorageUriResolver resolver = new JdbcStorageUriResolver();
     private final String host = "localhost";
     private final int port = 100;
     private final String db = "db";

@@ -9,10 +9,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-class GeneratingStorageUriResolver implements StorageUriResolver {
+final class GeneratingStorageUriResolver implements StorageUriResolver {
     private static final String EXPECTED_URI_FORMAT = "gen://{count}[:{idsPrefix}]?tileIds={tileId1}[,{tileId2},...]";
+    private final Pattern quadKeyPattern = Pattern.compile("[0123]+");
 
     @Override
     public @NotNull GeneratingStorageConfig resolve(@NotNull URI uri) {
@@ -105,9 +107,9 @@ class GeneratingStorageUriResolver implements StorageUriResolver {
 
     private void requireTileIdsValuesAreQuadKeys(List<String> values, URI uri) {
         values.forEach(str -> {
-            if (!str.matches("[0123]+")) {
+            if (!quadKeyPattern.matcher(str).matches()) {
                 throw new StorageUriResolverException(
-                        "tileIds values must fulfill the regex [0123]+. Received: %s".formatted(str),
+                        "tileIds values must fulfill the regex %s. Received: %s".formatted(quadKeyPattern.pattern(), str),
                         uri,
                         EXPECTED_URI_FORMAT
                 );

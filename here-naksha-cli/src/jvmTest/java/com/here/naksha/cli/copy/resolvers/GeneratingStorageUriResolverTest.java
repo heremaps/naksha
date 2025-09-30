@@ -77,11 +77,10 @@ class GeneratingStorageUriResolverTest {
         assertThrows(StorageUriResolverException.class, () -> resolver.resolve(uri));
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {"gen://100:pref:pref?tileIds=0132102,230"})
-    void shouldThrowWhenInvalidAuthority(String rawUri) throws URISyntaxException {
+    @Test
+    void shouldThrowWhenInvalidAuthority() throws URISyntaxException {
         // Given
-        URI uri = new URI(rawUri);
+        URI uri = new URI("gen://100:pref:pref?tileIds=0132102,230");
 
         // When & Then
         assertThrows(StorageUriResolverException.class, () -> resolver.resolve(uri));
@@ -98,7 +97,10 @@ class GeneratingStorageUriResolverTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"gen://100:pref?tileIds=021324", "gen://100:pref?tileIds=tileId", "gen://100:pref?tileIds=4,5"})
+    @ValueSource(strings = {
+            "gen://100:pref?tileIds=021324", "gen://100:pref?tileIds=tileId", "gen://100:pref?tileIds=4,5",
+            "gen://100:pref?tileIds=%20"
+    })
     void shouldThrowWhenTileIdsAreNotQuadKeys(String rawUri) throws URISyntaxException {
         // Given
         URI uri = new URI(rawUri);
