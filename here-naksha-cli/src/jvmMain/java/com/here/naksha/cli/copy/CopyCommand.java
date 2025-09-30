@@ -34,8 +34,8 @@ import java.util.concurrent.Callable;
         sortSynopsis = false,
         sortOptions = false,
         versionProvider = VersionInfo.class,
-        footerHeading = "Examples",
         showDefaultValues = true,
+        footerHeading = "Examples",
         footer = {
                 """
                             ./naksha-cli copy \\
