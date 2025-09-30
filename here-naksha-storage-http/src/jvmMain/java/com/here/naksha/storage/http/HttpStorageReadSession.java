@@ -19,10 +19,13 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
-import java.util.List;
-
-import naksha.jbon.JbDictionary;
-import naksha.model.*;
+import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
+import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
+import naksha.model.IReadSession;
+import naksha.model.IStorage;
+import naksha.model.NakshaContext;
+import naksha.model.NakshaError;
+import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaMap;
 import naksha.model.request.ErrorResponse;
@@ -35,9 +38,11 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
+
 import static naksha.model.LibModelKt.FETCH_ALL;
 
-public final class HttpStorageReadSession implements IReadSession {
+public class HttpStorageReadSession implements IReadSession {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadSession.class);
 
@@ -47,9 +52,13 @@ public final class HttpStorageReadSession implements IReadSession {
   @NotNull
   private final RequestSender requestSender;
 
-  HttpStorageReadSession(@Nullable NakshaContext context, @NotNull RequestSender requestSender) {
+  @NotNull
+  private final HttpInterface httpInterface;
+
+  HttpStorageReadSession(@Nullable NakshaContext context, @NotNull RequestSender requestSender, @NotNull HttpInterface httpInterface) {
     this.context = context == null ? NakshaContext.currentContext() : context;
     this.requestSender = requestSender;
+    this.httpInterface = httpInterface;
   }
 
   public @NotNull NakshaContext getNakshaContext() {
@@ -59,7 +68,12 @@ public final class HttpStorageReadSession implements IReadSession {
   @Override
   public @NotNull Response execute(@NotNull Request readRequest) {
     try {
-      return HttpStorageReadExecute.execute(context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+      return switch (httpInterface) {
+        case ffwAdapter -> FfwInterfaceReadExecute.execute(
+                context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+        case dataHubConnector -> ConnectorInterfaceReadExecute.execute(
+                context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+      };
     } catch (Exception exception) {
       log.warn("We got exception while executing Read request.", exception);
       return new ErrorResponse(NakshaError.EXCEPTION, exception.getMessage(), exception);
@@ -151,5 +165,10 @@ public final class HttpStorageReadSession implements IReadSession {
   @Override
   public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
     loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
+  }
+
+  @NotNull
+  RequestSender getRequestSender() {
+    return requestSender;
   }
 }

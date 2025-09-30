@@ -20,7 +20,12 @@ package com.here.naksha.storage.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Arrays;
 import java.util.Map;
+
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -44,31 +49,10 @@ public class HttpStorageProperties extends NakshaProperties {
   private static final String SOCKET_TIMEOUT = "socketTimeout";
   private static final String HEADERS = "headers";
 
-  @JsonProperty(URL)
-  private @NotNull String url;
-
-  @JsonProperty(CONNECTION_TIMEOUT)
-  private @NotNull Integer connectTimeout;
-
-  @JsonProperty(SOCKET_TIMEOUT)
-  private @NotNull Integer socketTimeout;
-
-  @JsonProperty(HEADERS)
-  private @NotNull Map<String, String> headers;
+  private static final String HTTP_INTERFACE = "httpInterface";
+  private static final HttpInterface DEFAULT_XYZ_PROTOCOL = HttpInterface.ffwAdapter;
 
   public HttpStorageProperties() {}
-
-  @JsonCreator
-  public HttpStorageProperties(
-      @JsonProperty(value = URL, required = true) @NotNull String url,
-      @JsonProperty(CONNECTION_TIMEOUT) @Nullable Integer connectTimeout,
-      @JsonProperty(SOCKET_TIMEOUT) @Nullable Integer socketTimeout,
-      @JsonProperty(HEADERS) @Nullable Map<String, String> headers) {
-    this.url = url;
-    this.connectTimeout = connectTimeout == null ? DEF_CONNECTION_TIMEOUT_SEC : connectTimeout;
-    this.socketTimeout = socketTimeout == null ? DEF_SOCKET_TIMEOUT_SEC : socketTimeout;
-    this.headers = headers == null ? DEFAULT_HEADERS : headers;
-  }
 
   /**
    * Points to the instance, not to an endpoint.
@@ -116,4 +100,26 @@ public class HttpStorageProperties extends NakshaProperties {
   public void setHeaders(final @Nullable Map<String, String> headers) {
     setRaw(HEADERS, headers);
   }
+
+  public @NotNull HttpInterface getProtocol() {
+    final Object raw = getRaw(HTTP_INTERFACE);
+    if (raw instanceof HttpInterface) {
+      return (HttpInterface) raw;
+    }
+    if (raw instanceof String) {
+      try {
+        return HttpInterface.valueOf((String) raw);
+      } catch (IllegalArgumentException e) {
+        final String errorMessage = String.format(
+                "Invalid value for the 'HttpInterface' property. The value '%s' is not supported. Please use one of: %s",
+                raw,
+                Arrays.toString(HttpInterface.values()));
+        throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, errorMessage);
+      }
+    }
+    return DEFAULT_XYZ_PROTOCOL;
+  }
+
+  public void setProtocol(final HttpInterface protocol) {setRaw(HTTP_INTERFACE, protocol);}
+
 }

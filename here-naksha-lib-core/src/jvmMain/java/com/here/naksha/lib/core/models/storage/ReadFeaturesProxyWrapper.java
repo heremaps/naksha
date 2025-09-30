@@ -90,6 +90,15 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
     return this;
   }
 
+  public ReadFeaturesProxyWrapper addQueryParameter(String key, Object parameters) {
+    if (getQueryParameters() == null) {
+      setQueryParameters(Map.of(key, parameters));
+      return this;
+    }
+    getQueryParameters().put(key, parameters);
+    return this;
+  }
+
   public ReadFeaturesProxyWrapper withLimit(int limit){
     setLimit(limit);
     return this;

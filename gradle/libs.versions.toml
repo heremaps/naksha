@@ -74,7 +74,7 @@ mchange_commons = "com.mchange:mchange-commons-java:0.2.20"
 mchange_c3p0 = "com.mchange:c3p0:0.9.5.5"
 
 jayway_jsonpath = "com.jayway.jsonpath:json-path:2.9.0"
-jayway_restassured = "com.jayway.restassured:rest-assured:2.9.0"
+rest_assured = "io.rest-assured:rest-assured:5.5.0"
 assertj_core = "org.assertj:assertj-core:3.24.2"
 awaitility = "org.awaitility:awaitility:4.2.0"
 
