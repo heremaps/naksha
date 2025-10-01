@@ -18,12 +18,6 @@
  */
 package com.here.naksha.storage.http;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.util.Arrays;
-import java.util.Map;
-
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
@@ -31,6 +25,9 @@ import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.Map;
 
 /**
  * A Http storage configuration as used by the {@link HttpStorage}.

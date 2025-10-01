@@ -18,6 +18,13 @@ public final class ITagQueryToTagsQuery {
 
     public static TagsQuery toTagsQuery(ITagQuery root) {
         if (root == null) throw new IllegalArgumentException("ITagQuery is null");
+        // empty tags "tags=" is translated to tagsOr or so we just return empty TagsQuery.
+        if(root instanceof TagOr) {
+            List<ITagQuery> kids = children(root);
+            if (kids.isEmpty()) {
+                return new TagsQuery();
+            }
+        }
         ensureExistsOnly(root);
 
         List<LinkedHashSet<String>> dnf = toDNF(root);
