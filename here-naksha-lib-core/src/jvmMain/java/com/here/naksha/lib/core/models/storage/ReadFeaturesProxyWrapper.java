@@ -27,6 +27,7 @@ import naksha.model.request.query.ISpatialQuery;
 import naksha.model.request.query.ITagQuery;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -87,6 +88,16 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
   public ReadFeaturesProxyWrapper withQueryParameters(Map<String, Object> parameters) {
     setQueryParameters(parameters);
+    return this;
+  }
+
+  public ReadFeaturesProxyWrapper addQueryParameter(String key, Object parameters) {
+    Map<String, Object> params = getQueryParameters();
+    if (params == null) {
+      setQueryParameters(Map.of(key, parameters));
+      return this;
+    }
+    params.put(key, parameters);
     return this;
   }
 

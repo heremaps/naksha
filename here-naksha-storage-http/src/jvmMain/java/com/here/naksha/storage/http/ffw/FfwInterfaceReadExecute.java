@@ -16,28 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.storage.http;
-
-import static com.here.naksha.common.http.apis.ApiParamsConst.*;
-import static com.here.naksha.storage.http.PrepareResult.prepareResult;
-import static java.lang.String.format;
-import static java.util.stream.Collectors.joining;
+package com.here.naksha.storage.http.ffw;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
-import java.net.HttpURLConnection;
-import java.net.http.HttpResponse;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Function;
-
-import naksha.base.JvmBoxingUtil;
+import com.here.naksha.storage.http.PrepareResult;
+import com.here.naksha.storage.http.RequestSender;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
-import naksha.model.XyzFeatureCollection;
-import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -46,13 +32,36 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class HttpStorageReadExecute {
+import java.net.HttpURLConnection;
+import java.net.http.HttpResponse;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
-  private static final Logger log = LoggerFactory.getLogger(HttpStorageReadExecute.class);
+import static com.here.naksha.common.http.apis.ApiParamsConst.EAST;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.LIMIT;
+import static com.here.naksha.common.http.apis.ApiParamsConst.MARGIN;
+import static com.here.naksha.common.http.apis.ApiParamsConst.NORTH;
+import static com.here.naksha.common.http.apis.ApiParamsConst.SHORT_FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.SOUTH;
+import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE;
+import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE_QUADKEY;
+import static com.here.naksha.common.http.apis.ApiParamsConst.WEST;
+import static com.here.naksha.storage.http.PrepareResult.prepareResult;
+import static java.lang.String.format;
+import static java.util.stream.Collectors.joining;
+
+public class FfwInterfaceReadExecute {
+
+  private static final Logger log = LoggerFactory.getLogger(FfwInterfaceReadExecute.class);
   private static final String HDR_STREAM_ID = "Stream-Id";
 
   @NotNull
-  static Response execute(@NotNull NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
+  public static Response execute(@NotNull NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
 
     return switch (request.getReadRequestType()) {
       case GET_BY_ID -> executeFeatureById(context, request, sender);
@@ -75,7 +84,7 @@ class HttpStorageReadExecute {
       // For Error 404 (not found) on single feature GetById request, we need to return empty result
       return new SuccessResponse(Collections.emptyList());
     }
-    return prepareResult(response, singleFeatureMapper);
+    return prepareResult(response,  PrepareResult.singleFeatureMapper);
   }
 
   private static Response executeFeaturesById(
@@ -87,7 +96,7 @@ class HttpStorageReadExecute {
         format("/%s/features?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, collectionMapper);
+    return prepareResult(response,  PrepareResult.collectionMapper);
   }
 
   private static Response executeFeatureByBBox(
@@ -100,7 +109,7 @@ class HttpStorageReadExecute {
         format("/%s/bbox?%s%s%s", baseEndpoint(readRequest), queryParamsString, featureIdsQueryString, propertyQueryString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, collectionMapper);
+    return prepareResult(response,  PrepareResult.collectionMapper);
   }
 
   private static String getFeatureIdsQueryOrEmpty(ReadFeaturesProxyWrapper readRequest) {
@@ -132,7 +141,7 @@ class HttpStorageReadExecute {
             baseEndpoint(readRequest), tileId, queryParamsString, featureIdsQueryString, getPOpQueryOrEmpty(readRequest)),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, collectionMapper);
+    return prepareResult(response, PrepareResult.collectionMapper);
   }
 
   private static Response executeIterate(
@@ -143,7 +152,7 @@ class HttpStorageReadExecute {
         format("/%s/iterate?%s", baseEndpoint(readRequest), queryParamsString),
         Map.of(HDR_STREAM_ID, context.getStreamId()));
 
-    return prepareResult(response, collectionMapper);
+    return prepareResult(response,  PrepareResult.collectionMapper);
   }
 
   /**
@@ -166,10 +175,4 @@ class HttpStorageReadExecute {
   private static String baseEndpoint(ReadFeaturesProxyWrapper request) {
     return request.getCollectionIds().get(0);
   }
-
-  private static final Function<Object, List<NakshaFeature>> collectionMapper = tuples ->
-      JvmBoxingUtil.box(tuples, XyzFeatureCollection.class).getFeatures();
-
-  private static final Function<Object, List<NakshaFeature>> singleFeatureMapper = tuples ->
-      List.of(JvmBoxingUtil.box(tuples, NakshaFeature.class));
 }
