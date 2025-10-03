@@ -48,6 +48,14 @@ jobs:
         if: success() || failure() # always run even if the previous step fails
         with:
           report_paths: '**/build/test-results/jvmTest/TEST-*.xml'
+      - name: Publish code coverage report as PR comment
+        uses: madrapps/jacoco-report@v1.6.1
+        with:
+          paths: '**/build/reports/jacoco/test/jacocoTestReport.xml'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: $MIN_COVERAGE_OVERALL
+          min-coverage-changed-files: $MIN_COVERAGE_CHANGED_FILES
+          title: Code Coverage
 #      - name: Publish code coverage report as PR comment
 #        id: jacoco
 #        uses: madrapps/jacoco-report@v1.6.1
