@@ -216,6 +216,20 @@ fun Task.configureCleanAndTestTasks() {
 }
 tasks.register("cleanAndTestAll") { configureCleanAndTestTasks() }
 
+// Helper, run as `gradle jacocoTestReport`
+fun Task.configureCodeCoverageTasks() {
+    allModules.forEach {
+        when (it.value.first) {
+            CleanAndTest.KOTLIN -> {
+                println("Generate code coverage for ${it.key}")
+                dependsOn(":${it.key}:jacocoTestReport")
+            }
+            else -> {}
+        }
+    }
+}
+tasks.register("jacocoTestReport") { configureCodeCoverageTasks() }
+
 // Helper, run as `gradle publishToLocal`
 fun Task.publishToLocal() {
     allModules.forEach {
