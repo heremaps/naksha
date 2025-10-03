@@ -282,7 +282,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     // Fetch features that already exist in the storage
     final ReadFeatures getExistingFeatures = proxyWrapperOf(RequestHelper.readFeaturesByIdsRequest(null, spaceId, requestFeaturesIds))
         .withReadRequestType(ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_IDS)
-        .withQueryParameters(Map.of(FEATURE_IDS, requestFeaturesIds));
+        .addQueryParameter(FEATURE_IDS, requestFeaturesIds);
     Response existingFeaturesResp = executeReadRequestFromSpaceStorage(getExistingFeatures);
 
     // Handle response - group existing features by id (optimize subsequent traversals)

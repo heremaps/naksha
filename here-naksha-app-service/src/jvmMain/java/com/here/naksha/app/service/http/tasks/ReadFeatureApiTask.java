@@ -166,8 +166,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       return verticle.sendErrorResponse(routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing id parameter");
     }
     final ReadFeaturesProxyWrapper rdRequest = proxyWrapperOf(readFeaturesByIdsRequest(null, spaceId, featureIds))
-        .withReadRequestType(ReadRequestType.GET_BY_IDS)
-        .withQueryParameters(Map.of(FEATURE_IDS, featureIds));
+            .withReadRequestType(ReadRequestType.GET_BY_IDS)
+            .addQueryParameter(FEATURE_IDS, featureIds);
+
 
     // Forward request to NH Space Storage reader instance
     Response response = executeReadRequestFromSpaceStorage(rdRequest);
@@ -185,8 +186,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParameters);
 
     final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(null, spaceId, featureId))
-        .withReadRequestType(ReadRequestType.GET_BY_ID)
-        .withQueryParameters(Map.of(FEATURE_ID, featureId));
+            .withReadRequestType(ReadRequestType.GET_BY_ID)
+            .addQueryParameter(FEATURE_ID, featureId);
 
     // Forward request to NH Space Storage reader instance
     Response response = executeReadRequestFromSpaceStorage(rdRequest);
@@ -232,6 +233,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     queryParamsMap.put(EAST, east);
     queryParamsMap.put(SOUTH, south);
     queryParamsMap.put(LIMIT, limit);
+    queryParamsMap.put(CLIP_GEO, clip);
     if (propertyQuery != null) {
       queryParamsMap.put(PROPERTY_SEARCH_OP, propertyQuery);
     }
@@ -285,6 +287,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     queryParamsMap.put(LIMIT, limit);
     queryParamsMap.put(TILE_TYPE, tileType);
     queryParamsMap.put(TILE_ID, tileId);
+    queryParamsMap.put(CLIP_GEO, clip);
     if (propertyQuery != null) {
       queryParamsMap.put(PROPERTY_SEARCH_OP, propertyQuery);
     }
@@ -456,8 +459,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     NakshaFeature feature = null;
     // Forward Read request to NHSpaceStorage instance
     final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(null, refSpaceId, refFeatureId))
-        .withReadRequestType(ReadRequestType.GET_BY_ID)
-        .withQueryParameters(Map.of(FEATURE_ID, refFeatureId));
+            .withReadRequestType(ReadRequestType.GET_BY_ID)
+            .addQueryParameter(FEATURE_ID, refFeatureId);
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
     if (response instanceof SuccessResponse successResponse) {
       feature = ResultHelper.readFeatureFromResponse(successResponse, NakshaFeature.class);

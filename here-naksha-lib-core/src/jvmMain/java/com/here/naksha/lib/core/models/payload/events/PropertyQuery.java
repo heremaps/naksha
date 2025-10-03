@@ -36,7 +36,10 @@ public class PropertyQuery {
 
   public PropertyQuery() {}
 
-  public PropertyQuery(@NotNull String key, @NotNull QueryOperation op) {}
+  public PropertyQuery(@NotNull String key, @NotNull QueryOperation op) {
+    this.key = key;
+    this.operation = op;
+  }
 
   /** The property key as JSON path. */
   private String key;
@@ -92,5 +95,15 @@ public class PropertyQuery {
   public @NotNull PropertyQuery withValues(@NotNull List<@Nullable Object> values) {
     this.values = values;
     return this;
+  }
+
+  public enum QueryOperation {
+    EQUALS,
+    NOT_EQUALS,
+    LESS_THAN,
+    GREATER_THAN,
+    LESS_THAN_OR_EQUALS,
+    GREATER_THAN_OR_EQUALS,
+    CONTAINS
   }
 }

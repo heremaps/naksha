@@ -57,8 +57,12 @@ public class RequestSender {
    * @param endpoint does not contain host:port part, starts with "/".
    * @param addHeaders headers to be added to the ones defines {@link KeyProperties#defaultHeaders}.
    */
-  HttpResponse<byte[]> sendRequest(@NotNull String endpoint, @Nullable Map<String, String> addHeaders) {
+  public HttpResponse<byte[]> sendRequest(@NotNull String endpoint, @Nullable Map<String, String> addHeaders) {
     return sendRequest(endpoint, true, addHeaders, null, null);
+  }
+
+  public HttpResponse<byte[]> post(String endpoint, String body) {
+    return sendRequest(endpoint, true, null, "POST", body);
   }
 
   HttpResponse<byte[]> sendRequest(
