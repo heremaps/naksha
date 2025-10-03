@@ -100,8 +100,8 @@ public class HttpStorageProperties extends NakshaProperties {
 
   public @NotNull HttpInterface getProtocol() {
     final Object raw = getRaw(HTTP_INTERFACE);
-    if (raw instanceof HttpInterface) {
-      return (HttpInterface) raw;
+    if (raw instanceof HttpInterface httpInterface) {
+      return httpInterface;
     }
     if (raw instanceof String) {
       try {

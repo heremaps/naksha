@@ -6,6 +6,7 @@ import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.objects.NakshaTx;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;
@@ -37,8 +38,8 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
                         getNakshaContext(), (WriteRequest) writeRequest, getRequestSender())
                         .execute();
             };
-        } catch (ConnectorInterfaceWriteExecute.ConflictException e) {
-            return new ErrorResponse(NakshaError.CONFLICT, e.getMessage(), e);
+        } catch (NakshaException e) {
+            return new ErrorResponse(e.getError());
         } catch (UnsupportedOperationException e) {
             return new ErrorResponse(NakshaError.NOT_IMPLEMENTED, e.getMessage(), e);
         } catch (Exception e) {

@@ -30,8 +30,7 @@ import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static naksha.base.Platform.getLogger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -49,8 +48,6 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
  * Builds a {@link Response} from {@link HttpResponse}
  */
 public class PrepareResult {
-
-  private static final Logger log = LoggerFactory.getLogger(PrepareResult.class);
 
   private static final String TYPE_KEY = "type";
   private static final String ERROR_RESPONSE = "ErrorResponse";
@@ -104,7 +101,7 @@ public class PrepareResult {
       NakshaError boxed = JvmBoxingUtil.box(rawErr, NakshaError.class);
       if (boxed != null) return boxed;
     } catch (IllegalStateException ex) {
-      log.warn("Unsuccessful boxing DH response to NakshaError. Error was [{}]", ex.getMessage());
+      getLogger().warn("Unsuccessful boxing DH response to NakshaError. Error was [{}]", ex.getMessage());
     }
     return new NakshaError(NakshaError.EXCEPTION, UNKNOWN_ERROR);
   }

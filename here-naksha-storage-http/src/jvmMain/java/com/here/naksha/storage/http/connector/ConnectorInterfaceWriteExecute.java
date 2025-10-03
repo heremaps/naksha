@@ -98,7 +98,7 @@ public class ConnectorInterfaceWriteExecute {
                 // so empty string is used instead.
                 featuresToDelete.put(write.getId(), "");
             } else {
-                throw new UnsupportedOperationException("Unsupported feature codec OP: " + write.getOp());
+                throw new UnsupportedOperationException("Unsupported feature OP: " + write.getOp());
             }
         }
 
@@ -133,7 +133,7 @@ public class ConnectorInterfaceWriteExecute {
                 .filter(feature -> feature.getOp().equals(WriteOp.CREATE) || feature.getOp().equals(WriteOp.UPDATE) || feature.getOp().equals(WriteOp.UPSERT))
                 .map(feature -> feature.getFeature().getId())
                 .toList();
-        NakshaFeatureList nakshaFeatureList = getFeaturesFromDb(idsList);
+        NakshaFeatureList nakshaFeatureList = getFeaturesFromDataHub(idsList);
         for (NakshaFeature nakshaFeature : nakshaFeatureList.asList()) {
             databaseFeaturesCache.put(nakshaFeature.getId(), nakshaFeature);
         }
@@ -142,7 +142,7 @@ public class ConnectorInterfaceWriteExecute {
     private void assertNoUuid(NakshaFeature feature) {
         String id = feature.getId();
         if (feature.getProperties().getXyz().getUuid() != null) {
-            throw new IllegalArgumentException("The feature with id " + id + " cannot be created. "
+            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,"The feature with id " + id + " cannot be created. "
                     + "Property UUID should not be provided as input.");
         }
     }
@@ -152,9 +152,8 @@ public class ConnectorInterfaceWriteExecute {
         if (uuid != null) {
             String uuidFromDb = getXyzNamespaceFromDbCache(feature).getUuid();
             if (!uuid.equals(uuidFromDb)) {
-                throw new ConflictException(
-                        "The feature with id %s cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
-                                .formatted(feature.getId(), uuidFromDb));
+                throw new NakshaException(NakshaError.CONFLICT,"The feature with id %s cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
+                        .formatted(feature.getId(), uuidFromDb));
             }
         }
     }
@@ -187,7 +186,7 @@ public class ConnectorInterfaceWriteExecute {
         }
     }
 
-    private NakshaFeatureList getFeaturesFromDb(List<String> featureIds) {
+    private NakshaFeatureList getFeaturesFromDataHub(List<String> featureIds) {
         ReadFeaturesProxyWrapper getFeaturesRequest = new ReadFeaturesProxyWrapper().withReadRequestType(GET_BY_IDS);
         getFeaturesRequest.addQueryParameter(FEATURE_IDS, featureIds);
         getFeaturesRequest.withCollection(endpoint);
@@ -199,12 +198,6 @@ public class ConnectorInterfaceWriteExecute {
             throw new NakshaException(errorResponse.getError());
         } else {
             throw new NakshaException(NakshaError.EXCEPTION, "Unexpected response while reading features from storage");
-        }
-    }
-
-    public static class ConflictException extends IllegalStateException {
-        public ConflictException(String message) {
-            super(message);
         }
     }
 

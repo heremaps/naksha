@@ -1,16 +1,19 @@
 package com.here.naksha.storage.http.connector.pop;
 
 import com.here.naksha.lib.core.models.payload.events.PropertyQueryAnd;
+import com.here.naksha.lib.core.models.payload.events.PropertyQueryOr;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import naksha.model.request.query.AnyOp;
 
 import static com.here.naksha.storage.http.connector.pop.IPropertyQueryToPropertiesQuery.toPoPQueryAnd;
+import static com.here.naksha.storage.http.connector.pop.IPropertyQueryToPropertiesQuery.toPopQueryOr;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import naksha.model.request.query.DoubleOp;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PAnd;
+import naksha.model.request.query.PFalse;
 import naksha.model.request.query.PNot;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
@@ -36,13 +39,6 @@ public class POpToQueryConverterTest {
         [
         {"key":"property.prop_1","operation":"EQUALS","values":["1"]}
         ]""", query);
-    }
-
-    private static void assertQueryEquals(String expectedJson, PropertyQueryAnd actualQuery) {
-        assertEquals(
-                expectedJson.replace(System.lineSeparator(), ""),
-                JsonSerializable.serialize(actualQuery)
-        );
     }
 
     @Test
@@ -327,6 +323,116 @@ public class POpToQueryConverterTest {
         [
         {"key":"id","operation":"EQUALS","values":["1"]}
         ]""", query);
+    }
+
+    @Test
+    void wrapsAndSingleIntoOr() {
+        IPropertyQuery q = and(
+                eq(prop("prop_1"), "1")
+        );
+
+        PropertyQueryOr or = toPopQueryOr(q);
+
+        assertQueryOrEquals("""
+                [
+                [
+                {"key":"property.prop_1","operation":"EQUALS","values":["1"]}
+                ]
+                ]""", or);
+    }
+
+    @Test
+    void wrapsAndManyChildrenIntoSingleOrEntry() {
+        IPropertyQuery q = and(
+                eq(prop("prop_1"), "1"),
+                eq(prop("prop_2"), 2)
+        );
+
+        PropertyQueryOr or = toPopQueryOr(q);
+
+        assertQueryOrEquals("""
+                [
+                [
+                {"key":"property.prop_1","operation":"EQUALS","values":["1"]},
+                {"key":"property.prop_2","operation":"EQUALS","values":[2]}
+                ]
+                ]""", or);
+    }
+
+    @Test
+    void wrapsTopLevelOrMergedLeaf() {
+        IPropertyQuery q = or(
+                eq(prop("prop_1"), "1"),
+                eq(prop("prop_1"), "2")
+        );
+
+        PropertyQueryOr or = toPopQueryOr(q);
+
+        assertQueryOrEquals("""
+                [
+                [
+                {"key":"property.prop_1","operation":"EQUALS","values":["1","2"]}
+                ]
+                ]""", or);
+    }
+
+    @Test
+    void wrapsExistsAndNotExistsThroughNot() {
+        IPropertyQuery q = and(
+                exists(prop("prop_1")),
+                not(exists(prop("prop_2")))
+        );
+
+        PropertyQueryOr or = toPopQueryOr(q);
+
+        assertQueryOrEquals("""
+                [
+                [
+                {"key":"property.prop_1","operation":"NOT_EQUALS","values":[null]},
+                {"key":"property.prop_2","operation":"EQUALS","values":[null]}
+                ]
+                ]""", or);
+    }
+
+    @Test
+    void propagatesPFalseAsException() {
+        IPropertyQuery q = PFalse.INSTANCE;
+
+        assertThrows(
+                IPropertyQueryToPropertiesQuery.IPropertyQueryToQueryConversionException.class,
+                () -> toPopQueryOr(q)
+        );
+    }
+
+    @Test
+    void dontAddPrefixToIdPropInOrWrapper() {
+        IPropertyQuery q = and(
+                eq(idProp(), "1")
+        );
+
+        PropertyQueryOr or = toPopQueryOr(q);
+
+        assertQueryOrEquals("""
+                [
+                [
+                {"key":"id","operation":"EQUALS","values":["1"]}
+                ]
+                ]""", or);
+    }
+
+
+    private static void assertQueryEquals(String expectedJson, PropertyQueryAnd actualQuery) {
+        assertEquals(
+                expectedJson.replace(System.lineSeparator(), ""),
+                JsonSerializable.serialize(actualQuery)
+        );
+    }
+
+    private static void assertQueryOrEquals(String expectedJson, PropertyQueryOr actual) {
+        assertEquals(
+                expectedJson.replace(System.lineSeparator(), ""),
+                JsonSerializable.serialize(actual)
+        );
     }
 
 

@@ -33,10 +33,12 @@ import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
 import com.here.naksha.storage.http.connector.pop.IPropertyQueryToPropertiesQuery;
 import com.here.naksha.storage.http.connector.pop.ITagQueryToTagsQuery;
+import naksha.base.StringList;
 import naksha.geo.SpBoundingBox;
+import naksha.model.NakshaError;
+import naksha.model.NakshaException;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.Response;
-import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.http.HttpResponse;
@@ -60,7 +62,7 @@ public class ConnectorInterfaceReadExecute {
     @NotNull
     public static Response execute(naksha.model.NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
         String streamId = context.getStreamId();
-        String endpoint = "/" + request.getCollectionIds().get(0);
+        String endpoint = "/" + firstCollectionIdOrThrow(request);
 
         Event event =
                 switch (request.getReadRequestType()) {
@@ -149,7 +151,21 @@ public class ConnectorInterfaceReadExecute {
             event.setQuadkey(tileAddress.asQuadkey());
             return event;
         } else {
-            throw new NotImplementedException("Tile type other than " + TILE_TYPE_QUADKEY);
+            throw new NakshaException(NakshaError.NOT_IMPLEMENTED,"Tile type other than " + TILE_TYPE_QUADKEY);
         }
+    }
+
+    private static String firstCollectionIdOrThrow(ReadFeaturesProxyWrapper request) {
+        StringList ids = request.getCollectionIds();
+        if (ids == null || ids.isEmpty()) {
+            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
+                    "collectionIds must contain at least one non-empty id");
+        }
+        String id0 = ids.get(0);
+        if (id0 == null || id0.isBlank()) {
+            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
+                    "First collectionId must be non-empty");
+        }
+        return id0;
     }
 }
