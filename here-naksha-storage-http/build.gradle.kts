@@ -22,6 +22,7 @@ kotlin {
             dependencies {
                 implementation(libs.bundles.testing)
                 implementation(libs.rest.assured)
+                implementation(libs.wiremock)
             }
         }
     }

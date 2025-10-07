@@ -67,7 +67,8 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
             httpStorageProperties.getUrl(),
             httpStorageProperties.getHeaders(),
             httpStorageProperties.getConnectTimeout(),
-            httpStorageProperties.getSocketTimeout()
+            httpStorageProperties.getSocketTimeout(),
+            httpStorageProperties.getMaxRetries()
     );
   }
 
@@ -85,7 +86,8 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
                     defaultKeyProperties.hostUrl(),
                     defaultKeyProperties.defaultHeaders(),
                     defaultKeyProperties.connectionTimeoutSec(),
-                    defaultKeyProperties.socketTimeoutSec()
+                    defaultKeyProperties.socketTimeoutSec(),
+                    httpStorageProperties.getMaxRetries()
             ));
     return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender, httpStorageProperties.getProtocol());
   }
@@ -104,7 +106,8 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
                     defaultKeyProperties.hostUrl(),
                     defaultKeyProperties.defaultHeaders(),
                     defaultKeyProperties.connectionTimeoutSec(),
-                    defaultKeyProperties.socketTimeoutSec()
+                    defaultKeyProperties.socketTimeoutSec(),
+                    httpStorageProperties.getMaxRetries()
             ));
     return new HttpStorageWriteSession(NakshaContext.currentContext(), requestSender, httpStorageProperties.getProtocol());
   }
