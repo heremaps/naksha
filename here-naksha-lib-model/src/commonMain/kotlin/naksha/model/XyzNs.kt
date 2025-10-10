@@ -166,25 +166,25 @@ class XyzNs : AnyObject() {
          * The key of the [cs0] property.
          * @since 3.0
          */
-        const val CS0 = "c0"
+        const val CS0 = "cs0"
 
         /**
          * The key of the [cs1] property.
          * @since 3.0
          */
-        const val CS1 = "c1"
+        const val CS1 = "cs1"
 
         /**
          * The key of the [cs2] property.
          * @since 3.0
          */
-        const val CS2 = "c2"
+        const val CS2 = "cs2"
 
         /**
          * The key of the [cs3] property.
          * @since 3.0
          */
-        const val CS3 = "c3"
+        const val CS3 = "cs3"
 
         private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
         private val _OPERATION = NotNullEnum<XyzNs, Operation>(Operation::class) { _, _ -> Operation.CREATED }
