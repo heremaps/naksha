@@ -28,8 +28,9 @@ import com.here.naksha.lib.core.models.features.Extension;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.util.IoHelp;
 import com.here.naksha.lib.extmanager.ExtensionManager;
+import com.here.naksha.lib.extmanager.FileClient;
 import com.here.naksha.lib.extmanager.IExtensionManager;
-import com.here.naksha.lib.extmanager.helpers.AmazonS3Helper;
+import com.here.naksha.lib.extmanager.helpers.FileClientFactory;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import naksha.base.FromJsonOptions;
@@ -56,6 +57,9 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
+import naksha.model.request.query.IPropertyQuery;
+import naksha.model.request.query.PAnd;
+import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.util.ResultHelper;
@@ -387,8 +391,10 @@ public class NakshaHub implements INaksha {
   @Override
   public @NotNull ExtensionConfig getExtensionConfig() {
     final ReadFeatures readRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS).withMapId(adminMapId);
-    final PQuery pQuery = new PQuery(new Property(EXTN_ID_PROP_PATH), AnyOp.EXISTS);
-    readRequest.withPropertyQuery(pQuery);
+    final PQuery pQueryExists = new PQuery(new Property(EXTN_ID_PROP_PATH), AnyOp.EXISTS);
+    final PQuery pQueryNotNull = new PQuery(new Property(EXTN_ID_PROP_PATH), AnyOp.IS_NOT_NULL);
+    final IPropertyQuery propertyQuery = new PAnd(pQueryExists, pQueryNotNull);
+    readRequest.withPropertyQuery(propertyQuery);
     NakshaContext nakshaContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName());
     nakshaContext.attachToCurrentThread();
     Response response = getAdminStorage().useReadSession(SessionOptions.from(nakshaContext),
@@ -409,7 +415,7 @@ public class NakshaHub implements INaksha {
         if (extensionId != null && extensionId.contains(":")) {
           extensionIds.add(extensionId);
         } else {
-          logger.error("Environment is missing for an extension Id");
+          logger.info("Environment is missing for an extension Id");
         }
       }
     } else {
@@ -424,53 +430,33 @@ public class NakshaHub implements INaksha {
     }
 
     final ExtensionConfigParams extensionConfigParams = nakshaHubConfig.getExtensionConfigParams();
-    if (extensionConfigParams.getExtensionRootPath() == null || !extensionConfigParams.getExtensionRootPath().startsWith("s3://")) {
-      throw new UnsupportedOperationException(
-              "ExtensionRootPath must be a valid s3 bucket url which should be prefixed with s3://");
-    }
 
-
-    List<Extension> extList = loadExtensionConfigFromS3(extensionConfigParams.getExtensionRootPath(), extensionIds);
+    List<Extension> extList = loadExtensionConfig(extensionConfigParams.getExtensionRootPath(), extensionIds);
     return new ExtensionConfig(
         System.currentTimeMillis() + extensionConfigParams.getIntervalMs(),
         extList,
         extensionConfigParams.getWhiteListClasses());
   }
 
-  private List<Extension> loadExtensionConfigFromS3(String extensionRootPath, Set<String> extensionIds) {
-    AmazonS3Helper s3Helper = new AmazonS3Helper();
-
+  private List<Extension> loadExtensionConfig(String extensionRootPath, Set<String> extensionIds) {
     List<Extension> extList = new ArrayList<>();
-    extensionIds.forEach(extensionId -> {
-      String env = extensionId.split(":")[0];
+    FileClient fileClient = FileClientFactory.create(extensionRootPath);
+
+    for (String extensionId : extensionIds) {
+      String extEnv = extensionId.split(":")[0];
       String extensionIdWotEnv = extensionId.split(":")[1];
-      String filePath = extensionRootPath + extensionIdWotEnv + "/" + "latest-" + env.toLowerCase() + ".txt";
-      String version;
       try {
-        version = s3Helper.getFileContent(filePath);
-      } catch (Exception e) {
-        logger.error("Failed to read extension content from {}", filePath, e);
-        return;
-      }
-      filePath = extensionRootPath + extensionIdWotEnv + "/" + extensionIdWotEnv + "-" + version + "."
-              + env.toLowerCase() + ".json";
-      String exJson;
-      try {
-        exJson = s3Helper.getFileContent(filePath);
-      } catch (Exception e) {
-        logger.error("Failed to read extension meta data from {} ", filePath, e);
-        return;
-      }
-      Extension extension;
-      try {
-        extension = JvmBoxingUtil.box(Platform.fromJSON(exJson, FromJsonOptions.DEFAULT), Extension.class);
-        extension.setEnv(env);
+        String version = fileClient.getFileContent(
+                extensionRootPath + extensionIdWotEnv + "/latest-" + extEnv.toLowerCase() + ".txt");
+        String exJson = fileClient.getFileContent(extensionRootPath + extensionIdWotEnv + "/"
+                + extensionIdWotEnv + "-" + version + "." + extEnv.toLowerCase() + ".json");
+        Extension extension = JvmBoxingUtil.box(Platform.fromJSON(exJson, FromJsonOptions.DEFAULT), Extension.class);
+        extension.setEnv(extEnv);
         extList.add(extension);
       } catch (Exception e) {
-        logger.error("Failed to convert extension meta data to Extension object. {} ", exJson, e);
-        return;
+        logger.error("Failed loading extension {} at {}", extensionId, extensionRootPath, e);
       }
-    });
+    }
     return extList;
   }
 

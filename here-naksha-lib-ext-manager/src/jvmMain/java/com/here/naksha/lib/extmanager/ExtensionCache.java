@@ -108,7 +108,7 @@ public class ExtensionCache {
         List<String> whitelistClasses = (List<String>) extension
                 .getProperties()
                 .getOr(WHITE_LIST_CLASSES, extensionConfig.getWhitelistDelegateClasses());
-        logger.info("Whitelist classes in use for extension {} are {}", extensionIdWthEnv, whitelistClasses);
+        logger.info("Whitelist classes in use for extension {} are {}", extensionIdWthEnv, whitelistClasses.toArray());
         loader = ClassLoaderHelper.getClassLoader(jarFile, whitelistClasses);
       } catch (Exception e) {
         logger.error("Failed to load extension jar " + extensionIdWthEnv, e);
@@ -200,7 +200,7 @@ public class ExtensionCache {
     try {
       file = client.getFile(extension.getUrl());
     } catch (IOException | SdkClientException e) {
-      logger.error("Failed to fetch jar {} ", extension.getUrl());
+      logger.error("Failed to fetch jar {}: {}", extension.getUrl(), e.getMessage(), e);
     }
     return new KVPair<Extension, File>(extension, file);
   }
