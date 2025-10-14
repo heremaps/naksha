@@ -352,7 +352,7 @@ public final class NakshaHubConfig extends NakshaFeature {
    * Optional Total Author Concurrency Threshold
    */
   public Integer getMaxPctParallelRequestsPerActor() {
-    return getOrSet(MAX_PARALLEL_REQUESTS_PER_CPU, defaultMaxPctParallelRequestsPerActor());
+    return getOrSet(MAX_PCT_PARALLEL_REQUESTS_PER_ACTOR, defaultMaxPctParallelRequestsPerActor());
   }
 
   /**
