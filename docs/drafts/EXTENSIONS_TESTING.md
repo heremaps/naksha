@@ -6,7 +6,7 @@ For demonstration purposes, we will use a sample `test` extension that adds the 
 The Naksha Hub (REST Service) receives requests through API endpoints, processes them via internal synchronous pipeline by invoking pre-configured inbuilt / custom Event Handlers.
 When pipeline encounters custom handler, the respective EventHandler implementation is loaded from the cached copy of Extension. The Extensions are (un)cached dynamically (via background job) from the external Extension Registry (S3 bucket or local folder). The setup thus, allows flexibility in injecting the custom business logic as part of pipeline execution.
 
-![extensions_loading.png](../diagrams/extensions_loading.png))
+![extensions_loading.png](../diagrams/extensions_loading.png)
 
 ---
 
@@ -109,10 +109,10 @@ This JSON configuration should be submitted to Naksha using the REST API endpoin
 Verify that after creating the custom EventHandler, the extension is successfully loaded into the Naksha service. 
 You can confirm this by checking the log statements, which should look similar to the following:
 ```text
-2025-09-23 10:38:15.349 -0500 [INFO ]  [NakshaWorker#1] - lib.extmanager.ExtensionCache (downloadJar:201) {streamId=8Il23zBXwvzL} - Downloading jar naksha-test-extension with version 1.0.0  
-2025-09-23 10:38:15.350 -0500 [INFO ]  [main] - lib.extmanager.ExtensionCache (publishIntoCache:111) {streamId=naksha-app} - Whitelist classes in use for extension local:naksha-test-extension are [java.*, javax.*, com.here.*, jdk.internal.reflect.*, com.sun.*, org.w3c.dom.*, sun.misc.*, org.locationtech.jts.*, org.xml.sax.*, org.slf4j.*] 
-2025-09-23 10:38:15.360 -0500 [INFO ]  [main] - lib.extmanager.ExtensionCache (publishIntoCache:153) {streamId=naksha-app} - Extension id=local:naksha-test-extension, version=1.0.0 is successfully loaded into the cache, using Jar at naksha-test-extension-1.0.0-shaded.jar. 
-2025-09-23 10:38:15.361 -0500 [INFO ]  [main] - lib.extmanager.ExtensionCache (buildExtensionCache:96) {streamId=naksha-app} - Extension cache size 1 
+[NakshaWorker#2] INFO com.here.naksha.lib.extmanager.ExtensionCache - Downloading jar naksha-tag-extension with version 1.0.0 
+[Thread-0] INFO com.here.naksha.lib.extmanager.ExtensionCache - Whitelist classes in use for extension local:naksha-tag-extension are [java.*, javax.*, com.here.*, jdk.internal.reflect.*, com.sun.*, org.w3c.dom.*, sun.misc.*, org.locationtech.jts.*, org.xml.sax.*, org.slf4j.*, kotlin.*, naksha.*]
+[Thread-0] INFO com.here.naksha.lib.extmanager.ExtensionCache - Extension id=local:naksha-tag-extension, version=1.0.0 is successfully loaded into the cache, using Jar at naksha-tag-extension-1.0.0.jar.
+[Thread-0] INFO com.here.naksha.lib.extmanager.ExtensionCache - Extension cache size 1
 ```
 
 ## 6. Defining Spaces
@@ -203,11 +203,11 @@ See in the response that the new tag `test_tag_v1` has been added by our extensi
 Check the Naksha service logs to ensure the extension was invoked correctly. 
 Example relevant log entries:
 ```text
-2025-09-24 15:30:48.454 -0500 [INFO ]  [NakshaWorker#2] - lib.hub.storages.NHSpaceStorageReader (setupEventPipelineForSpaceId:289) {streamId=3Yr6hZRsTSS9} - Handler IDs identified [test_handler] 
-2025-09-24 15:30:48.455 -0500 [INFO ]  [NakshaWorker#2] - lib.hub.storages.NHSpaceStorageReader (setupEventPipelineForSpaceId:338) {streamId=3Yr6hZRsTSS9} - Handler types identified [TestHandler] 
-2025-09-24 15:30:48.455 -0500 [INFO ]  [NakshaWorker#2] - ext.test.handlers.TestHandler (processEvent:45) {streamId=3Yr6hZRsTSS9} - Handler received request WriteXyzFeatures 
-2025-09-24 15:30:48.465 -0500 [INFO ]  [NakshaWorker#2] - app.service.util.logging.AccessLogUtil (writeAccessLog:219) {streamId=3Yr6hZRsTSS9} - {"time":"2025-09-24T20:30:48,464","clientInfo":{"appId":"naksha","ip":"0:0:0:0:0:0:0:1","realm":null,"remoteAddress":"0:0:0:0:0:0:0:1:60076","userAgent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36","userId":"master-test-user"},"ms":37,"ns":37950490,"reqInfo":{"accept":"application/geo+json","contentType":"application/geo+json","method":"POST","origin":"http://localhost:8080","referer":"http://localhost:8080/hub/swagger/index.html","size":540,"uri":"/hub/spaces/test_space/features"},"respInfo":{"contentType":"application/geo+json","size":68,"statusCode":200,"statusMsg":"OK"},"src":null,"streamId":"3Yr6hZRsTSS9","streamInfo":{"spaceId":"test_space","timeInStorageMs":0},"t":"STREAM","timeWithoutStorageMs":37,"unixtime":1758745848464} 
-2025-09-24 15:30:48.465 -0500 [INFO ]  [NakshaWorker#2] - app.service.util.logging.AccessLogUtil (writeAccessLog:225) {streamId=3Yr6hZRsTSS9} - [REST API stats => spaceId,storageId,method,uri,status,timeTakenMs,resSize,timeWithoutStorageMs] - RESTAPIStats test_space - POST /hub/spaces/test_space/features 200 37 68 37 
+[NakshaWorker#1] INFO com.here.naksha.lib.hub.storages.NHSpaceStorageReader - Handler IDs identified tag_handler
+[NakshaWorker#1] INFO com.here.naksha.lib.hub.storages.NHSpaceStorageReader - Handler types identified [TaggingHandler]
+[NakshaWorker#1] INFO com.here.naksha.ext.tag.handlers.TaggingHandler - Handler received request WriteRequest
+[NakshaWorker#1] INFO com.here.naksha.app.service.util.logging.AccessLogUtil - {"reqInfo":{"method":"POST","uri":"/hub/spaces/test_space/features","referer":null,"origin":null,"size":540,"contentType":"application/json","accept":"*/*"},"clientInfo":{"ip":"0:0:0:0:0:0:0:1","remoteAddress":"0:0:0:0:0:0:0:1:54907","userAgent":"PostmanRuntime/7.48.0","realm":null,"userId":"my-custom-user-id","appId":"web-client-custom-app-id"},"streamInfo":{},"respInfo":{"statusCode":200,"statusMsg":"OK","size":460,"contentType":"application/geo+json"},"unixtime":1760429528903,"time":"2025-10-14T08:12:08,903","ns":804831208,"ms":804}
+[NakshaWorker#1] INFO com.here.naksha.app.service.util.logging.AccessLogUtil - [REST API stats => eventType,spaceId,storageId,method,uri,status,timeTakenMs,resSize] - RESTAPIStats test_space - POST /hub/spaces/test_space/features 200 804 460
 ```
 
 ## 8. Releasing New Versions
@@ -234,13 +234,13 @@ Debugging support is essential when working with dynamically loaded extensions. 
 Use the following command to start the Naksha service with remote debugging enabled:
 
 ```bash
-java -Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8888,suspend=y -jar naksha-2.2.12-all.jar extension-config
+java -Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8888,suspend=y -jar here-naksha-app-service/build/libs/naksha-app-service-*.jar extension-config
 ```
 **Explanation of the Flags:**
 
 - `-Xdebug` → Enables debugging.
 - `-Xrunjdwp:server=y,transport=dt_socket,address=8888,suspend=y` → Starts a remote debugging server on port `8888` and waits for the debugger to attach before running.
-- `-jar naksha-2.2.2-all.jar` → Specifies the Naksha service JAR to run.
+- `-jar here-naksha-app-service/build/libs/naksha-app-service-*.jar` → Specifies the Naksha service JAR to run.
 - `extension-config` → The configuration file.
 
 

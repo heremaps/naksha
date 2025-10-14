@@ -209,7 +209,7 @@ public class NHSpaceStorageReader implements IReadSession {
     if (eventHandlerIds == null || eventHandlerIds.isEmpty()) {
       return new ErrorResponse(NakshaError.NOT_FOUND, "No associated handler");
     }
-    logger.info("Handler IDs identified {}", eventHandlerIds);
+    logger.info("Handler IDs identified {}", eventHandlerIds.toArray());
 
     List<EventHandlerConfig> eventHandlers = null;
     Response handlersResponse = nakshaHub.getAdminStorage()
