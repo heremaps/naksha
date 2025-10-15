@@ -416,7 +416,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           collection.getId());
-      measuredStorageRunnable(() -> createXyzCollection(ctx, storageImpl, collection), storageTimer);
+      measuredStorageRunnable(() -> createMissingXyzCollection(ctx, storageImpl, collection), storageTimer);
       logger.info("Created collection {}, forwarding the request once again", collection.getId());
       return forwardRequestToStorage(
           ctx, request, storageImpl, collection, ATTEMPT_AFTER_COLLECTION_CREATION, storageTimer);
@@ -482,12 +482,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         .filter(Objects::nonNull);
   }
 
-  private void createXyzCollection(
+  protected void createMissingXyzCollection(
       final @NotNull NakshaContext ctx,
       final @NotNull IStorage storageImpl,
       final @NotNull XyzCollection collection) {
     try (final IWriteSession writer = storageImpl.newWriteSession(ctx, true)) {
-      final Result result = writer.execute(createRequestForMissingCollections(collection));
+      final Result result = writer.execute(createWriteCollectionsRequest(collection));
       if (result instanceof SuccessResult) {
         writer.commit(true);
       } else {
@@ -499,10 +499,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         throw unchecked(new Exception("Failed creating collection " + collection.getId()));
       }
     }
-  }
-
-  protected @NotNull WriteXyzCollections createRequestForMissingCollections(final @NotNull XyzCollection collection) {
-    return RequestHelper.createWriteCollectionsRequest(collection);
   }
 
   enum OperationAttempt {
