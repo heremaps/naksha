@@ -6,7 +6,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-/// Used as internal implementation of {@link JvmMap}.
+/// Used as internal implementation of {@link JvmMap}. Assumption is that each JSON object has only around 4 or fewer key-value pairs.
+/// This means each object of this class can fit into CPU L1 which makes it very fast to access.
 ///
 class JsonMap implements Map<String, Object> {
     JsonMap(){
@@ -19,74 +20,104 @@ class JsonMap implements Map<String, Object> {
 
     @Override
     public int size() {
-        return map.length/2;
+        return map.length >> 1;
     }
 
     @Override
     public boolean isEmpty() {
-        return size()==0;
+        return map.length==0;
+    }
+
+    private static int indexOf(@NotNull Object[] map, Object e, int start) {
+        assert start >= 0;
+        if (e != null) {
+            for( int i=start; i < map.length; i+=2 ) {
+                if( e.equals(map[i]) ) return i;
+            }
+        }
+        return -1;
     }
 
     @Override
     public boolean containsKey(@NotNull Object key) {
-        for( int i=0; i < map.length; i+=2 ) {
-            if( map[i].equals(key) ) return true;
-        }
-        return false;
+        return indexOf(this.map, key, 0) >= 0;
     }
 
     @Override
     public boolean containsValue(@NotNull Object value) {
-        for( int i=1; i < map.length; i+=2 ) {
-            if( map[i].equals(value) ) return true;
-        }
-        return false;
+        return indexOf(this.map, value, 1) >= 0;
     }
 
     @Override
-    public Object get(@NotNull Object key) {
-        for( int i=0; i < map.length; i+=2 ) {
-            if( map[i].equals(key) ) return map[i+1];
-        }
-        return null;
+    public @Nullable Object get(Object key) {
+        var i = indexOf(map, key, 0);
+        return i >= 0 ? map[i+1] : null;
     }
 
     @Nullable
     @Override
     public Object put(@NotNull String key, @Nullable Object value) {
-        for ( int i=0; i < map.length; i+=2 ) {
-            if( map[i].equals(key) ) {
-                Object old = map[i+1];
+        var localMapCopy = this.map;
+        for (int i = 0; i < localMapCopy.length; i+=2 ) {
+            if( key.equals(localMapCopy[i]) ) {
                 map[i+1] = value;
-                return old;
+                return localMapCopy[i+1];
             }
         }
-        map = Arrays.copyOf(map, map.length+2);
-        map[map.length-2] = key;
-        map[map.length-1] = value;
+        localMapCopy = Arrays.copyOf(localMapCopy, localMapCopy.length+2);
+        localMapCopy[localMapCopy.length-2] = key;
+        localMapCopy[localMapCopy.length-1] = value;
+        map = localMapCopy;
         return null;
+    }
+
+    /// @return the previous value that was removed.
+    private Object removeAt(int index) {
+        if( index < 0 ) {
+            return null;
+        }
+        var localMapCopy = map;
+        if (localMapCopy.length == 2) { //removing the only element
+            map = EMPTY;
+            return localMapCopy[1];
+        }
+        Object[] newArr = new Object[localMapCopy.length - 2];
+        System.arraycopy(localMapCopy, 0, newArr, 0, index);
+        if (index < localMapCopy.length-2) { //deleting not the last element
+            System.arraycopy(localMapCopy, index + 2, newArr, index, localMapCopy.length - index - 2);
+        }
+        map = newArr;
+        return localMapCopy[index+1];
     }
 
     @Override
     public Object remove(@NotNull Object key) {
-        for( int i=0; i < map.length; i+=2 ) {
-            if( map[i].equals(key) ) {
-                final Object old = map[i+1];
-                Object[] newArr = new Object[map.length - 2];
-                System.arraycopy(map, 0, newArr, 0, i);
-                System.arraycopy(map, i + 2, newArr, i, map.length - i - 2);
-                map = newArr;
-                return old;
-            }
-        }
-        return null;
+        var index = indexOf(map, key, 0);
+        return removeAt(index);
     }
 
     @Override
     public void putAll(@NotNull Map<? extends String, ?> m) {
-        for ( Entry<? extends String, ?> e : m.entrySet() ) {
-            put(e.getKey(), e.getValue());
+        int toAdd = 0;
+        var localMapCopy = this.map;
+        for ( var key : m.keySet() ) {
+            if( indexOf(localMapCopy, key, 0) < 0 ) {
+                toAdd+=2;
+            }
         }
+        var newMap = Arrays.copyOf(localMapCopy, localMapCopy.length + toAdd); //Resize only once
+        toAdd = localMapCopy.length; //Now toAdd is the index where we can add new elements
+        for ( var entry : m.entrySet() ) {
+            final var key = entry.getKey();
+            int index = indexOf(localMapCopy, key, 0);
+            if( index < 0 ) {
+                newMap[toAdd++] = key;
+                newMap[toAdd++] = entry.getValue();
+            } else {
+                newMap[index+1] = entry.getValue();
+            }
+        }
+        map = newMap;
     }
 
     @Override
@@ -120,8 +151,7 @@ class JsonMap implements Map<String, Object> {
 
                     public void remove() {
                         if (!canRemove) throw new IllegalStateException();
-                        JsonMap.this.remove(map[index-2]); // remove by key, but remove both key and value
-                        index-=2;
+                        removeAt(index-=2); // remove by key, but remove both key and value
                         canRemove = false;
                     }
                 };
@@ -129,7 +159,7 @@ class JsonMap implements Map<String, Object> {
 
             @Override
             public int size() {
-                return map.length/2;
+                return map.length >> 1;
             }
         };
     }
@@ -161,7 +191,7 @@ class JsonMap implements Map<String, Object> {
 
                     public void remove() {
                         if (!canRemove) throw new IllegalStateException();
-                        JsonMap.this.remove(map[index-1]); // remove by key, but remove both key and value
+                        removeAt(index-1); // remove by key, but remove both key and value
                         index-=2;
                         canRemove = false;
                     }
@@ -170,7 +200,7 @@ class JsonMap implements Map<String, Object> {
 
             @Override
             public int size() {
-                return map.length/2;
+                return map.length >> 1;
             }
         };
     }
@@ -179,6 +209,7 @@ class JsonMap implements Map<String, Object> {
     @Override
     public Set<Entry<String, Object>> entrySet() {
         return new AbstractSet<>() {
+            @NotNull
             @Override
             public Iterator<Entry<String, Object>> iterator() {
                 return new Iterator<>() {
@@ -216,13 +247,17 @@ class JsonMap implements Map<String, Object> {
                         index += 2;
                         return entry;                    }
 
-                    public void remove() {}
+                    public void remove() {
+                        if (!canRemove) throw new IllegalStateException();
+                        removeAt(index-=2); // remove by key, but remove both key and value
+                        canRemove = false;
+                    }
                 };
             }
 
             @Override
             public int size() {
-                return map.length/2;
+                return map.length >> 1;
             }
         };
     }
