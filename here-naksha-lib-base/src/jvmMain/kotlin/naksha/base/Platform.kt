@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.module.kotlin.kotlinModule
 import naksha.base.Platform.PlatformCompanion.proxy
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
@@ -29,7 +28,6 @@ import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.isSuperclassOf
-import kotlin.reflect.full.primaryConstructor
 
 
 /**
@@ -81,16 +79,16 @@ actual class Platform {
         @JvmField
         internal val objectMapper: ThreadLocal<ObjectMapper> = ThreadLocal.withInitial {
             val jsonFactory = JsonFactoryBuilder()
-                .configure(JsonFactory.Feature.INTERN_FIELD_NAMES, false)
-                .configure(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES, false)
+                //.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, false)
+                //.configure(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES, false)
                 .configure(JsonFactory.Feature.USE_THREAD_LOCAL_FOR_BUFFER_RECYCLING, true)
                 .build()
             jsonFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false)
             jsonFactory.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false)
             JsonMapper.builder(jsonFactory)
                 //.enable(MapperFeature.DEFAULT_VIEW_INCLUSION)
-                .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
-                .enable(MapperFeature.SORT_CREATOR_PROPERTIES_FIRST)
+                //.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+                //.enable(MapperFeature.SORT_CREATOR_PROPERTIES_FIRST)
                 //.serializationInclusion(JsonInclude.Include.NON_NULL)
                 .visibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.NONE)
                 .visibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE)
