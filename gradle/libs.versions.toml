@@ -141,4 +141,4 @@ testing = [
     "mockito", "mockito_junit"
 ]
 jackson = ["jackson_core", "jackson_core_annotations", "jackson_core_databind", "jackson_core_dataformat", "jackson_kotlin"]
-logging = ["slf4j_api", "slf4j_console", "jcl_slf4j", "log4j_core", "log4j_api", "log4j_jcl", "log4j_slf4j"]
+logging = ["slf4j_api", "jcl_slf4j", "log4j_core", "log4j_api", "log4j_jcl", "log4j_slf4j"]

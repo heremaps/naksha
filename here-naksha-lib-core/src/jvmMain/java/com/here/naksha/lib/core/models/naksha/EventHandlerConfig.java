@@ -127,7 +127,7 @@ public class EventHandlerConfig extends NakshaFeature {
       return constructor.call(naksha, this, eventTarget);
     } catch (Exception e) {
       logger.error(
-          "Exception loading constructor for EventHandler id {}, extensionId {}.", getId(), extensionId, e);
+          "Exception loading constructor for EventHandler id: {}, extensionId: {}.", getId(), extensionId, e);
       throw unchecked(e);
     }
   }

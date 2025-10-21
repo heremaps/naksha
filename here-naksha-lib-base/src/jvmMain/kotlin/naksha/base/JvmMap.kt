@@ -88,7 +88,7 @@ open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
     }
 
     override fun isEmpty(): Boolean = size == 0
-    override fun putAll(from: kotlin.collections.Map<out Any, Any?>) = map().putAll(from)
+    override fun putAll(from: Map<out Any, Any?>) = map().putAll(from)
 
     override fun remove(key: Any): Any? = map?.remove(key)
 

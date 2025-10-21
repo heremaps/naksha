@@ -345,14 +345,14 @@ public final class NakshaHubConfig extends NakshaFeature {
    * Optional Total Concurrency Limit
    */
   public Integer getMaxParallelRequestsPerCPU() {
-    return getProperty(this, MAX_PARALLEL_REQUESTS_PER_CPU, Integer.class);
+    return getOrSet(MAX_PARALLEL_REQUESTS_PER_CPU, defaultMaxParallelRequestsPerCPU());
   }
 
   /**
    * Optional Total Author Concurrency Threshold
    */
   public Integer getMaxPctParallelRequestsPerActor() {
-    return getProperty(this, MAX_PCT_PARALLEL_REQUESTS_PER_ACTOR, Integer.class);
+    return getOrSet(MAX_PCT_PARALLEL_REQUESTS_PER_ACTOR, defaultMaxPctParallelRequestsPerActor());
   }
 
   /**

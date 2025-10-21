@@ -37,6 +37,7 @@ public class HttpStorageProperties extends NakshaProperties {
 
   public static final Integer DEF_CONNECTION_TIMEOUT_SEC = 20;
   public static final Integer DEF_SOCKET_TIMEOUT_SEC = 90;
+  public static final Integer DEF_MAX_RETRIES = 1;
   public static final Map<String, String> DEFAULT_HEADERS = Map.of(
       "Content-Type", "application/json",
       "Accept-Encoding", "gzip");
@@ -44,6 +45,7 @@ public class HttpStorageProperties extends NakshaProperties {
   static final String URL = "url";
   private static final String CONNECTION_TIMEOUT = "connectTimeout";
   private static final String SOCKET_TIMEOUT = "socketTimeout";
+  private static final String MAX_RETRIES = "maxRetries";
   private static final String HEADERS = "headers";
 
   private static final String HTTP_INTERFACE = "httpInterface";
@@ -84,6 +86,18 @@ public class HttpStorageProperties extends NakshaProperties {
 
   public void setSocketTimeout(final @Nullable Integer socketTimeout) {
     setRaw(SOCKET_TIMEOUT, socketTimeout);
+  }
+
+  /**
+   * The max number of retries.
+   * By default: 1
+   */
+  public @NotNull Integer getMaxRetries() {
+    return getOrSet(MAX_RETRIES, DEF_MAX_RETRIES);
+  }
+
+  public void setMaxRetries(final @Nullable Integer maxRetries) {
+    setRaw(MAX_RETRIES, maxRetries);
   }
 
   /**
