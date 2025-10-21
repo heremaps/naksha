@@ -10,9 +10,10 @@ log4j = "2.25.1"
 junit = "5.9.2"
 test_containers = "1.20.6"
 kotlin = "2.1.20"
+fastdouble = "2.0.1"
 
 [libraries]
-jetbrains_annotations = { module = "org.jetbrains:annotations", version = "24.0.1" }
+jetbrains_annotations = { module = "org.jetbrains:annotations", version = "26.0.2-1" }
 
 vertx_core = { module = "io.vertx:vertx-core", version.ref = "vertx" }
 vertx_config = { module = "io.vertx:vertx-config", version.ref = "vertx" }
@@ -101,6 +102,8 @@ kotlinx_datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.6.2"
 lz4_java = "org.lz4:lz4-java:1.8.0"
 
 picocli = { module = "info.picocli:picocli", version = "4.7.7" }
+
+fastdouble = { module = "ch.randelshofer:fastdoubleparser", version.ref = "fastdouble" }
 
 [plugins]
 kotlin_multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

@@ -1,4 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
@@ -33,7 +32,11 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(kotlin("reflect"))
-                api(libs.kotlinx.datetime)
+                implementation(libs.fastdouble)
+                implementation(libs.jetbrains.annotations)
+                api(libs.kotlinx.datetime.get().toString()) {
+                   exclude(group = "org.jetbrains.annotations")
+                }
                 api(libs.lz4.java)
                 implementation(libs.jackson.kotlin)
                 // https://mvnrepository.com/artifact/org.slf4j
