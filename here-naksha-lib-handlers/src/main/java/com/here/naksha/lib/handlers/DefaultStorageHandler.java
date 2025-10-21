@@ -46,7 +46,6 @@ import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.StreamInfo;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
-import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.handlers.exceptions.MissingCollectionsException;
 import java.sql.SQLException;
 import java.util.List;
@@ -271,9 +270,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull F1<Result, RuntimeException> reattempt,
       @NotNull StopWatch storageTimer) {
     try {
-      if (wr instanceof WriteXyzCollections){
-          return measuredStorageSupplier(() -> performAtomicWriteCollection(ctx, storageImpl, (WriteXyzCollections) wr), storageTimer);
-      } else{
+      if (wr instanceof WriteXyzCollections) {
+        return measuredStorageSupplier(
+            () -> performAtomicWriteCollection(ctx, storageImpl, (WriteXyzCollections) wr), storageTimer);
+      } else {
         return measuredStorageSupplier(() -> performAtomicWriteFeatures(ctx, storageImpl, wr), storageTimer);
       }
     } catch (RuntimeException re) {
@@ -282,17 +282,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   private @NotNull Result performAtomicWriteCollection(
-          @NotNull NakshaContext ctx,
-          @NotNull IStorage storageImpl,
-          @NotNull WriteXyzCollections writeCollections) {
-      return singleWrite(ctx, storageImpl, writeCollections);
+      @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteXyzCollections writeCollections) {
+    return singleWrite(ctx, storageImpl, writeCollections);
   }
 
   protected @NotNull Result performAtomicWriteFeatures(
-          @NotNull NakshaContext ctx,
-          @NotNull IStorage storageImpl,
-          @NotNull WriteRequest<?, ?, ?> wr) {
-      return singleWrite(ctx, storageImpl, wr);
+      @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteRequest<?, ?, ?> wr) {
+    return singleWrite(ctx, storageImpl, wr);
   }
 
   private @NotNull Result singleWrite(
