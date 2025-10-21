@@ -65,6 +65,8 @@ open class PgTable(
 ) {
 
     companion object PgTableCompanion {
+        private const val toast_tuple_target: Int = 32736
+
         /**
          * Tests if this is any HEAD table _(either root or a performance-partition)_.
          * @param name the table name.
@@ -189,6 +191,19 @@ open class PgTable(
      * Actually, history is always partitioned by year, all other tables are optionally performance partitioned.
      */
     private fun doInit(): Pair<String?, String?> {
+        // About TOAST_TUPLE_TARGET
+        //
+        // Each page in PostgresQL looks like:
+        // Page header: ~24 bytes
+        // ItemId array: 4 bytes per tuple
+        // Line pointer: part of ItemId array
+        // Tuple header: 23 bytes (for a normal heap tuple)
+        // NULL bitmap: variable (~1 byte per 8 columns)
+        // Actual data: variable
+        //
+        // Now, PostgresQL maximum page size is 32768 (configurable at compile time), therefore, setting TOAST_TUPLE_TARGET to 32767
+        // will ensure that whatever size a page is, PostgresQL will try to insert the row completely, before falling back to TOAST !
+
         // Copy to stack, makes possible for the compiler to remember when values are not null!
         val partitionCount = this.partitionCount
         val partitionColumn = this.partitionByColumn
@@ -287,7 +302,7 @@ open class PgTable(
   CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (naksha_tn_partition_index(tn, $parentPartCount)=$partitionValue),
   CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1}) 
-WITH (fillfactor=100,toast_tuple_target=8140)
+WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
                 return Pair(SQL, TABLESPACE)
             }
@@ -319,7 +334,7 @@ $TABLESPACE"""
   CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn}),
   CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_tn IS NOT NULL AND naksha_tn_year(next_tn)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1}) 
-WITH (fillfactor=100,toast_tuple_target=8140)
+WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
                 return Pair(SQL, TABLESPACE)
             }
@@ -340,7 +355,7 @@ $TABLESPACE"""
   CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (naksha_tn_partition_index(tn, $parentPartCount)=$partitionValue),
   CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1}) 
-WITH (fillfactor=100,toast_tuple_target=8140)
+WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
                 return Pair(SQL, TABLESPACE)
             }
@@ -370,7 +385,7 @@ $TABLESPACE"""
 ${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }},
 CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn})
 )
-WITH (fillfactor=100,toast_tuple_target=8140)
+WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)
         }

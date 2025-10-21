@@ -456,7 +456,7 @@ class PgColumn : JsEnum() {
         val cs0 = def(PgColumn::class, "cs0") { self ->
             self._i = 21
             self._type = PgType.STRING
-            self._extra = "STORAGE $MAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -468,7 +468,7 @@ class PgColumn : JsEnum() {
         val cs1 = def(PgColumn::class, "cs1") { self ->
             self._i = 22
             self._type = PgType.STRING
-            self._extra = "STORAGE $MAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -480,7 +480,7 @@ class PgColumn : JsEnum() {
         val cs2 = def(PgColumn::class, "cs2") { self ->
             self._i = 23
             self._type = PgType.STRING
-            self._extra = "STORAGE $MAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         /**
@@ -492,7 +492,7 @@ class PgColumn : JsEnum() {
         val cs3 = def(PgColumn::class, "cs3") { self ->
             self._i = 24
             self._type = PgType.STRING
-            self._extra = "STORAGE $MAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
         // Assuming:
@@ -513,7 +513,7 @@ class PgColumn : JsEnum() {
         val tags = def(PgColumn::class, "tags") { self ->
             self._i = 25
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $MAIN"
+            self._extra = "STORAGE $EXTERNAL"
         }
 
         /**
@@ -525,7 +525,7 @@ class PgColumn : JsEnum() {
         val ref_point = def(PgColumn::class, "ref_point") { self ->
             self._i = 26
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $MAIN"
+            self._extra = "STORAGE $EXTERNAL"
         }
 
         /**
@@ -537,7 +537,7 @@ class PgColumn : JsEnum() {
         val geo = def(PgColumn::class, "geo") { self ->
             self._i = 27
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $MAIN"
+            self._extra = "STORAGE $EXTERNAL"
         }
 
         /**
@@ -549,7 +549,7 @@ class PgColumn : JsEnum() {
         val feature = def(PgColumn::class, "feature") { self ->
             self._i = 28
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $MAIN"
+            self._extra = "STORAGE $EXTERNAL"
         }
 
         /**
@@ -561,7 +561,7 @@ class PgColumn : JsEnum() {
         val attachment = def(PgColumn::class, "attachment") { self ->
             self._i = 29
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $MAIN"
+            self._extra = "STORAGE $EXTERNAL"
         }
 
         /**
