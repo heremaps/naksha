@@ -5,16 +5,19 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
-
-/// Used as internal implementation of {@link JvmMap}. Assumption is that each JSON object has only around 4 or fewer key-value pairs.
-/// This means each object of this class can fit into CPU L1 which makes it very fast to access.
-///
+/**
+ * Used as internal implementation of {@link JvmMap}. Assumption is that each JSON object has only around 4 or fewer key-value pairs.
+ * This means each object of this class can fit into CPU L1 which makes it very fast to access.
+ * Not to be confused with the class of the same name in {@link com.here.naksha.lib.core.util.json}.
+ */
 class JsonMap implements Map<String, Object> {
     JsonMap(){
         map = EMPTY;
     }
 
-    /// The internal map representation, \[key1, value1, key2, value2,...].
+    /**
+     * The internal map representation, [key1, value1, key2, value2,...].
+     */
     private @NotNull Object[] map;
     private static final Object[] EMPTY = new Object[0];
 
@@ -60,8 +63,9 @@ class JsonMap implements Map<String, Object> {
         var localMapCopy = this.map;
         for (int i = 0; i < localMapCopy.length; i+=2 ) {
             if( key.equals(localMapCopy[i]) ) {
-                map[i+1] = value;
-                return localMapCopy[i+1];
+                var oldValue = localMapCopy[i+1];
+                localMapCopy[i+1] = value;
+                return oldValue;
             }
         }
         localMapCopy = Arrays.copyOf(localMapCopy, localMapCopy.length+2);
@@ -71,7 +75,9 @@ class JsonMap implements Map<String, Object> {
         return null;
     }
 
-    /// @return the previous value that was removed.
+    /**
+     * @return the previous value that was removed.
+     */
     private Object removeAt(int index) {
         if( index < 0 ) {
             return null;
@@ -106,7 +112,7 @@ class JsonMap implements Map<String, Object> {
             }
         }
         var newMap = Arrays.copyOf(localMapCopy, localMapCopy.length + toAdd); //Resize only once
-        toAdd = localMapCopy.length; //Now toAdd is the index where we can add new elements
+        toAdd = localMapCopy.length; // Reuse, now toAdd is the index where we can add new elements
         for ( var entry : m.entrySet() ) {
             final var key = entry.getKey();
             int index = indexOf(localMapCopy, key, 0);
@@ -137,7 +143,7 @@ class JsonMap implements Map<String, Object> {
                     boolean canRemove = false;
                     @Override
                     public boolean hasNext() {
-                        return index < map.length-2;
+                        return index < map.length;
                     }
 
                     @Override
@@ -177,7 +183,7 @@ class JsonMap implements Map<String, Object> {
 
                     @Override
                     public boolean hasNext() {
-                        return index < map.length-1;
+                        return index < map.length;
                     }
 
                     @Override

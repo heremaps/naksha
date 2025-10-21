@@ -48,6 +48,8 @@ import org.slf4j.LoggerFactory;
  * A map that uses {@link String} key and arbitrary values. The map is thread safe for concurrent
  * access. All keys are deduplicated as intrinsic feature of the map. This reduces the memory
  * consumption when many instance with the same keys are used.
+ * <p>
+ * Not to be confused with the class of the same name in {@link naksha.base}.
  *
  * @since 2.0.0
  */
