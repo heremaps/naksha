@@ -44,6 +44,8 @@ class JsonParserTest {
     assertEquals("test", s);
   }
 
+  // TODO: test_quoted_string
+
   @Test
   public void test_boolean() {
     Object r = parse("true");
@@ -75,6 +77,24 @@ class JsonParserTest {
     b = assertInstanceOf(Boolean.class, r);
     assertNotNull(b);
     assertFalse(b);
+  }
+
+  @Test
+  public void test_null() {
+    Object r = parse("null");
+    assertNull(r);
+
+    r = parse(" null ");
+    assertNull(r);
+
+    r = parse("null // comments should be ignored");
+    assertNull(r);
+
+    r = parse("/* test*/ null // comments should be ignored");
+    assertNull(r);
+
+    r = parse("/* test*/ null /* comments should be ignored");
+    assertNull(r);
   }
 
   @Test
@@ -122,5 +142,8 @@ class JsonParserTest {
     assertNotNull(d);
     assertEquals(-1.23e100d, d);
   }
+
+  // TODO: test_array
+  // TODO: test_map
 
 }
