@@ -15,7 +15,7 @@ import static naksha.base.UTF8.*;
  * <li>{@code null} -> {@code null}
  * <li>{@code Boolean} -> {@link Boolean}
  * <li>{@code Number} -> {@link Number}: Actually always results in {@link Long} or {@link Double}, they will be interned with some limits.
- * <li>{@code String} -> {@link String} or {@link JsonKey}: The returned strings are {@link NormalizerForm#NFKC NFKC} normalized, and if being keys in a map, they are interned using {@link JsonKey}. The interning guarantees that there will never be the same key twice in memory, which allows to compare keys by reference, basically you are fine to do {@code key1 == key2}. This makes maps much faster.
+ * <li>{@code String} -> {@link String}: The returned strings are {@link NormalizerForm#NFKC NFKC} normalized, and if being keys in a map, they are interned. The interning guarantees that there will never be the same key twice in memory, which allows to compare keys by reference, basically you are fine to do {@code key1 == key2}. This makes maps much faster.
  * <li>{@code Array} -> {@link JsonArray}
  * <li>{@code Map} -> {@link JsonMap}
  * <li>{@code UInt8Array} -> {@code byte[]}: In a JSON typed-arrays are encoded as <a href="https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data">data-url</a>, like {@code data:UInt8Array;base64,<data>}.
@@ -27,12 +27,7 @@ import static naksha.base.UTF8.*;
  * </ul>
  * Beware that the encoding of binary data is a none-standard extension, only supported by this JSON parser. It as well allows comments and keys or values to be not quoted.
  *
- * <h1>Implementation Notes</h1>
- * Internally, the JSON parser does encode {@code Array} as {@code Object[]}, so while parsing. The array encodes in the first slot the type, in the second the reference to the parent, followed by all elements, eventually ended either by the and of the array or with a special {@link #END} element, when the list does not use all slots. This reduces the amount of resized that need to be done.
- *
- * <p>The same is true for {@code Map}, as well encoded in {@code Object[]}, with the first two slots used for TYPE and parent reference, plus then additional two slots for each map-entry, storing all keys as ({@link JsonKey}), and values as one of the valid Json types documented above. The array is eventually ended with a special {@link #END} key, when not all slots are used to encode map-entries.
- *
- * <p>Technically, the parser will work optimal, when the JSON is not too deep, and only has small objects; huge objects with hundreds of key-value pairs or elements in an array, are rather bad for the performance.
+ * @implNote Internally, the JSON parser does encode {@code Array}'s and {@code Map}'s as {@code Object[]}. Technically, the parser will work optimal, when the JSON is not too deep, and has only small maps; huge maps with hundreds of key-value pairs are rather bad for the performance, while bigger arrays should perform okay.
  * @since 3.0
  */
 public final class JsonParser {
@@ -43,203 +38,10 @@ public final class JsonParser {
    */
   public static final ThreadLocal<@NotNull JsonParser> instance = ThreadLocal.withInitial(JsonParser::new);
 
-  /**
-   * The index of the object type in low-level representation <i>({@code Object[]})</i>.
-   * @since 3.0
-   */
-  public static final int TYPE = 0;
-
-  /**
-   * The value to signal {@link JsonMap} type.
-   * @since 3.0
-   */
-  public static final Object MAP = new Object();
-
-  /**
-   * The value to signal {@link JsonArray} type.
-   * @since 3.0
-   */
-  public static final Object ARRAY = new Object();
-
-  /**
-   * The index of the object state in low-level representation <i>({@code Object[]})</i>.
-   *
-   * <p>Used while parsing to keep a reference to the parent, as long as the object is just yet partially processed, when going back to parent, it is replaced with state.
-   * @since 3.0
-   */
-  public static final int STATE = 1;
-
-  /**
-   * The value to signal that the object is empty <i>(has no valid elements or map entries)</i>.
-   * @since 3.0
-   */
-  public static final Object IS_EMPTY = new Object();
-
-  /**
-   * The value to signal that the object is full <i>(all slots store valid elements or map entries)</i>. This means, the length of the object can be calculated from the length of the {@code Object[]}.
-   * @since 3.0
-   */
-  public static final Object IS_FULL = new Object();
-
-  /**
-   * The index of the first value element or map-entry in low-level representation <i>({@code Object[]})</i>.
-   * @since 3.0
-   */
-  public static final int FIRST = 2;
-
-  /**
-   * The END sign, when the object slots are not fully used.
-   * @since 3.0
-   */
-  public static final Object END = new Object();
-
-  /**
-   * An empty array.
-   * @since 3.0
-   */
-  public static final Object[] EMPTY_ARRAY = new Object[0];
-
-  /**
-   * An empty map.
-   * @since 3.0
-   */
-  public static final Object[] EMPTY_MAP = new Object[0];
-
-  /**
-   * Tests if the given data array represents an array.
-   * @param data the data array.
-   * @return true if this represents an array.
-   */
-  public static boolean isArray(Object @NotNull [] data) {
-    return data == EMPTY_ARRAY || data.length > 0 && data[0] == ARRAY;
-  }
-
-  /**
-   * Tests if the given data array represents a map.
-   * @param data the data array.
-   * @return true if this represents a map.
-   */
-  public static boolean isMap(Object @NotNull [] data) {
-    return data == EMPTY_MAP || data.length > 0 && data[0] == MAP;
-  }
-
-  /**
-   * Tests if the given map or array data is empty.
-   * @param data The map or array to test.
-   * @return true if the map or array is empty.
-   */
-  public static boolean isEmpty(Object @NotNull [] data) {
-    final int length = data.length;
-    if (length == 0) return true;
-    assert length >= 6;
-    if (data[1] == IS_EMPTY) return true;
-    if (data[1] == IS_FULL) return false;
-    // In any case, when the array is empty, we will have an END mark at the first slot!
-    return data[2] == END;
-  }
-
-  /**
-   * Tests if the given map or array data is full.
-   * @param data The map or array to test.
-   * @return true if the map or array is full.
-   */
-  public static boolean isFull(Object @NotNull [] data) {
-    final int length = data.length;
-    if (length == 0) return true;
-    assert length >= 6;
-    if (data[1] == IS_EMPTY) return false;
-    if (data[1] == IS_FULL) return true;
-    if (data[2] == END) return false; // isEmpty!
-    if (data[0] == MAP) {
-      var end = 4;
-      while (end < length && data[end] != END) end += 2;
-      return end == length;
-    }
-    // ARRAY
-    var end = 3;
-    while (end < length && data[end] != END) end++;
-    return end == length;
-  }
-
-  /**
-   * Returns the amount of elements in an array or the amount of entries in a map.
-   *
-   * @param data the map or array.
-   * @return the amount of valid elements or entries.
-   */
-  public static int lengthOf(Object @NotNull [] data) {
-    final int length = data.length;
-    if (length == 0) return 0;
-    assert length >= 6;
-    if (data[1] == IS_EMPTY) return 0;
-    if (data[0] == MAP) {
-      if (data[1] == IS_FULL) return (length - 2) >> 1;
-      var end = 2;
-      while (end < length && data[end] != END) end += 2;
-      return (end - 2) >> 1;
-    }
-    // ARRAY
-    if (data[1] == IS_FULL) return length - 2;
-    var end = 2;
-    while (end < length && data[end] != END) end++;
-    return end - 2;
-  }
-
-  /**
-   * Returns the amount of elements or entries that can be stored in the given map or array.
-   * @param data The map or array data.
-   * @return The amount of elements or entries that can be stored in the given map or array.
-   */
-  public static int capacityOf(Object @NotNull [] data) {
-    if (data.length == 0) return 0;
-    assert data.length >= 6;
-    if (data[0] == MAP) return (data.length - 2) >> 1;
-    return data.length - 2;
-  }
-
-  /**
-   * A method optimized for 64-bit CPU, and for small objects/arrays as we normally encounter in JSON. It is unusual in JSON, to ever encounter a map or array with more than 20 elements. So, we optimize for memory consumption and CPU caching of small data structures here.
-   * @param data the data to ensure a specific capacity.
-   * @param capacity the amount of values that should be stored (if map-entries, then 2 values are needed for each entry).
-   * @param shrink if shrinking is wanted.
-   * @return either the given array or a new one with the data copied over, so that the new values are fitting into.
-   */
-  public static Object @NotNull [] ensureCapacity(Object @NotNull [] data, int capacity, boolean shrink) {
-    // Handle empty
-    if (capacity < 0) throw new IllegalArgumentException("Capacity must not be negative");
-    if (capacity == 0) {
-      if (!shrink) return data;
-      if (isMap(data)) return EMPTY_MAP;
-      return EMPTY_ARRAY;
-    }
-    capacity += 2; // the first two slots are internally used, and must always be there.
-    if (data.length == capacity) return data;
-
-    // The want the Object[] to fit exactly into L1 cache lines.
-    // Therefore, the first "page" can only hold 6 values, every following each 8.
-    // The reason is that each value is a pointer, and we optimize this for 64-bit machines with no pointer compression!
-    // - If we request 1 to 6 values, we expect the result to be 6.
-    // - If we request 7 values, we expect the result to be 8 + 6 = 14.
-    // - If we request 14 values, we expect the result to be 8 + 6 = 14.
-    // - If we request 15 values, we expect the result to be 16 + 6 = 24.
-    var new_size = (((capacity-6) + 7) & 0xffff_fff8) + 6;
-    if (data.length == new_size) { // unchanged size (actually, there is still room left).
-      return data;
-    }
-    if (new_size > data.length) { // we need to expand.
-      var new_data = new Object[new_size];
-      System.arraycopy(data, 0, new_data, 0, data.length);
-      return new_data;
-    }
-    if (!shrink) return data;
-    // We need to shrink.
-    var new_data = new Object[new_size];
-    System.arraycopy(data, 0, new_data, 0, new_size);
-    return new_data;
-  }
 
   // Allocate 2 KiB for the stack (3 elements are used for the JVM header, size, and padding on 64-bit JVM).
   // We stick with this stack for the life-time of the parser.
+  // The inner arrays are managed using `ArrayUtil`.
   private final @Nullable Object @NotNull[] @Nullable[] stack = new Object[256-3][];
   private int stack_end;
   private ThreadLocalCharBuffer charBuffer;
@@ -249,7 +51,6 @@ public final class JsonParser {
   private boolean isNFKCNormalized;
   private int line;
   private int column;
-  private int i;
 
   /**
    * To be called ones a line comment has hit, so after reading {@code //}.
@@ -324,7 +125,7 @@ public final class JsonParser {
   }
 
   /**
-   * Skip all white-spaces, including {@code ,}, {@code ;}, and {@code :}, next to line-feed <code>\n</code>, carriage-return <code>\r</code> and others.
+   * Skip all white-spaces, including {@code ,}, {@code ;}, {@code :}, line-feed <code>\n</code>, carriage-return <code>\r</code> and others.
    * @param utf8 the UTF-8 bytes.
    * @param i the index to start reading.
    * @return the index of the first byte that is no white-space.
@@ -417,9 +218,11 @@ public final class JsonParser {
    */
   private int parseValue(byte[] utf8, int i) {
     i = skipWhiteSpaces(utf8, i);
+    if (i < 0) return i;
     final long result = decodeCodePoint(utf8, i);
     final int cp = resultCodePoint(result);
     i = resultNextIndex(result);
+    if (i < 0) return i;
     switch (cp) {
       case '{': return parseMap(utf8, i);
       case '[': return parseArray(utf8, i);
@@ -503,7 +306,7 @@ public final class JsonParser {
       }
     } catch (NumberFormatException ignored) {}
     // Obviously no long or double, so must be string.
-    parsedValue = StringUtil.getOrNew(chars, 0, chars_end, chars_hash, isNFKCNormalized);
+    parsedValue = StringUtil.newString(chars, 0, chars_end, chars_hash, isNFKCNormalized);
     return i;
   }
 
@@ -543,6 +346,7 @@ public final class JsonParser {
    */
   public @Nullable Object parse(byte[] utf8, int i, boolean isNFKCNormalized) {
     if (utf8 == null) return null;
+    stack_end = 0;
     charBuffer = ThreadLocalCharBuffer.instance.get();
     chars = charBuffer.get();
     chars_hash = 0;
