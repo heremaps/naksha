@@ -38,17 +38,15 @@ public class JsonArray implements List<Object> {
 
     @Override
     public int indexOf(@Nullable Object o) {
-        if (o instanceof Double) {
-            if (doubleList != null) {
-                var localDoubleList = doubleList;
-                double doubleValue = (Double) o;
-                for (int i = 0; i < localDoubleList.length; i++) {
-                    if (localDoubleList[i] == doubleValue) {
-                        return i;
-                    }
+        if (o instanceof Double && doubleList != null) {
+            var localDoubleList = doubleList;
+            double doubleValue = (Double) o;
+            for (int i = 0; i < localDoubleList.length; i++) {
+                if (localDoubleList[i] == doubleValue) {
+                    return i;
                 }
-                return -1;
             }
+            return -1;
         }
         var localList = list;
         for (int i = 0; i < localList.length; i++) {
@@ -81,8 +79,32 @@ public class JsonArray implements List<Object> {
 
     @Override
     public Object set(int index, Object element) {
-        //TODO
-        return null;
+        var localDoubleList = doubleList;
+        if (localDoubleList != null) {
+            if (element instanceof Double) {
+                if (index < 0 || index >= localDoubleList.length) {
+                    throw new IndexOutOfBoundsException("Index: " + index + ", JsonArray size: " + localDoubleList.length);
+                }
+                var oldValue = localDoubleList[index];
+                localDoubleList[index] = (Double) element;
+                return oldValue;
+            }
+            // First non-double being set
+            var localList = new Object[localDoubleList.length];
+            for (int i = 0; i < index; i++) {
+                localList[i] = localDoubleList[i];
+            }
+            localList[index] = element;
+            for (int i = index+1; i < localDoubleList.length; i++) {
+                localList[i] = localDoubleList[i];
+            }
+            list = localList;
+            doubleList = null; // Mixed types now
+            return localDoubleList[index];
+        }
+        var oldValue = list[index];
+        list[index] = element;
+        return oldValue;
     }
 
     @Override
@@ -117,8 +139,8 @@ public class JsonArray implements List<Object> {
             for (int i = 0; i < index; i++) {
                 newList[i] = localDoubleList[i];
             }
-            for (int i=index; i<newList.length; i++) {
-                newList[i+1] = localDoubleList[i];
+            for (int i=index+1; i<newList.length; i++) {
+                newList[i] = localDoubleList[i];
             }
             doubleList = null; // Mixed types now
         } else {
@@ -151,12 +173,55 @@ public class JsonArray implements List<Object> {
 
     @Override
     public boolean addAll(@NotNull Collection c) {
-        //TODO
-        return false;
+        return addAll(list.length, c);
     }
 
     @Override
     public boolean addAll(int index, @NotNull Collection c) {
+//        if (element instanceof Double) {
+//            if (doubleList != null) {
+//                var localDoubleList = doubleList;
+//                if (index < 0 || index > localDoubleList.length) {
+//                    throw new IndexOutOfBoundsException("Index: "+index+", JsonArray size: "+localDoubleList.length);
+//                }
+//                var newDoubleList = new double[localDoubleList.length + 1];
+//                System.arraycopy(localDoubleList, 0, newDoubleList, 0, index);
+//                newDoubleList[index] = (Double) element;
+//                if (index < localDoubleList.length) // not adding at end
+//                {
+//                    System.arraycopy(localDoubleList, index, newDoubleList, index + 1, localDoubleList.length-index);
+//                }
+//                doubleList = newDoubleList;
+//                return;
+//            } else if (list == EMPTY) { // First element and it's a double
+//                var localDoubleList = new double[1];
+//                localDoubleList[0] = (Double) element;
+//                doubleList = localDoubleList;
+//                return;
+//            }
+//        }
+//        // Either adding double to existing mixed list, or adding non-double
+//        Object[] newList;
+//        if (doubleList != null) { // First non-double being added
+//            var localDoubleList = doubleList;
+//            newList = new Object[localDoubleList.length+1];
+//            for (int i = 0; i < index; i++) {
+//                newList[i] = localDoubleList[i];
+//            }
+//            for (int i=index+1; i<newList.length; i++) {
+//                newList[i] = localDoubleList[i];
+//            }
+//            doubleList = null; // Mixed types now
+//        } else {
+//            var localList = list;
+//            newList = new Object[localList.length + 1];
+//            System.arraycopy(localList, 0, newList, 0, index);
+//            if (index < localList.length) { // not adding at end
+//                System.arraycopy(localList, index, newList, index + 1, localList.length - index);
+//            }
+//        }
+//        newList[index] = element;
+//        list = newList;
         //TODO
         return false;
     }
