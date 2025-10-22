@@ -99,8 +99,23 @@ class JsonParserTest {
 
   @Test
   public void test_plain_long() {
-    Object r = parse("15");
+    Object r = parse("0");
     Long l = assertInstanceOf(Long.class, r);
+    assertNotNull(l);
+    assertEquals(0L, l);
+
+    r = parse("-0");
+    l = assertInstanceOf(Long.class, r);
+    assertNotNull(l);
+    assertEquals(0L, l);
+
+    r = parse("-1");
+    l = assertInstanceOf(Long.class, r);
+    assertNotNull(l);
+    assertEquals(-1L, l);
+
+    r = parse("15");
+    l = assertInstanceOf(Long.class, r);
     assertNotNull(l);
     assertEquals(15L, l);
 
@@ -126,6 +141,23 @@ class JsonParserTest {
     Double d = assertInstanceOf(Double.class, r);
     assertNotNull(d);
     assertEquals(15.0d, d);
+
+    r = parse("0.0");
+    d = assertInstanceOf(Double.class, r);
+    assertNotNull(d);
+    assertEquals(0.0d, d);
+
+    r = parse("-0.0");
+    d = assertInstanceOf(Double.class, r);
+    assertNotNull(d);
+    // Warning: Do not call equals on boxed values, they compare binary, and -0.0 is binary different from 0.0 !
+    assertNotEquals(0.0d, d.doubleValue());
+    assertEquals(-0.0d, d.doubleValue());
+
+    r = parse("-1.0");
+    d = assertInstanceOf(Double.class, r);
+    assertNotNull(d);
+    assertEquals(-1.0d, d);
 
     r = parse(" 15.0e0  ");
     d = assertInstanceOf(Double.class, r);
