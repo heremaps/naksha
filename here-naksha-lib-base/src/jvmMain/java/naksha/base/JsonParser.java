@@ -7,6 +7,7 @@ import java.text.Normalizer;
 
 import static ch.randelshofer.fastdoubleparser.JsonDoubleParser.parseDouble;
 import static java.lang.Character.isWhitespace;
+import static naksha.base.StringUtil.newString;
 import static naksha.base.UTF8.*;
 
 /**
@@ -55,8 +56,8 @@ public final class JsonParser {
   /**
    * To be called ones a line comment has hit, so after reading {@code //}.
    * @param utf8 the UTF-8 bytes.
-   * @param i the index to start reading at, so first byte after {@code \n}.
-   * @return the index of the first byte after the comment ends.
+   * @param i the index to start reading at, so first byte after {@code //}.
+   * @return the index of the first byte after the comment ends, so after <code>//\n</code>
    */
   private int skipLineComment(byte[] utf8, int i) {
     int line = this.line;
@@ -84,10 +85,10 @@ public final class JsonParser {
   /**
    * To be called ones a line comment has hit, so after reading <code>/*</code>.
    * @param utf8 the UTF-8 bytes.
-   * @param i the index to start reading at, so first byte after <code>*\</code>.
-   * @return the index of the first byte after the comment ends.
+   * @param i the index to start reading at, so first byte after <code>/*</code>.
+   * @return the index of the first byte after the comment ends, so after <code>&ast;/</code>.
    */
-  private int skipCommentBlock(byte[] utf8, int i) {
+  private int skipBlockComment(byte[] utf8, int i) {
     int line = this.line;
     int column = this.column;
     try {
@@ -113,6 +114,21 @@ public final class JsonParser {
       this.line = line;
       this.column = column;
     }
+  }
+
+  /**
+   * To be called ones a line or block comment has hit, so after reading {@code /}. It will skip the comment, if there is any, otherwise it will just return the same i.
+   * @param utf8 the UTF-8 bytes.
+   * @param i the index to start reading at, so first byte after {@code /}.
+   * @return the index of the first byte after the comment ends or the given {@code i}, if this was no comment.
+   */
+  private int skipIfComment(byte[] utf8, int i) {
+    final var result = decodeCodePoint(utf8, i);
+    final int cp = resultCodePoint(result);
+    final int next_i = resultNextIndex(result);
+    if (cp == '*') return skipBlockComment(utf8, next_i);
+    if (cp == '/') return skipLineComment(utf8, next_i);
+    return i;
   }
 
   private static final boolean[] WHITESPACES = new boolean[256];
@@ -201,6 +217,281 @@ public final class JsonParser {
     throw new UnsupportedOperationException();
   }
 
+  private static final long[] MUL = new long[] {
+      1_000_000_000_000_000_000L, // 18
+      100_000_000_000_000_000L, // 17
+      10_000_000_000_000_000L, // 16
+      1_000_000_000_000_000L, // 15
+      100_000_000_000_000L, // 14
+      10_000_000_000_000L, // 13
+      1_000_000_000_000L, // 12
+      100_000_000_000L, // 11
+      10_000_000_000L, // 10
+      1_000_000_000L, // 9
+      100_000_000L, // 8
+      10_000_000L, // 7
+      1_000_000L, // 6
+      100_000L, // 5
+      10_000L, // 4
+      1_000L, // 3
+      100L, // 2
+      10L, // 1
+      1L // 0
+  };
+  private static long v(char @NotNull[] chars, int offset, int pos, int length) {
+    assert offset >= 0 && offset+pos < chars.length;
+    assert pos >= 0 && pos <= 18;
+    assert length >= 1 && length <= 19 && length > pos;
+
+    final char digit = chars[offset+pos];
+    assert digit >= '0' && digit <= '9';
+    final int i = length - pos - 1;
+    // assert i >= 0 && i <= 18 && i <= MUL.length;
+    return (digit-'0') * MUL[i];
+  }
+  private @NotNull Long parseLong(char[] chars, int offset, int length) {
+    //
+    // Note: We're only called, when the chars are only digits, except for the first, which may be a minus!
+    //
+    //  2           1
+    // 109 876 543 210 987 654 3210
+    //  -9,223,372,036,854,775,808
+    if (length <= 0 || length > 20) throw new NumberFormatException();
+    //assert length >= 1 && length <= 20;
+    final boolean negative;
+    if (chars[offset] == '-') {
+      negative = true;
+      ++offset;
+      // We basically have just `-`
+      if (--length == 0) throw new NumberFormatException();
+    } else {
+      negative = false;
+      if (length == 20) throw new NumberFormatException();
+    }
+
+    // TODO: We can use vector instructions for this, when we just get FFW to upgrade to latest JVM 25.
+    // Compiler knows that we're in that range, so he will create a jump-table!
+    //assert length >= 1 && length <= 19;
+    final long value;
+    switch (length) {
+      case 19: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length)
+                     + v(chars, offset, 11, length)
+                     + v(chars, offset, 12, length)
+                     + v(chars, offset, 13, length)
+                     + v(chars, offset, 14, length)
+                     + v(chars, offset, 15, length)
+                     + v(chars, offset, 16, length)
+                     + v(chars, offset, 17, length)
+                     + v(chars, offset, 18, length);
+        // This happens only when -9,223,372,036,854,775,808 is parsed,
+        // because 9_223_372_036_854_775_800L + 8L = -9,223,372,036,854,775,808
+        if (value < 0) return value;
+      break;
+      case 18: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length)
+                     + v(chars, offset, 11, length)
+                     + v(chars, offset, 12, length)
+                     + v(chars, offset, 13, length)
+                     + v(chars, offset, 14, length)
+                     + v(chars, offset, 15, length)
+                     + v(chars, offset, 16, length)
+                     + v(chars, offset, 17, length);
+      break;
+      case 17: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length)
+                     + v(chars, offset, 11, length)
+                     + v(chars, offset, 12, length)
+                     + v(chars, offset, 13, length)
+                     + v(chars, offset, 14, length)
+                     + v(chars, offset, 15, length)
+                     + v(chars, offset, 16, length);
+      break;
+      case 16: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length)
+                     + v(chars, offset, 11, length)
+                     + v(chars, offset, 12, length)
+                     + v(chars, offset, 13, length)
+                     + v(chars, offset, 14, length)
+                     + v(chars, offset, 15, length);
+      break;
+      case 15: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length)
+                     + v(chars, offset, 11, length)
+                     + v(chars, offset, 12, length)
+                     + v(chars, offset, 13, length)
+                     + v(chars, offset, 14, length);
+      break;
+      case 14: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length)
+                     + v(chars, offset, 11, length)
+                     + v(chars, offset, 12, length)
+                     + v(chars, offset, 13, length);
+      break;
+      case 13: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length)
+                     + v(chars, offset, 11, length)
+                     + v(chars, offset, 12, length);
+      break;
+      case 12: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length)
+                     + v(chars, offset, 11, length);
+      break;
+      case 11: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length)
+                     + v(chars, offset, 10, length);
+      break;
+      case 10: value = v(chars, offset, 0, length)
+                     + v(chars, offset, 1, length)
+                     + v(chars, offset, 2, length)
+                     + v(chars, offset, 3, length)
+                     + v(chars, offset, 4, length)
+                     + v(chars, offset, 5, length)
+                     + v(chars, offset, 6, length)
+                     + v(chars, offset, 7, length)
+                     + v(chars, offset, 8, length)
+                     + v(chars, offset, 9, length);
+      break;
+      case 9: value = v(chars, offset, 0, length)
+                    + v(chars, offset, 1, length)
+                    + v(chars, offset, 2, length)
+                    + v(chars, offset, 3, length)
+                    + v(chars, offset, 4, length)
+                    + v(chars, offset, 5, length)
+                    + v(chars, offset, 6, length)
+                    + v(chars, offset, 7, length)
+                    + v(chars, offset, 8, length);
+      break;
+      case 8: value = v(chars, offset, 0, length)
+                    + v(chars, offset, 1, length)
+                    + v(chars, offset, 2, length)
+                    + v(chars, offset, 3, length)
+                    + v(chars, offset, 4, length)
+                    + v(chars, offset, 5, length)
+                    + v(chars, offset, 6, length)
+                    + v(chars, offset, 7, length);
+      break;
+      case 7: value = v(chars, offset, 0, length)
+                    + v(chars, offset, 1, length)
+                    + v(chars, offset, 2, length)
+                    + v(chars, offset, 3, length)
+                    + v(chars, offset, 4, length)
+                    + v(chars, offset, 5, length)
+                    + v(chars, offset, 6, length);
+      break;
+      case 6: value = v(chars, offset, 0, length)
+                    + v(chars, offset, 1, length)
+                    + v(chars, offset, 2, length)
+                    + v(chars, offset, 3, length)
+                    + v(chars, offset, 4, length)
+                    + v(chars, offset, 5, length);
+      break;
+      case 5: value = v(chars, offset, 0, length)
+                    + v(chars, offset, 1, length)
+                    + v(chars, offset, 2, length)
+                    + v(chars, offset, 3, length)
+                    + v(chars, offset, 4, length);
+      break;
+      case 4: value = v(chars, offset, 0, length)
+                    + v(chars, offset, 1, length)
+                    + v(chars, offset, 2, length)
+                    + v(chars, offset, 3, length);
+      break;
+      case 3: value = v(chars, offset, 0, length)
+                    + v(chars, offset, 1, length)
+                    + v(chars, offset, 2, length);
+      break;
+      case 2: value = v(chars, offset, 0, length)
+                    + v(chars, offset, 1, length);
+      break;
+      case 1: value = v(chars, offset, 0, length);
+      break;
+      default:
+        throw new NumberFormatException();
+    }
+    return negative ? -value : value;
+  }
+
   /**
    * Parse an arbitrary value into {@link #parsedValue}, possible values are:
    * <ul>
@@ -217,97 +508,108 @@ public final class JsonParser {
    * @return the index of the first byte after the value ends or {@code -1} in error case.
    */
   private int parseValue(byte[] utf8, int i) {
-    i = skipWhiteSpaces(utf8, i);
-    if (i < 0) return i;
-    final long result = decodeCodePoint(utf8, i);
-    final int cp = resultCodePoint(result);
-    i = resultNextIndex(result);
-    if (i < 0) return i;
-    switch (cp) {
-      case '{': return parseMap(utf8, i);
-      case '[': return parseArray(utf8, i);
-      case '\'':
-      case '"': return parseString(utf8, i, cp, false);
-      default:
-    }
-    // Otherwise parse the text.
-    i = parseText(utf8, i, false);
-    if (i < 0) return i;
+    while (true) {
+      i = skipWhiteSpaces(utf8, i);
+      if (i < 0) return i;
+      final long result = decodeCodePoint(utf8, i);
+      final int cp = resultCodePoint(result);
+      i = resultNextIndex(result);
+      if (i < 0) return i;
+      switch (cp) {
+        case '/': {
+          final int new_i = skipIfComment(utf8, i);
+          if (new_i != i) {
+            i = new_i;
+            continue;
+          }
+          break;
+        }
+        case '{': return parseMap(utf8, i);
+        case '[': return parseArray(utf8, i);
+        case '\'':
+        case '"': return parseString(utf8, i, cp, false);
+        default:
+      }
+      // Otherwise parse the text.
+      i = parseText(utf8, i, false);
+      if (i < 0) return i;
 
-    final var chars = this.chars;
-    final var chars_end = this.chars_end;
+      final var chars = this.chars;
+      final var chars_end = this.chars_end;
 
-    // Empty text is an empty string.
-    if (chars_end == 0) {
-      parsedValue = StringUtil.EMPTY;
+      // Empty text is an empty string.
+      if (chars_end == 0) {
+        parsedValue = StringUtil.EMPTY;
+        return i;
+      }
+
+      // A single character text is simple.
+      if (chars_end == 1) {
+        final var c = chars[0];
+        if (c >= '0' && c <= '9') {
+          parsedValue = (long) (c - '0');
+          return i;
+        }
+        // Note: For surrogate characters this will return null as value!
+        parsedValue = StringUtil.ONE_CHAR[c];
+        return i;
+      }
+
+      // can be `true` or `null`
+      if (chars_end == 4) {
+        final var c0 = chars[0];
+        final var c1 = chars[1];
+        final var c2 = chars[2];
+        final var c3 = chars[3];
+        if ((c0 == 't' || c0 == 'T')
+            && (c1 == 'r' || c1 == 'R')
+            && (c2 == 'u' || c2 == 'U')
+            && (c3 == 'e' || c3 == 'E')) {
+          parsedValue = Boolean.TRUE;
+          return i;
+        }
+        if ((c0 == 'n' || c0 == 'N')
+            && (c1 == 'u' || c1 == 'U')
+            && (c2 == 'l' || c2 == 'L')
+            && (c3 == 'l' || c3 == 'L')) {
+          parsedValue = null;
+          return i;
+        }
+      }
+
+      // can be `false`
+      if (chars_end == 5) {
+        final var c0 = chars[0];
+        final var c1 = chars[1];
+        final var c2 = chars[2];
+        final var c3 = chars[3];
+        final var c4 = chars[4];
+        if ((c0 == 'f' || c0 == 'F')
+            && (c1 == 'a' || c1 == 'A')
+            && (c2 == 'l' || c2 == 'L')
+            && (c3 == 's' || c3 == 'S')
+            && (c4 == 'e' || c4 == 'E')) {
+          parsedValue = Boolean.FALSE;
+          return i;
+        }
+      }
+
+      // Now we are left only with number or string, test number first.
+      try {
+        if (potentialLong) {
+          parsedValue = parseLong(chars, 0, chars_end);
+          return i;
+        }
+        if (potentialDouble) {
+          parsedValue = parseDouble(chars, 0, chars_end);
+          return i;
+        }
+      } catch (NumberFormatException ignored) {
+      }
+      // Obviously no long or double, so must be string.
+      parsedValue = newString(chars, 0, chars_end, chars_hash, isNFKCNormalized);
       return i;
     }
-
-    // A single character text is simple.
-    if (chars_end == 1) {
-      final var c = chars[0];
-      if (c >= '0' && c <= '9') {
-        parsedValue = (long)(c - '0');
-        return i;
-      }
-      // Note: For surrogate characters this will return null as value!
-      parsedValue = StringUtil.ONE_CHAR[c];
-      return i;
-    }
-
-    // can be `true` or `null`
-    if (chars_end == 4) {
-      final var c0 = chars[0];
-      final var c1 = chars[1];
-      final var c2 = chars[2];
-      final var c3 = chars[3];
-      if ((c0=='t'||c0=='T')
-          && (c1=='r'||c1=='R')
-          && (c2=='u'||c2=='U')
-          && (c3=='e'||c3=='E')) {
-        parsedValue = Boolean.TRUE;
-        return i;
-      }
-      if ((c0=='n'||c0=='N')
-          && (c1=='u'||c1=='U')
-          && (c2=='l'||c2=='L')
-          && (c3=='l'||c3=='L')) {
-        parsedValue = null;
-        return i;
-      }
-    }
-
-    // can be `false`
-    if (chars_end == 5) {
-      final var c0 = chars[0];
-      final var c1 = chars[1];
-      final var c2 = chars[2];
-      final var c3 = chars[3];
-      final var c4 = chars[4];
-      if ((c0=='f'||c0=='F')
-          && (c1=='a'||c1=='A')
-          && (c2=='l'||c2=='L')
-          && (c3=='s'||c3=='S')
-          && (c4=='e'||c4=='E')) {
-        parsedValue = Boolean.FALSE;
-        return i;
-      }
-    }
-
-    // Now we are left only with number or string, test number first.
-    try {
-      if (potentialLong) {
-        // TODO: Parse long, or throw NumberFormatException if failed.
-        throw new UnsupportedOperationException();
-      }
-      if (potentialDouble) {
-        parsedValue = parseDouble(chars, 0, chars_end);
-        return i;
-      }
-    } catch (NumberFormatException ignored) {}
-    // Obviously no long or double, so must be string.
-    parsedValue = StringUtil.newString(chars, 0, chars_end, chars_hash, isNFKCNormalized);
-    return i;
   }
 
   /**
