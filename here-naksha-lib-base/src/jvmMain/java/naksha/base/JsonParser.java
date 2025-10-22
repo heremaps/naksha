@@ -4,9 +4,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.Normalizer;
+import java.util.Arrays;
 
 import static ch.randelshofer.fastdoubleparser.JsonDoubleParser.parseDouble;
-import static java.lang.Character.isWhitespace;
+import static java.lang.Character.*;
 import static naksha.base.StringUtil.newString;
 import static naksha.base.UTF8.*;
 
@@ -34,6 +35,13 @@ import static naksha.base.UTF8.*;
 public final class JsonParser {
 
   /**
+   * Create a new instance of JSON parser, this is not really deprecated, but not recommended. It is recommended to use the thread local instance, by doing {@code JsonParse.instance.get()}.
+   * @see #instance
+   */
+  @Deprecated
+  public JsonParser() {}
+
+  /**
    * The thread local parser instance to be used to reduce memory consumption.
    * @since 3.0
    */
@@ -46,12 +54,62 @@ public final class JsonParser {
   private final @Nullable Object @NotNull[] @Nullable[] stack = new Object[256-3][];
   private int stack_end;
   private ThreadLocalCharBuffer charBuffer;
+  private byte[] utf8_bytes;
   private char[] chars;
   private int chars_end;
   private int chars_hash;
   private boolean isNFKCNormalized;
   private int line;
   private int column;
+  private @Nullable JsonError error;
+
+  /** Expected end-of-file, so terminates the JSON parsing correctly. */
+  public static final int EOF = -1;
+  /** Erroneous end-of-file, so pre-mature terminates the JSON parsing. */
+  public static final int UNEXPECTED_EOF = -2;
+  /** Error in the UTF-8 encoding, for example missing bytes of multibyte code-point or invalid code-point value. */
+  public static final int MALFORMED_UTF8 = -3;
+  /** Erroneous JSON formatting. */
+  public static final int MALFORMED_JSON = -4;
+
+  /**
+   * Returns {@code -2}, and sets {@link #error} with the provided {@code index}, {@code line} and {@code column} as error source.
+   *
+   * <p>If an expected end-of-file happens, just return {@link #EOF}.
+   * @param index the index within the {@code utf-8 bytes} that is erroneous.
+   * @param line the line number in the source where the error happens.
+   * @param column the column that is encoded wrong.
+   * @return {@link #UNEXPECTED_EOF} <i>(-2)</i>.
+   */
+  private int error_eof(int index, int line, int column) {
+    this.error = new JsonError("Unexpected end-of-file", utf8_bytes, index, line, column);
+    return UNEXPECTED_EOF;
+  }
+
+  /**
+   * Returns {@code -3}, and sets {@link #error} with the provided {@code index}, {@code line} and {@code column} as error source.
+   * @param index the index within the {@code utf-8 bytes} that is erroneous.
+   * @param line the line number in the source where the error happens.
+   * @param column the column that is encoded wrong.
+   * @return {@link #MALFORMED_UTF8} <i>(-3)</i>.
+   */
+  private int error_malformed_utf8(int index, int line, int column) {
+    this.error = new JsonError("Malformed UTF-8 encoding", utf8_bytes, index, line, column);
+    return MALFORMED_UTF8;
+  }
+
+  /**
+   * Returns {@code -4}, and sets {@link #error} with the provided {@code index}, {@code line} and {@code column} as error source.
+   * @param message the reason for the malformed JSON.
+   * @param index the index within the {@code utf-8 bytes} that is erroneous.
+   * @param line the line number in the source where the error happens.
+   * @param column the column that is encoded wrong.
+   * @return {@link #MALFORMED_JSON} <i>(-4)</i>.
+   */
+  private int error_malformed_json(@NotNull String message, int index, int line, int column) {
+    this.error = new JsonError(message, utf8_bytes, index, line, column);
+    return MALFORMED_JSON;
+  }
 
   /**
    * To be called ones a line comment has hit, so after reading {@code //}.
@@ -63,18 +121,23 @@ public final class JsonParser {
     int line = this.line;
     int column = this.column;
     try {
-      int cp;
+      int prev_cp = -1;
+      int cp = -1;
       do {
+        // We ignore carriage-return as previous characters, so that a backslash at the end of the line comment continues, even on windows.
+        prev_cp = cp != '\r' ? cp : prev_cp;
         final var result = decodeCodePoint(utf8, i);
-        cp = resultCodePoint(result);
         i = resultNextIndex(result);
+        if (i < 0) return EOF;
+        cp = resultCodePoint(result);
+        if (cp < 0) return error_malformed_utf8(i, line, column);
         if (cp == '\n') {
           line++;
           column = 0;
         } else {
           column++;
         }
-      } while (cp != '\n');
+      } while (prev_cp != '\\' && cp != '\n');
       return i;
     } finally {
       this.line = line;
@@ -94,22 +157,24 @@ public final class JsonParser {
     try {
       int prev_cp;
       int cp = -1;
-      while (true) {
+      do {
         prev_cp = cp;
         final var result = decodeCodePoint(utf8, i);
-        cp = resultCodePoint(result);
         i = resultNextIndex(result);
+        if (i < 0) return EOF; // We simply allow the JSON to end with /*
+        cp = resultCodePoint(result);
+        if (cp < 0) return error_malformed_utf8(i, line, column);
         if (cp == '\n') {
           line++;
           column = 0;
         } else {
           column++;
         }
-        if (prev_cp == '*' && cp == '/') {
-          // Refers to the first byte after comment end.
-          return i;
-        }
-      }
+        // Allow escaping, so `prev_cp` becomes -1.
+        // Therefore, for example `\*/` and `*\/` will work in block comments.
+        if (cp == '\\') cp = -1;
+      } while (prev_cp != '*' || cp != '/');
+      return i;
     } finally {
       this.line = line;
       this.column = column;
@@ -125,23 +190,21 @@ public final class JsonParser {
   private int skipIfComment(byte[] utf8, int i) {
     final var result = decodeCodePoint(utf8, i);
     final int cp = resultCodePoint(result);
+    if (cp < 0) return error_malformed_utf8(i, line, column);
     final int next_i = resultNextIndex(result);
+    if (next_i < 0) return i; // this is the last code-point.
     if (cp == '*') return skipBlockComment(utf8, next_i);
     if (cp == '/') return skipLineComment(utf8, next_i);
+    // This does not start a comment.
     return i;
   }
 
-  private static final boolean[] WHITESPACES = new boolean[256];
-  static {
-    for (int i = 0; i <= 32; i++) {
-      WHITESPACES[i] = true;
-    }
-    WHITESPACES[','] = true;
-    WHITESPACES[':'] = true;
+  private static boolean isWhitespace(int codePoint) {
+    return codePoint < 32 || Character.isWhitespace(codePoint);
   }
 
   /**
-   * Skip all white-spaces, including {@code ,}, {@code ;}, {@code :}, line-feed <code>\n</code>, carriage-return <code>\r</code> and others.
+   * Skip all white-spaces <i>(code-point below 32, space)</i>.
    * @param utf8 the UTF-8 bytes.
    * @param i the index to start reading.
    * @return the index of the first byte that is no white-space.
@@ -150,15 +213,13 @@ public final class JsonParser {
     int line = this.line;
     int column = this.column;
     try {
-      final var WHITESPACES = JsonParser.WHITESPACES;
       int cp;
       while (true) {
         final var result = decodeCodePoint(utf8, i);
         cp = resultCodePoint(result);
         assert cp >= 0;
-        if (cp >= WHITESPACES.length || !WHITESPACES[cp]) {
-          // Use the current "i", because this code-point is basically the search none-whitespace.
-          // So, ignore next-index.
+        if (!isWhitespace(cp)) {
+          // Return the current "i", because this (the next) code-point is basically the search none-whitespace.
           return i;
         }
         if (cp == '\n') {
@@ -176,8 +237,7 @@ public final class JsonParser {
   }
 
   private Object parsedValue;
-  private boolean potentialLong;
-  private boolean potentialDouble;
+  private int potentialType;
 
   /**
    * Parse a quoted string, store the result in {@link #parsedValue}.
@@ -185,58 +245,216 @@ public final class JsonParser {
    * @param i the index to start reading at, so first byte after the {@code startChar}.
    * @param startChar the character the string started with ({@code '} or {@code "}).
    * @param intern if the string should be interned, normally only done for keys.
+   * @param decodeDataUrl if true, then <a href="https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data">data-url's</a> that refer to {@code Uint8Array}, {@code Int8Array}, {@code Uint16Array}, {@code Int16Array}, {@code Uint32Array}, {@code Int32Array}, {@code BigUint64Array}, {@code BigInt64Array}, {@code Float32Array}, or {@code Float64Array} should be decoded automatically into the Java equivalent, so {@code byte[]}, {@code short[]}, {@code int[]}, {@code long[]}, {@code float[]}, or {@code double[]}.
    * @return the index of the first byte after the string ends.
    */
-  private int parseString(byte[] utf8, int i, int startChar, boolean intern) {
+  private int parseString(byte[] utf8, int i, int startChar, boolean intern, boolean decodeDataUrl) {
     throw new UnsupportedOperationException();
   }
 
+  private static boolean[] VALUE_TERMINATOR = new boolean[128];
+  static {
+    VALUE_TERMINATOR[','] = true; // {a:foo,b:bar} -- {a:true,} -- [true,]
+    VALUE_TERMINATOR['}'] = true; // {a:foo}
+    VALUE_TERMINATOR[']'] = true; // [true]
+    VALUE_TERMINATOR['\n'] = true;
+    // {
+    //   a:foo
+    //   b:bar
+    // }
+  }
+
+  // number = [ minus ] int [ frac ] [ exp ]
+  //
+  //  minus  = %x2D                        ; -
+  //  int    = zero / ( digit1-9 *DIGIT )
+  //  frac   = decimal-point 1*DIGIT
+  //  exp    = e [ minus / plus ] 1*DIGIT
+  //
+  //  decimal-point = %x2E                 ; .
+  //  digit1-9      = %x31-39              ; 1-9
+  //  e             = %x65 / %x45          ; e E
+  //  plus          = %x2B                 ; +
+  //  zero          = %x30                 ; 0
+  private static final int TYPE_START = 0;
+  private static final int NUM_INT = 1;
+  private static final int NUM_AFTER_DOT = 2; //
+  private static final int NUM_AFTER_EXP_FIRST = 3;
+  private static final int NUM_AFTER_EXP = 4;
+  private static final int TEXT = 5;
+  private static int[][] NUMBER_TABLE = new int[5][];
+  static { // TYPE_START
+    final int[] table = new int[128];
+    Arrays.fill(table, TEXT);
+    for (int i = '0'; i < '9'; i++) table[i] = NUM_INT;
+    table['-'] = NUM_INT; // 45
+    NUMBER_TABLE[TYPE_START] = table;
+  }
+  static { // NUM_INT
+    final int[] table = new int[128];
+    Arrays.fill(table, TEXT);
+    for (int i = '0'; i < '9'; i++) table[i] = NUM_INT;
+    table['.'] = NUM_AFTER_DOT; // 46
+    table['e'] = NUM_AFTER_EXP_FIRST; // 101
+    table['E'] = NUM_AFTER_EXP_FIRST; // 69
+    NUMBER_TABLE[NUM_INT] = table;
+  }
+  static { // NUM_AFTER_DOT
+    final int[] table = new int[102];
+    Arrays.fill(table, TEXT);
+    for (int i = '0'; i < '9'; i++) table[i] = NUM_AFTER_DOT;
+    table['e'] = NUM_AFTER_EXP_FIRST; // 101
+    table['E'] = NUM_AFTER_EXP_FIRST; // 69
+    NUMBER_TABLE[NUM_AFTER_DOT] = table;
+  }
+  static { // NUM_AFTER_EXP_FIRST
+    final int[] table = new int[58];
+    Arrays.fill(table, TEXT);
+    for (int i = '0'; i < '9'; i++) table[i] = NUM_AFTER_EXP;
+    table['+'] = NUM_AFTER_EXP; // 43
+    table['-'] = NUM_AFTER_EXP; // 45
+    NUMBER_TABLE[NUM_AFTER_EXP_FIRST] = table;
+  }
+  static { // NUM_AFTER_EXP
+    final int[] table = new int[58];
+    Arrays.fill(table, TEXT);
+    for (int i = '0'; i < '9'; i++) table[i] = NUM_AFTER_EXP;
+    NUMBER_TABLE[NUM_AFTER_EXP] = table;
+  }
+
   /**
-   * Parse an unquoted text.
+   * Parse an unquoted text <i>(does not support <a href="https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data">data-url</a> decoding!)</i>.
    *
    * <p>Unquoted texts can be found in keys of maps, or they are values of maps or arrays, or are found in the root. They basically can be anything, because JSON is not typed, so they can be {@code null}, {@code Boolean}, {@code Long}, {@code Double}, or a {@code String}. However, all of them should be trimmed from white spaces at the end.
    *
    * <p>An unquoted key is special case, it must end at a colon ({@code :}), while all other values will end at comma ({@code ,}), line-feed ({@code \n}), map close (<code>}</code>), or array close ({@code ]}). They are parsed until a valid end is found, and then trimmed reverse! The returned index will be positioned on the detected end, so that it can be read again.
    *
-   * <p>The result of the parse will be stored in {@link #chars}, with {@link #chars_end} pointing to the first character that is not valid, and with {@link #chars_hash} being correct. Additionally, the parser will set {@link #potentialLong}, when the processed characters match a long value, or {@link #potentialDouble}, when the processed character match a JSON double. The result need to be interpreted within the context in which it was requested.
+   * <p>The result of the parse will be stored in {@link #chars}, with {@link #chars_end} pointing to the first character that is not valid, and with {@link #chars_hash} being correct. Additionally, the parser will set {@link #potentialType}. The result need to be interpreted within the context in which it was requested.
    *
    * @param utf8 the UTF-8 bytes.
-   * @param i the index to start reading at, so first valid string byte.
+   * @param i the index to start reading at, so first valid byte to read.
    * @param isKey if the string is a key, therefore must be followed by a colon ({@code :}), and should be interned.
    * @return the index of the first byte after the end character.
    */
   private int parseText(byte[] utf8, int i, boolean isKey) {
-    throw new UnsupportedOperationException();
+    char[] chars = this.chars;
+    assert chars != null;
+    int chars_hash = 0;
+    int chars_length = 0;
+    boolean escape = false;
+    int type = TYPE_START;
+    try {
+      while (true) {
+        final long result = decodeCodePoint(utf8, i);
+        i = resultNextIndex(result);
+        if (i < 0) return i;
+        final int cp = resultCodePoint(result);
+        if (cp < 0) return error_malformed_utf8(i, line, column);
+        if (!escape) {
+          if (cp == '\\') {
+            escape = true;
+            continue;
+          }
+          if (isKey) {
+            if (cp == ':') return i;
+            if (cp == '\n') return error_malformed_json("Expected colon, but found line-break", i, line, column);
+          } else if (cp == ',' // {a:foo,b:bar} -- {a:true,} -- [true,]
+              || cp == '}' // {a:foo}
+              || cp == ']' // // [true]
+              || cp == '\n' // {
+            //   a:foo
+            //   b:bar
+            // }
+          ) {
+            return i;
+          }
+        }
+        if (isBmpCodePoint(cp)) {
+          chars[chars_length++] = (char) cp;
+        } else {
+          chars[chars_length] = highSurrogate(cp);
+          chars[chars_length + 1] = lowSurrogate(cp);
+          chars_length += 2;
+          // Every extended code-point breaks the number assumption.
+          type = TEXT;
+        }
+        escape = false;
+      }
+    } finally {
+      // Trim leading white spaces.
+      int pos = 0;
+      while (pos < chars_length && isWhitespace(chars[pos])) pos++;
+      if (pos > 0) {
+        final int new_length = chars_length - pos;
+        System.arraycopy(chars, pos, chars, 0, new_length);
+        chars_length = new_length;
+      }
+      // Trim trailing white spaces.
+      pos = chars_length - 1;
+      while (pos > 0 && isWhitespace(chars[pos])) pos--;
+      chars_length = pos + 1;
+
+      // Detect long and boolean types by chaining a bunch of tables.
+      final int[][] NUMBER_TABLE = JsonParser.NUMBER_TABLE;
+      pos = 0;
+      while (type != TEXT && pos < chars_length) {
+        final char c = chars[pos++];
+        final int[] table = NUMBER_TABLE[type];
+        if (c < table.length) {
+          type = table[c];
+        } else {
+          type = TEXT;
+        }
+      }
+      this.potentialType = type;
+      this.chars = chars;
+      this.chars_hash = chars_hash;
+      this.chars_end = chars_length;
+    }
   }
 
+  /**
+   * Called after a map is opened, so after the <code>{</code> character was hit. Parses the map and returns it in {@link #parsedValue} as {@link JsonMap}.
+   * @param utf8 the UTF-8 bytes.
+   * @param i the index to start reading at, so the first valid byte after the map open character <i>(<code>{</code>)</i>.
+   * @return the index to continue reading at, so the first byte after the map close <i>(<code>}</code>)</i>
+   */
   private int parseMap(byte[] utf8, int i) {
+    // TODO: For now, wrap JsonMap into JvmMap!
     throw new UnsupportedOperationException();
   }
 
+  /**
+   * Called after an array is opened, so after the <code>[</code> character was hit. Parses the array and returns it in {@link #parsedValue} as {@link JsonArray}.
+   * @param utf8 the UTF-8 bytes.
+   * @param i the index to start reading at, so the first valid byte after the array open character <i>(<code>[</code>)</i>.
+   * @return the index to continue reading at, so the first byte after the array close <i>(<code>]</code>)</i>
+   */
   private int parseArray(byte[] utf8, int i) {
+    // TODO: For now, wrap JsonArray into JvmList!
     throw new UnsupportedOperationException();
   }
 
   private static final long[] MUL = new long[] {
-      1_000_000_000_000_000_000L, // 18
-      100_000_000_000_000_000L, // 17
-      10_000_000_000_000_000L, // 16
-      1_000_000_000_000_000L, // 15
-      100_000_000_000_000L, // 14
-      10_000_000_000_000L, // 13
-      1_000_000_000_000L, // 12
-      100_000_000_000L, // 11
-      10_000_000_000L, // 10
-      1_000_000_000L, // 9
-      100_000_000L, // 8
-      10_000_000L, // 7
-      1_000_000L, // 6
-      100_000L, // 5
-      10_000L, // 4
-      1_000L, // 3
-      100L, // 2
+      1L, // 0
       10L, // 1
-      1L // 0
+      100L, // 2
+      1_000L, // 3
+      10_000L, // 4
+      100_000L, // 5
+      1_000_000L, // 6
+      10_000_000L, // 7
+      100_000_000L, // 8
+      1_000_000_000L, // 9
+      10_000_000_000L, // 10
+      100_000_000_000L, // 11
+      1_000_000_000_000L, // 12
+      10_000_000_000_000L, // 13
+      100_000_000_000_000L, // 14
+      1_000_000_000_000_000L, // 15
+      10_000_000_000_000_000L, // 16
+      100_000_000_000_000_000L, // 17
+      1_000_000_000_000_000_000L // 18
   };
   private static long v(char @NotNull[] chars, int offset, int pos, int length) {
     assert offset >= 0 && offset+pos < chars.length;
@@ -508,38 +726,43 @@ public final class JsonParser {
    * @return the index of the first byte after the value ends or {@code -1} in error case.
    */
   private int parseValue(byte[] utf8, int i) {
+    int next_i;
     while (true) {
       i = skipWhiteSpaces(utf8, i);
       if (i < 0) return i;
       final long result = decodeCodePoint(utf8, i);
+      next_i = resultNextIndex(result);
+      if (next_i < 0) return i;
       final int cp = resultCodePoint(result);
-      i = resultNextIndex(result);
-      if (i < 0) return i;
+      if (cp < 0) return error_malformed_utf8(i, line, column);
       switch (cp) {
-        case '/': {
-          final int new_i = skipIfComment(utf8, i);
-          if (new_i != i) {
-            i = new_i;
-            continue;
-          }
-          break;
-        }
         case '{': return parseMap(utf8, i);
         case '[': return parseArray(utf8, i);
         case '\'':
-        case '"': return parseString(utf8, i, cp, false);
+        case '"': return parseString(utf8, i, cp, false, true);
+        case '/':
+          final int after_comment = skipIfComment(utf8, i);
+          if (after_comment < 0) return after_comment; // Error while parsing comment or EOF, in any case we're done.
+          if (after_comment != next_i) { // A comment was skipped, content continues.
+            i = after_comment;
+            continue;
+          }
+          // No comment, we continue parsing as text.
         default:
       }
-      // Otherwise parse the text.
+      // Parse the text to detect the type.
       i = parseText(utf8, i, false);
-      if (i < 0) return i;
+      if (i < EOF) return i;
 
       final var chars = this.chars;
       final var chars_end = this.chars_end;
 
-      // Empty text is an empty string.
+      // We were asked to parse a value, but just found an empty text, this can happen for example in the following case:
+      // [5,,6]
+      // {a:,b:5}
+      // We will treat this as `undefined`, JavaScript does it as well, therefore `{a:}` is not the same as `{a:null}`.
       if (chars_end == 0) {
-        parsedValue = StringUtil.EMPTY;
+        parsedValue = Json.UNDEFINED;
         return i;
       }
 
@@ -595,25 +818,30 @@ public final class JsonParser {
       }
 
       // Now we are left only with number or string, test number first.
-      try {
-        if (potentialLong) {
+      final int type = potentialType;
+      if (type == NUM_INT) {
+        try {
           parsedValue = parseLong(chars, 0, chars_end);
           return i;
+        } catch (NumberFormatException ignored) {
+          // Ups, no long.
         }
-        if (potentialDouble) {
+      }
+      if (type == NUM_AFTER_DOT || type == NUM_AFTER_EXP) {
+        try {
           parsedValue = parseDouble(chars, 0, chars_end);
           return i;
+        } catch (NumberFormatException ignored) {
+          // Ups, no double.
         }
-      } catch (NumberFormatException ignored) {
       }
-      // Obviously no long or double, so must be string.
       parsedValue = newString(chars, 0, chars_end, chars_hash, isNFKCNormalized);
       return i;
     }
   }
 
   /**
-   * The index of the first byte that was not parsed.
+   * The index of the first byte that was not parsed, {@code -1} if EOF, other negative values indicate and error.
    */
   public int end;
 
@@ -648,15 +876,15 @@ public final class JsonParser {
    */
   public @Nullable Object parse(byte[] utf8, int i, boolean isNFKCNormalized) {
     if (utf8 == null) return null;
-    stack_end = 0;
+    utf8_bytes = utf8;
     charBuffer = ThreadLocalCharBuffer.instance.get();
     chars = charBuffer.get();
-    chars_hash = 0;
-    chars_end = 0;
+    error = null;
     line = 0;
     column = 0;
+    stack_end = 0;
     this.isNFKCNormalized = isNFKCNormalized;
     end = parseValue(utf8, i);
-    return parsedValue;
+    return error != null ? error : parsedValue;
   }
 }

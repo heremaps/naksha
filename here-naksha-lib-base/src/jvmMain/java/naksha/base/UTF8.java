@@ -1271,7 +1271,7 @@ public final class UTF8 {
    * @return the code-point decoded from the supplied array ({@link #resultCodePoint(long)}) and the index of the first byte that was not read ({@link #resultNextIndex(long)}), so the index to continue reading from.
    */
   public static long decodeCodePoint(final byte @NotNull [] bytes, final int i) {
-    if (i >= bytes.length) return combine(i, -1);
+    if (i >= bytes.length) return combine(-1, 0);
     // Read a byte, single CPU instruction.
     final byte b1 = bytes[i];
     // Widen into 32-bit register, single CPU instruction.
@@ -1341,7 +1341,7 @@ public final class UTF8 {
    * Returns the index contained in the result.
    *
    * @param result the result as returned by the {@link #decodeCodePoint(byte[], int)}.
-   * @return the index of the next byte that should be read.
+   * @return the index of the next byte that should be read; {@code -1} if EOF is reached, in that case the code-point will be as well {@code -1}.
    */
   public static int resultNextIndex(final long result) {
     return highInt(result);
@@ -1349,7 +1349,6 @@ public final class UTF8 {
 
   /**
    * Returns the code-point contained in the result.
-   *
    * @param result the result as returned by the {@link #decodeCodePoint(byte[], int)}.
    * @return the code-point that was decoded, either a positive integer or {@code -1}, if the UTF-8 is malformed.
    */

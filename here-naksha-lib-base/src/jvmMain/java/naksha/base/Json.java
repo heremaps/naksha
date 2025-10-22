@@ -8,18 +8,21 @@ import java.util.Arrays;
  * Tooling around arrays.
  * @since 3.0
  */
-final class ArrayUtil {
-  /**
-   * The marker for all undefined values.
-   * @since 3.0
-   */
-  static final Object UNDEFINED = new Object();
+final class Json {
+  /** The singleton for the JavaScript value {@code undefined}, which will not be the same as {@link #EMPTY_ARRAY}, so {@code EMPTY != UNDEFINED}, but {@code EMPTY.equals(UNDEFINED)}. */
+  public static final String UNDEFINED = new String(new char[]{});
 
   /**
-   * An empty map or array.
+   * A singleton for all empty array's.
    * @since 3.0
    */
-  static final Object[] EMPTY = new Object[0];
+  public static final Object[] EMPTY_ARRAY = new Object[0];
+
+  /**
+   * A singleton for all empty map's.
+   * @since 3.0
+   */
+  public static final Object[] EMPTY_MAP = new Object[0];
 
   /**
    * Tests if the given map or array is empty.
@@ -89,7 +92,7 @@ final class ArrayUtil {
     if (size < 0) throw new IllegalArgumentException("Capacity must not be negative");
     if (size == 0) {
       if (!shrink) return data;
-      return EMPTY;
+      return EMPTY_ARRAY;
     }
     final int current_size = data.length;
     if (current_size == size) return data;
