@@ -1071,11 +1071,11 @@ public final class UTF8 {
       }
 
       if (Character.isBmpCodePoint(codePoint)) {
-        chars = charBuffer.ensure(i, chars);
+        chars = charBuffer.ensure(chars, i);
         chars[i++] = (char) codePoint;
         hash = hash * 31 + codePoint;
       } else {
-        chars = charBuffer.ensure(i+1, chars);
+        chars = charBuffer.ensure(chars, i+1);
         final char hi = Character.highSurrogate(codePoint);
         chars[i] = hi;
         final char lo = Character.lowSurrogate(codePoint);

@@ -77,11 +77,11 @@ public final class ThreadLocalCharBuffer {
 
   /**
    * Ensures that the given character buffer a capacity that is enough to read/write the given index. Normally, this method should be called before accessing the given index within the character-buffer. This expects that {@code chars} is the cached buffer of this thread-local! It will copy the buffer, and store it in thread locals, it not too big.
-   * @param index the index to read/write.
    * @param chars Expected to be the current character buffer.
+   * @param index the index to read/write.
    * @return the char-buffer that is of the desired size.
    */
-  public char @NotNull [] ensure(int index, char @NotNull [] chars) {
+  public char @NotNull [] ensure(char @NotNull [] chars, int index) {
     if (index < chars.length) {
       return chars;
     }

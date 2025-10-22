@@ -286,14 +286,14 @@ public final class JsonParser {
   static { // TYPE_START
     final int[] table = new int[128];
     Arrays.fill(table, TEXT);
-    for (int i = '0'; i < '9'; i++) table[i] = NUM_INT;
+    for (int i = '0'; i <= '9'; i++) table[i] = NUM_INT;
     table['-'] = NUM_INT; // 45
     NUMBER_TABLE[TYPE_START] = table;
   }
   static { // NUM_INT
     final int[] table = new int[128];
     Arrays.fill(table, TEXT);
-    for (int i = '0'; i < '9'; i++) table[i] = NUM_INT;
+    for (int i = '0'; i <= '9'; i++) table[i] = NUM_INT;
     table['.'] = NUM_AFTER_DOT; // 46
     table['e'] = NUM_AFTER_EXP_FIRST; // 101
     table['E'] = NUM_AFTER_EXP_FIRST; // 69
@@ -302,7 +302,7 @@ public final class JsonParser {
   static { // NUM_AFTER_DOT
     final int[] table = new int[102];
     Arrays.fill(table, TEXT);
-    for (int i = '0'; i < '9'; i++) table[i] = NUM_AFTER_DOT;
+    for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_DOT;
     table['e'] = NUM_AFTER_EXP_FIRST; // 101
     table['E'] = NUM_AFTER_EXP_FIRST; // 69
     NUMBER_TABLE[NUM_AFTER_DOT] = table;
@@ -310,7 +310,7 @@ public final class JsonParser {
   static { // NUM_AFTER_EXP_FIRST
     final int[] table = new int[58];
     Arrays.fill(table, TEXT);
-    for (int i = '0'; i < '9'; i++) table[i] = NUM_AFTER_EXP;
+    for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_EXP;
     table['+'] = NUM_AFTER_EXP; // 43
     table['-'] = NUM_AFTER_EXP; // 45
     NUMBER_TABLE[NUM_AFTER_EXP_FIRST] = table;
@@ -318,7 +318,7 @@ public final class JsonParser {
   static { // NUM_AFTER_EXP
     final int[] table = new int[58];
     Arrays.fill(table, TEXT);
-    for (int i = '0'; i < '9'; i++) table[i] = NUM_AFTER_EXP;
+    for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_EXP;
     NUMBER_TABLE[NUM_AFTER_EXP] = table;
   }
 
@@ -355,6 +355,14 @@ public final class JsonParser {
             escape = true;
             continue;
           }
+          if (cp == '/') {
+            final int next_i = skipIfComment(utf8, i);
+            if (next_i != i) {
+              if (next_i < 0) return next_i;
+              i = next_i;
+              continue;
+            }
+          }
           if (isKey) {
             if (cp == ':') return i;
             if (cp == '\n') return error_malformed_json("Expected colon, but found line-break", i, line, column);
@@ -370,8 +378,11 @@ public final class JsonParser {
           }
         }
         if (isBmpCodePoint(cp)) {
-          chars[chars_length++] = (char) cp;
+          chars = charBuffer.ensure(chars, chars_length);
+          chars[chars_length] = (char) cp;
+          chars_length += 1;
         } else {
+          chars = charBuffer.ensure(chars, chars_length + 1);
           chars[chars_length] = highSurrogate(cp);
           chars[chars_length + 1] = lowSurrogate(cp);
           chars_length += 2;
@@ -741,8 +752,8 @@ public final class JsonParser {
         case '\'':
         case '"': return parseString(utf8, i, cp, false, true);
         case '/':
-          final int after_comment = skipIfComment(utf8, i);
-          if (after_comment < 0) return after_comment; // Error while parsing comment or EOF, in any case we're done.
+          final int after_comment = skipIfComment(utf8, next_i);
+          if (after_comment < 0) return after_comment; // Error or EOF while parsing comment, in any case we're done.
           if (after_comment != next_i) { // A comment was skipped, content continues.
             i = after_comment;
             continue;
