@@ -1,0 +1,37 @@
+{
+  "momType": "RoadSegmentRangeAnchor",
+  "id": "4993cfab-999b-46d9-aab1-f499d126be3e",
+  "type": "Feature",
+  "bbox": [13.51040914, 52.36513566, 13.51075247, 52.36521942],
+  "properties": {
+    "rangeReferences": [
+      {
+        "range": {
+          "endOffset": 0.4198888319025942,
+          "startOffset": 0.18451526520478095
+        },
+        "segment": {
+          "id": "urn:here::here:RoadSegment:842980419"
+        },
+        "orientation": "FROM_FIRST"
+      }
+    ],
+    "@ns:com:here:mom:meta": {
+      "createdTS": "2024-04-23T21:39:16.640795206Z",
+      "modelVersion": "1.7.6-mapObjects"
+    },
+    "@ns:com:here:mom:delta": {
+      "changeState": "CREATED",
+      "reviewState": "PENDING"
+    },
+    "featureType": "TopologyRangeAnchor"
+  },
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [13.51040914, 52.36513566, 86.96701188],
+      [13.51075247, 52.36521942, 86.03198881]
+    ]
+  }
+
+}
