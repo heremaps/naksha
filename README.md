@@ -243,9 +243,9 @@ The service will respond with the inserted geo features:
 
 # Testing locally
 
-To run tests locally run Gradle `test` task:
+To run tests locally run Gradle `cleanAndTest` task:
 ```bash
-./gradlew test
+./gradlew cleanAndTest
 ```
 
 Code coverage report is generated with use of [jacoco](https://www.jacoco.org/)
@@ -253,26 +253,29 @@ Code coverage report is generated with use of [jacoco](https://www.jacoco.org/)
 To generate **subproject** level coverage, use Gradle task `jacocoTestReport`:
 
 ```bash
-./gradlew jacocoTestReport
+./gradlew :<module-name>:jacocoTestReport
 ```
 
-Outputs for each subproject will be stored in `/[module]/build/reports/jacoco/test/html/index.html`
+Outputs for each subproject will be stored in `/[module]/build/reports/jacocoTestReport/html/index.html`
 
-To generate **root** level aggregated coverage, use Gradle task `testCodeCoverageReport`:
+To generate **root** level aggregated coverage, use Gradle task `jacocoAggregatedTestReport`:
 
 ```bash
-./gradlew testCodeCoverageReport
+./gradlew jacocoAggregatedTestReport
 ```
 
-Outputs will be stored in `/build/reports/jacoco/testCodeCoverageReport/html/index.html`
+Outputs will be stored in `build/reports/jacoco/jacocoAggregatedTestReport/html/index.html`
 
-To validate test coverage, run `jacocoTestCoverageVerification` Gradle task:
+To validate test coverage, run `jacocoAggreagetedTestCoverageVerification` Gradle task:
 ```bash
-./gradlew jacocoTestReport jacocoTestCoverageVerification
+./gradlew jacocoAggreagetedTestCoverageVerification
 ```
 
+You can also validate test coverage for **subproject**, use Gradle task `jacocoTestCoverageVerification`:
 
-
+```bash
+./gradlew :<module-name>:jacocoTestCoverageVerification
+```
 
 # Acknowledgements
 
