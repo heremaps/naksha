@@ -1,6 +1,5 @@
 import com.vanniktech.maven.publish.SonatypeHost
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.dsl.kotlinExtension
 import java.net.URI
 
 plugins {
@@ -204,9 +203,43 @@ allprojects {
     }
 }
 
-jacoco {
-    toolVersion = libs.versions.jacoco.get()
-    reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
+data class JacocoProjectDirs(
+    val sourceDirectories: ConfigurableFileCollection,
+    val classDirectories: ConfigurableFileCollection,
+    val executionData: ConfigurableFileCollection
+)
+
+fun Project.extractJacocoProjectDirs(): JacocoProjectDirs {
+    val kotlinExtension = requireNotNull(
+        extensions.findByType(KotlinMultiplatformExtension::class.java)
+    ) { "KotlinMultiplatformExtension is required, but in the project ${this.name} not found" }
+    val sourceSets = kotlinExtension.sourceSets
+    val commonSrc = sourceSets.getByName("commonMain").kotlin.srcDirs
+    val jvmSrc = sourceSets.getByName("jvmMain").kotlin.srcDirs
+    val buildDirectory = layout.buildDirectory
+    val classesDirs = kotlinExtension.jvm().compilations.getByName("main").output.classesDirs
+    val buildData = buildDirectory.files("jacoco/jvmTest.exec")
+    return JacocoProjectDirs(files(commonSrc + jvmSrc), classesDirs, files(buildData))
+}
+
+fun JacocoReportBase.configureJacocoForKmp(project: Project) {
+    project.extractJacocoProjectDirs().let {
+        sourceDirectories.setFrom(it.sourceDirectories)
+        classDirectories.setFrom(it.classDirectories)
+        executionData.setFrom(it.executionData)
+    }
+}
+
+fun List<JacocoProjectDirs>.merge(): JacocoProjectDirs {
+    val allSourceDirs = flatMap { it.sourceDirectories }
+    val allClassDirs = flatMap { it.classDirectories }
+    val allExecData = flatMap { it.executionData }
+
+    return JacocoProjectDirs(
+        sourceDirectories = files(allSourceDirs),
+        classDirectories = files(allClassDirs),
+        executionData = files(allExecData)
+    )
 }
 
 subprojects {
@@ -222,17 +255,7 @@ subprojects {
             group = "jacoco"
 
             dependsOn("jvmTest")
-            val kotlinExtension = project.extensions.findByType(KotlinMultiplatformExtension::class.java)
-            val sourceSets = kotlinExtension?.sourceSets
-            val commonSrc = sourceSets?.getByName("commonMain")?.kotlin?.srcDirs ?: emptySet()
-            val jvmSrc = sourceSets?.getByName("jvmMain")?.kotlin?.srcDirs ?: emptySet()
-            sourceDirectories.setFrom(commonSrc + jvmSrc)
-            val buildDirectory = layout.buildDirectory
-            val classesDirs = kotlinExtension?.jvm()?.compilations?.getByName("main")?.output?.classesDirs ?: emptySet()
-            classDirectories.setFrom(classesDirs)
-            buildDirectory.files("jacoco/jvmTest.exec").let {
-                executionData.setFrom(it)
-            }
+            configureJacocoForKmp(project)
             reports {
                 xml.required = true
             }
@@ -279,26 +302,15 @@ tasks.register<JacocoReport>("jacocoAggregatedTestReport") {
     modulesWithTestsEnabled.forEach {(moduleName, _) ->
         dependsOn(":${moduleName}:jvmTest")
     }
-
-    val projects = modulesWithTestsEnabled.map { (moduleName, _) -> project(":${moduleName}") }
-    val sourceDirs = projects.flatMap { p ->
-        val sourceSets = p.extensions.findByType(KotlinMultiplatformExtension::class.java)?.sourceSets
-        val commonSource = sourceSets?.findByName("commonMain")?.kotlin?.srcDirs ?: emptySet()
-        val jvmSource = sourceSets?.findByName("jvmMain")?.kotlin?.srcDirs ?: emptySet()
-        commonSource + jvmSource
-    }
-    val classDirs = projects.flatMap { p ->
-        p.extensions.findByType(KotlinMultiplatformExtension::class.java)?.jvm()?.compilations
-            ?.getByName("main")?.output?.classesDirs ?: emptySet()
-    }
-    val execFiles = projects.flatMap { p ->
-        val buildDir = p.layout.buildDirectory
-        buildDir.files("jacoco/jvmTest.exec")
-    }
-
-    sourceDirectories.setFrom(sourceDirs)
-    classDirectories.setFrom(classDirs)
-    executionData.setFrom(execFiles)
+    modulesWithTestsEnabled
+        .map { (moduleName, _) -> project(":${moduleName}")
+        .extractJacocoProjectDirs() }
+        .merge()
+        .let {
+            sourceDirectories.setFrom(it.sourceDirectories)
+            classDirectories.setFrom(it.classDirectories)
+            executionData.setFrom(it.executionData)
+        }
 
     reports {
         xml.required = true
