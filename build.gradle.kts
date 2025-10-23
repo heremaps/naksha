@@ -203,43 +203,9 @@ allprojects {
     }
 }
 
-data class JacocoProjectDirs(
-    val sourceDirectories: ConfigurableFileCollection,
-    val classDirectories: ConfigurableFileCollection,
-    val executionData: ConfigurableFileCollection
-)
-
-fun Project.extractJacocoProjectDirs(): JacocoProjectDirs {
-    val kotlinExtension = requireNotNull(
-        extensions.findByType(KotlinMultiplatformExtension::class.java)
-    ) { "KotlinMultiplatformExtension is required, but in the project ${this.name} not found" }
-    val sourceSets = kotlinExtension.sourceSets
-    val commonSrc = sourceSets.getByName("commonMain").kotlin.srcDirs
-    val jvmSrc = sourceSets.getByName("jvmMain").kotlin.srcDirs
-    val buildDirectory = layout.buildDirectory
-    val classesDirs = kotlinExtension.jvm().compilations.getByName("main").output.classesDirs
-    val buildData = buildDirectory.files("jacoco/jvmTest.exec")
-    return JacocoProjectDirs(files(commonSrc + jvmSrc), classesDirs, files(buildData))
-}
-
-fun JacocoReportBase.configureJacocoForKmp(project: Project) {
-    project.extractJacocoProjectDirs().let {
-        sourceDirectories.setFrom(it.sourceDirectories)
-        classDirectories.setFrom(it.classDirectories)
-        executionData.setFrom(it.executionData)
-    }
-}
-
-fun List<JacocoProjectDirs>.merge(): JacocoProjectDirs {
-    val allSourceDirs = flatMap { it.sourceDirectories }
-    val allClassDirs = flatMap { it.classDirectories }
-    val allExecData = flatMap { it.executionData }
-
-    return JacocoProjectDirs(
-        sourceDirectories = files(allSourceDirs),
-        classDirectories = files(allClassDirs),
-        executionData = files(allExecData)
-    )
+jacoco {
+    toolVersion = rootProject.libs.versions.jacoco.get()
+    reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
 }
 
 subprojects {
@@ -411,4 +377,47 @@ tasks.register("publishToCentral") { publishToCentral() }
 
 tasks.register("shadowJar") {
     dependsOn(":here-naksha-app-service:shadowJar")
+}
+
+data class JacocoProjectDirs(
+    val sourceDirectories: ConfigurableFileCollection,
+    val classDirectories: ConfigurableFileCollection,
+    val executionData: ConfigurableFileCollection
+)
+
+fun Project.extractJacocoProjectDirs(): JacocoProjectDirs {
+    val kotlinExtension = requireNotNull(
+        extensions.findByType(KotlinMultiplatformExtension::class.java)
+    ) { "KotlinMultiplatformExtension not found in project '$name'" }
+    val sourceSets = kotlinExtension.sourceSets
+    val commonSrcDirs = sourceSets.getByName("commonMain").kotlin.srcDirs
+    val jvmSrcDirs = sourceSets.getByName("jvmMain").kotlin.srcDirs
+    val buildDirectory = layout.buildDirectory
+    val classesDirs = kotlinExtension.jvm().compilations.getByName("main").output.classesDirs
+    val buildData = buildDirectory.files("jacoco/jvmTest.exec")
+    return JacocoProjectDirs(
+        sourceDirectories = files(commonSrcDirs + jvmSrcDirs),
+        classDirectories = classesDirs,
+        executionData = files(buildData)
+    )
+}
+
+fun JacocoReportBase.configureJacocoForKmp(project: Project) {
+    project.extractJacocoProjectDirs().let {
+        sourceDirectories.setFrom(it.sourceDirectories)
+        classDirectories.setFrom(it.classDirectories)
+        executionData.setFrom(it.executionData)
+    }
+}
+
+fun List<JacocoProjectDirs>.merge(): JacocoProjectDirs {
+    val allSourceDirs = flatMap { it.sourceDirectories }
+    val allClassDirs = flatMap { it.classDirectories }
+    val allExecData = flatMap { it.executionData }
+
+    return JacocoProjectDirs(
+        sourceDirectories = files(allSourceDirs),
+        classDirectories = files(allClassDirs),
+        executionData = files(allExecData)
+    )
 }
