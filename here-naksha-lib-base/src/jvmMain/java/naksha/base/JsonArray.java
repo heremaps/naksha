@@ -335,14 +335,17 @@ public class JsonArray implements List<Object> {
 
     @Override
     public boolean containsAll(@NotNull Collection c) {
-        //TODO
-        return false;
+        for (Object o : c) {
+            if (!contains(o)) {
+                return false;
+            }
+        }
+        return true;
     }
 
-    @NotNull
     @Override
-    public Object[] toArray(@NotNull Object[] a) {
+    public <T> T @NotNull [] toArray(@NotNull T @NotNull [] a) {
         //TODO
-        return new Object[0];
+        return null;
     }
 }
