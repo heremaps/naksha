@@ -20,8 +20,10 @@ import static java.lang.Character.lowSurrogate;
  * <p>When keys or values are well known to be repetitive <i>(some strings are known to appear very often)</i>, then they can be interned and pinned, so that they are not garbage collected, even while currently no instance of them exist.
  */
 public final class StringUtil {
+  private static final int BITS = 21;
+
   /** The mask for the hash to index in the first level. */
-  private static final int MASK = 0x1fffff;
+  private static final int MASK = (1 << BITS) - 1;
 
   /** The singleton for an empty string. */
   public static final String EMPTY = "";
@@ -293,7 +295,7 @@ public final class StringUtil {
    *
    * <p>Actually, each entry will allocate one {@link CachedStringArray CachedStringArray}, which means JVM header (16 byte) plus 8 byte for the reference to the {@code CachedString[]}, so 24 byte. If there are valid values in the array, then this itself is at least JVM header (16 byte), plus size (4 byte), plus padding (4 byte), plus 8 byte per entry (minimal 32 byte). Therefore, each entry is minimally (when null) 8 byte for the null-pointer, with one entry it is 56-bytes. So, if all entries contain one value, we allocate 112 MiB of memory, not considering the memory for the strings them self. With the strings, we can estimate around 250 MiB per one million strings.
    */
-  private static final AtomicReferenceArray<@Nullable CachedStringArray> cache = new AtomicReferenceArray<>(1_048_576);
+  private static final AtomicReferenceArray<@Nullable CachedStringArray> cache = new AtomicReferenceArray<>(1 << BITS);
 
   /**
    * Updates the Java hash for the given code-point.
@@ -351,6 +353,8 @@ public final class StringUtil {
     string = new String(chars, start, end);
     if (!isNFKCNormalized && !Normalizer.isNormalized(string, Normalizer.Form.NFKC)) {
       string = Normalizer.normalize(string, Normalizer.Form.NFKC);
+      final var cached = cachedStrings != null ? cachedStrings.get(string, hashCode) : null;
+      if (cached != null) return cached;
     }
     return string;
   }

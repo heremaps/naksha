@@ -44,7 +44,33 @@ class JsonParserTest {
     assertEquals("test", s);
   }
 
-  // TODO: test_quoted_string
+  @Test
+  public void test_quoted_string() {
+    Object r = parse("'test'");
+    String s = assertInstanceOf(String.class, r);
+    assertNotNull(s);
+    assertEquals("test", s);
+
+    r = parse(" \"test bar\" ");
+    s = assertInstanceOf(String.class, r);
+    assertNotNull(s);
+    assertEquals("test bar", s);
+
+    r = parse("'test' // comments should be ignored");
+    s = assertInstanceOf(String.class, r);
+    assertNotNull(s);
+    assertEquals("test", s);
+
+    r = parse("/* test*/ 'test' // comments should be ignored");
+    s = assertInstanceOf(String.class, r);
+    assertNotNull(s);
+    assertEquals("test", s);
+
+    r = parse("/* test*/ \"\\x74\\u0065\\u{73}t\" /* comments should be ignored");
+    s = assertInstanceOf(String.class, r);
+    assertNotNull(s);
+    assertEquals("test", s);
+  }
 
   @Test
   public void test_boolean() {

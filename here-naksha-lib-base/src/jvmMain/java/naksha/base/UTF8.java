@@ -3,6 +3,7 @@ package naksha.base;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -1091,10 +1092,13 @@ public final class UTF8 {
   }
 
   /**
-   * Decodes a code-point from the supplied buffer and returns it.
+   * Decodes a code-point from the supplied buffer.
+   *
+   * <h2>Beware</h2>
+   * It is the job of the caller to test for {@code EOF} before calling this method, please check that {@link ByteBuffer#remaining()} is greater or equal to {@code 1}, before invoking this method. If there is only one remaining byte, but a multibyte is required, the method will return {@code -1}, but it will as well do so, if it gets called with no remaining bytes in the byte-buffer.
    *
    * @param buffer the buffer from which to read bytes.
-   * @return the decoded code point, {@code -1} when the UTF-8 is malformed.
+   * @return the decoded code point, {@code -1} when the UTF-8 is malformed or there are no more remaining bytes in the byte-buffer.
    */
   public static int decodeCodePoint(final @NotNull ByteBuffer buffer) {
     if (buffer.remaining() == 0) return -1;
@@ -1143,15 +1147,17 @@ public final class UTF8 {
   }
 
   /**
-   * Decodes a code-point from the supplied input stream and returns it. The method ignores end-of-file markers, except when it happens in the lead-in byte.
+   * Decodes a code-point from the supplied input stream.
    *
    * @param in the input stream from which to read bytes.
    * @return the decoded code point, {@code -1} when the UTF-8 is malformed.
+   * @throws EOFException if the input-stream's end was reached.
    * @throws IOException raised by the input stream, if the reader encounters any error.
    */
   public static int decodeCodePoint(final @NotNull InputStream in) throws IOException {
     // Widen into 32-bit register, single CPU instruction.
     final int c = in.read();
+    if (c < 0) throw new EOFException();
     // Invert the register, then count the leading zeros, two CPU instruction.
     final int leadBits = Integer.numberOfLeadingZeros(~c);
 
@@ -1165,6 +1171,7 @@ public final class UTF8 {
         final int b2 = in.read();
         final int b3 = in.read();
         final int b4 = in.read();
+        if (b2 < 0 || b3 < 0 || b4 < 0) throw new EOFException();
         return ((c & 0b00000_111) << 18)
             + ((b2 & 0b00_111111) << 12)
             + ((b3 & 0b00_111111) << 6)
@@ -1174,6 +1181,7 @@ public final class UTF8 {
       case 3: {
         final int b2 = in.read();
         final int b3 = in.read();
+        if (b2 < 0 || b3 < 0) throw new EOFException();
         return ((c & 0b0000_1111) << 12)
             + ((b2 & 0b00_111111) << 6)
             + (b3 & 0b00_111111);
@@ -1181,6 +1189,7 @@ public final class UTF8 {
       // 110_xxxxx 10_xxxxxx
       case 2: {
         final int b2 = in.read();
+        if (b2 < 0) throw new EOFException();
         return ((c & 0b000_11111) << 6)
             + (b2 & 0b00_111111);
       }
@@ -1192,46 +1201,58 @@ public final class UTF8 {
   }
 
   /**
-   * Decodes a code-point from the supplied bytes and returns it.
+   * Decodes a code-point from the supplied bytes.
+   *
+   * <h2>Warning</h2>
+   * This is a high performance version that does not check for errors! It simply assumes, that the provided byte values are valid and will blindly decode them into a code-point. If the lead-in byte signals a multibyte value, but the other bytes store invalid values, this just leads to totally wrong results.
    *
    * @param b1 the first byte.
-   * @return the decoded code point, {@code -1} when the UTF-8 is malformed.
+   * @return the decoded code point.
    */
   public static int decodeCodePoint(final byte b1) {
     return decodeCodePoint(b1, (byte)-1, (byte)-1, (byte)-1);
   }
 
   /**
-   * Decodes a code-point from the supplied bytes and returns it.
+   * Decodes a code-point from the supplied bytes.
+   *
+   * <h2>Warning</h2>
+   * This is a high performance version that does not check for errors! It simply assumes, that the provided byte values are valid and will blindly decode them into a code-point. If the lead-in byte signals a multibyte value, but the other bytes store invalid values, this just leads to totally wrong results.
    *
    * @param b1 the first byte.
    * @param b2 the second byte.
-   * @return the decoded code point, {@code -1} when the UTF-8 is malformed.
+   * @return the decoded code point.
    */
   public static int decodeCodePoint(final byte b1, final byte b2) {
     return decodeCodePoint(b1, b2, (byte)-1, (byte)-1);
   }
 
   /**
-   * Decodes a code-point from the supplied bytes and returns it.
+   * Decodes a code-point from the supplied bytes.
+   *
+   * <h2>Warning</h2>
+   * This is a high performance version that does not check for errors! It simply assumes, that the provided byte values are valid and will blindly decode them into a code-point. If the lead-in byte signals a multibyte value, but the other bytes store invalid values, this just leads to totally wrong results.
    *
    * @param b1 the first byte.
    * @param b2 the second byte.
    * @param b3 the third byte.
-   * @return the decoded code point, {@code -1} when the UTF-8 is malformed.
+   * @return the decoded code point.
    */
   public static int decodeCodePoint(final byte b1, final byte b2, final byte b3) {
     return decodeCodePoint(b1, b2, b3, (byte)-1);
   }
 
   /**
-   * Decodes a code-point from the supplied bytes and returns it.
+   * Decodes a code-point from the supplied bytes.
+   *
+   * <h2>Warning</h2>
+   * This is a high performance version that does not check for errors! It simply assumes, that the provided byte values are valid and will blindly decode them into a code-point. If the lead-in byte signals a multibyte value, but the other bytes store invalid values, this just leads to totally wrong results.
    *
    * @param b1 the first byte.
    * @param b2 the second byte.
    * @param b3 the third byte.
    * @param b4 the fourth byte.
-   * @return the decoded code point, {@code -1} when the UTF-8 is malformed.
+   * @return the decoded code point.
    */
   public static int decodeCodePoint(final byte b1, final byte b2, final byte b3, final byte b4) {
     // Widen into 32-bit register, single CPU instruction.
@@ -1264,11 +1285,14 @@ public final class UTF8 {
   }
 
   /**
-   * Decode a code point from the supplied byte array, and return it. The result is a combination of two 32-bit values that should be decoded using the {@link #resultNextIndex(long)} and {@link #resultCodePoint(long)} methods.
+   * Decode a code-point from the supplied byte-array.
+   *
+   * <h2>Beware</h2>
+   * The method will return two 32-bit values wrapped into a single 64-bit integer. The code-point that has been decoded, and the index of the next byte to decode, please always test {@link #resultGetNextIndex(long)} before reading the actual decoded code-point via {@link #resultGetCodePoint(long)}!
    *
    * @param bytes the bytes array from which to decode the next code-point.
    * @param i the index from where to read the next byte.
-   * @return the code-point decoded from the supplied array ({@link #resultCodePoint(long)}) and the index of the first byte that was not read ({@link #resultNextIndex(long)}), so the index to continue reading from.
+   * @return the code-point decoded from the supplied array ({@link #resultGetCodePoint(long)}) and the index of the first byte that was not read ({@link #resultGetNextIndex(long)}), so the index to continue reading from.
    */
   public static long decodeCodePoint(final byte @NotNull [] bytes, final int i) {
     if (i >= bytes.length) return combine(-1, 0);
@@ -1338,21 +1362,28 @@ public final class UTF8 {
   }
 
   /**
-   * Returns the index contained in the result.
+   * Returns the index of the next byte to decode from the result.
    *
+   * <h2>Beware:</h2>
+   * When the last code-point is decoded, the method does <b>NOT</b> return {@code -1} as next index, but the input length, and when calling {@link #decodeCodePoint(byte[], int)} again, providing the input length as index, then {@code EOF} aka {@code -1} is returned as next index. This means, it is totally safe to first test if the next index is less than {@code 0}, and if it is, to assume that no valid code-point has been decoded, and abort the processing!
+   *
+   * <p>Therefore, ones it is clear that {@code EOF} has not been hit, the code-point should be read using {@link #resultGetCodePoint(long)}.
    * @param result the result as returned by the {@link #decodeCodePoint(byte[], int)}.
    * @return the index of the next byte that should be read; {@code -1} if EOF is reached, in that case the code-point will be as well {@code -1}.
    */
-  public static int resultNextIndex(final long result) {
+  public static int resultGetNextIndex(final long result) {
     return highInt(result);
   }
 
   /**
    * Returns the code-point contained in the result.
+   *
+   * <h2>Beware</h2>
+   * This method must not be called before {@link #resultGetNextIndex(long)}, please always first test for {@code EOF}, before processing the code-point. If the code-point is {@code -1}, then this means that while there is still input left, the encoding is broken, we hit a malformed UTF-8 encoding.
    * @param result the result as returned by the {@link #decodeCodePoint(byte[], int)}.
    * @return the code-point that was decoded, either a positive integer or {@code -1}, if the UTF-8 is malformed.
    */
-  public static int resultCodePoint(final long result) {
+  public static int resultGetCodePoint(final long result) {
     return lowInt(result);
   }
 

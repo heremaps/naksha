@@ -8,6 +8,7 @@ import java.util.Arrays;
 
 import static ch.randelshofer.fastdoubleparser.JsonDoubleParser.parseDouble;
 import static java.lang.Character.*;
+import static naksha.base.StringUtil.intern;
 import static naksha.base.StringUtil.newString;
 import static naksha.base.UTF8.*;
 
@@ -71,6 +72,10 @@ public final class JsonParser {
   public static final int MALFORMED_UTF8 = -3;
   /** Erroneous JSON formatting. */
   public static final int MALFORMED_JSON = -4;
+  /** Malformed hexadecimal character escape sequence (<code>&#92;xNN</code>). */
+  public static final int MALFORMED_HEX_ESCAPE = -5;
+  /** Malformed Unicode character escape sequence (<code>&#92;uNNNN</code> or <code>&#92;u{NNNNN}</code>). */
+  public static final int MALFORMED_UNICODE_ESCAPE = -6;
 
   /**
    * Returns {@code -2}, and sets {@link #error} with the provided {@code index}, {@code line} and {@code column} as error source.
@@ -112,6 +117,30 @@ public final class JsonParser {
   }
 
   /**
+   * Returns {@code -5}, and sets {@link #error} with the provided {@code index}, {@code line} and {@code column} as error source.
+   * @param index the index within the {@code utf-8 bytes} that is erroneous.
+   * @param line the line number in the source where the error happens.
+   * @param column the column that is encoded wrong.
+   * @return {@link #MALFORMED_HEX_ESCAPE} <i>(-5)</i>.
+   */
+  private int error_malformed_hex_escape(int index, int line, int column) {
+    this.error = new JsonError("Malformed hexadecimal character escape sequence", utf8_bytes, index, line, column);
+    return MALFORMED_HEX_ESCAPE;
+  }
+
+  /**
+   * Returns {@code -6}, and sets {@link #error} with the provided {@code index}, {@code line} and {@code column} as error source.
+   * @param index the index within the {@code utf-8 bytes} that is erroneous.
+   * @param line the line number in the source where the error happens.
+   * @param column the column that is encoded wrong.
+   * @return {@link #MALFORMED_UNICODE_ESCAPE} <i>(-6)</i>.
+   */
+  private int error_malformed_unicode_escape(int index, int line, int column) {
+    this.error = new JsonError("Malformed Unicode character escape sequence", utf8_bytes, index, line, column);
+    return MALFORMED_UNICODE_ESCAPE;
+  }
+
+  /**
    * To be called ones a line comment has hit, so after reading {@code //}.
    * @param utf8 the UTF-8 bytes.
    * @param i the index to start reading at, so first byte after {@code //}.
@@ -127,9 +156,9 @@ public final class JsonParser {
         // We ignore carriage-return as previous characters, so that a backslash at the end of the line comment continues, even on windows.
         prev_cp = cp != '\r' ? cp : prev_cp;
         final var result = decodeCodePoint(utf8, i);
-        i = resultNextIndex(result);
+        i = resultGetNextIndex(result);
         if (i < 0) return EOF;
-        cp = resultCodePoint(result);
+        cp = resultGetCodePoint(result);
         if (cp < 0) return error_malformed_utf8(i, line, column);
         if (cp == '\n') {
           line++;
@@ -160,9 +189,9 @@ public final class JsonParser {
       do {
         prev_cp = cp;
         final var result = decodeCodePoint(utf8, i);
-        i = resultNextIndex(result);
+        i = resultGetNextIndex(result);
         if (i < 0) return EOF; // We simply allow the JSON to end with /*
-        cp = resultCodePoint(result);
+        cp = resultGetCodePoint(result);
         if (cp < 0) return error_malformed_utf8(i, line, column);
         if (cp == '\n') {
           line++;
@@ -189,9 +218,9 @@ public final class JsonParser {
    */
   private int skipIfComment(byte[] utf8, int i) {
     final var result = decodeCodePoint(utf8, i);
-    final int cp = resultCodePoint(result);
+    final int cp = resultGetCodePoint(result);
     if (cp < 0) return error_malformed_utf8(i, line, column);
-    final int next_i = resultNextIndex(result);
+    final int next_i = resultGetNextIndex(result);
     if (next_i < 0) return i; // this is the last code-point.
     if (cp == '*') return skipBlockComment(utf8, next_i);
     if (cp == '/') return skipLineComment(utf8, next_i);
@@ -216,7 +245,7 @@ public final class JsonParser {
       int cp;
       while (true) {
         final var result = decodeCodePoint(utf8, i);
-        cp = resultCodePoint(result);
+        cp = resultGetCodePoint(result);
         assert cp >= 0;
         if (!isWhitespace(cp)) {
           // Return the current "i", because this (the next) code-point is basically the search none-whitespace.
@@ -228,7 +257,7 @@ public final class JsonParser {
         } else {
           column++;
         }
-        i = resultNextIndex(result);
+        i = resultGetNextIndex(result);
       }
     } finally {
       this.line = line;
@@ -248,8 +277,166 @@ public final class JsonParser {
    * @param decodeDataUrl if true, then <a href="https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data">data-url's</a> that refer to {@code Uint8Array}, {@code Int8Array}, {@code Uint16Array}, {@code Int16Array}, {@code Uint32Array}, {@code Int32Array}, {@code BigUint64Array}, {@code BigInt64Array}, {@code Float32Array}, or {@code Float64Array} should be decoded automatically into the Java equivalent, so {@code byte[]}, {@code short[]}, {@code int[]}, {@code long[]}, {@code float[]}, or {@code double[]}.
    * @return the index of the first byte after the string ends.
    */
-  private int parseString(byte[] utf8, int i, int startChar, boolean intern, boolean decodeDataUrl) {
-    throw new UnsupportedOperationException();
+  private int parseString(final byte @NotNull [] utf8, int i, final int startChar, final boolean intern, final boolean decodeDataUrl) {
+    final var HEX_TABLE = JsonParser.HEX_TABLE;
+    char[] chars = this.chars;
+    assert chars != null;
+    int chars_hash = 0;
+    int chars_length = 0;
+    boolean escape = false;
+    potentialType = TEXT;
+    parsedValue = null;
+    try {
+      while (true) {
+        final long result = decodeCodePoint(utf8, i);
+        i = resultGetNextIndex(result);
+        if (i < 0) return i;
+        int cp = resultGetCodePoint(result);
+        if (cp < 0) return error_malformed_utf8(i, line, column);
+        if (!escape) {
+          if (cp == '\\') {
+            escape = true;
+            continue;
+          }
+          if (cp == startChar) {
+            return i;
+          }
+        } else { // escape sequences
+          switch (cp) {
+            case '0': cp = 0; break; // ASCII-0
+            case 'b': cp = '\b'; break; // backspace
+            case 'f': cp = '\f'; break; // form-feed
+            case 'v': cp = 11; break; // vertical-tab
+            case 'r': cp = '\r'; break; // carriage-return
+            case 'n': cp = '\n'; break; // line-feed
+            case 't': cp = '\t'; break; // tab
+            case 'x': {
+              // \xNN = Short hex escaped code-point
+              long r = decodeCodePoint(utf8, i);
+              int r_i = resultGetNextIndex(r);
+              if (r_i < 0) return error_malformed_hex_escape(i, line, column);
+              int r_cp = resultGetCodePoint(r);
+              if (r_cp < 0) return error_malformed_utf8(i, line, column);
+              final int h1 = r_cp >= HEX_TABLE.length ? -1 : HEX_TABLE[r_cp];
+              if (h1 < 0) return error_malformed_hex_escape(i, line, column);
+
+              r = decodeCodePoint(utf8, r_i);
+              r_i = resultGetNextIndex(r);
+              if (r_i < 0) return error_malformed_hex_escape(i, line, column);
+              r_cp = resultGetCodePoint(r);
+              if (r_cp < 0) return error_malformed_utf8(i, line, column);
+              final int h2 = r_cp >= HEX_TABLE.length ? -1 : HEX_TABLE[r_cp];
+              if (h2 < 0) return error_malformed_hex_escape(i, line, column);
+
+              cp = (h1 << 4) + h2;
+              i = r_i;
+              break;
+            }
+            case 'u': {
+              long r = decodeCodePoint(utf8, i);
+              int r_i = resultGetNextIndex(r);
+              if (r_i < 0) return error_malformed_hex_escape(i, line, column);
+              int r_cp = resultGetCodePoint(r);
+              if (r_cp < 0) return error_malformed_utf8(i, line, column);
+              if (r_cp == '{') {
+                // \\u{NNNNN} = Flexible hex escaped full code-point (N can be 1 to 5)
+                cp = 0;
+                int len = 0;
+                do {
+                  r = decodeCodePoint(utf8, r_i);
+                  r_i = resultGetNextIndex(r);
+                  if (r_i < 0) return error_malformed_hex_escape(i, line, column);
+                  r_cp = resultGetCodePoint(r);
+                  if (r_cp < 0) return error_malformed_utf8(i, line, column);
+                  if (r_cp == '}') {
+                    if (len == 0) return error_malformed_unicode_escape(i, line, column);
+                    break;
+                  }
+                  int h = r_cp >= HEX_TABLE.length ? -1 : HEX_TABLE[r_cp];
+                  if (h < 0) return error_malformed_unicode_escape(i, line, column);
+                  cp = (cp << 4) + h;
+                  if (++len == 6) return error_malformed_unicode_escape(i, line, column);
+                } while (true);
+              } else {
+                // \\uNNNN = Single hex escaped BMP code-point
+                final int h1 = r_cp >= HEX_TABLE.length ? -1 : HEX_TABLE[r_cp];
+                if (h1 < 0) return error_malformed_unicode_escape(i, line, column);
+
+                r = decodeCodePoint(utf8, r_i);
+                r_i = resultGetNextIndex(r);
+                if (r_i < 0) return error_malformed_hex_escape(i, line, column);
+                r_cp = resultGetCodePoint(r);
+                if (r_cp < 0) return error_malformed_utf8(i, line, column);
+                final int h2 = r_cp >= HEX_TABLE.length ? -1 : HEX_TABLE[r_cp];
+                if (h2 < 0) return error_malformed_unicode_escape(i, line, column);
+
+                r = decodeCodePoint(utf8, r_i);
+                r_i = resultGetNextIndex(r);
+                if (r_i < 0) return error_malformed_hex_escape(i, line, column);
+                r_cp = resultGetCodePoint(r);
+                if (r_cp < 0) return error_malformed_utf8(i, line, column);
+                final int h3 = r_cp >= HEX_TABLE.length ? -1 : HEX_TABLE[r_cp];
+                if (h3 < 0) return error_malformed_unicode_escape(i, line, column);
+
+                r = decodeCodePoint(utf8, r_i);
+                r_i = resultGetNextIndex(r);
+                if (r_i < 0) return error_malformed_hex_escape(i, line, column);
+                r_cp = resultGetCodePoint(r);
+                if (r_cp < 0) return error_malformed_utf8(i, line, column);
+                final int h4 = r_cp >= HEX_TABLE.length ? -1 : HEX_TABLE[r_cp];
+                if (h4 < 0) return error_malformed_unicode_escape(i, line, column);
+
+                cp = (h1 << 12) + (h2 << 8) + (h3 << 4) + h4;
+              }
+              i = r_i;
+              break;
+            }
+            // No special meaning, just use the current code point as is.
+            case '\\':
+            default:
+          }
+        }
+        if (isBmpCodePoint(cp)) {
+          chars = charBuffer.ensure(chars, chars_length);
+          chars[chars_length] = (char) cp;
+          chars_length += 1;
+          chars_hash = chars_hash * 31 + cp;
+        } else {
+          chars = charBuffer.ensure(chars, chars_length + 1);
+          final var hi = highSurrogate(cp);
+          final var lo = lowSurrogate(cp);
+          chars[chars_length] = hi;
+          chars[chars_length + 1] = lo;
+          chars_length += 2;
+          chars_hash = ((chars_hash * 31) + hi) * 31 + lo;
+        }
+        escape = false;
+      }
+    } finally {
+      this.chars = chars;
+      this.chars_hash = chars_hash;
+      this.chars_end = chars_length;
+      // - Uint8Array
+      // - Int8Array -> The shortest case with prefix being at least "data:Int8Array;base64,<data>", 23 chars.
+      // - Uint16Array
+      // - Int16Array
+      // - Uint32Array
+      // - Int32Array
+      // - BigUint64Array
+      // - BigInt64Array
+      // - Float32Array
+      // - Float64Array
+      if (decodeDataUrl && chars_length > 22) { // The shortest data-url is: "data:Int8Array;base64,0", so 23 chars!
+        // TODO: Decode `data:<type>;base64,<data>`, see https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data
+      }
+      if (chars_length == 0) {
+        parsedValue = StringUtil.EMPTY;
+      } else if (intern) {
+        parsedValue = intern(chars, 0, chars_length, chars_hash, false, false);
+      } else {
+        parsedValue = newString(chars, 0, chars_length, chars_hash, false);
+      }
+    }
   }
 
   private static boolean[] VALUE_TERMINATOR = new boolean[128];
@@ -321,6 +508,17 @@ public final class JsonParser {
     for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_EXP;
     NUMBER_TABLE[NUM_AFTER_EXP] = table;
   }
+  private static int[] HEX_TABLE = new int[128];
+  static {
+    Arrays.fill(HEX_TABLE, -1);
+    for (int i = '0'; i <= '9'; i++) HEX_TABLE[i] = i - '0';
+    HEX_TABLE['a'] = HEX_TABLE['A'] = 10;
+    HEX_TABLE['b'] = HEX_TABLE['B'] = 11;
+    HEX_TABLE['c'] = HEX_TABLE['C'] = 12;
+    HEX_TABLE['d'] = HEX_TABLE['D'] = 13;
+    HEX_TABLE['e'] = HEX_TABLE['E'] = 14;
+    HEX_TABLE['f'] = HEX_TABLE['F'] = 15;
+  }
 
   /**
    * Parse an unquoted text <i>(does not support <a href="https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data">data-url</a> decoding!)</i>.
@@ -336,7 +534,7 @@ public final class JsonParser {
    * @param isKey if the string is a key, therefore must be followed by a colon ({@code :}), and should be interned.
    * @return the index of the first byte after the end character.
    */
-  private int parseText(byte[] utf8, int i, boolean isKey) {
+  private int parseText(final byte @NotNull [] utf8, int i, final boolean isKey) {
     char[] chars = this.chars;
     assert chars != null;
     int chars_hash = 0;
@@ -346,9 +544,9 @@ public final class JsonParser {
     try {
       while (true) {
         final long result = decodeCodePoint(utf8, i);
-        i = resultNextIndex(result);
+        i = resultGetNextIndex(result);
         if (i < 0) return i;
-        final int cp = resultCodePoint(result);
+        final int cp = resultGetCodePoint(result);
         if (cp < 0) return error_malformed_utf8(i, line, column);
         if (!escape) {
           if (cp == '\\') {
@@ -381,11 +579,15 @@ public final class JsonParser {
           chars = charBuffer.ensure(chars, chars_length);
           chars[chars_length] = (char) cp;
           chars_length += 1;
+          chars_hash = chars_hash * 31 + cp;
         } else {
           chars = charBuffer.ensure(chars, chars_length + 1);
-          chars[chars_length] = highSurrogate(cp);
-          chars[chars_length + 1] = lowSurrogate(cp);
+          final var hi = highSurrogate(cp);
+          final var lo = lowSurrogate(cp);
+          chars[chars_length] = hi;
+          chars[chars_length + 1] = lo;
           chars_length += 2;
+          chars_hash = ((chars_hash * 31) + hi) * 31 + lo;
           // Every extended code-point breaks the number assumption.
           type = TEXT;
         }
@@ -742,15 +944,15 @@ public final class JsonParser {
       i = skipWhiteSpaces(utf8, i);
       if (i < 0) return i;
       final long result = decodeCodePoint(utf8, i);
-      next_i = resultNextIndex(result);
+      next_i = resultGetNextIndex(result);
       if (next_i < 0) return i;
-      final int cp = resultCodePoint(result);
+      final int cp = resultGetCodePoint(result);
       if (cp < 0) return error_malformed_utf8(i, line, column);
       switch (cp) {
-        case '{': return parseMap(utf8, i);
-        case '[': return parseArray(utf8, i);
+        case '{': return parseMap(utf8, next_i);
+        case '[': return parseArray(utf8, next_i);
         case '\'':
-        case '"': return parseString(utf8, i, cp, false, true);
+        case '"': return parseString(utf8, next_i, cp, false, true);
         case '/':
           final int after_comment = skipIfComment(utf8, next_i);
           if (after_comment < 0) return after_comment; // Error or EOF while parsing comment, in any case we're done.
