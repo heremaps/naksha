@@ -223,7 +223,7 @@ class JsonParserTest {
     assertEquals(1L, arr.get(0));
     assertEquals(2L, arr.get(1));
 
-    r = parse("[1,, test, true, false, 'bar\n', \"test\"]");
+    r = parse("[1,, test, true, false, 'bar\\n', \"test\"]");
     arr = assertInstanceOf(JsonArray.class, r);
     assertNotNull(arr);
     assertEquals(7, arr.size());
