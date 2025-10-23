@@ -16,12 +16,15 @@ class JsonParserTest {
     return jp.parse(json_bytes);
   }
 
+  /// This should pin the string "test", so that all instances must always be the same!
+  static final String test_SINGLETON = StringUtil.pin("test");
+
   @Test
   public void test_unquoted_string() {
     Object r = parse("test");
     String s = assertInstanceOf(String.class, r);
     assertNotNull(s);
-    assertEquals("test", s);
+    assertSame(test_SINGLETON, s);
 
     r = parse(" test bar ");
     s = assertInstanceOf(String.class, r);
@@ -31,17 +34,17 @@ class JsonParserTest {
     r = parse("test // comments should be ignored");
     s = assertInstanceOf(String.class, r);
     assertNotNull(s);
-    assertEquals("test", s);
+    assertSame(test_SINGLETON, s);
 
     r = parse("/* test*/ test // comments should be ignored");
     s = assertInstanceOf(String.class, r);
     assertNotNull(s);
-    assertEquals("test", s);
+    assertSame(test_SINGLETON, s);
 
     r = parse("/* test*/ test /* comments should be ignored");
     s = assertInstanceOf(String.class, r);
     assertNotNull(s);
-    assertEquals("test", s);
+    assertSame(test_SINGLETON, s);
   }
 
   @Test
@@ -49,7 +52,7 @@ class JsonParserTest {
     Object r = parse("'test'");
     String s = assertInstanceOf(String.class, r);
     assertNotNull(s);
-    assertEquals("test", s);
+    assertSame(test_SINGLETON, s);
 
     r = parse(" \"test bar\" ");
     s = assertInstanceOf(String.class, r);
@@ -59,17 +62,17 @@ class JsonParserTest {
     r = parse("'test' // comments should be ignored");
     s = assertInstanceOf(String.class, r);
     assertNotNull(s);
-    assertEquals("test", s);
+    assertSame(test_SINGLETON, s);
 
     r = parse("/* test*/ 'test' // comments should be ignored");
     s = assertInstanceOf(String.class, r);
     assertNotNull(s);
-    assertEquals("test", s);
+    assertSame(test_SINGLETON, s);
 
     r = parse("/* test*/ \"\\x74\\u0065\\u{73}t\" /* comments should be ignored");
     s = assertInstanceOf(String.class, r);
     assertNotNull(s);
-    assertEquals("test", s);
+    assertSame(test_SINGLETON, s);
   }
 
   @Test
@@ -77,12 +80,12 @@ class JsonParserTest {
     Object r = parse("true");
     Boolean b = assertInstanceOf(Boolean.class, r);
     assertNotNull(b);
-    assertTrue(b);
+    assertSame(Boolean.TRUE, b);
 
     r = parse("false");
     b = assertInstanceOf(Boolean.class, r);
     assertNotNull(b);
-    assertFalse(b);
+    assertSame(Boolean.FALSE, b);
 
     r = parse(" false ");
     b = assertInstanceOf(Boolean.class, r);
@@ -92,17 +95,17 @@ class JsonParserTest {
     r = parse("true // comments should be ignored");
     b = assertInstanceOf(Boolean.class, r);
     assertNotNull(b);
-    assertTrue(b);
+    assertSame(Boolean.TRUE, b);
 
     r = parse("/* test*/ true // comments should be ignored");
     b = assertInstanceOf(Boolean.class, r);
     assertNotNull(b);
-    assertTrue(b);
+    assertSame(Boolean.TRUE, b);
 
     r = parse("/* test*/ false /* comments should be ignored");
     b = assertInstanceOf(Boolean.class, r);
     assertNotNull(b);
-    assertFalse(b);
+    assertSame(Boolean.FALSE, b);
   }
 
   @Test

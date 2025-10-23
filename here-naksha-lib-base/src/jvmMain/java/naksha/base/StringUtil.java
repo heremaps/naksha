@@ -193,7 +193,7 @@ public final class StringUtil {
             newArray[i++] = cachedString;
           }
         }
-        cachedStrings[i++] = newCachedString;
+        newArray[i++] = newCachedString;
         if (i < newArray.length) { // GC happened in between, shorting, not that of a big issue
           newArray = Arrays.copyOf(newArray, i);
         }
@@ -242,7 +242,7 @@ public final class StringUtil {
             newArray[i++] = cachedString;
           }
         }
-        cachedStrings[i++] = newCachedString;
+        newArray[i++] = newCachedString;
         if (i < newArray.length) { // GC happened in between, shorting, not that of a big issue
           newArray = Arrays.copyOf(newArray, i);
         }

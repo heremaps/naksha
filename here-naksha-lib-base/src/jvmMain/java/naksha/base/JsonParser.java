@@ -595,17 +595,23 @@ public final class JsonParser {
       }
     } finally {
       // Trim leading white spaces.
+      boolean invalidate_hash = false;
       int pos = 0;
       while (pos < chars_length && isWhitespace(chars[pos])) pos++;
       if (pos > 0) {
+        invalidate_hash = true;
         final int new_length = chars_length - pos;
         System.arraycopy(chars, pos, chars, 0, new_length);
         chars_length = new_length;
       }
       // Trim trailing white spaces.
-      pos = chars_length - 1;
+      final int last_pos = chars_length - 1;
+      pos = last_pos;
       while (pos > 0 && isWhitespace(chars[pos])) pos--;
-      chars_length = pos + 1;
+      if (pos != last_pos) {
+        chars_length = pos + 1;
+        invalidate_hash = true;
+      }
 
       // Detect long and boolean types by chaining a bunch of tables.
       final int[][] NUMBER_TABLE = JsonParser.NUMBER_TABLE;
@@ -617,6 +623,13 @@ public final class JsonParser {
           type = table[c];
         } else {
           type = TEXT;
+        }
+      }
+      if (type == TEXT && invalidate_hash) {
+        // We need to calculate hash again.
+        chars_hash = 0;
+        for (int j = 0; j < chars_length; j++) {
+          chars_hash = (chars_hash * 31) + chars[j];
         }
       }
       this.potentialType = type;
@@ -969,6 +982,7 @@ public final class JsonParser {
 
       final var chars = this.chars;
       final var chars_end = this.chars_end;
+      final var chars_hash = this.chars_hash;
 
       // We were asked to parse a value, but just found an empty text, this can happen for example in the following case:
       // [5,,6]
