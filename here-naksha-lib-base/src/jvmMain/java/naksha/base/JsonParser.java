@@ -237,7 +237,7 @@ public final class JsonParser {
    * Skip all white-spaces <i>(code-point below 32, space)</i>.
    * @param utf8 the UTF-8 bytes.
    * @param i the index to start reading.
-   * @return the index of the first byte that is no white-space.
+   * @return the index of the first byte that is no white-space, being {@code i}, when no whitespace found.
    */
   private int skipWhiteSpaces(byte[] utf8, int i) {
     int line = this.line;
@@ -544,31 +544,33 @@ public final class JsonParser {
     int type = TYPE_START;
     try {
       while (true) {
-        final long result = decodeCodePoint(utf8, i);
-        i = resultGetNextIndex(result);
-        if (i < 0) return i;
-        final int cp = resultGetCodePoint(result);
-        if (cp < 0) return error_malformed_utf8(i, line, column);
+        final long r = decodeCodePoint(utf8, i);
+        final int r_i = resultGetNextIndex(r);
+        if (r_i < 0) return r_i;
+        final int r_cp = resultGetCodePoint(r);
+        if (r_cp < 0) return error_malformed_utf8(i, line, column);
+
         if (!escape) {
-          if (cp == '\\') {
+          if (r_cp == '\\') {
             escape = true;
+            i = r_i;
             continue;
           }
-          if (cp == '/') {
-            final int next_i = skipIfComment(utf8, i);
-            if (next_i != i) {
-              if (next_i < 0) return next_i;
-              i = next_i;
+          if (r_cp == '/') {
+            final int new_i = skipIfComment(utf8, r_i);
+            if (new_i != r_i) {
+              if (new_i < 0) return new_i;
+              i = new_i;
               continue;
             }
           }
           if (isKey) {
-            if (cp == ':') return i;
-            if (cp == '\n') return error_malformed_json("Expected colon, but found line-break", i, line, column);
-          } else if (cp == ',' // {a:foo,b:bar} -- {a:true,} -- [true,]
-              || cp == '}' // {a:foo}
-              || cp == ']' // // [true]
-              || cp == '\n' // {
+            if (r_cp == ':') return i;
+            if (r_cp == '\n') return error_malformed_json("Expected colon, but found line-break", i, line, column);
+          } else if (r_cp == ',' // {a:foo,b:bar} -- {a:true,} -- [true,]
+              || r_cp == '}' // {a:foo}
+              || r_cp == ']' // // [true]
+              || r_cp == '\n' // {
             //   a:foo
             //   b:bar
             // }
@@ -576,15 +578,15 @@ public final class JsonParser {
             return i;
           }
         }
-        if (isBmpCodePoint(cp)) {
+        if (isBmpCodePoint(r_cp)) {
           chars = charBuffer.ensure(chars, chars_length);
-          chars[chars_length] = (char) cp;
+          chars[chars_length] = (char) r_cp;
           chars_length += 1;
-          chars_hash = chars_hash * 31 + cp;
+          chars_hash = chars_hash * 31 + r_cp;
         } else {
           chars = charBuffer.ensure(chars, chars_length + 1);
-          final var hi = highSurrogate(cp);
-          final var lo = lowSurrogate(cp);
+          final var hi = highSurrogate(r_cp);
+          final var lo = lowSurrogate(r_cp);
           chars[chars_length] = hi;
           chars[chars_length + 1] = lo;
           chars_length += 2;
@@ -593,6 +595,7 @@ public final class JsonParser {
           type = TEXT;
         }
         escape = false;
+        i = r_i;
       }
     } finally {
       // Trim leading white spaces.
@@ -683,17 +686,18 @@ public final class JsonParser {
         int r_cp = resultGetCodePoint(r);
         if (r_cp < 0) return error_malformed_utf8(i, line, column);
         if (r_cp == '/') {
-          final int new_i = skipIfComment(utf8, i);
-          if (new_i != i) {
+          final int new_i = skipIfComment(utf8, r_i);
+          if (new_i != r_i) { // We skipped some comment.
+            if (new_i < 0) return error_malformed_utf8(i, line, column);
             i = new_i;
             continue;
           }
-          // TODO: Add some general code to add a code-point into a string, then add: ", but found '<cp>'"
-          return error_malformed_json("Expected ',' or ']'", i, line, column);
+          return error_malformed_json("Expected ',' or ']', but found '/'", i, line, column);
         }
         if (r_cp == ']') {
-          // TODO: Wrap into JsonArray
-          throw new UnsupportedOperationException();
+          final var content = Arrays.copyOf(data, data_end);
+          parsedValue = new JsonArray(content);
+          return r_i;
         }
         if (r_cp == ',') {
           if (!expect_comma) {
@@ -701,6 +705,7 @@ public final class JsonParser {
             data[data_end++] = Json.UNDEFINED;
           }
           expect_comma = false;
+          i = r_i;
           continue;
         }
         if (isWhitespace(r_cp)) {
@@ -712,10 +717,12 @@ public final class JsonParser {
           // TODO: Add some general code to add a code-point into a string, then add: ", but found '<cp>'"
           return error_malformed_json("Expected ',' or ']'", i, line, column);
         }
-        // Parse value.
+        // Parse value, starting at i, not r_i, because the current cp is part of the value!
         i = parseValue(utf8, i);
         if (i < 0) return i;
-        data[data_end++] = parsedValue;
+        data = ensure_size(data, data_end+1, false);
+        data[data_end] = parsedValue;
+        data_end++;
         expect_comma = true;
       }
     } finally {

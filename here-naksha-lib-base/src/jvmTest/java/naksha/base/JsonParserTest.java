@@ -209,7 +209,33 @@ class JsonParserTest {
     assertEquals(-1.23e100d, d);
   }
 
-  // TODO: test_array
+  @Test
+  public void test_array() {
+    Object r = parse("[]");
+    JsonArray arr = assertInstanceOf(JsonArray.class, r);
+    assertNotNull(arr);
+    assertEquals(0, arr.size());
+
+    r = parse("[1, 2]");
+    arr = assertInstanceOf(JsonArray.class, r);
+    assertNotNull(arr);
+    assertEquals(2, arr.size());
+    assertEquals(1L, arr.get(0));
+    assertEquals(2L, arr.get(1));
+
+    r = parse("[1,, test, true, false, 'bar\n', \"test\"]");
+    arr = assertInstanceOf(JsonArray.class, r);
+    assertNotNull(arr);
+    assertEquals(7, arr.size());
+    assertEquals(1L, arr.get(0));
+    assertEquals(Json.UNDEFINED, arr.get(1));
+    assertSame(test_SINGLETON, arr.get(2));
+    assertSame(Boolean.TRUE, arr.get(3));
+    assertSame(Boolean.FALSE, arr.get(4));
+    assertEquals("bar\n", arr.get(5));
+    assertSame(test_SINGLETON, arr.get(6));
+  }
+
   // TODO: test_map
 
 }

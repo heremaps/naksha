@@ -17,6 +17,11 @@ public class JsonArray implements List<Object> {
         this.doubleList = null;
     }
 
+    JsonArray(@Nullable Object @NotNull [] elements) {
+      this.list = elements;
+      this.doubleList = null;
+    }
+
     @Override
     public int size() {
         if (doubleList != null) {
