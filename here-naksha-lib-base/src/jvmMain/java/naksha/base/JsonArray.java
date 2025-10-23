@@ -38,21 +38,34 @@ public class JsonArray implements List<Object> {
 
     @Override
     public int indexOf(@Nullable Object o) {
-        if (o instanceof Double && doubleList != null) {
-            var localDoubleList = doubleList;
-            double doubleValue = (Double) o;
-            for (int i = 0; i < localDoubleList.length; i++) {
-                if (localDoubleList[i] == doubleValue) {
-                    return i;
-                }
-            }
-            return -1;
+        if (o instanceof Double && doubleList != null) return indexOfDouble((Double) o,1);
+        return indexOfObject(o, 1);
+    }
+
+    private int indexOfDouble(double value, int step) {
+        var localDoubleList = doubleList;
+        int i;
+        if (step > 0) {
+            i = 0;
+        } else {
+            i = localDoubleList.length - 1;
         }
+        for (; step > 0 ? i < localDoubleList.length : i >= 0; i += step) {
+            if (localDoubleList[i] == value) return i;
+        }
+        return -1;
+    }
+
+    private int indexOfObject(Object value, int step) {
         var localList = list;
-        for (int i = 0; i < localList.length; i++) {
-            if (internalEquals(o,localList[i])) {
-                return i;
-            }
+        int i;
+        if (step > 0) {
+            i = 0;
+        } else {
+            i = localList.length - 1;
+        }
+        for (; step > 0 ? i < localList.length : i >= 0; i += step) {
+            if (Objects.equals(value,localList[i])) return i;
         }
         return -1;
     }
@@ -287,17 +300,10 @@ public class JsonArray implements List<Object> {
         return localList[index];
     }
 
-    private boolean internalEquals(@Nullable Object a, @Nullable Object b) {
-        if (a == null) {
-            return b == null;
-        }
-        return a.equals(b);
-    }
-
     @Override
     public int lastIndexOf(Object o) {
-        //TODO
-        return 0;
+        if (o instanceof Double && doubleList != null) return indexOfDouble((Double) o,-1);
+        return indexOfObject(o, -1);
     }
 
     @NotNull
