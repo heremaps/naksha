@@ -1,0 +1,36 @@
+{
+  "momType": "Crosswalk",
+  "type": "Feature",
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [11.57553446724757, 48.137431617906635, 105.24],
+        [11.575582163673674, 48.13752705818873, 105.25],
+        [11.575450763721696, 48.13755885819759, 105.26],
+        [11.575405687241368, 48.13745982592636, 105.26],
+        [11.57553446724757, 48.137431617906635, 105.24]
+      ]
+    ]
+  },
+  "referencePoint": {
+    "type": "Point",
+    "coordinates": [11.57553446724757, 48.137431617906635, 105.24]
+  },
+  "id": "12345",
+  "properties": {
+    "featureType": "Crosswalk",
+    "isoCountryCode": "AUS",
+    "@ns:com:here:mom:meta": {
+      "hashPayload": "C63BB99145BDFE16E2DD838D2AB55635",
+      "createdTS": "2018-02-27T21:06:55.789Z",
+      "lastUpdatedTS": "2018-02-27T21:06:55.789Z",
+      "updatedByUser": "dbhattac",
+      "modelVersion": "2.0.0",
+      "sourceId": "1234abcde6789"
+    },
+    "classificationEstimate": {
+      "classificationStyle": "SOLID"
+    }
+  }
+}

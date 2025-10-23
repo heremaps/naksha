@@ -215,7 +215,7 @@ public class HereDeltaNs extends JsonObject {
    * (see <a href="https://devzone.it.here.com/jira/browse/CMECMSSUP-1945">CMECMSSUP-1945</a>)!
    */
   @JsonProperty
-  private long priorityCategory;
+  private Long priorityCategory;
 
   /**
    * The UNIX epoch timestamp in milliseconds of the time until when the edit must be taken care of. This property is only set automatically
