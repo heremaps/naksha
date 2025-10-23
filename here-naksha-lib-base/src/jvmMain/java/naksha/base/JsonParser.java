@@ -8,6 +8,7 @@ import java.util.Arrays;
 
 import static ch.randelshofer.fastdoubleparser.JsonDoubleParser.parseDouble;
 import static java.lang.Character.*;
+import static naksha.base.Json.ensure_size;
 import static naksha.base.StringUtil.intern;
 import static naksha.base.StringUtil.newString;
 import static naksha.base.UTF8.*;
@@ -650,6 +651,20 @@ public final class JsonParser {
     throw new UnsupportedOperationException();
   }
 
+  private @Nullable Object @NotNull [] allocateAtStack() {
+    final int stack_i = stack_end;
+    Object[] data = stack[stack_i];
+    if (data == null) {
+      data = ensure_size(Json.EMPTY_ARRAY, 1, false);
+      stack[stack_i] = data;
+    }
+    stack_end++;
+    return data;
+  }
+  private void releaseAtStack() {
+    stack_end--;
+  }
+
   /**
    * Called after an array is opened, so after the <code>[</code> character was hit. Parses the array and returns it in {@link #parsedValue} as {@link JsonArray}.
    * @param utf8 the UTF-8 bytes.
@@ -657,8 +672,55 @@ public final class JsonParser {
    * @return the index to continue reading at, so the first byte after the array close <i>(<code>]</code>)</i>
    */
   private int parseArray(byte[] utf8, int i) {
-    // TODO: For now, wrap JsonArray into JvmList!
-    throw new UnsupportedOperationException();
+    @Nullable Object @NotNull [] data = allocateAtStack();
+    boolean expect_comma = false;
+    try {
+      int data_end = 0;
+      while (true) {
+        long r = decodeCodePoint(utf8, i);
+        int r_i = resultGetNextIndex(r);
+        if (r_i < 0) return error_eof(i, line, column);
+        int r_cp = resultGetCodePoint(r);
+        if (r_cp < 0) return error_malformed_utf8(i, line, column);
+        if (r_cp == '/') {
+          final int new_i = skipIfComment(utf8, i);
+          if (new_i != i) {
+            i = new_i;
+            continue;
+          }
+          // TODO: Add some general code to add a code-point into a string, then add: ", but found '<cp>'"
+          return error_malformed_json("Expected ',' or ']'", i, line, column);
+        }
+        if (r_cp == ']') {
+          // TODO: Wrap into JsonArray
+          throw new UnsupportedOperationException();
+        }
+        if (r_cp == ',') {
+          if (!expect_comma) {
+            // We encounter a comma without any value, this happens for example for `[1,,2]` or `[,1]`.
+            data[data_end++] = Json.UNDEFINED;
+          }
+          expect_comma = false;
+          continue;
+        }
+        if (isWhitespace(r_cp)) {
+          i = skipWhiteSpaces(utf8, i);
+          continue;
+        }
+        // No whitespace, so value.
+        if (expect_comma) {
+          // TODO: Add some general code to add a code-point into a string, then add: ", but found '<cp>'"
+          return error_malformed_json("Expected ',' or ']'", i, line, column);
+        }
+        // Parse value.
+        i = parseValue(utf8, i);
+        if (i < 0) return i;
+        data[data_end++] = parsedValue;
+        expect_comma = true;
+      }
+    } finally {
+      releaseAtStack();
+    }
   }
 
   private static final long[] MUL = new long[] {

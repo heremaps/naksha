@@ -73,6 +73,11 @@ class JsonParserTest {
     s = assertInstanceOf(String.class, r);
     assertNotNull(s);
     assertSame(test_SINGLETON, s);
+
+    r = parse("\"\\x74\\u0065\\u{73}t\"");
+    s = assertInstanceOf(String.class, r);
+    assertNotNull(s);
+    assertSame(test_SINGLETON, s);
   }
 
   @Test
