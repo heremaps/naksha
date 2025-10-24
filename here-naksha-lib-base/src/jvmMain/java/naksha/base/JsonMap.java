@@ -15,11 +15,16 @@ class JsonMap implements Map<String, Object> {
         map = EMPTY;
     }
 
-    /**
+    /// Called by the JSON parser, the ownership of the given array is give to this.
+    JsonMap(@Nullable Object @NotNull [] map_content){
+      this.map = map_content;
+    }
+
+  /**
      * The internal map representation, [key1, value1, key2, value2,...].
      */
-    private @NotNull Object[] map;
-    private static final Object[] EMPTY = new Object[0];
+    @Nullable Object @NotNull [] map;
+    private static final @Nullable Object @NotNull [] EMPTY = new Object[0];
 
     @Override
     public int size() {

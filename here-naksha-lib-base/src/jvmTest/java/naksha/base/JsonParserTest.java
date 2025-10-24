@@ -236,6 +236,81 @@ class JsonParserTest {
     assertSame(test_SINGLETON, arr.get(6));
   }
 
-  // TODO: test_map
+  @Test
+  public void test_map() {
+    Object r = parse("{}");
+    JsonMap map = assertInstanceOf(JsonMap.class, r);
+    assertNotNull(map);
+    assertEquals(0, map.size());
 
+    r = parse("{a:1, b:2}");
+    map = assertInstanceOf(JsonMap.class, r);
+    assertNotNull(map);
+    assertEquals(2, map.size());
+    assertEquals(1L, map.get("a"));
+    assertEquals(2L, map.get("b"));
+  }
+
+  @Test
+  public void test_map_internals() {
+    final Object r = parse("{'a':1,,'b':test, 'c':true, d:false, 'foo':'bar\\n', 'test':\"test\"}");
+    final JsonMap map = assertInstanceOf(JsonMap.class, r);
+    assertNotNull(map);
+    assertEquals(6, map.size());
+
+    // 'a':1
+    assertEquals("a", map.map[0]);
+    assertEquals(1L, map.map[1]);
+    assertEquals(1L, map.get("a"));
+
+    // 'b':test
+    assertEquals("b", map.map[2]);
+    assertSame(test_SINGLETON, map.map[3]);
+    assertSame(test_SINGLETON, map.get("b"));
+
+    // 'c':true
+    assertEquals("c", map.map[4]);
+    assertSame(Boolean.TRUE, map.map[5]);
+    assertSame(Boolean.TRUE, map.get("c"));
+
+    // d:false
+    assertEquals("d", map.map[6]);
+    assertSame(Boolean.FALSE, map.map[7]);
+    assertSame(Boolean.FALSE, map.get("d"));
+
+    // 'foo':'bar\n'
+    assertEquals("foo", map.map[8]);
+    assertEquals("bar\n", map.map[9]);
+    assertEquals("bar\n", map.get("foo"));
+
+    // 'test':"test"
+    assertSame(test_SINGLETON, map.map[10]);
+    assertSame(test_SINGLETON, map.map[11]);
+    assertSame(test_SINGLETON, map.get("test"));
+  }
+
+    @Test
+  public void test_map_deep() {
+    final Object r = parse("{test:a, 'b':[1,2], c:[1,{test:test}]}");
+    final JsonMap root = assertInstanceOf(JsonMap.class, r);
+    assertNotNull(root);
+    assertEquals(3, root.size());
+    assertEquals("a", root.get("test"));
+
+    Object r2 = root.get("b");
+    JsonArray arr = assertInstanceOf(JsonArray.class, r2);
+    assertEquals(2, arr.size());
+    assertEquals(1L, arr.get(0));
+    assertEquals(2L, arr.get(1));
+
+    Object r3 = root.get("c");
+    arr = assertInstanceOf(JsonArray.class, r3);
+    assertEquals(2, arr.size());
+    assertEquals(1L, arr.get(0));
+
+    Object r4 = arr.get(1);
+    JsonMap map = assertInstanceOf(JsonMap.class, r4);
+    assertEquals(1, map.size());
+    assertSame(test_SINGLETON, map.get("test"));
+  }
 }

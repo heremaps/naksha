@@ -643,17 +643,7 @@ public final class JsonParser {
     }
   }
 
-  /**
-   * Called after a map is opened, so after the <code>{</code> character was hit. Parses the map and returns it in {@link #parsedValue} as {@link JsonMap}.
-   * @param utf8 the UTF-8 bytes.
-   * @param i the index to start reading at, so the first valid byte after the map open character <i>(<code>{</code>)</i>.
-   * @return the index to continue reading at, so the first byte after the map close <i>(<code>}</code>)</i>
-   */
-  private int parseMap(byte[] utf8, int i) {
-    // TODO: For now, wrap JsonMap into JvmMap!
-    throw new UnsupportedOperationException();
-  }
-
+  /// Allocate a new object[] at stack.
   private @Nullable Object @NotNull [] allocateAtStack() {
     final int stack_i = stack_end;
     Object[] data = stack[stack_i];
@@ -664,8 +654,153 @@ public final class JsonParser {
     stack_end++;
     return data;
   }
+
+  /// Release/free the top object[].
   private void releaseAtStack() {
     stack_end--;
+  }
+
+  private enum MapParserState {
+    PARSE_KEY_OR_END,
+    PARSE_COLON,
+    PARSE_VALUE,
+    PARSE_COMMA_OR_END;
+
+    public @NotNull String toString(int CodePoint) {
+      return toString();
+    }
+    public @NotNull String toString() {
+      switch (this) {
+        case PARSE_KEY_OR_END: return "Expected key or '}'";
+        case PARSE_COLON: return "Expected ':'";
+        case PARSE_VALUE: return "Expected value";
+        case PARSE_COMMA_OR_END: return "Expected ',' or '}'";
+      }
+      return "Invalid internal parser state";
+    }
+  }
+
+  /**
+   * Called after a map is opened, so after the <code>{</code> character was hit. Parses the map and returns it in {@link #parsedValue} as {@link JsonMap}.
+   * @param utf8 the UTF-8 bytes.
+   * @param i the index to read, so the first valid byte after the map open character <i>(<code>{</code>)</i>.
+   * @return the index to continue reading at, so the first byte after the map close <i>(<code>}</code>)</i>
+   */
+  private int parseMap(byte[] utf8, int i) {
+    @Nullable Object @NotNull [] data = allocateAtStack();
+    int line = this.line;
+    int column = this.column;
+    try {
+      // Note: We have four states, executed in order:
+      // - PARSE_KEY_OR_END
+      // - PARSE_COLON
+      // - PARSE_VALUE_COMMA_OR_END
+      // - PARSE_COMMA_OR_END
+      @NotNull MapParserState state = MapParserState.PARSE_KEY_OR_END;
+      int data_end = 0;
+      while (true) {
+        long r = decodeCodePoint(utf8, i);
+        int next_i = resultGetNextIndex(r);
+        if (next_i < 0) return error_eof(i, line, column);
+        int cp = resultGetCodePoint(r);
+        if (cp < 0) return error_malformed_utf8(i, line, column);
+        column++;
+        if (cp == '/') {
+          final int new_i = skipIfComment(utf8, next_i);
+          if (new_i != next_i) { // We skipped some comment.
+            if (new_i < 0) return error_malformed_utf8(i, line, column);
+            i = new_i;
+            continue;
+          }
+          return error_malformed_json(state.toString(cp), i, line, column);
+        }
+        if (cp == ':') {
+          if (state == MapParserState.PARSE_COLON) {
+            state = MapParserState.PARSE_VALUE;
+            i = next_i;
+            continue;
+          }
+          return error_malformed_json(state.toString(cp), i, line, column);
+        }
+        if (cp == '}') {
+          if (state == MapParserState.PARSE_COLON) {
+            return error_malformed_json(state.toString(cp), i, line, column);
+          }
+          if (state == MapParserState.PARSE_VALUE) {
+            // The happens for example for `{a:}`
+            data = ensure_size(data, data_end+1, false);
+            data[data_end++] = Json.UNDEFINED;
+          }
+          // Now we are in: `PARSE_KEY_OR_END` or `PARSE_COMMA_OR_END`
+          // Therefore, we are done.
+          final var content = Arrays.copyOf(data, data_end);
+          parsedValue = new JsonMap(content);
+          return next_i;
+        }
+        if (cp == ',') {
+          if (state == MapParserState.PARSE_COLON) {
+            return error_malformed_json(state.toString(cp), i, line, column);
+          }
+          if (state == MapParserState.PARSE_VALUE) {
+            // The happens for example for `{a:,b:10}`, we treat the value as undefined, rather than fail.
+            data = ensure_size(data, data_end+1, false);
+            data[data_end++] = Json.UNDEFINED;
+          }
+          // We may be in PARSE_KEY_OR_END, e.g. `{a:1,,b:10}`, we ignore this as human syntax error, and continue to parse key.
+          // We may be in PARSE_COMMA_OR_END, which is what is normal, we now continue to parse the key.
+          state = MapParserState.PARSE_KEY_OR_END;
+          i = next_i;
+          continue;
+        }
+        if (cp == '\n') {
+          line++; column = 0;
+          if (state == MapParserState.PARSE_COMMA_OR_END) {
+            // {
+            //   a: 12\n <-- We want to support this
+            //   b: 10
+            // }
+            // Therefore in this case only, we treat the LF as comma, and continue in the next line with parsing the key or close.
+            state = MapParserState.PARSE_KEY_OR_END;
+            i = next_i;
+            continue;
+          }
+          // In other cases we treat it just like any other whitespace, that will be ignored.
+        }
+        if (isWhitespace(cp)) {
+          i = skipWhiteSpaces(utf8, i);
+          continue;
+        }
+        if (state == MapParserState.PARSE_COLON || state == MapParserState.PARSE_COMMA_OR_END) {
+          // We expect key or value parsing at this point, no other state is valid!
+          return error_malformed_json(state.toString(cp), i, line, column);
+        }
+        // Parse the value and continue at the next code-point after the value.
+        if (state == MapParserState.PARSE_KEY_OR_END) {
+          if (cp == '\'' || cp=='"') {
+            i = parseString(utf8, next_i, cp, true, false);
+          } else {
+            i = parseText(utf8, i, true);
+            if (i < -1) return i;
+            parsedValue = intern(chars, 0, chars_end, chars_hash, isNFKCNormalized, false);
+          }
+          data = ensure_size(data, data_end+1, false);
+          data[data_end] = parsedValue;
+          data_end++;
+          state = MapParserState.PARSE_COLON;
+        } else {
+          i = parseValue(utf8, i);
+          if (i < -1) return i;
+          data = ensure_size(data, data_end+1, false);
+          data[data_end] = parsedValue;
+          data_end++;
+          state = MapParserState.PARSE_COMMA_OR_END;
+        }
+      }
+    } finally {
+      releaseAtStack();
+      this.line = line;
+      this.column = column;
+    }
   }
 
   /**
@@ -676,44 +811,53 @@ public final class JsonParser {
    */
   private int parseArray(byte[] utf8, int i) {
     @Nullable Object @NotNull [] data = allocateAtStack();
-    boolean expect_comma = false;
     try {
       int data_end = 0;
+      boolean expect_comma = false;
+      boolean lf = false;
       while (true) {
         long r = decodeCodePoint(utf8, i);
-        int r_i = resultGetNextIndex(r);
-        if (r_i < 0) return error_eof(i, line, column);
-        int r_cp = resultGetCodePoint(r);
-        if (r_cp < 0) return error_malformed_utf8(i, line, column);
-        if (r_cp == '/') {
-          final int new_i = skipIfComment(utf8, r_i);
-          if (new_i != r_i) { // We skipped some comment.
+        int next_i = resultGetNextIndex(r);
+        if (next_i < 0) return error_eof(i, line, column);
+        int cp = resultGetCodePoint(r);
+        if (cp < 0) return error_malformed_utf8(i, line, column);
+        if (cp == '/') {
+          final int new_i = skipIfComment(utf8, next_i);
+          if (new_i != next_i) { // We skipped some comment.
             if (new_i < 0) return error_malformed_utf8(i, line, column);
             i = new_i;
             continue;
           }
           return error_malformed_json("Expected ',' or ']', but found '/'", i, line, column);
         }
-        if (r_cp == ']') {
+        if (cp == ']') {
           final var content = Arrays.copyOf(data, data_end);
           parsedValue = new JsonArray(content);
-          return r_i;
+          return next_i;
         }
-        if (r_cp == ',') {
+        if (cp == '\n') {
+          line++; column = 0;
+          lf = true; // We allow:
+          // [
+          //   1
+          //   2
+          // ]
+        }
+        if (cp == ',') {
           if (!expect_comma) {
             // We encounter a comma without any value, this happens for example for `[1,,2]` or `[,1]`.
             data[data_end++] = Json.UNDEFINED;
           }
           expect_comma = false;
-          i = r_i;
+          i = next_i;
           continue;
         }
-        if (isWhitespace(r_cp)) {
+        if (isWhitespace(cp)) {
           i = skipWhiteSpaces(utf8, i);
           continue;
         }
-        // No whitespace, so value.
-        if (expect_comma) {
+        // No whitespace, so value (except we have a line-feed before!).
+        if (expect_comma && !lf) {
           // TODO: Add some general code to add a code-point into a string, then add: ", but found '<cp>'"
           return error_malformed_json("Expected ',' or ']'", i, line, column);
         }
@@ -724,6 +868,7 @@ public final class JsonParser {
         data[data_end] = parsedValue;
         data_end++;
         expect_comma = true;
+        lf = false;
       }
     } finally {
       releaseAtStack();
