@@ -3,7 +3,10 @@ package naksha.base;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
+import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -188,5 +191,221 @@ public class JsonClassesTest {
         map.put("key1", "value1");
         keyIterator = map.keySet().iterator();
         assertThrows(IllegalStateException.class, keyIterator::remove);
+    }
+
+    @Test
+    void testJsonArrayConstructorAndBasicOperations() {
+        JsonArray array = new JsonArray();
+        assertTrue(array.isEmpty());
+        assertEquals(0, array.size());
+
+        array.add("test");
+        assertFalse(array.isEmpty());
+        assertEquals(1, array.size());
+        assertEquals("test", array.get(0));
+    }
+
+    @Test
+    void testJsonArrayAddAndGet() {
+        JsonArray array = new JsonArray();
+        array.add("first");
+        array.add(2);
+        array.add(true);
+        array.add(null);
+
+        assertEquals("first", array.get(0));
+        assertEquals(2, array.get(1));
+        assertTrue((Boolean) array.get(2));
+        assertNull(array.get(3));
+        assertEquals(4, array.size());
+    }
+
+    @Test
+    void testJsonArrayContains() {
+        JsonArray array = new JsonArray();
+        array.add("test");
+        array.add(42);
+
+        assertTrue(array.contains("test"));
+        assertTrue(array.contains(42));
+        assertFalse(array.contains("nonexistent"));
+    }
+
+    @Test
+    void testJsonArrayIndexOf() {
+        JsonArray array = new JsonArray();
+        array.add("first");
+        array.add("second");
+        array.add("first");
+
+        assertEquals(0, array.indexOf("first"));
+        assertEquals(1, array.indexOf("second"));
+        assertEquals(-1, array.indexOf("nonexistent"));
+        assertEquals(2, array.lastIndexOf("first"));
+    }
+
+    @Test
+    void testJsonArrayAddAtIndex() {
+        JsonArray array = new JsonArray();
+        array.add("first");
+        array.add("third");
+        array.add(1, "second");
+
+        assertEquals("first", array.get(0));
+        assertEquals("second", array.get(1));
+        assertEquals("third", array.get(2));
+
+        assertThrows(IndexOutOfBoundsException.class, () -> array.add(4, "invalid"));
+    }
+
+    @Test
+    void testJsonArrayRemove() {
+        JsonArray array = new JsonArray();
+        array.add("first");
+        array.add("second");
+        array.add("third");
+
+        assertEquals("second", array.remove(1));
+        assertEquals(2, array.size());
+        assertEquals("third", array.get(1));
+
+        assertTrue(array.remove("first"));
+        assertFalse(array.remove("nonexistent"));
+        assertEquals(1, array.size());
+    }
+
+    @Test
+    void testJsonArraySet() {
+        JsonArray array = new JsonArray();
+        array.add("original");
+        array.add("test");
+
+        assertEquals("original", array.set(0, "replaced"));
+        assertEquals("replaced", array.get(0));
+        assertThrows(IndexOutOfBoundsException.class, () -> array.set(2, "invalid"));
+    }
+
+    @Test
+    void testJsonArrayToArray() {
+        JsonArray array = new JsonArray();
+        array.add("first");
+        array.add(2);
+
+        Object[] result = array.toArray();
+        assertEquals(2, result.length);
+        assertEquals("first", result[0]);
+        assertEquals(2, result[1]);
+
+        // Test toArray with provided array
+        Object[] objArray = new Object[3];
+        Object[] returned = array.toArray(objArray);
+        assertEquals(objArray, returned);
+        assertNull(objArray[2]);
+    }
+
+    @Test
+    void testJsonArrayAddAll() {
+        JsonArray array = new JsonArray();
+        List<Object> toAdd = Arrays.asList("first", 2, true);
+
+        assertTrue(array.addAll(toAdd));
+        assertEquals(3, array.size());
+        assertEquals("first", array.get(0));
+        assertEquals(2, array.get(1));
+        assertEquals(true, array.get(2));
+
+        // Test addAll at index
+        List<Object> toAddAtIndex = Arrays.asList("inserted", "items");
+        assertTrue(array.addAll(1, toAddAtIndex));
+        assertEquals(5, array.size());
+        assertEquals("first", array.get(0));
+        assertEquals("inserted", array.get(1));
+        assertEquals("items", array.get(2));
+    }
+
+    @Test
+    void testJsonArraySubList() {
+        JsonArray array = new JsonArray();
+        array.add("one");
+        array.add("two");
+        array.add("three");
+        array.add("four");
+
+        List<Object> subList = array.subList(1, 3);
+        assertEquals(2, subList.size());
+        assertEquals("two", subList.get(0));
+        assertEquals("three", subList.get(1));
+
+        subList.set(0, "modified");
+        assertEquals("modified", array.get(1));
+
+        assertThrows(IndexOutOfBoundsException.class, () -> array.subList(-1, 3));
+        assertThrows(IndexOutOfBoundsException.class, () -> array.subList(2, 5));
+    }
+
+    @Test
+    void testJsonArrayListIterator() {
+        JsonArray array = new JsonArray();
+        array.add("first");
+        array.add("second");
+        array.add("third");
+
+        ListIterator<Object> iterator = array.listIterator();
+        assertTrue(iterator.hasNext());
+        assertFalse(iterator.hasPrevious());
+        assertEquals(0, iterator.nextIndex());
+        assertEquals(-1, iterator.previousIndex());
+
+        assertEquals("first", iterator.next());
+        assertEquals("second", iterator.next());
+        assertTrue(iterator.hasPrevious());
+        assertEquals("second", iterator.previous());
+
+        iterator.set("modified");
+        assertEquals("modified", array.get(1));
+
+        iterator.add("inserted");
+        assertEquals(4, array.size());
+        assertEquals("inserted", array.get(1));
+
+        // Test remove
+        iterator = array.listIterator();
+        iterator.next();
+        iterator.remove();
+        assertEquals(3, array.size());
+        assertEquals("inserted", array.get(0));
+        assertThrows(IllegalStateException.class, iterator::remove);
+    }
+
+    @Test
+    void testJsonArrayRetainAndRemoveAll() {
+        JsonArray array = new JsonArray();
+        array.add("keep");
+        array.add("remove");
+        array.add("also_keep");
+        array.add("also_remove");
+
+        List<Object> toKeep = Arrays.asList("keep", "also_keep");
+        assertTrue(array.retainAll(toKeep));
+        assertEquals(2, array.size());
+        assertTrue(array.containsAll(toKeep));
+
+        array.add("to_remove");
+        List<Object> toRemove = Arrays.asList("to_remove", "nonexistent");
+        assertTrue(array.removeAll(toRemove));
+        assertEquals(2, array.size());
+        assertFalse(array.contains("to_remove"));
+    }
+
+    @Test
+    void testJsonArrayClear() {
+        JsonArray array = new JsonArray();
+        array.add("test1");
+        array.add("test2");
+        assertFalse(array.isEmpty());
+
+        array.clear();
+        assertTrue(array.isEmpty());
+        assertEquals(0, array.size());
     }
 }

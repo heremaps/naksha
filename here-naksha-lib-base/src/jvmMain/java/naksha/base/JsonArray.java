@@ -156,7 +156,7 @@ public class JsonArray implements List<Object> {
 //        }
         // Either adding double to existing mixed list, or adding non-double
         var localList = list;
-        if (index < 0 || index >= localList.length) {
+        if (index < 0 || index > localList.length) {
             throw new IndexOutOfBoundsException("Index: "+index+", JsonArray size: "+localList.length);
         }
         Object[] newList;
@@ -203,7 +203,7 @@ public class JsonArray implements List<Object> {
     @Override
     public boolean addAll(int index, @NotNull Collection c) {
         var localList = list;
-        if (index < 0 || index >= localList.length) {
+        if (index < 0 || index > localList.length) {
             throw new IndexOutOfBoundsException("Index: "+index+", JsonArray size: "+localList.length);
         }
         Object[] newList;
@@ -327,7 +327,7 @@ public class JsonArray implements List<Object> {
                 }
                 lastMoveWasNext = false;
                 canRemove = true;
-                return list[index--];
+                return list[--index];
             }
 
             @Override
@@ -367,7 +367,7 @@ public class JsonArray implements List<Object> {
 
             @Override
             public void add(Object o) {
-                JsonArray.this.add(index++, o);
+                JsonArray.this.add(index, o);
                 canRemove = false;
             }
         };
@@ -418,10 +418,14 @@ public class JsonArray implements List<Object> {
         var localList = list;
         int countToRemove = 0;
         for (int i = 0; i < localList.length; i++ ) {
+            boolean match = false;
             for (Object o : c) {
                 if (Objects.equals(localList[i], o)) {
+                    match = true;
                     break;
                 }
+            }
+            if (!match) {
                 localList[i] = TOMBSTONE;
                 countToRemove++;
             }

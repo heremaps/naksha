@@ -169,8 +169,8 @@ class JsonMap implements Map<String, Object> {
             @Override
             public Iterator<String> iterator() {
                 return new Iterator<>() {
-                    int index = 0;
-                    boolean canRemove = false;
+                    private int index = 0;
+                    private boolean canRemove = false;
                     @Override
                     public boolean hasNext() {
                         return index < map.length;
