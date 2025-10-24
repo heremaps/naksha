@@ -43,7 +43,7 @@ class JsonMap implements Map<String, Object> {
      * @param key the key to turn into an interned.
      * @return the interned key or {@code null}, if this key is not yet interned, therefore it can't be part of map!
      */
-    private static @Nullable String toKeyOrNull(@NotNull Object key) {
+    private static @Nullable String toKeyOrNull(@Nullable Object key) {
         return key instanceof CharSequence ? StringUtil.get((CharSequence) key) : null;
     }
 
@@ -147,8 +147,9 @@ class JsonMap implements Map<String, Object> {
             final var key = toKey(entry.getKey());
             int index = indexOf(map, key, 0);
             if( index < 0 ) {
-                newMap[toAdd++] = key;
-                newMap[toAdd++] = entry.getValue();
+                newMap[toAdd] = key;
+                newMap[toAdd+1] = entry.getValue();
+                toAdd += 2;
             } else {
                 newMap[index+1] = entry.getValue();
             }
