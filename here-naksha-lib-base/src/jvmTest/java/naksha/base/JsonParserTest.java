@@ -289,7 +289,7 @@ class JsonParserTest {
     assertSame(test_SINGLETON, map.get("test"));
   }
 
-    @Test
+  @Test
   public void test_map_deep() {
     final Object r = parse("{test:a, 'b':[1,2], c:[1,{test:test}]}");
     final JsonMap root = assertInstanceOf(JsonMap.class, r);

@@ -215,8 +215,23 @@ public final class StringUtil {
     private @NotNull String intern(@NotNull CharSequence chars, int hashCode, boolean isNFKCNormalized, boolean pin) {
       // We keep this out of the loop, so we only generate a new cached string ones, even when we encounter a concurrent modification.
       CachedString newCachedString = null;
+      final String charsString = chars.getClass() == String.class ? (String) chars : null;
+      StringUtil.CachedString[] checked = null;
       while (true) {
         final var cachedStrings = this.get();
+        if (charsString != null && cachedStrings != checked) {
+          checked = cachedStrings;
+          // Prewarm L1 cache and detect if the given string is already interned.
+          for (final CachedString cachedString : cachedStrings) {
+            //noinspection StringEquality
+            if (charsString == cachedString.get()) {
+              // Great, the given string is already interned.
+              return charsString;
+            }
+          }
+        }
+
+        // We know that either chars is no string or it is not yet interned!
         int nulls = 0;
         for (final CachedString cachedString : cachedStrings) {
           final var s = cachedString.get();
@@ -230,6 +245,7 @@ public final class StringUtil {
             }
           }
         }
+
         // Not found, create a new string wrapper, which will be pinned initially.
         newCachedString = newCachedString(newCachedString, chars, isNFKCNormalized);
         // For now, no other thread has access, so release now or leave pinned, as requested.
@@ -279,13 +295,28 @@ public final class StringUtil {
      * @return the cached string or {@code null}, if no string cached.
      */
     private @Nullable String get(@NotNull CharSequence chars, int hashCode) {
-      var cachedStrings = this.get();
+      var cachedStrings = this.getPlain();
+
+      if (chars.getClass() == String.class) {
+        // Potentially already interned, first quick check that pre-warms the L1 cachea as a side effect.
+        final String potentiallyInterned = (String) chars;
+        for (final CachedString cachedString : cachedStrings) {
+          //noinspection StringEquality
+          if (potentiallyInterned == cachedString.get()) {
+            // Greate, the given string is already interned, just return it.
+            return potentiallyInterned;
+          }
+        }
+      }
+
+      // The given character sequence is not interned, we have to do full compares to find a match.
       for (final CachedString cachedString : cachedStrings) {
         final var s = cachedString.get();
         if (matches(s, chars, hashCode)) {
           return s;
         }
       }
+
       return null;
     }
   }
@@ -365,7 +396,7 @@ public final class StringUtil {
    * @return the cached string or {@code null}, if no string cached.
    */
   public static @Nullable String get(@NotNull CharSequence chars) {
-    final int hashCode = chars.hashCode();
+    final int hashCode = hashCodeOf(chars);
     final var cache = StringUtil.cache;
     final int index = hashCode & MASK;
     final var cachedStrings = cache.getPlain(index);
@@ -398,6 +429,25 @@ public final class StringUtil {
   }
 
   /**
+   * Calculates a standard hash-code above the given character sequence, only invokes {@code hashCode()} at the given character sequence, if it is a {@code String}; otherwise the hash-code is calculated manually the same way, that Java {@code String} does it.
+   * @param chars the character sequence for which to calculate the hash-code.
+   * @return the Java standard {@code String} hash-code.
+   */
+  public static int hashCodeOf(@NotNull CharSequence chars) {
+    if (chars.getClass() == String.class) {
+      return chars.hashCode();
+    }
+    // We need to calculate the hash-code our self, because we have no clue how the given char-sequence does it!
+    int hashCode = 0;
+    final int length = chars.length();
+    for (int i = 0; i < length; i++) {
+      final char c = chars.charAt(i);
+      hashCode = hashCode * 31 + c;
+    }
+    return hashCode;
+  }
+
+  /**
    * Returns the string singleton for the given character sequence.
    * @param chars The character sequence to turn into a string singleton.
    * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed <i>(ib doubt, always select false!)</i>.
@@ -405,7 +455,7 @@ public final class StringUtil {
    * @return the string singleton.
    */
   public static @NotNull String intern(@NotNull CharSequence chars, boolean isNFKCNormalized, boolean pin) {
-    final var hashCode = chars.hashCode();
+    final int hashCode = hashCodeOf(chars);
     final var cache = StringUtil.cache;
     final int index = hashCode & MASK;
     CachedStringArray csa = cache.getPlain(index);

@@ -20,7 +20,7 @@ class JsonMap implements Map<String, Object> {
       this.map = map_content;
     }
 
-  /**
+    /**
      * The internal map representation, [key1, value1, key2, value2,...].
      */
     @Nullable Object @NotNull [] map;
@@ -36,19 +36,42 @@ class JsonMap implements Map<String, Object> {
         return map.length==0;
     }
 
-    private static int indexOf(@NotNull Object[] map, Object e, int start) {
+    /**
+     * Tries to convert the given string into a key. A key is a string of which only one instance exists, so a singleton. If no such key singleton exists, returns {@code null}.
+     *
+     * <p>We always intern keys. If the given key is interned already, this check is cheap, if not, the test is slightly slower. The method actually boils down to one array access by hash-code of the given character sequence, followed by an iteration above all interned strings with the same hash-code. We assume there are no or maximal two hash collisions, therefore we expect that most compares are just numeric, except for a few hash collisions, where all characters have to be compared. So, unless this is the worst case (a hash collision), it just is comparing a bunch of references and integers.
+     * @param key the key to turn into an interned.
+     * @return the interned key or {@code null}, if this key is not yet interned, therefore it can't be part of map!
+     */
+    private static @Nullable String toKeyOrNull(@NotNull Object key) {
+        return key instanceof CharSequence ? StringUtil.get((CharSequence) key) : null;
+    }
+
+    /**
+     * Convert the given character sequence into a key, which is an interned string.
+     * @param key the key character sequence.
+     * @return the interned string.
+     */
+    private static @NotNull String toKey(@NotNull CharSequence key) {
+        return StringUtil.intern(key, false, false);
+    }
+
+    private static int indexOf(@Nullable Object @NotNull [] map, @Nullable Object e, int start) {
+        // Note: Searching for values does always expect a compare by reference, and it allows `null` values.
+        //       We intern keys, therefore, comparing by reference is true for keys too.
+        //       Even while keys can never be null, so searching for null at an even position will fail, we do no
+        //       pre-check, because every branch would slow us down for normal JSON maps with just a few entries,
+        //       we expect that the array is in L1 cache and using the CPU is cheaper than branching!
         assert start >= 0;
-        if (e != null) {
-            for( int i=start; i < map.length; i+=2 ) {
-                if( e.equals(map[i]) ) return i;
-            }
+        for (int i=start; i < map.length; i+=2) {
+            if (e == map[i]) return i;
         }
         return -1;
     }
 
-    @Override
+  @Override
     public boolean containsKey(@NotNull Object key) {
-        return indexOf(this.map, key, 0) >= 0;
+        return indexOf(this.map, toKeyOrNull(key), 0) >= 0;
     }
 
     @Override
@@ -57,52 +80,53 @@ class JsonMap implements Map<String, Object> {
     }
 
     @Override
-    public @Nullable Object get(Object key) {
-        var i = indexOf(map, key, 0);
+    public @Nullable Object get(@Nullable Object key) {
+        final var i = indexOf(map, toKeyOrNull(key), 0);
         return i >= 0 ? map[i+1] : null;
     }
 
     @Nullable
     @Override
-    public Object put(@NotNull String key, @Nullable Object value) {
-        var localMapCopy = this.map;
-        for (int i = 0; i < localMapCopy.length; i+=2 ) {
-            if( key.equals(localMapCopy[i]) ) {
-                var oldValue = localMapCopy[i+1];
-                localMapCopy[i+1] = value;
+    public Object put(String key, @Nullable Object value) {
+        var map = this.map;
+        key = toKey(key);
+        for (int i = 0; i < map.length; i+=2 ) {
+            if (key == map[i]) {
+                var oldValue = map[i+1];
+                map[i+1] = value;
                 return oldValue;
             }
         }
-        localMapCopy = Arrays.copyOf(localMapCopy, localMapCopy.length+2);
-        localMapCopy[localMapCopy.length-2] = key;
-        localMapCopy[localMapCopy.length-1] = value;
-        map = localMapCopy;
+        map = Arrays.copyOf(map, map.length+2);
+        map[map.length-2] = key;
+        map[map.length-1] = value;
+        this.map = map;
         return null;
     }
 
     /**
      * @return the previous value that was removed.
      */
-    private Object removeAt(int index) {
+    private @Nullable Object removeAt(int index) {
         if( index < 0 ) {
             return null;
         }
-        var localMapCopy = map;
-        if (localMapCopy.length == 2) { //removing the only element
-            map = EMPTY;
-            return localMapCopy[1];
+        var map = this.map;
+        if (map.length == 2) { //removing the only element
+            this.map = EMPTY;
+            return map[1];
         }
-        Object[] newArr = new Object[localMapCopy.length - 2];
-        System.arraycopy(localMapCopy, 0, newArr, 0, index);
-        if (index < localMapCopy.length-2) { //deleting not the last element
-            System.arraycopy(localMapCopy, index + 2, newArr, index, localMapCopy.length - index - 2);
+        Object[] newArr = new Object[map.length - 2];
+        System.arraycopy(map, 0, newArr, 0, index);
+        if (index < map.length-2) { //deleting not the last element
+            System.arraycopy(map, index + 2, newArr, index, map.length - index - 2);
         }
-        map = newArr;
-        return localMapCopy[index+1];
+        this.map = newArr;
+        return map[index+1];
     }
 
     @Override
-    public Object remove(@NotNull Object key) {
+    public @Nullable Object remove(@NotNull Object key) {
         var index = indexOf(map, key, 0);
         return removeAt(index);
     }
@@ -110,17 +134,18 @@ class JsonMap implements Map<String, Object> {
     @Override
     public void putAll(@NotNull Map<? extends String, ?> m) {
         int toAdd = 0;
-        var localMapCopy = this.map;
-        for ( var key : m.keySet() ) {
-            if( indexOf(localMapCopy, key, 0) < 0 ) {
-                toAdd+=2;
+        var map = this.map;
+        for (var rawKey : m.keySet()) {
+            final var key = toKey(rawKey);
+            if (indexOf(map, key, 0) < 0) {
+                toAdd += 2;
             }
         }
-        var newMap = Arrays.copyOf(localMapCopy, localMapCopy.length + toAdd); //Resize only once
-        toAdd = localMapCopy.length; // Reuse, now toAdd is the index where we can add new elements
-        for ( var entry : m.entrySet() ) {
-            final var key = entry.getKey();
-            int index = indexOf(localMapCopy, key, 0);
+        final var newMap = Arrays.copyOf(map, map.length + toAdd); //Resize only once
+        toAdd = map.length; // Reuse, now toAdd is the index where we can add new elements
+        for (var entry : m.entrySet() ) {
+            final var key = toKey(entry.getKey());
+            int index = indexOf(map, key, 0);
             if( index < 0 ) {
                 newMap[toAdd++] = key;
                 newMap[toAdd++] = entry.getValue();
@@ -128,7 +153,7 @@ class JsonMap implements Map<String, Object> {
                 newMap[index+1] = entry.getValue();
             }
         }
-        map = newMap;
+        this.map = newMap;
     }
 
     @Override
