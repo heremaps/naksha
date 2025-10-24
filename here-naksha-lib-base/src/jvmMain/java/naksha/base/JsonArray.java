@@ -80,8 +80,7 @@ public class JsonArray implements List<Object> {
     @NotNull
     @Override
     public Iterator<Object> iterator() {
-        //TODO
-        return null;
+        return listIterator();
     }
 
     @Override
@@ -287,16 +286,91 @@ public class JsonArray implements List<Object> {
 
     @NotNull
     @Override
-    public ListIterator listIterator() {
-        //TODO
-        return null;
+    public ListIterator<Object> listIterator() {
+        return listIterator(0);
     }
 
     @NotNull
     @Override
-    public ListIterator listIterator(int index) {
-        //TODO
-        return null;
+    public ListIterator<Object> listIterator(int index) {
+        if (index < 0 || index >= list.length) {
+            throw new IndexOutOfBoundsException("Index: "+index+", JsonArray size: "+list.length);
+        }
+        return new ListIterator<>() {
+            private int index = 0;
+            private boolean canRemove = false;
+            private boolean lastMoveWasNext = false;
+            @Override
+            public boolean hasNext() {
+                return index < list.length;
+            }
+
+            @Override
+            public Object next() {
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                lastMoveWasNext = true;
+                canRemove = true;
+                return list[index++];
+            }
+
+            @Override
+            public boolean hasPrevious() {
+                return index > 0;
+            }
+
+            @Override
+            public Object previous() {
+                if (!hasPrevious()) {
+                    throw new NoSuchElementException();
+                }
+                lastMoveWasNext = false;
+                canRemove = true;
+                return list[index--];
+            }
+
+            @Override
+            public int nextIndex() {
+                return index;
+            }
+
+            @Override
+            public int previousIndex() {
+                return index-1;
+            }
+
+            @Override
+            public void remove() {
+                if (!canRemove) {
+                    throw new IllegalStateException();
+                }
+                if (lastMoveWasNext) {
+                    JsonArray.this.remove(--index);
+                } else { // previous
+                    JsonArray.this.remove(index);
+                }
+                canRemove = false;
+            }
+
+            @Override
+            public void set(Object o) {
+                if (!lastMoveWasNext && index == 0) {
+                    throw new IllegalStateException();
+                }
+                if (lastMoveWasNext) {
+                    list[index-1] = o;
+                } else { // previous
+                    list[index] = o;
+                }
+            }
+
+            @Override
+            public void add(Object o) {
+                JsonArray.this.add(index++, o);
+                canRemove = false;
+            }
+        };
     }
 
     @NotNull
@@ -341,19 +415,56 @@ public class JsonArray implements List<Object> {
 
     @Override
     public boolean retainAll(@NotNull Collection c) {
-        //TODO
-        return false;
+        var localList = list;
+        int countToRemove = 0;
+        for (int i = 0; i < localList.length; i++ ) {
+            for (Object o : c) {
+                if (Objects.equals(localList[i], o)) {
+                    break;
+                }
+                localList[i] = TOMBSTONE;
+                countToRemove++;
+            }
+        }
+        if (countToRemove == 0) {
+            return false;
+        }
+        var newList = new Object[localList.length - countToRemove];
+        countToRemove = 0; // reuse countToRemove as new index
+        for (Object o : localList) {
+            if (o != TOMBSTONE) {
+                newList[countToRemove++] = o;
+            }
+        }
+        list = newList;
+        return true;
     }
+
+    private static final Object TOMBSTONE = new Object();
 
     @Override
     public boolean removeAll(@NotNull Collection c) {
-        //TODO
         var localList = list;
+        int count = 0;
         for (Object o : c) {
             for (int i = 0; i < localList.length; i++ ) {
-
+                if (Objects.equals(o, localList[i])) {
+                    localList[i] = TOMBSTONE;
+                    count++;
+                }
             }
         }
+        if (count == 0) {
+            return false;
+        }
+        var newList = new Object[localList.length - count];
+        count = 0; // reuse count as new index
+        for (Object o : localList) {
+            if (o != TOMBSTONE) {
+                newList[count++] = o;
+            }
+        }
+        list = newList;
         return true;
     }
 
