@@ -11,6 +11,10 @@ junit = "5.9.2"
 test_containers = "1.20.6"
 kotlin = "2.1.20"
 fastdouble = "2.0.1"
+jmh = "1.37"
+gson = "2.13.2"
+jsonio = "4.61.0"
+simdjson = "0.4.0"
 
 [libraries]
 jetbrains_annotations = { module = "org.jetbrains:annotations", version = "26.0.2-1" }
@@ -105,6 +109,12 @@ picocli = { module = "info.picocli:picocli", version = "4.7.7" }
 
 fastdouble = { module = "ch.randelshofer:fastdoubleparser", version.ref = "fastdouble" }
 
+jmh_core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
+jmh_ann = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+jsonio = { module = "com.cedarsoftware:json-io", version.ref = "jsonio" }
+simdjson = { module = "org.simdjson:simdjson-java", version.ref = "simdjson" }
+
 [plugins]
 kotlin_multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin_js_plain_objects = { id = "org.jetbrains.kotlin.plugin.js-plain-objects", version.ref = "kotlin" }
@@ -114,6 +124,7 @@ spotless = { id = "spotless", version = "6.22.0" }
 vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.31.0" }
 #vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.1.0-SNAPSHOT" }
 axion_release = { id = "pl.allegro.tech.build.axion-release", version = "1.20.1"}
+#jmh = { id = "me.champeau.jmh", version = "0.7.2"}
 
 [bundles]
 vertx = [
@@ -142,3 +153,4 @@ testing = [
 ]
 jackson = ["jackson_core", "jackson_core_annotations", "jackson_core_databind", "jackson_core_dataformat", "jackson_kotlin"]
 logging = ["slf4j_api", "jcl_slf4j", "log4j_core", "log4j_api", "log4j_jcl", "log4j_slf4j"]
+#perftest = ["jmh_core", "jmh_ann", "gson"]

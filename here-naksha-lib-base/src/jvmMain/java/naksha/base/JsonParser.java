@@ -9,6 +9,8 @@ import java.util.Arrays;
 import static ch.randelshofer.fastdoubleparser.JsonDoubleParser.parseDouble;
 import static java.lang.Character.*;
 import static naksha.base.Json.ensure_size;
+import static naksha.base.NumberUtil.boxDouble;
+import static naksha.base.NumberUtil.boxLong;
 import static naksha.base.StringUtil.intern;
 import static naksha.base.StringUtil.newString;
 import static naksha.base.UTF8.*;
@@ -953,7 +955,7 @@ public final class JsonParser {
                      + v(chars, offset, 18, length);
         // This happens only when -9,223,372,036,854,775,808 is parsed,
         // because 9_223_372_036_854_775_800L + 8L = -9,223,372,036,854,775,808
-        if (value < 0) return value;
+        if (value < 0) return boxLong(value);
       break;
       case 18: value = v(chars, offset, 0, length)
                      + v(chars, offset, 1, length)
@@ -1147,7 +1149,7 @@ public final class JsonParser {
       default:
         throw new NumberFormatException();
     }
-    return negative ? -value : value;
+    return boxLong(negative ? -value : value);
   }
 
   /**
@@ -1270,7 +1272,7 @@ public final class JsonParser {
       }
       if (type == NUM_AFTER_DOT || type == NUM_AFTER_EXP) {
         try {
-          parsedValue = parseDouble(chars, 0, chars_end);
+          parsedValue = boxDouble(parseDouble(chars, 0, chars_end));
           return i;
         } catch (NumberFormatException ignored) {
           // Ups, no double.
