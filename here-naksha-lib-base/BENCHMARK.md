@@ -26,7 +26,7 @@ Overview:
 
 | Parser         | Time   | Json-Size     | Heap-Usage   | Parser rate   | JSON : HEAP |
 |----------------|--------|---------------|--------------|---------------|-------------|
-| naksha         | 5.90   | 825.97 MiB    | 825.97 MiB   | 140.09 MiB/s  | 2.33        |
+| naksha         | 5.90   | 825.97 MiB    | 1925.90 MiB  | 140.09 MiB/s  | 2.33        |
 | jackson        | 7.07   | 825.97 MiB    | 4806.29 MiB  | 116.83 MiB/s  | 5.82        |
 | naksha_jackson | 8.05   | 825.97 MiB    | 5224.46 MiB  | 102.59 MiB/s  | 6.33        |
 | gson           | 17.57  | 825.97 MiB    | 6791.26 MiB  | 47.00 MiB/s   | 8.22        |
