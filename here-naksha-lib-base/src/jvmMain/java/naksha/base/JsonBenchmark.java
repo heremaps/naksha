@@ -46,6 +46,7 @@ public class JsonBenchmark {
     parsers.put("gson", this::gson_parse);
     parsers.put("jsonio", this::jsonio_parse);
     parsers.put("naksha", this::naksha_parse);
+    parsers.put("fastjson", this::fastjson_parse);
     parsers.put("simdjson", this::simdjson_parse);
 
     // Ensure that
@@ -112,6 +113,10 @@ public class JsonBenchmark {
     }
   }
 
+  @Nullable Object fastjson_parse(byte @NotNull [] utf8_json) throws IOException {
+    return com.alibaba.fastjson.JSON.parse(utf8_json);
+  }
+
   @Nullable Object simdjson_parse(byte @NotNull [] utf8_json) throws IOException {
     throw new UnsupportedOperationException("As long as we're stuck with JDK 11, this is no option");
     // final var parser = new org.simdjson.SimdJsonParser();
@@ -153,7 +158,7 @@ public class JsonBenchmark {
     }
   }
 
-  private static final String SYNTAX = "Usage: JsonBenchmark {dirName=path} {parserName=jackson|naksha_jackson|gson|naksha|simdjson} [rounds=10] [memQuota=12.0]";
+  private static final String SYNTAX = "Usage: JsonBenchmark {dirName=path} {parserName=jackson|naksha_jackson|gson|naksha|fastjson|simdjson} [rounds=10] [memQuota=12.0]";
 
   public static void main(String[] args) throws Exception {
     final var dirName = args.length > 0 ? args[0] : null;

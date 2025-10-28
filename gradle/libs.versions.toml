@@ -12,9 +12,10 @@ test_containers = "1.20.6"
 kotlin = "2.1.20"
 fastdouble = "2.0.1"
 jmh = "1.37"
-gson = "2.13.2"
-jsonio = "4.61.0"
-simdjson = "0.4.0"
+gson = "2.13.2" # https://github.com/google/gson
+jsonio = "4.61.0" # https://github.com/jdereg/json-io
+fastjson = "2.0.31" # https://github.com/alibaba/fastjson
+simdjson = "0.4.0" # https://github.com/simdjson/simdjson-java
 
 [libraries]
 jetbrains_annotations = { module = "org.jetbrains:annotations", version = "26.0.2-1" }
@@ -113,6 +114,7 @@ jmh_core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
 jmh_ann = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 jsonio = { module = "com.cedarsoftware:json-io", version.ref = "jsonio" }
+fastjson = { module = "com.alibaba:fastjson", version.ref="fastjson" }
 simdjson = { module = "org.simdjson:simdjson-java", version.ref = "simdjson" }
 
 [plugins]

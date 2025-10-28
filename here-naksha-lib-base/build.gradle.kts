@@ -43,6 +43,7 @@ kotlin {
                 implementation(libs.jackson.kotlin)
                 implementation(libs.gson)
                 implementation(libs.jsonio)
+                implementation(libs.fastjson)
                 // implementation(libs.simdjson) // Ones we have Java 25 !
                 // https://mvnrepository.com/artifact/org.slf4j
                 api(libs.slf4j.api)
