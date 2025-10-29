@@ -270,11 +270,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull F1<Result, RuntimeException> reattempt,
       @NotNull StopWatch storageTimer) {
     try {
-      if (wr instanceof WriteXyzCollections) {
+      if (wr instanceof WriteXyzCollections wc) {
         return measuredStorageSupplier(
-            () -> performAtomicWriteCollection(ctx, storageImpl, (WriteXyzCollections) wr), storageTimer);
+            () -> performAtomicWriteCollection(ctx, storageImpl, wc), storageTimer);
+      } else if (wr instanceof WriteFeatures<?, ?, ?> wf) {
+        return measuredStorageSupplier(
+                () -> performAtomicWriteFeatures(ctx, storageImpl, wf), storageTimer);
       } else {
-        return measuredStorageSupplier(() -> performAtomicWriteFeatures(ctx, storageImpl, wr), storageTimer);
+        return notImplemented(wr);
       }
     } catch (RuntimeException re) {
       return reattempt.call(re);
@@ -287,8 +290,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   protected @NotNull Result performAtomicWriteFeatures(
-      @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteRequest<?, ?, ?> wr) {
-    return singleWrite(ctx, storageImpl, wr);
+      @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteFeatures<?, ?, ?> wf) {
+    return singleWrite(ctx, storageImpl, wf);
   }
 
   private @NotNull Result singleWrite(
