@@ -14,7 +14,9 @@ class PsqlPlan(internal val query: PsqlQuery, conn: Connection) : PgPlan {
 
     override fun setFetchSize(size: Int) {
         check(!closed)
-        stmt.fetchSize = min(1_000_000, max(1_000, size))
+        if (size != 0) {
+            stmt.fetchSize = min(1_000_000, max(1_000, size))
+        }
     }
 
     /**
