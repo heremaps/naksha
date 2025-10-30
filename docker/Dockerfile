@@ -20,7 +20,7 @@ RUN chmod +x ./app/run-app.sh
 
 # Docker Env variables with default values
 ENV NAKSHA_CONFIG_ID test-config
-ENV NAKSHA_ADMIN_DB_URL 'jdbc:postgresql://host.docker.internal:5432/postgres?user=postgres&password=password&schema=naksha&app=naksha_local&id=naksha_admin_db'
+ENV NAKSHA_ADMIN_DB_URL 'jdbc:postgresql://host.docker.internal:5432/postgres?preferQueryMode=simple&user=postgres&password=password&schema=naksha&app=naksha_local&id=naksha_admin_db'
 ENV NAKSHA_EXTENSION_S3_BUCKET 'naksha-pvt-releases'
 ENV NAKSHA_JWT_PVT_KEY ''
 ENV NAKSHA_JWT_PUB_KEY ''
