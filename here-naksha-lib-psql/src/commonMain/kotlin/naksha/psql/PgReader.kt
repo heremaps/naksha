@@ -53,7 +53,7 @@ class PgReader(
                 val featureTuples = FeatureTupleList()
                 featureTuples.setCapacity(1024)
                 // Note: We know that each result is only 12 or 20 byte
-                plan.setFetchSize(100_000)
+                plan.setFetchSize(1_000_000) // Set very high to encourage parallelism on server side
                 plan.execute(query.argValues).use { cursor ->
                     val storageNumber = query.storageNumber
                     val mapNumber = query.mapNumber
