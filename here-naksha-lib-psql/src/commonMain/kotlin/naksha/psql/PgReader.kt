@@ -54,6 +54,7 @@ class PgReader(
                 featureTuples.setCapacity(1024)
                 // Note: We know that each result is only 12 or 20 byte
                 plan.setFetchSize(1_000_000) // Set very high to encourage parallelism on server side
+                // https://www.cybertec-postgresql.com/en/parallel-query-postgresql-problems-jdbc-dbeaver/
                 plan.execute(query.argValues).use { cursor ->
                     val storageNumber = query.storageNumber
                     val mapNumber = query.mapNumber
