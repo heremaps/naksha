@@ -339,7 +339,7 @@ SET SESSION pg_hint_plan.enable_hint = on;
         //props.setProperty(RECEIVE_BUFFER_SIZE.getName(), receiveBufferSize.toString())
         //props.setProperty(SEND_BUFFER_SIZE.getName(), sendBufferSize.toString())
         props.setProperty(REWRITE_BATCHED_INSERTS.getName(), "true")
-        props.setProperty(PREFER_QUERY_MODE.getName(), "simple")
+        props.setProperty(PREFER_QUERY_MODE.getName(), "extendedForPrepared")
         val jdbcConn = org.postgresql.jdbc.PgConnection(arrayOf(hostSpec), props, url)
         val pooledConn = PooledPgConnection(jdbcConn)
         psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
