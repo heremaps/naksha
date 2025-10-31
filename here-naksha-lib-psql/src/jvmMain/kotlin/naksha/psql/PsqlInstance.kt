@@ -262,6 +262,8 @@ SET SESSION $idle_in_transaction_session_timeout = '${toSeconds(options.idleTxTi
 SET SESSION enable_async_append = on;
 SET SESSION max_parallel_workers = 128;
 SET SESSION max_parallel_workers_per_gather = 16;
+SET SESSION parallel_setup_cost = 1;   
+SET SESSION parallel_tuple_cost = 0.01;
 SET SESSION enable_partition_pruning = on;
 SET SESSION enable_partitionwise_join = on;
 SET SESSION enable_partitionwise_aggregate = on;
@@ -337,6 +339,8 @@ SET SESSION pg_hint_plan.enable_hint = on;
         //props.setProperty(RECEIVE_BUFFER_SIZE.getName(), receiveBufferSize.toString())
         //props.setProperty(SEND_BUFFER_SIZE.getName(), sendBufferSize.toString())
         props.setProperty(REWRITE_BATCHED_INSERTS.getName(), "true")
+        // https://www.reddit.com/r/PostgreSQL/comments/o4ptz9/on_expensive_count_and_similar_queries_even_with/
+        props.setProperty(PREFER_QUERY_MODE.getName(), "extendedForPrepared") // "simple" preferred, but not possible for prepared statements, to encourage parallelism
         val jdbcConn = org.postgresql.jdbc.PgConnection(arrayOf(hostSpec), props, url)
         val pooledConn = PooledPgConnection(jdbcConn)
         psqlConn = PsqlConnection(this, pooledConn.id, pooledConn.jdbcConn, options)
