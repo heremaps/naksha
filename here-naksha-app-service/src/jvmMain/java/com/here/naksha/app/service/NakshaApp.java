@@ -69,7 +69,7 @@ public final class NakshaApp extends Thread {
 
   private static final String DEFAULT_MAP_ID = "naksha";
 
-  private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/postgres?preferQueryMode=simple&user=postgres&password=password"
+  private static final String DEFAULT_URL = "jdbc:postgresql://localhost:5432/postgres?preferQueryMode=extendedForPrepared&user=postgres&password=password"
                                             + "&schema=" + DEFAULT_MAP_ID
                                             + "&app=" + NakshaHubConfig.defaultAppName();
                                             //+ "&id=" + PgStorage.ADMIN_STORAGE_ID;

@@ -27,7 +27,7 @@ To get Naksha container running, one must do the following:
    There are optional environment variables that one can specify when running Naksha container.
     - `NAKSHA_CONFIG_ID`: id of naksha configaration to use, `test-config` by default
     - `NAKSHA_ADMIN_DB_URL`: url of database for Naksha app to
-      use, `jdbc:postgresql://host.docker.internal:5432/postgres?preferQueryMode=simple&user=postgres&password=password&schema=naksha&app=naksha_local&id=naksha_admin_db`
+      use, `jdbc:postgresql://host.docker.internal:5432/postgres?preferQueryMode=extendedForPrepared&user=postgres&password=password&schema=naksha&app=naksha_local&id=naksha_admin_db`
       by default
     - `NAKSHA_EXTENSION_S3_BUCKET`: S3 bucket name or S3 bucket access point.The default value is `naksha-pvt-releases`. 
     - `NAKSHA_JWT_PVT_KEY`: Naksha JWT private key.
