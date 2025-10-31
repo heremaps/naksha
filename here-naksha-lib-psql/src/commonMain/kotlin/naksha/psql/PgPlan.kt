@@ -11,7 +11,10 @@ import kotlin.js.JsExport
 @JsExport
 interface PgPlan : AutoCloseable {
     /**
-     * Gives a hint as to the number of rows that should be fetched from the database when more rows are needed. If the value specified is zero, then the hint is ignored. The default value is zero.
+     * Gives a hint as to the number of rows that should be fetched from the database when more rows are needed. Zero means no limit.
+     * If the value specified is zero or negative, zero will be used, but it MIGHT be ignored by the underlying implementation (see {@link java.sql.Statement}),
+     * so the last limit set would be kept in that case.
+     * The default value is zero.
      * @since 3.0
      */
     fun setFetchSize(size: Int)
