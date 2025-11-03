@@ -500,7 +500,8 @@ actual class Platform {
         @JvmField
         internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
 
-        fun fromJSON(utf8: ByteArray): Any? {
+        @JvmStatic
+        actual fun fromJSON(utf8: ByteArray): Any? {
             if (USE_NEW_JSON.get()) {
                 val jsonParser = naksha.base.JsonParser.threadLocal()
                 return jsonParser.parse(utf8)

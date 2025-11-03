@@ -479,6 +479,14 @@ expect class Platform {
 
         /**
          * Deserialize the given JSON.
+         * @param json The JSON UTF-8 encoded byte array to parse.
+         * @return The parsed JSON.
+         * @see [FromJsonOptions.DEFAULT]
+         */
+        fun fromJSON(utf8: ByteArray): Any?
+
+        /**
+         * Deserialize the given JSON.
          * @param json the JSON string to parse.
          * @param options the options to use; defaults to [FromJsonOptions.DEFAULT].
          * @return The parsed JSON.

@@ -831,5 +831,9 @@ return obj;
         init {
             initialize()
         }
+
+        actual fun fromJSON(utf8: ByteArray): Any? {
+            TODO("Not yet implemented")
+        }
     }
 }
