@@ -129,18 +129,19 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
 
     final var copy = new Object[toIndex - fromIndex];
     for (int i = fromIndex; i < toIndex; i+=2) {
+      final int copyIndex = i - fromIndex;
       final var rawKey = entries[i];
       if (rawKey == null || rawKey.getClass() != String.class) {
-        copy[i] = UNDEFINED;
-        copy[i+1] = UNDEFINED;
+        copy[copyIndex] = UNDEFINED;
+        copy[copyIndex+1] = UNDEFINED;
         length--;
         continue;
       }
       // assert rawKey instanceof String;
       final var key = intern((String)rawKey);
       final var value = entries[i + 1];
-      copy[i] = key;
-      copy[i+1] = value;
+      copy[copyIndex] = key;
+      copy[copyIndex+1] = value;
     }
     this.map = copy;
     this.length = length;
