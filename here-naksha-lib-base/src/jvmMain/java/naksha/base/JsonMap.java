@@ -399,7 +399,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
   private @Nullable Object _put(@NotNull String key, boolean interned, @Nullable Object value, int min_new_slots) {
     final var entries = this.entries;
     if (!interned) key = toKey(key);
-    int lastEmptyIndex = -1;
+    int firstEmptyIndex = -1;
     for (int i = 0; i < entries.length; i+=2) {
       final Object k = entries[i];
       if (key == k) {
@@ -407,14 +407,14 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
         entries[i+1] = value;
         return oldValue;
       }
-      if (k == UNDEFINED) {
-        lastEmptyIndex = i;
+      if (k == UNDEFINED && firstEmptyIndex < 0) {
+        firstEmptyIndex = i;
       }
     }
 
-    if (lastEmptyIndex >= 0) {
-      entries[lastEmptyIndex] = key;
-      entries[lastEmptyIndex + 1] = value;
+    if (firstEmptyIndex >= 0) {
+      entries[firstEmptyIndex] = key;
+      entries[firstEmptyIndex + 1] = value;
       this.length++;
       return UNDEFINED;
     }
@@ -617,7 +617,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
 
           @Override
           public boolean hasNext() {
-            return index() < entries.length-2;
+            return index() < (entries.length-2);
           }
 
           @Override
@@ -641,7 +641,8 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
             final var entries = JsonMap.this.entries;
             entries[index] = UNDEFINED;
             entries[index+1] = UNDEFINED;
-            JsonMap.this.length = size() - 1;
+            JsonMap.this.length--;
+            assert JsonMap.this.length >= 0;
             canRemove = false;
           }
         };
