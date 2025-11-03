@@ -183,12 +183,10 @@ open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
         return map.put(key, value)
     }
 
-    @Suppress("UNCHECKED_CAST")
     override val entries: MutableSet<MutableMap.MutableEntry<Any, Any?>>
-        get() = (jsonMap()?.entries ?: map().entries) as MutableSet<MutableMap.MutableEntry<Any, Any?>>
-    @Suppress("UNCHECKED_CAST")
+        get() = map().entries
     override val keys: MutableSet<Any>
-        get() = (jsonMap()?.keys ?: map().keys) as MutableSet<Any>
+        get() = map().keys
     override val size: Int
         get() {
             if (this.map == null && this.jsonMap == null) return 0
