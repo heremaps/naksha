@@ -3,6 +3,7 @@ package naksha.base;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.ref.SoftReference;
 import java.lang.reflect.InvocationTargetException;
 import java.text.Normalizer;
 import java.util.Arrays;

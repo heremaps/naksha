@@ -3,6 +3,7 @@ package naksha.base;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.ref.SoftReference;
 import java.lang.ref.WeakReference;
 import java.text.Normalizer;
 import java.util.concurrent.atomic.AtomicReference;
@@ -11,6 +12,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static java.lang.Character.highSurrogate;
 import static java.lang.Character.lowSurrogate;
+import static naksha.base.JvmUtil.JVM_OBJECT_ARRAY_BASE_OFFSET;
+import static naksha.base.JvmUtil.JVM_OBJECT_ARRAY_SCALE;
 import static naksha.base.Platform.unsafe;
 
 /**
@@ -42,6 +45,12 @@ public final class StringUtil {
     for (int i = 0; i < ONE_CHAR.length; i++) {
       final char c = (char) i;
       ONE_CHAR[c] = !Character.isSurrogate(c) ? new String(Character.toChars(c)) : EMPTY_STRING;
+    }
+  }
+
+  private static final class StringRef extends SoftReference<String> {
+    public StringRef(String referent) {
+      super(referent);
     }
   }
 
@@ -99,24 +108,14 @@ public final class StringUtil {
       return Normalizer.normalize(s, Normalizer.Form.NFKC);
     }
 
-    /// To ensure that only one thread at a time mutates the cache, we use this lock.
-    private final ReentrantLock lock = new ReentrantLock();
-
     /// If `charsOrSeq` is `char[]`, then `start` and `end` are considered; otherwise they are ignored, and `charsOrSeq` must be `CharSequence`!
-    @SuppressWarnings("unchecked")
     private @NotNull String intern(@NotNull Object charsOrSeq, int start, int end, int hashCode, boolean isNFKCNormalized, boolean pin) {
-      //
-      // Note: This is a lock-free algorithm for readers, but writes need to use a lock.
-      //       Therefore, if the given chars are already cached as string, the method will be lock free.
-      //       If it needs to be inserted, we try to keep the lock acquire to the smallest possible time.
-      //
-
       // Avoid generating the string and weak reference multiple times!
       String newString = null;
-      WeakReference<String> newWeakString = null;
+      StringRef newWeakString = null;
       do {
         // This is important.
-        final var array = this.getPlain();
+        var array = this.getPlain();
 
         // Search for the given string, if it is cached already.
         // Remember the last empty slot, that we can use for insertion.
@@ -133,24 +132,23 @@ public final class StringUtil {
             continue;
           }
 
-          // Otherwise it must be either a pinned string, or a weak reference.
-          final WeakReference<String> weakString;
+          // Otherwise it must be either a pinned string, or a `StringRef`.
+          final StringRef stringRef;
           final String s;
           if (raw.getClass() == String.class) {
-            weakString = null;
+            stringRef = null;
             s = (String) raw;
           } else {
-            assert raw instanceof WeakReference;
-            //noinspection unchecked
-            weakString = (WeakReference<String>) raw;
-            s = weakString.get();
+            assert raw instanceof StringRef;
+            stringRef = (StringRef) raw;
+            s = stringRef.get();
           }
 
           // If the string is empty, it is garbage collected weak reference.
           // Still, eventually it is just an empty slot.
           if (s == null) {
             lastEmptyIndex = i;
-            lastEmptyValue = weakString;
+            lastEmptyValue = stringRef;
             continue;
           }
 
@@ -158,64 +156,59 @@ public final class StringUtil {
           if (!matches(s, charsOrSeq, start, end, hashCode)) continue;
 
           // If we found the string, and it is pinned, we found what we were looking for, return it.
-          if (weakString == null) return s;
+          if (stringRef == null) return s;
 
           // This is a matching weak-referred string, and we are not asked to pin, return it.
           if (!pin) return s;
 
           // This is a weak-referred string, but we are asked to pin it, so do this now.
-          lock.lock();
-          try {
-            // It is possible that another thread has expanded the array while we were waiting for the lock.
-            // However, we know that others will not move the weak-reference, because it is still alive.
-            // Therefore, we only ensure that we have the right array reference, update the slot, and done.
-            final var current_array = this.get();
-            current_array[i] = s;
-            return s;
-          } finally {
-            // Ensure that all changes are visible to other threads, before we release the lock.
-            unsafe.fullFence();
-            lock.unlock();
-          }
+          // It is possible that another thread expands the array while we update the weak-reference.
+          // However, we know that others will not move the weak-reference, because it is still alive.
+          // Therefore, we only ensure that we update the right array reference.
+          do {
+            array = this.getPlain();
+            array[i] = s;
+            unsafe.storeFence();
+          } while (array != this.get());
+          return s;
         }
 
         // String not found, create a new string, and optionally a weak-reference to it.
         if (newString == null) newString = newString(charsOrSeq, start, end, isNFKCNormalized);
-        if (!pin && newWeakString == null) newWeakString = new WeakReference<>(newString);
+        if (!pin && newWeakString == null) newWeakString = new StringRef(newString);
 
-        // Acquire write lock.
-        lock.lock();
-        try {
-          // Ensure we have the right array reference, should another thread have expanded the array while we were trying to acquire the lock.
-          final var current_array = this.get();
+        // Ensure we have the right array reference, should another thread have expanded the array while we were trying to acquire the lock.
+        final var current_array = this.get();
 
-          // If there was an empty slot.
-          if (lastEmptyIndex >= 0) {
-            // If another thread used the slot, we have to restart.
-            if (current_array[lastEmptyIndex] != lastEmptyValue) continue;
-
-            // Otherwise, we are fine to put our value in, and return the string.
-            current_array[lastEmptyIndex] = newWeakString != null ? newWeakString : newString;
-            return newString;
+        // If there was an empty slot.
+        if (lastEmptyIndex >= 0) {
+          final long offset = JVM_OBJECT_ARRAY_BASE_OFFSET + lastEmptyIndex * JVM_OBJECT_ARRAY_SCALE;
+          if (!unsafe.compareAndSwapObject(array, offset, lastEmptyValue, newWeakString != null ? newWeakString : newString)) {
+            // Another thread updated used this slot, we need to restart.
+            continue;
           }
-
-          // There was no empty slot, we need to expand the array, to do this, we need to be sure that no
-          // other thread has expanded the array already, if it has, we need to restart searching for
-          // a free slot, there should be one.
-          if (array != current_array) continue;
-
-          // Worst case, we need to expand the array, while being inside a lock.
-          // Note: `ensure_size` will allocate at least another L1 cache line (so at least 8 more slots).
-          final var new_array = Json.ensure_size(array, array.length + 1, false, null);
-          assert new_array.length > array.length;
-          new_array[array.length] = newWeakString != null ? newWeakString : newString;
-          this.setPlain(new_array);
+          // CAS operations always intrinsically have full-fences, so we do not need yet another load-fence!
+          if (array != this.getPlain()) {
+            // Another thread replaces the whole array, so basically expanded the array. This means,
+            // we can't be sure if he copied over our string or not, so we have to verify,
+            // which means we need to restart.
+            continue;
+          }
+          // We successfully wrote our change.
           return newString;
-        } finally {
-          // Ensure that all changes are visible to other threads, before we release the lock.
-          unsafe.fullFence();
-          lock.unlock();
         }
+
+        // There was no empty slot, we need to expand the array, to do this, we need to be sure that no
+        // other thread has expanded the array already, if it has, we need to restart searching for
+        // a free slot, there should be one.
+        final var new_array = Json.ensure_size(array, array.length + 1, false, null);
+        assert new_array.length > array.length;
+        new_array[array.length] = newWeakString != null ? newWeakString : newString;
+        if (this.compareAndSet(array, new_array)) {
+          // Successfully expanded the array, and added our new value.
+          return newString;
+        }
+        // Another thread expanded the array, restart and find an empty slot, there should now be one.
       } while (true);
     }
 
@@ -230,7 +223,7 @@ public final class StringUtil {
         } else {
           assert raw instanceof WeakReference;
           //noinspection unchecked
-          s = ((WeakReference<String>) raw).get();
+          s = ((StringRef) raw).get();
         }
 
         if (s != null && matches(s, charsOrSeq, start, end, hashCode)) {

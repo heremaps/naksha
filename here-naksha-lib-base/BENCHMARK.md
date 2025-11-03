@@ -35,4 +35,3 @@ Overview:
 | fastjson       | 10.09  | 825.97 MiB    | 4932.15 MiB  | 81.84 MiB/s  | 5.97        |
 | gson           | 17.57  | 825.97 MiB    | 6791.26 MiB  | 47.00 MiB/s  | 8.22        |
 | jsonio         | 22.06  | 825.97 MiB    | 5143.81 MiB  | 37.43 MiB/s  | 6.23        |
-
