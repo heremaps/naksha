@@ -19,6 +19,6 @@ public class JvmParser extends JsonParser {
     if (value < Integer.MIN_VALUE ||  value > Integer.MAX_VALUE) {
       return NumberUtil.boxInt64(value);
     }
-    return (int) value;
+    return NumberUtil.boxInt((int)value);
   }
 }

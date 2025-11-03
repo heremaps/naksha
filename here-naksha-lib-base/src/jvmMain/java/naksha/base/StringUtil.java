@@ -4,11 +4,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.SoftReference;
-import java.lang.ref.WeakReference;
 import java.text.Normalizer;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static java.lang.Character.highSurrogate;
 import static java.lang.Character.lowSurrogate;
@@ -177,9 +175,6 @@ public final class StringUtil {
         if (newString == null) newString = newString(charsOrSeq, start, end, isNFKCNormalized);
         if (!pin && newWeakString == null) newWeakString = new StringRef(newString);
 
-        // Ensure we have the right array reference, should another thread have expanded the array while we were trying to acquire the lock.
-        final var current_array = this.get();
-
         // If there was an empty slot.
         if (lastEmptyIndex >= 0) {
           final long offset = JVM_OBJECT_ARRAY_BASE_OFFSET + lastEmptyIndex * JVM_OBJECT_ARRAY_SCALE;
@@ -221,8 +216,7 @@ public final class StringUtil {
         if (raw.getClass() == String.class) {
           s = (String) raw;
         } else {
-          assert raw instanceof WeakReference;
-          //noinspection unchecked
+          assert raw instanceof StringRef;
           s = ((StringRef) raw).get();
         }
 
