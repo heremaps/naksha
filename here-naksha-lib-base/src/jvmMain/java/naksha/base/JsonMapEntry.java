@@ -17,25 +17,25 @@ final class JsonMapEntry implements Map.Entry<@NotNull String, @Nullable Object>
 
   @Override
   public @NotNull String getKey() {
-    final Object key = map.entries[index];
+    final Object key = map.map[index];
     if (key == null || key.getClass() != String.class) throw new ConcurrentModificationException();
     return (String) key;
   }
 
   @Override
   public Object getValue() {
-    final Object key = map.entries[index];
-    final Object value = map.entries[index + 1];
+    final Object key = map.map[index];
+    final Object value = map.map[index + 1];
     if (key == null || key.getClass() != String.class) throw new ConcurrentModificationException();
     return value;
   }
 
   @Override
   public @Nullable Object setValue(@Nullable Object value) {
-    final Object key = map.entries[index];
+    final Object key = map.map[index];
     if (key == null || key.getClass() != String.class) throw new ConcurrentModificationException();
-    final var old = map.entries[index + 1];
-    map.entries[index + 1] = value;
+    final var old = map.map[index + 1];
+    map.map[index + 1] = value;
     return old;
   }
 
