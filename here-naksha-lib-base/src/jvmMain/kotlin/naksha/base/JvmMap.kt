@@ -17,6 +17,10 @@ open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
         }
     }
 
+    constructor(jsonMap: JsonMap) : this() {
+        this.jsonMap = jsonMap
+    }
+
     /**
      * The key-value pairs; if any.
      */
