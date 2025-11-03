@@ -3,7 +3,6 @@ package naksha.base;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.ref.SoftReference;
 import java.lang.reflect.InvocationTargetException;
 import java.text.Normalizer;
 import java.util.Arrays;
@@ -688,7 +687,16 @@ public class JsonParser {
 
   /// Release/free the top object[].
   private void releaseAtStack() {
-    stack_end--;
+      final int idx = stack_end - 1;
+      if (idx >= 0) {
+          // Clear the slot to avoid reusing the same Object[] instance if a consumer kept a reference.
+          // This prevents bugs when newJsonMap/newJsonArray retain the provided array (e.g. via JsonMap.wrap).
+          stack[idx] = null;
+          stack_end = idx;
+      } else {
+          // Defensive: ensure stack_end never becomes negative.
+          stack_end = 0;
+      }
   }
 
   private enum MapParserState {
