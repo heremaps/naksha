@@ -319,7 +319,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
    * @since 3.0
    */
   int indexOfValue(@Nullable Object value, int start) {
-    return indexOfValue(entries, value, 0);
+    return indexOfValue(entries, value, start);
   }
 
   @Override
@@ -330,7 +330,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
 
   @Override
   public boolean containsValue(@Nullable Object value) {
-    return indexOfValue(this.entries, value, 1) >= 0;
+    return indexOfValue(this.entries, value, 0) >= 0;
   }
 
   @Override
@@ -420,7 +420,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
     }
 
     final var new_entries = Json.ensure_size(entries, entries.length + max(2, min_new_slots << 1), false, UNDEFINED);
-    assert entries != new_entries && entries.length < new_entries.length;
+    assert entries != new_entries && entries.length < new_entries.length && ((entries.length & 1) == 0);
     new_entries[entries.length] = key;
     new_entries[entries.length+1] = value;
     this.entries = new_entries;
@@ -437,7 +437,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
       oldValue = entries[index+1];
       entries[index] = UNDEFINED;
       entries[index+1] = UNDEFINED;
-      length = length - 1;
+      length--;
     }
     return oldValue == UNDEFINED ? null : oldValue;
   }
@@ -457,7 +457,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
     if (index < 0) return false;
     entries[index] = UNDEFINED;
     entries[index+1] = UNDEFINED;
-    length = length - 1;
+    length--;
     return true;
   }
 
