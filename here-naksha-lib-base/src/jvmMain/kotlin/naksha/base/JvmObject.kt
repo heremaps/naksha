@@ -9,7 +9,7 @@ import kotlin.reflect.KClass
 open class JvmObject : PlatformObject {
     internal companion object {
         @JvmStatic
-        internal val undefined = JvmObject()
+        internal val undefined = Json.UNDEFINED; // JvmObject()
     }
 
     /**

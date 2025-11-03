@@ -3,14 +3,15 @@ package naksha.base;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.InvocationTargetException;
 import java.text.Normalizer;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static ch.randelshofer.fastdoubleparser.JsonDoubleParser.parseDouble;
 import static java.lang.Character.*;
+import static naksha.base.Json.UNDEFINED;
 import static naksha.base.Json.ensure_size;
-import static naksha.base.NumberUtil.boxDouble;
-import static naksha.base.NumberUtil.boxLong;
 import static naksha.base.StringUtil.intern;
 import static naksha.base.StringUtil.newString;
 import static naksha.base.UTF8.*;
@@ -36,11 +37,20 @@ import static naksha.base.UTF8.*;
  * @implNote Internally, the JSON parser does encode {@code Array}'s and {@code Map}'s as {@code Object[]}. Technically, the parser will work optimal, when the JSON is not too deep, and has only small maps; huge maps with hundreds of key-value pairs are rather bad for the performance, while bigger arrays should perform okay.
  * @since 3.0
  */
-public final class JsonParser {
+public class JsonParser {
 
   /**
-   * Create a new instance of JSON parser, this is not really deprecated, but not recommended. It is recommended to use the thread local instance, by doing {@code JsonParse.instance.get()}.
+   * If an application wants to use a different default parser implementation, just set it here, then {@link #threadLocal()} will return this instance.
+   * @since 3.0
+   */
+  public static final AtomicReference<@NotNull Class<? extends JsonParser>> threadLocalClass = new AtomicReference<>(JsonParser.class);
+
+  /**
+   * Create a new instance of JSON parser.
+   *
+   * <p>This is not really deprecated, but to improve buffer re-usage, it is recommended to use the thread local instance, by doing {@code JsonParse.instance.get()}.
    * @see #instance
+   * @since 3.0
    */
   @Deprecated
   public JsonParser() {}
@@ -49,8 +59,25 @@ public final class JsonParser {
    * The thread local parser instance to be used to reduce memory consumption.
    * @since 3.0
    */
-  public static final ThreadLocal<@NotNull JsonParser> instance = ThreadLocal.withInitial(JsonParser::new);
+  private static final ThreadLocal<JsonParser> instance = new ThreadLocal<>();
 
+  /**
+   * Returns the thread-local {@link JsonParser}, the default parser can be exchanged using {@link #threadLocalClass}.
+   * @return the thread-local parser.
+   */
+  public static @NotNull JsonParser threadLocal() {
+    final Class<? extends JsonParser> klass = threadLocalClass.getPlain();
+    JsonParser jsonParser = instance.get();
+    if (jsonParser == null || jsonParser.getClass() != klass) {
+      try {
+        final var constructor = klass.getDeclaredConstructor();
+        jsonParser = constructor.newInstance();
+      } catch (NoSuchMethodException | InstantiationException | IllegalAccessException | InvocationTargetException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    return jsonParser;
+  }
 
   // Allocate 2 KiB for the stack (3 elements are used for the JVM header, size, and padding on 64-bit JVM).
   // We stick with this stack for the life-time of the parser.
@@ -62,7 +89,11 @@ public final class JsonParser {
   private char[] chars;
   private int chars_end;
   private int chars_hash;
-  private boolean isNFKCNormalized;
+  /**
+   * A toggle if the input is trusted and in {@link NormalizerForm#NFKC NFKC} normalized, e.g. when read from database.
+   * @since 3.0
+   */
+  protected boolean isNFKCNormalized;
   private int line;
   private int column;
   private @Nullable JsonError error;
@@ -433,25 +464,13 @@ public final class JsonParser {
         // TODO: Decode `data:<type>;base64,<data>`, see https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data
       }
       if (chars_length == 0) {
-        parsedValue = StringUtil.EMPTY;
+        parsedValue = StringUtil.EMPTY_STRING;
       } else if (intern) {
-        parsedValue = intern(chars, 0, chars_length, chars_hash, false, false);
+        parsedValue = intern(chars, 0, chars_length, chars_hash, isNFKCNormalized, false);
       } else {
-        parsedValue = newString(chars, 0, chars_length, chars_hash, false);
+        parsedValue = newString(chars, 0, chars_length, chars_hash, isNFKCNormalized);
       }
     }
-  }
-
-  private static boolean[] VALUE_TERMINATOR = new boolean[128];
-  static {
-    VALUE_TERMINATOR[','] = true; // {a:foo,b:bar} -- {a:true,} -- [true,]
-    VALUE_TERMINATOR['}'] = true; // {a:foo}
-    VALUE_TERMINATOR[']'] = true; // [true]
-    VALUE_TERMINATOR['\n'] = true;
-    // {
-    //   a:foo
-    //   b:bar
-    // }
   }
 
   // number = [ minus ] int [ frac ] [ exp ]
@@ -472,55 +491,64 @@ public final class JsonParser {
   private static final int NUM_AFTER_EXP_FIRST = 3;
   private static final int NUM_AFTER_EXP = 4;
   private static final int TEXT = 5;
-  private static int[][] NUMBER_TABLE = new int[5][];
-  static { // TYPE_START
-    final int[] table = new int[128];
-    Arrays.fill(table, TEXT);
-    for (int i = '0'; i <= '9'; i++) table[i] = NUM_INT;
-    table['-'] = NUM_INT; // 45
-    NUMBER_TABLE[TYPE_START] = table;
-  }
-  static { // NUM_INT
-    final int[] table = new int[128];
-    Arrays.fill(table, TEXT);
-    for (int i = '0'; i <= '9'; i++) table[i] = NUM_INT;
-    table['.'] = NUM_AFTER_DOT; // 46
-    table['e'] = NUM_AFTER_EXP_FIRST; // 101
-    table['E'] = NUM_AFTER_EXP_FIRST; // 69
-    NUMBER_TABLE[NUM_INT] = table;
-  }
-  static { // NUM_AFTER_DOT
-    final int[] table = new int[102];
-    Arrays.fill(table, TEXT);
-    for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_DOT;
-    table['e'] = NUM_AFTER_EXP_FIRST; // 101
-    table['E'] = NUM_AFTER_EXP_FIRST; // 69
-    NUMBER_TABLE[NUM_AFTER_DOT] = table;
-  }
-  static { // NUM_AFTER_EXP_FIRST
-    final int[] table = new int[58];
-    Arrays.fill(table, TEXT);
-    for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_EXP;
-    table['+'] = NUM_AFTER_EXP; // 43
-    table['-'] = NUM_AFTER_EXP; // 45
-    NUMBER_TABLE[NUM_AFTER_EXP_FIRST] = table;
-  }
-  static { // NUM_AFTER_EXP
-    final int[] table = new int[58];
-    Arrays.fill(table, TEXT);
-    for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_EXP;
-    NUMBER_TABLE[NUM_AFTER_EXP] = table;
-  }
-  private static int[] HEX_TABLE = new int[128];
+  private static final int[][] NUMBER_TABLE = new int[5][];
+  private static final int[] HEX_TABLE = new int[128];
   static {
-    Arrays.fill(HEX_TABLE, -1);
-    for (int i = '0'; i <= '9'; i++) HEX_TABLE[i] = i - '0';
-    HEX_TABLE['a'] = HEX_TABLE['A'] = 10;
-    HEX_TABLE['b'] = HEX_TABLE['B'] = 11;
-    HEX_TABLE['c'] = HEX_TABLE['C'] = 12;
-    HEX_TABLE['d'] = HEX_TABLE['D'] = 13;
-    HEX_TABLE['e'] = HEX_TABLE['E'] = 14;
-    HEX_TABLE['f'] = HEX_TABLE['F'] = 15;
+    // TYPE_START
+    {
+      final int[] table = new int[128];
+      Arrays.fill(table, TEXT);
+      for (int i = '0'; i <= '9'; i++) table[i] = NUM_INT;
+      table['-'] = NUM_INT; // 45
+      NUMBER_TABLE[TYPE_START] = table;
+    }
+
+    // NUM_INT
+    {
+      final int[] table = new int[128];
+      Arrays.fill(table, TEXT);
+      for (int i = '0'; i <= '9'; i++) table[i] = NUM_INT;
+      table['.'] = NUM_AFTER_DOT; // 46
+      table['e'] = NUM_AFTER_EXP_FIRST; // 101
+      table['E'] = NUM_AFTER_EXP_FIRST; // 69
+      NUMBER_TABLE[NUM_INT] = table;
+    }
+    // NUM_AFTER_DOT
+    {
+      final int[] table = new int[102];
+      Arrays.fill(table, TEXT);
+      for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_DOT;
+      table['e'] = NUM_AFTER_EXP_FIRST; // 101
+      table['E'] = NUM_AFTER_EXP_FIRST; // 69
+      NUMBER_TABLE[NUM_AFTER_DOT] = table;
+    }
+    // NUM_AFTER_EXP_FIRST
+    {
+      final int[] table = new int[58];
+      Arrays.fill(table, TEXT);
+      for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_EXP;
+      table['+'] = NUM_AFTER_EXP; // 43
+      table['-'] = NUM_AFTER_EXP; // 45
+      NUMBER_TABLE[NUM_AFTER_EXP_FIRST] = table;
+    }
+    // NUM_AFTER_EXP
+    {
+      final int[] table = new int[58];
+      Arrays.fill(table, TEXT);
+      for (int i = '0'; i <= '9'; i++) table[i] = NUM_AFTER_EXP;
+      NUMBER_TABLE[NUM_AFTER_EXP] = table;
+    }
+    // HEX_TABLE
+    {
+      Arrays.fill(HEX_TABLE, -1);
+      for (int i = '0'; i <= '9'; i++) HEX_TABLE[i] = i - '0';
+      HEX_TABLE['a'] = HEX_TABLE['A'] = 10;
+      HEX_TABLE['b'] = HEX_TABLE['B'] = 11;
+      HEX_TABLE['c'] = HEX_TABLE['C'] = 12;
+      HEX_TABLE['d'] = HEX_TABLE['D'] = 13;
+      HEX_TABLE['e'] = HEX_TABLE['E'] = 14;
+      HEX_TABLE['f'] = HEX_TABLE['F'] = 15;
+    }
   }
 
   /**
@@ -650,7 +678,7 @@ public final class JsonParser {
     final int stack_i = stack_end;
     Object[] data = stack[stack_i];
     if (data == null) {
-      data = ensure_size(Json.EMPTY_ARRAY, 1, false);
+      data = ensure_size(Json.EMPTY_ARRAY, 1, false, UNDEFINED);
       stack[stack_i] = data;
     }
     stack_end++;
@@ -680,6 +708,44 @@ public final class JsonParser {
       }
       return "Invalid internal parser state";
     }
+  }
+
+  /**
+   * Can be overwritten to turn the given entries into a POJO or any other custom type. The method only borrows the {@code entries}, it must not modify them, nor store the reference, because the {@code entries} array is reused by the parser. The given entries has no {@link Json#UNDEFINED UNDEFINED} entries, so all key-value pairs given are valid, and the keys are guaranteed to be {@link StringUtil#intern(String) interned} alreadu.
+   * @param entries the key-value pairs, aka entries, of the map.
+   * @param length the amount of values being valid (2 for every entry).
+   * @return the Java type representing this map.
+   */
+  protected @NotNull Object newJsonMap(@Nullable Object @NotNull [] entries, int length) {
+    return new JsonMap(entries, 0, length, false);
+  }
+
+  /**
+   * Can be overwritten to return a custom type. The method only borrows the `elements`, it must not modify it, nor use the reference, because the `elements` array is reused by the parser.
+   * @param elements the elements of the array.
+   * @param length the amount of elements being valid.
+   * @return the Java type representing this array.
+   */
+  protected @NotNull Object newJsonArray(@Nullable Object @NotNull [] elements, int length) {
+    return new JsonArray(elements, 0, length);
+  }
+
+  /**
+   * Can be overwritten to return a custom type.
+   * @param value the value of the long.
+   * @return the Java type representing this long, either {@link Integer} or {@link Long} in the default implementation.
+   */
+  protected @NotNull Object newLong(long value) {
+    return NumberUtil.boxCompact(value);
+  }
+
+  /**
+   * Can be overwritten to return a custom type.
+   * @param value the value of the double.
+   * @return the Java type representing this double.
+   */
+  protected @NotNull Object newDouble(double value) {
+    return NumberUtil.boxDouble(value);
   }
 
   /**
@@ -730,13 +796,12 @@ public final class JsonParser {
           }
           if (state == MapParserState.PARSE_VALUE) {
             // The happens for example for `{a:}`
-            data = ensure_size(data, data_end+1, false);
+            data = ensure_size(data, data_end+1, false, UNDEFINED);
             data[data_end++] = Json.UNDEFINED;
           }
           // Now we are in: `PARSE_KEY_OR_END` or `PARSE_COMMA_OR_END`
           // Therefore, we are done.
-          final var content = Arrays.copyOf(data, data_end);
-          parsedValue = new JsonMap(content);
+          parsedValue = newJsonMap(data, data_end);
           return next_i;
         }
         if (cp == ',') {
@@ -745,7 +810,7 @@ public final class JsonParser {
           }
           if (state == MapParserState.PARSE_VALUE) {
             // The happens for example for `{a:,b:10}`, we treat the value as undefined, rather than fail.
-            data = ensure_size(data, data_end+1, false);
+            data = ensure_size(data, data_end+1, false, UNDEFINED);
             data[data_end++] = Json.UNDEFINED;
           }
           // We may be in PARSE_KEY_OR_END, e.g. `{a:1,,b:10}`, we ignore this as human syntax error, and continue to parse key.
@@ -785,14 +850,14 @@ public final class JsonParser {
             if (i < -1) return i;
             parsedValue = intern(chars, 0, chars_end, chars_hash, isNFKCNormalized, false);
           }
-          data = ensure_size(data, data_end+1, false);
+          data = ensure_size(data, data_end+1, false, UNDEFINED);
           data[data_end] = parsedValue;
           data_end++;
           state = MapParserState.PARSE_COLON;
         } else {
           i = parseValue(utf8, i);
           if (i < -1) return i;
-          data = ensure_size(data, data_end+1, false);
+          data = ensure_size(data, data_end+1, false, UNDEFINED);
           data[data_end] = parsedValue;
           data_end++;
           state = MapParserState.PARSE_COMMA_OR_END;
@@ -833,8 +898,7 @@ public final class JsonParser {
           return error_malformed_json("Expected ',' or ']', but found '/'", i, line, column);
         }
         if (cp == ']') {
-          final var content = Arrays.copyOf(data, data_end);
-          parsedValue = new JsonArray(content);
+          parsedValue = newJsonArray(data, data_end);
           return next_i;
         }
         if (cp == '\n') {
@@ -866,7 +930,7 @@ public final class JsonParser {
         // Parse value, starting at i, not r_i, because the current cp is part of the value!
         i = parseValue(utf8, i);
         if (i < 0) return i;
-        data = ensure_size(data, data_end+1, false);
+        data = ensure_size(data, data_end+1, false, UNDEFINED);
         data[data_end] = parsedValue;
         data_end++;
         expect_comma = true;
@@ -909,7 +973,8 @@ public final class JsonParser {
     // assert i >= 0 && i <= 18 && i <= MUL.length;
     return (digit-'0') * MUL[i];
   }
-  private @NotNull Long parseLong(char[] chars, int offset, int length) {
+
+  private @NotNull Object parseLong(char[] chars, int offset, int length) {
     //
     // Note: We're only called, when the chars are only digits, except for the first, which may be a minus!
     //
@@ -955,7 +1020,7 @@ public final class JsonParser {
                      + v(chars, offset, 18, length);
         // This happens only when -9,223,372,036,854,775,808 is parsed,
         // because 9_223_372_036_854_775_800L + 8L = -9,223,372,036,854,775,808
-        if (value < 0) return boxLong(value);
+        if (value < 0) return newLong(value);
       break;
       case 18: value = v(chars, offset, 0, length)
                      + v(chars, offset, 1, length)
@@ -1149,7 +1214,7 @@ public final class JsonParser {
       default:
         throw new NumberFormatException();
     }
-    return boxLong(negative ? -value : value);
+    return newLong(negative ? -value : value);
   }
 
   /**
@@ -1217,7 +1282,7 @@ public final class JsonParser {
           return i;
         }
         // Note: For surrogate characters this will return null as value!
-        parsedValue = StringUtil.ONE_CHAR[c];
+        parsedValue = StringUtil.interned(c);
         return i;
       }
 
@@ -1272,7 +1337,7 @@ public final class JsonParser {
       }
       if (type == NUM_AFTER_DOT || type == NUM_AFTER_EXP) {
         try {
-          parsedValue = boxDouble(parseDouble(chars, 0, chars_end));
+          parsedValue = newDouble(parseDouble(chars, 0, chars_end));
           return i;
         } catch (NumberFormatException ignored) {
           // Ups, no double.
@@ -1314,7 +1379,7 @@ public final class JsonParser {
    *
    * @param utf8 the JSON string as UTF-8 encoded bytes.
    * @param i the first byte to read.
-   * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed.
+   * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed. Only set this to true, when JSON is read from a trusted source, like a database you serialized into.
    * @return the parsed object or {@link JsonError}.
    */
   public @Nullable Object parse(byte[] utf8, int i, boolean isNFKCNormalized) {

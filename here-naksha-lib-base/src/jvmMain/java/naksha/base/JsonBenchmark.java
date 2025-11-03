@@ -102,7 +102,7 @@ public class JsonBenchmark {
   }
 
   @Nullable Object naksha_parse(byte @NotNull [] utf8_json) throws IOException {
-    final var naksha = JsonParser.instance.get();
+    final var naksha = JsonParser.threadLocal();
     return naksha.parse(utf8_json);
   }
 

@@ -12,7 +12,7 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
 
-import static naksha.base.Util.*;
+import static naksha.base.JvmUtil.*;
 
 /** A library that helps in processing of UTF-8 strings, optimized for performance. */
 @SuppressWarnings({"unused", "UnusedReturnValue"})
@@ -1085,7 +1085,7 @@ public final class UTF8 {
         i += 2;
       }
     }
-    String s = StringUtil.get(chars, 0, i, hash);
+    String s = StringUtil.interned(chars, 0, i, hash);
     if (s == null) s = new String(chars, 0, i);
     if (Normalizer.isNormalized(s, Normalizer.Form.NFKC)) return s;
     return Normalizer.normalize(s, Normalizer.Form.NFKC);

@@ -1,4 +1,7 @@
 package naksha.base;
 
-class JsonProxy {
-}
+/**
+ * Marker interface for all proxies.
+ * @since 3.0
+ */
+public interface JsonProxy {}

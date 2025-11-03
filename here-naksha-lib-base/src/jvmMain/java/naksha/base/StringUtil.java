@@ -5,136 +5,57 @@ import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.WeakReference;
 import java.text.Normalizer;
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceArray;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static java.lang.Character.highSurrogate;
 import static java.lang.Character.lowSurrogate;
+import static naksha.base.Platform.unsafe;
 
 /**
- * Tooling around strings, supports Java strings (UTF-16 encoded) and UTF-8 encoded byte arrays.
+ * String utils, including a cache with support for UTF-16 encoded Java strings, and UTF-8 encoded byte arrays.
  *
- * <p>This includes a string singleton cache, which should only be used for keys, because only there the advantage is huge, as it not only reduces memory consumption, but especially improves the hash access speed for {@link JsonMap}, as it will only compare references, instead of the hash-codes and the individual characters.
+ * <p>The main purpose is to ensure that all strings are {@link Normalizer.Form#NFKC NFKC} normalized, and that keys being used within maps are interned. For the interning, this class contains a static string singleton cache to reduce memory consumption, and to improve the access speed for {@link JsonMap}, as it will only compare keys by reference, instead of the hash-codes, and then individual characters.
  *
- * <p>When keys or values are well known to be repetitive <i>(some strings are known to appear very often)</i>, then they can be interned and pinned, so that they are not garbage collected, even while currently no instance of them exist.
+ * <p>When keys or values are known to be repetitive <i>(some strings are known to appear very often)</i>, then they can be pinned, so that they are not garbage collected, even while currently no instance of them exist.
+ * @since 3.0
  */
 public final class StringUtil {
+  /** The amount of bits to be used to the first level cache table. */
   private static final int BITS = 21;
 
   /** The mask for the hash to index in the first level. */
   private static final int MASK = (1 << BITS) - 1;
 
   /** The singleton for an empty string. */
-  public static final String EMPTY = "";
+  public static final String EMPTY_STRING = "";
 
   /**
-   * The singletons for all strings that are just one character long (there are more of them than one would expect).
+   * The singletons for all strings that are just one code-point long in {@link Character#isBmpCodePoint(int) Basic Multilingual Plane (BMP)}.
    *
-   * <p>Beware, the there is not string ({@code null}) in this array for those characters that are surrogates.
+   * <p>Beware, the there is no string ({@code null}) in this array for those code-points that are surrogates.
+   * @since 3.0
    */
-  public static final @Nullable String @NotNull [] ONE_CHAR = new String[65536];
+  private static final @NotNull String @NotNull [] ONE_CHAR = new String[65536];
   static {
     for (int i = 0; i < ONE_CHAR.length; i++) {
-      if (Character.isSurrogate((char)i)) continue;
-      ONE_CHAR[i] = new String(Character.toChars(i));
+      final char c = (char) i;
+      ONE_CHAR[c] = !Character.isSurrogate(c) ? new String(Character.toChars(c)) : EMPTY_STRING;
     }
   }
 
   /**
-   * A class to wrap each cached string, so adding 16-byte JVM header, 8-byte reference, 8-byte strong (pin) reference, and 4-byte hash-code, therefore 36 byte. Additionally, the string has to be kept on heap, until it is garbage collected, so another 16-byte JVM header, 8-byte byte-array reference, 4-byte hash-code, 1 byte coder, 1 byte hashIsZero boolean, 2 byte padding, therefore 32-byte. As it keeps a reference to the byte-array with the characters, this has again a JVM header of 16-byte, 4 byte length, plus characters, either ISO-8859-1 or UTF-16, so at least 24 byte.
-   *
-   * <p>In a nutshell, a cached string consumes minimally 92-byte (36 + 32 + 24), calculated for a string of length 1 to 4.
+   * For every unique lower {@link #BITS bits} of a string hash-code, one {@link CacheLine CacheLine} will be kept in memory. It stores all weak-interned strings, and all pinned (strong-interned) strings. When a weak-referred string is removed by garbage collector, the next add or remove will compact the array.
    */
-  public final static class CachedString extends WeakReference<String> {
-    private CachedString(@NotNull String s) {
-      super(s);
-      assert Normalizer.isNormalized(s, Normalizer.Form.NFKC);
-      strong = s;
-      hashCode = s.hashCode();
-    }
+  private static class CacheLine extends AtomicReference<@Nullable Object @NotNull []> {
+    private static final Object[] EMPTY = new Object[0];
 
-    private final int hashCode;
-    // Strong reference to the string, used to pin the string.
-    private volatile @Nullable String strong;
-
-    @Override
-    public int hashCode() {
-      return hashCode;
-    }
-
-    private @Nullable String getAndRelease() {
-      String s = strong;
-      if (s == null) s = get();
-      strong = null;
-      return s;
-    }
-
-    private @NotNull String pin() {
-      String s = strong;
-      if (s != null) return s;
-      s = get();
-      if (s == null) {
-        throw new IllegalStateException("No strong reference to release");
-      }
-      strong = s;
-      return s;
-    }
-
-    private @NotNull String release() {
-      String s = strong;
-      if (s == null) {
-        throw new IllegalStateException("No strong reference to release");
-      }
-      strong = null;
-      return s;
-    }
-  }
-
-  private static @NotNull CachedString newCachedString(
-      @Nullable CachedString existing,
-      char @NotNull [] chars,
-      int start,
-      int end,
-      boolean isNFKCNormalized
-  ) {
-    if (existing != null) {
-      return existing;
-    }
-    var s = new String(chars, start, end - start);
-    if (!isNFKCNormalized && !Normalizer.isNormalized(s, Normalizer.Form.NFKC)) {
-      s = Normalizer.normalize(s, Normalizer.Form.NFKC);
-    }
-    return new CachedString(s);
-  }
-
-  private static @NotNull CachedString newCachedString(
-      @Nullable CachedString existing,
-      @NotNull CharSequence chars,
-      boolean isNFKCNormalized
-  ) {
-    if (existing != null) {
-      return existing;
-    }
-    var s = chars.toString();
-    if (!isNFKCNormalized && !Normalizer.isNormalized(s, Normalizer.Form.NFKC)) {
-      s = Normalizer.normalize(s, Normalizer.Form.NFKC);
-    }
-    return new CachedString(s);
-  }
-
-  /**
-   * For every 21-bit unique lower bits of a string hash-code one {@code CachedStringArray} will be kept in memory. It consumes at least 16-byte JVM header, plus 8-byte {@code CachedString[]} reference (so 24 byte), plus the actual array, which consumes at least 16-byte JVM header, plus 4-byte size, plus 4-byte padding, plus 8-byte per stored {@code CachedString} reference (32-byte).
-   *
-   * <p>Therefore, for a size of zero, each {@code CachedStringArray} consume 48-byte, with one entry 56-byte. For one entry, we need to add the {@link CachedString CachedString} consumption, which is at least 96-byte, so each entry is at least 152-byte. A good number to keep in memory is, that each cached string costs around 192-byte to 256-byte, so caching one million strings, cost around 250 MiB of memory. This is only worth the effort, if the strings have really plenty of duplicates.
-   */
-  private static class CachedStringArray extends AtomicReference<@NotNull CachedString @NotNull []> {
-    private static final CachedString[] EMPTY = new CachedString[0];
-    private CachedStringArray() {
+    CacheLine() {
       super(EMPTY);
     }
 
-    private boolean matches(@Nullable String s, char @NotNull [] chars, int start, int end, int hashCode) {
+    private static boolean matchesChars(@Nullable String s, char @NotNull [] chars, int start, int end, int hashCode) {
       if (s == null) return false;
       final var length = end - start;
       if (s.hashCode() != hashCode || s.length() != length) return false;
@@ -144,7 +65,7 @@ public final class StringUtil {
       return true;
     }
 
-    private boolean matches(@Nullable String s, @NotNull CharSequence chars, int hashCode) {
+    private static boolean matchesCharSeq(@Nullable String s, @NotNull CharSequence chars, int hashCode) {
       if (s == null) return false;
       if (s == chars) return true;
       final var length = chars.length();
@@ -155,168 +76,167 @@ public final class StringUtil {
       return true;
     }
 
-    /**
-     * Returns the string singleton for the given characters.
-     * @param chars the characters.
-     * @param start the first valid character.
-     * @param end the first invalid character, must be greater/equal than {@code start}, and less/equal to {@code chars.length}.
-     * @param hashCode the Java hash code of the valid chars.
-     * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed.
-     * @param pin If the string should be pinned, so prevent garbage collection, even while not used.
-     * @return the cached string or {@code null}, if no string cached.
-     */
-    private @NotNull String intern(char @NotNull [] chars, int start, int end, int hashCode, boolean isNFKCNormalized, boolean pin) {
-      // We keep this out of the loop, so we only generate a new cached string ones, even when we encounter a concurrent modification.
-      CachedString newCachedString = null;
-      while (true) {
-        final var cachedStrings = this.get();
-        int nulls = 0;
-        for (final CachedString cachedString : cachedStrings) {
-          final var s = cachedString.get();
-          if (s == null) {
-            nulls++;
-          } else {
-            if (matches(s, chars, start, end, hashCode)) {
-              return s;
-            }
-          }
-        }
-        // Not found, create a new string wrapper, which will be pinned initially.
-        newCachedString = newCachedString(newCachedString, chars, start, end, isNFKCNormalized);
-        // For now, no other thread has access, so release now or leave pinned, as requested.
-        final var newString = pin ? newCachedString.pin() : newCachedString.release();
-        var newArray = new CachedString[cachedStrings.length - nulls + 1];
-        int i = 0;
-        for (final CachedString cachedString : cachedStrings) {
-          final var s = cachedString.get();
-          if (s != null) {
-            newArray[i++] = cachedString;
-          }
-        }
-        newArray[i++] = newCachedString;
-        if (i < newArray.length) { // GC happened in between, shorting, not that of a big issue
-          newArray = Arrays.copyOf(newArray, i);
-        }
-        if (this.compareAndSet(cachedStrings, newArray)) {
-          return newString;
-        }
-        // Concurrent modification, and we were slower, restart.
-      }
+    private static boolean matches(@Nullable String s, @NotNull Object charsOrSeq, int start, int end, int hashCode) {
+      return charsOrSeq.getClass() == char[].class ? matchesChars(s, (char[]) charsOrSeq, start, end, hashCode) : matchesCharSeq(s, (CharSequence) charsOrSeq, hashCode);
     }
 
-    /**
-     * Returns the unique string instance for the given character sequence. If a string is given, a singleton of it is returned; can be the given string, or a new another instance.
-     * @param chars The character sequence to turn into a string singleton.
-     * @param hashCode the Java hash code over the character sequence.
-     * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection is needed.
-     * @param pin If the string should be pinned, so prevent garbage collection, even while not used.
-     * @return the string singleton that represents the given character sequence.
-     */
-    private @NotNull String intern(@NotNull CharSequence chars, int hashCode, boolean isNFKCNormalized, boolean pin) {
-      // We keep this out of the loop, so we only generate a new cached string ones, even when we encounter a concurrent modification.
-      CachedString newCachedString = null;
-      final String charsString = chars.getClass() == String.class ? (String) chars : null;
-      StringUtil.CachedString[] checked = null;
-      while (true) {
-        final var cachedStrings = this.get();
-        if (charsString != null && cachedStrings != checked) {
-          checked = cachedStrings;
-          // Prewarm L1 cache and detect if the given string is already interned.
-          for (final CachedString cachedString : cachedStrings) {
-            //noinspection StringEquality
-            if (charsString == cachedString.get()) {
-              // Great, the given string is already interned.
-              return charsString;
-            }
-          }
-        }
-
-        // We know that either chars is no string or it is not yet interned!
-        int nulls = 0;
-        for (final CachedString cachedString : cachedStrings) {
-          final var s = cachedString.get();
-          if (s == null) {
-            nulls++;
-          } else {
-            // We know that
-            if (matches(s, chars, hashCode)) {
-              if (pin) cachedString.pin();
-              return s;
-            }
-          }
-        }
-
-        // Not found, create a new string wrapper, which will be pinned initially.
-        newCachedString = newCachedString(newCachedString, chars, isNFKCNormalized);
-        // For now, no other thread has access, so release now or leave pinned, as requested.
-        final var newString = pin ? newCachedString.pin() : newCachedString.release();
-        var newArray = new CachedString[cachedStrings.length - nulls + 1];
-        int i = 0;
-        for (final CachedString cachedString : cachedStrings) {
-          final var s = cachedString.get();
-          if (s != null) {
-            newArray[i++] = cachedString;
-          }
-        }
-        newArray[i++] = newCachedString;
-        if (i < newArray.length) { // GC happened in between, shorting, not that of a big issue
-          newArray = Arrays.copyOf(newArray, i);
-        }
-        if (this.compareAndSet(cachedStrings, newArray)) {
-          return newString;
-        }
-        // Concurrent modification, and we were slower, restart.
+    private static @NotNull String newString(
+        @NotNull Object charsOrSeq,
+        int start,
+        int end,
+        boolean isNFKCNormalized
+    ) {
+      final String s;
+      if (charsOrSeq.getClass() == char[].class) {
+        s = new String((char[]) charsOrSeq, start, end - start);
+      } else {
+        assert charsOrSeq instanceof CharSequence;
+        s = ((CharSequence) charsOrSeq).toString();
       }
+      if (isNFKCNormalized || Normalizer.isNormalized(s, Normalizer.Form.NFKC)) {
+        return s;
+      }
+      return Normalizer.normalize(s, Normalizer.Form.NFKC);
     }
 
-    /**
-     * Returns the cached string singleton for the given characters or {@code null}, if the characters are not yet cached.
-     * @param chars the characters.
-     * @param start the first valid character.
-     * @param end the first invalid character, must be greater/equal than {@code start}, and less/equal to {@code chars.length}.
-     * @param hashCode the Java hash code of the valid chars.
-     * @return the cached string or {@code null}, if no string cached.
-     */
-    private @Nullable String get(char @NotNull [] chars, int start, int end, int hashCode) {
-      var cachedStrings = this.get();
-      for (final CachedString cachedString : cachedStrings) {
-        final var s = cachedString.get();
-        if (matches(s, chars, start, end, hashCode)) {
+    /// To ensure that only one thread at a time mutates the cache, we use this lock.
+    private final ReentrantLock lock = new ReentrantLock();
+
+    /// If `charsOrSeq` is `char[]`, then `start` and `end` are considered; otherwise they are ignored, and `charsOrSeq` must be `CharSequence`!
+    @SuppressWarnings("unchecked")
+    private @NotNull String intern(@NotNull Object charsOrSeq, int start, int end, int hashCode, boolean isNFKCNormalized, boolean pin) {
+      //
+      // Note: This is a lock-free algorithm for readers, but writes need to use a lock.
+      //       Therefore, if the given chars are already cached as string, the method will be lock free.
+      //       If it needs to be inserted, we try to keep the lock acquire to the smallest possible time.
+      //
+
+      // Avoid generating the string and weak reference multiple times!
+      String newString = null;
+      WeakReference<String> newWeakString = null;
+      do {
+        // This is important.
+        final var array = this.getPlain();
+
+        // Search for the given string, if it is cached already.
+        // Remember the last empty slot, that we can use for insertion.
+        // All algorithm will find the same slot, when iterating in parallel.
+        int lastEmptyIndex = -1;
+        Object lastEmptyValue = null;
+        for (int i = 0; i < array.length; i++) {
+          final Object raw = array[i];
+
+          // Empty.
+          if (raw == null) {
+            lastEmptyIndex = i;
+            lastEmptyValue = null;
+            continue;
+          }
+
+          // Otherwise it must be either a pinned string, or a weak reference.
+          final WeakReference<String> weakString;
+          final String s;
+          if (raw.getClass() == String.class) {
+            weakString = null;
+            s = (String) raw;
+          } else {
+            assert raw instanceof WeakReference;
+            //noinspection unchecked
+            weakString = (WeakReference<String>) raw;
+            s = weakString.get();
+          }
+
+          // If the string is empty, it is garbage collected weak reference.
+          // Still, eventually it is just an empty slot.
+          if (s == null) {
+            lastEmptyIndex = i;
+            lastEmptyValue = weakString;
+            continue;
+          }
+
+          // If we have a cached string, but it is not what we are looking for, ignore.
+          if (!matches(s, charsOrSeq, start, end, hashCode)) continue;
+
+          // If we found the string, and it is pinned, we found what we were looking for, return it.
+          if (weakString == null) return s;
+
+          // This is a matching weak-referred string, and we are not asked to pin, return it.
+          if (!pin) return s;
+
+          // This is a weak-referred string, but we are asked to pin it, so do this now.
+          lock.lock();
+          try {
+            // It is possible that another thread has expanded the array while we were waiting for the lock.
+            // However, we know that others will not move the weak-reference, because it is still alive.
+            // Therefore, we only ensure that we have the right array reference, update the slot, and done.
+            final var current_array = this.get();
+            current_array[i] = s;
+            return s;
+          } finally {
+            // Ensure that all changes are visible to other threads, before we release the lock.
+            unsafe.fullFence();
+            lock.unlock();
+          }
+        }
+
+        // String not found, create a new string, and optionally a weak-reference to it.
+        if (newString == null) newString = newString(charsOrSeq, start, end, isNFKCNormalized);
+        if (!pin && newWeakString == null) newWeakString = new WeakReference<>(newString);
+
+        // Acquire write lock.
+        lock.lock();
+        try {
+          // Ensure we have the right array reference, should another thread have expanded the array while we were trying to acquire the lock.
+          final var current_array = this.get();
+
+          // If there was an empty slot.
+          if (lastEmptyIndex >= 0) {
+            // If another thread used the slot, we have to restart.
+            if (current_array[lastEmptyIndex] != lastEmptyValue) continue;
+
+            // Otherwise, we are fine to put our value in, and return the string.
+            current_array[lastEmptyIndex] = newWeakString != null ? newWeakString : newString;
+            return newString;
+          }
+
+          // There was no empty slot, we need to expand the array, to do this, we need to be sure that no
+          // other thread has expanded the array already, if it has, we need to restart searching for
+          // a free slot, there should be one.
+          if (array != current_array) continue;
+
+          // Worst case, we need to expand the array, while being inside a lock.
+          // Note: `ensure_size` will allocate at least another L1 cache line (so at least 8 more slots).
+          final var new_array = Json.ensure_size(array, array.length + 1, false, null);
+          assert new_array.length > array.length;
+          new_array[array.length] = newWeakString != null ? newWeakString : newString;
+          this.setPlain(new_array);
+          return newString;
+        } finally {
+          // Ensure that all changes are visible to other threads, before we release the lock.
+          unsafe.fullFence();
+          lock.unlock();
+        }
+      } while (true);
+    }
+
+    private @Nullable String get(@NotNull Object charsOrSeq, int start, int end, int hashCode) {
+      final var array = this.get();
+      for (final Object raw : array) {
+        if (raw == null) continue;
+
+        final String s;
+        if (raw.getClass() == String.class) {
+          s = (String) raw;
+        } else {
+          assert raw instanceof WeakReference;
+          //noinspection unchecked
+          s = ((WeakReference<String>) raw).get();
+        }
+
+        if (s != null && matches(s, charsOrSeq, start, end, hashCode)) {
           return s;
         }
       }
-      return null;
-    }
-
-    /**
-     * Returns the cached string singleton for the given characters or {@code null}, if the characters are not yet cached.
-     * @param chars the characters.
-     * @param hashCode the hash-code of the character sequence.
-     * @return the cached string or {@code null}, if no string cached.
-     */
-    private @Nullable String get(@NotNull CharSequence chars, int hashCode) {
-      var cachedStrings = this.getPlain();
-
-      if (chars.getClass() == String.class) {
-        // Potentially already interned, first quick check that pre-warms the L1 cachea as a side effect.
-        final String potentiallyInterned = (String) chars;
-        for (final CachedString cachedString : cachedStrings) {
-          //noinspection StringEquality
-          if (potentiallyInterned == cachedString.get()) {
-            // Greate, the given string is already interned, just return it.
-            return potentiallyInterned;
-          }
-        }
-      }
-
-      // The given character sequence is not interned, we have to do full compares to find a match.
-      for (final CachedString cachedString : cachedStrings) {
-        final var s = cachedString.get();
-        if (matches(s, chars, hashCode)) {
-          return s;
-        }
-      }
-
       return null;
     }
   }
@@ -324,9 +244,13 @@ public final class StringUtil {
   /**
    * The concurrent cache, index is the lower 21-bit of hash-code of the string <i>(so 2,097,152 * 8 byte = 16 MiB)</i>.
    *
-   * <p>Actually, each entry will allocate one {@link CachedStringArray CachedStringArray}, which means JVM header (16 byte) plus 8 byte for the reference to the {@code CachedString[]}, so 24 byte. If there are valid values in the array, then this itself is at least JVM header (16 byte), plus size (4 byte), plus padding (4 byte), plus 8 byte per entry (minimal 32 byte). Therefore, each entry is minimally (when null) 8 byte for the null-pointer, with one entry it is 56-bytes. So, if all entries contain one value, we allocate 112 MiB of memory, not considering the memory for the strings them self. With the strings, we can estimate around 250 MiB per one million strings.
+   * <p>Actually, each entry will allocate one {@link CacheLine CachedStringArray}, which means JVM header (16 byte) plus 8 byte for the reference to the {@code CachedString[]}, so 24 byte. If there are valid values in the array, then this itself is at least JVM header (16 byte), plus size (4 byte), plus padding (4 byte), plus 8 byte per entry (minimal 32 byte). Therefore, each entry is minimally (when null) 8 byte for the null-pointer, with one entry it is 56-bytes. So, if all entries contain one value, we allocate 112 MiB of memory, not considering the memory for the strings them self. With the strings, we can estimate around 250 MiB per one million strings.
    */
-  private static final AtomicReferenceArray<@Nullable CachedStringArray> cache = new AtomicReferenceArray<>(1 << BITS);
+  private static final AtomicReferenceArray<@Nullable CacheLine> cacheTable = new AtomicReferenceArray<>(1 << BITS);
+
+  // TODO: Should we allow to change the cache size, so reduce bits to reduce minimal memory consumption?
+  //       It would require the application to do this when bootstrapping, then we can update the atomic reference array, swap it with a new one,
+  //       copy over existing values, and re-distribute them. Its expensive, slow, but could be worth for applications that do not need the cache!
 
   /**
    * Updates the Java hash for the given code-point.
@@ -352,55 +276,164 @@ public final class StringUtil {
   }
 
   /**
-   * Returns the cached string singleton for the given characters or {@code null}, if the characters are not yet cached.
-   * @param chars the characters.
-   * @param start the first valid character.
-   * @param end the first invalid character, must be greater/equal than {@code start}, and less/equal to {@code chars.length}.
-   * @param hashCode the Java hash code of the valid chars.
-   * @return the cached string or {@code null}, if no string cached.
+   * Calculates a standard hash-code above the given character sequence, only invokes {@code hashCode()} at the given character sequence, if it is a {@code String}; otherwise the hash-code is calculated manually the same way, that Java {@code String} does it.
+   * @param chars the character sequence for which to calculate the hash-code.
+   * @return the Java standard {@code String} hash-code.
    */
-  public static @Nullable String get(char @NotNull [] chars, int start, int end, int hashCode) {
-    final var cache = StringUtil.cache;
-    final int index = hashCode & MASK;
-    final var cachedStrings = cache.getPlain(index);
-    return cachedStrings != null ? cachedStrings.get(chars, start, end, hashCode) : null;
+  public static int hashCodeOf(@NotNull CharSequence chars) {
+    return hashCodeOf(chars, 0, chars.length());
   }
 
   /**
-   * Returns the cached string singleton for the given characters or creates a new string instance, and ensures {@link Normalizer.Form#NFKC NFKC} form. This method does not intern the given string, but when there is an interned one, it returns it.
-   * @param chars the characters.
-   * @param start the first valid character.
-   * @param end the first invalid character, must be greater/equal than {@code start}, and less/equal to {@code chars.length}.
-   * @param hashCode the Java hash code of the valid chars.
-   * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed.
-   * @return the cached string or {@code null}, if no string cached.
+   * Calculates a standard hash-code above the given character sequence, only invokes {@code hashCode()} at the given character sequence, if it is a {@code String}; otherwise the hash-code is calculated manually the same way, that Java {@code String} does it.
+   * @param chars the character sequence for which to calculate the hash-code.
+   * @param fromIndex the index of the first character to consider.
+   * @param toIndex the index of the first character <b>NOT</b> to consider.
+   * @return the Java standard {@code String} hash-code.
    */
-  public static @NotNull String newString(char @NotNull [] chars, int start, int end, int hashCode, boolean isNFKCNormalized) {
-    final var cache = StringUtil.cache;
+  public static int hashCodeOf(@NotNull CharSequence chars, int fromIndex, int toIndex) {
+    if (chars.getClass() == String.class && fromIndex == 0 && toIndex == chars.length()) {
+      return chars.hashCode();
+    }
+    int hashCode = 0;
+    for (int i = fromIndex; i < toIndex; i++) {
+      hashCode = hashChar(chars.charAt(i), hashCode);
+    }
+    return hashCode;
+  }
+
+  /**
+   * Calculates a standard Java hash-code above the given character sequence.
+   * @param chars the character sequence for which to calculate the hash-code.
+   * @return the Java standard {@code String} hash-code.
+   */
+  public static int hashCodeOf(char @NotNull [] chars) {
+    return hashCodeOf(chars, 0, chars.length);
+  }
+
+  /**
+   * Calculates a standard Java hash-code above the given character sequence.
+   * @param chars the character sequence for which to calculate the hash-code.
+   * @param fromIndex the index of the first character to consider.
+   * @param toIndex the index of the first character <b>NOT</b> to consider.
+   * @return the Java standard {@code String} hash-code.
+   */
+  public static int hashCodeOf(char @NotNull [] chars, int fromIndex, int toIndex) {
+    int hashCode = 0;
+    for (int i = fromIndex; i < toIndex; i++) {
+      hashCode = hashChar(chars[i], hashCode);
+    }
+    return hashCode;
+  }
+
+  /**
+   * Returns the cached string singleton for the given character sequence or creates a new string instance. This method ensures that the returned string is {@link Normalizer.Form#NFKC NFKC} normalized. If possible, the method returns interned strings, but when there is no interned, it returns a new string.
+   * @param charSequence the character sequence to normalize.
+   * @return the normalized string.
+   */
+  public static @NotNull String normalize(@NotNull CharSequence charSequence) {
+    final int length = charSequence.length();
+    if (length == 0) return EMPTY_STRING;
+    if (length == 1) return ONE_CHAR[charSequence.charAt(0)];
+
+    final var cacheTable = StringUtil.cacheTable;
+    final int hashCode = charSequence.getClass() == String.class ? charSequence.hashCode() : hashCodeOf(charSequence, 0, length);
     final int index = hashCode & MASK;
-    final var cachedStrings = cache.getPlain(index);
-    var string = cachedStrings != null ? cachedStrings.get(chars, start, end, hashCode) : null;
+    final var cachedLine = cacheTable.getPlain(index);
+    String string = cachedLine != null ? cachedLine.get(charSequence, -1, -1, hashCode) : null;
     if (string != null) return string;
-    string = new String(chars, start, end);
-    if (!isNFKCNormalized && !Normalizer.isNormalized(string, Normalizer.Form.NFKC)) {
+
+    string = charSequence.toString();
+    if (!Normalizer.isNormalized(string, Normalizer.Form.NFKC)) {
       string = Normalizer.normalize(string, Normalizer.Form.NFKC);
-      final var cached = cachedStrings != null ? cachedStrings.get(string, hashCode) : null;
-      if (cached != null) return cached;
+      final var existing = cachedLine != null ? cachedLine.get(string, -1, -1, hashCode) : null;
+      if (existing != null) return existing;
     }
     return string;
   }
 
   /**
-   * Returns the cached string singleton for the given characters or {@code null}, if the characters are not yet cached.
+   * Returns the cached string singleton for the given characters or creates a new string instance, optionally ensures {@link Normalizer.Form#NFKC NFKC} form. This method does not intern the given string, but when there is an interned one, it returns it.
    * @param chars the characters.
-   * @return the cached string or {@code null}, if no string cached.
+   * @param fromIndex the first valid character.
+   * @param toIndex the first invalid character, must be greater/equal than {@code start}, and less/equal to {@code chars.length}.
+   * @param hashCode the Java hash code of the valid chars.
+   * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; in doubt set to false.
+   * @return the cached string or a new string.
    */
-  public static @Nullable String get(@NotNull CharSequence chars) {
-    final int hashCode = hashCodeOf(chars);
-    final var cache = StringUtil.cache;
+  public static @NotNull String newString(char @NotNull [] chars, int fromIndex, int toIndex, int hashCode, boolean isNFKCNormalized) {
+    final int length = toIndex - fromIndex;
+    if (length == 0) return EMPTY_STRING;
+    if (length == 1) return ONE_CHAR[chars[fromIndex]];
+
+    final var cacheTable = StringUtil.cacheTable;
     final int index = hashCode & MASK;
-    final var cachedStrings = cache.getPlain(index);
-    return cachedStrings != null ? cachedStrings.get(chars, hashCode) : null;
+    final var cachedLine = cacheTable.getPlain(index);
+    String string = cachedLine != null ? cachedLine.get(chars, fromIndex, toIndex, hashCode) : null;
+    if (string != null) return string;
+
+    string = new String(chars, fromIndex, toIndex);
+    if (!isNFKCNormalized && !Normalizer.isNormalized(string, Normalizer.Form.NFKC)) {
+      string = Normalizer.normalize(string, Normalizer.Form.NFKC);
+      final var existing = cachedLine != null ? cachedLine.get(string, -1, -1, hashCode) : null;
+      if (existing != null) return existing;
+    }
+    return string;
+  }
+
+  /**
+   * Returns the interned string for a single character.
+   * @param c the character for which to return a singleton.
+   * @return the singleton.
+   * @since 3.0
+   */
+  public static @NotNull String interned(char c) {
+    return ONE_CHAR[c];
+  }
+
+  /**
+   * Returns the cached string singleton for the given characters or {@code null}, if the characters are not yet cached. This method will return always null for character sequences not being in {@link Normalizer.Form#NFKC NFKC} form.
+   * @param chars the characters.
+   * @param fromIndex the first valid character.
+   * @param toIndex the first invalid character, must be greater/equal than {@code start}, and less/equal to {@code chars.length}.
+   * @param hashCode the Java hash code of the valid chars; if not known, use {@link #hashCodeOf(char[], int, int)} to calculate it.
+   * @return the cached string or {@code null}, if no string cached.
+   * @see #hashCodeOf(char[], int, int)
+   */
+  public static @Nullable String interned(char @NotNull [] chars, int fromIndex, int toIndex, int hashCode) {
+    final int length = toIndex - fromIndex;
+    if (length == 0) return EMPTY_STRING;
+    if (length == 1) return ONE_CHAR[chars[fromIndex]];
+
+    final int index = hashCode & MASK;
+    final var cacheLine = cacheTable.getPlain(index);
+    return cacheLine != null ? cacheLine.get(chars, fromIndex, toIndex, hashCode) : null;
+  }
+
+  /**
+   * Returns the cached string singleton for the given characters or {@code null}, if the characters are not yet cached. This method will return always null for character sequences not being in {@link Normalizer.Form#NFKC NFKC} form.
+   * @param charSequence the character sequence.
+   * @return the cached string or {@code null}, if not cached.
+   */
+  public static @Nullable String interned(@NotNull CharSequence charSequence) {
+    final int length = charSequence.length();
+    if (length == 0) return EMPTY_STRING;
+    if (length == 1) return ONE_CHAR[charSequence.charAt(0)];
+
+    final int hashCode = hashCodeOf(charSequence);
+    final int index = hashCode & MASK;
+    final var cacheLine = cacheTable.getPlain(index);
+    return cacheLine != null ? cacheLine.get(charSequence, -1, -1, hashCode) : null;
+  }
+
+  /**
+   * Returns the interned string for a single character.
+   * @param c the character for which to return a singleton.
+   * @return the singleton.
+   * @since 3.0
+   */
+  public static @NotNull String intern(char c) {
+    return ONE_CHAR[c];
   }
 
   /**
@@ -408,81 +441,57 @@ public final class StringUtil {
    * @param chars the characters.
    * @param start the first valid character.
    * @param end the first invalid character, must be greater/equal than {@code start}, and less/equal to {@code chars.length}.
-   * @param hashCode the Java hash code over the characters.
-   * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed <i>(ib doubt, always select false!)</i>.
-   * @param pin If the string should be pinned, so prevent garbage collection, even while not used.
+   * @param hashCode the Java hash code over the characters; if not known, use {@link #hashCodeOf(char[], int, int)} to calculate it.
+   * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed <i>(in doubt, always use false!)</i>.
+   * @param pin if the string should be pinned, so prevent garbage collection, even while not used.
    * @return the string singleton.
+   * @see #hashCodeOf(char[], int, int)
    */
   public static @NotNull String intern(char @NotNull [] chars, int start, int end, int hashCode, boolean isNFKCNormalized, boolean pin) {
-    final var cache = StringUtil.cache;
-    final int index = hashCode & MASK;
-    CachedStringArray csa = cache.getPlain(index);
-    if (csa != null) {
-      return csa.intern(chars, start, end, hashCode, isNFKCNormalized, pin);
-    }
-    csa = new CachedStringArray();
-    final var existing = cache.compareAndExchange(index, null, csa);
-    if (existing != null) {
-      return existing.intern(chars, start, end, hashCode, isNFKCNormalized, pin);
-    }
-    return csa.intern(chars, start, end, hashCode, isNFKCNormalized, pin);
-  }
+    final int length = end - start;
+    if (length == 0) return EMPTY_STRING;
+    if (length == 1) return ONE_CHAR[chars[start]];
 
-  /**
-   * Calculates a standard hash-code above the given character sequence, only invokes {@code hashCode()} at the given character sequence, if it is a {@code String}; otherwise the hash-code is calculated manually the same way, that Java {@code String} does it.
-   * @param chars the character sequence for which to calculate the hash-code.
-   * @return the Java standard {@code String} hash-code.
-   */
-  public static int hashCodeOf(@NotNull CharSequence chars) {
-    if (chars.getClass() == String.class) {
-      return chars.hashCode();
+    final var cacheTable = StringUtil.cacheTable;
+    final int index = hashCode & MASK;
+    CacheLine cacheLine = cacheTable.getPlain(index);
+    if (cacheLine != null) {
+      return cacheLine.intern(chars, start, end, hashCode, isNFKCNormalized, pin);
     }
-    // We need to calculate the hash-code our self, because we have no clue how the given char-sequence does it!
-    int hashCode = 0;
-    final int length = chars.length();
-    for (int i = 0; i < length; i++) {
-      final char c = chars.charAt(i);
-      hashCode = hashCode * 31 + c;
-    }
-    return hashCode;
+    cacheLine = new CacheLine();
+    final var existing = cacheTable.compareAndExchange(index, null, cacheLine);
+    return (existing != null ? existing : cacheLine).intern(chars, start, end, hashCode, isNFKCNormalized, pin);
   }
 
   /**
    * Returns the string singleton for the given character sequence.
-   * @param chars The character sequence to turn into a string singleton.
-   * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed <i>(ib doubt, always select false!)</i>.
+   * @param charSequence The character sequence to turn into a string singleton.
+   * @param isNFKCNormalized if the characters are already in {@link Normalizer.Form#NFKC NFKC} form; otherwise detection needed <i>(in doubt, always use false!)</i>.
    * @param pin If the string should be pinned, so prevent garbage collection, even while not used.
    * @return the string singleton.
    */
-  public static @NotNull String intern(@NotNull CharSequence chars, boolean isNFKCNormalized, boolean pin) {
-    final int hashCode = hashCodeOf(chars);
-    final var cache = StringUtil.cache;
+  public static @NotNull String intern(@NotNull CharSequence charSequence, boolean isNFKCNormalized, boolean pin) {
+    final int length = charSequence.length();
+    if (length == 0) return EMPTY_STRING;
+    if (length == 1) return ONE_CHAR[charSequence.charAt(0)];
+
+    final int hashCode = hashCodeOf(charSequence);
+    final var cache = StringUtil.cacheTable;
     final int index = hashCode & MASK;
-    CachedStringArray csa = cache.getPlain(index);
-    if (csa != null) {
-      return csa.intern(chars, hashCode, isNFKCNormalized, pin);
+    CacheLine cacheLine = cache.getPlain(index);
+    if (cacheLine != null) {
+      return cacheLine.intern(charSequence, -1, -1, hashCode, isNFKCNormalized, pin);
     }
-    csa = new CachedStringArray();
-    final var existing = cache.compareAndExchange(index, null, csa);
-    if (existing != null) {
-      return existing.intern(chars, hashCode, isNFKCNormalized, pin);
-    }
-    return csa.intern(chars, hashCode, isNFKCNormalized, pin);
+    cacheLine = new CacheLine();
+    final var existing = cache.compareAndExchange(index, null, cacheLine);
+    return (existing != null ? existing : cacheLine).intern(charSequence, -1, -1, hashCode, isNFKCNormalized, pin);
   }
 
   /**
    * Returns the given string as singleton, {@link Normalizer.Form#NFKC NFKC} normalized version.
-   *
-   * <p>This should be used for all strings that are statically cached, for example:
-   * <pre>{@code
-   * package demo;
-   * import naksha.base.StringUtil.intern;
-   * class Demo {
-   *   public static final SOME_CONST = intern("foo");
-   * }
-   * }</pre>
    * @param string The string to turn into a singleton.
    * @return the string singleton.
+   * @since 3.0
    */
   public static @NotNull String intern(@NotNull String string) {
     return intern(string, false, false);
@@ -491,22 +500,31 @@ public final class StringUtil {
   /**
    * Returns the given string as singleton, {@link Normalizer.Form#NFKC NFKC} normalized version, and permanently prevents that the string gets garbage collected.
    *
-   * <p>This should be used for all strings that need to be statically cached, but are not kept static somewhere:
+   * <p>This should be used for all strings that need to be statically cached:
    * <pre>{@code
    * package demo;
-   * import naksha.base.StringUtil.intern;
-   * class Demo {
-   *   static void init() {
-   *     pin("id");
-   *     pin("properties");
-   *     pin("geometry");
-   *     pin("type");
-   *     // ...
+   * import naksha.base.StringUtil.pin;
+   * class Demo extends JsonMapProxy<Object> {
+   *   static final String _id = pin("id");
+   *   static final String _name = pin("name");
+   *   // ...
+   *
+   *   public @NotNull String getId() {
+   *     final var raw = jsonMap().get(_id);
+   *     if (raw instanceof String s) return s;
+   *     throw new IllegalStateException("id is no string");
+   *   }
+   *
+   *   public @Nullable String getName() {
+   *     final var raw = jsonMap().get(_id);
+   *     return raw instanceof String s ? s : null;
    *   }
    * }
    * }</pre>
+   * Pinning a string releases burden from the garbage collector, and uses less memory, than dynamically interned strings.
    * @param string The string to turn into a singleton.
    * @return the string singleton.
+   * @since 3.0
    */
   public static @NotNull String pin(@NotNull String string) {
     return intern(string, false, true);

@@ -36,6 +36,24 @@ import kotlin.reflect.full.isSuperclassOf
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Platform {
     actual companion object PlatformCompanion {
+        /**
+         * Switch to `true` to enable the new JSON support.
+         */
+        @JvmField
+        internal val USE_NEW_JSON: AtomicBool = JvmAtomicBool(false)
+
+        fun useNewJson(): Boolean = USE_NEW_JSON.get()
+
+        fun enableNewJsonParser() {
+            if (USE_NEW_JSON.compareAndSet(expect=false, update=true)) {
+                naksha.base.JsonParser.threadLocalClass.set(JvmParser::class.java)
+            }
+        }
+        fun disableNewJsonParser() {
+            if (USE_NEW_JSON.compareAndSet(expect=true, update=false)) {
+                naksha.base.JsonParser.threadLocalClass.set(naksha.base.JsonParser::class.java)
+            }
+        }
 
         @JvmField
         internal val module = SimpleModule().apply {
@@ -482,13 +500,27 @@ actual class Platform {
         @JvmField
         internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
 
+        fun fromJSON(utf8: ByteArray): Any? {
+            if (USE_NEW_JSON.get()) {
+                val jsonParser = naksha.base.JsonParser.threadLocal()
+                return jsonParser.parse(utf8)
+            } else {
+                return objectMapper.get().readValue(utf8, Any::class.java)
+            }
+        }
+
         @JvmStatic
         actual fun fromJSON(json: String): Any? = fromJSON(json, FromJsonOptions.DEFAULT)
 
         @JvmStatic
         actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
-            fromJsonOptions.set(options)
-            return objectMapper.get().readValue(json, Any::class.java)
+            if (USE_NEW_JSON.get()) {
+                val jsonParser = naksha.base.JsonParser.threadLocal()
+                return jsonParser.parse(json.encodeToByteArray())
+            } else {
+                fromJsonOptions.set(options)
+                return objectMapper.get().readValue(json, Any::class.java)
+            }
         }
 
         @JvmStatic

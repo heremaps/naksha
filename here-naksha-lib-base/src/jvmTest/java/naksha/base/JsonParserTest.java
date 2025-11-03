@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class JsonParserTest {
   // new String(utf8, 0, utf8.length, StandardCharsets.UTF_8)
-  private final JsonParser jp = JsonParser.instance.get();
+  private final JsonParser jp = JsonParser.threadLocal();
 
   private Object parse(@NotNull String json) {
     final var json_bytes = json.getBytes(StandardCharsets.UTF_8);
@@ -259,33 +259,33 @@ class JsonParserTest {
     assertEquals(6, map.size());
 
     // 'a':1
-    assertEquals("a", map.map[0]);
-    assertEquals(1L, map.map[1]);
+    assertEquals("a", map.entries[0]);
+    assertEquals(1L, map.entries[1]);
     assertEquals(1L, map.get("a"));
 
     // 'b':test
-    assertEquals("b", map.map[2]);
-    assertSame(test_SINGLETON, map.map[3]);
+    assertEquals("b", map.entries[2]);
+    assertSame(test_SINGLETON, map.entries[3]);
     assertSame(test_SINGLETON, map.get("b"));
 
     // 'c':true
-    assertEquals("c", map.map[4]);
-    assertSame(Boolean.TRUE, map.map[5]);
+    assertEquals("c", map.entries[4]);
+    assertSame(Boolean.TRUE, map.entries[5]);
     assertSame(Boolean.TRUE, map.get("c"));
 
     // d:false
-    assertEquals("d", map.map[6]);
-    assertSame(Boolean.FALSE, map.map[7]);
+    assertEquals("d", map.entries[6]);
+    assertSame(Boolean.FALSE, map.entries[7]);
     assertSame(Boolean.FALSE, map.get("d"));
 
     // 'foo':'bar\n'
-    assertEquals("foo", map.map[8]);
-    assertEquals("bar\n", map.map[9]);
+    assertEquals("foo", map.entries[8]);
+    assertEquals("bar\n", map.entries[9]);
     assertEquals("bar\n", map.get("foo"));
 
     // 'test':"test"
-    assertSame(test_SINGLETON, map.map[10]);
-    assertSame(test_SINGLETON, map.map[11]);
+    assertSame(test_SINGLETON, map.entries[10]);
+    assertSame(test_SINGLETON, map.entries[11]);
     assertSame(test_SINGLETON, map.get("test"));
   }
 
