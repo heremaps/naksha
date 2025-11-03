@@ -1,3 +1,6 @@
+## Naksha_2.2.14
+- Refactor the `DefaultStorageHandler.java` to make it extensible without modifying the core implementation.
+
 ## Naksha_2.2.13
 - Local testing support for extensions.
 

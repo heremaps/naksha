@@ -40,16 +40,7 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.models.naksha.XyzCollection;
-import com.here.naksha.lib.core.models.storage.EWriteOp;
-import com.here.naksha.lib.core.models.storage.ErrorResult;
-import com.here.naksha.lib.core.models.storage.ReadFeatures;
-import com.here.naksha.lib.core.models.storage.Request;
-import com.here.naksha.lib.core.models.storage.Result;
-import com.here.naksha.lib.core.models.storage.SuccessResult;
-import com.here.naksha.lib.core.models.storage.WriteCollections;
-import com.here.naksha.lib.core.models.storage.WriteFeatures;
-import com.here.naksha.lib.core.models.storage.WriteRequest;
-import com.here.naksha.lib.core.models.storage.XyzCollectionCodec;
+import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
@@ -279,10 +270,28 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull F1<Result, RuntimeException> reattempt,
       @NotNull StopWatch storageTimer) {
     try {
-      return measuredStorageSupplier(() -> singleWrite(ctx, storageImpl, wr), storageTimer);
+      if (wr instanceof WriteXyzCollections wc) {
+        return measuredStorageSupplier(
+            () -> performAtomicWriteCollection(ctx, storageImpl, wc), storageTimer);
+      } else if (wr instanceof WriteFeatures<?, ?, ?> wf) {
+        return measuredStorageSupplier(
+                () -> performAtomicWriteFeatures(ctx, storageImpl, wf), storageTimer);
+      } else {
+        return notImplemented(wr);
+      }
     } catch (RuntimeException re) {
       return reattempt.call(re);
     }
+  }
+
+  private @NotNull Result performAtomicWriteCollection(
+      @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteXyzCollections writeCollections) {
+    return singleWrite(ctx, storageImpl, writeCollections);
+  }
+
+  protected @NotNull Result performAtomicWriteFeatures(
+      @NotNull NakshaContext ctx, @NotNull IStorage storageImpl, @NotNull WriteFeatures<?, ?, ?> wf) {
+    return singleWrite(ctx, storageImpl, wf);
   }
 
   private @NotNull Result singleWrite(
@@ -406,7 +415,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           collection.getId());
-      measuredStorageRunnable(() -> createXyzCollection(ctx, storageImpl, collection), storageTimer);
+      measuredStorageRunnable(() -> createMissingXyzCollection(ctx, storageImpl, collection), storageTimer);
       logger.info("Created collection {}, forwarding the request once again", collection.getId());
       return forwardRequestToStorage(
           ctx, request, storageImpl, collection, ATTEMPT_AFTER_COLLECTION_CREATION, storageTimer);
@@ -472,7 +481,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         .filter(Objects::nonNull);
   }
 
-  private void createXyzCollection(
+  protected void createMissingXyzCollection(
       final @NotNull NakshaContext ctx,
       final @NotNull IStorage storageImpl,
       final @NotNull XyzCollection collection) {
