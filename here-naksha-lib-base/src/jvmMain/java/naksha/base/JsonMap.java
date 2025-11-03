@@ -369,7 +369,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
 
   @Override
   public @Nullable Object put(@NotNull String key, @Nullable Object value) {
-    final var old = put(key, false, value, 1);
+    final var old = _put(key, false, value, 1);
     return old == UNDEFINED ? null : old;
   }
 
@@ -381,7 +381,7 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
    * @return the previous value associated with {@code key}, or {@link Json#UNDEFINED UNDEFINED} if there was no mapping for {@code key}.
    */
   public @Nullable Object set(@NotNull String key, @Nullable Object value) {
-    return put(key, false, value, 1);
+    return _put(key, false, value, 1);
   }
 
   /**
@@ -393,13 +393,12 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
    * @return the previous value associated with {@code key}, or {@link Json#UNDEFINED UNDEFINED} if there was no mapping for {@code key}.
    */
   public @Nullable Object set(@NotNull String key, @Nullable Object value, boolean interned) {
-    return put(key, interned, value, 1);
+    return _put(key, interned, value, 1);
   }
 
-  private @Nullable Object put(@NotNull String key, boolean interned, @Nullable Object value, int min_new_slots) {
+  private @Nullable Object _put(@NotNull String key, boolean interned, @Nullable Object value, int min_new_slots) {
     final var entries = this.entries;
     if (!interned) key = toKey(key);
-    int length = 0;
     int lastEmptyIndex = -1;
     for (int i = 0; i < entries.length; i+=2) {
       final Object k = entries[i];
@@ -410,22 +409,22 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
       }
       if (k == UNDEFINED) {
         lastEmptyIndex = i;
-      } else {
-        length++;
       }
     }
+
     if (lastEmptyIndex >= 0) {
-      entries[lastEmptyIndex] = value;
-      this.length = length + 1;
+      entries[lastEmptyIndex] = key;
+      entries[lastEmptyIndex + 1] = value;
+      this.length++;
       return UNDEFINED;
     }
 
     final var new_entries = Json.ensure_size(entries, entries.length + max(2, min_new_slots << 1), false, UNDEFINED);
-    assert entries != new_entries;
+    assert entries != new_entries && entries.length < new_entries.length;
     new_entries[entries.length] = key;
     new_entries[entries.length+1] = value;
     this.entries = new_entries;
-    this.length = length + 1;
+    this.length++;
     return UNDEFINED;
   }
 
@@ -477,13 +476,13 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
         if (rawKey != null && rawKey.getClass() == String.class) {
           final String key = (String) rawKey;
           final Object value = map_entries[i+1];
-          put(key, true, value, min_new_entries);
+          _put(key, true, value, min_new_entries);
         }
       }
     } else {
       // We need to intern the keys, this is more effort.
       for (final var entry : m.entrySet()) {
-        put(entry.getKey(), false, entry.getValue(), min_new_entries);
+        _put(entry.getKey(), false, entry.getValue(), min_new_entries);
       }
     }
   }
