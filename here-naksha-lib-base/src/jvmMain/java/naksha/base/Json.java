@@ -190,25 +190,23 @@ public final class Json {
    *
    * <p>Algorithmically, iterates the {@code elements} array, and copies back all elements that are not {@link #TOMBSTONE} to positions where previously {@link #TOMBSTONE} was stored. Eventually, filling the rest of the array with {@link #UNDEFINED}. So, removing all {@link #TOMBSTONE} values from the array, compacting the rest of the values, including {@link #UNDEFINED}.
    * @param elements the elements to compact.
-   * @return the new length of the compact array.
+   * @param length the length of the array, so the amount of valid values in it.
+   * @return the new length of the compact array, same as length when nothing was done.
    */
-  public static int array_compact(Object @NotNull [] elements) {
-    int copied = 0;
-    int target = 0;
-    for (int i=0; i < elements.length; i++) {
+  public static int array_compact(Object @NotNull [] elements, int length) {
+    int new_end = 0;
+    for (int i=0; i < length; i++) {
       final var element = elements[i];
       if (element == TOMBSTONE) continue;
-      if (target < i) { // We do not copy to our self.
-        copied++;
-        elements[target] = element;
-      }
-      target += 1;
+      // Avoid copy from `i` to `i`.
+      if (new_end < i) elements[new_end] = element;
+      new_end++;
     }
     // If we did some compaction, fill values behind the last target with UNDEFINED.
-    if (copied > 0) {
-      Arrays.fill(elements, target, elements.length, UNDEFINED);
+    if (new_end < length) {
+      Arrays.fill(elements, new_end, length, UNDEFINED);
     }
-    return target;
+    return new_end;
   }
 
   /**

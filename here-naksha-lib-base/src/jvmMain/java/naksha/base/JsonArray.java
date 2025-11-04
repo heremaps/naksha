@@ -340,15 +340,15 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
   @Override
   public @Nullable Object remove(int index) {
     final var elements = this.elements;
-    final var length = size();
+    final var length = this.length;
     if (index < 0 || index >= length) return null;
     final var removed = elements[index];
-    elements[index] = UNDEFINED;
-    if (length - 1 == index) {
+    elements[index] = TOMBSTONE;
+    if (index == length - 1) {
       // We removed the last element, no need to copy elements.
       this.length = length - 1;
     } else {
-      this.length = array_compact(elements);
+      this.length = array_compact(elements, length);
     }
     return removed;
   }
@@ -372,14 +372,12 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
 
       @Override
       public boolean hasNext() {
-        return index < size();
+        return index < length;
       }
 
       @Override
       public @Nullable Object next() {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
-        }
+        if (!hasNext()) throw new NoSuchElementException();
         lastMoveWasNext = true;
         canRemove = true;
         return elements[index++];
@@ -392,9 +390,7 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
 
       @Override
       public @Nullable Object previous() {
-        if (!hasPrevious()) {
-          throw new NoSuchElementException();
-        }
+        if (!hasPrevious()) throw new NoSuchElementException();
         lastMoveWasNext = false;
         canRemove = true;
         return elements[--index];
@@ -412,9 +408,7 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
 
       @Override
       public void remove() {
-        if (!canRemove) {
-          throw new IllegalStateException();
-        }
+        if (!canRemove) throw new IllegalStateException();
         if (lastMoveWasNext) {
           JsonArray.this.remove(--index);
         } else { // previous
@@ -501,7 +495,7 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
       if (removed == 0) {
           return false;
       }
-      this.length = array_compact(elements);
+      this.length = array_compact(elements, length);
       return true;
   }
 
@@ -521,7 +515,7 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
     if (removed == 0) {
       return false;
     }
-    array_compact(elements);
+    this.length = array_compact(elements, length);
     return true;
   }
 
