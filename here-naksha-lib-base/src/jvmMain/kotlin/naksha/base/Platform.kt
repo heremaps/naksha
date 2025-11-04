@@ -49,6 +49,7 @@ actual class Platform {
                 naksha.base.JsonParser.threadLocalClass.set(JvmParser::class.java)
             }
         }
+
         fun disableNewJsonParser() {
             if (USE_NEW_JSON.compareAndSet(expect=true, update=false)) {
                 naksha.base.JsonParser.threadLocalClass.set(naksha.base.JsonParser::class.java)

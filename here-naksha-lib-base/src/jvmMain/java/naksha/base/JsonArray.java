@@ -132,7 +132,7 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
    * @since 3.0
    */
   public JsonArray(int capacity, int length, @Nullable Object fillWith) {
-    assert capacity > 0;
+    assert capacity >= 0;
     assert length >= 0 && length <= capacity;
     this.elements = Json.ensure_size(EMPTY_ARRAY, capacity, false, fillWith);
     if (length < elements.length) Arrays.fill(this.elements, length, capacity, UNDEFINED);
