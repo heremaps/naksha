@@ -6,6 +6,7 @@ import java.util.NoSuchElementException;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class JsonMapTest {
+
   @Test
   public void test_map_entry_set() {
     final JsonMap map = new JsonMap();
@@ -45,12 +46,17 @@ public class JsonMapTest {
   }
 
   @Test
-    public  void parserTest() {
+  public  void parserTest() {
+    final var newJsonParserEnabled = Platform.PlatformCompanion.useNewJson();
+    Platform.PlatformCompanion.enableNewJsonParser();
+    try {
       final String json = "{\"type\":\"Feature\",\"momType\":\"Topology\",\"id\":\"urn:here::ipc:Topology:12345\",\"geometry\":{\"type\":\"LineString\",\"coordinates\":[[45.0,45.0],[45.0,46.0]]},\"properties\":{\"startNodeId\":\"So long, and thanks for all the fish.\",\"endNodeId\":\"So long, and thanks for all the fish.\",\"leftAdmin\":[{\"range\":{\"endOffset\":1.0,\"startOffset\":0.0},\"value\":{\"id\":\"urn:here::here:admin:82928227\"}}]}}";
-      Platform.PlatformCompanion.enableNewJsonParser();
       Object o = Platform.fromJSON(json);
       assertInstanceOf(JvmMap.class, o);
       var jvmMap = (JvmMap) o;
       assertTrue(jvmMap.containsKey("properties"));
+    } finally {
+      if (!newJsonParserEnabled) Platform.PlatformCompanion.disableNewJsonParser();
+    }
   }
 }

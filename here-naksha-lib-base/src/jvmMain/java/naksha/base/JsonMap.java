@@ -117,8 +117,9 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
    * @see #wrap(Object[], int)
    */
   public <T> JsonMap(@Nullable T @NotNull [] entries, int fromIndex, int toIndex, boolean intern) {
-    int length = toIndex - fromIndex;
-    if (length < 0 || length > entries.length || (length & 1) == 1) throw new IllegalArgumentException("Invalid entries array");
+    final int size = toIndex - fromIndex;
+    if (size < 0 || size > entries.length || (size & 1) == 1) throw new IllegalArgumentException("Invalid entries array");
+    int length = size >> 1;
 
     assert fromIndex >= 0 && fromIndex <= toIndex && toIndex <= entries.length;
     if (!intern) {
