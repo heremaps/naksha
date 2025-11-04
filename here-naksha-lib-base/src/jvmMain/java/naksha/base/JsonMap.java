@@ -513,7 +513,8 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
 
             @Override
             public boolean hasNext() {
-              return index() < map.length;
+              final var entries = JsonMap.this.map;
+              return index() < entries.length;
             }
 
             @Override
@@ -534,7 +535,8 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
               final var entries = JsonMap.this.map;
               entries[index] = UNDEFINED;
               entries[index+1] = UNDEFINED;
-              JsonMap.this.length = size() - 1;
+              JsonMap.this.length--;
+              assert JsonMap.this.length >= 0;
               canRemove = false;
             }
           };
@@ -566,7 +568,8 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
 
           @Override
           public boolean hasNext() {
-            return index() < map.length;
+            final var entries = JsonMap.this.map;
+            return index() < entries.length;
           }
 
           @Override
@@ -585,7 +588,8 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
             final var entries = JsonMap.this.map;
             entries[index] = UNDEFINED;
             entries[index+1] = UNDEFINED;
-            JsonMap.this.length = size() - 1;
+            JsonMap.this.length--;
+            assert JsonMap.this.length >= 0;
             canRemove = false;
           }
         };
@@ -618,7 +622,8 @@ public final class JsonMap implements JsonObject, Map<String, Object> {
 
           @Override
           public boolean hasNext() {
-            return index() < (map.length-2);
+            final var entries = JsonMap.this.map;
+            return index() < entries.length;
           }
 
           @Override
