@@ -61,13 +61,14 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
     /**
      * The payload of the array.
      */
+    @JvmField
     internal var list: MutableList<Any?>? = null
 
     /**
      * Returns the element data of the underlying list.
      * @return the element data of the underlying list; _null_ if no list is used.
      */
-    protected fun elementData(): Array<Any?>? {
+    private fun elementData(): Array<Any?>? {
         val list = this.list
         return if (list != null) getElementDataOf(list) else null
     }
@@ -126,7 +127,7 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
     constructor(vararg entries: Any?) : this() {
         val list: MutableList<Any?>?
         if (entries.isNotEmpty()) {
-            list = if (Platform.useNewJson()) JsonArray() else ArrayList(entries.size + 4)
+            list = if (useNewJson()) JsonArray() else ArrayList(entries.size + 4)
             list.addAll(entries)
         } else {
             list = null
@@ -154,10 +155,10 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
 
     fun getCapacity(): Int = elementData()?.size ?: 0
 
-    open fun list(): MutableList<Any?> {
+    private fun list(): MutableList<Any?> {
         var list = this.list
         if (list == null) {
-            list = if (Platform.useNewJson()) JsonArray() else ArrayList()
+            list = if (useNewJson()) JsonArray() else ArrayList()
             this.list = list
         }
         return list

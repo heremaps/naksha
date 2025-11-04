@@ -17,19 +17,17 @@ open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
         }
     }
 
-    constructor(jsonMap: JsonMap) : this() {
-        this.jsonMap = jsonMap
-    }
-
     /**
      * The key-value pairs; if any.
      */
-    private var map: LinkedHashMap<Any, Any?>? = null
+    @JvmField
+    internal var map: LinkedHashMap<Any, Any?>? = null
 
     /**
      * The key-value pairs; as long as only `String`'s are used as keys and [Platform.useNewJson] is enabled.
      */
-    private var jsonMap: JsonMap? = null
+    @JvmField
+    internal var jsonMap: JsonMap? = null
 
     /**
      * Returns the backing [LinkedHashMap]; if currently backed by a [JsonMap], copies the values from the [JsonMap] into a [LinkedHashMap].

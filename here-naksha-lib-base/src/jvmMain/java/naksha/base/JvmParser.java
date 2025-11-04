@@ -6,12 +6,16 @@ import org.jetbrains.annotations.Nullable;
 public class JvmParser extends JsonParser {
   @Override
   protected @NotNull Object newJsonMap(@Nullable Object @NotNull [] entries, int length) {
-    return new JvmMap(new JsonMap(entries, 0, length, false));
+    final var jvmMap = new JvmMap();
+    jvmMap.jsonMap = new JsonMap(entries, 0, length, false);
+    return jvmMap;
   }
 
   @Override
   protected @NotNull Object newJsonArray(@Nullable Object @NotNull [] elements, int length) {
-    return new JvmList(new JsonArray(elements, 0, length));
+    final var jvmList = new JvmList();
+    jvmList.list = new JsonArray(elements, 0, length);
+    return jvmList;
   }
 
   @Override
