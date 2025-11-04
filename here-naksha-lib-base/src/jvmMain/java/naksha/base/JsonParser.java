@@ -10,8 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static ch.randelshofer.fastdoubleparser.JsonDoubleParser.parseDouble;
 import static java.lang.Character.*;
-import static naksha.base.Json.UNDEFINED;
-import static naksha.base.Json.ensure_size;
+import static naksha.base.Json.*;
 import static naksha.base.StringUtil.intern;
 import static naksha.base.StringUtil.newString;
 import static naksha.base.UTF8.*;
@@ -678,7 +677,7 @@ public class JsonParser {
     final int stack_i = stack_end;
     Object[] data = stack[stack_i];
     if (data == null) {
-      data = ensure_size(Json.EMPTY_ARRAY, 1, false, UNDEFINED);
+      data = ensure_size(EMPTY_ARRAY, 1, false, UNDEFINED);
       stack[stack_i] = data;
     }
     stack_end++;
@@ -687,16 +686,11 @@ public class JsonParser {
 
   /// Release/free the top object[].
   private void releaseAtStack() {
-      final int idx = stack_end - 1;
-      if (idx >= 0) {
-          // Clear the slot to avoid reusing the same Object[] instance if a consumer kept a reference.
-          // This prevents bugs when newJsonMap/newJsonArray retain the provided array (e.g. via JsonMap.wrap).
-          stack[idx] = null;
-          stack_end = idx;
-      } else {
-          // Defensive: ensure stack_end never becomes negative.
-          stack_end = 0;
-      }
+    assert stack_end >= 1;
+    final int stack_i = --stack_end;
+    final var stack = this.stack[stack_i];
+    assert stack != null;
+    Arrays.fill(stack, 0, stack.length, null);
   }
 
   private enum MapParserState {
