@@ -308,7 +308,7 @@ actual class GeoUtil private actual constructor() {
          */
         @JvmStatic
         fun toJtsLineString(coords: LineStringCoord): LineString {
-            val points = coords.map { toJtsCoordinate(it!!) }.toTypedArray()
+            val points: Array<Coordinate> = Array(coords.size) { toJtsCoordinate( coords[it]!! ) }
             return factory.createLineString(points)
         }
 
