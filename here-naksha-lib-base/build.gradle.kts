@@ -1,10 +1,11 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    // we use this, ones we're back to java, currently it breaks the multi-platform build!
+    // alias(libs.plugins.jmh)
 }
 
 description = gatherDescription()
@@ -33,9 +34,17 @@ kotlin {
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 implementation(kotlin("reflect"))
-                api(libs.kotlinx.datetime)
+                implementation(libs.fastdouble)
+                implementation(libs.jetbrains.annotations)
+                api(libs.kotlinx.datetime.get().toString()) {
+                   exclude(group = "org.jetbrains.annotations")
+                }
                 api(libs.lz4.java)
                 implementation(libs.jackson.kotlin)
+                implementation(libs.gson)
+                implementation(libs.jsonio)
+                implementation(libs.fastjson)
+                // implementation(libs.simdjson) // Ones we have Java 25 !
                 // https://mvnrepository.com/artifact/org.slf4j
                 api(libs.slf4j.api)
                 implementation(libs.slf4j.console)
@@ -86,6 +95,10 @@ tasks {
     getByName<ProcessResources>("jvmProcessResources") {
         dependsOn("jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
     }
+//    getByName<JavaCompile>("jvmCompile") {
+//        options.annotationProcessorPath = configurations
+//        options.jm jmhAnnotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.36'
+//    }
     getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
     // Test
     getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }

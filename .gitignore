@@ -26,3 +26,6 @@ release.properties
 /here-naksha-lib-log
 /vault/
 !/vault/README.md
+/json_data/*
+!/json_data/
+!/json_data/README.md

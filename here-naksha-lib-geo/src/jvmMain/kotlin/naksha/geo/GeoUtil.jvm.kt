@@ -308,7 +308,12 @@ actual class GeoUtil private actual constructor() {
          */
         @JvmStatic
         fun toJtsLineString(coords: LineStringCoord): LineString {
-            val points = coords.map { toJtsCoordinate(it!!) }.toTypedArray()
+            val points: Array<Coordinate> = Array(coords.size) {
+                val i = it // This is for debugging, because the debugger does not expose `it`
+                val c = coords[i]
+                assert(c != null) { "Coordinate ${coords[i]} is null" }
+                toJtsCoordinate( c!! )
+            }
             return factory.createLineString(points)
         }
 

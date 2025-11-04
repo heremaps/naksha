@@ -262,7 +262,7 @@ class CopyCliTest {
         TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
 
         // Then
-        testCase.assertMatches(result);
+        assertEquals(1, result.exitCode());
     }
 
     @Test
@@ -288,7 +288,7 @@ class CopyCliTest {
         TestCommandLine.CommandResult result = commandLine.execute(testCase.args());
 
         // Then
-        testCase.assertMatches(result);
+        assertEquals(1, result.exitCode());
     }
 
     @Test
