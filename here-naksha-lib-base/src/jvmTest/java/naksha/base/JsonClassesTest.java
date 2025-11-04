@@ -255,7 +255,10 @@ public class JsonClassesTest {
         assertEquals("second", array.get(1));
         assertEquals("third", array.get(2));
 
-        assertThrows(IndexOutOfBoundsException.class, () -> array.add(4, "invalid"));
+        array.add(4, "last");
+        assertEquals(5 ,array.size());
+        assertSame(Json.UNDEFINED, array.get(3));
+        assertEquals("last", array.get(4));
     }
 
     @Test
@@ -280,9 +283,16 @@ public class JsonClassesTest {
         array.add("original");
         array.add("test");
 
+        assertEquals(2, array.size());
+        assertEquals("original", array.get(0));
+        assertEquals("test", array.get(1));
+
         assertEquals("original", array.set(0, "replaced"));
         assertEquals("replaced", array.get(0));
-        assertThrows(IndexOutOfBoundsException.class, () -> array.set(2, "invalid"));
+
+        array.add(2, "last");
+        assertEquals(3, array.size());
+        assertEquals("last", array.get(2));
     }
 
     @Test

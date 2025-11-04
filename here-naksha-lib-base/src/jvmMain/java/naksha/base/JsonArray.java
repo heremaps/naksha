@@ -238,10 +238,37 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
 
   @Override
   public void add(@Range(from = 0, to = Integer.MAX_VALUE) int index, @Nullable Object element) {
-    // TODO: Fix me, adding at an index not being length, requires coping values forward!
-    elements = ensure_size(elements, index + 1, false, UNDEFINED);
-    elements[index] = element;
-    length++;
+    final var elements = this.elements;
+    final var length = this.length;
+    // Append at the end, so index is the new length!
+    if (index >= length) {
+      final Object[] new_elements;
+      if (index >= elements.length) {
+        new_elements = ensure_size(elements, index + 1, false, UNDEFINED);
+      } else {
+        new_elements = elements;
+      }
+      // This can cause wholes, but that is fine with us.
+      new_elements[index] = element;
+      this.elements = new_elements;
+      this.length = index + 1;
+      return;
+    }
+
+    // We need to move backwards
+    if (length == elements.length) {
+      // Array is full, copy into new array.
+      final var new_elements = new Object[JvmUtil.optimalObjectArrayLength(length+1)];
+      System.arraycopy(elements, 0, new_elements, 0, index);
+      new_elements[index] = element;
+      System.arraycopy(elements, index, new_elements, index+1, length-index);
+      this.elements = new_elements;
+    } else {
+      // There is space in the array, just copy backward.
+      System.arraycopy(elements, index, elements, index + 1, length - index);
+      elements[index] = element;
+    }
+    this.length++;
   }
 
   @Override
@@ -447,8 +474,8 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
     private final int size;
 
     SubList(int fromIndex, int toIndex) {
-      if (fromIndex < 0 || toIndex > size() || fromIndex > toIndex) {
-        throw new IndexOutOfBoundsException("fromIndex: "+fromIndex+", toIndex: "+toIndex+", JsonArray size: "+ elements.length);
+      if (fromIndex < 0 || toIndex > length || fromIndex > toIndex) {
+        throw new IndexOutOfBoundsException("fromIndex: "+fromIndex+", toIndex: "+toIndex+", JsonArray size: "+ length);
       }
       this.offset = fromIndex;
       this.size = toIndex - fromIndex;
