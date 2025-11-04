@@ -392,6 +392,9 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
 
   @Override
   public @NotNull ListIterator<@Nullable Object> listIterator(final int fromIndex) {
+    if (fromIndex < 0 || fromIndex > length) {
+      throw new IndexOutOfBoundsException("Index: "+fromIndex+", JsonArray size: "+size());
+    }
     return new ListIterator<>() {
       private int index = fromIndex;
       private boolean canRemove = false;
@@ -446,7 +449,7 @@ public final class JsonArray implements List<@Nullable Object>, JsonObject, Json
 
       @Override
       public void set(Object o) {
-        if (!lastMoveWasNext && index == 0) {
+        if (!canRemove) {
           throw new IllegalStateException();
         }
         if (lastMoveWasNext) {
