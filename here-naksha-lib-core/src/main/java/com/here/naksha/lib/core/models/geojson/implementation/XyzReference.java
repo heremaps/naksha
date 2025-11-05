@@ -47,7 +47,10 @@ public class XyzReference extends JsonObject {
   @JsonInclude(Include.NON_NULL)
   private @Nullable String spaceId;
 
-  @JsonProperty("featureType")
+  @AvailableSince(NakshaVersion.v2_0_11)
+  public static final String FEATURE_TYPE = "featureType";
+
+  @JsonProperty(FEATURE_TYPE)
   @JsonInclude(Include.NON_NULL)
   private @Nullable String featureType;
 
