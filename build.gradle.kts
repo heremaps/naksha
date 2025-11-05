@@ -544,7 +544,7 @@ project(":here-naksha-app-service") {
 //}
 
 project(":here-naksha-lib-mom10"){
-    description = "Naksha Service"
+    description = "Naksha MOM 10 library"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-handlers"))
