@@ -106,7 +106,7 @@ open class PgMap internal constructor(
         collectionCache[collection.number] = collection
     }
 
-    protected fun invalidateCollection(collection: PgCollection) {
+    fun invalidateCollection(collection: PgCollection) {
         collectionCache.remove(collection.number, collection)
         //collectionNumberById.remove(collection.id, collection.number)
     }
