@@ -21,7 +21,27 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
 import static com.here.naksha.app.service.http.apis.ApiParams.extractParamAsStringList;
 import static com.here.naksha.app.service.http.apis.ApiParams.queryParamsFromRequest;
-import static com.here.naksha.common.http.apis.ApiParamsConst.*;
+import static com.here.naksha.common.http.apis.ApiParamsConst.CLIP_GEO;
+import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_FEATURE_LIMIT;
+import static com.here.naksha.common.http.apis.ApiParamsConst.EAST;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLE;
+import static com.here.naksha.common.http.apis.ApiParamsConst.LAT;
+import static com.here.naksha.common.http.apis.ApiParamsConst.LIMIT;
+import static com.here.naksha.common.http.apis.ApiParamsConst.LON;
+import static com.here.naksha.common.http.apis.ApiParamsConst.MARGIN;
+import static com.here.naksha.common.http.apis.ApiParamsConst.NORTH;
+import static com.here.naksha.common.http.apis.ApiParamsConst.NULL_COORDINATE;
+import static com.here.naksha.common.http.apis.ApiParamsConst.PROPERTY_SEARCH_OP;
+import static com.here.naksha.common.http.apis.ApiParamsConst.RADIUS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.REF_FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.REF_SPACE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.SOUTH;
+import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE;
+import static com.here.naksha.common.http.apis.ApiParamsConst.WEST;
 import static com.here.naksha.lib.core.models.storage.transformation.BufferTransformation.bufferInMeters;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
@@ -30,11 +50,12 @@ import com.here.naksha.app.service.http.ops.PropertySearchUtil;
 import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
 import com.here.naksha.app.service.http.ops.SpatialUtil;
 import com.here.naksha.app.service.http.ops.TagsUtil;
+import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.PropertySelectionPostProcessor;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
-import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzGeometry;
@@ -143,10 +164,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
-      final F1<XyzFeature, XyzFeature> preResponseProcessing =
-          standardReadFeaturesPreResponseProcessing(propPaths, false, null);
       // transform Result to Http FeatureCollection response
-      return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, preResponseProcessing);
+      return transformReadResultToXyzCollectionResponse(
+          result, XyzFeature.class, propSelectionProcessorOrNull(propPaths));
     }
   }
 
@@ -163,10 +183,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
-      final F1<XyzFeature, XyzFeature> preResponseProcessing =
-          standardReadFeaturesPreResponseProcessing(propPaths, false, null);
       // transform Result to Http XyzFeature response
-      return transformReadResultToXyzFeatureResponse(result, XyzFeature.class, preResponseProcessing);
+      return transformReadResultToXyzFeatureResponse(
+          result, XyzFeature.class, propSelectionProcessorOrNull(propPaths));
     }
   }
 
@@ -221,12 +240,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    // we will also apply response preprocessing (like property selection and geometry clipping)
+    // we will also apply feature postprocessing (like property selection and geometry clipping)
     // if any of the options is enabled
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, clip, bbox);
-    return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
+    FeaturePostProcessor<XyzFeature> postProcessor = selectPropertiesAndClip(propPaths, clip, bbox);
+    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
 
   private @NotNull XyzResponse executeFeaturesByTile() {
@@ -274,10 +291,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     // we will also apply response preprocessing (like property selection and geometry clipping)
     // if any of the options is enabled
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, clip, geo);
-    return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
+    FeaturePostProcessor<XyzFeature> postProcessor = selectPropertiesAndClip(propPaths, clip, geo);
+    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
 
   private @NotNull XyzResponse executeSearch() {
@@ -307,11 +322,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
+        result, XyzFeature.class, 0, limit, null, propSelectionProcessorOrNull(propPaths));
   }
 
   private @NotNull XyzResponse executeIterate() {
@@ -349,12 +362,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http FeatureCollection response,
     // restricted by given feature limit and by adding "handle" attribute to support subsequent iteration
     return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, offset, clientLimit, handle, preResponseProcessing);
+        result, XyzFeature.class, offset, clientLimit, handle, propSelectionProcessorOrNull(propPaths));
   }
 
   private @NotNull XyzResponse executeFeaturesByRadius() {
@@ -393,12 +404,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
-    // TODO pass the correct transformed geometry into this method call, also use the boolean clip
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, false, radiusOp.getGeometry());
+    final FeaturePostProcessor<XyzFeature> postProcessor =
+        selectPropertiesAndClip(propPaths, clip, radiusOp.getGeometry());
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
+    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
 
   private @NotNull XyzGeometry obtainReferenceGeometry(
@@ -454,6 +463,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // NOTE : queryParams can be null. Subsequent steps should respect the same.
     final long radius = ApiParams.extractQueryParamAsLong(queryParams, RADIUS, false, 0);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
+    final boolean clip = ApiParams.extractQueryParamAsBoolean(queryParams, CLIP_GEO, false);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
@@ -472,11 +482,16 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
-    // TODO pass the correct transformed geometry into this method call, also use the boolean clip
-    final F1<XyzFeature, XyzFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, false, radiusOp.getGeometry());
+    final FeaturePostProcessor<XyzFeature> postProcessor =
+        selectPropertiesAndClip(propPaths, clip, radiusOp.getGeometry());
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, preResponseProcessing);
+    return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
+  }
+
+  private @Nullable PropertySelectionPostProcessor propSelectionProcessorOrNull(Set<String> propPaths) {
+    if (propPaths == null || propPaths.isEmpty()) {
+      return null;
+    }
+    return new PropertySelectionPostProcessor(propPaths);
   }
 }

@@ -74,7 +74,7 @@ public class Mom10Transformation {
         deltaNs.setChangeState(JsonEnum.get(EChangeState.class, rawChangeState));
       }
       String rawReviewState = (String) moderationInfo.get(DeltaProperties.REVIEW_STATE);
-      if (rawChangeState != null) {
+      if (rawReviewState != null) {
         deltaNs.setReviewState(JsonEnum.get(EReviewState.class, rawReviewState));
       }
       String originId = (String) moderationInfo.get(DeltaProperties.ORIGIN_ID);

@@ -517,6 +517,7 @@ project(":here-naksha-app-service") {
         //implementation(project(":here-naksha-lib-extension"))
         implementation(project(":here-naksha-lib-hub"))
         implementation(project(":here-naksha-common-http"))
+        implementation(project(":here-naksha-lib-mom10"))
 
         implementation(log4j_slf4j)
         implementation(log4j_api)
