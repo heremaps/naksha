@@ -27,8 +27,8 @@ class Mom10VerificationTest {
   private static Stream<Named<VerificationCase>> shouldVerifyIfFeatureIsInMom10() {
     return Stream.of(
         named("10.0.0 version in correct field => true", new VerificationCase(featureWithVersionInMeta("10.0.0"), true)),
-        named("10.0 version in correct field => true", new VerificationCase(featureWithVersionInMeta("10.0.0"), true)),
-        named("10 version in correct field => true", new VerificationCase(featureWithVersionInMeta("10.0.0"), true)),
+        named("10.0 version in correct field => false", new VerificationCase(featureWithVersionInMeta("10.0"), false)),
+        named("10 version in correct field => false", new VerificationCase(featureWithVersionInMeta("10"), false)),
         named("10.0.1-lorem-ipsum version in correct field => true", new VerificationCase(featureWithVersionInMeta("10.0.1-lorem-ipsum"), true)),
         named("12.0.3 version in correct field => true", new VerificationCase(featureWithVersionInMeta("12.0.3"), true)),
         named("9.9.9 version in correct field => false", new VerificationCase(featureWithVersionInMeta("9.9.9"), false)),

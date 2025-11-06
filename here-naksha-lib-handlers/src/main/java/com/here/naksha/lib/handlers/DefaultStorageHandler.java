@@ -271,11 +271,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull StopWatch storageTimer) {
     try {
       if (wr instanceof WriteXyzCollections wc) {
-        return measuredStorageSupplier(
-            () -> performAtomicWriteCollection(ctx, storageImpl, wc), storageTimer);
+        return measuredStorageSupplier(() -> performAtomicWriteCollection(ctx, storageImpl, wc), storageTimer);
       } else if (wr instanceof WriteFeatures<?, ?, ?> wf) {
-        return measuredStorageSupplier(
-                () -> performAtomicWriteFeatures(ctx, storageImpl, wf), storageTimer);
+        return measuredStorageSupplier(() -> performAtomicWriteFeatures(ctx, storageImpl, wf), storageTimer);
       } else {
         return notImplemented(wr);
       }

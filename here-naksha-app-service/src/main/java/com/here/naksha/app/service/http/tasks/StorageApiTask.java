@@ -18,13 +18,14 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.ops.MaskingUtil.maskProperties;
 import static com.here.naksha.common.http.apis.ApiParamsConst.STORAGE_ID;
 import static com.here.naksha.lib.core.NakshaAdminCollection.STORAGES;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.MaskingPostProcessor;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
@@ -47,6 +48,7 @@ import org.slf4j.LoggerFactory;
 public class StorageApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(StorageApiTask.class);
+  private static final FeaturePostProcessor<Storage> STORAGE_MASKING = new MaskingPostProcessor<>();
   private final @NotNull StorageApiReqType reqType;
 
   public enum StorageApiReqType {
@@ -104,8 +106,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   private @NotNull XyzResponse executeGetStorages() {
     final ReadFeatures request = new ReadFeatures(STORAGES);
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(
-          rdResult, Storage.class, this::storageWithMaskedSensitiveProperties);
+      return transformReadResultToXyzCollectionResponse(rdResult, Storage.class, STORAGE_MASKING);
     }
   }
 
@@ -137,30 +138,22 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final WriteXyzFeatures wrRequest = RequestHelper.deleteFeatureByIdRequest(STORAGES, storageId);
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
-      return transformDeleteResultToXyzFeatureResponse(
-          wrResult, Storage.class, this::storageWithMaskedSensitiveProperties);
+      return transformDeleteResultToXyzFeatureResponse(wrResult, Storage.class, STORAGE_MASKING);
     }
   }
 
   @NotNull
   private XyzResponse transformResponseFor(ReadFeatures request) {
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzFeatureResponse(
-          rdResult, Storage.class, this::storageWithMaskedSensitiveProperties);
+      return transformReadResultToXyzFeatureResponse(rdResult, Storage.class, STORAGE_MASKING);
     }
   }
 
   @NotNull
   private XyzResponse transformResponseFor(WriteXyzFeatures updateStorageReq) {
     try (Result updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq)) {
-      return transformWriteResultToXyzFeatureResponse(
-          updateStorageResult, Storage.class, this::storageWithMaskedSensitiveProperties);
+      return transformWriteResultToXyzFeatureResponse(updateStorageResult, Storage.class, STORAGE_MASKING);
     }
-  }
-
-  private Storage storageWithMaskedSensitiveProperties(Storage storage) {
-    maskProperties(storage);
-    return storage;
   }
 
   private @NotNull Storage storageFromRequestBody() throws JsonProcessingException {
