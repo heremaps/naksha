@@ -29,7 +29,7 @@ import com.here.naksha.lib.core.models.storage.ErrorResult;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.mom10.Mom10Verification;
-import com.here.naksha.mom10.transform.Mom10Transformation;
+import com.here.naksha.mom10.Mom10Transformation;
 import java.util.Collections;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
