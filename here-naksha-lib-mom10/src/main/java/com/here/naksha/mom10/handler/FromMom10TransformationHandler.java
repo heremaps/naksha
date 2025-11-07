@@ -35,6 +35,12 @@ import java.util.Collections;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Handler responsible for populating outdated (pre MOM 10) namespaces: `@ns:com:here:mom:meta` and '@ns:com:here:mom:meta`.
+ * The feature modification happens in-place, no other properties are modified.
+ * This handler works only for features of MOM version 10 and above. It is intended to be part of the writing pipeline.
+ * Reading of features process with this handler should be done with use of {@link ToMom10TransformationHandler}
+ */
 public final class FromMom10TransformationHandler extends AbstractEventHandler {
 
   public FromMom10TransformationHandler(@NotNull INaksha hub) {
@@ -54,7 +60,7 @@ public final class FromMom10TransformationHandler extends AbstractEventHandler {
     TransformFromMom10Request request = (TransformFromMom10Request) event.getRequest();
     List<XyzFeature> features = featuresOrEmptyList(request);
     try {
-      features.forEach(this::validateVersionAndDropMeta);
+      features.forEach(this::validateVersionAndPopulatePreMom10Namespaces);
     } catch (IllegalArgumentException iae) {
       return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "MOM 10 transformation failed", iae);
     }
@@ -69,9 +75,9 @@ public final class FromMom10TransformationHandler extends AbstractEventHandler {
     return features;
   }
 
-  private void validateVersionAndDropMeta(@NotNull XyzFeature feature) {
+  private void validateVersionAndPopulatePreMom10Namespaces(@NotNull XyzFeature feature) {
     if (Mom10Verification.isMom10OrGreater(feature)) {
-      Mom10Transformation.dropMom10Meta(feature);
+      Mom10Transformation.populatePreMom10Namespaces(feature);
     } else {
       throw new IllegalArgumentException("Feature '" + feature.getId() + "' has version < 10.0.0");
     }

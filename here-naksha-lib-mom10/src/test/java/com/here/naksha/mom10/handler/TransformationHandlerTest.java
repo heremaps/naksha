@@ -41,20 +41,20 @@ abstract class TransformationHandlerTest {
   protected Stream<TransformationSample> samplesWithModelVersion(@NotNull String modelVersion) {
     return TransformationSamples.streamSamples()
         .peek(sample -> {
-          forceModelVersion(sample.original(), modelVersion);
-          forceModelVersion(sample.transformed(), modelVersion);
+          forceModelVersion(sample.mom10(), modelVersion);
+          forceModelVersion(sample.nakshaInternal(), modelVersion);
         });
   }
 
   private void forceModelVersion(@NotNull XyzFeature feature, @NotNull String modelVersion) {
     XyzProperties properties = feature.getProperties();
-    if(properties.containsKey(MetaProperties.META)){
-      Map meta = (Map) properties.get(MetaProperties.META);
+    Map meta = (Map) properties.get(MetaProperties.META);
+    if(meta != null){
       meta.put(MetaProperties.MODEL_VERSION, modelVersion);
     }
-    if(properties.containsKey(XyzProperties.HERE_META_NS)){
-      Map meta = (Map) properties.get(XyzProperties.HERE_META_NS);
-      meta.put(MetaProperties.MODEL_VERSION, modelVersion);
+    Map metaNs = (Map) properties.get(XyzProperties.HERE_META_NS);
+    if(metaNs != null){
+      metaNs.put(MetaProperties.MODEL_VERSION, modelVersion);
     }
   }
 

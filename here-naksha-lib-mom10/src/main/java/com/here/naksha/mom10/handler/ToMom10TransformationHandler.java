@@ -34,6 +34,11 @@ import java.util.Collections;
 import java.util.List;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * Handler responsible for dropping outdated (pre MOM 10) namespaces: `@ns:com:here:mom:meta` and '@ns:com:here:mom:meta`.
+ * The feature modification happens in-place, no other properties are modified.
+ * This handler works only for features of MOM version 10 and above and should be used only for reading features that were previously written with use of {@link FromMom10TransformationHandler}
+ */
 public final class ToMom10TransformationHandler extends AbstractEventHandler {
 
   public ToMom10TransformationHandler(@NotNull INaksha hub) {
@@ -53,7 +58,7 @@ public final class ToMom10TransformationHandler extends AbstractEventHandler {
     TransformToMom10Request request = (TransformToMom10Request) event.getRequest();
     List<XyzFeature> features = featuresOrEmptyList(request);
     try {
-      features.forEach(this::validateVersionAndPopulateMeta);
+      features.forEach(this::validateVersionAndDropPreMom10Namespaces);
     } catch (IllegalArgumentException iae) {
       return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, "MOM 10 transformation failed", iae);
     }
@@ -68,10 +73,11 @@ public final class ToMom10TransformationHandler extends AbstractEventHandler {
     return features;
   }
 
-  private void validateVersionAndPopulateMeta(@NotNull XyzFeature feature) {
+  private void validateVersionAndDropPreMom10Namespaces(@NotNull XyzFeature feature) {
     if (Mom10Verification.isMom10OrGreater(feature)) {
-      throw new IllegalArgumentException("Feature '" + feature.getId() + "' has version >= 10.0.0");
+      Mom10Transformation.dropPreMom10Namespaces(feature);
+    } else {
+      throw new IllegalArgumentException("Feature '" + feature.getId() + "' has version < 10.0.0");
     }
-    Mom10Transformation.populateMom10Meta(feature);
   }
 }
