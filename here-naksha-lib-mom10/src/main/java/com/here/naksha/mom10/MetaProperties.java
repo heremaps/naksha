@@ -42,11 +42,6 @@ public class MetaProperties {
    */
   public static final String CONFIDENCE = "confidence";
 
-  /**
-   * TODO
-   */
-  public static final String EXTERNAL_IDS = "externalIds";
-
   public static final String SOURCE_INFO = "sourceInfo";
 
   /**

@@ -16,10 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.mom10.transform;
+package com.here.naksha.mom10;
 
 import static com.here.naksha.mom10.MetaProperties.CONFIDENCE;
-import static com.here.naksha.mom10.MetaProperties.EXTERNAL_IDS;
 import static com.here.naksha.mom10.MetaProperties.META;
 import static com.here.naksha.mom10.MetaProperties.MODERATION_INFO;
 import static com.here.naksha.mom10.MetaProperties.SOURCE_INFO;
@@ -30,9 +29,7 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EChange
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReviewState;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereMetaNs;
-import com.here.naksha.lib.core.util.json.JsonObject;
 import java.util.Map;
-import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 

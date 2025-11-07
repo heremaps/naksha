@@ -2,6 +2,7 @@ package com.here.naksha.mom10.transform;
 
 import static com.here.naksha.mom10.util.FeaturesAssertionUtil.assertFeaturesEqual;
 
+import com.here.naksha.mom10.Mom10Transformation;
 import com.here.naksha.mom10.TransformationSamples.TransformationSample;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
