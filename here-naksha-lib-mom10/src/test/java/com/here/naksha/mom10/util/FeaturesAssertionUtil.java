@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import com.here.naksha.lib.core.util.json.JsonEnum;
 import com.here.naksha.mom10.MetaProperties;
 import java.util.HashSet;
@@ -27,6 +28,12 @@ public class FeaturesAssertionUtil {
       "parentLink", "originId"
   );
 
+  private static final Set<String> IGNORE_IF_NULL = Set.of(
+      XyzProperties.HERE_DELTA_NS,
+      XyzProperties.HERE_META_NS,
+      XyzProperties.XYZ_ACTIVITY_LOG_NS
+  );
+
   public static void assertFeaturesEqual(XyzFeature expectedFeature, XyzFeature actualFeature) {
     assertMapsEqual(expectedFeature, actualFeature, "");
   }
@@ -35,11 +42,25 @@ public class FeaturesAssertionUtil {
     if (Objects.equals(path, MODERATION_INFO_PATH)) {
       verifyAndDropNullsSetByNaksha(expected, actual);
     }
+    if (Objects.equals(path, XyzFeature.PROPERTIES)) {
+      dropIgnoredIfNulls(expected, actual);
+    }
     assertEquals(expected.size(), actual.size(), "Map size mismatch under path: " + path);
     expected.forEach((key, expectedValue) -> {
       Object actualValue = actual.get(key);
       assertObjectEqual(expectedValue, actualValue, (path.isEmpty() ? key.toString() : path + "." + key));
     });
+  }
+
+  private static void dropIgnoredIfNulls(Map expected, Map actual) {
+    for (String key : IGNORE_IF_NULL) {
+      if (expected.containsKey(key) && expected.get(key) == null) {
+        expected.remove(key);
+      }
+      if (actual.containsKey(key) && actual.get(key) == null) {
+        actual.remove(key);
+      }
+    }
   }
 
   private static void verifyAndDropNullsSetByNaksha(Map expectedModerationInfo, Map actualModerationInfo) {

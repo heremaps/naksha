@@ -19,25 +19,15 @@
   },
   "id": "12345",
   "properties": {
-    "featureType": "Crosswalk",
-    "isoCountryCode": "AUS",
-    "@ns:com:here:mom:meta": {
-      "hashPayload": "C63BB99145BDFE16E2DD838D2AB55635",
-      "createdTS": "2018-02-27T21:06:55.789Z",
-      "lastUpdatedTS": "2018-02-27T21:06:55.789Z",
-      "updatedByUser": "dbhattac",
-      "modelVersion": "2.0.0",
-      "sourceId": "1234abcde6789"
-    },
-    "classificationEstimate": {
-      "classificationStyle": "SOLID"
-    },
     "meta": {
       "createdTS": "2018-02-27T21:06:55.789Z",
       "lastUpdatedTS": "2018-02-27T21:06:55.789Z",
       "updatedByUser": "dbhattac",
-      "modelVersion": "2.0.0",
+      "modelVersion": "10.0.0",
       "sourceId": "1234abcde6789"
+    },
+    "classificationEstimate": {
+      "classificationStyle": "SOLID"
     }
   }
 }

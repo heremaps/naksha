@@ -22,66 +22,71 @@ import static com.here.naksha.mom10.MetaProperties.CONFIDENCE;
 import static com.here.naksha.mom10.MetaProperties.EXTERNAL_IDS;
 import static com.here.naksha.mom10.MetaProperties.META;
 import static com.here.naksha.mom10.MetaProperties.MODERATION_INFO;
+import static com.here.naksha.mom10.MetaProperties.SOURCE_INFO;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EChangeState;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReviewState;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereMetaNs;
 import com.here.naksha.lib.core.util.json.JsonObject;
+import java.util.Map;
 import java.util.Set;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class Mom10Transformation {
   private Mom10Transformation() {}
 
-  public static void populateMom10Meta(@Nullable XyzFeature feature) {
+  public static void populatePreMom10Namespaces(@Nullable XyzFeature feature) {
     if (feature == null) {
       return;
     }
+
     XyzProperties properties = feature.getProperties();
-    if (properties.containsKey(META)) {
-      throw new IllegalArgumentException(
-          "This feature (id= " + feature.getId() + ") already contains the '" + META + "' property");
-    }
+    Map<String, Object> meta = (Map<String, Object>) properties.get(META);
+    if (meta != null) {
+      Map<String, Object> moderationInfo = (Map<String, Object>) meta.get(MODERATION_INFO);
+      if (moderationInfo != null) {
+        HereDeltaNs deltaNs = deltaNsFromModerationInfo(moderationInfo);
+        properties.setDeltaNamespace(deltaNs);
+      }
 
-    JsonObject oldMetaNs = properties.getMetaNamespace();
-    JsonObject mom10Meta;
-    if (oldMetaNs != null) {
-      mom10Meta = oldMetaNs.deepClone();
-      drop(mom10Meta, OutdatedProperties.OUTDATED_META_PROPERTIES);
-    } else {
-      mom10Meta = new JsonObject();
+      if (!meta.isEmpty()) {
+        HereMetaNs metaNs = new HereMetaNs();
+        metaNs.putAll(meta);
+        // remove properties that before MOM 10 lived in root properties
+        metaNs.remove(CONFIDENCE);
+        metaNs.remove(MODERATION_INFO);
+        metaNs.remove(SOURCE_INFO);
+        properties.setMetaNamespace(metaNs);
+      }
     }
-
-    JsonObject oldDeltaNs = properties.getDeltaNamespace();
-    if (oldDeltaNs != null) {
-      JsonObject mom10ModerationInfo = oldDeltaNs.deepClone();
-      drop(mom10ModerationInfo, OutdatedProperties.OUTDATED_DELTA_PROPERTIES);
-      mom10Meta.put(MODERATION_INFO, mom10ModerationInfo);
-    }
-
-    Object confidence = properties.get(CONFIDENCE);
-    if (confidence != null) {
-      mom10Meta.put(CONFIDENCE, confidence);
-    }
-
-    Object externalIds = properties.get(EXTERNAL_IDS);
-    if (externalIds != null) {
-      mom10Meta.put(EXTERNAL_IDS, externalIds);
-    }
-
-    properties.put(META, mom10Meta);
   }
 
-  public static void dropMom10Meta(@Nullable XyzFeature feature) {
-    if (feature == null) {
-      return;
+  private static HereDeltaNs deltaNsFromModerationInfo(@NotNull Map<String, Object> moderationInfo) {
+    HereDeltaNs deltaNs = new HereDeltaNs();
+    String rawChangeState = (String) moderationInfo.get(HereDeltaNs.CHANGE_STATE_PROPERTY);
+    if (rawChangeState != null) {
+      deltaNs.setChangeState(EChangeState.get(EChangeState.class, rawChangeState));
     }
-    XyzProperties properties = feature.getProperties();
-    properties.remove(META);
+    String rawReviewState = (String) moderationInfo.get(HereDeltaNs.REVIEW_STATE_PROPERTY);
+    if (rawChangeState != null) {
+      deltaNs.setReviewState(EReviewState.get(EReviewState.class, rawReviewState));
+    }
+    for (Map.Entry<String, Object> entry : moderationInfo.entrySet()) {
+      if (!entry.getKey().equals(HereDeltaNs.CHANGE_STATE_PROPERTY)
+          && !entry.getKey().equals(HereDeltaNs.REVIEW_STATE_PROPERTY)) {
+        deltaNs.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return deltaNs;
   }
 
-  private static void drop(JsonObject bearer, Set<String> propertyNames) {
-    for (String propertyName : propertyNames) {
-      bearer.remove(propertyName);
-    }
+  public static void dropPreMom10Namespaces(@Nullable XyzFeature feature) {
+    XyzProperties properties = feature.getProperties();
+    properties.remove(XyzProperties.HERE_META_NS);
+    properties.remove(XyzProperties.HERE_DELTA_NS);
   }
 }

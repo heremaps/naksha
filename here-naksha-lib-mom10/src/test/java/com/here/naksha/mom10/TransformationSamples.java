@@ -20,8 +20,8 @@ public class TransformationSamples {
 
   public record TransformationSample(
       String sourceDir,
-      XyzFeature original,
-      XyzFeature transformed
+      XyzFeature mom10,
+      XyzFeature nakshaInternal
   ) {
 
     @Override
@@ -46,16 +46,16 @@ public class TransformationSamples {
   private static TransformationSample copy(TransformationSample base) {
     return new TransformationSample(
         base.sourceDir,
-        base.original.deepClone(),
-        base.transformed.deepClone()
+        base.mom10.deepClone(),
+        base.nakshaInternal.deepClone()
     );
   }
 
   private static class SamplesLoader {
 
     private static final String TEST_DIR = "/transformation_samples";
-    private static final String ORIGINAL_JSON = "original.json";
-    private static final String TRANSFORMED_JSON = "transformed.json";
+    private static final String MOM_10_JSON = "mom_10.json";
+    private static final String NAKSHA_INTERNAL_JSON = "naksha_internal.json";
 
     // initialization on demand
     private static final List<TransformationSample> LOADED_SAMPLES;
@@ -80,8 +80,8 @@ public class TransformationSamples {
 
     private static TransformationSample loadSampleFrom(Path dir) {
       try {
-        byte[] rawBefore = readAllBytes(dir.resolve(ORIGINAL_JSON));
-        byte[] rawAfter = readAllBytes(dir.resolve(TRANSFORMED_JSON));
+        byte[] rawBefore = readAllBytes(dir.resolve(MOM_10_JSON));
+        byte[] rawAfter = readAllBytes(dir.resolve(NAKSHA_INTERNAL_JSON));
         return new TransformationSample(
             dir.getFileName().toString(),
             JsonSerializable.deserialize(rawBefore, XyzFeature.class),

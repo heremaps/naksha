@@ -16,18 +16,10 @@
       "createdAt": 1713953775997,
       "updatedAt": 1713953775997
     },
-    "@ns:com:here:mom:meta": {
-      "createdTS": "2024-04-24T10:16:15.787710027Z",
-      "modelVersion": "1.7.6-mapObjects"
-    },
-    "@ns:com:here:mom:delta": {
-      "changeState": "CREATED",
-      "reviewState": "PENDING"
-    },
     "featureType": "TopologyPointAnchor",
     "meta": {
       "createdTS": "2024-04-24T10:16:15.787710027Z",
-      "modelVersion": "1.7.6-mapObjects",
+      "modelVersion": "10.0.0",
       "moderationInfo": {
         "changeState": "CREATED",
         "reviewState": "PENDING"

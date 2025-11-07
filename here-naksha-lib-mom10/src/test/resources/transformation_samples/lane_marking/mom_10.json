@@ -25,18 +25,8 @@
         }
       ]
     },
-    "@ns:com:here:xyz": {
-      "tags": [],
-      "space": "a3gf23Wx",
-      "createdAt": 1632493990414,
-      "updatedAt": 1632493990414,
-      "version": 0
-    },
-    "@ns:com:here:mom:meta": {
-      "modelVersion": "2.0.0"
-    },
     "meta": {
-      "modelVersion": "2.0.0",
+      "modelVersion": "10.0.0",
       "confidence": {
         "simpleScores": [
           {

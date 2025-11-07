@@ -16,18 +16,10 @@
         "orientation": "FROM_FIRST"
       }
     ],
-    "@ns:com:here:mom:meta": {
-      "createdTS": "2024-04-23T21:39:16.640795206Z",
-      "modelVersion": "1.7.6-mapObjects"
-    },
-    "@ns:com:here:mom:delta": {
-      "changeState": "CREATED",
-      "reviewState": "PENDING"
-    },
     "featureType": "TopologyRangeAnchor",
     "meta": {
       "createdTS": "2024-04-23T21:39:16.640795206Z",
-      "modelVersion": "1.7.6-mapObjects",
+      "modelVersion": "10.0.0",
       "moderationInfo": {
         "changeState": "CREATED",
         "reviewState": "PENDING"

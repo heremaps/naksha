@@ -10,24 +10,24 @@ class Mom10TransformationTest {
 
   @ParameterizedTest
   @MethodSource("com.here.naksha.mom10.TransformationSamples#streamSamples")
-  void shouldPopulateMom10Meta(TransformationSample versionedFeatures) {
+  void shouldPopulatePreMom10Namespaces(TransformationSample versionedFeatures) {
     // When
-    Mom10Transformation.populateMom10Meta(versionedFeatures.original());
+    Mom10Transformation.populatePreMom10Namespaces(versionedFeatures.mom10());
 
     // Then:
     assertFeaturesEqual(
-        versionedFeatures.transformed(), // expected - untouched
-        versionedFeatures.original() // actual - transformed
+        versionedFeatures.nakshaInternal(), // expected - untouched
+        versionedFeatures.mom10() // actual - transformed
     );
   }
 
   @ParameterizedTest
   @MethodSource("com.here.naksha.mom10.TransformationSamples#streamSamples")
-  void shouldDropMom10Meta(TransformationSample versionedFeatures) {
+  void shouldDropPreMom10Namespaces(TransformationSample versionedFeatures) {
     // When
-    Mom10Transformation.dropMom10Meta(versionedFeatures.transformed());
+    Mom10Transformation.dropPreMom10Namespaces(versionedFeatures.nakshaInternal());
 
     // Then:
-    assertFeaturesEqual(versionedFeatures.original(), versionedFeatures.transformed());
+    assertFeaturesEqual(versionedFeatures.mom10(), versionedFeatures.nakshaInternal());
   }
 }

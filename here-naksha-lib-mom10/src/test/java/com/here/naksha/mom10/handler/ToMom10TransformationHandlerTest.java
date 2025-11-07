@@ -1,7 +1,10 @@
 package com.here.naksha.mom10.handler;
 
+import static com.here.naksha.mom10.TransformationSamples.streamSamples;
 import static com.here.naksha.mom10.util.FeaturesAssertionUtil.assertFeaturesEqual;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.exceptions.NoCursor;
@@ -12,9 +15,7 @@ import com.here.naksha.lib.core.models.storage.Request;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.util.storage.ResultHelper;
 import com.here.naksha.mom10.TransformationSamples.TransformationSample;
-import com.here.naksha.mom10.handler.TransformationSuccess.FromMom10;
 import com.here.naksha.mom10.handler.TransformationSuccess.ToMom10;
-import com.here.naksha.mom10.util.FeaturesAssertionUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -28,17 +29,17 @@ class ToMom10TransformationHandlerTest extends TransformationHandlerTest {
   private final ToMom10TransformationHandler handler = new ToMom10TransformationHandler(naksha);
 
   @Test
-  void shouldPopulateMetaInFeatures() throws NoCursor {
+  void shouldDropPreMom10Namespaces() throws NoCursor {
     // Given
-    List<XyzFeature> preMom10Features = new ArrayList<>();
-    List<XyzFeature> expectedFeaturesWithMeta = new ArrayList<>();
-    samplesWithModelVersion("9.9.7").forEach(sample -> {
-      preMom10Features.add(sample.original());
-      expectedFeaturesWithMeta.add(sample.transformed());
+    List<XyzFeature> nakshaInternalFeatures = new ArrayList<>();
+    List<XyzFeature> mom10Features = new ArrayList<>();
+    streamSamples().forEach(sample -> {
+      nakshaInternalFeatures.add(sample.nakshaInternal());
+      mom10Features.add(sample.mom10());
     });
 
     // And
-    IEvent event = event(new TransformToMom10Request(preMom10Features));
+    IEvent event = event(new TransformToMom10Request(nakshaInternalFeatures));
 
     // When
     Result result = handler.processEvent(event);
@@ -48,9 +49,9 @@ class ToMom10TransformationHandlerTest extends TransformationHandlerTest {
 
     // And
     List<XyzFeature> handledFeatures = ResultHelper.readFeaturesFromResult(success, XyzFeature.class);
-    assertEquals(expectedFeaturesWithMeta.size(), handledFeatures.size());
-    for (int i = 0; i < expectedFeaturesWithMeta.size(); i++) {
-      assertFeaturesEqual(expectedFeaturesWithMeta.get(i), handledFeatures.get(i));
+    assertEquals(mom10Features.size(), handledFeatures.size());
+    for (int i = 0; i < mom10Features.size(); i++) {
+      assertFeaturesEqual(mom10Features.get(i), handledFeatures.get(i));
     }
   }
 
@@ -83,9 +84,9 @@ class ToMom10TransformationHandlerTest extends TransformationHandlerTest {
   }
 
   @Test
-  void shouldFailWhenVersionTooHigh() {
+  void shouldFailWhenVersionTooLow() {
     // Given:
-    List<XyzFeature> featuresWithVersionTooHigh = samplesWithModelVersion("10.0.0").map(TransformationSample::transformed).toList();
+    List<XyzFeature> featuresWithVersionTooHigh = samplesWithModelVersion("9.9.7").map(TransformationSample::nakshaInternal).toList();
     IEvent event = event(new TransformToMom10Request(featuresWithVersionTooHigh));
 
     // When: handling empty event

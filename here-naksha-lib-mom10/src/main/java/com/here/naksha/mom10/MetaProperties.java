@@ -42,10 +42,15 @@ public class MetaProperties {
    */
   public static final String CONFIDENCE = "confidence";
 
+  /**
+   * TODO
+   */
   public static final String EXTERNAL_IDS = "externalIds";
 
+  public static final String SOURCE_INFO = "sourceInfo";
+
   /**
-   * SOurce of truth about model version - required since MOM 10.0.0
+   * Source of truth about model version - required since MOM 10.0.0
    */
   public static final String MODEL_VERSION = "modelVersion";
 }
