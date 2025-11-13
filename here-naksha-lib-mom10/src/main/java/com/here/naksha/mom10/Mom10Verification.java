@@ -28,8 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 public class Mom10Verification {
 
-  private static final Pattern SEM_VER_PATTERN = Pattern.compile(
-      "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$");
+  private static final Pattern SHORT_SEM_VER = Pattern.compile("^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\..+$");
 
   private Mom10Verification() {}
 
@@ -50,7 +49,7 @@ public class Mom10Verification {
   }
 
   private static @Nullable Integer getMajorFrom(@NotNull String modelVersion) {
-    Matcher matcher = SEM_VER_PATTERN.matcher(modelVersion);
+    Matcher matcher = SHORT_SEM_VER.matcher(modelVersion);
     if (matcher.find()) {
       try {
         return Integer.parseInt(matcher.group(1));

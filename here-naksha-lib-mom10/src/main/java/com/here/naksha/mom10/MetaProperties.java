@@ -19,6 +19,9 @@
 package com.here.naksha.mom10;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Some of Meta-related properties from MOM 10
@@ -33,19 +36,58 @@ public class MetaProperties {
   public static final String META = "meta";
 
   /**
+   * Source of truth about model version - required since MOM 10.0.0, optional before
+   */
+  public static final String MODEL_VERSION = "modelVersion";
+
+  /*
+  https://docs.in.here.com/static/169823/1467398/html/#com/here/mom/internal/component/meta/metadata.html
+  */
+  private static final Set<String> META_NAMESPACE_PROPERTIES = Set.of(
+      "createdTS",
+      "hashPayload",
+      "lastObservedTS",
+      "lastReviewedTS",
+      "lastUpdatedBy",
+      "lastUpdatedTS",
+      "layerId",
+      MODEL_VERSION,
+      "operation",
+      "owner",
+      "protectionFlags",
+      "sourceId",
+      "tid",
+      "updatedByApp",
+      "updatedByUser");
+
+  /**
    * Renamed from {@link XyzProperties#HERE_DELTA_NS} and moved under {@link MetaProperties#META}
    */
   public static final String MODERATION_INFO = "moderationInfo";
 
-  /**
-   * Moved from {@link XyzProperties#HERE_DELTA_NS} to {@link MetaProperties#META}
-   */
-  public static final String CONFIDENCE = "confidence";
+  // https://here-dev.zoominsoftware.io/docs/bundle/map-object-model-data-specification-10/page/com/here/mom/internal/component/meta/metadata.html
+  private static final Set<String> MOM_10_META_PROPERTIES = Set.of(
+      "confidence",
+      "createdTS",
+      "externalIds",
+      "keyValues",
+      "lastUpdatedBy",
+      "lastUpdatedTS",
+      "layerId",
+      MODEL_VERSION, // "modelVersion"
+      MODERATION_INFO, // "moderationInfo"
+      "protectionFlags",
+      "sourceId",
+      "sourceInfo",
+      "tags",
+      "updatedByApp",
+      "updatedByUser");
 
-  public static final String SOURCE_INFO = "sourceInfo";
+  static final Set<String> COMMON_META_PROPERTIES;
 
-  /**
-   * Source of truth about model version - required since MOM 10.0.0
-   */
-  public static final String MODEL_VERSION = "modelVersion";
+  static {
+    HashSet<String> metaProperties = new HashSet<>(META_NAMESPACE_PROPERTIES);
+    metaProperties.retainAll(MOM_10_META_PROPERTIES);
+    COMMON_META_PROPERTIES = Collections.unmodifiableSet(metaProperties);
+  }
 }

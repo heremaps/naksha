@@ -18,10 +18,9 @@
  */
 package com.here.naksha.mom10;
 
-import static com.here.naksha.mom10.MetaProperties.CONFIDENCE;
+import static com.here.naksha.mom10.MetaProperties.COMMON_META_PROPERTIES;
 import static com.here.naksha.mom10.MetaProperties.META;
 import static com.here.naksha.mom10.MetaProperties.MODERATION_INFO;
-import static com.here.naksha.mom10.MetaProperties.SOURCE_INFO;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
@@ -29,11 +28,13 @@ import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EChange
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReviewState;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereMetaNs;
+import com.here.naksha.lib.core.util.json.JsonEnum;
 import java.util.Map;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class Mom10Transformation {
+
   private Mom10Transformation() {}
 
   public static void populatePreMom10Namespaces(@Nullable XyzFeature feature) {
@@ -43,42 +44,53 @@ public class Mom10Transformation {
 
     XyzProperties properties = feature.getProperties();
     Map<String, Object> meta = (Map<String, Object>) properties.get(META);
-    if (meta != null) {
-      Map<String, Object> moderationInfo = (Map<String, Object>) meta.get(MODERATION_INFO);
-      if (moderationInfo != null) {
-        HereDeltaNs deltaNs = deltaNsFromModerationInfo(moderationInfo);
+    if (meta != null && !meta.isEmpty()) {
+      HereDeltaNs deltaNs = deltaNs(meta);
+      if (deltaNs != null) {
         properties.setDeltaNamespace(deltaNs);
       }
-
-      if (!meta.isEmpty()) {
-        HereMetaNs metaNs = new HereMetaNs();
-        metaNs.putAll(meta);
-        // remove properties that before MOM 10 lived in root properties
-        metaNs.remove(CONFIDENCE);
-        metaNs.remove(MODERATION_INFO);
-        metaNs.remove(SOURCE_INFO);
+      HereMetaNs metaNs = metaNs(meta);
+      if (metaNs != null) {
         properties.setMetaNamespace(metaNs);
       }
     }
   }
 
-  private static HereDeltaNs deltaNsFromModerationInfo(@NotNull Map<String, Object> moderationInfo) {
-    HereDeltaNs deltaNs = new HereDeltaNs();
-    String rawChangeState = (String) moderationInfo.get(HereDeltaNs.CHANGE_STATE_PROPERTY);
-    if (rawChangeState != null) {
-      deltaNs.setChangeState(EChangeState.get(EChangeState.class, rawChangeState));
-    }
-    String rawReviewState = (String) moderationInfo.get(HereDeltaNs.REVIEW_STATE_PROPERTY);
-    if (rawChangeState != null) {
-      deltaNs.setReviewState(EReviewState.get(EReviewState.class, rawReviewState));
-    }
-    for (Map.Entry<String, Object> entry : moderationInfo.entrySet()) {
-      if (!entry.getKey().equals(HereDeltaNs.CHANGE_STATE_PROPERTY)
-          && !entry.getKey().equals(HereDeltaNs.REVIEW_STATE_PROPERTY)) {
-        deltaNs.put(entry.getKey(), entry.getValue());
+  private static @NotNull HereMetaNs metaNs(@NotNull Map<String, Object> meta) {
+    HereMetaNs metaNs = new HereMetaNs();
+    for (String metaKey : COMMON_META_PROPERTIES) {
+      Object value = meta.get(metaKey);
+      if (value != null) {
+        metaNs.put(metaKey, value);
       }
     }
-    return deltaNs;
+    return metaNs;
+  }
+
+  private static @Nullable HereDeltaNs deltaNs(@NotNull Map<String, Object> meta) {
+    Map<String, Object> moderationInfo = (Map<String, Object>) meta.get(MODERATION_INFO);
+    if (moderationInfo == null) {
+      return null;
+    } else {
+      HereDeltaNs deltaNs = new HereDeltaNs();
+      String rawChangeState = (String) moderationInfo.get(DeltaProperties.CHANGE_STATE);
+      if (rawChangeState != null) {
+        deltaNs.setChangeState(JsonEnum.get(EChangeState.class, rawChangeState));
+      }
+      String rawReviewState = (String) moderationInfo.get(DeltaProperties.REVIEW_STATE);
+      if (rawChangeState != null) {
+        deltaNs.setReviewState(JsonEnum.get(EReviewState.class, rawReviewState));
+      }
+      String originId = (String) moderationInfo.get(DeltaProperties.ORIGIN_ID);
+      if (originId != null) {
+        deltaNs.setOriginId(originId);
+      }
+      String parentLink = (String) moderationInfo.get(DeltaProperties.PARENT_LINK);
+      if (parentLink != null) {
+        deltaNs.setParentLink(parentLink);
+      }
+      return deltaNs;
+    }
   }
 
   public static void dropPreMom10Namespaces(@Nullable XyzFeature feature) {
