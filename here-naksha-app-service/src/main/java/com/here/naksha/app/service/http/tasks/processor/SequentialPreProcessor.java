@@ -20,8 +20,25 @@ package com.here.naksha.app.service.http.tasks.processor;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 
-public sealed interface FeaturePreProcessor<T extends XyzFeature>
-    permits Mom10PreProcessor, SequentialPreProcessor, TagsPreProcessor {
+public final class SequentialPreProcessor<T extends XyzFeature> implements FeaturePreProcessor<T> {
 
-  T preProcess(T feature);
+  private final FeaturePreProcessor<T>[] preProcessors;
+
+  private SequentialPreProcessor(FeaturePreProcessor<T>[] preProcessors) {
+    this.preProcessors = preProcessors;
+  }
+
+  public static <T extends XyzFeature> SequentialPreProcessor<T> combine(FeaturePreProcessor<T>... preProcessors) {
+    return new SequentialPreProcessor<>(preProcessors);
+  }
+
+  @Override
+  public T preProcess(T feature) {
+    for (FeaturePreProcessor<T> preProcessor : preProcessors) {
+      if (preProcessor != null) {
+        feature = preProcessor.preProcess(feature);
+      }
+    }
+    return feature;
+  }
 }

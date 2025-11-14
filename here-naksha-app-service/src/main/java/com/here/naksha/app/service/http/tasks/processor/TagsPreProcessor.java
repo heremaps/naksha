@@ -19,9 +19,27 @@
 package com.here.naksha.app.service.http.tasks.processor;
 
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
+import java.util.List;
+import org.jetbrains.annotations.NotNull;
 
-public sealed interface FeaturePreProcessor<T extends XyzFeature>
-    permits Mom10PreProcessor, SequentialPreProcessor, TagsPreProcessor {
+public final class TagsPreProcessor implements FeaturePreProcessor<XyzFeature> {
 
-  T preProcess(T feature);
+  private static final boolean DO_NORMALIZE = true;
+
+  private final List<String> tagsToRemove;
+  private final List<String> tagsToAdd;
+
+  public TagsPreProcessor(@NotNull List<String> tagsToRemove, @NotNull List<String> tagsToAdd) {
+    this.tagsToRemove = tagsToRemove;
+    this.tagsToAdd = tagsToAdd;
+  }
+
+  @Override
+  public XyzFeature preProcess(XyzFeature feature) {
+    XyzNamespace xyzNs = feature.getProperties().getXyzNamespace();
+    xyzNs.addTags(tagsToAdd, DO_NORMALIZE);
+    xyzNs.removeTags(tagsToRemove, DO_NORMALIZE);
+    return feature;
+  }
 }
