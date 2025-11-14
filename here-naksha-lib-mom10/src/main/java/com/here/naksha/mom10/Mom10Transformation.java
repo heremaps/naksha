@@ -46,13 +46,9 @@ public class Mom10Transformation {
     Map<String, Object> meta = (Map<String, Object>) properties.get(META);
     if (meta != null && !meta.isEmpty()) {
       HereDeltaNs deltaNs = deltaNs(meta);
-      if (deltaNs != null) {
-        properties.setDeltaNamespace(deltaNs);
-      }
+      properties.setDeltaNamespace(deltaNs);
       HereMetaNs metaNs = metaNs(meta);
-      if (metaNs != null) {
-        properties.setMetaNamespace(metaNs);
-      }
+      properties.setMetaNamespace(metaNs);
     }
   }
 

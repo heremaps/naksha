@@ -68,7 +68,7 @@ info: https://here-dev.zoominsoftware.io/docs/bundle/map-object-model-data-speci
 #### Populating old meta
 
 Properties supported by both old `@ns:com:here:mom:meta` NS and MOM 10+ `meta` property 
-- `sourceId` (!!)
+- `sourceId` 
 - `updatedByUser`
 - `lastUpdatedBy`
 - `modelVersion`
