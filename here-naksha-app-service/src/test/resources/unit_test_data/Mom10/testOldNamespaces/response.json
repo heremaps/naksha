@@ -1,0 +1,60 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "mom_10_patch_f",
+      "bbox": [
+        13.50906323,
+        52.36563795,
+        13.50906323,
+        52.36563795
+      ],
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.50906323,
+          52.36563795,
+          94.6138976
+        ]
+      },
+      "properties": {
+        "@ns:com:here:mom:delta": {
+          "changeState": "CREATED",
+          "reviewState": "PENDING",
+          "changeCounter": 0,
+          "potentialValue": 0,
+          "priorityCategory": 0
+        },
+        "@ns:com:here:mom:meta": {
+          "modelVersion": "10.0.0",
+          "createdTS": "2024-04-24T10:16:15.787710027Z"
+        },
+        "@ns:com:here:xyz": {
+          "action": "UPDATE",
+          "app_id": "naksha",
+          "author": "master-test-user",
+          "version": 2
+        },
+        "pointReference": {
+          "offset": 0.5012262317243747,
+          "segment": {
+            "id": "urn:here::here:Topology:875120847"
+          },
+          "orientation": "UNORIENTED"
+        },
+        "featureType": "TopologyPointAnchor",
+        "meta": {
+          "createdTS": "2024-04-24T10:16:15.787710027Z",
+          "unmappable": 123,
+          "modelVersion": "1.0.0",
+          "moderationInfo": {
+            "changeState": "CREATED",
+            "reviewState": "PENDING"
+          }
+        }
+      },
+      "momType": "TopologyPointAnchor"
+    }
+  ]
+}

@@ -161,11 +161,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
-    // as applicable, modify features based on parameters supplied
-    for (final XyzFeature feature : features) {
-      addTagsToFeature(feature, addTags);
-      removeTagsFromFeature(feature, removeTags);
-    }
+    // pre process and upsert
+    preProcess(features, removeTags, addTags);
     final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
