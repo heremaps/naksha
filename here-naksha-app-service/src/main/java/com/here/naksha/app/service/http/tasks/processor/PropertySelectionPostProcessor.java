@@ -37,12 +37,4 @@ public final class PropertySelectionPostProcessor implements FeaturePostProcesso
     final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(feature, propPaths);
     return JsonSerializable.fromMap(tgtMap, XyzFeature.class);
   }
-  /**
-   *   @SuppressWarnings("unchecked")
-   *   private <F extends XyzFeature> @NotNull F applyPropertySelection(
-   *       final @NotNull F f, final @NotNull Set<String> propPaths) {
-   *     final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
-   *     return (F) JsonSerializable.fromMap(tgtMap, f.getClass());
-   *   }
-   */
 }

@@ -1,0 +1,43 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "momType": "TopologyPointAnchor",
+      "id": "mom_rft_id",
+      "type": "Feature",
+      "bbox": [
+        13.50906323,
+        52.36563795,
+        13.50906323,
+        52.36563795
+      ],
+      "properties": {
+        "pointReference": {
+          "offset": 0.5012262317243747,
+          "segment": {
+            "id": "urn:here::here:Topology:875120847"
+          },
+          "orientation": "UNORIENTED"
+        },
+        "featureType": "TopologyPointAnchor",
+        "meta": {
+          "createdTS": "2024-04-24T10:16:15.787710027Z",
+          "modelVersion": "10.0.0",
+          "moderationInfo": {
+            "changeState": "CREATED",
+            "reviewState": "PENDING"
+          },
+          "unmappable": 123
+        }
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.50906323,
+          52.36563795,
+          94.6138976
+        ]
+      }
+    }
+  ]
+}
