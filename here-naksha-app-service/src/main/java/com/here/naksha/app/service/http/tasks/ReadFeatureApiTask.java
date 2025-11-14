@@ -21,6 +21,8 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
 import static com.here.naksha.app.service.http.apis.ApiParams.extractParamAsStringList;
 import static com.here.naksha.app.service.http.apis.ApiParams.queryParamsFromRequest;
+import static com.here.naksha.app.service.http.tasks.processor.Mom10PostProcessor.MOM_10_POST_PROCESSOR;
+import static com.here.naksha.app.service.http.tasks.processor.SequentialPostProcessor.combine;
 import static com.here.naksha.common.http.apis.ApiParamsConst.CLIP_GEO;
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_FEATURE_LIMIT;
 import static com.here.naksha.common.http.apis.ApiParamsConst.EAST;
@@ -51,6 +53,7 @@ import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
 import com.here.naksha.app.service.http.ops.SpatialUtil;
 import com.here.naksha.app.service.http.ops.TagsUtil;
 import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.GeoClipPostProcessor;
 import com.here.naksha.app.service.http.tasks.processor.PropertySelectionPostProcessor;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
@@ -165,8 +168,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       // transform Result to Http FeatureCollection response
-      return transformReadResultToXyzCollectionResponse(
-          result, XyzFeature.class, propSelectionProcessorOrNull(propPaths));
+      return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, postProcessor(propPaths));
     }
   }
 
@@ -184,8 +186,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward request to NH Space Storage reader instance
     try (Result result = executeReadRequestFromSpaceStorage(rdRequest)) {
       // transform Result to Http XyzFeature response
-      return transformReadResultToXyzFeatureResponse(
-          result, XyzFeature.class, propSelectionProcessorOrNull(propPaths));
+      return transformReadResultToXyzFeatureResponse(result, XyzFeature.class, postProcessor(propPaths));
     }
   }
 
@@ -242,7 +243,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     // we will also apply feature postprocessing (like property selection and geometry clipping)
     // if any of the options is enabled
-    FeaturePostProcessor<XyzFeature> postProcessor = selectPropertiesAndClip(propPaths, clip, bbox);
+    FeaturePostProcessor<XyzFeature> postProcessor = this.postProcessor(propPaths, clip, bbox);
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
 
@@ -291,7 +292,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     // we will also apply response preprocessing (like property selection and geometry clipping)
     // if any of the options is enabled
-    FeaturePostProcessor<XyzFeature> postProcessor = selectPropertiesAndClip(propPaths, clip, geo);
+    FeaturePostProcessor<XyzFeature> postProcessor = this.postProcessor(propPaths, clip, geo);
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
 
@@ -324,7 +325,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, 0, limit, null, propSelectionProcessorOrNull(propPaths));
+        result, XyzFeature.class, 0, limit, null, postProcessor(propPaths));
   }
 
   private @NotNull XyzResponse executeIterate() {
@@ -365,7 +366,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // transform Result to Http FeatureCollection response,
     // restricted by given feature limit and by adding "handle" attribute to support subsequent iteration
     return transformReadResultToXyzCollectionResponse(
-        result, XyzFeature.class, offset, clientLimit, handle, propSelectionProcessorOrNull(propPaths));
+        result, XyzFeature.class, offset, clientLimit, handle, postProcessor(propPaths));
   }
 
   private @NotNull XyzResponse executeFeaturesByRadius() {
@@ -405,7 +406,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
     final FeaturePostProcessor<XyzFeature> postProcessor =
-        selectPropertiesAndClip(propPaths, clip, radiusOp.getGeometry());
+        this.postProcessor(propPaths, clip, radiusOp.getGeometry());
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
@@ -483,15 +484,31 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
     final FeaturePostProcessor<XyzFeature> postProcessor =
-        selectPropertiesAndClip(propPaths, clip, radiusOp.getGeometry());
+        this.postProcessor(propPaths, clip, radiusOp.getGeometry());
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
 
-  private @Nullable PropertySelectionPostProcessor propSelectionProcessorOrNull(Set<String> propPaths) {
+  private @NotNull FeaturePostProcessor<XyzFeature> postProcessor(Set<String> propPaths) {
     if (propPaths == null || propPaths.isEmpty()) {
-      return null;
+      return MOM_10_POST_PROCESSOR;
     }
-    return new PropertySelectionPostProcessor(propPaths);
+    return combine(new PropertySelectionPostProcessor(propPaths), MOM_10_POST_PROCESSOR);
+  }
+
+  private @NotNull FeaturePostProcessor<XyzFeature> postProcessor(
+      Set<String> propPaths, boolean clip, Geometry clipGeo) {
+    if (propPaths != null && !propPaths.isEmpty()) {
+      PropertySelectionPostProcessor propSelectionPostProcessor = new PropertySelectionPostProcessor(propPaths);
+      if (clip) {
+        return combine(propSelectionPostProcessor, new GeoClipPostProcessor(clipGeo), MOM_10_POST_PROCESSOR);
+      } else {
+        return combine(propSelectionPostProcessor, MOM_10_POST_PROCESSOR);
+      }
+    } else if (clip) {
+      return combine(new GeoClipPostProcessor(clipGeo), MOM_10_POST_PROCESSOR);
+    } else {
+      return MOM_10_POST_PROCESSOR;
+    }
   }
 }

@@ -20,7 +20,6 @@ package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
-import static com.here.naksha.app.service.http.tasks.processor.SequentialPostProcessor.combine;
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
@@ -31,8 +30,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
-import com.here.naksha.app.service.http.tasks.processor.GeoClipPostProcessor;
-import com.here.naksha.app.service.http.tasks.processor.PropertySelectionPostProcessor;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
@@ -57,10 +54,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.locationtech.jts.geom.Geometry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -323,22 +318,6 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     try (final Json json = Json.get()) {
       final String bodyJson = routingContext.body().asString();
       return json.reader(ViewDeserialize.User.class).forType(type).readValue(bodyJson);
-    }
-  }
-
-  protected @Nullable FeaturePostProcessor<XyzFeature> selectPropertiesAndClip(
-      Set<String> propPaths, final boolean clip, final Geometry clipGeo) {
-    if (propPaths != null && !propPaths.isEmpty()) {
-      PropertySelectionPostProcessor propSelectionPostProcessor = new PropertySelectionPostProcessor(propPaths);
-      if (clip) {
-        return combine(propSelectionPostProcessor, new GeoClipPostProcessor(clipGeo));
-      } else {
-        return propSelectionPostProcessor;
-      }
-    } else if (clip) {
-      return new GeoClipPostProcessor(clipGeo);
-    } else {
-      return null;
     }
   }
 }
