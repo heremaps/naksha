@@ -21,6 +21,7 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.apis.ApiParams.extractParamAsStringList;
 import static com.here.naksha.app.service.http.apis.ApiParams.queryParamsFromRequest;
 import static com.here.naksha.app.service.http.apis.ApiParams.validateFeatureId;
+import static com.here.naksha.app.service.http.tasks.processor.Mom10PostProcessor.MOM_10_POST_PROCESSOR;
 import static com.here.naksha.app.service.http.tasks.processor.Mom10PreProcessor.MOM_10_PRE_PROCESSOR;
 import static com.here.naksha.app.service.http.tasks.processor.SequentialPreProcessor.combine;
 import static com.here.naksha.common.http.apis.ApiParamsConst.ADD_TAGS;
@@ -170,7 +171,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
+      return transformWriteResultToXyzCollectionResponse(
+          wrResult, XyzFeature.class, false, MOM_10_POST_PROCESSOR);
     }
   }
 
@@ -216,7 +218,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, true);
+      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, true, MOM_10_POST_PROCESSOR);
     }
   }
 
@@ -387,7 +389,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         if (responseType.equals(HttpResponseType.FEATURE)) {
           return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
         }
-        return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
+        return transformWriteResultToXyzCollectionResponse(
+            wrResult, XyzFeature.class, false, MOM_10_POST_PROCESSOR);
       }
     }
   }

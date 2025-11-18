@@ -4,7 +4,7 @@
   "type": "Feature",
   "properties": {
     "meta": {
-      "modelVersion": "1.0.0"
+      "modelVersion": "10.0.0"
     }
   }
 }

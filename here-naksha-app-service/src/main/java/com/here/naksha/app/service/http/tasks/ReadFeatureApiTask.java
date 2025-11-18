@@ -117,8 +117,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
    * Initializes this task.
    */
   @Override
-  protected void init() {
-  }
+  protected void init() {}
 
   /**
    * Execute this task.
@@ -482,7 +481,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
-    final FeaturePostProcessor<XyzFeature> postProcessor = postProcessor(propPaths); // TODO CASL-1479: consider adding clip support
+    final FeaturePostProcessor<XyzFeature> postProcessor =
+        postProcessor(propPaths); // TODO CASL-1479: consider adding clip support
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }

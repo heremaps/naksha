@@ -23,7 +23,6 @@ import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUN
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
-import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesGroupedByOp;
 import static java.util.Collections.emptyList;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -42,15 +41,18 @@ import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
+import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.ReadFeatures;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.WriteFeatures;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.core.view.ViewDeserialize;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -236,13 +238,17 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   }
 
   protected <R extends XyzFeature> @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
-      final @Nullable Result wrResult, final @NotNull Class<R> type, final boolean isDeleteOperation) {
+      final @Nullable Result wrResult,
+      final @NotNull Class<R> type,
+      final boolean isDeleteOperation,
+      final @Nullable FeaturePostProcessor<R> featurePostProcessor) {
     final XyzResponse validatedErrorResponse = validateErrorResult(wrResult);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else {
       try {
-        final Map<EExecutedOp, List<R>> featureMap = readFeaturesGroupedByOp(wrResult, type);
+        final Map<EExecutedOp, List<R>> featureMap =
+            postProcessedFeaturesByOp(wrResult, type, featurePostProcessor);
         final List<R> insertedFeatures = featureMap.get(EExecutedOp.CREATED);
         final List<R> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
         final List<R> deletedFeatures = featureMap.get(EExecutedOp.DELETED);
@@ -268,6 +274,45 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         return verticle.sendErrorResponse(
             routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
       }
+    }
+  }
+
+  /**
+   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with
+   * type T. Returned lists are limited with respect to supplied `limit` parameter.
+   *
+   * @param result      the Result which is to be read
+   * @param featureType the type of feature to be extracted from result
+   * @param <R>         type of feature
+   * @return a map grouping the lists of features extracted from ReadResult
+   */
+  private static <R extends XyzFeature> Map<EExecutedOp, List<R>> postProcessedFeaturesByOp(
+      Result result, Class<R> featureType, FeaturePostProcessor<R> postProcessor) throws NoCursor {
+    try (ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
+      final List<R> insertedFeatures = new ArrayList<>();
+      final List<R> updatedFeatures = new ArrayList<>();
+      final List<R> deletedFeatures = new ArrayList<>();
+      while (resultCursor.hasNext()) {
+        if (!resultCursor.next()) {
+          throw new RuntimeException("Unexpected invalid result");
+        }
+        R feature = featureType.cast(resultCursor.getFeature());
+        if (postProcessor != null) {
+          feature = postProcessor.postProcess(feature);
+        }
+        if (resultCursor.getOp().equals(EExecutedOp.CREATED)) {
+          insertedFeatures.add(feature);
+        } else if (resultCursor.getOp().equals(EExecutedOp.UPDATED)) {
+          updatedFeatures.add(feature);
+        } else if (resultCursor.getOp().equals(EExecutedOp.DELETED)) {
+          deletedFeatures.add(feature);
+        }
+      }
+      final Map<EExecutedOp, List<R>> features = new HashMap<>();
+      features.put(EExecutedOp.CREATED, insertedFeatures);
+      features.put(EExecutedOp.UPDATED, updatedFeatures);
+      features.put(EExecutedOp.DELETED, deletedFeatures);
+      return features;
     }
   }
 

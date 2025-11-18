@@ -19,17 +19,6 @@
         ]
       },
       "properties": {
-        "@ns:com:here:mom:delta": {
-          "changeState": "CREATED",
-          "reviewState": "PENDING",
-          "changeCounter": 0,
-          "potentialValue": 0,
-          "priorityCategory": 0
-        },
-        "@ns:com:here:mom:meta": {
-          "modelVersion": "10.0.0",
-          "createdTS": "2024-04-24T10:16:15.787710027Z"
-        },
         "@ns:com:here:xyz": {
           "action": "UPDATE",
           "app_id": "naksha",
@@ -47,7 +36,7 @@
         "meta": {
           "createdTS": "2024-04-24T10:16:15.787710027Z",
           "unmappable": 123,
-          "modelVersion": "1.0.0",
+          "modelVersion": "10.0.0",
           "moderationInfo": {
             "changeState": "CREATED",
             "reviewState": "PENDING"

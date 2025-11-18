@@ -24,14 +24,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzReference;
+import com.here.naksha.lib.core.util.json.JsonObject;
 import java.net.http.HttpResponse;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -106,6 +110,31 @@ public class ResponseAssertions {
   public ResponseAssertions hasInsertedCountMatchingWithFeaturesInRequest(final @NotNull String reqBody) throws JSONException {
     final FeatureCollectionRequest collectionRequest = parseJson(reqBody, FeatureCollectionRequest.class);
     return hasMatchingInsertedCount(collectionRequest.getFeatures().size());
+  }
+
+  public ResponseAssertions hasBodyWithout(String[]... paths){
+    JsonObject jsonBody = parseJson(subject.body(), JsonObject.class);
+    if(jsonBody.containsKey("features")){
+      List<Map<String, Object>> features = (List<Map<String, Object>>) jsonBody.get("features");
+      for(Map<String, Object> feature : features){
+        failIfFeatureJsonContainsEntry(feature, paths);
+      }
+    } else {
+      failIfFeatureJsonContainsEntry(jsonBody, paths);
+    }
+    return this;
+  }
+
+  private void failIfFeatureJsonContainsEntry(Map<String, Object> rawFeature, String[]... paths){
+    for(String[] path : paths){
+      Map<String, Object> cur = rawFeature;
+      for(int i = 0; cur != null && i < path.length - 1; i++){
+        cur = (Map<String, Object>) cur.get(path[i]);
+      }
+      if(cur != null && cur.containsKey(path[path.length - 1])){
+        fail("Body should not contain entry for path: " + Arrays.toString(path));
+      }
+    }
   }
 
   public ResponseAssertions hasMatchingInsertedCount(int cnt) throws JSONException {

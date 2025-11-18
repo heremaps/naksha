@@ -6,6 +6,8 @@ import static com.here.naksha.app.common.assertions.ResponseAssertions.assertTha
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
@@ -17,6 +19,8 @@ class Mom10Test extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
   private static final String SPACE_ID = "mom_10_test_space";
+  private static final String[] DELTA_NS_PATH = new String[]{XyzFeature.PROPERTIES, XyzProperties.HERE_DELTA_NS};
+  private static final String[] META_NS_PATH = new String[]{XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS};
 
   @BeforeAll
   static void setup() {
@@ -37,6 +41,7 @@ class Mom10Test extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasJsonBody(featuresJson)
+        .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
         .hasStreamIdHeader(streamId);
   }
 
@@ -58,6 +63,7 @@ class Mom10Test extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasJsonBody(createFeatureJson)
+        .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
         .hasStreamIdHeader(streamId);
   }
 
@@ -76,7 +82,8 @@ class Mom10Test extends ApiTest {
     assertThat(createResp).hasStatus(200);
 
     // And: We do little hacking - patching the feature with different `modelVersion` so that MOM 10 transformation don't happen
-    HttpResponse<String> patchResp = getNakshaClient().patch("hub/spaces/" + SPACE_ID + "/features/" + featureId, patchFeatureJson, streamId);
+    HttpResponse<String> patchResp = getNakshaClient().patch("hub/spaces/" + SPACE_ID + "/features/" + featureId, patchFeatureJson,
+        streamId);
     assertThat(patchResp).hasStatus(200);
 
     // And: We query for the patched feature that was transformed during the write phase (it was MOM 10) but will not during read phase (it was not MOM 10)
@@ -104,7 +111,8 @@ class Mom10Test extends ApiTest {
     assertThat(createResp).hasStatus(200);
 
     // And: We do little hacking - patching the feature with different `modelVersion` (MOM 10) so that MOM 10 transformation will happen
-    HttpResponse<String> patchResp = getNakshaClient().patch("hub/spaces/" + SPACE_ID + "/features/" + featureId, patchFeatureJson, streamId);
+    HttpResponse<String> patchResp = getNakshaClient().patch("hub/spaces/" + SPACE_ID + "/features/" + featureId, patchFeatureJson,
+        streamId);
     assertThat(patchResp).hasStatus(200);
 
     // And: We query for the patched feature that was not transformed during the write phase (it was pre MOM 10) but will during read phase (it was MOM 10)
@@ -114,6 +122,7 @@ class Mom10Test extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasJsonBody(expectedGetResp)
+        .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
         .hasStreamIdHeader(streamId);
   }
 }
