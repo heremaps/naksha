@@ -125,4 +125,43 @@ class Mom10Test extends ApiTest {
         .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
         .hasStreamIdHeader(streamId);
   }
+
+  @Test
+  void shouldPrioritizeMetaOverOldNamespaces() throws URISyntaxException, IOException, InterruptedException {
+    // Test API : POST /hub/spaces/{spaceId}/features
+    // Given: Create Features request with MOM 10 aligned payload
+    final String createFeatureJson = loadFileOrFail("Mom10/testOverride/features.json");
+    final String expectedInitialGet = loadFileOrFail("Mom10/testOverride/first_response.json");
+    final String patchFeatureJson = loadFileOrFail("Mom10/testOverride/patch.json");
+    final String expectedSecondGet = loadFileOrFail("Mom10/testOverride/second_response.json");
+    String streamId = UUID.randomUUID().toString();
+
+    // When: Create Features request is submitted to NakshaHub Space Storage instance
+    HttpResponse<String> createResp = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", createFeatureJson, streamId);
+    assertThat(createResp).hasStatus(200);
+
+    // And: We query for this feature
+    HttpResponse<String> getResp = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?id=mom_10_override_f", streamId);
+
+    // Then: Stored feature is returned
+    assertThat(getResp)
+        .hasStatus(200)
+        .hasJsonBody(expectedInitialGet)
+        .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
+        .hasStreamIdHeader(streamId);
+
+    // When: we patch it to old version to get old namespaces
+    HttpResponse<String> patchResp = getNakshaClient().patch("hub/spaces/" + SPACE_ID + "/features/mom_10_override_f", patchFeatureJson,
+        streamId);
+    assertThat(patchResp).hasStatus(200);
+
+    // And: We query for the patched feature that was not transformed during the write phase (it was pre MOM 10) but will during read phase (it was MOM 10)
+    HttpResponse<String> secondGetResp = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?id=mom_10_override_f", streamId);
+
+    // Then: We get original feature with dropped old namespaces
+    assertThat(secondGetResp)
+        .hasStatus(200)
+        .hasJsonBody(expectedSecondGet)
+        .hasStreamIdHeader(streamId);
+  }
 }

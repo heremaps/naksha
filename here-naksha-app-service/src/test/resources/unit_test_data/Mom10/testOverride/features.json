@@ -1,0 +1,52 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "momType": "TopologyPointAnchor",
+      "id": "mom_10_override_f",
+      "type": "Feature",
+      "bbox": [
+        13.50906323,
+        52.36563795,
+        13.50906323,
+        52.36563795
+      ],
+      "properties": {
+        "pointReference": {
+          "offset": 0.5012262317243747,
+          "segment": {
+            "id": "urn:here::here:Topology:875120847"
+          },
+          "orientation": "UNORIENTED"
+        },
+        "featureType": "TopologyPointAnchor",
+        "meta": {
+          "createdTS": "2024-04-24T10:16:15.787710027Z",
+          "modelVersion": "10.0.0",
+          "layerId": "layer_id_META",
+          "sourceId": "source_id_META",
+          "moderationInfo": {
+            "changeState": "CREATED",
+            "reviewState": "PENDING"
+          }
+        },
+        "@ns:com:here:mom:delta": {
+          "changeState": "UPDATED",
+          "reviewState": "UNPUBLISHED"
+        },
+        "@ns:com:here:mom:meta": {
+          "layerId": "layer_id_NS",
+          "sourceId": "source_id_NS"
+        }
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13.50906323,
+          52.36563795,
+          94.6138976
+        ]
+      }
+    }
+  ]
+}
