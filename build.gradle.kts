@@ -459,6 +459,7 @@ project(":here-naksha-lib-handlers") {
         implementation(project(":here-naksha-lib-psql"))
         implementation(project(":here-naksha-lib-view"))
         implementation(project(":here-naksha-storage-http"))
+        implementation(project(":here-naksha-lib-mom10"))
 
         implementation(commons_lang3)
         implementation(commons_dbutils)
@@ -548,7 +549,6 @@ project(":here-naksha-lib-mom10"){
     description = "Naksha MOM 10 library"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
-        implementation(project(":here-naksha-lib-handlers"))
 
         testImplementation(mockito)
     }

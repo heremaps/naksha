@@ -117,7 +117,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
    * Initializes this task.
    */
   @Override
-  protected void init() {}
+  protected void init() {
+  }
 
   /**
    * Execute this task.
@@ -386,7 +387,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final long radius = ApiParams.extractQueryParamAsLong(queryParams, RADIUS, false, 0);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
-    final boolean clip = ApiParams.extractQueryParamAsBoolean(queryParams, CLIP_GEO, false);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
     ApiParams.validateLatLon(lat, lon);
@@ -406,7 +406,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
     final FeaturePostProcessor<XyzFeature> postProcessor =
-        this.postProcessor(propPaths, clip, radiusOp.getGeometry());
+        postProcessor(propPaths); // TODO CASL-1479: consider adding clip support
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
@@ -464,7 +464,6 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // NOTE : queryParams can be null. Subsequent steps should respect the same.
     final long radius = ApiParams.extractQueryParamAsLong(queryParams, RADIUS, false, 0);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_FEATURE_LIMIT);
-    final boolean clip = ApiParams.extractQueryParamAsBoolean(queryParams, CLIP_GEO, false);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     // validate values
     limit = (limit < 0 || limit > DEF_FEATURE_LIMIT) ? DEF_FEATURE_LIMIT : limit;
@@ -483,8 +482,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Result result = executeReadRequestFromSpaceStorage(rdRequest);
-    final FeaturePostProcessor<XyzFeature> postProcessor =
-        this.postProcessor(propPaths, clip, radiusOp.getGeometry());
+    final FeaturePostProcessor<XyzFeature> postProcessor = postProcessor(propPaths); // TODO CASL-1479: consider adding clip support
     // transform Result to Http FeatureCollection response, restricted by given feature limit
     return transformReadResultToXyzCollectionResponse(result, XyzFeature.class, 0, limit, null, postProcessor);
   }
@@ -493,7 +491,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     if (propPaths == null || propPaths.isEmpty()) {
       return MOM_10_POST_PROCESSOR;
     }
-    return combine(new PropertySelectionPostProcessor(propPaths), MOM_10_POST_PROCESSOR);
+    return combine(MOM_10_POST_PROCESSOR, new PropertySelectionPostProcessor(propPaths));
   }
 
   private @NotNull FeaturePostProcessor<XyzFeature> postProcessor(
@@ -501,12 +499,12 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     if (propPaths != null && !propPaths.isEmpty()) {
       PropertySelectionPostProcessor propSelectionPostProcessor = new PropertySelectionPostProcessor(propPaths);
       if (clip) {
-        return combine(propSelectionPostProcessor, new GeoClipPostProcessor(clipGeo), MOM_10_POST_PROCESSOR);
+        return combine(MOM_10_POST_PROCESSOR, propSelectionPostProcessor, new GeoClipPostProcessor(clipGeo));
       } else {
-        return combine(propSelectionPostProcessor, MOM_10_POST_PROCESSOR);
+        return combine(MOM_10_POST_PROCESSOR, propSelectionPostProcessor);
       }
     } else if (clip) {
-      return combine(new GeoClipPostProcessor(clipGeo), MOM_10_POST_PROCESSOR);
+      return combine(MOM_10_POST_PROCESSOR, new GeoClipPostProcessor(clipGeo));
     } else {
       return MOM_10_POST_PROCESSOR;
     }

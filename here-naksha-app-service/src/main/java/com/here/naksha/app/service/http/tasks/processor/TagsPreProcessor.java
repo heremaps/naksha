@@ -21,7 +21,7 @@ package com.here.naksha.app.service.http.tasks.processor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import java.util.List;
-import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public final class TagsPreProcessor implements FeaturePreProcessor<XyzFeature> {
 
@@ -30,7 +30,7 @@ public final class TagsPreProcessor implements FeaturePreProcessor<XyzFeature> {
   private final List<String> tagsToRemove;
   private final List<String> tagsToAdd;
 
-  public TagsPreProcessor(@NotNull List<String> tagsToRemove, @NotNull List<String> tagsToAdd) {
+  public TagsPreProcessor(@Nullable List<String> tagsToRemove, @Nullable List<String> tagsToAdd) {
     this.tagsToRemove = tagsToRemove;
     this.tagsToAdd = tagsToAdd;
   }
@@ -38,8 +38,16 @@ public final class TagsPreProcessor implements FeaturePreProcessor<XyzFeature> {
   @Override
   public XyzFeature preProcess(XyzFeature feature) {
     XyzNamespace xyzNs = feature.getProperties().getXyzNamespace();
-    xyzNs.addTags(tagsToAdd, DO_NORMALIZE);
-    xyzNs.removeTags(tagsToRemove, DO_NORMALIZE);
+    if (hasItems(tagsToAdd)) {
+      xyzNs.addTags(tagsToAdd, DO_NORMALIZE);
+    }
+    if (hasItems(tagsToRemove)) {
+      xyzNs.removeTags(tagsToRemove, DO_NORMALIZE);
+    }
     return feature;
+  }
+
+  private static boolean hasItems(List<String> tags) {
+    return tags != null && tags.size() > 0;
   }
 }
