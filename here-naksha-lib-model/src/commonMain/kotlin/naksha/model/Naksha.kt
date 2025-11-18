@@ -853,7 +853,7 @@ class Naksha private constructor() {
                 }
             }
             val localS = s
-            if (localS != null && localS.config == config) {
+            if (localS != null && localS.config.configEquals(config)) {
                 // Only invoke initStorage, when we are forced to do it!
                 if (forceCreateOrUpgrade == true) localS.invokeInitStorage(config, create = true, upgrade = true)
                 return localS
@@ -867,7 +867,9 @@ class Naksha private constructor() {
                         "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
                 }
                 if (storage != null) {
-                    if (storage.config == config) return storage
+                    if (storage.config.configEquals(config)) {
+                        return storage
+                    }
                     storage.invokeShutdownStorage(false)
                 }
                 val klass = Platform.klassForName<AbstractStorage<*>>(config.className)
