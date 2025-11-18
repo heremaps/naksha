@@ -186,4 +186,20 @@ open class NakshaStorage() : NakshaFeature() {
      */
     val number: Int64
         get() = featureNumber
+
+    /**
+     * Compares this configuration with another [NakshaStorage] instance.
+     *
+     * This method is designed to be overridden by subclasses that want to define
+     * equality based on a subset of configuration fields rather than performing
+     * a full object comparison.
+     *
+     * When not overridden, this method falls back to the standard [equals] implementation.
+     *
+     * @param other another [NakshaStorage] instance to compare against
+     * @return `true` if the two configurations are considered equal under the
+     *         comparison rules; otherwise `false`
+     * @since 3.0
+     */
+    open fun configEquals(other: NakshaStorage) = this == other
 }

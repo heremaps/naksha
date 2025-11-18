@@ -249,7 +249,10 @@ open class PgWriter internal constructor(
             } else if (write.isCollectionModification) {
                 val map = write.map
                 val col = write.asPgCollection
-                if (col != null) transaction.useMap(map.id, map.number).useCollection(col.id, col.number, write.action)
+                if (col != null) {
+                    transaction.useMap(map.id, map.number).useCollection(col.id, col.number, write.action)
+                    map.invalidateCollection(col)
+                }
             }
             if (tuple != null) tupleList.add(tuple)
         }
