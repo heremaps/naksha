@@ -387,7 +387,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
-          return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+          return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class, MOM_10_POST_PROCESSOR);
         }
         return transformWriteResultToXyzCollectionResponse(
             wrResult, XyzFeature.class, false, MOM_10_POST_PROCESSOR);
