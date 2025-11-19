@@ -29,6 +29,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandler;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.handlers.util.PropertyOperationUtil;
+import com.here.naksha.mom10.MetaProperties;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -89,13 +90,11 @@ public class SourceIdHandler extends AbstractEventHandler {
   }
 
   private void transformPropertyOperation(ReadFeatures readRequest) {
-
     if (readRequest.getPropertyOp() == null) {
       return;
     }
 
     POp propertyOp = readRequest.getPropertyOp();
-
     if (propertyOp.children() != null && !propertyOp.children().isEmpty()) {
       PropertyOperationUtil.transformPropertyInPropertyOperationTree(
           propertyOp, SourceIdHandler::mapIntoTagOperation);
@@ -136,8 +135,13 @@ public class SourceIdHandler extends AbstractEventHandler {
 
   private static boolean propertyReferenceEqualsSourceId(PRef pRef) {
     List<@NotNull String> path = pRef.getPath();
-    return path.size() == PREF_PATHS_SIZE
-        && path.containsAll(List.of(XyzFeature.PROPERTIES, XyzProperties.HERE_META_NS, SOURCE_ID));
+    if (path.size() == PREF_PATHS_SIZE) {
+      String secondPart = path.get(1);
+      return XyzFeature.PROPERTIES.equals(path.get(0))
+          && (MetaProperties.META.equals(secondPart) || XyzProperties.HERE_META_NS.equals(secondPart))
+          && SOURCE_ID.equals(path.get(2));
+    }
+    return false;
   }
 
   private static boolean sourceIdTransformationCapable(POp propertyOperation) {

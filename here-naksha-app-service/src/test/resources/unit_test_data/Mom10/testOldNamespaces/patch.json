@@ -1,0 +1,10 @@
+{
+  "momType": "TopologyPointAnchor",
+  "id": "mom_10_patch_f",
+  "type": "Feature",
+  "properties": {
+    "meta": {
+      "modelVersion": "1.0.0"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "momType": "TopologyPointAnchor",
+  "id": "test_drop_f",
+  "type": "Feature",
+  "properties": {
+    "meta": {
+      "modelVersion": "10.0.0"
+    }
+  }
+}

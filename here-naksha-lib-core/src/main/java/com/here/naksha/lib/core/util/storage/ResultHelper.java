@@ -22,14 +22,11 @@ import static java.util.Collections.emptyList;
 
 import com.here.naksha.lib.core.exceptions.NoCursor;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.ForwardCursor;
 import com.here.naksha.lib.core.models.storage.Result;
 import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -120,56 +117,5 @@ public class ResultHelper {
     } catch (NoCursor e) {
       return emptyList();
     }
-  }
-
-  /**
-   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with
-   * type T. Returned lists are limited with respect to supplied `limit` parameter.
-   *
-   * @param result      the Result which is to be read
-   * @param featureType the type of feature to be extracted from result
-   * @param limit       the max number of features to be extracted
-   * @param <R>         type of feature
-   * @return a map grouping the lists of features extracted from ReadResult
-   */
-  public static <R extends XyzFeature> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
-      Result result, Class<R> featureType, long limit) throws NoCursor {
-    try (ForwardCursor<XyzFeature, XyzFeatureCodec> resultCursor = result.getXyzFeatureCursor()) {
-      final List<R> insertedFeatures = new ArrayList<>();
-      final List<R> updatedFeatures = new ArrayList<>();
-      final List<R> deletedFeatures = new ArrayList<>();
-      int cnt = 0;
-      while (resultCursor.hasNext() && cnt++ < limit) {
-        if (!resultCursor.next()) {
-          throw new RuntimeException("Unexpected invalid result");
-        }
-        if (resultCursor.getOp().equals(EExecutedOp.CREATED)) {
-          insertedFeatures.add(featureType.cast(resultCursor.getFeature()));
-        } else if (resultCursor.getOp().equals(EExecutedOp.UPDATED)) {
-          updatedFeatures.add(featureType.cast(resultCursor.getFeature()));
-        } else if (resultCursor.getOp().equals(EExecutedOp.DELETED)) {
-          deletedFeatures.add(featureType.cast(resultCursor.getFeature()));
-        }
-      }
-      final Map<EExecutedOp, List<R>> features = new HashMap<>();
-      features.put(EExecutedOp.CREATED, insertedFeatures);
-      features.put(EExecutedOp.UPDATED, updatedFeatures);
-      features.put(EExecutedOp.DELETED, deletedFeatures);
-      return features;
-    }
-  }
-
-  /**
-   * Helper method to fetch features from given Result and return a map of multiple lists grouped by {@link EExecutedOp} of features with
-   * type T. Returned list is not limited - to set the upper bound, use sibling method with limit argument.
-   *
-   * @param result      the Result which is to be read
-   * @param featureType the type of feature to be extracted from result
-   * @param <R>         type of feature
-   * @return a map grouping the lists of features extracted from ReadResult
-   */
-  public static <R extends XyzFeature> Map<EExecutedOp, List<R>> readFeaturesGroupedByOp(
-      Result result, Class<R> featureType) throws NoCursor, NoSuchElementException {
-    return readFeaturesGroupedByOp(result, featureType, Long.MAX_VALUE);
   }
 }

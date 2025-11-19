@@ -18,8 +18,17 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.apis.ApiParams.*;
-import static com.here.naksha.common.http.apis.ApiParamsConst.*;
+import static com.here.naksha.app.service.http.apis.ApiParams.extractParamAsStringList;
+import static com.here.naksha.app.service.http.apis.ApiParams.queryParamsFromRequest;
+import static com.here.naksha.app.service.http.apis.ApiParams.validateFeatureId;
+import static com.here.naksha.app.service.http.tasks.processor.Mom10PostProcessor.MOM_10_POST_PROCESSOR;
+import static com.here.naksha.app.service.http.tasks.processor.Mom10PreProcessor.MOM_10_PRE_PROCESSOR;
+import static com.here.naksha.app.service.http.tasks.processor.SequentialPreProcessor.combine;
+import static com.here.naksha.common.http.apis.ApiParamsConst.ADD_TAGS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_ID;
+import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.REMOVE_TAGS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.util.diff.PatcherUtils.removeAllRemoveOpExceptForList;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 
@@ -27,6 +36,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.tasks.processor.FeaturePreProcessor;
+import com.here.naksha.app.service.http.tasks.processor.TagsPreProcessor;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
@@ -36,13 +47,25 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
-import com.here.naksha.lib.core.models.storage.*;
+import com.here.naksha.lib.core.models.storage.EExecutedOp;
+import com.here.naksha.lib.core.models.storage.ErrorResult;
+import com.here.naksha.lib.core.models.storage.ForwardCursor;
+import com.here.naksha.lib.core.models.storage.ReadFeatures;
+import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
+import com.here.naksha.lib.core.models.storage.Result;
+import com.here.naksha.lib.core.models.storage.WriteXyzFeatures;
+import com.here.naksha.lib.core.models.storage.XyzFeatureCodec;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.diff.Difference;
 import com.here.naksha.lib.core.util.diff.Patcher;
 import com.here.naksha.lib.core.util.storage.RequestHelper;
 import io.vertx.ext.web.RoutingContext;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -123,7 +146,8 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
-    return attemptFeaturesPatching(spaceId, features, HttpResponseType.FEATURE_COLLECTION, addTags, removeTags, 0);
+    return patchAndPreProcess(
+        spaceId, features, HttpResponseType.FEATURE_COLLECTION, preProcessor(removeTags, addTags));
   }
 
   private @NotNull XyzResponse executeUpsertFeatures() throws Exception {
@@ -140,17 +164,15 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     final List<String> addTags = extractParamAsStringList(queryParams, ADD_TAGS);
     final List<String> removeTags = extractParamAsStringList(queryParams, REMOVE_TAGS);
 
-    // as applicable, modify features based on parameters supplied
-    for (final XyzFeature feature : features) {
-      addTagsToFeature(feature, addTags);
-      removeTagsFromFeature(feature, removeTags);
-    }
+    // pre process and upsert
+    preProcess(features, removeTags, addTags);
     final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, features);
 
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
+      return transformWriteResultToXyzCollectionResponse(
+          wrResult, XyzFeature.class, false, MOM_10_POST_PROCESSOR);
     }
   }
 
@@ -168,15 +190,14 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     validateFeatureId(routingContext, feature.getId());
 
     // as applicable, modify features based on parameters supplied
-    addTagsToFeature(feature, addTags);
-    removeTagsFromFeature(feature, removeTags);
+    preProcess(feature, removeTags, addTags);
 
     final WriteXyzFeatures wrRequest = RequestHelper.updateFeatureRequest(spaceId, feature);
 
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+      return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class, MOM_10_POST_PROCESSOR);
     }
   }
 
@@ -197,7 +218,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, true);
+      return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, true, MOM_10_POST_PROCESSOR);
     }
   }
 
@@ -211,14 +232,13 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Forward request to NH Space Storage writer instance
     try (Result wrResult = executeWriteRequestFromSpaceStorage(wrRequest)) {
       // transform WriteResult to Http FeatureCollection response
-      return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+      return transformDeleteResultToXyzFeatureResponse(wrResult, XyzFeature.class, MOM_10_POST_PROCESSOR);
     }
   }
 
   private static final int MAX_RETRY_ATTEMPT = 5;
 
   private @NotNull XyzResponse executePatchFeatureById() throws JsonProcessingException {
-
     final XyzFeature featureFromRequest = parseRequestBodyAs(XyzFeature.class);
 
     final String spaceId = ApiParams.extractMandatoryPathParam(routingContext, SPACE_ID);
@@ -228,18 +248,23 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
 
     // Validate parameters
     validateFeatureId(routingContext, featureFromRequest.getId());
-
-    final List<XyzFeature> featuresFromRequest = new ArrayList<>();
-    featuresFromRequest.add(featureFromRequest);
-    return attemptFeaturesPatching(spaceId, featuresFromRequest, HttpResponseType.FEATURE, addTags, removeTags, 0);
+    return patchAndPreProcess(
+        spaceId, List.of(featureFromRequest), HttpResponseType.FEATURE, preProcessor(removeTags, addTags));
   }
 
-  private XyzResponse attemptFeaturesPatching(
+  private XyzResponse patchAndPreProcess(
       @NotNull String spaceId,
       @NotNull List<XyzFeature> featuresFromRequest,
       @NotNull HttpResponseType responseType,
-      @Nullable List<String> addTags,
-      @Nullable List<String> removeTags,
+      @Nullable FeaturePreProcessor<XyzFeature> preProcessor) {
+    return patchAndPreProcess(spaceId, featuresFromRequest, responseType, preProcessor, 0);
+  }
+
+  private XyzResponse patchAndPreProcess(
+      @NotNull String spaceId,
+      @NotNull List<XyzFeature> featuresFromRequest,
+      @NotNull HttpResponseType responseType,
+      @Nullable FeaturePreProcessor<XyzFeature> preProcessor,
       int retry) {
     // Patched feature list is to ensure the order of input features is retained
     final List<XyzFeature> patchedFeatures;
@@ -286,8 +311,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         // Else none of the features exists in storage, will create them later
       }
       // Attempt patching, keeping the order of the features from the request
-      patchedFeatures =
-          performInMemoryPatching(featuresFromRequest, featuresToPatchFromStorage, addTags, removeTags);
+      patchedFeatures = patchInMemoryAndPreProcess(featuresFromRequest, featuresToPatchFromStorage, preProcessor);
     }
     final WriteXyzFeatures wrRequest = RequestHelper.upsertFeaturesRequest(spaceId, patchedFeatures);
     // Forward request to NH Space Storage writer instance
@@ -353,8 +377,7 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
           }
           // Attempt retry
           resultCursor.close();
-          return attemptFeaturesPatching(
-              spaceId, featuresFromRequest, responseType, addTags, removeTags, retry + 1);
+          return patchAndPreProcess(spaceId, featuresFromRequest, responseType, preProcessor, retry + 1);
         } catch (NoCursor e) {
           return returnError(
               er.reason,
@@ -364,9 +387,10 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
-          return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class);
+          return transformWriteResultToXyzFeatureResponse(wrResult, XyzFeature.class, MOM_10_POST_PROCESSOR);
         }
-        return transformWriteResultToXyzCollectionResponse(wrResult, XyzFeature.class, false);
+        return transformWriteResultToXyzCollectionResponse(
+            wrResult, XyzFeature.class, false, MOM_10_POST_PROCESSOR);
       }
     }
   }
@@ -374,33 +398,38 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
   /**
    * Return a list of patched XyzFeature, including the ones not yet existing, ready for upsert
    */
-  private List<XyzFeature> performInMemoryPatching(
+  private List<XyzFeature> patchInMemoryAndPreProcess(
       @NotNull List<XyzFeature> featuresFromRequest,
       List<XyzFeature> featuresToPatchFromStorage,
-      @Nullable List<String> addTags,
-      @Nullable List<String> removeTags) {
+      @Nullable FeaturePreProcessor<XyzFeature> preProcessor) {
     final List<XyzFeature> patchedFeatureList = new ArrayList<>();
+    final Map<String, XyzFeature> storedFeaturesById = associateById(featuresToPatchFromStorage);
     for (final XyzFeature inputFeature : featuresFromRequest) {
       // we take input feature as default
       XyzFeature featureToPatch = inputFeature;
       // check if input feature matches with any of the existing features in storage
-      if (inputFeature.getId() != null) {
-        for (XyzFeature storageFeature : featuresToPatchFromStorage) {
-          if (inputFeature.getId().equals(storageFeature.getId())) {
-            // we found matching feature in storage, so we take patched version of the feature
-            final Difference difference = Patcher.getDifference(storageFeature, inputFeature);
-            final Difference diffNoRemoveOp = removeAllRemoveOpExceptForList(difference);
-            featureToPatch = Patcher.patch(storageFeature, diffNoRemoveOp);
-            break;
-          }
-        }
+      XyzFeature storedFeature = storedFeaturesById.get(featureToPatch.getId());
+      if (storedFeature != null) {
+        // we found matching feature in storage, so we take patched version of the feature
+        final Difference difference = Patcher.getDifference(storedFeature, inputFeature);
+        final Difference diffNoRemoveOp = removeAllRemoveOpExceptForList(difference);
+        featureToPatch = Patcher.patch(storedFeature, diffNoRemoveOp);
+      }
+      if (preProcessor != null) {
+        preProcessor.preProcess(featureToPatch);
       }
       // We now have featureToPatch which needs to be modified (if needed) and to be added to the list
-      addTagsToFeature(featureToPatch, addTags);
-      removeTagsFromFeature(featureToPatch, removeTags);
       patchedFeatureList.add(featureToPatch);
     }
     return patchedFeatureList;
+  }
+
+  private static @NotNull Map<String, XyzFeature> associateById(@NotNull List<XyzFeature> features) {
+    Map<String, XyzFeature> byId = new HashMap<>();
+    for (XyzFeature feature : features) {
+      byId.put(feature.getId(), feature);
+    }
+    return byId;
   }
 
   private XyzResponse returnError(
@@ -409,15 +438,16 @@ public class WriteFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<
     return verticle.sendErrorResponse(routingContext, xyzError, httpResponseMsg);
   }
 
-  private void addTagsToFeature(XyzFeature feature, List<String> addTags) {
-    if (addTags != null) {
-      feature.getProperties().getXyzNamespace().addTags(addTags, true);
-    }
+  private void preProcess(XyzFeature feature, List<String> removeTags, List<String> addTags) {
+    preProcessor(removeTags, addTags).preProcess(feature);
   }
 
-  private void removeTagsFromFeature(XyzFeature feature, List<String> removeTags) {
-    if (removeTags != null) {
-      feature.getProperties().getXyzNamespace().removeTags(removeTags, true);
-    }
+  private void preProcess(final List<XyzFeature> features, List<String> removeTags, List<String> addTags) {
+    FeaturePreProcessor<XyzFeature> preProcessor = preProcessor(removeTags, addTags);
+    features.forEach(preProcessor::preProcess);
+  }
+
+  private FeaturePreProcessor<XyzFeature> preProcessor(List<String> removeTags, List<String> addTags) {
+    return combine(MOM_10_PRE_PROCESSOR, new TagsPreProcessor(removeTags, addTags));
   }
 }
