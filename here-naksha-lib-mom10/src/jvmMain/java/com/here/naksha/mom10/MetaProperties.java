@@ -18,7 +18,6 @@
  */
 package com.here.naksha.mom10;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -28,10 +27,11 @@ import java.util.Set;
  */
 public class MetaProperties {
 
-  private MetaProperties() {}
+  private MetaProperties() {
+  }
 
   /**
-   * Renamed in MOM 10 from {@link XyzProperties#HERE_META_NS}
+   * Renamed in MOM 10 from {@link naksha.model.objects.NakshaProperties#META_KEY}
    */
   public static final String META = "meta";
 
@@ -61,7 +61,7 @@ public class MetaProperties {
       "updatedByUser");
 
   /**
-   * Renamed from {@link XyzProperties#HERE_DELTA_NS} and moved under {@link MetaProperties#META}
+   * Renamed from {@link naksha.model.objects.NakshaProperties#DELTA_KEY} and moved under {@link MetaProperties#META}
    */
   public static final String MODERATION_INFO = "moderationInfo";
 

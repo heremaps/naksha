@@ -2,8 +2,6 @@ package com.here.naksha.mom10;
 
 import static java.nio.file.Files.readAllBytes;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -12,6 +10,9 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
+import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
+import naksha.model.objects.NakshaFeature;
 
 public class TransformationSamples {
 
@@ -20,8 +21,8 @@ public class TransformationSamples {
 
   public record TransformationSample(
       String sourceDir,
-      XyzFeature mom10,
-      XyzFeature nakshaInternal
+      NakshaFeature mom10,
+      NakshaFeature nakshaInternal
   ) {
 
     @Override
@@ -46,8 +47,8 @@ public class TransformationSamples {
   private static TransformationSample copy(TransformationSample base) {
     return new TransformationSample(
         base.sourceDir,
-        base.mom10.deepClone(),
-        base.nakshaInternal.deepClone()
+        base.mom10.copy(true),
+        base.nakshaInternal.copy(true)
     );
   }
 
@@ -59,6 +60,7 @@ public class TransformationSamples {
 
     // initialization on demand
     private static final List<TransformationSample> LOADED_SAMPLES;
+
     static {
       List<Path> dirs = samplesDirs();
       LOADED_SAMPLES = new ArrayList<>(dirs.size());
@@ -84,8 +86,8 @@ public class TransformationSamples {
         byte[] rawAfter = readAllBytes(dir.resolve(NAKSHA_INTERNAL_JSON));
         return new TransformationSample(
             dir.getFileName().toString(),
-            JsonSerializable.deserialize(rawBefore, XyzFeature.class),
-            JsonSerializable.deserialize(rawAfter, XyzFeature.class)
+            JvmBoxingUtil.box(Platform.fromJSON(rawBefore), NakshaFeature.class),
+            JvmBoxingUtil.box(Platform.fromJSON(rawAfter), NakshaFeature.class)
         );
       } catch (IOException e) {
         throw new RuntimeException("Unable to load sample from: " + dir, e);

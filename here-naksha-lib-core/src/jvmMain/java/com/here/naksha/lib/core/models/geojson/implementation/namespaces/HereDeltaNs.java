@@ -33,9 +33,6 @@ import org.jetbrains.annotations.Nullable;
 @Deprecated
 public class HereDeltaNs extends JsonObject {
 
-  public static final String CHANGE_STATE_PROPERTY = "changeState";
-  public static final String REVIEW_STATE_PROPERTY = "reviewState";
-
   /**
    * Create a new default delta namespace for new features.
    */
@@ -52,10 +49,10 @@ public class HereDeltaNs extends JsonObject {
    */
   @JsonCreator
   public HereDeltaNs(
-      @JsonProperty(CHANGE_STATE_PROPERTY) @Nullable MomChangeState changeState,
-      @JsonProperty(REVIEW_STATE_PROPERTY) @Nullable MomReviewState reviewState) {
+      @JsonProperty("changeState") @Nullable MomChangeState changeState,
+      @JsonProperty("reviewState") @Nullable MomReviewState reviewState) {
     if (changeState == null) {
-      changeState = EChangeState.CREATED;
+      changeState = MomChangeState.CREATED;
     }
     if (reviewState == null) {
       reviewState = MomReviewState.UNPUBLISHED;

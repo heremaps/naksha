@@ -18,11 +18,11 @@
  */
 package com.here.naksha.mom10;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.util.json.JsonObject;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import naksha.base.AnyObject;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,10 +30,11 @@ public class Mom10Verification {
 
   private static final Pattern SHORT_SEM_VER = Pattern.compile("^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\..+$");
 
-  private Mom10Verification() {}
+  private Mom10Verification() {
+  }
 
-  public static boolean isMom10OrGreater(JsonObject rawFeature) {
-    Map properties = nestedMapOrNull(rawFeature, XyzFeature.PROPERTIES);
+  public static boolean isMom10OrGreater(AnyObject rawFeature) {
+    Map properties = nestedMapOrNull(rawFeature, NakshaFeature.PROPERTIES_KEY);
     if (properties != null) {
       Map meta = nestedMapOrNull(properties, MetaProperties.META);
       if (meta != null && meta.get(MetaProperties.MODEL_VERSION) instanceof String modelVersion) {

@@ -18,7 +18,7 @@ Because of the above, Naksha has to:
 
 ### Checking `modelVersion`
 
-[Mom10Verification](src/main/java/com/here/naksha/mom10/Mom10Verification.java) is responsible for
+[Mom10Verification](src/jvmMain/java/com/here/naksha/mom10/Mom10Verification.java) is responsible for
 checking whether given feature **has MOM version equal or greater to `10.0.0`**.
 This information can be used to determine whether a further processing is required.
 

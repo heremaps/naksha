@@ -22,38 +22,36 @@ import static com.here.naksha.mom10.MetaProperties.COMMON_META_PROPERTIES;
 import static com.here.naksha.mom10.MetaProperties.META;
 import static com.here.naksha.mom10.MetaProperties.MODERATION_INFO;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EChangeState;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.EReviewState;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereDeltaNs;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.HereMetaNs;
-import com.here.naksha.lib.core.util.json.JsonEnum;
 import java.util.Map;
+import naksha.model.mom.MomDeltaNs;
+import naksha.model.mom.MomMetaNs;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class Mom10Transformation {
 
-  private Mom10Transformation() {}
+  private Mom10Transformation() {
+  }
 
-  public static void populatePreMom10Namespaces(@Nullable XyzFeature feature) {
+  public static void populatePreMom10Namespaces(@Nullable NakshaFeature feature) {
     if (feature == null) {
       return;
     }
 
-    XyzProperties properties = feature.getProperties();
+    NakshaProperties properties = feature.getProperties();
     Map<String, Object> meta = (Map<String, Object>) properties.get(META);
     if (meta != null && !meta.isEmpty()) {
-      HereDeltaNs deltaNs = deltaNs(meta);
-      properties.setDeltaNamespace(deltaNs);
-      HereMetaNs metaNs = metaNs(meta);
-      properties.setMetaNamespace(metaNs);
+      MomDeltaNs deltaNs = deltaNs(meta);
+      properties.setDelta(deltaNs);
+      MomMetaNs metaNs = metaNs(meta);
+      properties.setMeta(metaNs);
     }
   }
 
-  private static @NotNull HereMetaNs metaNs(@NotNull Map<String, Object> meta) {
-    HereMetaNs metaNs = new HereMetaNs();
+  private static @NotNull MomMetaNs metaNs(@NotNull Map<String, Object> meta) {
+    MomMetaNs metaNs = new MomMetaNs();
     for (String metaKey : COMMON_META_PROPERTIES) {
       Object value = meta.get(metaKey);
       if (value != null) {
@@ -63,19 +61,19 @@ public class Mom10Transformation {
     return metaNs;
   }
 
-  private static @Nullable HereDeltaNs deltaNs(@NotNull Map<String, Object> meta) {
+  private static @Nullable MomDeltaNs deltaNs(@NotNull Map<String, Object> meta) {
     Map<String, Object> moderationInfo = (Map<String, Object>) meta.get(MODERATION_INFO);
     if (moderationInfo == null) {
       return null;
     } else {
-      HereDeltaNs deltaNs = new HereDeltaNs();
-      String rawChangeState = (String) moderationInfo.get(DeltaProperties.CHANGE_STATE);
-      if (rawChangeState != null) {
-        deltaNs.setChangeState(JsonEnum.get(EChangeState.class, rawChangeState));
+      MomDeltaNs deltaNs = new MomDeltaNs();
+      String changeState = (String) moderationInfo.get(DeltaProperties.CHANGE_STATE);
+      if (changeState != null) {
+        deltaNs.setChangeState(changeState);
       }
-      String rawReviewState = (String) moderationInfo.get(DeltaProperties.REVIEW_STATE);
-      if (rawChangeState != null) {
-        deltaNs.setReviewState(JsonEnum.get(EReviewState.class, rawReviewState));
+      String reviewState = (String) moderationInfo.get(DeltaProperties.REVIEW_STATE);
+      if (reviewState != null) {
+        deltaNs.setReviewState(reviewState);
       }
       String originId = (String) moderationInfo.get(DeltaProperties.ORIGIN_ID);
       if (originId != null) {
@@ -89,9 +87,9 @@ public class Mom10Transformation {
     }
   }
 
-  public static void dropPreMom10Namespaces(@Nullable XyzFeature feature) {
-    XyzProperties properties = feature.getProperties();
-    properties.remove(XyzProperties.HERE_META_NS);
-    properties.remove(XyzProperties.HERE_DELTA_NS);
+  public static void dropPreMom10Namespaces(@Nullable NakshaFeature feature) {
+    NakshaProperties properties = feature.getProperties();
+    properties.remove(NakshaProperties.META_KEY);
+    properties.remove(NakshaProperties.DELTA_KEY);
   }
 }

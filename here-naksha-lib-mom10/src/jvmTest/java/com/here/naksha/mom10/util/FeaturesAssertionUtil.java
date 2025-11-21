@@ -2,19 +2,17 @@ package com.here.naksha.mom10.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
-import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
-import com.here.naksha.lib.core.util.json.JsonEnum;
 import com.here.naksha.mom10.MetaProperties;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 
 public class FeaturesAssertionUtil {
 
@@ -22,19 +20,19 @@ public class FeaturesAssertionUtil {
   }
 
   private static final String MODERATION_INFO_PATH =
-      XyzFeature.PROPERTIES + "." + MetaProperties.META + "." + MetaProperties.MODERATION_INFO;
+      NakshaFeature.PROPERTIES_KEY + "." + MetaProperties.META + "." + MetaProperties.MODERATION_INFO;
 
   private static final Set<String> MODERATION_INFO_NULLABLE_FIELDS_SET_BY_NAKSHA = Set.of(
       "parentLink", "originId"
   );
 
   private static final Set<String> IGNORE_IF_NULL = Set.of(
-      XyzProperties.HERE_DELTA_NS,
-      XyzProperties.HERE_META_NS,
-      XyzProperties.XYZ_ACTIVITY_LOG_NS
+      NakshaProperties.DELTA_KEY,
+      NakshaProperties.META_KEY,
+      NakshaProperties.XYZ_ACTIVITY_LOG_NS
   );
 
-  public static void assertFeaturesEqual(XyzFeature expectedFeature, XyzFeature actualFeature) {
+  public static void assertFeaturesEqual(NakshaFeature expectedFeature, NakshaFeature actualFeature) {
     assertMapsEqual(expectedFeature, actualFeature, "");
   }
 
@@ -42,7 +40,7 @@ public class FeaturesAssertionUtil {
     if (Objects.equals(path, MODERATION_INFO_PATH)) {
       verifyAndDropNullsSetByNaksha(expected, actual);
     }
-    if (Objects.equals(path, XyzFeature.PROPERTIES)) {
+    if (Objects.equals(path, NakshaFeature.PROPERTIES_KEY)) {
       dropIgnoredIfNulls(expected, actual);
     }
     assertEquals(expected.size(), actual.size(), "Map size mismatch under path: " + path);
@@ -81,12 +79,6 @@ public class FeaturesAssertionUtil {
     } else if (expectedValue instanceof List expectedListValue) {
       assertInstanceOf(List.class, actualValue);
       assertListsEqual(expectedListValue, (List) actualValue, path);
-    } else if (expectedValue instanceof JsonEnum expectedJsonEnum && actualValue instanceof String actualString) {
-      assertEquals(expectedJsonEnum.value(), actualString,
-          "Expected " + expectedValue + " but got " + actualValue + " under path: " + path);
-    } else if (actualValue instanceof JsonEnum actualJsonEnum && expectedValue instanceof String expectedString) {
-      assertEquals(expectedString, actualJsonEnum.value(),
-          "Expected " + expectedValue + " but got " + actualValue + " under path: " + path);
     } else {
       assertEquals(expectedValue, actualValue, "Expected " + expectedValue + " but got " + actualValue + " under path: " + path);
     }
