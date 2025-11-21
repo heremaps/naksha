@@ -88,8 +88,10 @@ public class Mom10Transformation {
   }
 
   public static void dropPreMom10Namespaces(@Nullable NakshaFeature feature) {
-    NakshaProperties properties = feature.getProperties();
-    properties.remove(NakshaProperties.META_KEY);
-    properties.remove(NakshaProperties.DELTA_KEY);
+    if(feature != null) {
+      NakshaProperties properties = feature.getProperties();
+      properties.remove(NakshaProperties.META_KEY);
+      properties.remove(NakshaProperties.DELTA_KEY);
+    }
   }
 }

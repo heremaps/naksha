@@ -18,7 +18,8 @@ Because of the above, Naksha has to:
 
 ### Checking `modelVersion`
 
-[Mom10Verification](src/jvmMain/java/com/here/naksha/mom10/Mom10Verification.java) is responsible for
+[Mom10Verification](src/jvmMain/java/com/here/naksha/mom10/Mom10Verification.java) is responsible
+for
 checking whether given feature **has MOM version equal or greater to `10.0.0`**.
 This information can be used to determine whether a further processing is required.
 
@@ -41,23 +42,24 @@ previously stored MOM 10 feature (described above):
 - we return feature in the same shape as it was given to Naksha in the writing phase
 
 The class responsible for these operations
-is [Mom10Transformation](../java/com/here/naksha/mom10/transform/Mom10Transformation.java).
+is [Mom10Transformation](src/jvmMain/java/com/here/naksha/mom10/Mom10Transformation.java).
 
 #### Populating old delta
 
-| `@ns:com:here:mom:delta` properties supported in Naksha V2 (pre MOM 10) | equivalents in `meta.moderationInfo` (MOM 10+) |
-|-------------------------------------------------------------------------|------------------------------------------------| 
-| `originId`                                                              | `originId`                                     |
-| `parentLink`                                                            | `parentLink`                                   |
-| `changeState`                                                           | `changeState`                                  |
-| `reviewState`                                                           | `reviewState`                                  |
-| `streamId`                                                              | not applicable                                 |
-| `potentialValue`                                                        | not applicable                                 |
-| `priorityCategory`                                                      | not applicable                                 |
-| `dueTS`                                                                 | not applicable                                 |
-| `changeCounter`                                                         | not applicable                                 |
+| `@ns:com:here:mom:delta` properties supported in Naksha (pre MOM 10) | equivalents in `meta.moderationInfo` (MOM 10+) |
+|----------------------------------------------------------------------|------------------------------------------------| 
+| `originId`                                                           | `originId`                                     |
+| `parentLink`                                                         | `parentLink`                                   |
+| `changeState`                                                        | `changeState`                                  |
+| `reviewState`                                                        | `reviewState`                                  |
+| `streamId`                                                           | not applicable                                 |
+| `potentialValue`                                                     | not applicable                                 |
+| `priorityCategory`                                                   | not applicable                                 |
+| `dueTS`                                                              | not applicable                                 |
+| `changeCounter`                                                      | not applicable                                 |
 
-Only the properties supported in both old delta NS and new `moderationInfo` will be used for population of `@ns:com:here:mom:delta` namespace.
+Only the properties supported in both old delta NS and new `moderationInfo` will be used for
+population of `@ns:com:here:mom:delta` namespace.
 
 Pre MOM 10 delta NS
 model: https://docs.in.here.com/static/169823/1467398/html/#com/here/mom/internal/extension/branch/branch.html
@@ -67,8 +69,9 @@ info: https://here-dev.zoominsoftware.io/docs/bundle/map-object-model-data-speci
 
 #### Populating old meta
 
-Properties supported by both old `@ns:com:here:mom:meta` NS and MOM 10+ `meta` property 
-- `sourceId` 
+Properties supported by both old `@ns:com:here:mom:meta` NS and MOM 10+ `meta` property
+
+- `sourceId`
 - `updatedByUser`
 - `lastUpdatedBy`
 - `modelVersion`

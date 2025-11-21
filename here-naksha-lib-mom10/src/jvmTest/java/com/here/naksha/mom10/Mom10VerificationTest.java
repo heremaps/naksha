@@ -29,8 +29,8 @@ class Mom10VerificationTest {
   private static Stream<Named<VerificationCase>> shouldVerifyIfFeatureIsInMom10() {
     return Stream.of(
         named("10.0.0 version in correct field => true", new VerificationCase(featureWithVersionInMeta("10.0.0"), true)),
-        named("10.0 version in correct field => true", new VerificationCase(featureWithVersionInMeta("10.0.0"), true)),
-        named("10 version in correct field => true", new VerificationCase(featureWithVersionInMeta("10.0.0"), true)),
+        named("10.0 version in correct field => false", new VerificationCase(featureWithVersionInMeta("10.0"), false)),
+        named("10 version in correct field => false", new VerificationCase(featureWithVersionInMeta("10"), false)),
         named("10.0.1-lorem-ipsum version in correct field => true",
             new VerificationCase(featureWithVersionInMeta("10.0.1-lorem-ipsum"), true)),
         named("12.0.3 version in correct field => true", new VerificationCase(featureWithVersionInMeta("12.0.3"), true)),
@@ -39,7 +39,7 @@ class Mom10VerificationTest {
             new VerificationCase(featureWithVersionInMeta("10.plus.1.equals.11-not_a_semver"), false)),
         named("10.0.0 version in incorrect field => false", new VerificationCase(featureWithVersionInOldMetaNs("10.0.0"), false)),
         named("Newer version in incorrect field => false", new VerificationCase(featureWithVersionInOldMetaNs("12.0.0"), false)),
-        named("Older version in incorrect field => false", new VerificationCase(featureWithVersionInOldMetaNs("8.91"), false)),
+        named("Older version in incorrect field => false", new VerificationCase(featureWithVersionInOldMetaNs("8.91.0"), false)),
         named("Invalid string in incorrect field => false",
             new VerificationCase(featureWithVersionInOldMetaNs("11.minus.2.equals.9"), false))
     );
