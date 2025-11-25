@@ -201,7 +201,8 @@ open class PgTable(
         //
         // Now, PostgresQL maximum page size is 32768 (configurable at compile time), therefore, setting TOAST_TUPLE_TARGET to 32767
         // will ensure that whatever size a page is, PostgresQL will try to insert the row completely, before falling back to TOAST !
-        val toast_tuple_target = collection.map.storage.adminMap.maxTupleSize
+        val map = collection.map;
+        val toast_tuple_target = if (map is PgAdminMap) map.maxTupleSize else map.storage.adminMap.maxTupleSize;
 
         // Copy to stack, makes possible for the compiler to remember when values are not null!
         val partitionCount = this.partitionCount
