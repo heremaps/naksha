@@ -166,11 +166,6 @@ abstract class PgAdminMap internal constructor(
         val config_version = config.version
         val psql_version = if (config_version != null) NakshaVersion.of(config_version) else adminVersion
 
-        // This only creates the logical structure, no database access is yet done!
-        transactions = PgNakshaTransactions(this)
-        dictionaries = PgNakshaDictionaries(this)
-        maps = PgNakshaMaps(this)
-
         // Switch to admin context.
         val conn = storage.newConnection(Naksha.adminOptions, false)
         conn.use {
@@ -245,6 +240,13 @@ SELECT basics.*, procs.* FROM basics, procs;
                 has_naksha_storage_id = cursor.column("has_naksha_storage_id") as Boolean?
                 has_naksha_storage_number = cursor.column("has_naksha_storage_number") as Boolean?
             }
+
+            // This only creates the logical structure, no database access is yet done!
+            // Beware: We need to do this here, because `PgCollection` back-refers to `maxTupleSize` !
+            transactions = PgNakshaTransactions(this)
+            dictionaries = PgNakshaDictionaries(this)
+            maps = PgNakshaMaps(this)
+
             if (admin_schema_oid == null) {
                 if (!doCreate) throw forbidden("Creation of admin-map needed, but forbidden by config")
                 logger.info("Install Naksha admin-map in version $psql_version for storage $id / $number")
