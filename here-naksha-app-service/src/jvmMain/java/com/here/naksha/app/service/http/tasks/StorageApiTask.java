@@ -18,8 +18,6 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.ops.CommonPropertiesToMask.COMMON_PROPERTIES_TO_MASK;
-import static com.here.naksha.app.service.http.ops.MaskingUtil.maskProperties;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.STORAGE_ID;
@@ -27,11 +25,11 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
-import com.here.naksha.app.service.http.ops.CommonPropertiesToMask;
+import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.MaskingPostProcessor;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
-import java.util.Set;
 import naksha.base.JvmJsonUtil;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
@@ -49,6 +47,7 @@ import org.slf4j.LoggerFactory;
 public class StorageApiTask extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(StorageApiTask.class);
+  private static final FeaturePostProcessor<NakshaStorage> STORAGE_MASKING = new MaskingPostProcessor<>();
 
   private final @NotNull StorageApiReqType reqType;
 
@@ -107,7 +106,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
     final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
     request.setMapId(naksha().getAdminMapId());
     Response response = executeReadRequestFromSpaceStorage(request);
-    return transformResponseToXyzCollectionResponse(response, NakshaStorage.class, this::maskSensitiveProperties);
+    return transformResponseToXyzCollectionResponse(response, NakshaStorage.class, STORAGE_MASKING);
   }
 
   private @NotNull XyzResponse executeGetStorageById() {
@@ -131,7 +130,8 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
       return verticle.sendErrorResponse(
           routingContext, NakshaError.ILLEGAL_ARGUMENT, mismatchMsg(storageIdFromPath, storageFromBody));
     } else {
-      final WriteRequest updateStorageReq = RequestHelper.nonAtomicUpdateFeatureRequest(naksha().getAdminMapId(), STORAGES, storageFromBody);
+      final WriteRequest updateStorageReq = RequestHelper.nonAtomicUpdateFeatureRequest(naksha().getAdminMapId(), STORAGES,
+          storageFromBody);
       return transformedResponseTo(updateStorageReq);
     }
   }
@@ -141,26 +141,21 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
     final WriteRequest wrRequest = RequestHelper.deleteFeatureByIdRequest(naksha().getAdminMapId(), STORAGES, storageId);
     Response response = executeWriteRequestFromSpaceStorage(wrRequest);
     return transformResponseToXyzFeatureResponse(response, NakshaStorage.class, NOT_FOUND_ON_NO_ELEMENTS,
-        this::maskSensitiveProperties);
+        STORAGE_MASKING);
   }
 
   @NotNull
   private XyzResponse transformedResponseTo(ReadFeatures request) {
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzFeatureResponse(
-        response, NakshaStorage.class, NOT_FOUND_ON_NO_ELEMENTS, this::maskSensitiveProperties);
+        response, NakshaStorage.class, NOT_FOUND_ON_NO_ELEMENTS, STORAGE_MASKING);
   }
 
   @NotNull
   private XyzResponse transformedResponseTo(WriteRequest updateStorageReq) {
     Response updateStorageResult = executeWriteRequestFromSpaceStorage(updateStorageReq);
     return transformResponseToXyzFeatureResponse(updateStorageResult, NakshaStorage.class, FAIL_ON_NO_ELEMENTS,
-        this::maskSensitiveProperties);
-  }
-
-  private NakshaStorage maskSensitiveProperties(NakshaStorage storageConfig) {
-    maskProperties(storageConfig, COMMON_PROPERTIES_TO_MASK);
-    return storageConfig;
+        STORAGE_MASKING);
   }
 
   private @NotNull NakshaStorage storageConfigFromRequestBody() {

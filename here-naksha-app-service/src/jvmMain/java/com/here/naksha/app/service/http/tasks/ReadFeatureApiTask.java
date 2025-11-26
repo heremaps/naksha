@@ -21,6 +21,8 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
 import static com.here.naksha.app.service.http.apis.ApiParams.extractParamAsStringList;
 import static com.here.naksha.app.service.http.apis.ApiParams.queryParamsFromRequest;
+import static com.here.naksha.app.service.http.tasks.processor.Mom10PostProcessor.MOM_10_POST_PROCESSOR;
+import static com.here.naksha.app.service.http.tasks.processor.SequentialPostProcessor.combine;
 import static com.here.naksha.common.http.apis.ApiParamsConst.CLIP_GEO;
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_FEATURE_LIMIT;
 import static com.here.naksha.common.http.apis.ApiParamsConst.EAST;
@@ -53,9 +55,11 @@ import com.here.naksha.app.service.http.ops.PropertyQueryUtil;
 import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
 import com.here.naksha.app.service.http.ops.TagQueryUtil;
 import com.here.naksha.app.service.http.ops.TileToBboxUtil;
+import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.GeoClipPostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.PropertySelectionPostProcessor;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
@@ -166,16 +170,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
       return verticle.sendErrorResponse(routingContext, NakshaError.ILLEGAL_ARGUMENT, "Missing id parameter");
     }
     final ReadFeaturesProxyWrapper rdRequest = proxyWrapperOf(readFeaturesByIdsRequest(null, spaceId, featureIds))
-            .withReadRequestType(ReadRequestType.GET_BY_IDS)
-            .addQueryParameter(FEATURE_IDS, featureIds);
-
+        .withReadRequestType(ReadRequestType.GET_BY_IDS)
+        .addQueryParameter(FEATURE_IDS, featureIds);
 
     // Forward request to NH Space Storage reader instance
     Response response = executeReadRequestFromSpaceStorage(rdRequest);
-    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, null);
-
     // transform Result to Http FeatureCollection response
-    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, preResponseProcessing);
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, postProcessor(propPaths));
   }
 
   private @NotNull XyzResponse executeFeatureById() {
@@ -186,15 +187,14 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParameters);
 
     final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(null, spaceId, featureId))
-            .withReadRequestType(ReadRequestType.GET_BY_ID)
-            .addQueryParameter(FEATURE_ID, featureId);
+        .withReadRequestType(ReadRequestType.GET_BY_ID)
+        .addQueryParameter(FEATURE_ID, featureId);
 
     // Forward request to NH Space Storage reader instance
     Response response = executeReadRequestFromSpaceStorage(rdRequest);
-    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http XyzFeature response
     return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS,
-        preResponseProcessing);
+        postProcessor(propPaths));
   }
 
   private @NotNull XyzResponse executeFeaturesByBBox() {
@@ -252,11 +252,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     final Response response = executeReadRequestFromSpaceStorage(readFeatures);
 
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    // we will also apply response preprocessing (like property selection and geometry clipping)
+    // we will also apply feature postprocessing (like property selection and geometry clipping)
     // if any of the options is enabled
-    final F1<NakshaFeature, NakshaFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, clip, bbox.toPolygon());
-    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, preResponseProcessing);
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null,
+        postProcessor(propPaths, clip, bbox.toPolygon()));
   }
 
   private @NotNull XyzResponse executeFeaturesByTile() {
@@ -305,11 +304,10 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     // Forward request to NH Space Storage reader instance
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    // we will also apply response preprocessing (like property selection and geometry clipping)
+    // we will also apply feature postprocessing (like property selection and geometry clipping)
     // if any of the options is enabled
-    final F1<NakshaFeature, NakshaFeature> preResponseProcessing =
-        standardReadFeaturesPreResponseProcessing(propPaths, clip, tilePolygon);
-    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, preResponseProcessing);
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null,
+        postProcessor(propPaths, clip, tilePolygon));
   }
 
   private @NotNull XyzResponse executeSearch() {
@@ -344,9 +342,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
-    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, preResponseProcessing);
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, postProcessor(propPaths));
   }
 
   private @NotNull XyzResponse executeIterate() {
@@ -383,10 +380,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
-    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, null);
     // transform Result to Http FeatureCollection response,
     // restricted by given feature limit and by adding "handle" attribute to support subsequent iteration
-    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, offset, clientLimit, handle, preResponseProcessing);
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, offset, clientLimit, handle, postProcessor(propPaths));
   }
 
   // TODO: refactor: this and other radius method are basically the sma,e only refGeo origin differs
@@ -432,10 +428,9 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
-    // TODO pass the correct transformed geometry into this method call, also use the boolean clip
-    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, refGeometry);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, preResponseProcessing);
+    FeaturePostProcessor<NakshaFeature> postProcessor = postProcessor(propPaths); // TODO CASL-1479: consider adding clip support
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, postProcessor);
   }
 
   private @NotNull SpGeometry obtainReferenceGeometry(
@@ -459,8 +454,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     NakshaFeature feature = null;
     // Forward Read request to NHSpaceStorage instance
     final ReadFeatures rdRequest = proxyWrapperOf(readFeaturesByIdRequest(null, refSpaceId, refFeatureId))
-            .withReadRequestType(ReadRequestType.GET_BY_ID)
-            .addQueryParameter(FEATURE_ID, refFeatureId);
+        .withReadRequestType(ReadRequestType.GET_BY_ID)
+        .addQueryParameter(FEATURE_ID, refFeatureId);
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
     if (response instanceof SuccessResponse successResponse) {
       feature = ResultHelper.readFeatureFromResponse(successResponse, NakshaFeature.class);
@@ -514,9 +509,31 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
     // Forward request to NH Space Storage reader instance
     final Response response = executeReadRequestFromSpaceStorage(rdRequest);
-    // TODO pass the correct transformed geometry into this method call, also use the boolean clip
-    final F1<NakshaFeature, NakshaFeature> preResponseProcessing = standardReadFeaturesPreResponseProcessing(propPaths, false, refGeometry);
     // transform Result to Http FeatureCollection response, restricted by given feature limit
-    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, preResponseProcessing);
+    FeaturePostProcessor<NakshaFeature> postProcessor = postProcessor(propPaths); // TODO CASL-1479: consider adding clip support
+    return transformResponseToXyzCollectionResponse(response, NakshaFeature.class, 0, limit, null, postProcessor);
+  }
+
+  private @NotNull FeaturePostProcessor<NakshaFeature> postProcessor(Set<String> propPaths) {
+    if (propPaths == null || propPaths.isEmpty()) {
+      return MOM_10_POST_PROCESSOR;
+    }
+    return combine(MOM_10_POST_PROCESSOR, new PropertySelectionPostProcessor(propPaths));
+  }
+
+  private @NotNull FeaturePostProcessor<NakshaFeature> postProcessor(
+      Set<String> propPaths, boolean clip, SpGeometry clipGeo) {
+    if (propPaths != null && !propPaths.isEmpty()) {
+      PropertySelectionPostProcessor propSelectionPostProcessor = new PropertySelectionPostProcessor(propPaths);
+      if (clip) {
+        return combine(MOM_10_POST_PROCESSOR, propSelectionPostProcessor, new GeoClipPostProcessor(clipGeo));
+      } else {
+        return combine(MOM_10_POST_PROCESSOR, propSelectionPostProcessor);
+      }
+    } else if (clip) {
+      return combine(MOM_10_POST_PROCESSOR, new GeoClipPostProcessor(clipGeo));
+    } else {
+      return MOM_10_POST_PROCESSOR;
+    }
   }
 }
