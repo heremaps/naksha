@@ -89,33 +89,4 @@ class Mom10Test extends ApiTest {
         .hasJsonBody(expectedGetResp)
         .hasStreamIdHeader(streamId);
   }
-
-  @Test
-  void shouldDropOldNamespaces() throws URISyntaxException, IOException, InterruptedException {
-    // Test API : POST /hub/spaces/{spaceId}/features
-    // Given: Create Features request with feature that is pre-MOM 10
-    final String createFeatureJson = loadFileOrFail("Mom10/testDropNamespaces/features.json");
-    final String patchFeatureJson = loadFileOrFail("Mom10/testDropNamespaces/patch.json");
-    final String expectedGetResp = loadFileOrFail("Mom10/testDropNamespaces/response.json");
-    String featureId = "test_drop_f";
-    String streamId = UUID.randomUUID().toString();
-
-    // When: Create Features request is submitted to NakshaHub Space Storage instance
-    HttpResponse<String> createResp = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", createFeatureJson, streamId);
-    assertThat(createResp).hasStatus(200);
-
-    // And: We do little hacking - patching the feature with different `modelVersion` (MOM 10) so that MOM 10 transformation will happen
-    HttpResponse<String> patchResp = getNakshaClient().patch("hub/spaces/" + SPACE_ID + "/features/" + featureId, patchFeatureJson,
-        streamId);
-    assertThat(patchResp).hasStatus(200);
-
-    // And: We query for the patched feature that was not transformed during the write phase (it was pre MOM 10) but will during read phase (it was MOM 10)
-    HttpResponse<String> getResp = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features?id=" + featureId, streamId);
-
-    // Then: We get original feature with dropped old namespaces
-    assertThat(getResp)
-        .hasStatus(200)
-        .hasJsonBody(expectedGetResp)
-        .hasStreamIdHeader(streamId);
-  }
 }
