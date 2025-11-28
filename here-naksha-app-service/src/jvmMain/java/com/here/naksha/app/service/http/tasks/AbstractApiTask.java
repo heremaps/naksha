@@ -24,33 +24,31 @@ import static java.util.Objects.requireNonNull;
 import static naksha.base.JvmBoxingUtil.box;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
-import static naksha.model.util.ResultHelper.readFeaturesGroupedByAction;
 
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
+import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.lambdas.F1;
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
-import com.here.naksha.lib.core.util.PropertyPathUtil;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
 import naksha.base.Platform;
-import naksha.geo.ProxyGeoUtil;
-import naksha.geo.SpGeometry;
 import naksha.model.Action;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
@@ -58,8 +56,6 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.util.GeometryFixer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,15 +112,15 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final @Nullable Response response,
       final @NotNull Class<F> type,
       final @NotNull NoElementsStrategy noElementsStrategy,
-      final @Nullable F1<F, F> preResponseProcessing
+      final @Nullable FeaturePostProcessor<F> featurePostProcessor
   ) {
     final XyzResponse validatedErrorResponse = validateErrorResult(response);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else if (response instanceof SuccessResponse successResponse) {
       F feature = readFeatureFromResponse(successResponse, type);
-      if (feature != null && preResponseProcessing != null) {
-        feature = preResponseProcessing.call(feature);
+      if (feature != null && featurePostProcessor != null) {
+        feature = featurePostProcessor.postProcess(feature);
       }
       if (feature == null) {
         return handleNoElements(noElementsStrategy);
@@ -143,19 +139,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
       final @Nullable Response response,
       final @NotNull Class<F> type,
-      final @Nullable F1<F, F> preResponseProcessing) {
+      final @Nullable FeaturePostProcessor<F> featurePostProcessor
+  ) {
     return transformResponseToXyzCollectionResponse(
-        response, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, preResponseProcessing);
-  }
-
-  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(final @Nullable Response response,
-      final @NotNull Class<F> type) {
-    return transformResponseToXyzCollectionResponse(response, type, DEF_ADMIN_FEATURE_LIMIT);
-  }
-
-  protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
-      final @Nullable Response response, final @NotNull Class<F> type, final int maxLimit) {
-    return transformResponseToXyzCollectionResponse(response, type, 0, maxLimit, null, null);
+        response, type, 0, DEF_ADMIN_FEATURE_LIMIT, null, featurePostProcessor);
   }
 
   protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzCollectionResponse(
@@ -164,17 +151,17 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final int offset,
       final int maxLimit,
       final @Nullable IterateHandle handle,
-      final @Nullable F1<F, F> preResponseProcessing) {
+      final @Nullable FeaturePostProcessor<F> featurePostProcessor) {
     final XyzResponse validatedErrorResponse = validateErrorResultEmptyCollection(response);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else if (response instanceof SuccessResponse successResponse) {
       final List<F> features = extractResponseItems(successResponse, type, offset, maxLimit);
       List<F> processedFeatures = features;
-      if (preResponseProcessing != null) {
+      if (featurePostProcessor != null) {
         processedFeatures = new ArrayList<>();
         for (F feature : features) {
-          final F processedFeature = preResponseProcessing.call(feature);
+          final F processedFeature = featurePostProcessor.postProcess(feature);
           if (processedFeature != null) {
             processedFeatures.add(processedFeature);
           }
@@ -214,16 +201,19 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     return handle.base64EncodedSerializedJson();
   }
 
-  protected <F extends NakshaFeature> @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
-      final @Nullable Response response, final @NotNull Class<F> type, final boolean isDeleteOperation) {
+  protected @NotNull XyzResponse transformWriteResultToXyzCollectionResponse(
+      final @Nullable Response response,
+      final boolean isDeleteOperation,
+      @Nullable FeaturePostProcessor<NakshaFeature> postProcessor
+  ) {
     final XyzResponse validatedErrorResponse = validateErrorResult(response);
     if (validatedErrorResponse != null) {
       return validatedErrorResponse;
     } else if (response instanceof SuccessResponse successResponse) {
-      final Map<Action, List<F>> featureMap = readFeaturesGroupedByAction(successResponse, type);
-      final List<F> insertedFeatures = featureMap.get(Action.CREATED);
-      final List<F> updatedFeatures = featureMap.get(Action.UPDATED);
-      final List<F> deletedFeatures = featureMap.get(Action.DELETED);
+      final Map<Action, List<NakshaFeature>> featureMap = postProcessedFeaturesByAction(successResponse, postProcessor);
+      final List<NakshaFeature> insertedFeatures = featureMap.get(Action.CREATED);
+      final List<NakshaFeature> updatedFeatures = featureMap.get(Action.UPDATED);
+      final List<NakshaFeature> deletedFeatures = featureMap.get(Action.DELETED);
       // extract violations if available
       List<NakshaFeature> violations = null;
       if (successResponse instanceof ContextXyzFeatureResponse cr) {
@@ -299,46 +289,39 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     return requireNonNull(box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), type));
   }
 
-  protected <F extends NakshaFeature> @Nullable F1<F, F> standardReadFeaturesPreResponseProcessing(
-      final @Nullable Set<String> propPaths, final boolean clip, final SpGeometry clipGeo) {
-    if (propPaths == null && !clip) {
-      return null;
+  /**
+   * Helper method to fetch features from given Result and return a map of multiple lists of features with type T. Returned list is not
+   * limited - to set the upper bound, use sibling method with limit argument.
+   *
+   * @param result the Result which is to be read
+   * @return a map grouping the lists of features extracted from ReadResult (might be Map.empty())
+   */
+  private static Map<Action, List<NakshaFeature>> postProcessedFeaturesByAction(
+      SuccessResponse result,
+      FeaturePostProcessor<NakshaFeature> postProcessor
+  ) {
+    final NakshaFeatureList features = result.getFeatures();
+    if (features.isEmpty()) {
+      return Collections.emptyMap();
     }
-    return f -> {
-      F newF = f;
-      // Apply prop selection if enabled
-      if (propPaths != null) {
-        newF = applyPropertySelection(newF, propPaths);
+    final List<NakshaFeature> insertedFeatures = new ArrayList<>();
+    final List<NakshaFeature> updatedFeatures = new ArrayList<>();
+    final List<NakshaFeature> deletedFeatures = new ArrayList<>();
+    for (NakshaFeature feature : features) {
+      postProcessor.postProcess(feature);
+      final Action action = feature.getProperties().getXyz().getAction();
+      if (action == Action.CREATED) {
+        insertedFeatures.add(feature);
+      } else if (action == Action.UPDATED) {
+        updatedFeatures.add(feature);
+      } else if (action == Action.DELETED) {
+        deletedFeatures.add(feature);
       }
-      // Apply geometry clipping if enabled
-      if (clip) {
-        applyGeometryClipping(newF, clipGeo);
-      }
-      return newF;
-    };
-  }
-
-  @SuppressWarnings("unchecked")
-  private <F extends NakshaFeature> @NotNull F applyPropertySelection(
-      final @NotNull F f, final @NotNull Set<String> propPaths) {
-    final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(f, propPaths);
-    NakshaFeature newF = new NakshaFeature();
-    newF.putAll(tgtMap);
-    return (F) box(newF, f.getClass());
-  }
-
-  private <F extends NakshaFeature> void applyGeometryClipping(final @NotNull F f, final SpGeometry clipGeo) {
-    // clip Feature geometry (if present) to a given clipGeo geometry
-    final SpGeometry geo = f.getGeometry();
-    if (geo != null) {
-      // NOTE - in JTS when we say:
-      //    GeometryFixer.fix(geom).intersection(bbox)
-      // it is the best available way of clipping geometry, equivalent to PostGIS approach of:
-      //    ST_Intersection(ST_MakeValid(geo, 'method=structure'), bbox)
-      Geometry jtsGeo = ProxyGeoUtil.toJtsGeometry(geo);
-      Geometry jtsClip = ProxyGeoUtil.toJtsGeometry(clipGeo);
-      Geometry clippedGeo = GeometryFixer.fix(jtsGeo).intersection(jtsClip);
-      f.setGeometry(ProxyGeoUtil.toProxyGeometry(clippedGeo));
     }
+    final Map<Action, List<NakshaFeature>> featuresByAction = new HashMap<>();
+    featuresByAction.put(Action.CREATED, insertedFeatures);
+    featuresByAction.put(Action.UPDATED, updatedFeatures);
+    featuresByAction.put(Action.DELETED, deletedFeatures);
+    return featuresByAction;
   }
 }
