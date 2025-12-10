@@ -18,14 +18,14 @@
  */
 package com.here.naksha.app.service.http.tasks;
 
-import static com.here.naksha.app.service.http.ops.CommonPropertiesToMask.COMMON_PROPERTIES_TO_MASK;
-import static com.here.naksha.app.service.http.ops.MaskingUtil.maskProperties;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLER_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.MaskingPostProcessor;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
@@ -46,6 +46,7 @@ import org.slf4j.LoggerFactory;
 public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResponse> {
 
   private static final Logger logger = LoggerFactory.getLogger(EventHandlerApiTask.class);
+  private static final FeaturePostProcessor<EventHandlerConfig> HANDLER_MASKING = new MaskingPostProcessor<>();
 
   private final @NotNull EventHandlerApiReqType reqType;
 
@@ -100,7 +101,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     final WriteRequest writeRequest = RequestHelper.createFeatureRequest(naksha().getAdminMapId(), EVENT_HANDLERS, newHandler);
     // persist new handler in Admin DB (if doesn't exist already)
     Response response = executeWriteRequestFromSpaceStorage(writeRequest);
-    return transformResponseToXyzFeatureResponse(response, EventHandlerConfig.class, FAIL_ON_NO_ELEMENTS, this::maskSensitiveProperties);
+    return transformResponseToXyzFeatureResponse(response, EventHandlerConfig.class, FAIL_ON_NO_ELEMENTS, HANDLER_MASKING);
   }
 
   private @NotNull XyzResponse executeGetHandlers() {
@@ -110,7 +111,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);
     // transform Response to Http FeatureCollection response
-    return transformResponseToXyzCollectionResponse(response, EventHandlerConfig.class, this::maskSensitiveProperties);
+    return transformResponseToXyzCollectionResponse(response, EventHandlerConfig.class, HANDLER_MASKING);
   }
 
   private @NotNull XyzResponse executeGetHandlerById() {
@@ -125,7 +126,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
         response,
         EventHandlerConfig.class,
         NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS,
-        this::maskSensitiveProperties
+        HANDLER_MASKING
     );
   }
 
@@ -143,7 +144,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
           updateHandlerResponse,
           EventHandlerConfig.class,
           FAIL_ON_NO_ELEMENTS,
-          this::maskSensitiveProperties
+          HANDLER_MASKING
       );
     }
   }
@@ -156,18 +157,13 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
         response,
         EventHandlerConfig.class,
         NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS,
-        this::maskSensitiveProperties
+        HANDLER_MASKING
     );
   }
 
   private @NotNull EventHandlerConfig handlerFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
     return JvmJsonUtil.readJsonAs(bodyJson, EventHandlerConfig.class);
-  }
-
-  private EventHandlerConfig maskSensitiveProperties(EventHandlerConfig handlerConfig) {
-    maskProperties(handlerConfig, COMMON_PROPERTIES_TO_MASK);
-    return handlerConfig;
   }
 
   private static String mismatchMsg(String handlerIdFromPath, EventHandlerConfig handlerToUpdate) {

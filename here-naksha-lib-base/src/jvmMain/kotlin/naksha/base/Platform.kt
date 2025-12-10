@@ -11,7 +11,6 @@ import com.fasterxml.jackson.databind.*
 import com.fasterxml.jackson.databind.deser.BeanDeserializerModifier
 import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
-import com.fasterxml.jackson.module.kotlin.kotlinModule
 import naksha.base.Platform.PlatformCompanion.proxy
 import net.jpountz.lz4.LZ4Factory
 import sun.misc.Unsafe
@@ -29,7 +28,6 @@ import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.isSuperclassOf
-import kotlin.reflect.full.primaryConstructor
 
 
 /**
@@ -38,6 +36,25 @@ import kotlin.reflect.full.primaryConstructor
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class Platform {
     actual companion object PlatformCompanion {
+        /**
+         * Switch to `true` to enable the new JSON support.
+         */
+        @JvmField
+        internal val USE_NEW_JSON: AtomicBool = JvmAtomicBool(false)
+
+        fun useNewJson(): Boolean = USE_NEW_JSON.get()
+
+        fun enableNewJsonParser() {
+            if (USE_NEW_JSON.compareAndSet(expect=false, update=true)) {
+                naksha.base.JsonParser.threadLocalClass.set(JvmParser::class.java)
+            }
+        }
+
+        fun disableNewJsonParser() {
+            if (USE_NEW_JSON.compareAndSet(expect=true, update=false)) {
+                naksha.base.JsonParser.threadLocalClass.set(naksha.base.JsonParser::class.java)
+            }
+        }
 
         @JvmField
         internal val module = SimpleModule().apply {
@@ -81,16 +98,16 @@ actual class Platform {
         @JvmField
         internal val objectMapper: ThreadLocal<ObjectMapper> = ThreadLocal.withInitial {
             val jsonFactory = JsonFactoryBuilder()
-                .configure(JsonFactory.Feature.INTERN_FIELD_NAMES, false)
-                .configure(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES, false)
+                //.configure(JsonFactory.Feature.INTERN_FIELD_NAMES, false)
+                //.configure(JsonFactory.Feature.CANONICALIZE_FIELD_NAMES, false)
                 .configure(JsonFactory.Feature.USE_THREAD_LOCAL_FOR_BUFFER_RECYCLING, true)
                 .build()
             jsonFactory.configure(JsonGenerator.Feature.AUTO_CLOSE_TARGET, false)
             jsonFactory.configure(JsonParser.Feature.AUTO_CLOSE_SOURCE, false)
             JsonMapper.builder(jsonFactory)
                 //.enable(MapperFeature.DEFAULT_VIEW_INCLUSION)
-                .enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
-                .enable(MapperFeature.SORT_CREATOR_PROPERTIES_FIRST)
+                //.enable(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY)
+                //.enable(MapperFeature.SORT_CREATOR_PROPERTIES_FIRST)
                 //.serializationInclusion(JsonInclude.Include.NON_NULL)
                 .visibility(PropertyAccessor.SETTER, JsonAutoDetect.Visibility.NONE)
                 .visibility(PropertyAccessor.GETTER, JsonAutoDetect.Visibility.NONE)
@@ -485,12 +502,27 @@ actual class Platform {
         internal val fromJsonOptions = ThreadLocal<FromJsonOptions>()
 
         @JvmStatic
+        actual fun fromJSON(utf8: ByteArray): Any? {
+            if (USE_NEW_JSON.get()) {
+                val jsonParser = naksha.base.JsonParser.threadLocal()
+                return jsonParser.parse(utf8)
+            } else {
+                return objectMapper.get().readValue(utf8, Any::class.java)
+            }
+        }
+
+        @JvmStatic
         actual fun fromJSON(json: String): Any? = fromJSON(json, FromJsonOptions.DEFAULT)
 
         @JvmStatic
         actual fun fromJSON(json: String, options: FromJsonOptions): Any? {
-            fromJsonOptions.set(options)
-            return objectMapper.get().readValue(json, Any::class.java)
+            if (USE_NEW_JSON.get()) {
+                val jsonParser = naksha.base.JsonParser.threadLocal()
+                return jsonParser.parse(json.encodeToByteArray())
+            } else {
+                fromJsonOptions.set(options)
+                return objectMapper.get().readValue(json, Any::class.java)
+            }
         }
 
         @JvmStatic

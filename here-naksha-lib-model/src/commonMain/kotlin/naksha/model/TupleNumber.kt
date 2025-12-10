@@ -25,7 +25,7 @@ import kotlin.jvm.JvmStatic
 /**
  * The in-memory representation of the unique [Tuple] identifier.
  *
- * The full qualified [Tuple] identifier is a 288-bit value _(36 byte)_, persisting out of the storage-number, map-number, collection-number, feature-number, [transaction-number][Version], and the local unique identifier.
+ * The full qualified [Tuple] identifier is a 288-bit value _(36 byte)_, persisting out of the storage-number, map-number, collection-number, feature-number, [transaction-number][Version], and the local unique identifier (`uid`). Note that the lower two bit of the `uid` encode the [action][Action].
  *
  * The tuple-number is stringified into:
  * ```

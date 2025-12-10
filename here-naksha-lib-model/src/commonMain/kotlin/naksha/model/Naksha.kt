@@ -839,17 +839,24 @@ class Naksha private constructor() {
         fun useStorage(config: NakshaStorage): IStorage = _useStorage(config, null)
 
         private fun _useStorage(config: NakshaStorage, forceCreateOrUpgrade: Boolean?): IStorage {
-            val s = storagesByNumber[config.number]
-            val s2 = storagesById[config.id]
+            var s = storagesByNumber[config.number]
+            var s2 = storagesById[config.id]
             if (s !== s2) {
-                throw NakshaException(
-                    ILLEGAL_ARGUMENT,
-                    "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                lock.acquire().use {
+                    s = storagesByNumber[config.number]
+                    s2 = storagesById[config.id]
+                    if (s !== s2) {
+                        throw NakshaException(
+                            ILLEGAL_ARGUMENT,
+                            "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                    }
+                }
             }
-            if (s != null && s.config == config) {
+            val localS = s
+            if (localS != null && localS.config.configEquals(config)) {
                 // Only invoke initStorage, when we are forced to do it!
-                if (forceCreateOrUpgrade == true) s.invokeInitStorage(config, create = true, upgrade = true)
-                return s
+                if (forceCreateOrUpgrade == true) localS.invokeInitStorage(config, create = true, upgrade = true)
+                return localS
             }
             lock.acquire().use {
                 var storage = storagesByNumber[config.number]
@@ -860,7 +867,9 @@ class Naksha private constructor() {
                         "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
                 }
                 if (storage != null) {
-                    if (storage.config == config) return storage
+                    if (storage.config.configEquals(config)) {
+                        return storage
+                    }
                     storage.invokeShutdownStorage(false)
                 }
                 val klass = Platform.klassForName<AbstractStorage<*>>(config.className)

@@ -149,4 +149,35 @@ class PgConfig() : NakshaStorage() {
      * @since 3.0
      */
     val ephemeral_tablespace by STRING_NULL
+
+    override fun configEquals(other: NakshaStorage): Boolean {
+        val otherConfig = other.proxy(this::class)
+        return hardCap == otherConfig.hardCap &&
+                create == otherConfig.create &&
+                upgrade == otherConfig.upgrade &&
+                version == otherConfig.version &&
+                pgInstancesEquals(master, otherConfig.master) &&
+                replicasEquals(replicas, otherConfig.replicas)
+    }
+
+    private fun pgInstancesEquals(i1: PgInstanceConfig, i2: PgInstanceConfig): Boolean {
+        return i1.host == i2.host &&
+                i1.port == i2.port &&
+                i1.db == i2.db &&
+                i1.user == i2.user &&
+                i1.password == i2.password &&
+                i1.readOnly == i2.readOnly &&
+                i1.connectionLimit == i2.connectionLimit
+    }
+
+    private fun replicasEquals(l1: PgInstanceConfigList, l2: PgInstanceConfigList): Boolean {
+        if(l1.size != l2.size) return false
+        val l1Sorted = l1.sortedBy { it.toString() }
+        val l2Sorted = l2.sortedBy { it.toString() }
+        return l1Sorted
+            .zip(l2Sorted)
+            .all { (i1, i2) ->
+                (i1 == null && i2 == null) || (i1 != null && i2 != null && pgInstancesEquals(i1, i2))
+            }
+    }
 }

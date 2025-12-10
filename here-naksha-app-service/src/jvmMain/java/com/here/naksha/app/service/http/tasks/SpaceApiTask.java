@@ -20,6 +20,7 @@ package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.app.service.http.apis.ApiParams.extractMandatoryPathParam;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
+import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
 import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 
@@ -134,7 +135,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
     final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
     request.setMapId(naksha().getAdminMapId());
     Response response = executeReadRequestFromSpaceStorage(request);
-    return transformResponseToXyzCollectionResponse(response, Space.class);
+    return transformResponseToXyzCollectionResponse(response, Space.class, 0, DEF_ADMIN_FEATURE_LIMIT, null, null);
   }
 
   private @NotNull XyzResponse executeGetSpaceById() {

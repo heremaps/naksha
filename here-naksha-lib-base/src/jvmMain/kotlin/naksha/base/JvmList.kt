@@ -1,7 +1,10 @@
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.UNDEFINED
 import naksha.base.Platform.PlatformCompanion.unsafe
+import naksha.base.Platform.PlatformCompanion.useNewJson
 import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.math.max
 import kotlin.math.round
 
@@ -21,12 +24,29 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         internal val emptyArrayListElement = emptyArray<Any?>()
 
         @Suppress("NOTHING_TO_INLINE", "UNCHECKED_CAST")
-        private inline fun getElementDataOf(list: ArrayList<Any?>): Array<Any?> =
-            unsafe.getObject(list, arrayList_elementDataOFFSET) as Array<Any?>
+        private inline fun getElementDataOf(list: MutableList<Any?>): Array<Any?> =
+            if (list::class == ArrayList::class) unsafe.getObject(list, arrayList_elementDataOFFSET) as Array<Any?>
+            else if (list::class == JsonArray::class) (list as JsonArray).elements
+            else throw IllegalStateException("Invalid list type, only ArrayList and JsonArray are supported")
 
         @Suppress("NOTHING_TO_INLINE")
-        private inline fun setElementDataOf(list: ArrayList<Any?>, array: Array<Any?>) =
-            unsafe.putObject(list, arrayList_elementDataOFFSET, array)
+        private inline fun setElementDataOf(list: MutableList<Any?>, array: Array<Any?>) =
+            if (list::class == ArrayList::class) unsafe.putObject(list, arrayList_elementDataOFFSET, array)
+            else if (list::class == JsonArray::class) (list as JsonArray).elements = array
+            else throw IllegalStateException("Invalid list type, only ArrayList and JsonArray are supported")
+
+        @Suppress("NOTHING_TO_INLINE")
+        private inline fun ensureCapacity(list: MutableList<Any?>, newLength: Int) {
+            if (list::class == ArrayList::class) {
+                (list as ArrayList<Any?>).ensureCapacity(newLength)
+                return
+            }
+            if (list::class == JsonArray::class) {
+                (list as JsonArray).ensure(newLength)
+                return
+            }
+            throw IllegalStateException("Invalid list type, only ArrayList and JsonArray are supported")
+        }
 
         private const val MAX_OPT_CAPACITY = Int.MAX_VALUE - 16
 
@@ -41,13 +61,14 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
     /**
      * The payload of the array.
      */
-    internal var list: ArrayList<Any?>? = null
+    @JvmField
+    internal var list: MutableList<Any?>? = null
 
     /**
      * Returns the element data of the underlying list.
      * @return the element data of the underlying list; _null_ if no list is used.
      */
-    protected fun elementData(): Array<Any?>? {
+    private fun elementData(): Array<Any?>? {
         val list = this.list
         return if (list != null) getElementDataOf(list) else null
     }
@@ -104,9 +125,9 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
     }
 
     constructor(vararg entries: Any?) : this() {
-        val list: ArrayList<Any?>?
+        val list: MutableList<Any?>?
         if (entries.isNotEmpty()) {
-            list = ArrayList(entries.size + 4)
+            list = if (useNewJson()) JsonArray() else ArrayList(entries.size + 4)
             list.addAll(entries)
         } else {
             list = null
@@ -121,7 +142,7 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         check(capacity >= 0) { "capacity must be >= 0" }
         var list = this.list
         if (list == null) {
-            list = ArrayList(capacity)
+            list = if (Platform.useNewJson()) JsonArray(capacity) else ArrayList(capacity)
             this.list = list
         } else {
             val data = getElementDataOf(list)
@@ -134,10 +155,10 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
 
     fun getCapacity(): Int = elementData()?.size ?: 0
 
-    open fun list(): ArrayList<Any?> {
+    private fun list(): MutableList<Any?> {
         var list = this.list
         if (list == null) {
-            list = ArrayList()
+            list = if (useNewJson()) JsonArray() else ArrayList()
             this.list = list
         }
         return list
@@ -153,18 +174,33 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
 
             var list = this.list
             if (list == null) {
-                list = ArrayList(optimalCapacity(newLength))
-                unsafe.putInt(list, arrayList_sizeOFFSET, newLength)
+                if (useNewJson()) {
+                    list = JsonArray(newLength, newLength, null)
+                } else {
+                    list = ArrayList(optimalCapacity(newLength))
+                    unsafe.putInt(list, arrayList_sizeOFFSET, newLength)
+                }
                 this.list = list
             } else {
                 val length = list.size
                 if (newLength > length) { // inflate list
-                    list.ensureCapacity(optimalCapacity(newLength))
-                    Arrays.fill(getElementDataOf(list), length, newLength, null)
-                    unsafe.putInt(list, arrayList_sizeOFFSET, newLength)
+                    if (list is JsonArray) {
+                        list.ensure(newLength)
+                        Arrays.fill(list.elements, list.length, newLength, null)
+                        list.length = newLength
+                    } else {
+                        ensureCapacity(list, optimalCapacity(newLength))
+                        Arrays.fill(getElementDataOf(list), length, newLength, null)
+                        unsafe.putInt(list, arrayList_sizeOFFSET, newLength)
+                    }
                 } else if (newLength < length) { // deflate list, we know that newLength >= 1!
-                    unsafe.putInt(list, arrayList_sizeOFFSET, newLength)
-                    Arrays.fill(getElementDataOf(list), newLength, length, null)
+                    if (list is JsonArray) {
+                        Arrays.fill(list.elements, newLength, list.length, UNDEFINED)
+                        list.length = newLength
+                    } else {
+                        unsafe.putInt(list, arrayList_sizeOFFSET, newLength)
+                        Arrays.fill(getElementDataOf(list), newLength, length, null)
+                    }
                 }
             }
         }

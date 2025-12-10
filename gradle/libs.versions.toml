@@ -11,9 +11,15 @@ junit = "5.9.2"
 test_containers = "1.20.6"
 kotlin = "2.1.20"
 jacoco = "0.8.14"
+fastdouble = "2.0.1"
+jmh = "1.37"
+gson = "2.13.2" # https://github.com/google/gson
+jsonio = "4.61.0" # https://github.com/jdereg/json-io
+fastjson = "2.0.31" # https://github.com/alibaba/fastjson
+simdjson = "0.4.0" # https://github.com/simdjson/simdjson-java
 
 [libraries]
-jetbrains_annotations = { module = "org.jetbrains:annotations", version = "24.0.1" }
+jetbrains_annotations = { module = "org.jetbrains:annotations", version = "26.0.2-1" }
 
 vertx_core = { module = "io.vertx:vertx-core", version.ref = "vertx" }
 vertx_config = { module = "io.vertx:vertx-config", version.ref = "vertx" }
@@ -103,6 +109,15 @@ lz4_java = "org.lz4:lz4-java:1.8.0"
 
 picocli = { module = "info.picocli:picocli", version = "4.7.7" }
 
+fastdouble = { module = "ch.randelshofer:fastdoubleparser", version.ref = "fastdouble" }
+
+jmh_core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
+jmh_ann = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+jsonio = { module = "com.cedarsoftware:json-io", version.ref = "jsonio" }
+fastjson = { module = "com.alibaba:fastjson", version.ref="fastjson" }
+simdjson = { module = "org.simdjson:simdjson-java", version.ref = "simdjson" }
+
 [plugins]
 kotlin_multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin_js_plain_objects = { id = "org.jetbrains.kotlin.plugin.js-plain-objects", version.ref = "kotlin" }
@@ -112,6 +127,7 @@ spotless = { id = "spotless", version = "6.22.0" }
 vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.31.0" }
 #vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.1.0-SNAPSHOT" }
 axion_release = { id = "pl.allegro.tech.build.axion-release", version = "1.20.1"}
+#jmh = { id = "me.champeau.jmh", version = "0.7.2"}
 
 [bundles]
 vertx = [
@@ -140,3 +156,4 @@ testing = [
 ]
 jackson = ["jackson_core", "jackson_core_annotations", "jackson_core_databind", "jackson_core_dataformat", "jackson_kotlin"]
 logging = ["slf4j_api", "jcl_slf4j", "log4j_core", "log4j_api", "log4j_jcl", "log4j_slf4j"]
+#perftest = ["jmh_core", "jmh_ann", "gson"]
