@@ -1,4 +1,5 @@
 import com.vanniktech.maven.publish.SonatypeHost
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import java.net.URI
 
 plugins {
@@ -11,6 +12,7 @@ plugins {
     // Only need within root
     // see: https://github.com/johnrengelman/shadow
     alias(libs.plugins.shadow) apply false
+    id("jacoco")
 }
 
 //configurations.implementation {
@@ -202,6 +204,50 @@ allprojects {
     }
 }
 
+jacoco {
+    toolVersion = rootProject.libs.versions.jacoco.get()
+    reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
+}
+
+subprojects {
+    if(allModules[name]?.first == CleanAndTest.KOTLIN) {
+        apply(plugin = "jacoco")
+
+        jacoco {
+            toolVersion = rootProject.libs.versions.jacoco.get()
+            reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
+        }
+
+        tasks {
+            val jacocoTestReport by registering(JacocoReport::class) {
+                group = "jacoco"
+
+                dependsOn("jvmTest")
+                configureJacocoForKmp(project)
+                reports {
+                    xml.required = true
+                }
+            }
+
+            val jacocoTestCoverageVerification by registering(JacocoCoverageVerification::class) {
+                group = "jacoco"
+                dependsOn(jacocoTestReport)
+                val reportTask = jacocoTestReport.get()
+                sourceDirectories.setFrom(reportTask.sourceDirectories)
+                classDirectories.setFrom(reportTask.classDirectories)
+                executionData.setFrom(reportTask.executionData)
+                violationRules {
+                    rule {
+                        limit {
+                            minimum = getOverallCoverage().toBigDecimal()
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // Helper, run as `gradle cleanAndTestAll`
 fun Task.configureCleanAndTestTasks() {
     allModules.forEach {
@@ -216,6 +262,45 @@ fun Task.configureCleanAndTestTasks() {
     }
 }
 tasks.register("cleanAndTestAll") { configureCleanAndTestTasks() }
+
+tasks.register<JacocoReport>("jacocoAggregatedTestReport") {
+    group = "jacoco"
+
+    val modulesWithTestsEnabled = allModules.filter {(_, moduleInfo) ->  moduleInfo.first == CleanAndTest.KOTLIN }
+    modulesWithTestsEnabled.forEach {(moduleName, _) ->
+        dependsOn(":${moduleName}:jvmTest")
+    }
+    modulesWithTestsEnabled
+        .map { (moduleName, _) -> project(":${moduleName}")
+        .extractJacocoProjectDirs() }
+        .merge()
+        .let {
+            sourceDirectories.setFrom(it.sourceDirectories)
+            classDirectories.setFrom(it.classDirectories)
+            executionData.setFrom(it.executionData)
+        }
+
+    reports {
+        xml.required = true
+    }
+}
+
+tasks.register<JacocoCoverageVerification>("jacocoAggreagetedTestCoverageVerification") {
+    group = "jacoco"
+
+    val reportTask = tasks.named<JacocoReport>("jacocoAggregatedTestReport").get()
+    dependsOn(reportTask)
+    sourceDirectories.setFrom(reportTask.sourceDirectories)
+    classDirectories.setFrom(reportTask.classDirectories)
+    executionData.setFrom(reportTask.executionData)
+    violationRules {
+        rule {
+            limit {
+                minimum = getOverallCoverage().toBigDecimal()
+            }
+        }
+    }
+}
 
 // Helper, run as `gradle publishToLocal`
 fun Task.publishToLocal() {
@@ -294,4 +379,47 @@ tasks.register("publishToCentral") { publishToCentral() }
 
 tasks.register("shadowJar") {
     dependsOn(":here-naksha-app-service:shadowJar")
+}
+
+data class JacocoProjectDirs(
+    val sourceDirectories: ConfigurableFileCollection,
+    val classDirectories: ConfigurableFileCollection,
+    val executionData: ConfigurableFileCollection
+)
+
+fun Project.extractJacocoProjectDirs(): JacocoProjectDirs {
+    val kotlinExtension = requireNotNull(
+        extensions.findByType(KotlinMultiplatformExtension::class.java)
+    ) { "KotlinMultiplatformExtension not found in project '$name'" }
+    val sourceSets = kotlinExtension.sourceSets
+    val commonSrcDirs = sourceSets.getByName("commonMain").kotlin.srcDirs
+    val jvmSrcDirs = sourceSets.getByName("jvmMain").kotlin.srcDirs
+    val buildDirectory = layout.buildDirectory
+    val classesDirs = kotlinExtension.jvm().compilations.getByName("main").output.classesDirs
+    val buildData = buildDirectory.files("jacoco/jvmTest.exec")
+    return JacocoProjectDirs(
+        sourceDirectories = files(commonSrcDirs + jvmSrcDirs),
+        classDirectories = classesDirs,
+        executionData = files(buildData)
+    )
+}
+
+fun JacocoReportBase.configureJacocoForKmp(project: Project) {
+    project.extractJacocoProjectDirs().let {
+        sourceDirectories.setFrom(it.sourceDirectories)
+        classDirectories.setFrom(it.classDirectories)
+        executionData.setFrom(it.executionData)
+    }
+}
+
+fun List<JacocoProjectDirs>.merge(): JacocoProjectDirs {
+    val allSourceDirs = flatMap { it.sourceDirectories }
+    val allClassDirs = flatMap { it.classDirectories }
+    val allExecData = flatMap { it.executionData }
+
+    return JacocoProjectDirs(
+        sourceDirectories = files(allSourceDirs),
+        classDirectories = files(allClassDirs),
+        executionData = files(allExecData)
+    )
 }
