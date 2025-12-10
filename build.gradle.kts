@@ -210,36 +210,37 @@ jacoco {
 }
 
 subprojects {
-    apply(plugin = "jacoco")
+    if(allModules[name]?.first == CleanAndTest.KOTLIN) {
+        apply(plugin = "jacoco")
 
-    jacoco {
-        toolVersion = rootProject.libs.versions.jacoco.get()
-        reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
-    }
-
-    tasks {
-        val jacocoTestReport by registering(JacocoReport::class) {
-            group = "jacoco"
-
-            dependsOn("jvmTest")
-            configureJacocoForKmp(project)
-            reports {
-                xml.required = true
-            }
+        jacoco {
+            toolVersion = rootProject.libs.versions.jacoco.get()
+            reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
         }
 
-        val jacocoTestCoverageVerification by registering(JacocoCoverageVerification::class) {
-            group = "jacoco"
+        tasks {
+            val jacocoTestReport by registering(JacocoReport::class) {
+                group = "jacoco"
 
-            dependsOn(jacocoTestReport)
-            val reportTask = jacocoTestReport.get()
-            sourceDirectories.setFrom(reportTask.sourceDirectories)
-            classDirectories.setFrom(reportTask.classDirectories)
-            executionData.setFrom(reportTask.executionData)
-            violationRules {
-                rule {
-                    limit {
-                        minimum = getOverallCoverage().toBigDecimal()
+                dependsOn("jvmTest")
+                configureJacocoForKmp(project)
+                reports {
+                    xml.required = true
+                }
+            }
+
+            val jacocoTestCoverageVerification by registering(JacocoCoverageVerification::class) {
+                group = "jacoco"
+                dependsOn(jacocoTestReport)
+                val reportTask = jacocoTestReport.get()
+                sourceDirectories.setFrom(reportTask.sourceDirectories)
+                classDirectories.setFrom(reportTask.classDirectories)
+                executionData.setFrom(reportTask.executionData)
+                violationRules {
+                    rule {
+                        limit {
+                            minimum = getOverallCoverage().toBigDecimal()
+                        }
                     }
                 }
             }
