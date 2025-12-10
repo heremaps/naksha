@@ -10,6 +10,7 @@ log4j = "2.25.1"
 junit = "5.9.2"
 test_containers = "1.20.6"
 kotlin = "2.1.20"
+jacoco = "0.8.14"
 fastdouble = "2.0.1"
 jmh = "1.37"
 gson = "2.13.2" # https://github.com/google/gson

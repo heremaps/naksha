@@ -48,7 +48,7 @@ In tests of Naksha service, it relies on custom container image (which is simply
 
 #### Prerequisites:
 - `Docker` or some equivalent (we suggest `Podman` for those without `Docker` license) available on host machine
-- Environment variable `NAKSHA_LOCAL_TEST_CONTEXT` must be set to `TEST_CONTAINERS`
+- Environment variable `NAKSHA_APP_SERVICE_TEST_CONTEXT` must be set to `TEST_CONTAINERS`
 - Port `5432` must be available (it is possible for TestContainers to utilize any other port but the majority of tests that were written before supporting this approach rely on strict port mapping - that is likely to change in the future)
 - To build image locally (ie when you don't have access to the registry to pull it), run:
   ```
