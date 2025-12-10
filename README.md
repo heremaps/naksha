@@ -264,7 +264,7 @@ To generate **root** level aggregated coverage, use Gradle task `jacocoAggregate
 ./gradlew jacocoAggregatedTestReport
 ```
 
-Outputs will be stored in `build/reports/jacoco/jacocoAggregatedTestReport/html/index.html`
+Outputs will be stored in `/build/reports/jacoco/jacocoAggregatedTestReport/html/index.html`
 
 To validate test coverage, run `jacocoAggreagetedTestCoverageVerification` Gradle task:
 ```bash
