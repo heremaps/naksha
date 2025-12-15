@@ -17,6 +17,7 @@ import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 import kotlin.test.*
@@ -217,6 +218,7 @@ abstract class PgTestBase(
         return response
     }
 
+    @JvmOverloads
     protected fun executeWrite(
         request: WriteRequest,
         sessionOptions: SessionOptions? = newSessionOptions()
@@ -347,6 +349,7 @@ abstract class PgTestBase(
          */
         @JvmStatic
         @JsStatic
+        @JvmOverloads
         fun newSessionOptions(
             appId: String = PgTest.TEST_APP_ID,
             author: String? = PgTest.TEST_APP_AUTHOR,
