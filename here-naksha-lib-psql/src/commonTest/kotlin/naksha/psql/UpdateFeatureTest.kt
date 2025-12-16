@@ -6,7 +6,6 @@ import naksha.model.request.*
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.*
 
-//
 class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
 
     @Test
