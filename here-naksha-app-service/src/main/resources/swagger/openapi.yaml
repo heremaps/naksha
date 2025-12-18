@@ -3,16 +3,16 @@ openapi: "3.0.2"
 servers:
   - url: "http://localhost:8080/"
     description: "Local"
-  - url: "https://naksha-v2-dev.ext.mapcreator.here.com/"
+  - url: "https://api-dev.naksha.here.com/v2/"
     description: "DEV"
-  - url: "https://naksha-v2-e2e.ext.mapcreator.here.com/"
+  - url: "https://api-stg.naksha.here.com/v2/"
     description: "E2E"
-  - url: "https://naksha-v2.ext.mapcreator.here.com/"
+  - url: "https://api.naksha.here.com/v2/"
     description: "PRD"
 info:
   title: "Naksha Hub-API"
   description: "Naksha Hub-API is a REST API to provide simple access to geo data."
-  version: "2.2.15"
+  version: "2.2.16"
 
 security:
   - AccessToken: [ ]
