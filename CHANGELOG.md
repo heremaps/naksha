@@ -1,3 +1,7 @@
+## Naksha_1.1.4
+
+- Optimized Txn fetch query to avoid long-running query issue against space with very old last published transaction Id 
+
 ## Naksha_1.1.3
 
 - Increased DB Pool size of Naksha Admin DB from 10 to 25 to allow additional sequencer/publisher jobs to run in parallel.
