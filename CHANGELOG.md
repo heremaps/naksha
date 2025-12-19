@@ -1,3 +1,6 @@
+## Naksha_2.2.16
+- Updated OpenAPI URLs to reflect latest API migration.
+
 ## Naksha_2.2.15
 - Added `mom10` module to handle MOM version 10.
 
