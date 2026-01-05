@@ -1494,7 +1494,6 @@ CREATE OR REPLACE FUNCTION xyz_config.naksha_fetch_newer_transactions( in_hst_sc
 AS
 $BODY$
 DECLARE
-    table_name          TEXT;
     txn_stmt            TEXT;
     txn_record          RECORD;
     crt_txn_rec_id      int8;
@@ -1503,17 +1502,12 @@ DECLARE
     fetched_count       int;
 BEGIN
     -- Statement to fetch newer transaction Id(s) from Transactions table for a given space
-	-- We use "schema" and "table" based query (instead of space) to hit the right index
-    --txn_stmt:= format('SELECT t.id, t.txn FROM xyz_config.transactions t '
-    --                ||'WHERE t.space = $1 AND t.id >= $2 ORDER BY t.id ASC LIMIT %s', in_limit_rows+1);
     txn_stmt:= format('SELECT t.id, t.txn FROM xyz_config.transactions t '
-                    ||'WHERE t."schema" = $1 AND t."table" = $2 AND t.id >= $3 ORDER BY t.id ASC LIMIT %s', in_limit_rows+1);
+                    ||'WHERE t.space = $1 AND t.id >= $2 ORDER BY t.id ASC LIMIT %s', in_limit_rows+1);
 
-    table_name := replace(in_hst_table, '_hst', '');
     fetched_count := 0;
     -- Fetch transaction Id(s)
-    --FOR txn_record IN EXECUTE txn_stmt USING in_space, in_last_txn_id LOOP
-    FOR txn_record IN EXECUTE txn_stmt USING in_hst_schema, table_name, in_last_txn_id LOOP
+    FOR txn_record IN EXECUTE txn_stmt USING in_space, in_last_txn_id LOOP
         EXIT WHEN fetched_count >= in_limit_rows;
         --RAISE NOTICE 'Transaction fetched is %', txn_record;
 
