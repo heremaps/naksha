@@ -111,8 +111,13 @@ public final class PropertyOperationUtil {
                 return disablePropertyInPropertyQueryTree(
                         pNot.getQuery(), removalCondition, disabledProperties, notNeutral
                 ).flatMap(pq -> {
-                    pNot.setQuery(pq);
-                    return Optional.of(pNot);
+                    if (pq == PFalse.INSTANCE) {
+                        return Optional.of(PTrue.INSTANCE);
+                    }
+                    if (pq == PTrue.INSTANCE) {
+                        return Optional.of(PFalse.INSTANCE);
+                    }
+                    return Optional.of(new PNot(pq));
                 });
             }
             case PQuery currentPQuery when removalCondition.call(currentPQuery) -> {
