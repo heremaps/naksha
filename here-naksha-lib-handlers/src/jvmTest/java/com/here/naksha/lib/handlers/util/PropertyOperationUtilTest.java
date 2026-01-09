@@ -11,7 +11,6 @@ import java.util.Set;
 
 import static com.here.naksha.lib.handlers.util.PropertyOperationUtil.disablePQueriesInRequest;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.junit.jupiter.api.Assumptions.*;
 
 class PropertyOperationUtilTest {
     private final F1<Boolean, PQuery> dummyShouldDisable = _ -> false;
@@ -20,7 +19,7 @@ class PropertyOperationUtilTest {
     void shouldNothingBeDisabledWhenPropertiesAbsent() {
         // Given
         RequestQuery query = new RequestQuery();
-        assumeTrue(query.getProperties() == null);
+        query.setProperties(null);
 
         // When
         Set<PQuery> disabledPQueries = disablePQueriesInRequest(query, dummyShouldDisable);

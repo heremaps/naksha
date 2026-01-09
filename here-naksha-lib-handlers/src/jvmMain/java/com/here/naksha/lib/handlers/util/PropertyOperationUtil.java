@@ -43,7 +43,7 @@ public final class PropertyOperationUtil {
    * <p>
    * The removed queries are collected and returned as a set.
    * <b>Important:</b> this method <b>mutates</b> the given {@code requestQuery}.
-   * After execution, {@code requestQuery.getProperties()} may reference a different {@link IPropertyQuery} object than before, reflecting the removal of matching queries.
+   * After execution, {@code requestQuery.getProperties()} may reference a different {@link IPropertyQuery} object than before or even be {@code null}, reflecting the removal of matching queries.
    * <p>
    * If the request has no property query, the returned set will be empty and the request is left unchanged.
    *
