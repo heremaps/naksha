@@ -43,10 +43,10 @@ class PgReader(
                 if (session.logQueries) {
                     session.logAtInfo(query.sql)
                 }
-//                if (session.logExplain) {
+                if (session.logExplain) {
                     val explain = session.explain(conn, false, query.sql, query.argTypes, query.argValues)
                     session.logAtInfo(explain)
-//                }
+                }
             }
             conn.prepare(query.sql, query.argTypes).use { plan ->
                 // Start allocating around 8 KiB
