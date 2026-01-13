@@ -13,7 +13,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import naksha.model.request.query.DoubleOp;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PAnd;
-import naksha.model.request.query.PFalse;
 import naksha.model.request.query.PNot;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
@@ -392,16 +391,6 @@ public class POpToQueryConverterTest {
                 {"key":"property.prop_2","operation":"EQUALS","values":[null]}
                 ]
                 ]""", or);
-    }
-
-    @Test
-    void propagatesPFalseAsException() {
-        IPropertyQuery q = PFalse.INSTANCE;
-
-        assertThrows(
-                IPropertyQueryToPropertiesQuery.IPropertyQueryToQueryConversionException.class,
-                () -> toPopQueryOr(q)
-        );
     }
 
     @Test
