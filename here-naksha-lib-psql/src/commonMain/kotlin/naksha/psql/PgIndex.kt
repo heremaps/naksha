@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.AtomicMap
 import naksha.base.JsEnum
+import naksha.base.Platform
 import naksha.base.fn.Fx2
 import naksha.model.request.query.SortOrder
 import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
@@ -672,6 +673,7 @@ ${if (where==null) "" else "WHERE $where"};"""
     internal fun create(conn: PgConnection, table: PgTable) {
         val createFn = this.createFn
         check(createFn != null) { "This index does not support `create` operation" }
+        Platform.logger.warn("Creating index ${this.name} on ${table.name}")
         return createFn.call(conn, table)
     }
 

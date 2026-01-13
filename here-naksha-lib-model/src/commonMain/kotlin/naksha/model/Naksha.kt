@@ -205,9 +205,9 @@ class Naksha private constructor() {
             if (id == "naksha") {
                 throw illegalId("The identifier 'naksha' is forbidden")
             }
-            if (id.length > MAX_ID_LENGTH) {
-                throw illegalId("The identifier '$id' is too long: ${id.length}, must be maximal $MAX_ID_LENGTH")
-            }
+//            if (id.length > MAX_ID_LENGTH) {
+//                throw illegalId("The identifier '$id' is too long: ${id.length}, must be maximal $MAX_ID_LENGTH")
+//            }
             var i = 0
             var c = id[i++]
             if (c.code < 'a'.code || c.code > 'z'.code) {

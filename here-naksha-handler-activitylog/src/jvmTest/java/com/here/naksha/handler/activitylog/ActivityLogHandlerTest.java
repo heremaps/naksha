@@ -1,11 +1,15 @@
 package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogHandlerProperties.activityLogHandlerProperties;
+import static com.here.naksha.handler.activitylog.GuidUtil.guid;
+import static com.here.naksha.handler.activitylog.GuidUtil.randomVersion;
 import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFeature;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -20,17 +24,25 @@ import com.here.naksha.handler.activitylog.sample.DatahubSamplesUtil.DatahubSamp
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import naksha.base.AnyList;
 import naksha.base.JvmInt64;
 import naksha.model.Action;
+import naksha.model.Guid;
+import naksha.model.GuidList;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
+import naksha.model.TupleNumber;
+import naksha.model.TupleNumberVariant;
+import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadCollections;
 import naksha.model.request.ReadFeatures;
@@ -303,7 +315,7 @@ class ActivityLogHandlerTest {
   }
 
   @Test
-  void shouldFailIfInitialRequestFails(){
+  void shouldFailIfInitialRequestFails() {
     // Given
     configureSpaceStorage(
         initialHistoryRequestFails(),
@@ -318,7 +330,7 @@ class ActivityLogHandlerTest {
   }
 
   @Test
-  void shouldFailIfRequestForMissingPredecessorsFails(){
+  void shouldFailIfRequestForMissingPredecessorsFails() {
     // Given
     configureSpaceStorage(
         initialHistoryAwareRequestReturns(List.of(new NakshaFeature("some_id"))),
@@ -330,6 +342,89 @@ class ActivityLogHandlerTest {
 
     // Then:
     Assertions.assertInstanceOf(ErrorResponse.class, result);
+  }
+
+  @Test
+  void shouldFetchSuccessorsDirectlyByVersionIfPossible() {
+    // Given
+    List<ReadRequest> predecessorRequests = new ArrayList<>();
+    Guid puuid = guid("sample_feature", randomVersion());
+    configureSpaceStorage(
+        initialHistoryAwareRequestReturns(List.of(featureWithPuuidOnly(puuid.toString()))),
+        capturingOnlyPredecessorRequest(predecessorRequests)
+    );
+
+    // When: handler processes event bearing such request
+    handler.processEvent(eventWith(new ReadFeatures()));
+
+    // Then:
+    assertEquals(1, predecessorRequests.size());
+    ReadFeatures predecessorReq = assertInstanceOf(ReadFeatures.class, predecessorRequests.get(0));
+    assertTrue(containsGuuidQuery(predecessorReq, puuid));
+    assertFalse(containsNextVersionMetaQuery(predecessorReq));
+  }
+
+  @Test
+  void shouldFetchSuccessorIndirectlyByNextTnAsFallback() {
+    // Given
+    List<ReadRequest> predecessorRequests = new ArrayList<>();
+    Guid uuid = guid("sample_feature", randomVersion());
+    configureSpaceStorage(
+        initialHistoryAwareRequestReturns(List.of(featureWithUuidOnly(uuid.toString()))),
+        capturingOnlyPredecessorRequest(predecessorRequests)
+    );
+
+    // When: handler processes event bearing such request
+    handler.processEvent(eventWith(new ReadFeatures()));
+
+    // Then:
+    assertEquals(1, predecessorRequests.size());
+    ReadFeatures predecessorReq = assertInstanceOf(ReadFeatures.class, predecessorRequests.get(0));
+    assertFalse(containsGuuidQuery(predecessorReq));
+    assertTrue(containsNextVersionMetaQuery(predecessorReq, uuid.tupleNumber));
+  }
+
+  @Test
+  void shouldCombineDirectAndIndirectSuccessorsRetrieval() {
+    // Given
+    List<ReadRequest> predecessorRequests = new ArrayList<>();
+    Guid firstFeatureUuid = guid("sample_feature_1", randomVersion());
+    Guid secondFeaturePuid = guid("sample_feature_2", randomVersion());
+    configureSpaceStorage(
+        initialHistoryAwareRequestReturns(List.of(
+            featureWithUuidOnly(firstFeatureUuid.toString()),
+            featureWithPuuidOnly(secondFeaturePuid.toString())
+        )),
+        capturingOnlyPredecessorRequest(predecessorRequests)
+    );
+
+    // When: handler processes event bearing such request
+    handler.processEvent(eventWith(new ReadFeatures()));
+
+    // Then:
+    assertEquals(2, predecessorRequests.size());
+    assertTrue(predecessorRequests.stream().anyMatch(req -> containsGuuidQuery((ReadFeatures) req, secondFeaturePuid)));
+    assertTrue(predecessorRequests.stream().anyMatch(req -> containsNextVersionMetaQuery((ReadFeatures) req, firstFeatureUuid.tupleNumber)));
+  }
+
+  private NakshaFeature featureWithPuuidOnly(String puuid) {
+    return featureWithXyzFields(Map.of(
+        XyzNs.PUUID, puuid
+    ));
+  }
+
+  private NakshaFeature featureWithUuidOnly(String uuid) {
+    return featureWithXyzFields(Map.of(
+        XyzNs.UUID, uuid
+    ));
+  }
+
+  private NakshaFeature featureWithXyzFields(Map<String, Object> fields) {
+    XyzNs xyzNs = new XyzNs();
+    fields.forEach((k, v) -> xyzNs.put(k, v));
+    NakshaProperties props = new NakshaProperties();
+    props.setXyz(xyzNs);
+    return new NakshaFeature().withProperties(props);
   }
 
   private ActivityLogHandler handlerForSpaceId(String spaceId) {
@@ -344,39 +439,43 @@ class ActivityLogHandlerTest {
     );
   }
 
-  private void configureSpaceStorage(ReadBehavior... readBehaviors){
+  private void configureSpaceStorage(ReadBehavior... readBehaviors) {
     IReadSession readSession = mockReadSession(readBehaviors);
     when(spaceStorage.newReadSession(any())).thenReturn(readSession);
   }
 
-  private ReadBehavior initialHistoryAwareRequestReturns(List<NakshaFeature> nakshaFeatures){
-    ArgumentMatcher<ReadRequest> notNextTnBasedHistoryQuery = readRequest -> {
-      return isHistoryAwareReadFeatures(readRequest) && !containsNextVersionMetaQuery((ReadFeatures) readRequest);
-    };
-    return ReadBehavior.successfulRead(notNextTnBasedHistoryQuery, nakshaFeatures);
+  private ReadBehavior initialHistoryAwareRequestReturns(List<NakshaFeature> nakshaFeatures) {
+    return ReadBehavior.successfulRead(initialRequestMatcher(), nakshaFeatures);
   }
 
   private ReadBehavior requestForMissingPredecessorsReturns(List<NakshaFeature> nakshaFeatures) {
-    ArgumentMatcher<ReadRequest> anyNextTnBasedRequest = readRequest -> {
-      return isHistoryAwareReadFeatures(readRequest)
-             && containsNextVersionMetaQuery((ReadFeatures) readRequest);
-    };
-    return ReadBehavior.successfulRead(anyNextTnBasedRequest, nakshaFeatures);
+    return ReadBehavior.successfulRead(predecessorRequestMatcher(), nakshaFeatures);
   }
 
-  private ReadBehavior initialHistoryRequestFails(){
-    ArgumentMatcher<ReadRequest> notNextTnBasedHistoryQuery = readRequest -> {
-      return isHistoryAwareReadFeatures(readRequest) && !containsNextVersionMetaQuery((ReadFeatures) readRequest);
-    };
-    return ReadBehavior.failingRead(notNextTnBasedHistoryQuery);
+  private ReadBehavior initialHistoryRequestFails() {
+    return ReadBehavior.failingRead(initialRequestMatcher());
   }
 
   private ReadBehavior requestForMissingPredecessorsFails() {
-    ArgumentMatcher<ReadRequest> anyNextTnBasedRequest = readRequest -> {
-      return isHistoryAwareReadFeatures(readRequest)
-             && containsNextVersionMetaQuery((ReadFeatures) readRequest);
-    };
-    return ReadBehavior.failingRead(anyNextTnBasedRequest);
+    return ReadBehavior.failingRead(predecessorRequestMatcher());
+  }
+
+  private ReadBehavior capturingOnlyPredecessorRequest(List<ReadRequest> capturedReqs) {
+    return ReadBehavior.capturingRead(predecessorRequestMatcher(), capturedReqs);
+  }
+
+  private ArgumentMatcher<ReadRequest> initialRequestMatcher() {
+    return readRequest -> isHistoryAwareReadFeatures(readRequest)
+                          && !containsNextVersionMetaQuery((ReadFeatures) readRequest)
+                          && !containsGuuidQuery((ReadFeatures) readRequest);
+  }
+
+  private ArgumentMatcher<ReadRequest> predecessorRequestMatcher() {
+    return readRequest -> isHistoryAwareReadFeatures(readRequest)
+                          && (
+                              containsNextVersionMetaQuery((ReadFeatures) readRequest)
+                              || containsGuuidQuery((ReadFeatures) readRequest)
+                          );
   }
 
   private boolean isHistoryAwareReadFeatures(ReadRequest readRequest) {
@@ -386,12 +485,31 @@ class ActivityLogHandlerTest {
     return false;
   }
 
-  private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures){
+  private boolean containsGuuidQuery(ReadFeatures readFeatures, Guid... expectedGuids) {
+    GuidList guids = readFeatures.getGuids();
+    if (expectedGuids.length == 0) {
+      return !guids.isEmpty();
+    } else {
+      return guids.getSize() == expectedGuids.length && guids.containsAll(Arrays.asList(expectedGuids));
+    }
+  }
+
+  private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedNextTns) {
     IMetaQuery metaQuery = readFeatures.getQuery().getMetadata();
     if (metaQuery instanceof MetaQuery mq) {
-      return mq.getColumn().equals(MetaColumn.nextVersion())
-             && mq.getOp().equals(AnyOp.IS_ANY_OF)
-             && mq.getValue() instanceof AnyList;
+      boolean basicCheck = mq.getColumn().equals(MetaColumn.nextVersion())
+                           && mq.getOp().equals(AnyOp.IS_ANY_OF)
+                           && mq.getValue() instanceof AnyList;
+      if (basicCheck && expectedNextTns.length > 0) {
+        List queryNextTns = ((AnyList) mq.getValue()).asList();
+        return queryNextTns.size() == expectedNextTns.length
+               && Arrays.stream(expectedNextTns)
+                   .map(tn -> tn.toByteArray(TupleNumberVariant.B96))
+                   .allMatch(expectedTnAsBytes -> queryNextTns.stream()
+                       .anyMatch(queryTnAsBytes -> Arrays.equals(expectedTnAsBytes, (byte[]) queryTnAsBytes))
+                   );
+      }
+      return basicCheck;
     }
     return false;
   }
@@ -400,11 +518,37 @@ class ActivityLogHandlerTest {
     IReadSession readSession = mock(IReadSession.class);
     for (ReadBehavior behavior : readBehavior) {
       when(readSession.execute(argThat(behavior.readReqMatcher))).thenReturn(behavior.readResponse);
+      when(readSession.execute(argThat(behavior.readReqMatcher))).then(invocation -> {
+        ReadRequest arg = invocation.getArgument(0);
+        if (behavior.getCaptured() != null) {
+          behavior.getCaptured().add(arg);
+        }
+        return behavior.readResponse;
+      });
     }
     return readSession;
   }
 
-  private record ReadBehavior(ArgumentMatcher<ReadRequest> readReqMatcher, Response readResponse) {
+  private static class ReadBehavior {
+
+    private final ArgumentMatcher<ReadRequest> readReqMatcher;
+    private final Response readResponse;
+    private List<ReadRequest> captured;
+
+    private ReadBehavior(ArgumentMatcher<ReadRequest> readReqMatcher, Response readResponse) {
+      this.readReqMatcher = readReqMatcher;
+      this.readResponse = readResponse;
+    }
+
+    public ReadBehavior(ArgumentMatcher<ReadRequest> readReqMatcher, Response readResponse, List<ReadRequest> captured) {
+      this.readReqMatcher = readReqMatcher;
+      this.readResponse = readResponse;
+      this.captured = captured;
+    }
+
+    public List<ReadRequest> getCaptured() {
+      return captured;
+    }
 
     static ReadBehavior successfulRead(ArgumentMatcher<ReadRequest> readReqMatcher, List<NakshaFeature> returnedFeatures) {
       return new ReadBehavior(readReqMatcher, new SuccessResponse(returnedFeatures));
@@ -412,6 +556,14 @@ class ActivityLogHandlerTest {
 
     static ReadBehavior failingRead(ArgumentMatcher<ReadRequest> readReqMatcher) {
       return new ReadBehavior(readReqMatcher, new ErrorResponse());
+    }
+
+    static ReadBehavior capturingRead(ArgumentMatcher<ReadRequest> readReqMatcher, List<ReadRequest> captured) {
+      return new ReadBehavior(
+          readReqMatcher,
+          new SuccessResponse(), // we should not care about this result
+          captured
+      );
     }
   }
 

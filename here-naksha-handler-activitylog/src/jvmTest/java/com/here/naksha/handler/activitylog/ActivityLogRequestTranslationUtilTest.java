@@ -2,6 +2,8 @@ package com.here.naksha.handler.activitylog;
 
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.PROPERTY_ACTIVITY_LOG_ID;
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.transformOriginalRequest;
+import static com.here.naksha.handler.activitylog.GuidUtil.guid;
+import static com.here.naksha.handler.activitylog.GuidUtil.randomVersion;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,7 +27,6 @@ import org.junit.jupiter.api.Test;
 class ActivityLogRequestTranslationUtilTest {
 
   private static final String TEST_SPACE_ID = "test_space_id";
-  private final Random random = new Random();
 
   @Test
   void shouldTranslateSingleGuidPassedAsFeatureId() {
@@ -178,15 +179,5 @@ class ActivityLogRequestTranslationUtilTest {
     assertEquals(1, collectionIds.size());
     assertEquals(TEST_SPACE_ID, collectionIds.get(0));
     assertEquals(Integer.MAX_VALUE, readFeatures.getVersions());
-  }
-
-  private Version randomVersion() {
-    return new Version(random.nextLong());
-  }
-
-  private Guid guid(String featureId, Version version) {
-    return new Guid(featureId, new TupleNumber(
-        new JvmInt64(0), 0, 0, new JvmInt64(0), version, 0
-    ));
   }
 }

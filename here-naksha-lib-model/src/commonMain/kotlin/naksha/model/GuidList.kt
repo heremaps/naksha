@@ -23,5 +23,13 @@ class GuidList : ListProxy<Guid>(Guid::class){
                 addAll(guids)
             }
         }
+
+        @JvmStatic
+        @JsName("fromRawGuids")
+        fun fromRawGuids(rawGuids: List<String>): GuidList {
+            val guids = rawGuids.map(Guid.GuidCompanion::fromString)
+            return GuidList().apply { addAll(guids) }
+
+        }
     }
 }

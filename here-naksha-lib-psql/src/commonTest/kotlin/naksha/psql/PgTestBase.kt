@@ -244,6 +244,7 @@ abstract class PgTestBase(
         }
     }
 
+    @JvmOverloads
     protected fun executeRead(
         request: ReadRequest,
         sessionOptions: SessionOptions? = newSessionOptions()
@@ -334,12 +335,17 @@ abstract class PgTestBase(
         /**
          * The storage configuration used by default.
          */
+//        @JvmStatic
+//        @JsStatic
+//        protected val storageConfig = NakshaStorage.fromJSON("""{
+//  "id": "local_psql_test_storage",
+//  "className": "naksha.psql.PsqlTestStorage"
+//}""").proxy(PgConfig::class)
         @JvmStatic
         @JsStatic
-        protected val storageConfig = NakshaStorage.fromJSON("""{
-  "id": "local_psql_test_storage",
-  "className": "naksha.psql.PsqlTestStorage"
-}""").proxy(PgConfig::class)
+        protected val storageConfig = PgConfig("naksha-hub-admin-storage").withMasterUri(
+                "jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
+            )
 
         /**
          * Create [SessionOptions] and mutate the current [NakshaContext] to actually use the [PgTest] constants for `appName`, `appId`, and `author`, to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or [PgStorage.newReadSession].

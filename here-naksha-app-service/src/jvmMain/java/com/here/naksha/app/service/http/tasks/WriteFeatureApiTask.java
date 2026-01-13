@@ -55,6 +55,7 @@ import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
+import naksha.model.Version;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.ErrorResponse;
