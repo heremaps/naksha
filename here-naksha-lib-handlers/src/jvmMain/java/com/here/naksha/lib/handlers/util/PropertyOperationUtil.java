@@ -21,36 +21,45 @@ package com.here.naksha.lib.handlers.util;
 import com.here.naksha.lib.core.lambdas.F1;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PAnd;
-import naksha.model.request.query.PFalse;
 import naksha.model.request.query.PNot;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
-import naksha.model.request.query.PTrue;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class PropertyOperationUtil {
+public final class PropertyOperationUtil {
 
   private PropertyOperationUtil() {
   }
 
+  /**
+   * Traverses the property query tree of the given {@link RequestQuery} and disables any {@link PQuery} nodes that match the provided predicate.
+   * <p>
+   * The removed queries are collected and returned as a set.
+   * <b>Important:</b> this method <b>mutates</b> the given {@code requestQuery}.
+   * After execution, {@code requestQuery.getProperties()} may reference a different {@link IPropertyQuery} object than before or even be {@code null}, reflecting the removal of matching queries.
+   * <p>
+   * If the request has no property query, the returned set will be empty and the request is left unchanged.
+   *
+   * @param requestQuery  the request whose property query tree is to be traversed and modified
+   * @param shouldDisable a predicate that determines whether a {@link PQuery} should be removed
+   * @return a set containing all {@link PQuery} instances that were removed from the property query tree; returns an empty set if no queries were removed
+   */
   public static Set<PQuery> disablePQueriesInRequest(@NotNull RequestQuery requestQuery, @NotNull F1<Boolean, PQuery> shouldDisable) {
     IPropertyQuery rootPropertyQuery = requestQuery.getProperties();
     if (rootPropertyQuery != null) {
-      // if there is only single PQuery in the whole request, disable without tree traversal by simply removing it (set to null)
-      if (rootPropertyQuery instanceof PQuery rootPQuery && shouldDisable.call(rootPQuery)) {
-        requestQuery.setProperties(null);
-        return Set.of(rootPQuery);
-      } else {
-        // if there is a tree (not a PQuery) under `requestQuery.properties` - traverse the tree and logically disable matching pQuery
-        HashSet<PQuery> disabledProperties = new HashSet<>();
-        disablePropertyInPropertyQueryTree(rootPropertyQuery, null, shouldDisable, disabledProperties);
-        return disabledProperties;
-      }
+      HashSet<PQuery> disabledProperties = new HashSet<>();
+      IPropertyQuery newRootPropertyQuery = disablePropertyInPropertyQueryTree(
+          rootPropertyQuery, shouldDisable, disabledProperties
+      ).orElse(null);
+      requestQuery.setProperties(newRootPropertyQuery);
+      return disabledProperties;
     }
     // root property query is null -> no disabled property queries -> empty set
     return Collections.emptySet();
@@ -58,36 +67,82 @@ public class PropertyOperationUtil {
 
   /**
    * @param current            Currently traversed node
-   * @param parent             Parent containing current node (can be null for first iteration, should be checked on call-site)
-   * @param removalCondition   If evaluates to true, it effectively disables the check by replacing it with `true-ish` query
+   * @param removalCondition   Predicate that determines whether a {@link PQuery} should be disabled
    * @param disabledProperties Set of so-far disabled property queries
+   * @return an {@link Optional} containing the updated query node, or an empty optional if the node is removed as a result of disabling
    */
-  // TODO CASL-1123: this can be improved - we could inline "always true" statement such as AND(PTrue, PTrue) or OR(PTrue, PFalse)
-  // in such cases we can simply remove the node - in edge cases, we could end up without IPropertyQuery at all (if all gets resolved)
-  private static void disablePropertyInPropertyQueryTree(
-      @NotNull IPropertyQuery current, @Nullable IPropertyQuery parent, F1<Boolean, PQuery> removalCondition, Set<PQuery> disabledProperties
+  private static Optional<IPropertyQuery> disablePropertyInPropertyQueryTree(
+      @NotNull IPropertyQuery current,
+      @NotNull F1<Boolean, PQuery> removalCondition,
+      @NotNull Set<PQuery> disabledProperties
   ) {
-    switch (current) {
-      case PAnd pAnd -> pAnd.forEach(andChild -> disablePropertyInPropertyQueryTree(andChild, pAnd, removalCondition, disabledProperties));
-      case POr pOr -> pOr.forEach(orChild -> disablePropertyInPropertyQueryTree(orChild, pOr, removalCondition, disabledProperties));
-      case PNot pNot -> disablePropertyInPropertyQueryTree(pNot.getQuery(), pNot, removalCondition, disabledProperties);
-      case PQuery currentyPQuery when removalCondition.call(currentyPQuery) -> {
-        if (parent instanceof PAnd pAndParent) {
-          pAndParent.remove(current);
-          pAndParent.add(PTrue.INSTANCE);
-          disabledProperties.add(currentyPQuery);
-        } else if (parent instanceof POr pOrParent) {
-          pOrParent.remove(current);
-          pOrParent.add(PTrue.INSTANCE);
-          disabledProperties.add(currentyPQuery);
-        } else if (parent instanceof PNot pNotParent) {
-          pNotParent.setQuery(PFalse.INSTANCE);
-          disabledProperties.add(currentyPQuery);
-        }
+    return switch (current) {
+      case PAnd pAnd -> handleCompoundQuery(
+          pAnd,
+          removalCondition,
+          disabledProperties,
+          PAnd::new
+      );
+      case POr pOr -> handleCompoundQuery(
+          pOr,
+          removalCondition,
+          disabledProperties,
+          POr::new
+      );
+      case PNot pNot -> disablePropertyInPropertyQueryTree(
+          pNot.getQuery(), removalCondition, disabledProperties
+      ).flatMap(pq -> Optional.of(new PNot(pq)));
+      case PQuery currentPQuery when removalCondition.call(currentPQuery) -> {
+        disabledProperties.add(currentPQuery);
+        yield disabledPropertyQuery();
       }
-      default -> {
-        // unhandled type / not matching pQuery => stop traversal without failing
-      }
+      default -> Optional.of(current);
+    };
+  }
+
+  private static Optional<IPropertyQuery> disabledPropertyQuery() {
+    return Optional.empty();
+  }
+
+  private static boolean allChildrenDisabled(List<Optional<IPropertyQuery>> children) {
+    return children.stream().allMatch(Optional::isEmpty);
+  }
+
+  private static List<IPropertyQuery> removeDisabledChildren(List<Optional<IPropertyQuery>> children) {
+    return children.stream()
+        .filter(Optional::isPresent)
+        .map(Optional::get)
+        .toList();
+  }
+
+  private static <T extends List<IPropertyQuery> & IPropertyQuery> Optional<IPropertyQuery> handleCompoundQuery(
+      T compoundQuery,
+      F1<Boolean, PQuery> removalCondition,
+      Set<PQuery> disabledProperties,
+      Supplier<T> constructor
+  ) {
+    List<Optional<IPropertyQuery>> newChildren = disablePropertyInChildrenQueryTree(
+        compoundQuery,
+        removalCondition,
+        disabledProperties
+    );
+    if (!compoundQuery.isEmpty() && allChildrenDisabled(newChildren)) {
+      return disabledPropertyQuery();
     }
+    compoundQuery = constructor.get();
+    compoundQuery.addAll(removeDisabledChildren(newChildren));
+    return Optional.of(compoundQuery);
+  }
+
+  private static <T extends List<IPropertyQuery> & IPropertyQuery> List<Optional<IPropertyQuery>> disablePropertyInChildrenQueryTree(
+      T compoundQuery,
+      F1<Boolean, PQuery> removalCondition,
+      Set<PQuery> disabledProperties
+  ) {
+    return compoundQuery.stream()
+        .map(child -> disablePropertyInPropertyQueryTree(
+            child, removalCondition, disabledProperties
+        ))
+        .toList();
   }
 }

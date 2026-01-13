@@ -6,12 +6,9 @@ import com.here.naksha.lib.core.models.payload.events.PropertyQueryOr;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PAnd;
-import naksha.model.request.query.PFalse;
 import naksha.model.request.query.PNot;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
-import naksha.model.request.query.PTrue;
-import naksha.model.request.query.Property;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -32,14 +29,8 @@ public final class IPropertyQueryToPropertiesQuery {
     }
 
     public static PropertyQueryAnd toPoPQueryAnd(@NotNull IPropertyQuery query) {
-        if (query instanceof PAnd) {
-            return and((PAnd) query);
-        }
-        if (isPTrue(query)) {
-            return new PropertyQueryAnd();
-        }
-        if (isPFalse(query)) {
-            throw unsupported("PFalse cannot be translated to a finite connector query");
+        if (query instanceof PAnd pAnd) {
+            return and(pAnd);
         }
         PropertyQueryAnd and = new PropertyQueryAnd();
         and.add(iqToMultiValueComparison(query));
@@ -48,9 +39,9 @@ public final class IPropertyQueryToPropertiesQuery {
 
 
     private static PropertyQuery iqToMultiValueComparison(@NotNull IPropertyQuery q) {
-        if (q instanceof POr) return or((POr) q);
-        if (q instanceof PNot) return not((PNot) q);
-        if (q instanceof PQuery) return simpleLeaf((PQuery) q);
+        if (q instanceof POr pOr) return or(pOr);
+        if (q instanceof PNot pNot) return not(pNot);
+        if (q instanceof PQuery pQuery) return simpleLeaf(pQuery);
         throw unsupported("Unsupported query node: " + q.getClass().getSimpleName());
     }
 
@@ -103,7 +94,6 @@ public final class IPropertyQueryToPropertiesQuery {
     }
 
     private static PropertyQuery simpleLeaf(@NotNull PQuery leaf) {
-        Property property = leaf.getProperty();
         AnyOp anyOp = leaf.getOp();
         Object value = leaf.getValue();
 
@@ -176,25 +166,8 @@ public final class IPropertyQueryToPropertiesQuery {
         }
     }
 
-    private static boolean isPTrue(IPropertyQuery q) {
-        try {
-            return q == PTrue.INSTANCE;
-        } catch (Throwable ignore) {
-            return false;
-        }
-    }
-
-    private static boolean isPFalse(IPropertyQuery q) {
-        try {
-            return q == PFalse.INSTANCE;
-        } catch (Throwable ignore) {
-            return false;
-        }
-    }
-
     private static String normalizeOp(@NotNull AnyOp op) {
-        String s = Objects.toString(op, "").trim().toLowerCase(Locale.ROOT);
-        return s;
+        return Objects.toString(op, "").trim().toLowerCase(Locale.ROOT);
     }
 
     private static RuntimeException unsupported(String msg) {

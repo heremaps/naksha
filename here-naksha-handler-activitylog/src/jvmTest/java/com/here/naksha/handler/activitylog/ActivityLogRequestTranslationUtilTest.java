@@ -18,7 +18,6 @@ import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
-import naksha.model.request.query.PTrue;
 import naksha.model.request.query.StringOp;
 import org.junit.jupiter.api.Test;
 
@@ -102,7 +101,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertEquals(1, featureIds.size());
     assertEquals(featureId, featureIds.get(0));
 
-    // And: there is dummy POr(PTrue, PTrue) query
+    // And:
     assertNull(readFeatures.getQuery().getProperties());
 
     // And: there are no guids (nothing was declared in original featureIds)
@@ -133,9 +132,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertTrue(featureIds.containsAll(List.of(firstId, secondId)));
 
     // And: the pQuery left is effectively dead
-    // TODO CASL-1123: in the future we should simply delete such IPropertyQuery
-    POr root = (POr) readFeatures.getQuery().getProperties();
-    assertTrue(root.stream().allMatch(PTrue.class::isInstance));
+    assertNull(readFeatures.getQuery().getProperties());
 
     // And: there are no guids (nothing was declared in original featureIds)
     assertTrue(readFeatures.getGuids().isEmpty());

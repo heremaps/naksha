@@ -50,8 +50,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
     private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder): Boolean {
         when (pQuery) {
-            null, is PTrue -> return true
-            is PFalse -> return false
+            null -> return true
             is PAnd -> return pQuery.all { resolvePropsQuery(it, decoder) }
             is POr -> return pQuery.any { resolvePropsQuery(it, decoder) }
             is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
