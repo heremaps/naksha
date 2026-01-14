@@ -198,9 +198,8 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private List<NakshaFeature> fetchFeatures(ReadFeatures readFeatures, NakshaContext context) {
-    PlatformUtil.ENABLE_INFO = true;
     Response response = nakshaHub().getSpaceStorage().useReadSession(
-        SessionOptions.from(context, null, true, PgLogLevel.EXPLAIN_AND_QUERIES),
+        SessionOptions.from(context, true),
         readSession -> readSession.execute(readFeatures)
     );
     if (response instanceof SuccessResponse successResponse) {
