@@ -31,14 +31,18 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import naksha.base.JvmBoxingUtil;
+import naksha.base.PlatformUtil;
 import naksha.base.StringList;
 import naksha.model.Action;
+import naksha.model.Guid;
+import naksha.model.GuidList;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
@@ -58,6 +62,7 @@ import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.MetaColumn;
 import naksha.model.request.query.MetaQuery;
+import naksha.psql.PgLogLevel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -143,17 +148,42 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private void collectMissingPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
-    List<TupleNumber> featuresWithoutPredecessorsTns = collectedFeatures.activityLogRoots.stream()
+    List<String> availablePuuids = new ArrayList<>();
+    List<TupleNumber> tnsOfFeaturesWithoutPuuids = new ArrayList<>();
+    collectedFeatures.activityLogRoots.stream()
         .filter(f -> !collectedFeatures.allByNuuid.containsKey(f.getId()))
-        .map(NakshaFeature::getTupleNumber)
-        .toList();
-    if (!featuresWithoutPredecessorsTns.isEmpty()) {
-      List<NakshaFeature> missingPredecessors = fetchFeatures(requestPredecessorsOf(featuresWithoutPredecessorsTns), context);
-      collectedFeatures.addPredecessors(missingPredecessors);
+        .forEach(feature -> {
+          String puuid = puuid(feature);
+          if(puuid != null) {
+            availablePuuids.add(puuid);
+          } else {
+            tnsOfFeaturesWithoutPuuids.add(feature.getTupleNumber());
+          }
+        });
+    if(!availablePuuids.isEmpty()) {
+      List<NakshaFeature> missingPredecessorsByPuuids = fetchFeatures(featuresWhereTnMatchesOneOf(availablePuuids), context);
+      collectedFeatures.addPredecessors(missingPredecessorsByPuuids);
+    }
+    if (!tnsOfFeaturesWithoutPuuids.isEmpty()) {
+      List<NakshaFeature> missingPredecessorsByNextTns = fetchFeatures(featuresWhereNextTnIsOneOf(tnsOfFeaturesWithoutPuuids), context);
+      collectedFeatures.addPredecessors(missingPredecessorsByNextTns);
     }
   }
 
-  private ReadFeatures requestPredecessorsOf(List<TupleNumber> tupleNumbers) {
+  private static @Nullable String puuid(NakshaFeature feature){
+    return feature.getProperties().getXyz().getPuuid();
+  }
+
+  private ReadFeatures featuresWhereTnMatchesOneOf(List<String> uuids){
+    GuidList guids = GuidList.fromRawGuids(uuids);
+    ReadFeatures requestPredecessors = new ReadFeatures();
+    requestPredecessors.setCollectionIds(StringList.of(properties.getSpaceId()));
+    requestPredecessors.setQueryHistory(true);
+    requestPredecessors.setGuids(guids);
+    return requestPredecessors;
+  }
+
+  private ReadFeatures featuresWhereNextTnIsOneOf(List<TupleNumber> tupleNumbers) {
     // we will compare against `next_tn` which is encodded with 96-bit encoding
     byte[][] b96tns = new byte[tupleNumbers.size()][];
     for (int i = 0; i < tupleNumbers.size(); i++) {
