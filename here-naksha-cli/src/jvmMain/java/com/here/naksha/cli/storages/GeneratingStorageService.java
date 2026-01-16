@@ -39,10 +39,10 @@ final class GeneratingStorageService {
         FeatureTupleList featureTuples = new FeatureTupleList();
         featureTuples.setCapacity(numOfFeaturesToGenerate);
         for (int i = 0; i < numOfFeaturesToGenerate; ++i) {
-            TupleNumber tupleNumber = new TupleNumber(
-                    storage.getNumber(), 0, 0, Platform.toInt64(i), new Version(0), i
+            TupleNumber dummyTupleNumber = new TupleNumber(
+                storage.getNumber(), 0, 0, Platform.intToInt64(i), new Version(0), i
             );
-            FeatureTuple featureTuple = new FeatureTuple(tupleNumber, null);
+            FeatureTuple featureTuple = new FeatureTuple(dummyTupleNumber, null);
             featureTuples.add(featureTuple);
         }
         return featureTuples;
@@ -56,18 +56,17 @@ final class GeneratingStorageService {
         String idsPrefix = getIdsPrefixOrDefault(configProperties, DEFAULT_IDS_PREFIX);
         List<String> tileIds = requireTileIds(configProperties);
         NakshaFeature templateFeature = loadTemplateFeatureOrEmpty(configProperties.getFeatureTemplateFilePath());
-
         List<NakshaFeature> features = new ArrayList<>(featureTuples.size());
         Random random = ThreadLocalRandom.current();
-
+        int tileIndex = 0;
         for (FeatureTuple featureTuple : featureTuples) {
             Int64 featureNumber = featureTuple.tupleNumber.featureNumber;
             String featureId = idsPrefix + featureNumber;
-            String tileId = randomTileId(tileIds, random);
+            String tileId = tileIds.get(tileIndex);
             NakshaFeature feature = generateFeature(templateFeature, featureId, tileId, random);
             features.add(feature);
+            tileIndex = (tileIndex + 1) % tileIds.size();
         }
-
         return features;
     }
 
@@ -75,7 +74,6 @@ final class GeneratingStorageService {
         if (count == null) {
             throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Provide count in the config properties.");
         }
-
         return count;
     }
 
@@ -91,7 +89,6 @@ final class GeneratingStorageService {
         if (featureTemplateFilePath != null) {
             return loadTemplateFeature(featureTemplateFilePath);
         }
-
         return new NakshaFeature();
     }
 
@@ -104,10 +101,6 @@ final class GeneratingStorageService {
         }
     }
 
-    private String randomTileId(List<String> tileIds, Random random) {
-        return tileIds.get(random.nextInt(tileIds.size()));
-    }
-
     private NakshaFeature generateFeature(NakshaFeature baseFeature, String id, String tileId, Random random) {
         NakshaFeature feature = baseFeature.copy(false);
         feature.setId(id);
@@ -117,7 +110,6 @@ final class GeneratingStorageService {
 //         from the template may introduce inconsistencies.
 //         To avoid this, we have decided to remove the reference point.
         feature.setReferencePoint(null);
-
         return feature;
     }
 
@@ -129,7 +121,6 @@ final class GeneratingStorageService {
         for (int i = 0; i < pointsInLine; ++i) {
             coords.add(randomPointCoord(tileBbox, random));
         }
-
         return new SpLineString(coords);
     }
 
