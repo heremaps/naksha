@@ -13,27 +13,35 @@ import java.util.List;
 final class GeneratingSession implements IReadSession {
     private final GeneratingStorage storage;
     private final SessionOptions sessionOptions;
+    private final NakshaFeature templateFeature;
 
     GeneratingSession(
-            @NotNull GeneratingStorage storage,
-            @NotNull SessionOptions sessionOptions
+        @NotNull GeneratingStorage storage,
+        @NotNull SessionOptions sessionOptions,
+        @NotNull NakshaFeature templateFeature
     ) {
-        this.storage = storage;
         this.sessionOptions = sessionOptions;
+        this.storage = storage;
+        this.templateFeature = templateFeature;
     }
 
     @NotNull
     @Override
     public Response execute(@NotNull Request request) {
         GeneratingStorageService service = storage.getService();
-        FeatureTupleList featureTuples = service.generateFeatureTuples(storage);
+        FeatureTupleList featureTuples = service.generateDummyFeatureTuples(storage.getNumber(), storage.getNumOfFeaturesToGenerate());
         return new SuccessResponse(featureTuples);
     }
 
     @Override
     public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
         GeneratingStorageService service = storage.getService();
-        List<NakshaFeature> generatedFeatures = service.generateFeatures(featureTuples);
+        List<NakshaFeature> generatedFeatures = service.generateFeatures(
+            featureTuples,
+            storage.getTileIds(),
+            storage.getIdsPrefix(),
+            templateFeature
+        );
         for (int i = 0; i < featureTuples.size(); ++i) {
             FeatureTuple featureTuple = featureTuples.get(i);
             NakshaFeature feature = generatedFeatures.get(i);

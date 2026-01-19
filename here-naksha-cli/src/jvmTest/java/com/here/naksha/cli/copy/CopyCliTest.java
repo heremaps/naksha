@@ -5,7 +5,7 @@ import com.here.naksha.cli.TestCommandLine;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.WriteMode;
-import com.here.naksha.cli.parsers.JsonFileParser;
+import com.here.naksha.cli.utils.JsonParser;
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandSuccess;
 import naksha.model.objects.NakshaStorage;
@@ -425,8 +425,8 @@ class CopyCliTest {
     }
 
     private NakshaStorage loadStorage(Path storageConfig) {
-        JsonFileParser jsonFileParser = new JsonFileParser();
-        return assertDoesNotThrow(() -> jsonFileParser.parse(storageConfig, NakshaStorage.class));
+        JsonParser jsonParser = new JsonParser();
+        return assertDoesNotThrow(() -> jsonParser.readAndParse(storageConfig, NakshaStorage.class));
     }
 
     private void assertCopyElement(

@@ -63,7 +63,6 @@ class PsqlCopyTest {
 
         // And: copy service
         CopyService copyService = new CopyService(featuresWriteExecutor, new StorageProvider(), sessionOptions);
-
         // When: copying
         assertCommandSuccessResult(copyService.copy(source, target, false));
 
@@ -140,8 +139,8 @@ class PsqlCopyTest {
 
     private static Stream<Arguments> featuresWriteExecutors() {
         return Stream.of(
-                Arguments.of(new OneShotFeaturesWriteExecutor()),
-                Arguments.of(new ParallelFeaturesWriteExecutor())
+                Arguments.of(new ParallelFeaturesWriteExecutor()),
+                Arguments.of(new OneShotFeaturesWriteExecutor())
         );
     }
 

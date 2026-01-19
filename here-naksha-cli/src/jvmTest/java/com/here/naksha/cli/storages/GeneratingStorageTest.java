@@ -1,6 +1,6 @@
 package com.here.naksha.cli.storages;
 
-import com.here.naksha.cli.parsers.JsonFileParser;
+import com.here.naksha.cli.utils.JsonParser;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,9 +30,9 @@ import static naksha.model.util.ResultHelper.extractResponseItems;
 import static org.junit.jupiter.api.Assertions.*;
 
 class GeneratingStorageTest {
-    private final JsonFileParser jsonFileParser = new JsonFileParser();
+    private final JsonParser jsonParser = new JsonParser();
     private final SessionOptions sessionOptions = new SessionOptions();
-    private final String defaultIdsPrefix = GeneratingStorageService.DEFAULT_IDS_PREFIX;
+    private final String defaultIdsPrefix = GeneratingStorage.DEFAULT_IDS_PREFIX;
 
     @BeforeAll
     static void beforeAll() {
@@ -431,7 +431,7 @@ class GeneratingStorageTest {
 
     private NakshaFeature loadFeatureTemplate(String featureTemplateFilePath) {
         Path path = Path.of(featureTemplateFilePath);
-        return assertDoesNotThrow(() -> jsonFileParser.parse(path, NakshaFeature.class));
+        return assertDoesNotThrow(() -> jsonParser.readAndParse(path, NakshaFeature.class));
     }
 
     private List<String> getExpectedTileIdsFromSource(String tileIdsCsv) {
