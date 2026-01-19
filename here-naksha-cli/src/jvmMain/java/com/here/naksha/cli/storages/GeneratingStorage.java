@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public final class GeneratingStorage extends AbstractStorage<GeneratingStorageConfig> {
-    private final GeneratingStorageService service = new GeneratingStorageService();
+    private GeneratingStorageService service;
 
     @NotNull
     @Override
@@ -57,7 +57,11 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
             @Nullable Boolean create,
             @Nullable Boolean upgrade
     ) {
-        // nothing to do
+        try {
+            service = new GeneratingStorageService(storageConfig.getProperties());
+        }catch (Exception e) {
+            throw new NakshaException(NakshaError.INITIALIZATION_FAILED, "Failed to init GeneratingStorage!", e);
+        }
     }
 
     @Override

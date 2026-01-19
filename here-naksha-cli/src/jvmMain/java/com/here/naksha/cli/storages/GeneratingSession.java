@@ -26,19 +26,18 @@ final class GeneratingSession implements IReadSession {
     @Override
     public Response execute(@NotNull Request request) {
         GeneratingStorageService service = storage.getService();
-        GeneratingStorageConfig config = storage.getConfig();
-        GeneratingStorageConfigProperties configProperties = config.getProperties();
-        FeatureTupleList featureTuples = service.generateFeatureTuples(storage, configProperties);
+        FeatureTupleList featureTuples = service.generateFeatureTuples(storage);
         return new SuccessResponse(featureTuples);
     }
 
     @Override
     public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
         GeneratingStorageService service = storage.getService();
-        GeneratingStorageConfig config = storage.getConfig();
-        List<NakshaFeature> generatedFeatures = service.generateFeatures(config.getProperties(), featureTuples);
+        List<NakshaFeature> generatedFeatures = service.generateFeatures(featureTuples);
         for (int i = 0; i < featureTuples.size(); ++i) {
-            featureTuples.get(i).setFeature(generatedFeatures.get(i));
+            FeatureTuple featureTuple = featureTuples.get(i);
+            NakshaFeature feature = generatedFeatures.get(i);
+            featureTuple.setFeature(feature);
         }
     }
 

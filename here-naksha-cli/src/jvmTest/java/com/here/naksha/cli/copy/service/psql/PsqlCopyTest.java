@@ -51,9 +51,10 @@ class PsqlCopyTest {
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: prepared source
-        int countOfFeatures = 10_000;
+        int featuresInTile = 5_000;
         StringList tileIds = new StringList("122013100013", "122013100020");
-        IStorage sourceStorage = generatingStorageWithGivenCountOfFeaturesAndTilesIds(countOfFeatures, tileIds);
+        int totalFeatures = tileIds.size() * featuresInTile;
+        IStorage sourceStorage = generatingStorageWithGivenCountOfFeaturesAndTilesIds(totalFeatures, tileIds);
         CopyElement source = copyElementForGeneratingStorage(sourceStorage);
 
         // And: prepared target
@@ -66,13 +67,13 @@ class PsqlCopyTest {
         // When: copying
         assertCommandSuccessResult(copyService.copy(source, target, false));
 
-        // And
-        List<NakshaFeature> targetFeatures = readFeaturesInTheGivenTiles(
-                targetStorage, target.getMapId(), target.getCollectionId(), sessionOptions, tileIds
-        );
-
-        // Then
-        assertEquals(countOfFeatures, targetFeatures.size());
+        // Then: evenly distributed
+        for(String tileId : tileIds) {
+            List<NakshaFeature> tilesFeatures = readFeaturesInTheGivenTile(
+                targetStorage, target.getMapId(), target.getCollectionId(), sessionOptions, tileId
+            );
+            assertEquals(featuresInTile, tilesFeatures.size());
+        }
     }
 
     @ParameterizedTest
@@ -139,8 +140,8 @@ class PsqlCopyTest {
 
     private static Stream<Arguments> featuresWriteExecutors() {
         return Stream.of(
-                Arguments.of(new ParallelFeaturesWriteExecutor()),
-                Arguments.of(new OneShotFeaturesWriteExecutor())
+                Arguments.of(new OneShotFeaturesWriteExecutor()),
+                Arguments.of(new ParallelFeaturesWriteExecutor())
         );
     }
 
@@ -199,6 +200,22 @@ class PsqlCopyTest {
         );
 
         makeWriteRequest(storage, writeRequest, sessionOptions);
+    }
+
+    private List<NakshaFeature> readFeaturesInTheGivenTile(
+        IStorage storage,
+        String mapId,
+        String collectionId,
+        SessionOptions sessionOptions,
+        String tileId
+    ) {
+        return readFeaturesInTheGivenTiles(
+            storage,
+            mapId,
+            collectionId,
+            sessionOptions,
+            StringList.of(tileId)
+        );
     }
 
     private List<NakshaFeature> readFeaturesInTheGivenTiles(
