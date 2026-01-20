@@ -39,20 +39,20 @@ final class GeneratingStorageService {
 
     @NotNull
     List<NakshaFeature> generateFeatures(
-        @NotNull List<? extends FeatureTuple> featureTuples,
+        int numOfFeaturesToGenerate,
         List<String> tileIds,
         String idsPrefix,
         NakshaFeature templateFeature
     ) {
-        List<NakshaFeature> features = new ArrayList<>(featureTuples.size());
+        List<NakshaFeature> features = new ArrayList<>(numOfFeaturesToGenerate);
         Random random = ThreadLocalRandom.current();
-        int tileIx = tileIndex.getAndUpdate(i -> (i + featureTuples.size()) % tileIds.size());
-        for (var _ : featureTuples) {
+        int index = tileIndex.getAndUpdate(i -> (i + numOfFeaturesToGenerate) % tileIds.size());
+        for (int i = 0; i < numOfFeaturesToGenerate; ++i) {
             String featureId = idsPrefix + UUID.randomUUID();
-            String tileId = tileIds.get(tileIx);
+            String tileId = tileIds.get(index);
             NakshaFeature feature = generateFeature(templateFeature, featureId, tileId, random);
             features.add(feature);
-            tileIx = (tileIx + 1) % tileIds.size();
+            index = (index + 1) % tileIds.size();
         }
         return features;
     }

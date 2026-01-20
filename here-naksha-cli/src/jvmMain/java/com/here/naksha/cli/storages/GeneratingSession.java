@@ -37,7 +37,7 @@ final class GeneratingSession implements IReadSession {
     public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
         GeneratingStorageService service = storage.getService();
         List<NakshaFeature> generatedFeatures = service.generateFeatures(
-            featureTuples,
+            featureTuples.size(),
             storage.getTileIds(),
             storage.getIdsPrefix(),
             templateFeature

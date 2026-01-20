@@ -52,7 +52,6 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
                 case null -> new NakshaFeature();
                 default -> jsonParser.parse(templateFeatureString, NakshaFeature.class);
             };
-
             return new GeneratingSession(
                     this,
                     sessionOptions,
