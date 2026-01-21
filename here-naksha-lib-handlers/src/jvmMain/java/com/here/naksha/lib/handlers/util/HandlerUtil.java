@@ -74,12 +74,16 @@ public final class HandlerUtil {
     // generate new ContextWriteFeatures request
     final ContextWriteXyzFeatures cwf = new ContextWriteXyzFeatures();
 
+    if(collectionIds.isEmpty()) {
+        throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "No collection IDs supplied"));
+    }
+
     // Add features in the request
     for (int i = 0; i < features.size(); i++) {
       final NakshaFeature feature =
           checkInstanceOf(features.get(i), NakshaFeature.class, "Unsupported feature type");
       final Write write = new Write()
-          .updateFeature(collectionIds.get(Math.min(i, collectionIds.size())), feature, false);
+          .updateFeature(collectionIds.get(Math.min(i, collectionIds.size()-1)), feature, false);
       cwf.add(write);
     }
     // add context to write request
