@@ -40,7 +40,6 @@ jackson_core_databind = { module = "com.fasterxml.jackson.core:jackson-databind"
 jackson_core_dataformat = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
 jackson_kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
 
-snakeyaml = "org.yaml:snakeyaml:1.33"
 google_flatbuffers = "com.google.flatbuffers:flatbuffers-java:23.5.9"
 google_protobuf = "com.google.protobuf:protobuf-java:3.16.3"
 google_guava = "com.google.guava:guava:33.4.8-jre"
