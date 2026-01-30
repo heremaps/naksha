@@ -5,6 +5,8 @@ servers:
     description: "Local"
   - url: "https://api-dev.naksha.here.com/v3/"
     description: "DEV"
+  - url: "https://api-stg.naksha.here.com/v3/"
+    description: "E2E" 
   - url: "https://api.naksha.here.com/v3/"
     description: "PRD"
 info:
