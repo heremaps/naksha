@@ -61,12 +61,6 @@ is [Mom10Transformation](src/jvmMain/java/com/here/naksha/mom10/Mom10Transformat
 Only the properties supported in both old delta NS and new `moderationInfo` will be used for
 population of `@ns:com:here:mom:delta` namespace.
 
-Pre MOM 10 delta NS
-model: https://docs.in.here.com/static/169823/1467398/html/#com/here/mom/internal/extension/branch/branch.html
-
-MOM 10+ moderation
-info: https://here-dev.zoominsoftware.io/docs/bundle/map-object-model-data-specification-10/page/com/here/mom/internal/component/moderation/moderation-information.html
-
 #### Populating old meta
 
 Properties supported by both old `@ns:com:here:mom:meta` NS and MOM 10+ `meta` property
