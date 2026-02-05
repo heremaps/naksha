@@ -1,3 +1,6 @@
+## Naksha_2.2.17
+- Fixed ext references to avoid confusion from opensource consumption
+
 ## Naksha_2.2.16
 - Updated OpenAPI URLs to reflect latest API migration.
 

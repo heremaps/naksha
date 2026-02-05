@@ -74,12 +74,13 @@ public class NakshaVersion implements Comparable<NakshaVersion> {
   public static final String v2_2_14 = "2.2.14";
   public static final String v2_2_15 = "2.2.15";
   public static final String v2_2_16 = "2.2.16";
+  public static final String v2_2_17 = "2.2.17";
 
   /**
    * The latest version of the naksha-extension stored in the resources.
    */
   @AvailableSince(v2_0_5)
-  public static final NakshaVersion latest = of(v2_2_16);
+  public static final NakshaVersion latest = of(v2_2_17);
 
   private final int major;
   private final int minor;
