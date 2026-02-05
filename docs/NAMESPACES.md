@@ -1,6 +1,6 @@
 # Namespaces
 
-The XYZ-Hub supports namespaces within the `properties` of features. The most namespaces have historic meaning, see [confluence](https://confluence.in.here.com/pages/viewpage.action?pageId=800919496). The following sections show details about the existing definitions:
+The Naksha supports namespaces within the `properties` of features. The following sections show details about the existing definitions:
 
 ## XYZ-Metadata [`@ns:com:here:xyz`]
 
