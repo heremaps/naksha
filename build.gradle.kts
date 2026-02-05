@@ -459,7 +459,7 @@ project(":here-naksha-lib-handlers") {
         implementation(project(":here-naksha-lib-psql"))
         implementation(project(":here-naksha-lib-view"))
         implementation(project(":here-naksha-storage-http"))
-        implementation(project(":here-naksha-lib-ns-util"))
+        implementation(project(":here-naksha-lib-mm-util"))
 
         implementation(commons_lang3)
         implementation(commons_dbutils)
@@ -518,7 +518,7 @@ project(":here-naksha-app-service") {
         //implementation(project(":here-naksha-lib-extension"))
         implementation(project(":here-naksha-lib-hub"))
         implementation(project(":here-naksha-common-http"))
-        implementation(project(":here-naksha-lib-ns-util"))
+        implementation(project(":here-naksha-lib-mm-util"))
 
         implementation(log4j_slf4j)
         implementation(log4j_api)
@@ -545,7 +545,7 @@ project(":here-naksha-app-service") {
 //} catch (ignore: UnknownProjectException) {
 //}
 
-project(":here-naksha-lib-ns-util"){
+project(":here-naksha-lib-mm-util"){
     description = "Naksha Namespace Util library"
     dependencies {
         implementation(project(":here-naksha-lib-core"))
