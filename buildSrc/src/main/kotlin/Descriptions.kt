@@ -25,7 +25,7 @@ private val Descriptions = mapOf(
     "here-naksha-lib-view" to "Naksha library, adding capabilities to combine multiple storages, maps, collections into a single virtual view.",
     "here-naksha-storage-http" to "TBD",
     "here-naksha-cli" to "The Naksha CLI tool allows users to interact with Naksha storage.",
-    "here-naksha-lib-ns-util" to "Naksha library offering support for breaking change on meta, delta namespaces"
+    "here-naksha-lib-mm-util" to "Naksha library offering support for breaking change on Map Model related to meta, delta namespaces"
 )
 
 fun Project.gatherDescription(): String

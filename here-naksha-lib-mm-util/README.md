@@ -1,6 +1,6 @@
-## lib-ns-util module
+## lib-mm-util module
 
-The job of this module is to provide Naksha ecosystem with tools needed for correct handling of common namespaces (like delta, meta)
+The job of this module is to provide Naksha ecosystem with tools needed for correct handling of common namespaces (like delta, meta) as part of Map Model object.
 
 Naksha itself relies heavily on `@ns:com:here:mom:meta` and `@ns:com:here:mom:delta` namespaces that
 were changed in MOM 10.
