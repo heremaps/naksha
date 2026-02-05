@@ -1,6 +1,6 @@
-## lib-mom10 module
+## lib-mm-util module
 
-The job of this module is to provide Naksha ecosystem with tools needed for correct MOM 10 handling.
+The job of this module is to provide Naksha ecosystem with tools needed for correct handling of common namespaces (like delta, meta) as part of Map Model object.
 
 Naksha itself relies heavily on `@ns:com:here:mom:meta` and `@ns:com:here:mom:delta` namespaces that
 were changed in MOM 10.
@@ -60,12 +60,6 @@ is [Mom10Transformation](src/jvmMain/java/com/here/naksha/mom10/Mom10Transformat
 
 Only the properties supported in both old delta NS and new `moderationInfo` will be used for
 population of `@ns:com:here:mom:delta` namespace.
-
-Pre MOM 10 delta NS
-model: https://docs.in.here.com/static/169823/1467398/html/#com/here/mom/internal/extension/branch/branch.html
-
-MOM 10+ moderation
-info: https://here-dev.zoominsoftware.io/docs/bundle/map-object-model-data-specification-10/page/com/here/mom/internal/component/moderation/moderation-information.html
 
 #### Populating old meta
 

@@ -40,9 +40,6 @@ public class MetaProperties {
    */
   public static final String MODEL_VERSION = "modelVersion";
 
-  /*
-  https://docs.in.here.com/static/169823/1467398/html/#com/here/mom/internal/component/meta/metadata.html
-  */
   private static final Set<String> META_NAMESPACE_PROPERTIES = Set.of(
       "createdTS",
       "hashPayload",

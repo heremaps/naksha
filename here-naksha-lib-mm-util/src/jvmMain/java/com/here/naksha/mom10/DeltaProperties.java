@@ -23,8 +23,6 @@ class DeltaProperties {
 
   /*
   Properties that are part of both pre-MOM 10 delta NS and MOM 10+ moderationInfo
-  pre MOM 10: https://docs.in.here.com/static/169823/1467398/html/#com/here/mom/internal/extension/branch/branch.html
-  MOM 10+: https://here-dev.zoominsoftware.io/docs/bundle/map-object-model-data-specification-10/page/com/here/mom/internal/component/moderation/moderation-information.html
   */
   public static final String ORIGIN_ID = "originId";
   public static final String PARENT_LINK = "parentLink";

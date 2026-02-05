@@ -27,7 +27,7 @@ kotlin {
                 implementation(project(":here-naksha-common-http"))
                 implementation(project(":here-naksha-lib-diff"))
                 implementation(project(":here-naksha-handler-activitylog"))
-                implementation(project(":here-naksha-lib-mom10"))
+                implementation(project(":here-naksha-lib-mm-util"))
 
                 implementation(libs.commons.lang3)
                 implementation(libs.otel)

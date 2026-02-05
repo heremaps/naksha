@@ -96,7 +96,7 @@ val allModules = mapOf(
     Pair("here-naksha-lib-view", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-storage-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-cli", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
-    Pair("here-naksha-lib-mom10", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair("here-naksha-lib-mm-util", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
 )
 
 fun Project.configureVanniktechMavenPublish() {
