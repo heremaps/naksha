@@ -1,6 +1,6 @@
-## lib-mom10 module
+## lib-ns-util module
 
-The job of this module is to provide Naksha ecosystem with tools needed for correct MOM 10 handling.
+The job of this module is to provide Naksha ecosystem with tools needed for correct handling of common namespaces (like delta, meta)
 
 Naksha itself relies heavily on `@ns:com:here:mom:meta` and `@ns:com:here:mom:delta` namespaces that
 were changed in MOM 10.
