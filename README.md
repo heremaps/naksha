@@ -37,8 +37,8 @@ Naksha uses [GeoJSON](https://www.rfc-editor.org/rfc/rfc7946.html) as the main g
 
 # Prerequisites
 
-* Java 17+
-* Gradle 7.2+
+* Java 17+ (on MacOS use `export JAVA_HOME=$(/usr/libexec/java_home -v 17)` to set JDK 17 as default)
+* Gradle 7.2+ (some combinations of gradle and JDK versions might not work - in that case use the provided gradle wrapper `./gradlew` )
 * Postgres 14+ with PostGIS 2.5+
 
 # Getting started
