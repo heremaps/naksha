@@ -1,3 +1,6 @@
+## Naksha_2.2.18
+- Fix snakeyaml conflicting versions.
+
 ## Naksha_2.2.17
 - Fixed ext references to avoid confusion from opensource consumption
 
