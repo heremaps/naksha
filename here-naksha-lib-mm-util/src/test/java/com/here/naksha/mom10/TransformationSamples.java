@@ -18,11 +18,25 @@ public class TransformationSamples {
   private TransformationSamples() {
   }
 
-  public record TransformationSample(
-      String sourceDir,
-      XyzFeature mom10,
-      XyzFeature nakshaInternal
-  ) {
+  public static final class TransformationSample {
+
+    private final String sourceDir;
+    private final XyzFeature mom10;
+    private final XyzFeature nakshaInternal;
+
+    public TransformationSample(String sourceDir, XyzFeature mom10, XyzFeature nakshaInternal) {
+      this.sourceDir = sourceDir;
+      this.mom10 = mom10;
+      this.nakshaInternal = nakshaInternal;
+    }
+
+    public XyzFeature getMom10() {
+      return mom10;
+    }
+
+    public XyzFeature getNakshaInternal() {
+      return nakshaInternal;
+    }
 
     @Override
     public String toString() {
@@ -59,6 +73,7 @@ public class TransformationSamples {
 
     // initialization on demand
     private static final List<TransformationSample> LOADED_SAMPLES;
+
     static {
       List<Path> dirs = samplesDirs();
       LOADED_SAMPLES = new ArrayList<>(dirs.size());

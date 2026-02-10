@@ -547,6 +547,12 @@ project(":here-naksha-app-service") {
 
 project(":here-naksha-lib-mm-util"){
     description = "Naksha Namespace Util library"
+    java {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+        withJavadocJar()
+        withSourcesJar()
+    }
     dependencies {
         implementation(project(":here-naksha-lib-core"))
 

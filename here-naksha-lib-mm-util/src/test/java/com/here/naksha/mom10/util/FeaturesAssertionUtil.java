@@ -2,7 +2,6 @@ package com.here.naksha.mom10.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -75,16 +74,22 @@ public class FeaturesAssertionUtil {
   private static void assertObjectEqual(Object expectedValue, Object actualValue, String path) {
     if (expectedValue == null) {
       assertNull(actualValue, "Expected null value under path: " + path);
-    } else if (expectedValue instanceof Map expectedMapValue) {
+    } else if (expectedValue instanceof Map) {
+      Map expectedMapValue = (Map) expectedValue;
       assertInstanceOf(Map.class, actualValue);
       assertMapsEqual(expectedMapValue, (Map) actualValue, path);
-    } else if (expectedValue instanceof List expectedListValue) {
+    } else if (expectedValue instanceof List) {
+      List expectedListValue = (List) expectedValue;
       assertInstanceOf(List.class, actualValue);
       assertListsEqual(expectedListValue, (List) actualValue, path);
-    } else if (expectedValue instanceof JsonEnum expectedJsonEnum && actualValue instanceof String actualString) {
+    } else if (expectedValue instanceof JsonEnum && actualValue instanceof String) {
+      JsonEnum expectedJsonEnum = (JsonEnum) expectedValue;
+      String actualString = (String) actualValue;
       assertEquals(expectedJsonEnum.value(), actualString,
           "Expected " + expectedValue + " but got " + actualValue + " under path: " + path);
-    } else if (actualValue instanceof JsonEnum actualJsonEnum && expectedValue instanceof String expectedString) {
+    } else if (actualValue instanceof JsonEnum && expectedValue instanceof String) {
+      JsonEnum actualJsonEnum = (JsonEnum) actualValue;
+      String expectedString = (String) expectedValue;
       assertEquals(expectedString, actualJsonEnum.value(),
           "Expected " + expectedValue + " but got " + actualValue + " under path: " + path);
     } else {
