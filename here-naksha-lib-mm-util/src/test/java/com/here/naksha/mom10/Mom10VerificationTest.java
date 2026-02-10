@@ -13,7 +13,16 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class Mom10VerificationTest {
 
-  record VerificationCase(JsonObject rawFeature, boolean isAtLeastMom10) {}
+  private static class VerificationCase {
+
+    private final JsonObject rawFeature;
+    private final boolean isAtLeastMom10;
+
+    public VerificationCase(JsonObject rawFeature, boolean isAtLeastMom10) {
+      this.rawFeature = rawFeature;
+      this.isAtLeastMom10 = isAtLeastMom10;
+    }
+  }
 
   @ParameterizedTest
   @MethodSource

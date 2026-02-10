@@ -19,6 +19,7 @@
 package com.here.naksha.mom10;
 
 class DeltaProperties {
+
   private DeltaProperties() {}
 
   /*

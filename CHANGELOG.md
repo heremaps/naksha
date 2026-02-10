@@ -1,3 +1,6 @@
+## Naksha_2.2.19
+- Changed from Java 17 to Java 11 for naksha-lib-mm-util project.
+
 ## Naksha_2.2.18
 - Fix snakeyaml conflicting versions.
 
