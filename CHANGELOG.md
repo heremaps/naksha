@@ -1,3 +1,6 @@
+## Naksha_2.2.20
+- Remove unused module snakeyaml.
+
 ## Naksha_2.2.19
 - Changed from Java 17 to Java 11 for naksha-lib-mm-util project.
 
