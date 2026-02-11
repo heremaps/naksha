@@ -53,8 +53,6 @@ val jackson_core_annotations = "com.fasterxml.jackson.core:jackson-annotations:2
 val jackson_core_databind = "com.fasterxml.jackson.core:jackson-databind:2.15.4"
 val jackson_core_dataformat = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.15.4"
 
-var snakeyaml = "org.yaml:snakeyaml";
-
 val google_flatbuffers = "com.google.flatbuffers:flatbuffers-java:24.3.25"
 val google_protobuf = "com.google.protobuf:protobuf-java:4.27.2"
 val google_guava = "com.google.guava:guava:33.2.1-jre"
@@ -250,12 +248,6 @@ subprojects {
     // Fix transitive dependencies.
 
     dependencies {
-        implementation(snakeyaml) {
-            // https://stackoverflow.com/questions/70154082/getting-java-lang-nosuchmethoderror-org-yaml-snakeyaml-yaml-init-while-runnin
-            version {
-                strictly("1.33")
-            }
-        }
         implementation(platform(aws_bom))
     }
 
