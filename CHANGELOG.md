@@ -1,3 +1,7 @@
+## Naksha_1.1.2
+
+- Increased header size limit to 24K
+
 ## Naksha_1.1.1
 
 - Introduced new query parameter `rlock` to indicate whether API transaction should `WAIT` or `ABORT` when there is DB row-level lock found during Updates.
