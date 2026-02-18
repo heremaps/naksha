@@ -1,3 +1,7 @@
+## Naksha_1.1.4
+
+- Increased header size limit to 24k
+
 ## Naksha_1.1.3
 
 - Increased DB Pool size of Naksha Admin DB from 10 to 25 to allow additional sequencer/publisher jobs to run in parallel.
