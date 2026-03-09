@@ -62,10 +62,10 @@ class XyzFeatureCollectionTest {
                 .withDeleted(Collections.singletonList("id_03"));
         //when //then
         assertEquals(2, collection.getFeatures().size());
-        assertEquals(feature1, collection.getFeatures().getFirst());
-        assertEquals("id_01", collection.getInserted().getFirst());
-        assertEquals("id_02", collection.getUpdated().getFirst());
-        assertEquals("id_03", collection.getDeleted().getFirst());
+        assertEquals(feature1, collection.getFeatures().get(0));
+        assertEquals("id_01", collection.getInserted().get(0));
+        assertEquals("id_02", collection.getUpdated().get(0));
+        assertEquals("id_03", collection.getDeleted().get(0));
     }
 
     @Test
@@ -79,13 +79,13 @@ class XyzFeatureCollectionTest {
 
         //when //then
         assertEquals(1, collection.getInserted().size());
-        assertEquals("new_insert_1", collection.getInserted().getFirst());
+        assertEquals("new_insert_1", collection.getInserted().get(0));
 
         assertEquals(1, collection.getUpdated().size());
-        assertEquals("new_update_1", collection.getUpdated().getFirst());
+        assertEquals("new_update_1", collection.getUpdated().get(0));
 
         assertEquals(1, collection.getDeleted().size());
-        assertEquals("new_delete_1", collection.getDeleted().getFirst());
+        assertEquals("new_delete_1", collection.getDeleted().get(0));
 
         //given
         collection.appendInsertId("new_insert_2");
@@ -106,8 +106,8 @@ class XyzFeatureCollectionTest {
 
         // when // then
         assertEquals(1, collection.getFailed().size());
-        assertEquals("failed_id", collection.getFailed().getFirst().getId());
-        assertEquals("Something went wrong", collection.getFailed().getFirst().getMessage());
+        assertEquals("failed_id", collection.getFailed().get(0).getId());
+        assertEquals("Something went wrong", collection.getFailed().get(0).getMessage());
     }
 
 
