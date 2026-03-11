@@ -24,6 +24,8 @@ import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+
 public final class RequestTypesUtil {
 
   private RequestTypesUtil() {}
@@ -46,7 +48,9 @@ public final class RequestTypesUtil {
    */
   public static boolean isOnlyWriteCollections(Request request) {
     if (!(request instanceof WriteRequest)) return false;
-    for (Write write : ((WriteRequest) request).getWrites()) {
+    final List<Write> writes = ((WriteRequest) request).getWrites();
+    if (writes.isEmpty()) return false;
+    for (Write write : writes) {
       // A Write operation onto the virtual "naksha~collections" means that it is a write request for
       // NakshaCollection
       if (!Naksha.COLLECTIONS_COL.equals(write.getCollectionId())) return false;

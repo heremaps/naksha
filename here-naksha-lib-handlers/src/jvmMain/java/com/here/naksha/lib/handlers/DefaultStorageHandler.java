@@ -122,7 +122,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     try {
       String collectionId = retrieveCollectionIdFromRequest(request);
       String mapId = extractMapIdFromStorageProps(storageImpl);
-      applyMapIdAndCollectionId(request, mapId, collectionId);
+      normalizeWriteRequest(request, mapId, collectionId);
       OperationData operationData = new OperationData(sessionOptions, storageImpl, mapId, collectionId, request);
       return forwardRequestToStorage(operationData, FIRST_ATTEMPT, storageTimer);
     } catch (NakshaException ne) {
@@ -273,12 +273,22 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull final F1<Response, ErrorResponse> reattempt,
       final @NotNull StopWatch storageTimer) {
     Response response = measuredStorageSupplier(
-        () -> singleWrite(operationData.sessionOptions, operationData.storageImpl, (WriteRequest) operationData.request), storageTimer);
+        () -> performAtomicWriteFeatures(operationData.sessionOptions, operationData.storageImpl, (WriteRequest) operationData.request), storageTimer);
     if (response instanceof ErrorResponse errorResponse) {
       return reattempt.call(errorResponse);
     } else {
       return response;
     }
+  }
+
+  /**
+   * Hook for executing a feature write request atomically.
+   */
+  protected @NotNull Response performAtomicWriteFeatures(
+      @NotNull SessionOptions sessionOptions,
+      @NotNull IStorage storageImpl,
+      @NotNull WriteRequest wr) {
+    return singleWrite(sessionOptions, storageImpl, wr);
   }
 
   private @NotNull Response singleWrite(@NotNull SessionOptions sessionOptions, @NotNull IStorage storageImpl, @NotNull WriteRequest wr) {
@@ -409,9 +419,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull StopWatch storageTimer
   ) {
     logger.info("Creating map '{}'", operationData.mapId);
-    WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaMap(operationData.mapId)));
     Response createMapResponse = measuredStorageSupplier(
-        () -> singleWrite(operationData.sessionOptions, operationData.storageImpl, createMapRequest), storageTimer);
+        () -> createMissingMap(operationData.sessionOptions, operationData.storageImpl, operationData.mapId), storageTimer);
     if (createMapResponse instanceof SuccessResponse) {
       logger.info("Successfully created map '{}'", operationData.mapId);
       return forwardRequestToStorage(operationData, ATTEMPT_AFTER_MAP_CREATION, storageTimer);
@@ -427,6 +436,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
+  protected @NotNull Response createMissingMap(
+      @NotNull SessionOptions sessionOptions,
+      @NotNull IStorage storageImpl,
+      @NotNull String mapId) {
+    WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaMap(mapId)));
+    return singleWrite(sessionOptions, storageImpl, createMapRequest);
+  }
+
   private Response retryDueToMissingCollection(
       final @NotNull OperationData operationData,
       final @NotNull StopWatch storageTimer) {
@@ -436,7 +453,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           operationData.collectionId);
       Response createCollectionResp = measuredStorageSupplier(
-          () -> createXyzCollection(operationData.sessionOptions, operationData.storageImpl, operationData.mapId, operationData.collectionId),
+          () -> createMissingCollection(operationData.sessionOptions, operationData.storageImpl, operationData.mapId, operationData.collectionId),
           storageTimer);
       if (createCollectionResp instanceof SuccessResponse) {
         logger.info("Created collection {}, forwarding the request once again", operationData.collectionId);
@@ -457,6 +474,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       return new ErrorResponse(new NakshaError(
           NakshaError.NOT_FOUND, "Could not find and auto-create collection: " + operationData.collectionId));
     }
+  }
+
+  protected @NotNull Response createMissingCollection(
+      @NotNull SessionOptions sessionOptions,
+      @NotNull IStorage storageImpl,
+      @NotNull String mapId,
+      @NotNull String collectionId) {
+    return createXyzCollection(sessionOptions, storageImpl, mapId, collectionId);
   }
 
   private boolean indicateStorageNotInitialized(@NotNull ErrorResponse errorResponse) {
@@ -492,6 +517,17 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         write.setCollectionId(finalCollectionId);
       });
     }
+  }
+
+  /**
+   * Hook called during {@link #process} to normalize the request before execution.
+   */
+  protected void normalizeWriteRequest(
+      @NotNull Request request,
+      @NotNull String mapId,
+      @NotNull String collectionId
+  ) {
+    applyMapIdAndCollectionId(request, mapId, collectionId);
   }
 
   // TODO: collectionId at handler level can be potentially removed in the future

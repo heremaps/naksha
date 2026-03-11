@@ -43,4 +43,12 @@ public class RequestTypesUtilTest extends AbstractTest {
     Assertions.assertFalse(RequestTypesUtil.isOnlyWriteFeatures(writeRequest));
     Assertions.assertFalse(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
   }
+
+  @Test
+  public void testIsFeaturesRequestTypeForEmptyRequest() {
+    //Given: Empty WriteRequest
+    final WriteRequest writeRequest = new WriteRequest();
+    //Then
+    Assertions.assertFalse(RequestTypesUtil.isOnlyWriteCollections(writeRequest));
+  }
 }
