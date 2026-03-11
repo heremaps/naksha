@@ -577,7 +577,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     return collections;
   }
 
-  protected Response createXyzCollection(
+  private Response createXyzCollection(
       @NotNull SessionOptions sessionOptions,
       @NotNull IStorage storageImpl,
       @NotNull String mapId,
