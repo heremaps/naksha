@@ -17,6 +17,7 @@ import static com.here.naksha.lib.core.models.geojson.implementation.namespaces.
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.UUID_KEY;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.assertDbEmpty;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.assertStatusCode200;
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.format;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.readTestResourcesFile;
 import static java.net.HttpURLConnection.HTTP_CONFLICT;
 import static java.util.UUID.randomUUID;
@@ -98,7 +99,7 @@ public abstract class WriteCollectionTest {
         String featuresArrayJson = features.stream()
                 .map(InputFeature::toJson)
                 .collect(Collectors.joining(", ", "[", "]"));
-        String featuresCollectionJson = readTestResourcesFile("postAndPut/feature_collection_template.json").formatted(featuresArrayJson);
+        String featuresCollectionJson = format(readTestResourcesFile("postAndPut/feature_collection_template.json"), featuresArrayJson);
         RequestSpecification request = Naksha.request()
                 .with().body(featuresCollectionJson)
                 .with().header("Content-Type", "application/json");
@@ -157,7 +158,8 @@ public abstract class WriteCollectionTest {
         );
         Response responseUpdated = writeFeature(new InputFeature(FEATURE_A_ID, propertiesWithUuid));
         String detailed = ("The feature with id urn:here::here:landmark3d.Landmark3dPhotoreal:A cannot be replaced. " +
-                "The provided UUID doesn't match the UUID of the head state: %s").formatted(outputNew.getUuid());
+                "The provided UUID doesn't match the UUID of the head state: %s");
+        detailed = format(detailed, outputNew.getUuid());
         responseUpdated.then()
                 .assertThat().statusCode(HTTP_CONFLICT)
                 .and().body("type", equalTo("ErrorResponse"))
@@ -211,10 +213,25 @@ public abstract class WriteCollectionTest {
         return detailedMessage;
     }
 
-    record InputFeature(String shortId, Map properties) {
+    static class InputFeature {
+        private final String shortId;
+        private final Map properties;
+
+        InputFeature(String shortId, Map properties) {
+            this.shortId = shortId;
+            this.properties = properties;
+        }
+
+        String getShortId() {
+            return shortId;
+        }
+
+        Map getProperties() {
+            return properties;
+        }
+
         String toJson() {
-            return readTestResourcesFile("postAndPut/feature_template.json")
-                    .formatted(shortId, JsonSerializable.serialize(properties));
+            return format(readTestResourcesFile("postAndPut/feature_template.json"), getShortId(), JsonSerializable.serialize(getProperties()));
         }
     }
 }

@@ -8,7 +8,7 @@ kotlin {
     jvm {}
     sourceSets {
         jvmMain {
-            jvmToolchain(23)
+            jvmToolchain(11)
             dependencies {
                 implementation(project(":here-naksha-lib-core"))
                 implementation(project(":here-naksha-lib-model"))

@@ -13,7 +13,9 @@ import java.util.Map;
 
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.URN_PREFIX;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.assertDbEmpty;
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.format;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.assertStatusCode200;
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.lines;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.readTestResourcesFile;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.rmAllFeatures;
 import static org.hamcrest.Matchers.equalTo;
@@ -67,9 +69,7 @@ public class PatchTest {
 
     @Test
     void patchShouldPatchProperties() {
-        createFeatureInDb(FULL_A_ID, """
-      {"p":"1","q":"1"}
-      """);
+        createFeatureInDb(FULL_A_ID, lines("{\"p\":\"1\",\"q\":\"1\"}"));
 
         Response responseAUpdated = patchFeature(new InputFeature(SHORT_A_ID, Map.of("p", "2")));
         assertStatusCode200(responseAUpdated);
@@ -97,7 +97,7 @@ public class PatchTest {
     void errorOnNotMatchingIds() {
         Response responseEmpty = Naksha
                 .request()
-                .with().body(readTestResourcesFile("patch/feature_template.json").formatted(FULL_A_ID, "{}"))
+                .with().body(format(readTestResourcesFile("patch/feature_template.json"), FULL_A_ID, "{}"))
                 .with().header("Content-Type", "application/json")
                 .patch("/features/{featureId}", URN_PREFIX + "DEFINITELY_NOT_SHORT_A_ID");
         responseEmpty.then().assertThat().statusCode(400)
@@ -123,11 +123,24 @@ public class PatchTest {
         DataHub.createFeatureFromJsonTemplateFile("patch/feature_template.json", fullId, propertiesJson);
     }
 
-    private record InputFeature(String shortId, Map properties) {
+    private static class InputFeature {
+        private final String shortId;
+        private final Map properties;
+
+        private InputFeature(String shortId, Map properties) {
+            this.shortId = shortId;
+            this.properties = properties;
+        }
+
+        private String getShortId(){return shortId;}
+
+        private Map getProperties(){return properties;}
+
+
+
         String toJson() {
             String fullId = URN_PREFIX + shortId;
-            return readTestResourcesFile("patch/feature_template.json")
-                    .formatted(fullId, JsonSerializable.serialize(properties));
+            return format(readTestResourcesFile("patch/feature_template.json"), fullId, JsonSerializable.serialize(properties));
         }
     }
 }

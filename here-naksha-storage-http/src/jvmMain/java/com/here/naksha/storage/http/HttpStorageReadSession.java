@@ -68,12 +68,16 @@ public class HttpStorageReadSession implements IReadSession {
   @Override
   public @NotNull Response execute(@NotNull Request readRequest) {
     try {
-      return switch (httpInterface) {
-        case ffwAdapter -> FfwInterfaceReadExecute.execute(
-                context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
-        case dataHubConnector -> ConnectorInterfaceReadExecute.execute(
-                context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
-      };
+      switch (httpInterface) {
+        case ffwAdapter:
+          return FfwInterfaceReadExecute.execute(
+              context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+        case dataHubConnector:
+          return ConnectorInterfaceReadExecute.execute(
+              context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+        default:
+          throw new IllegalStateException("Unsupported HTTP interface: " + httpInterface);
+      }
     } catch (Exception exception) {
       log.warn("We got exception while executing Read request.", exception);
       return new ErrorResponse(NakshaError.EXCEPTION, exception.getMessage(), exception);
@@ -85,7 +89,7 @@ public class HttpStorageReadSession implements IReadSession {
 
   @Override
   public int getSocketTimeout() {
-    return requestSender.keyProps.socketTimeoutSec();
+    return requestSender.keyProps.getSocketTimeoutSec();
   }
 
   @Override

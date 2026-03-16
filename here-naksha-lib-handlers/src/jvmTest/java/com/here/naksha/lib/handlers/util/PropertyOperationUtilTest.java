@@ -13,7 +13,7 @@ import static com.here.naksha.lib.handlers.util.PropertyOperationUtil.disablePQu
 import static org.junit.jupiter.api.Assertions.*;
 
 class PropertyOperationUtilTest {
-    private final F1<Boolean, PQuery> dummyShouldDisable = _ -> false;
+    private final F1<Boolean, PQuery> dummyShouldDisable = ignored -> false;
 
     @Test
     void shouldNothingBeDisabledWhenPropertiesAbsent() {
@@ -80,13 +80,13 @@ class PropertyOperationUtilTest {
         POr root = (POr) newPropertyQuery;
         assertEquals(2, root.size());
         // first child is AND with 1 child node
-        PAnd andUnderRoot = assertInstanceOf(PAnd.class, root.getFirst());
+        PAnd andUnderRoot = assertInstanceOf(PAnd.class, root.get(0));
         assertEquals(1, andUnderRoot.size());
-        assertEquals(typeIsSpeedLimit, andUnderRoot.getFirst());
+        assertEquals(typeIsSpeedLimit, andUnderRoot.get(0));
         // second child is OR with 1 child node
         POr orUnderRoot = assertInstanceOf(POr.class, root.get(1));
         assertEquals(1, orUnderRoot.size());
-        assertEquals(typeIsCarAllowed, orUnderRoot.getFirst());
+        assertEquals(typeIsCarAllowed, orUnderRoot.get(0));
     }
 
     @Test
@@ -174,7 +174,7 @@ class PropertyOperationUtilTest {
 
         // And
         assertEquals(1, pAnd.size());
-        assertEquals(b, pAnd.getFirst());
+        assertEquals(b, pAnd.get(0));
     }
 
     @Test
@@ -200,7 +200,7 @@ class PropertyOperationUtilTest {
 
         // And
         assertEquals(1, pOr.size());
-        assertEquals(b, pOr.getFirst());
+        assertEquals(b, pOr.get(0));
     }
 
     @Test

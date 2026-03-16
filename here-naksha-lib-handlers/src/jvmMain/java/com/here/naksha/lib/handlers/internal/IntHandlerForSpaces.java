@@ -26,13 +26,12 @@ import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
+import java.util.stream.Collectors;
 import naksha.model.NakshaError;
 import naksha.model.SessionOptions;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
@@ -66,8 +65,8 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     } else {
       return new ErrorResponse(
           NakshaError.NOT_FOUND,
-          "Following handlers defined for Space %s don't exist: %s"
-              .formatted(space.getId(), String.join(",", missingHandlerIds)));
+          String.format("Following handlers defined for Space %s don't exist: %s",
+              space.getId(), String.join(",", missingHandlerIds)));
     }
   }
 
@@ -84,6 +83,6 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     List<String> availableHandlerIds = ResultHelper.readIdsFromResult(fetchedHandlers);
     return expectedHandlersIds.stream()
         .filter(expectedId -> !availableHandlerIds.contains(expectedId))
-        .toList();
+        .collect(Collectors.toList());
   }
 }

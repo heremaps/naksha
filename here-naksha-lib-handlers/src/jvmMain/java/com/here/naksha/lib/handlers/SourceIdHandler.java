@@ -57,13 +57,16 @@ public class SourceIdHandler extends AbstractEventHandler {
   public @NotNull Response process(@NotNull IEvent event) {
     final Request request = event.getRequest();
     logger.info("Handler received request {}", request.getClass().getSimpleName());
-    if (request instanceof ReadFeatures readRequest) {
+    if (request instanceof ReadFeatures) {
+      ReadFeatures readRequest = (ReadFeatures) request;
       // Read request
       mapIntoTagOperation(readRequest);
-    } else if (request instanceof WriteRequest wr) {
+    } else if (request instanceof WriteRequest) {
+      WriteRequest wr = (WriteRequest) request;
       // Write request
       WriteList codecList = wr.getWrites();
-      if (wr instanceof ContextWriteXyzFeatures cwf) {
+      if (wr instanceof ContextWriteXyzFeatures) {
+        ContextWriteXyzFeatures cwf = (ContextWriteXyzFeatures) wr;
         codecList = cwf.getWrites();
       }
       if (!codecList.isEmpty()) {
@@ -105,7 +108,8 @@ public class SourceIdHandler extends AbstractEventHandler {
         readRequest.getQuery().setProperties(null);
       }
       // Unwrap the query if it is an AND clause with only 1 remaining sub-clause
-      else if ((propertyOp instanceof PAnd canBeSimplified) && (canBeSimplified.size() == 1)) {
+      else if ((propertyOp instanceof PAnd) && (((PAnd) propertyOp).size() == 1)) {
+        PAnd canBeSimplified = (PAnd) propertyOp;
         readRequest.getQuery().setProperties(canBeSimplified.get(0));
       }
     });
@@ -136,11 +140,12 @@ public class SourceIdHandler extends AbstractEventHandler {
     return (propertyQuery instanceof PQuery)
         || (propertyQuery instanceof PNot)
         || (propertyQuery instanceof POr)
-        || ((propertyQuery instanceof PAnd pAnd) && (pAnd.isEmpty()));
+        || ((propertyQuery instanceof PAnd) && (((PAnd) propertyQuery).isEmpty()));
   }
 
   private static Optional<ITagQuery> transformPropertyOperation(IPropertyQuery propertyOperation) {
-    if (propertyOperation instanceof PAnd pAnd) {
+    if (propertyOperation instanceof PAnd) {
+      PAnd pAnd = (PAnd) propertyOperation;
       final TagAnd tagAnd = new TagAnd();
       // List of successfully transformed property queries to be removed at the end, so as not to disrupt the loop
       final List<IPropertyQuery> toRemove = new ArrayList<>();
@@ -154,7 +159,8 @@ public class SourceIdHandler extends AbstractEventHandler {
             toRemove.add(propertyComponent);
           }
           // Unwrap the query if it is an AND clause with only 1 remaining sub-clause
-          else if ((propertyComponent instanceof PAnd canBeSimplified) && (canBeSimplified.size() == 1)) {
+          else if ((propertyComponent instanceof PAnd) && (((PAnd) propertyComponent).size() == 1)) {
+            PAnd canBeSimplified = (PAnd) propertyComponent;
             pAnd.set(i, canBeSimplified.get(0));
           }
         }
@@ -167,7 +173,8 @@ public class SourceIdHandler extends AbstractEventHandler {
         return Optional.of(tagAnd.get(0));
       }
       return Optional.of(tagAnd);
-    } else if (propertyOperation instanceof POr pOr) {
+    } else if (propertyOperation instanceof POr) {
+      POr pOr = (POr) propertyOperation;
       final TagOr tagOr = new TagOr();
       for (IPropertyQuery iPropertyQuery : pOr) {
         final Optional<ITagQuery> tagComponent = transformPropertyOperation(iPropertyQuery);
@@ -179,10 +186,12 @@ public class SourceIdHandler extends AbstractEventHandler {
         tagOr.add(tagComponent.get());
       }
       return Optional.of(tagOr);
-    } else if (propertyOperation instanceof PNot pNot) {
+    } else if (propertyOperation instanceof PNot) {
+      PNot pNot = (PNot) propertyOperation;
       final Optional<ITagQuery> tagComponent = transformPropertyOperation(pNot.getQuery());
       return tagComponent.map(TagNot::new);
-    } else if (propertyOperation instanceof PQuery pQuery) {
+    } else if (propertyOperation instanceof PQuery) {
+      PQuery pQuery = (PQuery) propertyOperation;
       if (sourceIdTransformationCapable(pQuery) && operationTypeAllowed(pQuery)) {
         final TagExists tagQuery = new TagExists(TAG_PREFIX + pQuery.getValue());
         return Optional.of(tagQuery);

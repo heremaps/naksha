@@ -8,7 +8,7 @@ kotlin {
     jvm {}
     sourceSets {
         jvmMain {
-            jvmToolchain(23)
+            jvmToolchain(11)
             dependencies {
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))

@@ -24,6 +24,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.function.Supplier;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.query.IPropertyQuery;
@@ -76,28 +77,36 @@ public final class PropertyOperationUtil {
       @NotNull F1<Boolean, PQuery> removalCondition,
       @NotNull Set<PQuery> disabledProperties
   ) {
-    return switch (current) {
-      case PAnd pAnd -> handleCompoundQuery(
-          pAnd,
+    if (current instanceof PAnd) {
+      return handleCompoundQuery(
+          (PAnd) current,
           removalCondition,
           disabledProperties,
           PAnd::new
       );
-      case POr pOr -> handleCompoundQuery(
-          pOr,
+    }
+    if (current instanceof POr) {
+      return handleCompoundQuery(
+          (POr) current,
           removalCondition,
           disabledProperties,
           POr::new
       );
-      case PNot pNot -> disablePropertyInPropertyQueryTree(
+    }
+    if (current instanceof PNot) {
+      PNot pNot = (PNot) current;
+      return disablePropertyInPropertyQueryTree(
           pNot.getQuery(), removalCondition, disabledProperties
       ).flatMap(pq -> Optional.of(new PNot(pq)));
-      case PQuery currentPQuery when removalCondition.call(currentPQuery) -> {
+    }
+    if (current instanceof PQuery) {
+      PQuery currentPQuery = (PQuery) current;
+      if (removalCondition.call(currentPQuery)) {
         disabledProperties.add(currentPQuery);
-        yield disabledPropertyQuery();
+        return disabledPropertyQuery();
       }
-      default -> Optional.of(current);
-    };
+    }
+    return Optional.of(current);
   }
 
   private static Optional<IPropertyQuery> disabledPropertyQuery() {
@@ -112,7 +121,7 @@ public final class PropertyOperationUtil {
     return children.stream()
         .filter(Optional::isPresent)
         .map(Optional::get)
-        .toList();
+        .collect(Collectors.toList());
   }
 
   private static <T extends List<IPropertyQuery> & IPropertyQuery> Optional<IPropertyQuery> handleCompoundQuery(
@@ -143,6 +152,6 @@ public final class PropertyOperationUtil {
         .map(child -> disablePropertyInPropertyQueryTree(
             child, removalCondition, disabledProperties
         ))
-        .toList();
+        .collect(Collectors.toList());
   }
 }

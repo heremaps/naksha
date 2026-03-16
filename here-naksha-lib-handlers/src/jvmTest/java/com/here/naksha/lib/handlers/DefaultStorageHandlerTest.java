@@ -26,6 +26,7 @@ import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
@@ -149,10 +150,10 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // Given: Storage writer failing on WriteRequest for features due to undefined table but is able to create new collection
     NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
     when(
-        storageWriteSession.execute(argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteFeatures(wr)))))
+        storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteFeaturesRequest)))
         .thenReturn(new ErrorResponse(missingCollectionError));
     when(storageWriteSession.execute(
-        argThat(request -> (request instanceof WriteRequest wr) && (RequestTypesUtil.isOnlyWriteCollections(wr)))))
+        argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest)))
         .thenReturn(new SuccessResponse());
 
     // And: feature to be saved in potentially different collection
@@ -547,7 +548,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
   private static List<Write> getSingularWritesToCollection(List<WriteRequest> writeRequests, String collectionId) {
     return flattenSingularWriteRequest(writeRequests)
         .filter(write -> collectionId.equals(write.getCollectionId()))
-        .toList();
+        .collect(Collectors.toList());
   }
 
   private static Stream<Write> flattenSingularWriteRequest(List<WriteRequest> writeRequests) {
@@ -610,12 +611,21 @@ class DefaultStorageHandlerTest extends AbstractTest {
     return storageConfig;
   }
 
-  record CollectionPriorityTestCase(
-      DefaultStorageHandlerProperties handlerProperties,
-      Space space,
-      ValidCollectionSource validCollectionSource
+  static final class CollectionPriorityTestCase {
 
-  ) {
+    private final DefaultStorageHandlerProperties handlerProperties;
+    private final Space space;
+    private final ValidCollectionSource validCollectionSource;
+
+    CollectionPriorityTestCase(
+        DefaultStorageHandlerProperties handlerProperties,
+        Space space,
+        ValidCollectionSource validCollectionSource
+    ) {
+      this.handlerProperties = handlerProperties;
+      this.space = space;
+      this.validCollectionSource = validCollectionSource;
+    }
 
     enum ValidCollectionSource {
       HANDLER_PROPERTIES,
@@ -624,12 +634,31 @@ class DefaultStorageHandlerTest extends AbstractTest {
     }
 
     NakshaCollection correctCollection() {
-      return switch (validCollectionSource) {
-        case HANDLER_PROPERTIES -> handlerProperties.getCollection();
-        case SPACE_PROPERTIES -> JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
-        case SPACE_ID -> new NakshaCollection(space.getId()).withMapId(getMapId());
-      };
+      switch (validCollectionSource) {
+        case HANDLER_PROPERTIES:
+          return handlerProperties.getCollection();
+        case SPACE_PROPERTIES:
+          return JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
+        case SPACE_ID:
+          return new NakshaCollection(space.getId()).withMapId(getMapId());
+        default:
+          throw new IllegalStateException("Unexpected collection source: " + validCollectionSource);
+      }
     }
+  }
+
+  private static boolean isOnlyWriteFeaturesRequest(Request request) {
+    if (!(request instanceof WriteRequest)) {
+      return false;
+    }
+    return RequestTypesUtil.isOnlyWriteFeatures((WriteRequest) request);
+  }
+
+  private static boolean isOnlyWriteCollectionsRequest(Request request) {
+    if (!(request instanceof WriteRequest)) {
+      return false;
+    }
+    return RequestTypesUtil.isOnlyWriteCollections((WriteRequest) request);
   }
 
   private IEvent event(Request request) {

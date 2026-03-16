@@ -108,10 +108,9 @@ class IntHandlerForStoragesTest {
             createHttpStorageProperties("this_is_not_a_url", validConnectionTimeout, validSocketTimeout,null, emptyMap())),
         arguments("Invalid url: ftp://cool.files.com/static/rfc959.txt",
             createHttpStorageProperties("ftp://cool.files.com/static/rfc959.txt", validConnectionTimeout, validSocketTimeout,null, emptyMap())),
-        arguments("""
-                  Invalid connection timeout: -1, allowed values (sec): 0 - 30
-                  Invalid socket timeout: 91, allowed values (sec): 0 - 90
-                  Invalid url: ftp://cool.files.com/static/rfc959.txt""",
+        arguments("Invalid connection timeout: -1, allowed values (sec): 0 - 30\n"
+                + "Invalid socket timeout: 91, allowed values (sec): 0 - 90\n"
+                + "Invalid url: ftp://cool.files.com/static/rfc959.txt",
                 createHttpStorageProperties("ftp://cool.files.com/static/rfc959.txt", -1, 91,null, emptyMap()))
     );
   }

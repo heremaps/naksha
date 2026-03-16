@@ -13,8 +13,22 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 class Mom10VerificationTest {
 
-  record VerificationCase(AnyObject rawFeature, boolean isAtLeastMom10) {
+  static final class VerificationCase {
+    private final AnyObject rawFeature;
+    private final boolean isAtLeastMom10;
 
+    VerificationCase(AnyObject rawFeature, boolean isAtLeastMom10) {
+      this.rawFeature = rawFeature;
+      this.isAtLeastMom10 = isAtLeastMom10;
+    }
+
+    AnyObject getRawFeature() {
+      return rawFeature;
+    }
+
+    boolean isAtLeastMom10() {
+      return isAtLeastMom10;
+    }
   }
 
   @ParameterizedTest

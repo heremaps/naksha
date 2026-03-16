@@ -64,14 +64,26 @@ public class ConnectorInterfaceReadExecute {
         String streamId = context.getStreamId();
         String endpoint = "/" + firstCollectionIdOrThrow(request);
 
-        Event event =
-                switch (request.getReadRequestType()) {
-                    case GET_BY_ID -> createFeatureByIdEvent(request);
-                    case GET_BY_IDS -> createFeaturesByIdsEvent(request);
-                    case GET_BY_BBOX -> createFeatureByBBoxEvent(request);
-                    case GET_BY_TILE -> createFeaturesByTileEvent(request);
-                    case ITERATE -> createIterateEvent(request);
-                };
+        Event event;
+        switch (request.getReadRequestType()) {
+            case GET_BY_ID:
+                event = createFeatureByIdEvent(request);
+                break;
+            case GET_BY_IDS:
+                event = createFeaturesByIdsEvent(request);
+                break;
+            case GET_BY_BBOX:
+                event = createFeatureByBBoxEvent(request);
+                break;
+            case GET_BY_TILE:
+                event = createFeaturesByTileEvent(request);
+                break;
+            case ITERATE:
+                event = createIterateEvent(request);
+                break;
+            default:
+                throw new IllegalStateException("Unsupported read request type: " + request.getReadRequestType());
+        }
 
         event.setStreamId(streamId);
 

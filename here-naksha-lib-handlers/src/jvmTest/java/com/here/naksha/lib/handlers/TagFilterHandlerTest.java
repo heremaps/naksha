@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import com.here.naksha.test.common.FileUtil;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
@@ -65,7 +66,7 @@ class TagFilterHandlerTest extends AbstractTest {
     Assertions.assertInstanceOf(TagAnd.class, tagQuery);
     List<String> tagNameList = ((TagAnd) tagQuery).stream()
         .map(tagOp -> (TagExists) tagOp)
-        .map(TagExists::getName).toList();
+        .map(TagExists::getName).collect(Collectors.toList());
     assertEquals(tagFilter.size(), tagNameList.size());
     Assertions.assertTrue(tagNameList.contains("violated_ftype_topology"));
     Assertions.assertTrue(tagNameList.contains("some_other_tag"));
@@ -105,7 +106,7 @@ class TagFilterHandlerTest extends AbstractTest {
     Assertions.assertInstanceOf(TagAnd.class, tagQuery);
     List<String> tagNameList = ((TagAnd) tagQuery).stream()
         .map(tagOp -> (TagExists) tagOp)
-        .map(TagExists::getName).toList();
+        .map(TagExists::getName).collect(Collectors.toList());
     assertEquals(tagFilter.size(), tagNameList.size());
     Assertions.assertTrue(tagNameList.contains("violated_ftype_topology"));
     Assertions.assertTrue(tagNameList.contains("some_other_tag"));

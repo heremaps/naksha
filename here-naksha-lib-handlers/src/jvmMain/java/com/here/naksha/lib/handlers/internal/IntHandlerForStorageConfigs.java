@@ -39,6 +39,7 @@ import naksha.model.request.query.StringOp;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.handlers.internal.HttpStorageValidation.validateConfigForHttpStorage;
@@ -112,15 +113,16 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Naksha
             .withPropertyQuery(activeHandlersPOp);
     Response activeHandlersResponse = nakshaHub().getAdminStorage()
         .useReadSession(SessionOptions.from(NakshaContext.currentContext()), readSession -> readSession.execute(readActiveHandlersRequest));
-    if(activeHandlersResponse instanceof SuccessResponse successResponse) {
+    if(activeHandlersResponse instanceof SuccessResponse) {
+      SuccessResponse successResponse = (SuccessResponse) activeHandlersResponse;
       final List<EventHandlerConfig> eventHandlers = extractResponseItems(successResponse, EventHandlerConfig.class);
       if(eventHandlers.isEmpty()) {
         return SUCCESSFUL_VALIDATION;
       }
-      final List<String> handlerIds = eventHandlers.stream().map(NakshaFeature::getId).toList();
+      final List<String> handlerIds = eventHandlers.stream().map(NakshaFeature::getId).collect(Collectors.toList());
       return new ErrorResponse(CONFLICT, "The storage is still in use by these event handlers: " + handlerIds);
-    } else if (activeHandlersResponse instanceof ErrorResponse errorResponse) {
-        return errorResponse;
+    } else if (activeHandlersResponse instanceof ErrorResponse) {
+        return (ErrorResponse) activeHandlersResponse;
     } else {
       return new ErrorResponse(EXCEPTION, "Unexpected response while fetching storage's handlers: " + activeHandlersResponse);
     }

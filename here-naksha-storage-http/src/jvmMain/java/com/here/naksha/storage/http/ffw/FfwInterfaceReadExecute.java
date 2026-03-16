@@ -62,14 +62,20 @@ public class FfwInterfaceReadExecute {
 
   @NotNull
   public static Response execute(@NotNull NakshaContext context, ReadFeaturesProxyWrapper request, RequestSender sender) {
-
-    return switch (request.getReadRequestType()) {
-      case GET_BY_ID -> executeFeatureById(context, request, sender);
-      case GET_BY_IDS -> executeFeaturesById(context, request, sender);
-      case GET_BY_BBOX -> executeFeatureByBBox(context, request, sender);
-      case GET_BY_TILE -> executeFeaturesByTile(context, request, sender);
-      case ITERATE -> executeIterate(context, request, sender);
-    };
+    switch (request.getReadRequestType()) {
+      case GET_BY_ID:
+        return executeFeatureById(context, request, sender);
+      case GET_BY_IDS:
+        return executeFeaturesById(context, request, sender);
+      case GET_BY_BBOX:
+        return executeFeatureByBBox(context, request, sender);
+      case GET_BY_TILE:
+        return executeFeaturesByTile(context, request, sender);
+      case ITERATE:
+        return executeIterate(context, request, sender);
+      default:
+        throw new IllegalStateException("Unsupported read request type: " + request.getReadRequestType());
+    }
   }
 
   private static Response executeFeatureById(
@@ -119,7 +125,7 @@ public class FfwInterfaceReadExecute {
     } else {
       return featureIds.stream().collect(joining(
           ",", // delimeter
-          "&%s=".formatted(SHORT_FEATURE_ID), // prefix
+          String.format("&%s=", SHORT_FEATURE_ID), // prefix
           "" // suffix
       ));
     }

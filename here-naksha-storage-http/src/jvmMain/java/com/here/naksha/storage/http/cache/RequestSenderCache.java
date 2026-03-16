@@ -50,7 +50,7 @@ public class RequestSenderCache {
   @NotNull
   public RequestSender getSenderWith(KeyProperties keyProperties) {
     return requestSenders.compute(
-        keyProperties.name(), (__, cachedSender) -> getUpdated(cachedSender, keyProperties));
+        keyProperties.getName(), (__, cachedSender) -> getUpdated(cachedSender, keyProperties));
   }
 
   private @NotNull RequestSender getUpdated(

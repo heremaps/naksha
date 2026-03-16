@@ -28,6 +28,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -126,22 +127,100 @@ public class RequestSender {
     }
 
     private boolean isRetryEligibleException(@NotNull final Exception e) {
-        return (e instanceof ExecutionException
-                && e.getCause() instanceof IOException ioe
-                && ioe.getMessage() != null
-                && ioe.getMessage().contains("GOAWAY"));
+        if (!(e instanceof ExecutionException)) {
+            return false;
+        }
+        Throwable cause = e.getCause();
+        if (!(cause instanceof IOException)) {
+            return false;
+        }
+        IOException ioe = (IOException) cause;
+        return ioe.getMessage() != null && ioe.getMessage().contains("GOAWAY");
     }
 
     public boolean hasKeyProps(KeyProperties thatKeyProps) {
         return this.keyProps.equals(thatKeyProps);
     }
 
-    public record KeyProperties(
-            @NotNull String name,
-            @NotNull String hostUrl,
-            @NotNull Map<String, String> defaultHeaders,
-            int connectionTimeoutSec,
-            int socketTimeoutSec,
-            int maxRetries) {
+    public static final class KeyProperties {
+        private final @NotNull String name;
+        private final @NotNull String hostUrl;
+        private final @NotNull Map<String, String> defaultHeaders;
+        private final int connectionTimeoutSec;
+        private final int socketTimeoutSec;
+        private final int maxRetries;
+
+        public KeyProperties(
+                @NotNull String name,
+                @NotNull String hostUrl,
+                @NotNull Map<String, String> defaultHeaders,
+                int connectionTimeoutSec,
+                int socketTimeoutSec,
+                int maxRetries) {
+            this.name = name;
+            this.hostUrl = hostUrl;
+            this.defaultHeaders = defaultHeaders;
+            this.connectionTimeoutSec = connectionTimeoutSec;
+            this.socketTimeoutSec = socketTimeoutSec;
+            this.maxRetries = maxRetries;
+        }
+
+        public @NotNull String getName() {
+            return name;
+        }
+
+        public @NotNull String getHostUrl() {
+            return hostUrl;
+        }
+
+        public @NotNull Map<String, String> getDefaultHeaders() {
+            return defaultHeaders;
+        }
+
+        public int getConnectionTimeoutSec() {
+            return connectionTimeoutSec;
+        }
+
+        public int getSocketTimeoutSec() {
+            return socketTimeoutSec;
+        }
+
+        public int getMaxRetries() {
+            return maxRetries;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof KeyProperties)) {
+                return false;
+            }
+            KeyProperties that = (KeyProperties) o;
+            return connectionTimeoutSec == that.connectionTimeoutSec
+                    && socketTimeoutSec == that.socketTimeoutSec
+                    && maxRetries == that.maxRetries
+                    && name.equals(that.name)
+                    && hostUrl.equals(that.hostUrl)
+                    && defaultHeaders.equals(that.defaultHeaders);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(name, hostUrl, defaultHeaders, connectionTimeoutSec, socketTimeoutSec, maxRetries);
+        }
+
+        @Override
+        public String toString() {
+            return "KeyProperties["
+                    + "name=" + name
+                    + ", hostUrl=" + hostUrl
+                    + ", defaultHeaders=" + defaultHeaders
+                    + ", connectionTimeoutSec=" + connectionTimeoutSec
+                    + ", socketTimeoutSec=" + socketTimeoutSec
+                    + ", maxRetries=" + maxRetries
+                    + ']';
+        }
     }
 }
