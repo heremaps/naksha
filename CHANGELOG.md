@@ -1,3 +1,7 @@
+## Naksha_1.1.5
+
+- Improved DataSource cache refresh handling in txn-handler submodule to gracefully close active DB connections
+
 ## Naksha_1.1.4
 
 - Increased header size limit to 24k

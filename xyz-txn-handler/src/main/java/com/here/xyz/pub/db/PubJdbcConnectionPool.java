@@ -60,7 +60,7 @@ public class PubJdbcConnectionPool {
         }
         // reset cache (if it is full cache flush)
         if (spaceId == null) {
-            dsCache = new ConcurrentHashMap<>();
+            dsCache.clear();
             dsCacheExpiryEpochMs = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(dsCacheExpiryInMins);
             logger.info("Recreated DataSource Cache with expiry of {}mins.", dsCacheExpiryInMins);
         }
