@@ -15,8 +15,8 @@ import org.apache.logging.log4j.Logger;
 public class PubJdbcConnectionPool {
     private static final Logger logger = LogManager.getLogger();
 
-    // Entire cache will be flushed every x hours (e.g. 8hrs) to prevent pile-up of stale data
-    final private static int dsCacheExpiryInMins = 8*60;
+    // Entire cache will be flushed every x hours (e.g. 1hrs) to prevent pile-up of stale data
+    final private static int dsCacheExpiryInMins = 1 * 60;
     private static long dsCacheExpiryEpochMs = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(dsCacheExpiryInMins);
     private static ConcurrentHashMap<JdbcConnectionParams, HikariDataSource> dsCache = new ConcurrentHashMap<>();
 
@@ -51,8 +51,10 @@ public class PubJdbcConnectionPool {
         for (JdbcConnectionParams connParams : dsCache.keySet()) {
             flushThisDS = (spaceId == null || spaceId.equals(connParams.getSpaceId()));
             if (flushThisDS) {
-                dsCache.get(connParams).close(); // close datasource
-                dsCache.remove(connParams); // remove datasource from cache
+                final HikariDataSource oldDs = dsCache.remove(connParams); // remove old datasource from cache
+                if (oldDs != null) {
+                    oldDs.close(); // close old datasource gracefully
+                }
                 logger.info("Removed old cached DataSource for spaceId {}.", connParams.getSpaceId());
             }
         }
@@ -74,7 +76,7 @@ public class PubJdbcConnectionPool {
         // Create new Datasource (connection pool) and add it to a cache
         final HikariConfig config = new HikariConfig();
         String dbUrl = dbConnParams.getDbUrl();
-        dbUrl += (dbUrl.contains("?") ? "&" : "?") + "ApplicationName=XYZ-Hub-Publisher";
+        dbUrl += (dbUrl.contains("?") ? "&" : "?") + "ApplicationName=XYZ-Hub-Publisher_"+dbConnParams.getSpaceId();
         config.setDriverClassName(dbConnParams.getDriveClass());
         config.setJdbcUrl(dbUrl);
         config.setUsername(dbConnParams.getUser());
