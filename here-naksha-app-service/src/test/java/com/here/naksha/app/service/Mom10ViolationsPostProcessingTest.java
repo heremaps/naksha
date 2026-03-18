@@ -48,7 +48,6 @@ public class Mom10ViolationsPostProcessingTest extends ApiTest {
         assertThat(response)
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
-                .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match")
-        ;
+                .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match");
     }
 }
