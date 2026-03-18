@@ -3,9 +3,13 @@ package com.here.naksha.app.service;
 import static com.here.naksha.app.common.CommonApiTestSetup.*;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static com.here.naksha.app.common.TestUtil.*;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -49,5 +53,19 @@ public class Mom10ViolationsPostProcessingTest extends ApiTest {
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match");
+
+        // Verify old namespaces are absent in the raw HTTP payload.
+        // Not doing object conversion because it adds the old namespaces back for backward compatibility, but we want to ensure that the raw payload doesn't contain them.
+        final JsonNode rawResponse = new ObjectMapper().readTree(response.body());
+        for (JsonNode featureNode : rawResponse.path("features")) {
+            final JsonNode propertiesNode = featureNode.path("properties");
+            assertFalse(propertiesNode.has(XyzProperties.HERE_DELTA_NS), "Old delta namespace should be absent in raw feature payload");
+            assertFalse(propertiesNode.has(XyzProperties.HERE_META_NS), "Old meta namespace should be absent in raw feature payload");
+        }
+        for (JsonNode violationNode : rawResponse.path("violations")) {
+            final JsonNode propertiesNode = violationNode.path("properties");
+            assertFalse(propertiesNode.has(XyzProperties.HERE_DELTA_NS), "Old delta namespace should be absent in raw violation payload");
+            assertFalse(propertiesNode.has(XyzProperties.HERE_META_NS), "Old meta namespace should be absent in raw violation payload");
+        }
     }
 }
