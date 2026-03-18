@@ -1,0 +1,39 @@
+[
+    {
+        "id": "urn:here::here:Topology:violation_id-1",
+        "type": "Feature",
+        "momType": "supporting.Violation",
+        "properties": {
+            "meta": {
+                "createdTS": "2014-04-08T02:44:49.789Z",
+                "lastUpdatedTS": "2018-02-08T01:15:17.372Z",
+                "modelVersion": "10.0.0",
+                "updatedByUser": "account_identifier"
+            },
+            "@ns:com:here:mom:meta": {
+                "operation": "CREATED",
+                "modelVersion": "10.0.0",
+                "lastUpdatedBy": "topology_adapter_service",
+                "updatedByUser": "topology_adapter_service"
+            },
+            "@ns:com:here:mom:delta": {
+                "changeState": "UPDATED",
+                "reviewState": "AUTO_ENDORSED"
+            },
+            "ruleId": "WROAD159",
+            "latitude": 52.2943,
+            "severity": 1,
+            "deltaMode": false,
+            "longitude": 13.63291,
+            "references": null,
+            "errorMessage": "Topology ID urn:here::here:Topology:106003684 has a Speed Limit 50 that does not match the speed sign",
+            "isoCountryCode": "DEU",
+            "ruleDescription": "Speed limit on the road should match the speed limit sign"
+        },
+        "violatedObject": {
+            "id": "urn:here::here:Topology:106003684",
+            "spaceId": "roadtopology",
+            "featureType": "Topology"
+        }
+    }
+]
