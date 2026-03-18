@@ -7,6 +7,7 @@ import naksha.model.request.query.AnyOp;
 
 import static com.here.naksha.storage.http.connector.pop.IPropertyQueryToPropertiesQuery.toPoPQueryAnd;
 import static com.here.naksha.storage.http.connector.pop.IPropertyQueryToPropertiesQuery.toPopQueryOr;
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.lines;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -34,10 +35,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":["1"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\"]}",
+                "]"), query);
     }
 
     @Test
@@ -49,11 +50,11 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":["1"]},
-        {"key":"property.prop_2","operation":"EQUALS","values":[2]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\"]},",
+                "{\"key\":\"property.prop_2\",\"operation\":\"EQUALS\",\"values\":[2]}",
+                "]"), query);
     }
 
     @Test
@@ -65,11 +66,11 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":["1"]},
-        {"key":"property.prop_1","operation":"EQUALS","values":["2"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\"]},",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"2\"]}",
+                "]"), query);
     }
 
     @Test
@@ -84,14 +85,14 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":["1"]},
-        {"key":"property.prop_2","operation":"EQUALS","values":["2"]},
-        {"key":"property.prop_3","operation":"EQUALS","values":["3"]},
-        {"key":"property.prop_4","operation":"EQUALS","values":["4"]},
-        {"key":"property.prop_5","operation":"EQUALS","values":["5"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\"]},",
+                "{\"key\":\"property.prop_2\",\"operation\":\"EQUALS\",\"values\":[\"2\"]},",
+                "{\"key\":\"property.prop_3\",\"operation\":\"EQUALS\",\"values\":[\"3\"]},",
+                "{\"key\":\"property.prop_4\",\"operation\":\"EQUALS\",\"values\":[\"4\"]},",
+                "{\"key\":\"property.prop_5\",\"operation\":\"EQUALS\",\"values\":[\"5\"]}",
+                "]"), query);
     }
 
 
@@ -103,10 +104,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":["1"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\"]}",
+                "]"), query);
     }
 
     @Test
@@ -118,10 +119,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":["1","2"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\",\"2\"]}",
+                "]"), query);
     }
 
     @Test
@@ -164,10 +165,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":["1","2","3","4","5"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\",\"2\",\"3\",\"4\",\"5\"]}",
+                "]"), query);
     }
 
     @Test
@@ -179,10 +180,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":[1,null]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[1,null]}",
+                "]"), query);
     }
 
     @Test
@@ -191,10 +192,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":["1"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\"]}",
+                "]"), query);
     }
 
     @Test
@@ -203,10 +204,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"NOT_EQUALS","values":["1"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"NOT_EQUALS\",\"values\":[\"1\"]}",
+                "]"), query);
     }
 
     @ParameterizedTest
@@ -238,10 +239,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"NOT_EQUALS","values":[null]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"NOT_EQUALS\",\"values\":[null]}",
+                "]"), query);
     }
 
     @Test
@@ -250,10 +251,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":[null]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[null]}",
+                "]"), query);
     }
 
     @Test
@@ -263,10 +264,10 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"CONTAINS","values":["{\\"num\\":1,\\"str\\":\\"str1\\",\\"arr\\":[1,2,3],\\"obj\\":{}}"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"CONTAINS\",\"values\":[\"{\\\"num\\\":1,\\\"str\\\":\\\"str1\\\",\\\"arr\\\":[1,2,3],\\\"obj\\\":{}}\"]}",
+                "]"), query);
     }
 
     @Test
@@ -281,14 +282,14 @@ public class POpToQueryConverterTest {
 
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"property.prop_1","operation":"EQUALS","values":[1]},
-        {"key":"property.prop_2","operation":"GREATER_THAN","values":[2]},
-        {"key":"property.prop_3","operation":"GREATER_THAN_OR_EQUALS","values":[3]},
-        {"key":"property.prop_4","operation":"LESS_THAN","values":[4]},
-        {"key":"property.prop_5","operation":"LESS_THAN_OR_EQUALS","values":[5]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[1]},",
+                "{\"key\":\"property.prop_2\",\"operation\":\"GREATER_THAN\",\"values\":[2]},",
+                "{\"key\":\"property.prop_3\",\"operation\":\"GREATER_THAN_OR_EQUALS\",\"values\":[3]},",
+                "{\"key\":\"property.prop_4\",\"operation\":\"LESS_THAN\",\"values\":[4]},",
+                "{\"key\":\"property.prop_5\",\"operation\":\"LESS_THAN_OR_EQUALS\",\"values\":[5]}",
+                "]"), query);
     }
 
     @ParameterizedTest
@@ -318,10 +319,10 @@ public class POpToQueryConverterTest {
         );
         PropertyQueryAnd query = toPoPQueryAnd(q);
 
-        assertQueryEquals("""
-        [
-        {"key":"id","operation":"EQUALS","values":["1"]}
-        ]""", query);
+        assertQueryEquals(lines(
+                "[",
+                "{\"key\":\"id\",\"operation\":\"EQUALS\",\"values\":[\"1\"]}",
+                "]"), query);
     }
 
     @Test
@@ -332,12 +333,12 @@ public class POpToQueryConverterTest {
 
         PropertyQueryOr or = toPopQueryOr(q);
 
-        assertQueryOrEquals("""
-                [
-                [
-                {"key":"property.prop_1","operation":"EQUALS","values":["1"]}
-                ]
-                ]""", or);
+        assertQueryOrEquals(lines(
+                "[",
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\"]}",
+                "]",
+                "]"), or);
     }
 
     @Test
@@ -349,13 +350,13 @@ public class POpToQueryConverterTest {
 
         PropertyQueryOr or = toPopQueryOr(q);
 
-        assertQueryOrEquals("""
-                [
-                [
-                {"key":"property.prop_1","operation":"EQUALS","values":["1"]},
-                {"key":"property.prop_2","operation":"EQUALS","values":[2]}
-                ]
-                ]""", or);
+        assertQueryOrEquals(lines(
+                "[",
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\"]},",
+                "{\"key\":\"property.prop_2\",\"operation\":\"EQUALS\",\"values\":[2]}",
+                "]",
+                "]"), or);
     }
 
     @Test
@@ -367,12 +368,12 @@ public class POpToQueryConverterTest {
 
         PropertyQueryOr or = toPopQueryOr(q);
 
-        assertQueryOrEquals("""
-                [
-                [
-                {"key":"property.prop_1","operation":"EQUALS","values":["1","2"]}
-                ]
-                ]""", or);
+        assertQueryOrEquals(lines(
+                "[",
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"EQUALS\",\"values\":[\"1\",\"2\"]}",
+                "]",
+                "]"), or);
     }
 
     @Test
@@ -384,13 +385,13 @@ public class POpToQueryConverterTest {
 
         PropertyQueryOr or = toPopQueryOr(q);
 
-        assertQueryOrEquals("""
-                [
-                [
-                {"key":"property.prop_1","operation":"NOT_EQUALS","values":[null]},
-                {"key":"property.prop_2","operation":"EQUALS","values":[null]}
-                ]
-                ]""", or);
+        assertQueryOrEquals(lines(
+                "[",
+                "[",
+                "{\"key\":\"property.prop_1\",\"operation\":\"NOT_EQUALS\",\"values\":[null]},",
+                "{\"key\":\"property.prop_2\",\"operation\":\"EQUALS\",\"values\":[null]}",
+                "]",
+                "]"), or);
     }
 
     @Test
@@ -401,12 +402,12 @@ public class POpToQueryConverterTest {
 
         PropertyQueryOr or = toPopQueryOr(q);
 
-        assertQueryOrEquals("""
-                [
-                [
-                {"key":"id","operation":"EQUALS","values":["1"]}
-                ]
-                ]""", or);
+        assertQueryOrEquals(lines(
+                "[",
+                "[",
+                "{\"key\":\"id\",\"operation\":\"EQUALS\",\"values\":[\"1\"]}",
+                "]",
+                "]"), or);
     }
 
 

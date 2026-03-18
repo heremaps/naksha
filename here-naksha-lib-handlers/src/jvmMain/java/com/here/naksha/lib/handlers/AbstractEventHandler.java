@@ -49,12 +49,18 @@ public abstract class AbstractEventHandler implements IEventHandler {
 
   @Override
   public final @NotNull Response processEvent(@NotNull IEvent event) {
-    return switch (processingStrategyFor(event)) {
-      case PROCESS -> process(event);
-      case SEND_UPSTREAM_WITHOUT_PROCESSING -> event.sendUpstream();
-      case SUCCEED_WITHOUT_PROCESSING -> new SuccessResponse();
-      case NOT_IMPLEMENTED -> notImplemented(event);
-    };
+    switch (processingStrategyFor(event)) {
+      case PROCESS:
+        return process(event);
+      case SEND_UPSTREAM_WITHOUT_PROCESSING:
+        return event.sendUpstream();
+      case SUCCEED_WITHOUT_PROCESSING:
+        return new SuccessResponse();
+      case NOT_IMPLEMENTED:
+        return notImplemented(event);
+      default:
+        throw new IllegalStateException("Unsupported processing strategy");
+    }
   }
 
   protected @NotNull Response notImplemented(@NotNull IEvent event) {

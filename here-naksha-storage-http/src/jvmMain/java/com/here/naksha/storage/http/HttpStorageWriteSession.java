@@ -31,13 +31,17 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
     @Override
     public @NotNull Response execute(@NotNull Request writeRequest) {
         try {
-            return switch (httpInterface) {
-                case ffwAdapter -> new ErrorResponse(
-                        NakshaError.NOT_IMPLEMENTED, "Writing not supported by underlying storage");
-                case dataHubConnector -> new ConnectorInterfaceWriteExecute(
-                        getNakshaContext(), (WriteRequest) writeRequest, getRequestSender())
-                        .execute();
-            };
+            switch (httpInterface) {
+                case ffwAdapter:
+                    return new ErrorResponse(
+                            NakshaError.NOT_IMPLEMENTED, "Writing not supported by underlying storage");
+                case dataHubConnector:
+                    return new ConnectorInterfaceWriteExecute(
+                            getNakshaContext(), (WriteRequest) writeRequest, getRequestSender())
+                            .execute();
+                default:
+                    throw new IllegalStateException("Unsupported HTTP interface: " + httpInterface);
+            }
         } catch (NakshaException e) {
             return new ErrorResponse(e.getError());
         } catch (UnsupportedOperationException e) {

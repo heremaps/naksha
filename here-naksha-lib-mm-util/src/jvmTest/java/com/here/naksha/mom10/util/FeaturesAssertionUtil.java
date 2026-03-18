@@ -73,10 +73,12 @@ public class FeaturesAssertionUtil {
   private static void assertObjectEqual(Object expectedValue, Object actualValue, String path) {
     if (expectedValue == null) {
       assertNull(actualValue, "Expected null value under path: " + path);
-    } else if (expectedValue instanceof Map expectedMapValue) {
+    } else if (expectedValue instanceof Map) {
+      Map expectedMapValue = (Map) expectedValue;
       assertInstanceOf(Map.class, actualValue);
       assertMapsEqual(expectedMapValue, (Map) actualValue, path);
-    } else if (expectedValue instanceof List expectedListValue) {
+    } else if (expectedValue instanceof List) {
+      List expectedListValue = (List) expectedValue;
       assertInstanceOf(List.class, actualValue);
       assertListsEqual(expectedListValue, (List) actualValue, path);
     } else {

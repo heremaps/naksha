@@ -38,11 +38,28 @@ public final class IPropertyQueryToQueryConverter {
   private static final String VALUE_TRUE = "true";
   private static final String VALUE_FALSE = "false";
 
-  /**
-   * A private helper record to hold the final serialized parts of a simple query.
-   */
-  private record EffectiveQueryParts(String path, String operator, String valueString) {
+  private static final class EffectiveQueryParts {
+    private final String path;
+    private final String operator;
+    private final String valueString;
 
+    private EffectiveQueryParts(String path, String operator, String valueString) {
+      this.path = path;
+      this.operator = operator;
+      this.valueString = valueString;
+    }
+
+    private String getPath() {
+      return path;
+    }
+
+    private String getOperator() {
+      return operator;
+    }
+
+    private String getValueString() {
+      return valueString;
+    }
   }
 
   private IPropertyQueryToQueryConverter() {
@@ -55,19 +72,17 @@ public final class IPropertyQueryToQueryConverter {
    * @return A URL-formatted query string.
    */
   public static String convert(IPropertyQuery query) {
-    return switch (query) {
-      case PAnd pAnd -> convertPAnd(pAnd);
-      case POr pOr -> convertPOr(pOr);
-      case PNot pNot -> {
-        EffectiveQueryParts parts = getEffectiveParts(pNot);
-        yield parts.path() + parts.operator() + parts.valueString();
-      }
-      case PQuery pQuery -> {
-        EffectiveQueryParts parts = getEffectiveParts(pQuery);
-        yield parts.path() + parts.operator() + parts.valueString();
-      }
-      default -> throw new UnsupportedOperationException("Unsupported query type: " + query.getClass().getSimpleName());
-    };
+    if (query instanceof PAnd) {
+      return convertPAnd((PAnd) query);
+    }
+    if (query instanceof POr) {
+      return convertPOr((POr) query);
+    }
+    if (query instanceof PNot || query instanceof PQuery) {
+      EffectiveQueryParts parts = getEffectiveParts(query);
+      return parts.getPath() + parts.getOperator() + parts.getValueString();
+    }
+    throw new UnsupportedOperationException("Unsupported query type: " + query.getClass().getSimpleName());
   }
 
   private static String convertPAnd(PAnd query) {
@@ -84,7 +99,8 @@ public final class IPropertyQueryToQueryConverter {
 
     List<IPropertyQuery> flattenedChildren = new ArrayList<>();
     for (IPropertyQuery child : query) {
-      if (child instanceof POr innerOr) {
+      if (child instanceof POr) {
+        POr innerOr = (POr) child;
         flattenedChildren.addAll(innerOr);
       } else {
         flattenedChildren.add(child);
@@ -92,16 +108,16 @@ public final class IPropertyQueryToQueryConverter {
     }
 
     EffectiveQueryParts firstParts = getEffectiveParts(flattenedChildren.get(0));
-    final String referencePath = firstParts.path();
-    final String referenceOpString = firstParts.operator();
+    final String referencePath = firstParts.getPath();
+    final String referenceOpString = firstParts.getOperator();
 
     String values = flattenedChildren.stream()
         .map(q -> {
           EffectiveQueryParts currentParts = getEffectiveParts(q);
-          if (!currentParts.path().equals(referencePath) || !currentParts.operator().equals(referenceOpString)) {
+          if (!currentParts.getPath().equals(referencePath) || !currentParts.getOperator().equals(referenceOpString)) {
             throw new IllegalStateException("All queries in a POr must resolve to the same property and operator symbol.");
           }
-          return currentParts.valueString();
+          return currentParts.getValueString();
         })
         .collect(Collectors.joining(DELIMITER_OR));
 
@@ -109,7 +125,8 @@ public final class IPropertyQueryToQueryConverter {
   }
 
   private static EffectiveQueryParts getEffectiveParts(IPropertyQuery query) {
-    if (query instanceof PQuery p) {
+    if (query instanceof PQuery) {
+      PQuery p = (PQuery) query;
       final String path = getEncodedPath(p.getProperty());
       final AnyOp op = p.getOp();
         if (op == AnyOp.EXISTS || op == AnyOp.IS_NOT_NULL) {
@@ -129,9 +146,12 @@ public final class IPropertyQueryToQueryConverter {
       final String valueString = (p.getValue() == null) ? VALUE_NULL : urlEncode(p.getValue());
       return new EffectiveQueryParts(path, opString, valueString);
     }
-    if (query instanceof PNot n && n.getQuery() instanceof PQuery p) {
-      final String path = getEncodedPath(p.getProperty());
-      final AnyOp op = p.getOp();
+    if (query instanceof PNot) {
+      PNot n = (PNot) query;
+      if (n.getQuery() instanceof PQuery) {
+        PQuery p = (PQuery) n.getQuery();
+        final String path = getEncodedPath(p.getProperty());
+        final AnyOp op = p.getOp();
         if (op == AnyOp.EXISTS || op == AnyOp.IS_NOT_NULL) {
             return new EffectiveQueryParts(path, OP_EQ, VALUE_NULL);
         }
@@ -145,9 +165,10 @@ public final class IPropertyQueryToQueryConverter {
             return new EffectiveQueryParts(path, OP_EQ, VALUE_TRUE);
         }
 
-      final String opString = getInvertedOperatorString(op);
-      final String valueString = (p.getValue() == null) ? VALUE_NULL : urlEncode(p.getValue());
-      return new EffectiveQueryParts(path, opString, valueString);
+        final String opString = getInvertedOperatorString(op);
+        final String valueString = (p.getValue() == null) ? VALUE_NULL : urlEncode(p.getValue());
+        return new EffectiveQueryParts(path, opString, valueString);
+      }
     }
     throw new IllegalStateException("Unsupported query type for part resolution: " + query.getClass().getSimpleName());
   }

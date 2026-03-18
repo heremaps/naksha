@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
 import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.ReadRequestType.GET_BY_IDS;
@@ -132,7 +133,7 @@ public class ConnectorInterfaceWriteExecute {
         List<String> idsList = writes.stream()
                 .filter(feature -> feature.getOp().equals(WriteOp.CREATE) || feature.getOp().equals(WriteOp.UPDATE) || feature.getOp().equals(WriteOp.UPSERT))
                 .map(feature -> feature.getFeature().getId())
-                .toList();
+                .collect(Collectors.toList());
         NakshaFeatureList nakshaFeatureList = getFeaturesFromDataHub(idsList);
         for (NakshaFeature nakshaFeature : nakshaFeatureList.asList()) {
             databaseFeaturesCache.put(nakshaFeature.getId(), nakshaFeature);
@@ -152,8 +153,9 @@ public class ConnectorInterfaceWriteExecute {
         if (uuid != null) {
             String uuidFromDb = getXyzNamespaceFromDbCache(feature).getUuid();
             if (!uuid.equals(uuidFromDb)) {
-                throw new NakshaException(NakshaError.CONFLICT,"The feature with id %s cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s"
-                        .formatted(feature.getId(), uuidFromDb));
+                throw new NakshaException(NakshaError.CONFLICT, String.format(
+                        "The feature with id %s cannot be replaced. The provided UUID doesn't match the UUID of the head state: %s",
+                        feature.getId(), uuidFromDb));
             }
         }
     }
@@ -192,9 +194,11 @@ public class ConnectorInterfaceWriteExecute {
         getFeaturesRequest.withCollection(endpoint);
 
         Response response = ConnectorInterfaceReadExecute.execute(context, getFeaturesRequest, sender);
-        if (response instanceof SuccessResponse successResponse) {
+        if (response instanceof SuccessResponse) {
+            SuccessResponse successResponse = (SuccessResponse) response;
             return successResponse.getFeatures();
-        } else if (response instanceof ErrorResponse errorResponse) {
+        } else if (response instanceof ErrorResponse) {
+            ErrorResponse errorResponse = (ErrorResponse) response;
             throw new NakshaException(errorResponse.getError());
         } else {
             throw new NakshaException(NakshaError.EXCEPTION, "Unexpected response while reading features from storage");
@@ -202,7 +206,10 @@ public class ConnectorInterfaceWriteExecute {
     }
 
     private String singleCollectionIdFrom(WriteRequest writeRequest) {
-        List<String> distinctCollectionIds = writeRequest.getWrites().stream().map(Write::getCollectionId).distinct().toList();
+        List<String> distinctCollectionIds = writeRequest.getWrites().stream()
+                .map(Write::getCollectionId)
+                .distinct()
+                .collect(Collectors.toList());
         if (distinctCollectionIds.size() != 1) {
             throw new IllegalArgumentException(
                     "Expected Writes of WriteRequest to indicate single collection, got multiple: " + distinctCollectionIds);

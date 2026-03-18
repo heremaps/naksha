@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.lines;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.responseHasExactShortIds;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.rmAllFeatures;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,15 +24,9 @@ public class PropSearchTest {
 
     @Test
     void singleOperations() {
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "1", """
-                "prop1" : 1"""
-        );
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "2", """
-                "prop1" : 2"""
-        );
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "3", """
-                "prop1" : 3"""
-        );
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "1", lines("\"prop1\" : 1"));
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "2", lines("\"prop1\" : 2"));
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "3", lines("\"prop1\" : 3"));
 
         assertPropSearchHasShortIds("p.prop1=1", List.of("1"));
         assertPropSearchHasShortIds("p.prop1=2", List.of("2"));
@@ -46,24 +41,12 @@ public class PropSearchTest {
 
     @Test
     void combinedOperations() {
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "A1", """
-                "prop1" : "A", "prop2" : 1"""
-        );
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "A2", """
-                "prop1" : "A", "prop2" : 2"""
-        );
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "B1", """
-                "prop1" : "B", "prop2" : 1"""
-        );
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "B2", """
-                "prop1" : "B", "prop2" : 2"""
-        );
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "C1", """
-                "prop1" : "C", "prop2" : 1"""
-        );
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "C2", """
-                "prop1" : "C", "prop2" : 2"""
-        );
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "A1", lines("\"prop1\" : \"A\", \"prop2\" : 1"));
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "A2", lines("\"prop1\" : \"A\", \"prop2\" : 2"));
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "B1", lines("\"prop1\" : \"B\", \"prop2\" : 1"));
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "B2", lines("\"prop1\" : \"B\", \"prop2\" : 2"));
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "C1", lines("\"prop1\" : \"C\", \"prop2\" : 1"));
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "C2", lines("\"prop1\" : \"C\", \"prop2\" : 2"));
 
         assertPropSearchHasShortIds("p.prop1=A&p.prop2=1", List.of("A1")); // and
         assertPropSearchHasShortIds("p.prop1=A,B", List.of("A1","A2","B1","B2")); // or
@@ -76,9 +59,7 @@ public class PropSearchTest {
 
     @Test
     void notSupportedOperations(){
-        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "1", """
-                "prop1" : 1"""
-        );
+        DataHub.createFeatureFromJsonTemplateFile("propsearch/feature_template.json", "1", lines("\"prop1\" : 1"));
 
         String params = BBOX_PATH_AND_PARAMS + "p.prop1=cs=1";
         Response nakshaResponse = Naksha.request().urlEncodingEnabled(false).get(params);

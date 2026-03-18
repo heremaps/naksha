@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
@@ -19,11 +20,32 @@ public class TransformationSamples {
   private TransformationSamples() {
   }
 
-  public record TransformationSample(
-      String sourceDir,
-      NakshaFeature mom10,
-      NakshaFeature nakshaInternal
-  ) {
+  public static final class TransformationSample {
+    private final String sourceDir;
+    private final NakshaFeature mom10;
+    private final NakshaFeature nakshaInternal;
+
+    public TransformationSample(
+        String sourceDir,
+        NakshaFeature mom10,
+        NakshaFeature nakshaInternal
+    ) {
+      this.sourceDir = sourceDir;
+      this.mom10 = mom10;
+      this.nakshaInternal = nakshaInternal;
+    }
+
+    public String getSourceDir() {
+      return sourceDir;
+    }
+
+    public NakshaFeature getMom10() {
+      return mom10;
+    }
+
+    public NakshaFeature getNakshaInternal() {
+      return nakshaInternal;
+    }
 
     @Override
     public String toString() {
@@ -73,7 +95,7 @@ public class TransformationSamples {
       try {
         Path testDir = Paths.get(TransformationSamples.class.getResource(TEST_DIR).toURI());
         try (Stream<Path> subdirs = Files.list(testDir)) {
-          return subdirs.filter(Files::isDirectory).toList(); // not reusing underlying stream as it will get closed
+          return subdirs.filter(Files::isDirectory).collect(Collectors.toList()); // not reusing underlying stream as it will get closed
         }
       } catch (URISyntaxException | IOException e) {
         throw new RuntimeException(e);

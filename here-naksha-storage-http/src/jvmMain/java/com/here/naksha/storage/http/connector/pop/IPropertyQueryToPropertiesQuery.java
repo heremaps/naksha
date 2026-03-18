@@ -29,7 +29,8 @@ public final class IPropertyQueryToPropertiesQuery {
     }
 
     public static PropertyQueryAnd toPoPQueryAnd(@NotNull IPropertyQuery query) {
-        if (query instanceof PAnd pAnd) {
+        if (query instanceof PAnd) {
+            PAnd pAnd = (PAnd) query;
             return and(pAnd);
         }
         PropertyQueryAnd and = new PropertyQueryAnd();
@@ -39,9 +40,9 @@ public final class IPropertyQueryToPropertiesQuery {
 
 
     private static PropertyQuery iqToMultiValueComparison(@NotNull IPropertyQuery q) {
-        if (q instanceof POr pOr) return or(pOr);
-        if (q instanceof PNot pNot) return not(pNot);
-        if (q instanceof PQuery pQuery) return simpleLeaf(pQuery);
+        if (q instanceof POr) return or((POr) q);
+        if (q instanceof PNot) return not((PNot) q);
+        if (q instanceof PQuery) return simpleLeaf((PQuery) q);
         throw unsupported("Unsupported query node: " + q.getClass().getSimpleName());
     }
 

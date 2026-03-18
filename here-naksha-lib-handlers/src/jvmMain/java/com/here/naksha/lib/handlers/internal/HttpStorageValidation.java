@@ -61,21 +61,19 @@ public class HttpStorageValidation {
       boolean isUrlValid) {
     ArrayList<String> errorMsgs = new ArrayList<>(3);
     if (!isConnectionTimeoutValid) {
-      errorMsgs.add("Invalid connection timeout: %d, allowed values (sec): %d - %d"
-          .formatted(
+      errorMsgs.add(String.format("Invalid connection timeout: %d, allowed values (sec): %d - %d",
               httpStorageProperties.getConnectTimeout(),
               MIN_HTTP_CONNECT_TIMEOUT_SEC,
               MAX_HTTP_CONNECT_TIMEOUT_SEC));
     }
     if (!isSocketTimeoutValid) {
-      errorMsgs.add("Invalid socket timeout: %d, allowed values (sec): %d - %d"
-          .formatted(
+      errorMsgs.add(String.format("Invalid socket timeout: %d, allowed values (sec): %d - %d",
               httpStorageProperties.getSocketTimeout(),
               MIN_HTTP_SOCKET_TIMEOUT_SEC,
               MAX_HTTP_SOCKET_TIMEOUT_SEC));
     }
     if (!isUrlValid) {
-      errorMsgs.add("Invalid url: %s".formatted(httpStorageProperties.getUrl()));
+      errorMsgs.add(String.format("Invalid url: %s", httpStorageProperties.getUrl()));
     }
     return String.join("\n", errorMsgs);
   }

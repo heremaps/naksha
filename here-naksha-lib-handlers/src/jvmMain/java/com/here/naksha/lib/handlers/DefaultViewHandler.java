@@ -76,7 +76,7 @@ public class DefaultViewHandler extends AbstractEventHandler {
     @Override
     protected EventProcessingStrategy processingStrategyFor(IEvent event) {
         final Request request = event.getRequest();
-        if (request instanceof WriteRequest wr && RequestTypesUtil.isOnlyWriteCollections(wr)) {
+        if (request instanceof WriteRequest && RequestTypesUtil.isOnlyWriteCollections((WriteRequest) request)) {
             return SUCCEED_WITHOUT_PROCESSING;
         } else if (request instanceof ReadFeatures || request instanceof WriteRequest) {
             return PROCESS;
@@ -102,7 +102,8 @@ public class DefaultViewHandler extends AbstractEventHandler {
         final IStorage storageImpl = nakshaHub().getStorageById(storageId);
         logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
-        if (storageImpl instanceof IView view) {
+        if (storageImpl instanceof IView) {
+            IView view = (IView) storageImpl;
             if (properties.getSpaceIds() == null || properties.getSpaceIds().isEmpty()) {
                 logger.error("No spaces present in view's properties - unable to process this request");
                 return new ErrorResponse(NakshaError.NOT_FOUND, "No spaces defined in properties of handler: '" + eventHandler.getId() + "'");
@@ -121,9 +122,11 @@ public class DefaultViewHandler extends AbstractEventHandler {
     }
 
     private Response processRequest(NakshaContext ctx, IView view, Request request) {
-        if (request instanceof ReadFeatures rf) {
+        if (request instanceof ReadFeatures) {
+            ReadFeatures rf = (ReadFeatures) request;
             return forwardReadFeatures(ctx, view, rf);
-        } else if (request instanceof WriteRequest wr) {
+        } else if (request instanceof WriteRequest) {
+            WriteRequest wr = (WriteRequest) request;
             return forwardWriteFeatures(ctx, view, wr);
         } else {
             return notImplemented(request);

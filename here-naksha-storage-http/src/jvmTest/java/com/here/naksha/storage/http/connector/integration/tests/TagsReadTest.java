@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
+import static com.here.naksha.storage.http.connector.integration.utils.Commons.format;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.readTestResourcesFile;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.responseHasExactShortIds;
 import static com.here.naksha.storage.http.connector.integration.utils.Commons.rmAllFeatures;
@@ -28,43 +29,37 @@ public class TagsReadTest {
         rmAllFeatures();
         reqBase()
                 .body(
-                        readTestResourcesFile("tags/feature_template.json").formatted("""
-          {"prop" : "A"}""")
+                        format(readTestResourcesFile("tags/feature_template.json"), "{\"prop\" : \"A\"}")
                 )
                 .put("/features/urn:here::here:landmark3d.Landmark3dPhotoreal:1A?addTags=tag1");
 
         reqBase()
                 .body(
-                        readTestResourcesFile("tags/feature_template.json").formatted("""
-          {"prop" : "A"}""")
+                        format(readTestResourcesFile("tags/feature_template.json"), "{\"prop\" : \"A\"}")
                 )
                 .put("/features/urn:here::here:landmark3d.Landmark3dPhotoreal:2A?addTags=tag2");
 
         reqBase()
                 .body(
-                        readTestResourcesFile("tags/feature_template.json").formatted("""
-          {"prop" : "A"}""")
+                        format(readTestResourcesFile("tags/feature_template.json"), "{\"prop\" : \"A\"}")
                 )
                 .put("/features/urn:here::here:landmark3d.Landmark3dPhotoreal:12A?addTags=tag1,tag2");
 
         reqBase()
                 .body(
-                        readTestResourcesFile("tags/feature_template.json").formatted("""
-          {"prop" : "B"}""")
+                        format(readTestResourcesFile("tags/feature_template.json"), "{\"prop\" : \"B\"}")
                 )
                 .put("/features/urn:here::here:landmark3d.Landmark3dPhotoreal:12B?addTags=tag1,tag2");
 
         reqBase()
                 .body(
-                        readTestResourcesFile("tags/feature_template.json").formatted("""
-          {}""")
+                        format(readTestResourcesFile("tags/feature_template.json"), "{}")
                 )
                 .put("/features/urn:here::here:landmark3d.Landmark3dPhotoreal:123?addTags=tag1,tag2,tag3");
 
         reqBase()
                 .body(
-                        readTestResourcesFile("tags/feature_template.json").formatted("""
-          {}""")
+                        format(readTestResourcesFile("tags/feature_template.json"), "{}")
                 )
                 .put("/features/urn:here::here:landmark3d.Landmark3dPhotoreal:3?addTags=tag3");
 

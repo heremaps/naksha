@@ -92,11 +92,13 @@ public class PropertyQueryAssertions {
 
   @SafeVarargs
   public final PropertyQueryAssertions hasChildrenThat(Consumer<PropertyQueryAssertions>... childrenAssertions) {
-    if(subject instanceof PNot pNotSubject) {
+    if(subject instanceof PNot) {
+      PNot pNotSubject = (PNot) subject;
       assertEquals(1, childrenAssertions.length, "PNot can only have one child");
       PropertyQueryAssertions childAssertion = new PropertyQueryAssertions(pNotSubject.getQuery());
       childrenAssertions[0].accept(childAssertion);
-    } else if(subject instanceof List subjects) {
+    } else if(subject instanceof List) {
+      List subjects = (List) subject;
       assertEquals(subjects.size(), childrenAssertions.length, "Expecting single assertion per property query");
       for (int i = 0; i < subjects.size(); i++) {
         assertInstanceOf(IPropertyQuery.class, subjects.get(i));

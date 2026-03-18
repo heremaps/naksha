@@ -10,8 +10,10 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasKey;
@@ -45,11 +47,11 @@ public class Commons {
     response.then()
       .log().ifValidationFails()
       .and().assertThat().body("$", hasKey("features"));
-    return response.body().jsonPath().getList("features").stream().map(e -> ((Map) e).get("id").toString()).toList();
+    return response.body().jsonPath().getList("features").stream().map(e -> ((Map) e).get("id").toString()).collect(Collectors.toList());
   }
 
   public static boolean responseHasExactShortIds(List<String> expectedShortIds, Response response) {
-    List<String> expectedIds = expectedShortIds.stream().map(e -> URN_PREFIX + e).toList();
+    List<String> expectedIds = expectedShortIds.stream().map(e -> URN_PREFIX + e).collect(Collectors.toList());
     List<String> responseIds = responseToIds(response);
     return expectedIds.equals(responseIds);
   }
@@ -59,7 +61,7 @@ public class Commons {
   }
 
   public static ValidatableResponse createFeatureFromJsonTemplateFile(RequestSpecification rs, String pathInIntegrationResources, String... args) {
-    String body = readTestResourcesFile(pathInIntegrationResources).formatted(args);
+    String body = format(readTestResourcesFile(pathInIntegrationResources), (Object[]) args);
     return rs.with().body(body)
       .contentType("application/json")
       .when().post("features")
@@ -85,5 +87,13 @@ public class Commons {
       fail(e);
       return "";
     }
+  }
+
+  public static String format(String template, Object... args) {
+    return String.format(template, args);
+  }
+
+  public static String lines(String... lines) {
+    return String.join(System.lineSeparator(), lines);
   }
 }

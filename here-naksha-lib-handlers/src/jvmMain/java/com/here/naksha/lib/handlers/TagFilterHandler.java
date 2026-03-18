@@ -75,9 +75,11 @@ public class TagFilterHandler extends AbstractEventHandler {
       return event.sendUpstream();
     }
 
-    if (request instanceof ReadFeatures readRequest) {
+    if (request instanceof ReadFeatures) {
+      ReadFeatures readRequest = (ReadFeatures) request;
       applyFilterConditionOnRequest(readRequest, properties.getContains());
-    } else if (request instanceof WriteRequest wf) {
+    } else if (request instanceof WriteRequest) {
+      WriteRequest wf = (WriteRequest) request;
       applyTagChangesOnRequest(wf, properties.getAdd(), properties.getRemoveWithPrefixes());
     }
 
@@ -113,7 +115,8 @@ public class TagFilterHandler extends AbstractEventHandler {
       final @Nullable List<String> removeTags) {
     if (isNullOrEmpty(addTags) && isNullOrEmpty(removeTags)) return;
     WriteList writeList = wf.getWrites();
-    if (wf instanceof ContextWriteXyzFeatures cwxf) {
+    if (wf instanceof ContextWriteXyzFeatures) {
+      ContextWriteXyzFeatures cwxf = (ContextWriteXyzFeatures) wf;
       writeList = cwxf.getWrites();
     }
     if (isNotNullOrEmpty(writeList)) {

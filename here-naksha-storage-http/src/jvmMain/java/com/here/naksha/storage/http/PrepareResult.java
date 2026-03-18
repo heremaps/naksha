@@ -144,20 +144,32 @@ public class PrepareResult {
    */
   private static @Nullable String mapHttpStatusToErrorOrNull(final int httpStatus) {
     if (httpStatus >= 200 && httpStatus <= 299) return null;
-    return switch (httpStatus) {
-      case HttpURLConnection.HTTP_INTERNAL_ERROR -> NakshaError.EXCEPTION;
-      case HttpURLConnection.HTTP_NOT_IMPLEMENTED -> NakshaError.NOT_IMPLEMENTED;
-      case HttpURLConnection.HTTP_BAD_REQUEST -> NakshaError.ILLEGAL_ARGUMENT;
-      case HttpURLConnection.HTTP_ENTITY_TOO_LARGE -> NakshaError.PAYLOAD_TOO_LARGE;
-      case HttpURLConnection.HTTP_BAD_GATEWAY -> NakshaError.BAD_GATEWAY;
-      case HttpURLConnection.HTTP_CONFLICT -> NakshaError.CONFLICT;
-      case HttpURLConnection.HTTP_UNAUTHORIZED -> NakshaError.UNAUTHORIZED;
-      case HttpURLConnection.HTTP_FORBIDDEN -> NakshaError.FORBIDDEN;
-      case 429 -> NakshaError.TOO_MANY_REQUESTS;
-      case HttpURLConnection.HTTP_GATEWAY_TIMEOUT -> NakshaError.TIMEOUT;
-      case HttpURLConnection.HTTP_NOT_FOUND -> NakshaError.NOT_FOUND;
-      default -> throw new IllegalArgumentException("Http status code is not a known error code: " + httpStatus);
-    };
+    switch (httpStatus) {
+      case HttpURLConnection.HTTP_INTERNAL_ERROR:
+        return NakshaError.EXCEPTION;
+      case HttpURLConnection.HTTP_NOT_IMPLEMENTED:
+        return NakshaError.NOT_IMPLEMENTED;
+      case HttpURLConnection.HTTP_BAD_REQUEST:
+        return NakshaError.ILLEGAL_ARGUMENT;
+      case HttpURLConnection.HTTP_ENTITY_TOO_LARGE:
+        return NakshaError.PAYLOAD_TOO_LARGE;
+      case HttpURLConnection.HTTP_BAD_GATEWAY:
+        return NakshaError.BAD_GATEWAY;
+      case HttpURLConnection.HTTP_CONFLICT:
+        return NakshaError.CONFLICT;
+      case HttpURLConnection.HTTP_UNAUTHORIZED:
+        return NakshaError.UNAUTHORIZED;
+      case HttpURLConnection.HTTP_FORBIDDEN:
+        return NakshaError.FORBIDDEN;
+      case 429:
+        return NakshaError.TOO_MANY_REQUESTS;
+      case HttpURLConnection.HTTP_GATEWAY_TIMEOUT:
+        return NakshaError.TIMEOUT;
+      case HttpURLConnection.HTTP_NOT_FOUND:
+        return NakshaError.NOT_FOUND;
+      default:
+        throw new IllegalArgumentException("Http status code is not a known error code: " + httpStatus);
+    }
   }
 
   public static final Function<Object, List<NakshaFeature>> collectionMapper = tuples ->

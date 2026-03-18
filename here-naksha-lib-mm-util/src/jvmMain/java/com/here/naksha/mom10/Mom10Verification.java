@@ -37,8 +37,11 @@ public class Mom10Verification {
     Map properties = nestedMapOrNull(rawFeature, NakshaFeature.PROPERTIES_KEY);
     if (properties != null) {
       Map meta = nestedMapOrNull(properties, MetaProperties.META);
-      if (meta != null && meta.get(MetaProperties.MODEL_VERSION) instanceof String modelVersion) {
-        return specifiesAtLeastMom10(modelVersion);
+      if (meta != null) {
+        Object modelVersion = meta.get(MetaProperties.MODEL_VERSION);
+        if (modelVersion instanceof String) {
+          return specifiesAtLeastMom10((String) modelVersion);
+        }
       }
     }
     return false;
@@ -63,8 +66,8 @@ public class Mom10Verification {
 
   private static @Nullable Map<String, Object> nestedMapOrNull(Map rawFeature, String propertyName) {
     Object property = rawFeature.get(propertyName);
-    if (property instanceof Map nested) {
-      return nested;
+    if (property instanceof Map) {
+      return (Map<String, Object>) property;
     }
     return null;
   }

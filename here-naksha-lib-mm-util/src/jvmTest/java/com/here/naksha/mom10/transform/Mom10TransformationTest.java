@@ -13,12 +13,12 @@ class Mom10TransformationTest {
   @MethodSource("com.here.naksha.mom10.TransformationSamples#streamSamples")
   void shouldPopulatePreMom10Namespaces(TransformationSample versionedFeatures) {
     // When
-    Mom10Transformation.populatePreMom10Namespaces(versionedFeatures.mom10());
+    Mom10Transformation.populatePreMom10Namespaces(versionedFeatures.getMom10());
 
     // Then:
     assertFeaturesEqual(
-        versionedFeatures.nakshaInternal(), // expected - untouched
-        versionedFeatures.mom10() // actual - transformed
+        versionedFeatures.getNakshaInternal(), // expected - untouched
+        versionedFeatures.getMom10() // actual - transformed
     );
   }
 
@@ -26,9 +26,9 @@ class Mom10TransformationTest {
   @MethodSource("com.here.naksha.mom10.TransformationSamples#streamSamples")
   void shouldDropPreMom10Namespaces(TransformationSample versionedFeatures) {
     // When
-    Mom10Transformation.dropPreMom10Namespaces(versionedFeatures.nakshaInternal());
+    Mom10Transformation.dropPreMom10Namespaces(versionedFeatures.getNakshaInternal());
 
     // Then:
-    assertFeaturesEqual(versionedFeatures.mom10(), versionedFeatures.nakshaInternal());
+    assertFeaturesEqual(versionedFeatures.getMom10(), versionedFeatures.getNakshaInternal());
   }
 }

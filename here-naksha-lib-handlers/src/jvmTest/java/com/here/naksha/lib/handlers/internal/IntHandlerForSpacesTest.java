@@ -17,6 +17,7 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import naksha.base.fn.Fn1;
 import naksha.model.IReadSession;
@@ -100,7 +101,7 @@ class IntHandlerForSpacesTest {
     List<String> existingHandlers = List.of("handler_1", "handler_2");
     List<String> missingHandlerIds = space.getEventHandlerIds().stream()
         .filter(id -> !existingHandlers.contains(id))
-        .toList();
+        .collect(Collectors.toList());
 
     // And
     handlersExist(existingHandlers);
@@ -113,7 +114,8 @@ class IntHandlerForSpacesTest {
     assertInstanceOf(ErrorResponse.class, result);
     ErrorResponse errorResult = (ErrorResponse) result;
     assertEquals(NOT_FOUND, errorResult.getError().getCode());
-    assertEquals("Following handlers defined for Space %s don't exist: %s".formatted(
+    assertEquals(String.format(
+        "Following handlers defined for Space %s don't exist: %s",
         space.getId(),
         String.join(",", missingHandlerIds)
     ), errorResult.getError().getMsg());
@@ -193,7 +195,7 @@ class IntHandlerForSpacesTest {
     SuccessResponse successResponse = new SuccessResponse();
     List<NakshaFeature> features = ids.stream()
         .map(NakshaFeature::new)
-        .toList();
+        .collect(Collectors.toList());
     successResponse.setFeatures(NakshaFeatureList.fromList(features));
     return successResponse;
   }

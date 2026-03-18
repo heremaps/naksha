@@ -10,7 +10,7 @@ kotlin {
 
     sourceSets {
         jvmMain {
-            jvmToolchain(23)
+            jvmToolchain(11)
             dependencies {
             }
         }

@@ -83,10 +83,10 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
     final RequestSender requestSender = RequestSenderCache.getInstance()
             .getSenderWith(new KeyProperties(
                     getId(),
-                    defaultKeyProperties.hostUrl(),
-                    defaultKeyProperties.defaultHeaders(),
-                    defaultKeyProperties.connectionTimeoutSec(),
-                    defaultKeyProperties.socketTimeoutSec(),
+                    defaultKeyProperties.getHostUrl(),
+                    defaultKeyProperties.getDefaultHeaders(),
+                    defaultKeyProperties.getConnectionTimeoutSec(),
+                    defaultKeyProperties.getSocketTimeoutSec(),
                     httpStorageProperties.getMaxRetries()
             ));
     return new HttpStorageReadSession(NakshaContext.currentContext(), requestSender, httpStorageProperties.getProtocol());
@@ -103,10 +103,10 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
     final RequestSender requestSender = RequestSenderCache.getInstance()
             .getSenderWith(new KeyProperties(
                     getId(),
-                    defaultKeyProperties.hostUrl(),
-                    defaultKeyProperties.defaultHeaders(),
-                    defaultKeyProperties.connectionTimeoutSec(),
-                    defaultKeyProperties.socketTimeoutSec(),
+                    defaultKeyProperties.getHostUrl(),
+                    defaultKeyProperties.getDefaultHeaders(),
+                    defaultKeyProperties.getConnectionTimeoutSec(),
+                    defaultKeyProperties.getSocketTimeoutSec(),
                     httpStorageProperties.getMaxRetries()
             ));
     return new HttpStorageWriteSession(NakshaContext.currentContext(), requestSender, httpStorageProperties.getProtocol());
@@ -115,7 +115,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
   @NotNull
   @Override
   public String getId() {
-    return defaultKeyProperties.name();
+    return defaultKeyProperties.getName();
   }
 
   @Override

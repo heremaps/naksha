@@ -178,16 +178,17 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationData operationData,
       final @NotNull OperationAttempt currentAttempt,
       final @NotNull StopWatch storageTimer) {
-    if (operationData.request instanceof ReadFeatures) {
+    if (operationData.getRequest() instanceof ReadFeatures) {
       return forwardReadFeatures(operationData, currentAttempt, storageTimer);
-    } else if (operationData.request instanceof WriteRequest wr) {
+    } else if (operationData.getRequest() instanceof WriteRequest) {
+      WriteRequest wr = (WriteRequest) operationData.getRequest();
       if (isOnlyWriteCollections(wr)) {
         return forwardWriteCollections(operationData, currentAttempt, storageTimer);
       } else {
         return forwardWriteFeatures(operationData, currentAttempt, storageTimer);
       }
     } else {
-      return notImplemented(operationData.request);
+      return notImplemented(operationData.getRequest());
     }
   }
 
@@ -195,10 +196,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationData operationData,
       final @NotNull OperationAttempt currentAttempt,
       final @NotNull StopWatch storageTimer) {
-    logger.info("Processing ReadFeatures against {}", operationData.collectionId);
+    logger.info("Processing ReadFeatures against {}", operationData.getCollectionId());
     Response response = measuredStorageSupplier(
-        () -> singleRead(operationData.sessionOptions, operationData.storageImpl, (ReadFeatures) operationData.request), storageTimer);
-    if (response instanceof ErrorResponse errorResponse) {
+        () -> singleRead(operationData.getSessionOptions(), operationData.getStorageImpl(), (ReadFeatures) operationData.getRequest()), storageTimer);
+    if (response instanceof ErrorResponse) {
+      ErrorResponse errorResponse = (ErrorResponse) response;
       return reattemptFeatureRequest(operationData, currentAttempt, errorResponse, storageTimer);
     } else {
       return response;
@@ -213,7 +215,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationData operationData,
       final @NotNull OperationAttempt operationAttempt,
       final @NotNull StopWatch storageTimer) {
-    logger.info("Processing WriteFeatures for mapId: '{}' collection '{}'", operationData.mapId, operationData.collectionId);
+    logger.info("Processing WriteFeatures for mapId: '{}' collection '{}'", operationData.getMapId(), operationData.getCollectionId());
     return forwardWriteRequest(
         operationData,
         errorResponse -> reattemptFeatureRequest(
@@ -225,8 +227,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationData operationData,
       final @NotNull OperationAttempt operationAttempt,
       final @NotNull StopWatch storageTimer) {
-    logger.info("Processing WriteCollections against map: '{}' and collection '{}'", operationData.mapId, operationData.collectionId);
-    if (isUpdateCollectionRequest((WriteRequest) operationData.request)) {
+    logger.info("Processing WriteCollections against map: '{}' and collection '{}'", operationData.getMapId(), operationData.getCollectionId());
+    if (isUpdateCollectionRequest((WriteRequest) operationData.getRequest())) {
       if (properties.getAutoCreateCollection()) {
         return forwardWriteRequest(operationData, errorResponse -> reattemptCollectionRequest(
                 operationData, operationAttempt, errorResponse, storageTimer),
@@ -236,7 +238,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
             "Received update collection request but autoCreate is not enabled, returning success without any action");
         return new SuccessResponse();
       }
-    } else if (isDeleteCollectionRequest((WriteRequest) operationData.request)) {
+    } else if (isDeleteCollectionRequest((WriteRequest) operationData.getRequest())) {
       if (properties.getAutoDeleteCollection()) {
         return forwardWriteRequest(
             operationData,
@@ -273,8 +275,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull final F1<Response, ErrorResponse> reattempt,
       final @NotNull StopWatch storageTimer) {
     Response response = measuredStorageSupplier(
-        () -> performAtomicWriteFeatures(operationData.sessionOptions, operationData.storageImpl, (WriteRequest) operationData.request), storageTimer);
-    if (response instanceof ErrorResponse errorResponse) {
+        () -> performAtomicWriteFeatures(operationData.getSessionOptions(), operationData.getStorageImpl(), (WriteRequest) operationData.getRequest()), storageTimer);
+    if (response instanceof ErrorResponse) {
+      ErrorResponse errorResponse = (ErrorResponse) response;
       return reattempt.call(errorResponse);
     } else {
       return response;
@@ -297,7 +300,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       if (result instanceof SuccessResponse) {
         writer.commit();
         return result;
-      } else if (result instanceof ErrorResponse errorResponse) {
+      } else if (result instanceof ErrorResponse) {
+        ErrorResponse errorResponse = (ErrorResponse) result;
         logger.warn("Failed executing {}, expected success but got ErrorResponse: {}", wr.getClass(), errorResponse.getError());
         writer.rollback();
         return errorResponse;
@@ -313,12 +317,18 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationAttempt previousAttempt,
       final @NotNull ErrorResponse previousError,
       final @NotNull StopWatch storageTimer) {
-    return switch (previousAttempt) {
-      case FIRST_ATTEMPT -> reattemptFeatureRequestForTheFirstTime(operationData, previousError, storageTimer);
-      case ATTEMPT_AFTER_STORAGE_INITIALIZATION -> reattemptAfterStorageInitialization(operationData, previousError, storageTimer);
-      case ATTEMPT_AFTER_MAP_CREATION -> reattemptAfterMapCreation(operationData, previousError, storageTimer);
-      case ATTEMPT_AFTER_COLLECTION_CREATION -> previousError;
-    };
+    switch (previousAttempt) {
+      case FIRST_ATTEMPT:
+        return reattemptFeatureRequestForTheFirstTime(operationData, previousError, storageTimer);
+      case ATTEMPT_AFTER_STORAGE_INITIALIZATION:
+        return reattemptAfterStorageInitialization(operationData, previousError, storageTimer);
+      case ATTEMPT_AFTER_MAP_CREATION:
+        return reattemptAfterMapCreation(operationData, previousError, storageTimer);
+      case ATTEMPT_AFTER_COLLECTION_CREATION:
+        return previousError;
+      default:
+        throw new IllegalStateException("Unsupported operation attempt: " + previousAttempt);
+    }
   }
 
   private @NotNull Response reattemptCollectionRequest(
@@ -326,17 +336,21 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationAttempt previousAttempt,
       final @NotNull ErrorResponse previousError,
       final @NotNull StopWatch storageTimer) {
-    return switch (previousAttempt) {
-      case FIRST_ATTEMPT -> reattemptCollectionRequestForTheFirstTime(operationData, previousError, storageTimer);
-      case ATTEMPT_AFTER_STORAGE_INITIALIZATION -> reattemptCollectionRequestAfterStorageInit(operationData, previousError, storageTimer);
-      case ATTEMPT_AFTER_MAP_CREATION, ATTEMPT_AFTER_COLLECTION_CREATION -> {
+    switch (previousAttempt) {
+      case FIRST_ATTEMPT:
+        return reattemptCollectionRequestForTheFirstTime(operationData, previousError, storageTimer);
+      case ATTEMPT_AFTER_STORAGE_INITIALIZATION:
+        return reattemptCollectionRequestAfterStorageInit(operationData, previousError, storageTimer);
+      case ATTEMPT_AFTER_MAP_CREATION:
+      case ATTEMPT_AFTER_COLLECTION_CREATION:
         logger.warn(
                 "No further reattempt strategy available for WriteCollections request (collectionId: {}, previous attempt: {}. Rethrowing original exception",
-                operationData.collectionId,
+                operationData.getCollectionId(),
                 previousAttempt);
-        yield previousError;
-      }
-    };
+        return previousError;
+      default:
+        throw new IllegalStateException("Unsupported operation attempt: " + previousAttempt);
+    }
   }
 
   private @NotNull Response reattemptCollectionRequestForTheFirstTime(
@@ -409,7 +423,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull StopWatch storageTimer
   ) {
     logger.info("Initializing Storage before reattempting write request.");
-    measuredStorageRunnable(() -> Naksha.setupStorage(operationData.storageImpl.getConfig()), storageTimer);
+    measuredStorageRunnable(() -> Naksha.setupStorage(operationData.getStorageImpl().getConfig()), storageTimer);
     logger.info("Storage initialized");
     return forwardRequestToStorage(operationData, ATTEMPT_AFTER_STORAGE_INITIALIZATION, storageTimer);
   }
@@ -418,20 +432,21 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationData operationData,
       final @NotNull StopWatch storageTimer
   ) {
-    logger.info("Creating map '{}'", operationData.mapId);
+    logger.info("Creating map '{}'", operationData.getMapId());
     Response createMapResponse = measuredStorageSupplier(
-        () -> createMissingMap(operationData.sessionOptions, operationData.storageImpl, operationData.mapId), storageTimer);
+        () -> createMissingMap(operationData.getSessionOptions(), operationData.getStorageImpl(), operationData.getMapId()), storageTimer);
     if (createMapResponse instanceof SuccessResponse) {
-      logger.info("Successfully created map '{}'", operationData.mapId);
+      logger.info("Successfully created map '{}'", operationData.getMapId());
       return forwardRequestToStorage(operationData, ATTEMPT_AFTER_MAP_CREATION, storageTimer);
-    } else if (createMapResponse instanceof ErrorResponse er) {
-      logger.info("Failure while creating map '{}': {}", operationData.mapId, er.getError());
+    } else if (createMapResponse instanceof ErrorResponse) {
+      ErrorResponse er = (ErrorResponse) createMapResponse;
+      logger.info("Failure while creating map '{}': {}", operationData.getMapId(), er.getError());
       return er;
     } else {
-      logger.info("Unknown response encountered while creating map '{}': {}", operationData.mapId, createMapResponse);
+      logger.info("Unknown response encountered while creating map '{}': {}", operationData.getMapId(), createMapResponse);
       return new ErrorResponse(new NakshaError(
           NakshaError.EXCEPTION,
-          "Unknown response encountered while creating map: '" + operationData.mapId + "': " + createMapResponse
+          "Unknown response encountered while creating map: '" + operationData.getMapId() + "': " + createMapResponse
       ));
     }
   }
@@ -447,32 +462,39 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   private Response retryDueToMissingCollection(
       final @NotNull OperationData operationData,
       final @NotNull StopWatch storageTimer) {
-    logger.warn("Collection not found for {}", operationData.collectionId);
+    logger.warn("Collection not found for {}", operationData.getCollectionId());
     if (properties.getAutoCreateCollection()) {
       logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
-          operationData.collectionId);
+          operationData.getCollectionId());
       Response createCollectionResp = measuredStorageSupplier(
-          () -> createMissingCollection(operationData.sessionOptions, operationData.storageImpl, operationData.mapId, operationData.collectionId),
+          () -> createMissingCollection(operationData.getSessionOptions(), operationData.getStorageImpl(), operationData.getMapId(), operationData.getCollectionId()),
           storageTimer);
       if (createCollectionResp instanceof SuccessResponse) {
-        logger.info("Created collection {}, forwarding the request once again", operationData.collectionId);
+        logger.info("Created collection {}, forwarding the request once again", operationData.getCollectionId());
         return forwardRequestToStorage(operationData, ATTEMPT_AFTER_COLLECTION_CREATION, storageTimer);
-      } else if (createCollectionResp instanceof ErrorResponse errorResponse && indicateStorageNotInitialized(errorResponse)) {
-        logger.info("Failed to create collection {} because of uninitialized storage", operationData.collectionId);
-        return retryDueToUninitializedStorage(operationData, storageTimer);
-      } else {
-        logger.info("Failed to create collection '{}' because of unhandled reason. Response: {}", operationData.collectionId, createCollectionResp);
+      } else if (createCollectionResp instanceof ErrorResponse) {
+        ErrorResponse errorResponse = (ErrorResponse) createCollectionResp;
+        if (indicateStorageNotInitialized(errorResponse)) {
+          logger.info("Failed to create collection {} because of uninitialized storage", operationData.getCollectionId());
+          return retryDueToUninitializedStorage(operationData, storageTimer);
+        }
+        logger.info("Failed to create collection '{}' because of unhandled reason. Response: {}", operationData.getCollectionId(), createCollectionResp);
         return new ErrorResponse(new NakshaError(
             NakshaError.EXCEPTION,
-            "Could not handle request due to missing collection, could not recreate collection: " + operationData.collectionId));
+            "Could not handle request due to missing collection, could not recreate collection: " + operationData.getCollectionId()));
+      } else {
+        logger.info("Failed to create collection '{}' because of unhandled reason. Response: {}", operationData.getCollectionId(), createCollectionResp);
+        return new ErrorResponse(new NakshaError(
+            NakshaError.EXCEPTION,
+            "Could not handle request due to missing collection, could not recreate collection: " + operationData.getCollectionId()));
       }
     } else {
       logger.warn(
           "Collection auto creation is disabled, failing due to missing collection specified in request: {}",
-          operationData.collectionId);
+          operationData.getCollectionId());
       return new ErrorResponse(new NakshaError(
-          NakshaError.NOT_FOUND, "Could not find and auto-create collection: " + operationData.collectionId));
+          NakshaError.NOT_FOUND, "Could not find and auto-create collection: " + operationData.getCollectionId()));
     }
   }
 
@@ -501,10 +523,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull String mapId,
       @NotNull String collectionId
   ) {
-    if (request instanceof ReadFeatures rf) {
+    if (request instanceof ReadFeatures) {
+      ReadFeatures rf = (ReadFeatures) request;
       rf.setMapId(mapId);
       rf.setCollectionIds(StringList.of(collectionId));
-    } else if (request instanceof WriteRequest wr) {
+    } else if (request instanceof WriteRequest) {
+      WriteRequest wr = (WriteRequest) request;
       if (isOnlyWriteCollections(wr)) {
         collectionsFrom(wr).forEach(collectionFromRequest -> {
           collectionFromRequest.setMapId(mapId);
@@ -541,9 +565,11 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           eventHandlerConfig.getId());
       return collectionDefinedInHandler.getId();
     }
-    if (eventTarget instanceof Space s) {
+    if (eventTarget instanceof Space) {
+      Space s = (Space) eventTarget;
       NakshaCollection collectionDefinedInSpace = null;
-      if (request instanceof WriteRequest wc && isUpdateCollectionRequest(wc)) {
+      if (request instanceof WriteRequest && isUpdateCollectionRequest((WriteRequest) request)) {
+        WriteRequest wc = (WriteRequest) request;
         // use newly provided collection in the Update request itself
         // to make sure that the newer collection id (if it has been changed) is used
         collectionDefinedInSpace =
@@ -588,7 +614,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       if (result instanceof SuccessResponse) {
         writer.commit();
         return result;
-      } else if (result instanceof ErrorResponse errorResponse) {
+      } else if (result instanceof ErrorResponse) {
+        ErrorResponse errorResponse = (ErrorResponse) result;
         logger.error(
             "Error result while creating collection {}. Error: {}. Executing rollback",
             collectionId,
@@ -620,13 +647,45 @@ public class DefaultStorageHandler extends AbstractEventHandler {
    * @param collectionId
    * @param request
    */
-  private record OperationData(
-      SessionOptions sessionOptions,
-      IStorage storageImpl,
-      String mapId,
-      String collectionId,
-      Request request
-  ) {
+  private static final class OperationData {
+    private final SessionOptions sessionOptions;
+    private final IStorage storageImpl;
+    private final String mapId;
+    private final String collectionId;
+    private final Request request;
 
+    private OperationData(
+        SessionOptions sessionOptions,
+        IStorage storageImpl,
+        String mapId,
+        String collectionId,
+        Request request
+    ) {
+      this.sessionOptions = sessionOptions;
+      this.storageImpl = storageImpl;
+      this.mapId = mapId;
+      this.collectionId = collectionId;
+      this.request = request;
+    }
+
+    private SessionOptions getSessionOptions() {
+      return sessionOptions;
+    }
+
+    private IStorage getStorageImpl() {
+      return storageImpl;
+    }
+
+    private String getMapId() {
+      return mapId;
+    }
+
+    private String getCollectionId() {
+      return collectionId;
+    }
+
+    private Request getRequest() {
+      return request;
+    }
   }
 }

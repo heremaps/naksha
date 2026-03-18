@@ -336,7 +336,7 @@ abstract class PgTestBase(
          */
         @JvmStatic
         @JsStatic
-        protected val storageConfig = NakshaStorage.fromJSON("""{
+        val storageConfig = NakshaStorage.fromJSON("""{
   "id": "local_psql_test_storage",
   "className": "naksha.psql.PsqlTestStorage"
 }""").proxy(PgConfig::class)
