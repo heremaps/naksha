@@ -48,7 +48,7 @@ public class Mom10ViolationsPostProcessingTest extends ApiTest {
                 .hasStatus(200)
                 .hasStreamIdHeader(streamId)
                 .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match")
-                .hasBodyWithout(
+                .hasFeaturesWithout(
                         new String[] {"properties", XyzProperties.HERE_DELTA_NS},
                         new String[] {"properties", XyzProperties.HERE_META_NS})
                 .hasViolationsWithout(

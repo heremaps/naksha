@@ -112,32 +112,23 @@ public class ResponseAssertions {
     return hasMatchingInsertedCount(collectionRequest.getFeatures().size());
   }
 
-  public ResponseAssertions hasBodyWithout(String[]... paths){
-    JsonObject jsonBody = parseJson(subject.body(), JsonObject.class);
-    checkArrayItemsWithout(jsonBody, "features", paths);
-    if(!jsonBody.containsKey("features")) {
-      failIfFeatureJsonContainsEntry(jsonBody, paths);
-    }
-    return this;
+  public ResponseAssertions hasFeaturesWithout(String[]... paths){
+    return hasBodyWithout("features", paths);
+  }
+
+  public ResponseAssertions hasViolationsWithout(String[]... paths) {
+    return hasBodyWithout("violations", paths);
   }
 
   public ResponseAssertions hasBodyWithout(@NotNull String arrayName, String[]... paths) {
     JsonObject jsonBody = parseJson(subject.body(), JsonObject.class);
-    checkArrayItemsWithout(jsonBody, arrayName, paths);
-    return this;
-  }
-
-  private void checkArrayItemsWithout(@NotNull JsonObject jsonBody, @NotNull String arrayName, String[]... paths) {
     if (jsonBody.containsKey(arrayName)) {
       List<Map<String, Object>> items = (List<Map<String, Object>>) jsonBody.get(arrayName);
       for (Map<String, Object> item : items) {
         failIfFeatureJsonContainsEntry(item, paths);
       }
     }
-  }
-
-  public ResponseAssertions hasViolationsWithout(String[]... paths) {
-    return hasBodyWithout("violations", paths);
+    return this;
   }
 
   private void failIfFeatureJsonContainsEntry(Map<String, Object> rawFeature, String[]... paths){
