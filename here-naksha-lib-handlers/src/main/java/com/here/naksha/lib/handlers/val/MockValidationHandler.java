@@ -53,10 +53,12 @@ public class MockValidationHandler extends AbstractEventHandler {
   protected @NotNull EventTarget<?> eventTarget;
   protected @NotNull XyzProperties properties;
 
-  private static final String MOCK_VIOLATIONS_FILE = "mock_data/dry_run_violations.json";
+  private static final String DEFAULT_VIOLATIONS_FILE_PATH = "mock_data/dry_run_violations.json";
+  private static final String VIOLATIONS_FILE_PATH_PROPERTY = "violationsFilePath";
   private static final TypeReference<List<XyzFeature>> LIST_FEATURE_TYPE_REF = new TypeReference<>() {};
-  private static final List<XyzFeature> mockViolations = parseJsonFile(MOCK_VIOLATIONS_FILE, LIST_FEATURE_TYPE_REF);
-  private static final int totalViolations = mockViolations.size();
+
+  private final List<XyzFeature> mockViolations;
+  private final int totalViolations;
 
   public MockValidationHandler(
       final @NotNull EventHandler eventHandler,
@@ -66,6 +68,12 @@ public class MockValidationHandler extends AbstractEventHandler {
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
     this.properties = JsonSerializable.convert(eventHandler.getProperties(), XyzProperties.class);
+
+    final String violationsFilePath = this.properties.get(VIOLATIONS_FILE_PATH_PROPERTY) instanceof String filePath
+        ? filePath
+        : DEFAULT_VIOLATIONS_FILE_PATH;
+    this.mockViolations = parseJsonFile(violationsFilePath, LIST_FEATURE_TYPE_REF);
+    this.totalViolations = this.mockViolations.size();
   }
 
   @Override

@@ -1,0 +1,12 @@
+{
+  "id": "local-space-4-mom10-val-dry-run",
+  "type": "Space",
+  "title": "Topology Dry Run Space MOM10",
+  "description": "Topology Dry Run Space for MOM10 Testing purpose",
+  "eventHandlerIds": [
+    "local-context-handler-4-mom10-val-dry-run",
+    "local-validation-handler-4-mom10-val-dry-run",
+    "local-endorsement-handler-4-mom10-val-dry-run",
+    "local-echo-handler-4-mom10-val-dry-run"
+  ]
+}

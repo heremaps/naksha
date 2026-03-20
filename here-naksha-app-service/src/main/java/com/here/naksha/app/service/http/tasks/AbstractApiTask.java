@@ -252,11 +252,6 @@ public abstract class AbstractApiTask<T extends XyzResponse>
         final List<R> insertedFeatures = featureMap.get(EExecutedOp.CREATED);
         final List<R> updatedFeatures = featureMap.get(EExecutedOp.UPDATED);
         final List<R> deletedFeatures = featureMap.get(EExecutedOp.DELETED);
-        // extract violations if available
-        List<XyzFeature> violations = null;
-        if (wrResult instanceof ContextXyzFeatureResult cr) {
-          violations = cr.getViolations();
-        }
         return verticle.sendXyzResponse(
             routingContext,
             HttpResponseType.FEATURE_COLLECTION,
@@ -264,7 +259,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
                 .withInsertedFeatures(insertedFeatures)
                 .withUpdatedFeatures(updatedFeatures)
                 .withDeletedFeatures(deletedFeatures)
-                .withViolations(violations));
+                .withViolations(postProcessedViolations(wrResult, featurePostProcessor)));
       } catch (NoCursor | NoSuchElementException emptyException) {
         if (isDeleteOperation) {
           logger.info("No data found in ResultCursor, returning empty collection");
@@ -275,6 +270,27 @@ public abstract class AbstractApiTask<T extends XyzResponse>
             routingContext, XyzError.EXCEPTION, "Unexpected empty result from ResultCursor");
       }
     }
+  }
+
+  /**
+   * Extracts violations from a {@link ContextXyzFeatureResult} and applies the given post-processor to each one.
+   * Returns {@code null} if the result carries no violations.
+   */
+  @SuppressWarnings("unchecked")
+  private static <R extends XyzFeature> @Nullable List<XyzFeature> postProcessedViolations(
+      @Nullable Result result, @Nullable FeaturePostProcessor<R> postProcessor) {
+    if (!(result instanceof ContextXyzFeatureResult cr)) {
+      return null;
+    }
+    final List<XyzFeature> rawViolations = cr.getViolations();
+    if (rawViolations == null || postProcessor == null) {
+      return rawViolations;
+    }
+    final List<XyzFeature> violations = new ArrayList<>();
+    for (XyzFeature violation : rawViolations) {
+      violations.add(postProcessor.postProcess((R) violation));
+    }
+    return violations;
   }
 
   /**

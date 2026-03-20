@@ -112,15 +112,21 @@ public class ResponseAssertions {
     return hasMatchingInsertedCount(collectionRequest.getFeatures().size());
   }
 
-  public ResponseAssertions hasBodyWithout(String[]... paths){
+  public ResponseAssertions hasFeaturesWithout(String[]... paths){
+    return hasBodyWithout("features", paths);
+  }
+
+  public ResponseAssertions hasViolationsWithout(String[]... paths) {
+    return hasBodyWithout("violations", paths);
+  }
+
+  public ResponseAssertions hasBodyWithout(@NotNull String arrayName, String[]... paths) {
     JsonObject jsonBody = parseJson(subject.body(), JsonObject.class);
-    if(jsonBody.containsKey("features")){
-      List<Map<String, Object>> features = (List<Map<String, Object>>) jsonBody.get("features");
-      for(Map<String, Object> feature : features){
-        failIfFeatureJsonContainsEntry(feature, paths);
+    if (jsonBody.containsKey(arrayName)) {
+      List<Map<String, Object>> items = (List<Map<String, Object>>) jsonBody.get(arrayName);
+      for (Map<String, Object> item : items) {
+        failIfFeatureJsonContainsEntry(item, paths);
       }
-    } else {
-      failIfFeatureJsonContainsEntry(jsonBody, paths);
     }
     return this;
   }

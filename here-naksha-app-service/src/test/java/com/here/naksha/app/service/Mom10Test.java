@@ -41,7 +41,7 @@ class Mom10Test extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasJsonBody(featuresJson)
-        .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
+        .hasFeaturesWithout(DELTA_NS_PATH, META_NS_PATH)
         .hasStreamIdHeader(streamId);
   }
 
@@ -63,7 +63,7 @@ class Mom10Test extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasJsonBody(createFeatureJson)
-        .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
+        .hasFeaturesWithout(DELTA_NS_PATH, META_NS_PATH)
         .hasStreamIdHeader(streamId);
   }
 
@@ -122,7 +122,7 @@ class Mom10Test extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasJsonBody(expectedGetResp)
-        .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
+        .hasFeaturesWithout(DELTA_NS_PATH, META_NS_PATH)
         .hasStreamIdHeader(streamId);
   }
 
@@ -147,7 +147,7 @@ class Mom10Test extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasJsonBody(expectedInitialGet)
-        .hasBodyWithout(DELTA_NS_PATH, META_NS_PATH)
+        .hasFeaturesWithout(DELTA_NS_PATH, META_NS_PATH)
         .hasStreamIdHeader(streamId);
 
     // When: we patch it to old version to get old namespaces
