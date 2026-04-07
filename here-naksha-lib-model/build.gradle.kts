@@ -74,7 +74,7 @@ kotlin {
         jvmTest {
             dependencies {
                 implementation(libs.mockito)
-            }
+                runtimeOnly(libs.junit.platform.launcher)            }
         }
         jsMain {
             dependencies {

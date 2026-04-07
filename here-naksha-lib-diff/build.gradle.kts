@@ -60,7 +60,7 @@ kotlin {
                 api(libs.slf4j.api)
                 implementation(libs.slf4j.console)
                 implementation("org.skyscreamer:jsonassert:1.5.1")
-            }
+                runtimeOnly(libs.junit.platform.launcher)            }
         }
     }
 }

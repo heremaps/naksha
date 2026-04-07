@@ -46,6 +46,7 @@ kotlin {
                 implementation(libs.test.containers)
                 //implementation(testFixtures(project(":here-naksha-lib-core")))
                 implementation(libs.wiremock)
+                runtimeOnly(libs.junit.platform.launcher)
             }
         }
     }

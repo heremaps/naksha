@@ -23,6 +23,7 @@ kotlin {
                 implementation(project(":here-naksha-lib-core"))
                 implementation(libs.bundles.testing)
                 implementation(libs.jayway.jsonpath)
+                runtimeOnly(libs.junit.platform.launcher)
             }
         }
     }

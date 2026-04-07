@@ -24,7 +24,7 @@ kotlin {
             dependencies {
                 implementation(libs.bundles.testing)
                 //implementation(testFixtures(project(":here-naksha-lib-core")))
-            }
+                runtimeOnly(libs.junit.platform.launcher)            }
         }
     }
 }

@@ -22,7 +22,7 @@ kotlin {
                 implementation(project(":here-naksha-lib-model"))
                 implementation(project(":here-naksha-lib-psql"))
                 implementation(libs.jts.core)
-            }
+                runtimeOnly(libs.junit.platform.launcher)            }
         }
     }
 }

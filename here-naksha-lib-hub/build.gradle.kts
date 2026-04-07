@@ -28,7 +28,7 @@ kotlin {
             dependencies {
                 implementation(libs.json.assert)
                 implementation(libs.bundles.testing)
-            }
+                runtimeOnly(libs.junit.platform.launcher)            }
         }
     }
 }
