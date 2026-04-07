@@ -1,7 +1,5 @@
-package com.here.naksha.cli.parsers;
+package com.here.naksha.cli.utils;
 
-import com.here.naksha.cli.utils.JsonParser;
-import com.here.naksha.cli.utils.JsonParserException;
 import naksha.base.AnyObject;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
