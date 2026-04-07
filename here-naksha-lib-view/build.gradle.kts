@@ -22,7 +22,8 @@ kotlin {
                 implementation(project(":here-naksha-lib-model"))
                 implementation(project(":here-naksha-lib-psql"))
                 implementation(libs.jts.core)
-                runtimeOnly(libs.junit.platform.launcher)            }
+                runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
+            }
         }
     }
 }

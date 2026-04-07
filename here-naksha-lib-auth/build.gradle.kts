@@ -59,7 +59,7 @@ kotlin {
                 implementation(libs.junit.params)
                 api(libs.slf4j.api)
                 implementation(libs.slf4j.console)
-                runtimeOnly(libs.junit.platform.launcher)
+                runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }
         }
     }

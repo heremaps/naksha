@@ -45,7 +45,7 @@ kotlin {
             dependencies {
                 implementation(libs.bundles.testing)
                 implementation(libs.test.containers)
-                runtimeOnly(libs.junit.platform.launcher)
+                runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }
         }
     }
