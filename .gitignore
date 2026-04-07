@@ -29,3 +29,4 @@ release.properties
 /json_data/*
 !/json_data/
 !/json_data/README.md
+**/gradle-wrapper.jar

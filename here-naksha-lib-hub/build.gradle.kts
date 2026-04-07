@@ -28,6 +28,7 @@ kotlin {
             dependencies {
                 implementation(libs.json.assert)
                 implementation(libs.bundles.testing)
+                runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }
         }
     }

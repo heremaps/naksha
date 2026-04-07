@@ -45,6 +45,7 @@ kotlin {
                 runtimeOnly(libs.junit.jupiter.engine)
                 implementation(libs.junit.jupiter.api)
                 implementation(libs.junit.params)
+                runtimeOnly(libs.junit.platform.launcher)  // https://github.com/gradle/gradle/issues/34512
             }
         }
         jsMain {

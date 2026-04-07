@@ -94,7 +94,7 @@ kotlin {
                 implementation(libs.mockito)
                 implementation(libs.mockito.kotlin)
                 implementation(libs.spatial4j)
-
+                runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
                 // Include JMH and JMH annotation processor.
                 implementation("org.openjdk.jmh:jmh-core:1.37")
                 implementation("org.openjdk.jmh:jmh-generator-annprocess:1.37")
