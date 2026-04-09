@@ -9,8 +9,17 @@ plugins {
 
 description = gatherDescription()
 
+java {
+    setSourceCompatibility(11)
+    setTargetCompatibility(11)
+}
+
 kotlin {
-    jvm {}
+    jvm {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        }
+    }
     js(IR) {
         outputModuleName = "naksha_jbon"
         useEsModules()
@@ -51,7 +60,6 @@ kotlin {
             }
         }
         jvmMain {
-            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 api(libs.lz4.java)

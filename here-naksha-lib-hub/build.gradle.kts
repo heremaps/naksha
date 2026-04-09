@@ -4,11 +4,19 @@ plugins {
 
 description = gatherDescription()
 
+java {
+    setSourceCompatibility(23)
+    setTargetCompatibility(23)
+}
+
 kotlin {
-    jvm {}
+    jvm {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_23)
+        }
+    }
     sourceSets {
         jvmMain {
-            jvmToolchain(23)
             dependencies {
                 implementation(project(":here-naksha-lib-core"))
                 implementation(project(":here-naksha-lib-model"))
