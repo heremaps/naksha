@@ -10,10 +10,16 @@ plugins {
 
 description = gatherDescription()
 
+java {
+    setSourceCompatibility(11)
+    setTargetCompatibility(11)
+}
+
 kotlin {
     jvm {
         compilerOptions {
             freeCompilerArgs = listOf("-Xjvm-default=all")
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
         }
     }
 
@@ -61,7 +67,6 @@ kotlin {
             }
         }
         jvmMain {
-            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("stdlib-jdk8"))
                 api(project(":here-naksha-lib-base"))

@@ -9,8 +9,17 @@ plugins {
 
 description = gatherDescription()
 
+java {
+    setSourceCompatibility(11)
+    setTargetCompatibility(11)
+}
+
 kotlin {
-    jvm {}
+    jvm {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        }
+    }
     js(IR) {
         outputModuleName = "naksha_diff"
         useEsModules()
@@ -50,7 +59,6 @@ kotlin {
             }
         }
         jvmTest {
-            jvmToolchain(11)
             dependencies {
                 implementation(kotlin("test"))
                 implementation(libs.kotlintest.runner.junit5)
