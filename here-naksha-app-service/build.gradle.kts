@@ -65,10 +65,10 @@ tasks {
         useJUnitPlatform()
         maxHeapSize = "6g"
     }
-    val shadowJar by registering(ShadowJar::class) {
-        archiveBaseName.set(fatJarBaseName)
-        archiveClassifier.set("")
-        archiveVersion.set(project.version.toString())
+    named<ShadowJar>("shadowJar") {
+        archiveBaseName = fatJarBaseName
+        archiveClassifier = ""
+        archiveVersion = project.version.toString()
 
 //        mustRunAfter("testCodeCoverageReport")
 //
@@ -78,9 +78,6 @@ tasks {
         manifest {
             attributes["Main-Class"] = mainApiClass
         }
-
-        from(kotlin.jvm().compilations.getByName("main").output)
-        configurations = listOf(project.configurations.getByName("jvmRuntimeClasspath"))
     }
 }
 setOverallCoverage(0.0) // only increasing allowed!
