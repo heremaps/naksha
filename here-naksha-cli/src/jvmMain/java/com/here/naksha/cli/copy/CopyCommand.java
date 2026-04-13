@@ -1,11 +1,12 @@
 package com.here.naksha.cli.copy;
 
+import com.here.naksha.cli.VersionInfo;
 import com.here.naksha.cli.copy.service.*;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory.WriteMode;
 import com.here.naksha.cli.loggers.LoggingMixin;
-import com.here.naksha.cli.parsers.JsonFileParser;
-import com.here.naksha.cli.parsers.JsonFileParserException;
+import com.here.naksha.cli.utils.JsonParser;
+import com.here.naksha.cli.utils.JsonParserException;
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
@@ -23,7 +24,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(
         name = "copy",
         mixinStandardHelpOptions = true,
-        description = "Copy data between storages.",
+        description = "Copy features between storages.",
         exitCodeListHeading = "Exit Codes:%n",
         exitCodeList = {
                 " 0:Successful program execution",
@@ -32,11 +33,12 @@ import java.util.concurrent.Callable;
         },
         sortSynopsis = false,
         sortOptions = false,
-        showDefaultValues = true
+        showDefaultValues = true,
+        versionProvider = VersionInfo.class
 )
 public final class CopyCommand implements Callable<Integer> {
     private final CopyServiceFactory copyServiceFactory;
-    private final JsonFileParser jsonFileParser;
+    private final JsonParser jsonParser;
     private final StorageProvider storageProvider;
 
     @CommandLine.Spec
@@ -146,12 +148,12 @@ public final class CopyCommand implements Callable<Integer> {
             @NotNull StorageProvider storageProvider
     ) {
         this.copyServiceFactory = copyServiceFactory;
-        this.jsonFileParser = new JsonFileParser();
+        this.jsonParser = new JsonParser();
         this.storageProvider = storageProvider;
     }
 
     @Override
-    public Integer call() throws JsonFileParserException, CopyServiceException {
+    public Integer call() throws JsonParserException, CopyServiceException {
         CopyElement srcCopyElement = buildSrcCopyElement();
         CopyElement targetCopyElement = buildTargetCopyElement();
         NakshaContext.currentContext().withAppId("nakshacli");
@@ -196,7 +198,7 @@ public final class CopyCommand implements Callable<Integer> {
         };
     }
 
-    private CopyElement buildSrcCopyElement() throws JsonFileParserException {
+    private CopyElement buildSrcCopyElement() throws JsonParserException {
         NakshaStorage srcNakshaStorage = loadStorage(srcStorageConfig);
         return new CopyElement.Builder(srcNakshaStorage)
                 .setMapId(srcMapId)
@@ -204,7 +206,7 @@ public final class CopyCommand implements Callable<Integer> {
                 .build();
     }
 
-    private CopyElement buildTargetCopyElement() throws JsonFileParserException {
+    private CopyElement buildTargetCopyElement() throws JsonParserException {
         NakshaStorage targetNakshaStorage = loadStorage(targetStorageConfig);
         return new CopyElement.Builder(targetNakshaStorage)
                 .setMapId(targetMapId)
@@ -233,8 +235,8 @@ public final class CopyCommand implements Callable<Integer> {
         );
     }
 
-    private NakshaStorage loadStorage(Path storageConfig) throws JsonFileParserException {
-        return jsonFileParser.parse(storageConfig, NakshaStorage.class);
+    private NakshaStorage loadStorage(Path storageConfig) throws JsonParserException {
+        return jsonParser.readAndParse(storageConfig, NakshaStorage.class);
     }
 
     private void requirePositiveIntegerOrNull(
