@@ -11,7 +11,7 @@
 ## Build image
 
 - Move to `here-naksha-cli/docker` dir.
-- To edit generation's parameters edit files in `naksha-cli-files` dir. Look at `here-naksha-cli/docs/GeneratingStorageConfig.md` to learn more.
+- To edit generation's parameters edit files in `naksha-cli-files` dir. Look at [GeneratingStorageConfig.md](../docs/GeneratingStorageConfig.md) to learn more.
 > [!NOTE]
 > There are defaults targetMapId="genmap" and targetCollectionId="gencol".
 > You can change target's mapId and collectionId using build-args:
