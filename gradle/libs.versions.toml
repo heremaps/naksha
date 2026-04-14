@@ -123,7 +123,7 @@ simdjson = { module = "org.simdjson:simdjson-java", version.ref = "simdjson" }
 kotlin_multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin_js_plain_objects = { id = "org.jetbrains.kotlin.plugin.js-plain-objects", version.ref = "kotlin" }
 foojay = { id = "org.gradle.toolchains.foojay-resolver-convention", version = "0.10.0" }
-shadow = { id = "com.github.johnrengelman.shadow", version = "8.1.1" }
+shadow = { id = "com.gradleup.shadow", version = "9.4.1" }
 spotless = { id = "spotless", version = "6.22.0" }
 vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.31.0" }
 #vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.1.0-SNAPSHOT" }

@@ -34,7 +34,7 @@ git init
 git remote add origin https://github.com/heremaps/naksha
 git fetch origin ${CLI_GIT_TAG}
 git reset --hard FETCH_HEAD
-gradle :here-naksha-cli:shadowCreate
+gradle :here-naksha-cli:shadowJar
 EOF
 
 ###############
