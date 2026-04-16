@@ -42,7 +42,7 @@ To release a new version, use the command below. The JAR file will be prepared a
 The JAR can be found in the [build/libs](./build/libs) directory.
 
 ```bash
-gradle releaseAndShadow -Prelease.forceVersion=0.1.1
+./../gradlew :here-naksha-cli:releaseAndShadow -Prelease.forceVersion=0.1.1
 ```
 
 ## Read More

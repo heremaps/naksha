@@ -24,7 +24,7 @@ JAR=$(find "${MODULE_DIR}/build/libs/" -name "naksha-cli*.jar" -type f -exec ls 
 
 if [[ $rebuild == true ]] || ! [[ -f "$JAR" ]] ; then
   echo "Building..."
-  stdErr=$(gradle :here-naksha-cli:shadowJar 2>&1 > /dev/null)
+  stdErr=$(./../gradlew :here-naksha-cli:shadowJar 2>&1 > /dev/null)
   gradle_exit=$?
   if [[ $gradle_exit -ne 0 ]]; then
     echo "Build failed!" >&2
