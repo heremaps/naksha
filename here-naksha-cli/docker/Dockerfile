@@ -26,7 +26,7 @@ EOF
 ENV GRADLE_HOME="/opt/gradle/${GRADLE_VERSION}"
 ENV PATH="${GRADLE_HOME}/bin:${PATH}"
 # fetch and build cli
-ARG CLI_GIT_TAG="cli-v0.1.0" NAKSHA_DIR
+ARG CLI_GIT_TAG="cli-v0.1.1" NAKSHA_DIR
 WORKDIR ${NAKSHA_DIR}
 RUN <<EOF
 # do it this way to fetch only specified tag
