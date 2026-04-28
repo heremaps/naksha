@@ -18,6 +18,19 @@
  */
 package com.here.naksha.lib.hub;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
+import static naksha.model.Action.CREATED;
+import static naksha.model.NakshaContext.currentContext;
+import static naksha.model.util.RequestHelper.createFeatureRequest;
+import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
+import static naksha.model.util.ResultHelper.extractResponseItems;
+import static naksha.model.util.ResultHelper.readFeatureFromResponse;
+
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.DefaultRequestLimitManager;
 import com.here.naksha.lib.core.INaksha;
@@ -33,6 +46,12 @@ import com.here.naksha.lib.extmanager.IExtensionManager;
 import com.here.naksha.lib.extmanager.helpers.FileClientFactory;
 import com.here.naksha.lib.hub.storages.NHAdminStorage;
 import com.here.naksha.lib.hub.storages.NHSpaceStorage;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmJsonUtil;
@@ -59,7 +78,6 @@ import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PAnd;
-import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.util.ResultHelper;
@@ -69,28 +87,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-
-import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
-import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
-import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
-import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_MAP_ID;
-import static com.here.naksha.lib.hub.NakshaHubAdminStorageIdentifiers.DEFAULT_HUB_ADMIN_STORAGE_ID;
-import static naksha.model.Action.CREATED;
-import static naksha.model.NakshaContext.currentContext;
-import static naksha.model.util.RequestHelper.createFeatureRequest;
-import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
-import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
-import static naksha.model.util.ResultHelper.extractResponseItems;
-import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 public class NakshaHub implements INaksha {
 
@@ -138,8 +134,8 @@ public class NakshaHub implements INaksha {
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId) {
       this(
-          DEFAULT_HUB_ADMIN_MAP_ID,
-          DEFAULT_HUB_ADMIN_STORAGE_ID,
+          NakshaHubAdminStorageIdentifiers.getHubAdminMapId(),
+          NakshaHubAdminStorageIdentifiers.getHubAdminStorageId(),
           adminPgMasterUrl,
           customCfg,
           configId
@@ -260,7 +256,7 @@ public class NakshaHub implements INaksha {
   private static WriteRequest upsertAdminCollectionsRequest() {
     final WriteRequest writeRequest = new WriteRequest();
     for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
-      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, DEFAULT_HUB_ADMIN_MAP_ID)));
+      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, NakshaHubAdminStorageIdentifiers.getHubAdminMapId())));
     }
     return writeRequest;
   }
@@ -280,7 +276,7 @@ public class NakshaHub implements INaksha {
     return getAdminStorage().useWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       if (customCfg != null) {
         WriteRequest writeCustomCfg = new WriteRequest()
-            .add(new Write().upsertFeature(DEFAULT_HUB_ADMIN_MAP_ID, CONFIGS, customCfg));
+            .add(new Write().upsertFeature(NakshaHubAdminStorageIdentifiers.getHubAdminMapId(), CONFIGS, customCfg));
         Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();
