@@ -6,6 +6,7 @@ import org.gradle.api.Project
 private val Descriptions = mapOf(
     "here-naksha-app-service" to "TBD",
     "here-naksha-common-http" to "TBD",
+    "here-naksha-common-test" to "TBD",
     "here-naksha-handler-activitylog" to "Naksha handler, adds downward compatibility to XYZ-Hub activity-log.",
     //"here-naksha-handler-http" to "TBD",
     "here-naksha-lib-auth" to "Naksha library, provides helper classes to perform authorization against Wikvaya UPM (User Permission Management) authorization matrix.",

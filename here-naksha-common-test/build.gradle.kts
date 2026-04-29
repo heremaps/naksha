@@ -1,0 +1,32 @@
+plugins {
+    alias(libs.plugins.kotlin.multiplatform)
+}
+
+description = gatherDescription()
+
+kotlin {
+    jvm {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        }
+    }
+    js(IR) {
+        nodejs()
+    }
+    sourceSets {
+        jvmTest {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
+    }
+}
+
+tasks {
+    getByName<Test>("jvmTest") {
+        useJUnitPlatform()
+    }
+}
+
+setOverallCoverage(0.0) // only increasing allowed!
+
