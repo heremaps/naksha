@@ -26,6 +26,7 @@ kotlin {
         }
         jvmTest {
             dependencies {
+                implementation(project(":here-naksha-common-test"))
                 implementation(libs.bundles.testing)
                 implementation(project(":here-naksha-lib-model"))
                 implementation(project(":here-naksha-lib-psql"))

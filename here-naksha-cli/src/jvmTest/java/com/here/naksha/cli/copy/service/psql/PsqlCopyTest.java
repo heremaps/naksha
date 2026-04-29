@@ -1,6 +1,18 @@
 package com.here.naksha.cli.copy.service.psql;
 
-import com.here.naksha.cli.copy.service.*;
+import static naksha.model.RandomFeatures.randomFeatures;
+import static naksha.model.util.RequestHelper.createFeaturesRequest;
+import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
+import static naksha.model.util.ResultHelper.extractResponseItems;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
+
+import com.here.naksha.cli.copy.service.CopyElement;
+import com.here.naksha.cli.copy.service.CopyService;
+import com.here.naksha.cli.copy.service.CopyServiceException;
+import com.here.naksha.cli.copy.service.CopyServiceSuccessResultPayload;
+import com.here.naksha.cli.copy.service.StorageProvider;
 import com.here.naksha.cli.copy.service.executors.OneShotFeaturesWriteExecutor;
 import com.here.naksha.cli.copy.service.executors.ParallelFeaturesWriteExecutor;
 import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutor;
@@ -8,9 +20,12 @@ import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
 import com.here.naksha.cli.storages.GeneratingStorage;
 import com.here.naksha.cli.storages.GeneratingStorageConfig;
-import com.here.naksha.cli.testcontainers.TestContainersPsqlStorage;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Stream;
 import naksha.base.StringList;
+import naksha.common.test.CommonTestConstants;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
@@ -18,7 +33,14 @@ import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaMap;
-import naksha.model.request.*;
+import naksha.model.objects.NakshaStorage;
+import naksha.model.request.ReadFeatures;
+import naksha.model.request.Request;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.Response;
+import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import naksha.model.request.query.SpIntersects;
 import naksha.model.request.query.SpOr;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,25 +48,23 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Stream;
-
-import static naksha.model.RandomFeatures.randomFeatures;
-import static naksha.model.util.RequestHelper.createFeaturesRequest;
-import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
-import static naksha.model.util.ResultHelper.extractResponseItems;
-import static org.junit.jupiter.api.Assertions.*;
-
 class PsqlCopyTest {
     private final String srcCollectionId = "srccolid";
     private final String targetCollectionId = "targetcolid";
     private SessionOptions sessionOptions;
+    private static final NakshaStorage storageConfig = NakshaStorage.fromJSON("""
+        {
+        "id": "%s",
+        "className": "naksha.psql.PsqlTestStorage"
+        }
+        """.formatted(CommonTestConstants.getTestStorageId()));
+    private IStorage psqlStorage;
 
     @BeforeEach
     void beforeEach() {
         NakshaContext.currentContext().withAppId("testapp");
         sessionOptions = SessionOptions.from(NakshaContext.currentContext());
+        psqlStorage = Naksha.useStorage(storageConfig);
     }
 
     @ParameterizedTest
@@ -58,7 +78,7 @@ class PsqlCopyTest {
         CopyElement source = copyElementForGeneratingStorage(sourceStorage);
 
         // And: prepared target
-        IStorage targetStorage = TestContainersPsqlStorage.getInstance().getStorage();
+        IStorage targetStorage = psqlStorage;
         CopyElement target = createMapWithEmptyCollection(targetStorage, targetCollectionId);
 
         // And: copy service
@@ -79,7 +99,7 @@ class PsqlCopyTest {
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenMapsOnTheSameStorage(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: the same storage for source and target
-        IStorage storage = TestContainersPsqlStorage.getInstance().getStorage();
+        IStorage storage = psqlStorage;
 
         // Given: prepared source
         CopyElement source = createMapWithEmptyCollection(storage, srcCollectionId);
@@ -110,7 +130,7 @@ class PsqlCopyTest {
     @MethodSource("featuresWriteExecutors")
     void shouldCreateMapAndCollectionThenCopy(FeaturesWriteExecutor featuresWriteExecutor) {
         // Given: the same storage for source and target
-        IStorage storage = TestContainersPsqlStorage.getInstance().getStorage();
+        IStorage storage = psqlStorage;
 
         // Given: prepared source
         CopyElement source = createMapWithEmptyCollection(storage, srcCollectionId);
