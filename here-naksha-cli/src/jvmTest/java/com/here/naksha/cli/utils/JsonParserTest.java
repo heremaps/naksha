@@ -33,6 +33,7 @@ class JsonParserTest {
         Files.writeString(pathToFile, "{}");
         File file = pathToFile.toFile();
         assumeTrue(file.setReadable(false), "Can not set file as unreadable!");
+        assumeFalse(Files.isReadable(pathToFile), "File is still readable by the process, skipping test");
         JsonParser jsonParser = new JsonParser();
 
         // When & Then
