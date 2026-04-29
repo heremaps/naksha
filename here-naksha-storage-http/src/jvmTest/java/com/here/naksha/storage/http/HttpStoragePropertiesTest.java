@@ -1,10 +1,19 @@
 package com.here.naksha.storage.http;
 
 import org.junit.jupiter.api.Test;
+import naksha.base.JvmJsonUtil;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class HttpStoragePropertiesTest {
+
+    private static final String TEST_RESOURCE_DIR = "/unit_test_data/HttpStorageProperties/";
 
     @Test
     void shouldReturnDefaultValuesOnCreation() {
@@ -38,5 +47,127 @@ class HttpStoragePropertiesTest {
         assertEquals(testConnectTimeout, properties.getConnectTimeout());
         assertEquals(testSocketTimeout, properties.getSocketTimeout());
         assertEquals(testMaxRetries, properties.getMaxRetries());
+    }
+
+    @Test
+    void shouldNormalizeRawHeadersMapFromBoxedProperties() {
+        final HttpStorageProperties properties = new HttpStorageProperties();
+        final Map<String, String> rawHeaders = new HashMap<>();
+        rawHeaders.put("Authorization", "Bearer <token>");
+        rawHeaders.put("Content-Type", "application/json");
+
+        // Simulate the v3 boxed/proxy state before the typed getter runs its normalization logic.
+        properties.setRaw("headers", rawHeaders);
+
+        final Map<String, String> headers = properties.getHeaders();
+        assertEquals("Bearer <token>", headers.get("Authorization"));
+        assertEquals("application/json", headers.get("Content-Type"));
+        assertEquals(2, headers.size());
+        assertEquals(headers, properties.getRaw("headers"));
+        assertTrue(headers instanceof HttpStorageProperties.HeaderMap);
+        assertInstanceOf(Map.class, properties.getRaw("headers"));
+        assertNotSame(rawHeaders, headers);
+    }
+
+    @Test
+    void shouldStoreHeadersAsProxyWhenUsingSetter() {
+        final HttpStorageProperties properties = new HttpStorageProperties();
+        final Map<String, String> headers = Map.of(
+                "Authorization", "Bearer exampleToken",
+                "Content-Type", "application/json"
+        );
+
+        properties.setHeaders(headers);
+
+        assertEquals(headers, properties.getHeaders());
+        assertTrue(properties.getHeaders() instanceof HttpStorageProperties.HeaderMap);
+        assertInstanceOf(Map.class, properties.getRaw("headers"));
+        assertNotSame(headers, properties.getRaw("headers"));
+    }
+
+    @Test
+    void shouldReturnDefaultsForInvalidRawValues() {
+        final HttpStorageProperties properties = new HttpStorageProperties();
+
+        properties.setRaw("headers", "invalid");
+
+        assertEquals(HttpStorageProperties.DEFAULT_HEADERS, properties.getHeaders());
+    }
+
+    @Test
+    void shouldDeserializeAllFieldsFromJson() {
+        final HttpStorageProperties properties = jsonResourceToPropertiesOrFail("t01_testConvertAllFields");
+
+        assertEquals("https://example.org", properties.getUrl());
+        assertEquals(60, properties.getConnectTimeout());
+        assertEquals(3600, properties.getSocketTimeout());
+
+        final Map<String, String> headers = properties.getHeaders();
+        assertEquals("Bearer <token>", headers.get("Authorization"));
+        assertEquals("application/json", headers.get("Content-Type"));
+        assertEquals(2, headers.size());
+    }
+
+    @Test
+    void shouldDeserializeMissingValuesToDefaultsFromJson() {
+        final HttpStorageProperties properties = jsonResourceToPropertiesOrFail("t02_testConvertMissingToNull");
+
+        assertEquals("https://example.org", properties.getUrl());
+        assertEquals(HttpStorageProperties.DEF_CONNECTION_TIMEOUT_SEC, properties.getConnectTimeout());
+        assertEquals(HttpStorageProperties.DEF_SOCKET_TIMEOUT_SEC, properties.getSocketTimeout());
+        assertEquals(HttpStorageProperties.DEF_MAX_RETRIES, properties.getMaxRetries());
+        assertEquals(HttpStorageProperties.DEFAULT_HEADERS, properties.getHeaders());
+    }
+
+    @Test
+    void shouldIgnoreExcessFieldsInJson() {
+        assertDoesNotThrow(() -> jsonResourceToPropertiesOrFail("t03_testDontThrowOnExcessFields"));
+    }
+
+    @Test
+    void shouldDeserializeMissingUrlAsNullInJson() {
+        final HttpStorageProperties properties = jsonResourceToPropertiesOrFail("t04_testThrowOnMissingMandatory");
+
+        assertNull(properties.getUrl());
+        assertEquals(60, properties.getConnectTimeout());
+        assertEquals(3600, properties.getSocketTimeout());
+        assertEquals("Bearer <token>", properties.getHeaders().get("Authorization"));
+        assertEquals("application/json", properties.getHeaders().get("Content-Type"));
+    }
+
+    @Test
+    void shouldUseNormalizedHeadersMapInKeyProperties() {
+        final HttpStorageProperties properties = new HttpStorageProperties();
+        final Map<String, String> rawHeaders = new HashMap<>();
+        rawHeaders.put("Authorization", "Bearer <token>");
+        rawHeaders.put("Content-Type", "application/json");
+        properties.setUrl("https://example.org");
+        properties.setRaw("headers", rawHeaders);
+
+        final RequestSender.KeyProperties fromProperties = RequestSender.KeyProperties.fromHttpStorageProperties("test-storage", properties);
+
+        assertNotNull(fromProperties.getDefaultHeaders());
+        assertTrue(fromProperties.getDefaultHeaders() instanceof HttpStorageProperties.HeaderMap);
+        assertNotSame(rawHeaders, fromProperties.getDefaultHeaders());
+        assertEquals("Bearer <token>", fromProperties.getDefaultHeaders().get("Authorization"));
+        assertEquals("application/json", fromProperties.getDefaultHeaders().get("Content-Type"));
+        assertEquals(2, fromProperties.getDefaultHeaders().size());
+    }
+
+    private HttpStorageProperties jsonResourceToPropertiesOrFail(String fileName) {
+        String resource = TEST_RESOURCE_DIR + fileName + ".json";
+
+        try (InputStream testResourceStream = this.getClass().getResourceAsStream(resource)) {
+            if (testResourceStream == null) {
+                throw new IOException("Could not access " + resource + " resource");
+            }
+            String json = new String(testResourceStream.readAllBytes(), StandardCharsets.UTF_8);
+            HttpStorageProperties properties = JvmJsonUtil.readJsonAs(json, HttpStorageProperties.class);
+            assertNotNull(properties);
+            return properties;
+        } catch (IOException e) {
+            fail("Unable to convert json resource", e);
+            return null;
+        }
     }
 }

@@ -62,14 +62,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
     if (httpStorageProperties == null || httpStorageProperties.getUrl() == null) {
       throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
     }
-    this.defaultKeyProperties = new KeyProperties(
-            config.getId(),
-            httpStorageProperties.getUrl(),
-            httpStorageProperties.getHeaders(),
-            httpStorageProperties.getConnectTimeout(),
-            httpStorageProperties.getSocketTimeout(),
-            httpStorageProperties.getMaxRetries()
-    );
+    this.defaultKeyProperties = KeyProperties.fromHttpStorageProperties(config.getId(), httpStorageProperties);
   }
 
   @NotNull
