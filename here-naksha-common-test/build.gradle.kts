@@ -13,19 +13,6 @@ kotlin {
     js(IR) {
         nodejs()
     }
-    sourceSets {
-        jvmTest {
-            dependencies {
-                implementation(kotlin("test"))
-            }
-        }
-    }
-}
-
-tasks {
-    getByName<Test>("jvmTest") {
-        useJUnitPlatform()
-    }
 }
 
 setOverallCoverage(0.0) // only increasing allowed!

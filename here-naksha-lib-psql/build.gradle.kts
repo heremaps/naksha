@@ -57,6 +57,7 @@ kotlin {
         }
         commonTest {
             dependencies {
+                implementation(project(":here-naksha-common-test"))
                 implementation(kotlin("test"))
                 implementation(kotlin("test-common"))
                 implementation(kotlin("test-annotations-common"))

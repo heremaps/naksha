@@ -80,7 +80,7 @@ val allModules = mapOf(
     Pair("here-naksha-common-http", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
     //Pair("here-naksha-handler-http", Pair(CleanAndTest.OFF, PublishModule.NO)),
-    Pair("here-naksha-common-test", Pair(CleanAndTest.KOTLIN, PublishModule.NO)),
+    Pair("here-naksha-common-test", Pair(CleanAndTest.OFF, PublishModule.NO)),
     Pair("here-naksha-lib-auth", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-base", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-core", Pair(CleanAndTest.OFF, PublishModule.NO)),
