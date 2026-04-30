@@ -18,6 +18,7 @@
  */
 package com.here.naksha.storage.http;
 
+import naksha.base.JvmMapProxy;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.NakshaVersion;
@@ -34,6 +35,16 @@ import java.util.Map;
  */
 @AvailableSince(NakshaVersion.v2_0_12)
 public class HttpStorageProperties extends NakshaProperties {
+
+  static final class HeaderMap extends JvmMapProxy<String, String> {
+    private HeaderMap() {
+      super(String.class, String.class);
+    }
+
+    private void putHeaders(@NotNull Map<String, String> headers) {
+      headers.forEach(this::put);
+    }
+  }
 
   public static final Integer DEF_CONNECTION_TIMEOUT_SEC = 20;
   public static final Integer DEF_SOCKET_TIMEOUT_SEC = 90;
@@ -105,11 +116,29 @@ public class HttpStorageProperties extends NakshaProperties {
    * By default: 'Content-Type: application/json' and 'Accept-Encoding: gzip'
    */
   public @NotNull Map<String, String> getHeaders() {
-    return getOrSet(HEADERS, DEFAULT_HEADERS);
+    final Object raw = get(HEADERS);
+    if (raw instanceof HeaderMap) {
+      return (HeaderMap) raw;
+    }
+    if (raw instanceof Map<?, ?>) {
+      HeaderMap headers = toHeaderMap((Map<?, ?>) raw);
+      setRaw(HEADERS, headers);
+      return headers;
+    }
+    HeaderMap headers = new HeaderMap();
+    headers.putHeaders(DEFAULT_HEADERS);
+    setRaw(HEADERS, headers);
+    return headers;
   }
 
   public void setHeaders(final @Nullable Map<String, String> headers) {
-    setRaw(HEADERS, headers);
+    if (headers == null) {
+      setRaw(HEADERS, null);
+      return;
+    }
+    HeaderMap headerMap = new HeaderMap();
+    headerMap.putHeaders(headers);
+    setRaw(HEADERS, headerMap);
   }
 
   public @NotNull HttpInterface getProtocol() {
@@ -133,5 +162,15 @@ public class HttpStorageProperties extends NakshaProperties {
   }
 
   public void setProtocol(final HttpInterface protocol) {setRaw(HTTP_INTERFACE, protocol);}
+
+  private @NotNull HeaderMap toHeaderMap(@NotNull Map<?, ?> rawHeaders) {
+    HeaderMap headers = new HeaderMap();
+    rawHeaders.forEach((key, value) -> {
+      if (key instanceof String && value instanceof String) {
+        headers.put((String) key, (String) value);
+      }
+    });
+    return headers;
+  }
 
 }
