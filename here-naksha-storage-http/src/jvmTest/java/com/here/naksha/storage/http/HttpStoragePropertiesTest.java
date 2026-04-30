@@ -1,7 +1,10 @@
 package com.here.naksha.storage.http;
 
 import org.junit.jupiter.api.Test;
+import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmJsonUtil;
+import naksha.base.Platform;
+import naksha.model.objects.NakshaStorage;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -109,6 +112,34 @@ class HttpStoragePropertiesTest {
     }
 
     @Test
+    void shouldPreserveHeadersWhenBoxingStoragePropertiesFromJson() {
+        final String storageJson;
+        try {
+            storageJson = jsonResourceToStringOrFail("t05_testBoxStorageProperties");
+        } catch (IOException e) {
+            fail("Unable to convert json resource", e);
+            return;
+        }
+
+        final NakshaStorage storage = JvmBoxingUtil.box(Platform.fromJSON(storageJson), NakshaStorage.class);
+        assertNotNull(storage);
+
+        final HttpStorageProperties properties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
+        assertNotNull(properties);
+
+        final Object rawHeaders = properties.get("headers");
+        assertInstanceOf(Map.class, rawHeaders);
+        assertFalse(rawHeaders instanceof HttpStorageProperties.HeaderMap);
+
+        final Map<String, String> headers = properties.getHeaders();
+        assertEquals("Bearer boxed-token", headers.get("Authorization"));
+        assertEquals("demo", headers.get("X-Tenant"));
+        assertFalse(headers.containsKey("Accept-Encoding"));
+        assertEquals(2, headers.size());
+        assertTrue(headers instanceof HttpStorageProperties.HeaderMap);
+    }
+
+    @Test
     void shouldDeserializeMissingValuesToDefaultsFromJson() {
         final HttpStorageProperties properties = jsonResourceToPropertiesOrFail("t02_testConvertMissingToNull");
 
@@ -155,19 +186,25 @@ class HttpStoragePropertiesTest {
     }
 
     private HttpStorageProperties jsonResourceToPropertiesOrFail(String fileName) {
-        String resource = TEST_RESOURCE_DIR + fileName + ".json";
-
-        try (InputStream testResourceStream = this.getClass().getResourceAsStream(resource)) {
-            if (testResourceStream == null) {
-                throw new IOException("Could not access " + resource + " resource");
-            }
-            String json = new String(testResourceStream.readAllBytes(), StandardCharsets.UTF_8);
+        try {
+            String json = jsonResourceToStringOrFail(fileName);
             HttpStorageProperties properties = JvmJsonUtil.readJsonAs(json, HttpStorageProperties.class);
             assertNotNull(properties);
             return properties;
         } catch (IOException e) {
             fail("Unable to convert json resource", e);
             return null;
+        }
+    }
+
+    private String jsonResourceToStringOrFail(String fileName) throws IOException {
+        String resource = TEST_RESOURCE_DIR + fileName + ".json";
+
+        try (InputStream testResourceStream = this.getClass().getResourceAsStream(resource)) {
+            if (testResourceStream == null) {
+                throw new IOException("Could not access " + resource + " resource");
+            }
+            return new String(testResourceStream.readAllBytes(), StandardCharsets.UTF_8);
         }
     }
 }
