@@ -1,4 +1,9 @@
-# JBON
+# Lib-Data
+A library to implement support for general data structures needed. This library supports `JSON` _(JavaScript Object Notation)_ and a corresponding binary representation called `JBON` _(JavaScript Binary Object Notation)_.
+
+- start
+- end
+- 
 
 ## Introduction
 `JBON` is a shortcut for Java Binary Object Notation. In this binary format all values are stored as objects _(called units)_ in a tree like structure that can be navigated without parsing, and at the same time being very small.
