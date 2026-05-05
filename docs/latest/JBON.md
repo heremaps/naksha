@@ -10,19 +10,20 @@ The goals of **JBON** are:
 - The same object should result in the same hash and logical bytes, no matter how it is encoded.
 - Be compatible with _Java_.
 - Be compatible with _JavaScript_.
+- Be compatible with [GeoJSON].
 - Deduplicate data as much as possible to reduce the size.
 - Keep the binary as small as possible, while allow reading of the data without parsing.
-- Allow efficient caching of the data, especially on the heap.
+- Allow efficient caching of the data, especially on the JVM heap _(deduplicated)_.
 - Transfer data between services, clients, and storage in a binary safe way.
-- Support easy storage of data in databases or other storage systems.
-- Support easy calculation of differences, and patching.
+- Support easy storage of data in databases, on disk or other storage systems.
+- Support easy calculation of differences, patching, and application of patches or merging.
 - Good cooperation with the [Naksha data model].
 - **Keep the decoder stable, while allow improving the encoder over time**
-  - This was one very important goal, because we want to store data for years to come, we need a data-format that can improve, while guaranteeing that even decades old decoders can still decode new modern encoded data!
+  - This is an  important goal, because we want to store data for years to come, we need a data-format that can improve, while guaranteeing that even decades old decoders can still decode new modern encoded data!
 
 As the format name indicates, this format is object-oriented. All **JBON** data is encoded using _**units**_. All _**units**_ always start with a header. The header encodes the type of the _**unit**_. These are the basic _**unit**_ types:
 
-- `Primitive`: All _**units**_ that encode a fixed size value (null, integer, float, timestamp, references, ...)
+- `Primitive`: All _**units**_ that encode a fixed size value _(null, integer, float, timestamp, references, ...)_
 - `String`: A special _**unit**_ that encodes a list of [UNICODE] code points, optionally including [references] to sub-strings. Strings are split using the [UNICODE] word boundary algorithm from [ICU4J].
 - `Binary`: A special _**unit**_ that encodes a types binary as byte-array, i.e. [TWKB].
 - `Array`: A list of _**units**_.
@@ -70,31 +71,9 @@ Whenever data is sorted, the following sort order should be used:
 Beware that [references] can't be sorted, they always behave exactly like the value to which they refer. So, when a reference to a [string] is given, the sorting is based on the value of the [string], not on the reference itself.
 
 ## Logical Bytes
-To compare two **JBON** objects logically, they need to be converted into a sequence of bytes, called logical bytes. As the **JBON** binary is highly compressed, and the same logical object can be encoded in many different ways, a uniform logical serialization is needed to compare two **JBON** objects by value. Therefore, the **JBON** encoder and decoder can generate such a logical bytes. The default `MurMur3` hash implementation of the `lib-data` implements the `JbonLogicalBytes` so that it can be used to calculate hashes and _(optionally)_ collects the logical bytes. The interface `JbonLogicalBytes` is defined as:
+To compare two **JBON** objects logically, they need to be converted into a sequence of comparable bytes, called logical bytes. As the **JBON** binary is highly compressed, and the same logical data can be encoded in many different ways, a uniform logical serialization is needed to compare two **JBON** _**units**_ by value. Therefore, the **JBON** encoder and decoder can generate such a logical bytes.
 
-```java
-package naksha.data;
-public interface JbonLogicalBytes {
-  void addByte(byte b);
-  void addShortBE(short s);
-  void addIntBE(int i);
-  void addLongBE(long l);
-  void addFloatBE(float f);
-  void addDoubleBE(double d);
-  /**
-   * Add a Unicode code point as UTF-16 code units, big-endian.
-   * @param cp The Unicode code point to add, must be a valid code point between 0 and 0x10FFFF.
-   */
-  void addCodePointBE(int cp);
-  /**
-   * Add a char-sequence as UTF-16 code units, big-endian. The string is added without a lead-in byte, it is only the UTF-16 encoded code-units.
-   * @param chars The string to add, must not be null.
-   * @param normalize If {@code true}, then the string is normalized using NFC normalization form before adding, otherwise it is added as is, requiring that it is already normalized. 
-   */
-  void addText(@NotNull CharSequence chars, boolean normalize);
-  byte[] toBytes();
-}
-```
+The default [MurMur3] hash implementation of the `lib-data` implements the `JbonLogicalBytes` interface, so that it can be used to calculate hashes and _(optionally)_ collects the logical bytes.
 
 ## Hashing
 Hashing is part of the **JBON** specification. When all participants hash the same way, the binaries can be easier compared against each other. The trick in hashing **JBON** is that two different binaries can basically represent the same data, for example when they just use different order of members or different encodings. This starts to become more true, when global [books] are shared.
@@ -103,7 +82,7 @@ Hashing is part of the **JBON** specification. When all participants hash the sa
 - **All clients _(including storages)_ must be able to calculate the same hash for the same data, even while they encode the data differently!**
 - **We do not fix the hash algorithm, so clients can use any hashing algorithm!**
 
-To be able to calculate a hash, the _**unit**_ first needs to be converted into [logical bytes]. Therefore, **JBON** supports two logical byte serialization. Each **JBON** unit can be serialized into logical primary and secondary bytes. The serialized data can be used to compare two _**units**_ by value, but it can also be used to calculate the hash.
+To be able to calculate a hash, the _**unit**_ first needs to be converted into [logical bytes]. Therefore, **JBON** supports two logical byte serialization. So, each **JBON** _**unit**_ can be serialized into primary or secondary _logical bytes_. The serialized data can be used to compare two _**units**_ by value, but it can also be used to calculate the hash to improve the compare speed.
 
 The [logical bytes] are needed to compare two **JBONs** logically, because two **JBON** binaries can be logically similar, even while they are binary totally different. This happens for many different reasons, different `global` [books] being used, different `storage` [books], or just different encoders. Therefore, to logically compare two **JBONs** all _**units**_ of the **JBON** have to be logically serialized and hashed, recursively in a streaming way, in fixed order. The logical-bytes that need to be generated for the hashing are documented at each _**unit**_ specification.
 
@@ -111,151 +90,11 @@ In other words: Logically `{a:1,b:2}` is equal to `{b:2,a:1}`, therefore both ne
 
 To be compatible with the _Java_ ecosystem and with _JavaScript_ there are always two logical bytes:
 - A **primary logical bytes**, which is used to compare _**units**_ logically.
-- A **secondary logical bytes**, which is used as replacement for `hashCode` and for `equals` on the heap.
+- A **secondary logical bytes**, which is used as replacement for `hashCode` and for `equals` on the heap, and used by encoders to find matchings.
 
 For example [strings], the **primary logical bytes** are used for normal hashing, because it guarantees that the binary of a string is never the same as any other value, due to the **lead-in** byte added. However, we often need the _Java_ hash of a [string], which is calculated by converting it into UTF-16 encoding, then hashing the individual 16-bit code units like in _Java_, so, via `s[0]*31^(n-1) + s[1]*31^(n-2) + ... + s[n-1]`, where `s` is the UTF-16 encoded string as characters _(`char[]`)_. This means, there is no **lead-in** added, and therefore the binary can be overlapping with other data types. For example a string that has 5 ASCII code-units can have some overlap with certain integers, as they are as well encoded into **lead-in** plus 4 byte. However, this **secondary** logical byte representation is only used for the `hashCode` and `equals` on the heap.
 
-The default hashing algorithm for **JBON** is a 128-bit [murmur3], used in streaming mode, with option to shorten the hash to 64-bit, 32-bit, 16-bit or 8-bit. This is a simple reference implementation for a streaming [murmur3]:
-
-```java
-package naksha.data;
-public class MurMur3 implements JbonLogicalBytes {
-  // TODO: Add an optional feature, that can be enabled/disabled, which will collect all bytes that are hashed
-  //       so that they can be used for value comparison in case of hash collisions. By default it should be turned off.
-  private static final long c1 = 0x87c37b91114253d5L;
-  private static final long c2 = 0x4cf5ad432745937fL;
-
-  private long seed;
-  private long h;
-  private int offset;
-  private long totalLength;
-  private byte d0, d1, d2, d3, d4, d5, d6, d7;
-
-  public MurMur3() {}
-
-  public MurMur3(long seed) {
-    this.seed = seed;
-    this.h = seed;
-  }
-
-  public MurMur3 reset() {
-    offset = 0;
-    totalLength = 0L;
-    h = seed;
-    return this;
-  }
-
-  public MurMur3 reset(long seed) {
-    this.seed = seed;
-    offset = 0;
-    totalLength = 0L;
-    h = seed;
-    return this;
-  }
-
-  public MurMur3 update(byte[] data) {
-    return update(data, 0, data.length);
-  }
-
-  public MurMur3 update(byte[] data, int start, int end) {
-    byte d0 = this.d0;
-    byte d1 = this.d1;
-    byte d2 = this.d2;
-    byte d3 = this.d3;
-    byte d4 = this.d4;
-    byte d5 = this.d5;
-    byte d6 = this.d6;
-    byte d7 = this.d7;
-    int offset = this.offset;
-    long h = this.h;
-    while (start < end) {
-      final byte b = data[start++];
-      switch (offset) {
-        case 0: d0 = b; break;
-        case 1: d1 = b; break;
-        case 2: d2 = b; break;
-        case 3: d3 = b; break;
-        case 4: d4 = b; break;
-        case 5: d5 = b; break;
-        case 6: d6 = b; break;
-        case 7: d7 = b; break;
-      }
-      if (++offset == 8) {
-        long k = (d0 & 0xffL)
-              | ((d1 & 0xffL) << 8)
-              | ((d2 & 0xffL) << 16)
-              | ((d3 & 0xffL) << 24)
-              | ((d4 & 0xffL) << 32)
-              | ((d5 & 0xffL) << 40)
-              | ((d6 & 0xffL) << 48)
-              | ((d7 & 0xffL) << 56);
-        k *= c1;
-        k = Long.rotateLeft(k, 31);
-        k *= c2;
-        h ^= k;
-        h = Long.rotateLeft(h, 27);
-        h = h * 5 + 0x52dce729L;
-        offset = 0;
-      }
-    }
-    this.h = h;
-    this.offset = offset;
-    this.totalLength += (end - start) + offset; // bytes consumed so far
-    switch (offset & 7) {
-      case 7: this.d6 = d6;
-      case 6: this.d5 = d5;
-      case 5: this.d4 = d4;
-      case 4: this.d3 = d3;
-      case 3: this.d2 = d2;
-      case 2: this.d1 = d1;
-      case 1: this.d0 = d0;
-    }
-    return this;
-  }
-
-  public long finish() {
-    long k = 0L;
-    switch (offset) {
-      case 7: k ^= (d6 & 0xffL) << 48;
-      case 6: k ^= (d5 & 0xffL) << 40;
-      case 5: k ^= (d4 & 0xffL) << 32;
-      case 4: k ^= (d3 & 0xffL) << 24;
-      case 3: k ^= (d2 & 0xffL) << 16;
-      case 2: k ^= (d1 & 0xffL) << 8;
-      case 1: k ^= (d0 & 0xffL);
-        k *= c1;
-        k = Long.rotateLeft(k, 31);
-        k *= c2;
-        h ^= k;
-    }
-    h ^= totalLength;
-    // fmix64
-    h ^= (h >>> 33);
-    h *= 0xff51afd7ed558ccdL;
-    h ^= (h >>> 33);
-    h *= 0xc4ceb9fe1a85ec53L;
-    h ^= (h >>> 33);
-    return h;
-  }
-
-  /** Reduce the 64-bit hash to 32-bit by XOR'ing the high and low halves. */
-  public static int toInt32(long hash) {
-    return Long.hashCode(hash);
-  }
-
-  /** Reduce the 64-bit hash to 16-bit by XOR'ing all 16-bit halves. */
-  public static short toInt16(long hash) {
-    int h32 = toInt32(hash);
-    return (short) (h32 ^ (h32 >>> 16));
-  }
-
-  /** Reduce the 64-bit hash to 8-bit by XOR'ing all 8-bit halves. */
-  public static byte toInt8(long hash) {
-    int h16 = toInt16(hash) & 0xffff;
-    return (byte) (h16 ^ (h16 >>> 8));
-  }
-}
-```
+The default hashing algorithm for **JBON** is a 128-bit [murmur3], used in streaming mode, with option to shorten the hash to 64-bit, 32-bit, 16-bit or 8-bit. This is a simple reference implementation for a streaming [murmur3].
 
 ## Units
 All _**units**_ have a general concept they follow. The first byte is the `lead-in` byte, signaling the type of the _**unit**_. If the size of the _**unit**_ is not explicitly or implicitly encoded in the `lead-in`, then the `lead-in` is followed by the size of the _**unit**_. The size is encoded in 1, 2 or 4 byte, signaled by the `lead-in`. Dependent on the type of the _**unit**_, more header fields may follow.
@@ -572,74 +411,30 @@ For the `Type` column in the following structure tables the maximum allowed type
 ### Binary
 The binary structure is used to store binary content, actually byte-arrays of custom data. They are used for example to encode [TWKB]. The **lead-in** of a binary is `11ss_0000`; with `ss` encoding the size of the size, as usual. The binary format is like:
 
-| Name        | Type      | Description                                                                     |
-|-------------|-----------|---------------------------------------------------------------------------------|
-| lead_in     | `byte`    | The **lead-in** byte, `11ss_0000`.                                              |
-| byte_size   | `int64`   | The total size of the structure, including the **lead-in**, in bytes.           |
-| mime_type   | [string]  | The mime-type of the binary.                                                    |
-| compression | [string]? | The compression used, `null` when no compression is used _(raw bytes)_.         |
-| encoding    | [string]? | An optional encoding of the data.                                               |
-| charset     | [string]? | The character-set of the data when being a text format _(defaults to [UTF-8])_. |
-| data_size   | `int64`   | The size of the following bytes.                                                |
-| data        | `bytes`   | The bytes of the binary, size is `data_size`.                                   | 
+| Name       | Type      | Description                                                                                            |
+|------------|-----------|--------------------------------------------------------------------------------------------------------|
+| lead_in    | `byte`    | The **lead-in** byte, `11ss_0000`.                                                                     |
+| byte_size  | `int64`   | The total size of the structure, including the **lead-in**, in bytes.                                  |
+| mime_type  | [string]? | The MIME-Type of the binary, defaults to `application/octet-stream`, when being `null` or `undefined`. |
+| parameters | [map]?    | Additional _(optional)_ paramters, the [map] must use only [strings] as key and value.                 |
+| data_size  | `int64`   | The amount of bytes following that represent the binary.                                               |
+| data       | `bytes`   | The bytes of the binary.                                                                               |
+| tail       | `bytes`   | Arbitrary tail bytes _(padding)_.                                                                      |
 
-The MIME type is used to identify the type of the binary, normally values from the [IANA media types] are used. If no official MIME type is available, an own one should be used. For example HERE will use `application/twkb` for TWKB binaries, and `application/jbon` for **JBON** binaries.
+The [JSON] and [XML] the binary is encoded as a string using the [data URL scheme]. So, in the format `data:[<media-type>][;base64],<data>`, like `data:application/twkb;base64,{encoded-data}`. The `mime_type` is encoded as [media-type] of the [data URL]. The `parameters` are added as parameters to the [media-type], the general form is `{type}/{subtype};[parameter=value;]*base64,{data}`. For example, a binary using some parameters, with `mime_type` being `application/foo` can look like: `data:application/foo;content-encoding=GZIP;charset=UTF-8;data,eyJ4IjoxfQ==`. As mostly all the values are part of the [const] book, the [data URL] is only a few bytes extra, compared to the actual binary data.
 
-There are some special MIME types that are used for **JBON** encoding and can be found in the `const` book:
+The [MIME type] parameter is used to identify the type of the binary, normally values from the [IANA media types] are used. If no official MIME type is available, an own one should be used. For example HERE will use `application/twkb` for TWKB binaries, and `application/jbon` for **JBON** binaries. If no MIME type is available, `application/octet-stream` should be expected, resulting in a simple `byte[]`.
 
-| MIME-Type             | Const  | Java-Type  | JavaScript-Type | Description                                                  |
-|-----------------------|--------|------------|-----------------|--------------------------------------------------------------|
-| `application/jbon`    | `7000` | `byte[]`   | `Int8Array`     | The custom MIME-type for **JBON** binaries.                  |
-| `application/json`    | `7001` | `byte[]`   | `Int8Array`     | The custom MIME-type for **JSON** strings in UTF-8 encoding. |
-| `application/twkb`    | `7002` | `byte[]`   | `Int8Array`     | The custom MIME-type for [TWKB] binaries.                    |
-| `application/bytea`   | `7003` | `byte[]`   | `Int8Array`     | The custom MIME-type for a Java byte-array.                  |
-| `application/shorta`  | `7004` | `short[]`  | `Int16Array`    | The custom MIME-type for a Java short-array.                 |
-| `application/inta`    | `7005` | `int[]`    | `Int32Array`    | The custom MIME-type for a Java int-array.                   |
-| `application/longa`   | `7006` | `long[]`   | `BigInt64Array` | The custom MIME-type for a Java long-array.                  |
-| `application/floata`  | `7007` | `float[]`  | `Float32Array`  | The custom MIME-type for a Java float-array.                 |
-| `application/doublea` | `7008` | `double[]` | `Float64Array`  | The custom MIME-type for a Java double-array.                |
+There are pre-defined well-known parameters, for which in the [const] book there are pre-defined values:
 
-The [JSON] and [XML] encoding of the binary `data` is done as a string using the [data URL scheme], so in the format `data:[<media-type>][;base64],<data>`. Example: `data:application/twkb;base64,{encoded-data}`.
-
-There are as well some pre-defined compressions for the `compession` field, which can be found in the `const` book:
-
-| Encoding | Const  | Description                      |
-|----------|--------|----------------------------------|
-| `GZIP`   | `7100` | The binary is [GZIP] compressed. |
-| `LZ4`    | `7101` | The binary is [LZ4] compressed.  |
-
-And eventually there are as well some pre-defined encodings for the `charset` field, which can be found in the `const` book:
-
-| Chatset        | Const  | Description                                                      |
-|----------------|--------|------------------------------------------------------------------|
-| `US-ASCII`     | `7200` |                                                                  |
-| `ISO-8859-1`   | `7201` | Legacy Western European.                                         |
-| `ISO-8859-2`   | `7202` | Legacy Central/Eastern European.                                 |
-| `ISO-8859-5`   | `7205` | Legacy Cyrillic.                                                 |
-| `ISO-8859-15`  | `7215` | Legacy Western European, same as `ISO-8859-1`, but includes `€`. |
-|                |        |                                                                  |
-| `UTF-8`        | `7220` |                                                                  |
-| `UTF-16`       | `7221` | UTF-16 in platform encoding.                                     |
-| `UTF-16BE`     | `7222` | UTF-16 in big-endian byte-order _(network byte order)_.          |
-| `UTF-16LE`     | `7223` | UTF-16 in little-endian byte-order.                              |
-| `UTF-32`       | `7224` | UTF-32 in platform encoding.                                     |
-| `UTF-32BE`     | `7225` | UTF-32 in big-endian byte-order _(network byte order)_.          |
-| `UTF-32LE`     | `7226` | UTF-32 in little-endian byte-order.                              |
-|                |        |                                                                  |
-| `Shift_JIS`    | `7230` | Legacy Japanese.                                                 |
-| `EUC-JP`       | `7231` | Legacy Japanese.                                                 |
-| `GBK`          | `7232` | Legacy Common Chinese.                                           |
-| `Big5`         | `7233` | Legacy Traditional Chinese.                                      |
-| `KOI8-R`       | `7234` | Legacy Russian.                                                  |
-|                |        |                                                                  |
-| `Windows-1251` | `7251` | Very common legacy Western encoding on Windows.                  |
-| `Windows-1252` | `7252` | Cyrillic on Windows.                                             |
+- `mime_type`: The [mime type] of the data
+- `encoding`: The compression algorithm , encoding, and charset.
 
 #### Primary Logical Bytes
-The primary [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, followed by `mime_type`, `encoding`, `charset`, and finally by the actual decompressed `data`. This ignores the `compression` and the sizes, so `byte_size` and `data_size`.
+The primary [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, followed by `parameters`, and finally by the decompressed `data`. This ignores the `compression`, `byte_size`, `data_size`, and `tail`.
 
 #### Secondary Logical Bytes
-The secondary [logical bytes] of a binary are calculated the same way as the primary [logical bytes], just that `data` is not decompressed, and the `compression` is added after the `mime_type`, and before the `encoding`. 
+The secondary [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, followed by `mime_type`, `compression`, `encoding`, `charset`, `data`, and `tail`. This actually represents the [logical bytes] of the binary as it is encoded.
 
 ### Array
 An array of arbitrary other _**units**_, using the **lead-in** byte `11ss_0001`; with `ss` encoding the size of the size, as usual.
@@ -737,70 +532,73 @@ However, the member has an own primary [logical bytes] representation, calculate
 If the member has a key, so the `key` is not `undefined`, then secondary [logical bytes] are supported. They are calculated by adding the empty **lead-in** byte `1100_0100`, and then the `key`, ignoring the `value` and `annotations`. It can be used to find similar members, so members with the same key, but potentially different values, which is helpful for encoders.
 
 ### TupleNumber
-A tuple is a unique immutable state of some arbitrary data, uniquely addressed using a tuple-number. The tuple-number encoding can represent a single tuple-number or a list of tuple-numbers. It is a specialized data encoding with shared upfront data; the **lead-in** is `11ss_0101`.
+A tuple is a unique immutable state of some arbitrary feature, uniquely addressed using a tuple-number. The tuple-number encoding can represent a single tuple-number or a list of tuple-numbers. It is a specialized data encoding with shared upfront data; the **lead-in** is `11ss_0101`.
 
 This form of encoding reduces the encoding size of multiple tuple-numbers greatly, while only mildly increases the size of a single tuple-number _(which we rarely every find anywhere)_. However, multiple array numbers are encountered quite often, for example when transferring the result of a database query to a client. Therefore, we want to encode them very efficiently _(as small as possible)_:
 
-| Section    | Type    | Description                                                                                                                  |
-|------------|---------|------------------------------------------------------------------------------------------------------------------------------|
-| lead_in    | `byte`  | The **lead-in** byte, `11ss_0101`.                                                                                           |
-| byte_size  | `int64` | The total size of the structure, including the **lead-in**, in bytes.                                                        |
-| database   | `int64` | Either `null` (one byte) or the shared database number of each [tuple] in the array.                                         |
-| catalog    | `int32` | Only if `database` is not `null`, then either `null` (one byte) or the shared catalog number of each [tuple] in the array.   |
-| collection | `int32` | Only if `catalog` is not `null`, then either `null` (one byte) or the shared collection number of each [tuple] in the array. |
-| record     | `int64` | Only if `record` is not `null`, then either `null` (one byte) or the shared record number of each [tuple] in the array.      |
-| entries    | `bytea` | The actual tuple-numbers encoded as specified in the [Naksha data model Tuple-Number] section.                               |
+| Section           | Type    | Description                                                                                                                         |
+|-------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------|
+| lead_in           | `byte`  | The **lead-in** byte, `11ss_0101`.                                                                                                  |
+| byte_size         | `int64` | The total size of the structure, including the **lead-in**, in bytes.                                                               |
+| database_number   | `int64` | Either `null` (one byte) or the shared database number of each [tuple] in the array.                                                |
+| map_number        | `int32` | Only if `database_number` is not `null`, then either `null` (one byte) or the shared map number of each [tuple] in the array.       |
+| collection_number | `int32` | Only if `map_number` is not `null`, then either `null` (one byte) or the shared collection number of each [tuple] in the array.     |
+| feature_number    | `int64` | Only if `collection_number` is not `null`, then either `null` (one byte) or the shared feature number of each [tuple] in the array. |
+| entries           | `bytea` | The actual tuple-numbers encoded as specified in the [Naksha data model Tuple-Number] section, except for the shared components.    |
 
 Therefore:
-- If `database` is `null`, then each entry is encoded in 32 byte.
-- If `catalog` is `null`, then each entry is encoded in 24 byte, all of them are sharing the `catalog`.
-- If `collection` is `null`, then each entry is encoded in 20 byte, all of them are sharing the `database` and `catalog`.
-- If `record` is `null`, then each entry is encoded in 16 byte, all of them are sharing the `database`, `catalog` and `collection`.
-- If none of them is `null`, then each entry is encoded in 8 byte, all of them are sharing the `database`, `catalog`, `collection` and `record`.
+- If `database_number` is `null`, then each entry is encoded in 32 byte.
+- If `map_number` is `null`, then each entry is encoded in 24 byte, all of them are sharing the same `database`.
+- If `collection_number` is `null`, then each entry is encoded in 20 byte, all of them are sharing the same `database` and `map`.
+- If `feature_number` is `null`, then each entry is encoded in 16 byte, all of them are sharing the same `database`, `map` and `collection`.
+- If none of them is `null`, then each entry is encoded in 8 byte, all of them refer to the same _feature_, just in different versions.
 
-So, if `database`, `catalog`, `collection` and `record` are all given, all [Tuple] are of the same record, so they only differ in the `version`. This happens for example when loading all states of a specific record form the database. This uses the least amount of space per entry, only 8 byte per entry.
+So, if `database_number`, `map_number`, `collection_number` and `feature_number` are all given, all [Tuple] are of the same _feature_, so they only differ in the `version`. This happens for example when loading all states of a specific _feature_ form the database. This uses the least amount of space per entry, only 8 byte per entry.
 
-The most common encoding will have `database`, `catalog` and `collection` set, but `record` being `null`. This happens as result of a query from a single collection. In this case, each entry need to encode `record`, and `version`, which needs 16 byte per entry.
+The most common encoding will have `database_number`, `map_number` and `collection_number` set, but `feature_number` being `null`. This happens as result of a query from a single collection. In this case, each entry need to encode `feature_number`, and `version`, which requires 16 byte per entry.
 
-The second most common encoding will have `database` and `catalog` set, but `collection` and `record` will be `null`, then each entry is 20 byte.
+The second most common encoding will have `database_number` and `map_number` set, but `collection_number` and `feature_number` will be `null`, then each entry is 20 byte.
 
-Potentially rarely found are encodings where `catalog` or even `database` are `null`, as this wildly mixes data from different sources. However, it is not totally impossible!
+Potentially rarely found are encodings where `map_number` or even `database_number` are `null`, as this wildly mixes data from different sources. However, it is not totally impossible!
 
-**Note**: A single tuple-number can be encoded smaller as defined by the [Naksha data model Tuple-Number], because we can encode the `database`, `catalog`, `collection` and `record` in less than 8 byte, if the value is smaller. Therefore, the smallest single tuple-number would encode in **lead-in** _(1 byte)_, `byte_size` _(1 byte)_, `database` _(1 byte)_, `catalog` _(1 byte)_, `collection` _(1 byte)_, `record` _(1 byte)_, and the `version` as single value _(8 byte)_; therefore, resulting in 14 byte in total, while the [Naksha data model Tuple-Number] encoding does always require 32 byte. With a clever encoder, the largest encoding is 35 byte, so **lead-in** _(1 byte)_, `byte_size` _(1 byte)_, `database` as `null` _(1 byte)_ and the actual tuple-number value as full qualified _(32 byte)_, resulting in 35 byte. A more stupid encoder would encode in 38 byte _(not the biggest difference)_.
+**Note**: A single tuple-number can be encoded smaller as defined by the [Naksha data model Tuple-Number], because we can encode the `database_number`, `map_number`, `collection_number` and `feature_number` in less than 8 byte, if the value is smaller. Therefore, the smallest single tuple-number would encode in **lead-in** _(1 byte)_, `byte_size` _(1 byte)_, `database_number` _(1 byte)_, `map_number` _(1 byte)_, `collection_number` _(1 byte)_, `feature_number` _(1 byte)_, and the `version` as single value _(8 byte)_; therefore, resulting in 14 byte in total, while the [Naksha data model Tuple-Number] encoding does always require 32 byte.
 
-#### Hash
-The **hash** of a tuple-number is calculated by hashing the empty **lead-in** `1100_0101`, followed by the bytes of each contained tuple-number in full encoding as specified by the [Naksha data model Tuple-Number], so each tuple-number actually is added as fixed size 32 byte value in big-endian byte-order. This means, that for each tuple-number the `database`, `catalog`, `collection`, and `record` are added to the [hash] simply as 64-bit integers or 32-bit integers. The `version` is encoded into one 64-bit integer -(with top 12 bit being always zero)_, and then added to the [hash], so eventually 5 hash calls per tuple-number.
+A single tuple-number should be encoded in 35 byte, so **lead-in** _(1 byte)_, `byte_size` _(1 byte)_, `database_number` as `null` _(1 byte)_ and the actual tuple-number value as full qualified _(32 byte)_. Optionally, the `byte_size` can be encoded in two byte, which align the rest of the tuple-number to 4 byte, so that it can be faster processed by some CPU architectures. This would result in 36 byte for a single tuple-number.
+
+#### Primary Logical Bytes
+The primary [logical bytes] of a tuple-number are generated by adding the empty **lead-in** `1100_0101`, followed by the bytes of each contained tuple-number in full encoding as specified by the [Naksha data model Tuple-Number]. Each tuple-number actually is added as fixed size 32 byte value in big-endian byte-order. This means, that for each tuple-number the `database_number`, `map_number`, `collection_number`, and `feature_number` are added to the [logical bytes] simply as 32-bit or 64-bit integers, in big-endian byte-order. The `version` is encoded into one 64-bit integer -(with top 12 bit being always zero)_, and then added to the [logical bytes].
 
 ### Tuple
-The tuple is a special **JBON** wrapper designed to exchange [maps] between services, components, caches, and storages like a database or a file; the **lead-in** is `11ss_0110`.
+The tuple is a special **JBON** container designed to exchange [GeoJSON] _features_ between services, components, caches, and storages like a database or a file; the **lead-in** is `11ss_0110`.
 
 The tuple is a special encoding linked to the [Naksha data model]. All tuple are encoded in the following basic layout:
 
-| Section        | Type                   | Description                                                                                                                   |
-|----------------|------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| lead_in        | `byte`                 | The **lead-in** byte, `11ss_0110`.                                                                                            |
-| byte_size      | `int64`                | The total size of the structure, including the **lead-in**, in bytes.                                                         |
-| object         | [map]                  | The [map] to be stored.                                                                                                       |
-| local_book     | [Book]?                | The `local` book, if any.                                                                                                     |
-| annotations    | [array]?<[annotation]> | An _(optional)_ array of [annotations].                                                                                       |
-| attachment     | [Binary]?              | If `null`, the attachment is explicitly not existing, `undefined` means a context related _attachment_ state.                 |
-|                |                        |                                                                                                                               |
-| global_book_tn | [TupleNumber]?         | Either `null` (one byte) when no global book is needed; otherwise the [Tuple-Number] of the `global` [book] needed to decode. |
-| tuple_number   | [TupleNumber]          | The [tuple-number] of this tuple.                                                                                             |
-| next_version   | [uint56]               | The next version of the tuple, if the tuple is in _HEAD_ state, the value will be `4_503_599_627_370_495L`.                   |
-| prev_version   | `int64`?               | The previous version of the tuple; `null` _(one byte)_, if this is the first state.                                           |
-| storage_book   | [Book]?                | The `storage` book, offloaded data from the object, used by the storage subsystem, if any.                                    |
-| object_hash    | `int64`?               | The object hash.                                                                                                              |
+| Section        | Type                   | Description                                                                                                                      |
+|----------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| lead_in        | `byte`                 | The **lead-in** byte, `11ss_0110`.                                                                                               |
+| byte_size      | `int64`                | The total size of the structure, including the **lead-in**, in bytes.                                                            |
+| feature        | [map]                  | The _feature_ to be stored, can be an empty map _(so only one byte)_.                                                            |
+| local_book     | [Book]?                | The _(optional)_ `local` book.                                                                                                   |
+| annotations    | [array]?<[annotation]> | An _(optional)_ array of [annotations].                                                                                          |
+|                |                        |                                                                                                                                  |
+| attachment     | [Binary]?              | If `null`, the attachment is explicitly not existing, `undefined` means a context related _attachment_ state.                    |
+| next_version   | [uint56]               | The next version of the tuple, if the tuple is in _HEAD_ state, the value will be `4_503_599_627_370_495L`.                      |
+| prev_version   | `int64`?               | The previous version of the tuple; `null` _(one byte)_, if this is the first state.                                              |
+| tuple_number   | [TupleNumber]          | The [tuple-number] of this tuple.                                                                                                |
+| global_book_tn | [TupleNumber]?         | Either `null` (one byte) when no global book is needed; otherwise the [Tuple-Number] of the `global` [book] needed to decode.    |
+| storage_book   | [Book]?                | The `storage` book with values from the storage.                                                                                 |
 
 The `attachment` is special when encoded as `undefined`. The meaning has to be interpreted by the application considering the context in that case. When the tuple is encoded as an `UPDATE` or `DELETE` action, then an `undefined` attachment means that the attachment is not changed, so the old attachment should be kept. When the tuple is encoded as a `CREATE` action, then `undefined` means that there is no attachment, so it should simply become `null`.
 
-The layout of this entity has a specific reason:
+The layout of this entity has a specific reason. The principle is that the application does not generate a tuple, but operates on [GeoJSON] features with optional attachment. The storage converts the _feature_ and attachment into a tuple. However, when reading, the application can directly access the tuple, what avoids converting from tuple into [GeoJSON] feature. So the design is that tuples are easy to read for everyone, but creation is storage individual.
 
-The concept is that the application generates the `object`, the `local_book`, the `attachment`, and the `annotations`. When the tuple is given to the storage-engine, so without the rest of the tuple, the storage will decide which values from the [map] should be offloaded into dedicated places, like own columns in the database table or dedicated helper tables. This is done by relocating the values from the actual `object`, the `local` [book], or even `global` [book], into the `storage` [book], adding [references] were the values were originally stored _(except for primitives, which are duplicated)_, or redirecting the original [reference] from `global` [book] into the `storage` [book]. This requires to re-encoding the tuple.
+When a _feature_ is given to the storage engine, it will decide which values from the _feature_ [map] should be offloaded into dedicated places, like own columns in the database table or dedicated helper tables. This is done by relocating the values from the actual `feature`, into the `storage` [book], and to let the rest be added like normal into the `local` [book] or `global` [book]. As every storage, even when storing the same data, may have a different storage layout, this means that tuples read from one storage must be re-encoded when being written into another one, except it is a cache. A cache can just store the tuple as is, because it anyway only need to cache the binary and addresses it by the [TupleNumber].
 
-When writing the tuple into the storage, the storage-engine now has many options to split the **JBON** into parts. In the reference implementation using PostgresQL or SqLite, the storage engine will not even accept tuples as input. It will only accept the `object` and `attachment` as [JSON] maps, then directly encode the tuple by itself. Finally, it will truncate the tuple before the `attachment`, and store all the removed values in dedicated columns. It will split the `storage_book` as well into own dedicated columns, and fill a helper table for the `tags` it supports. The design is intentionally made, so that a database can index values, while a pure cache just takes the tuple as is, and stores it. Every storage can basically restore the `object` and `attachment` from a tuple, and then re-encode the tuple so that it is optimized for the storage. Even while this costs some CPU time, it allows to have a very efficient storage, and makes all replicas very efficient, and optimized. It is actually a form of logical replication.
+When a replication is done, it depends on the implementation. Technically, when the physical layout of the replica is exactly the same as the origin, then the same tuple can be stored. However, physical replication is rather rare, so the use case is more exotic.
 
-When reading back a tuple from the storage, the PostgresQL storage-engine re-constructs the full tuple binary from the table and the helper tables. It will restore the basic tuple form the table, appending the `attachment` again, it as well knows the final byte-size. Then it will restore the `global_book_tn`, `tuple_number`, `next_version`, and `prev_version` from database columns. The `storage_book` is restored from custom columns, while the tags are restored from a helper table. The resulting tuple contains all data again, without that it has to be re-encoded. All of this is just copy values into a fixed size buffer, where the size is already well known.
+In the reference implementation using PostgresQL or SqLite the storage engine will not accept tuples as input. It will only accept the `feature` as [JSON] map, and the `attachment` as `byte[]` _(with some metadata, so in a wrapper)_. Then it will directly encode the tuple by itself. Finally, it will truncate the tuple before the `attachment`, and store all the truncated values in dedicated database columns. It will split the `storage_book` as well into own dedicated columns, and fill a helper table for the `tags`. The design is intentionally made, so that a database can index values, while a pure cache just takes the tuple as is, and stores it. Every storage can basically restore the `object` and `attachment` from a tuple, and then re-encode the tuple so that it is optimized for the storage. Even while this costs some CPU time, it allows to have a very efficient storage, and makes all replicas very efficient, and optimized. It is actually a form of logical replication.
+
+When reading back a tuple from the storage, the PostgresQL storage-engine re-constructs the full tuple binary from the database table. It will restore the basic tuple form the table, appending the `attachment` again, it as well knows the final byte-size. Then it will restore the `global_book_tn`, `tuple_number`, `next_version`, and `prev_version` from database columns. The `storage_book` is restored from custom columns, while the tags are restored from a helper table. The resulting tuple contains all data again, without that it has to be re-encoded. All of this is just copy values into a fixed size buffer, where the size is already well known.
 
 This concept makes reading of data very efficient and quite simple, while writing is slightly more expensive. The design of [books] is very supportive for this design.
 
@@ -1170,10 +968,86 @@ The best is, that this allows storages to index the data, as long as they have t
 
 Clearly, we could somehow add the dictionaries and text encoding to [CBOR] using [tags](https://www.rfc-editor.org/rfc/rfc8949.html#name-tagging-of-items), but it would be a proprietary extension and therefore anyway force us to do some own implementations. It would eventually make [CBOR] so incompatible to what the rest of the world does, that there seems to be no advantage in this solution, when compared to creating our own binary encoding.
 
----
+## Const
+The `const` book is a special book, which is not encoded in the binary, but is hardcoded in the specification. It contains values that are commonly used, so that they do not have to be encoded in the binary, but can be just referenced by their index in the `const` book. This saves space and makes encoding more efficient.
+
+| Number | Const                      | Value                      | Description                                                                             |
+|--------|----------------------------|----------------------------|-----------------------------------------------------------------------------------------|
+| `0001` | `NAKSHA`                   | `Naksha`                   |                                                                                         |
+| `0002` | `GEO_JSON`                 | `GeoJSON`                  |                                                                                         |
+| `0003` | `JSON`                     | `JSON`                     |                                                                                         |
+| `0004` | `PROPERTIES`               | `properties`               |                                                                                         |
+| `0005` | `GEOMETRY`                 | `geometry`                 |                                                                                         |
+| `0006` | `REFERENCE_POINT`          | `referencePoint`           |                                                                                         |
+| `0007` | `NS_COM_HERE_XYZ`          | `@ns:com:here:xyz`         | The XYZ namespace key.                                                                  |
+|        |                            |                            |                                                                                         |
+| `7000` | `APPLICATION_OCTET_STREAM` | `application/octet-stream` | The MIME-type for arbitrary binaries _(default when no specific [MIME type] is given)_. |
+| `7001` | `APPLICATION_JBON`         | `application/jbon`         | The custom MIME-type for **JBON** binaries.                                             |
+| `7002` | `APPLICATION_JSON`         | `application/json`         | The custom MIME-type for **JSON** strings.                                              |
+| `7003` | `APPLICATION_TWKB`         | `application/twkb`         | The custom MIME-type for [TWKB] binaries.                                               |
+| `7004` | `APPLICATION_INT8A`        | `application/int8a`        | The custom MIME-type for a Java byte-array (`byte[]` / `Int8Array`)_.                   |
+| `7005` | `APPLICATION_INT16A`       | `application/int16a`       | The custom MIME-type for a Java short-array (`short[]` / `Int16Array`)_.                |
+| `7006` | `APPLICATION_INT32A`       | `application/int32a`       | The custom MIME-type for a Java int-array (`int[]` / `Int32Array`)_.                    |
+| `7007` | `APPLICATION_INT64A`       | `application/int64a`       | The custom MIME-type for a Java long-array (`long[]` / `BigInt64Array`)_.               |
+| `7008` | `APPLICATION_FLOAT16A`     | `application/float16a`     | The custom MIME-type for a Java float-array (`short[]` / `Float16Array`)_.              |
+| `7009` | `APPLICATION_FLOAT32A`     | `application/float32a`     | The custom MIME-type for a Java float-array (`float[]` / `Float32Array`)_.              |
+| `7010` | `APPLICATION_FLOAT64A`     | `application/float64a`     | The custom MIME-type for a Java double-array (`double[]` / `Float64Array`)_.            |
+| `7011` | `APPLICATION_FLOAT128A`    | `application/float128a`    | The custom MIME-type for a Java float-array (`byte[]` / `Int8Array`)_.                  |
+|        |                            |                            |                                                                                         |
+| `7100` | `CONTENT_ENCODING`         | `content-encoding`         | The encoding or compression algorithm being used in a [Binary] _(or other places)_.     |
+| `7101` | `GZIP`                     | `GZIP`                     | The binary is [GZIP] compressed.                                                        |
+| `7102` | `LZ4`                      | `LZ4`                      | The binary is [LZ4] compressed.                                                         |
+|        |                            |                            |                                                                                         |
+| `7200` | `CHARSET`                  | `charset`                  | The character-set being used in a [Binary] _(or other places)_.                         |
+| `7201` | `ISO_8859_1`               | `ISO-8859-1`               | Legacy Western European.                                                                |
+| `7202` | `ISO_8859_2`               | `ISO-8859-2`               | Legacy Central/Eastern European.                                                        |
+| `7205` | `ISO_8859_5`               | `ISO-8859-5`               | Legacy Cyrillic.                                                                        |
+| `7215` | `ISO_8859_15`              | `ISO-8859-15`              | Legacy Western European, same as `ISO-8859-1`, but includes `€`.                        |
+| `7219` | `US_ASCII`                 | `US-ASCII`                 |                                                                                         |
+|        |                            |                            |                                                                                         |
+| `7220` | `UTF_8`                    | `UTF-8`                    | UTF-8 encoding.                                                                         |
+| `7221` | `UTF_16`                   | `UTF-16`                   | UTF-16 in platform encoding.                                                            |
+| `7222` | `UTF_16BE`                 | `UTF-16BE`                 | UTF-16 in big-endian byte-order _(network byte order)_.                                 |
+| `7223` | `UTF_16LE`                 | `UTF-16LE`                 | UTF-16 in little-endian byte-order.                                                     |
+| `7224` | `UTF_32`                   | `UTF-32`                   | UTF-32 in platform encoding.                                                            |
+| `7225` | `UTF_32BE`                 | `UTF-32BE`                 | UTF-32 in big-endian byte-order _(network byte order)_.                                 |
+| `7226` | `UTF_32LE`                 | `UTF-32LE`                 | UTF-32 in little-endian byte-order.                                                     |
+|        |                            |                            |                                                                                         |
+| `7230` | `SHIFT_JIS`                | `Shift_JIS`                | Legacy Japanese.                                                                        |
+| `7231` | `EUC_JP`                   | `EUC-JP`                   | Legacy Japanese.                                                                        |
+| `7232` | `GBK`                      | `GBK`                      | Legacy Common Chinese.                                                                  |
+| `7233` | `BIG5`                     | `Big5`                     | Legacy Traditional Chinese.                                                             |
+| `7234` | `KOI8_R`                   | `KOI8-R`                   | Legacy Russian.                                                                         |
+|        |                            |                            |                                                                                         |
+| `7251` | `WINDOWS_1251`             | `Windows-1251`             | Very common legacy Western encoding on Windows.                                         |
+| `7252` | `WINDOWS_1252`             | `Windows-1252`             | Cyrillic on Windows.                                                                    |
 
 ## Java
 This section documents the Java API for **JBON**.
+
+```java
+package naksha.data;
+public interface JbonLogicalBytes {
+  void addByte(byte b);
+  void addShortBE(short s);
+  void addIntBE(int i);
+  void addLongBE(long l);
+  void addFloatBE(float f);
+  void addDoubleBE(double d);
+  /**
+   * Add a Unicode code point as UTF-16 code units, big-endian.
+   * @param cp The Unicode code point to add, must be a valid code point between 0 and 0x10FFFF.
+   */
+  void addCodePointBE(int cp);
+  /**
+   * Add a char-sequence as UTF-16 code units, big-endian. The string is added without a lead-in byte, it is only the UTF-16 encoded code-units.
+   * @param chars The string to add, must not be null.
+   * @param normalize If {@code true}, then the string is normalized using NFC normalization form before adding, otherwise it is added as is, requiring that it is already normalized. 
+   */
+  void addText(@NotNull CharSequence chars, boolean normalize);
+  byte[] toBytes();
+}
+```
 
 ```java
 package naksha.data;
@@ -1249,9 +1123,164 @@ public final class JbonBook extends JbonStructure {
 public final class JbonAnnotation extends JbonStructure implements ITuple {
   public JbonAnnotation(@NotNull Jbon jbon) { super(jbon); }
 }
+
+public class MurMur3 implements JbonLogicalBytes {
+  // TODO: Add an optional feature, that can be enabled/disabled, which will collect all bytes that are hashed
+  //       so that they can be used for value comparison in case of hash collisions. By default it should be turned off.
+  private static final long c1 = 0x87c37b91114253d5L;
+  private static final long c2 = 0x4cf5ad432745937fL;
+
+  private long seed;
+  private long h;
+  private int offset;
+  private long totalLength;
+  private byte d0, d1, d2, d3, d4, d5, d6, d7;
+
+  public MurMur3() {}
+
+  public MurMur3(long seed) {
+    this.seed = seed;
+    this.h = seed;
+  }
+
+  public MurMur3 reset() {
+    offset = 0;
+    totalLength = 0L;
+    h = seed;
+    return this;
+  }
+
+  public MurMur3 reset(long seed) {
+    this.seed = seed;
+    offset = 0;
+    totalLength = 0L;
+    h = seed;
+    return this;
+  }
+
+  public MurMur3 update(byte[] data) {
+    return update(data, 0, data.length);
+  }
+
+  public MurMur3 update(byte[] data, int start, int end) {
+    byte d0 = this.d0;
+    byte d1 = this.d1;
+    byte d2 = this.d2;
+    byte d3 = this.d3;
+    byte d4 = this.d4;
+    byte d5 = this.d5;
+    byte d6 = this.d6;
+    byte d7 = this.d7;
+    int offset = this.offset;
+    long h = this.h;
+    while (start < end) {
+      final byte b = data[start++];
+      switch (offset) {
+        case 0: d0 = b; break;
+        case 1: d1 = b; break;
+        case 2: d2 = b; break;
+        case 3: d3 = b; break;
+        case 4: d4 = b; break;
+        case 5: d5 = b; break;
+        case 6: d6 = b; break;
+        case 7: d7 = b; break;
+      }
+      if (++offset == 8) {
+        long k = (d0 & 0xffL)
+              | ((d1 & 0xffL) << 8)
+              | ((d2 & 0xffL) << 16)
+              | ((d3 & 0xffL) << 24)
+              | ((d4 & 0xffL) << 32)
+              | ((d5 & 0xffL) << 40)
+              | ((d6 & 0xffL) << 48)
+              | ((d7 & 0xffL) << 56);
+        k *= c1;
+        k = Long.rotateLeft(k, 31);
+        k *= c2;
+        h ^= k;
+        h = Long.rotateLeft(h, 27);
+        h = h * 5 + 0x52dce729L;
+        offset = 0;
+      }
+    }
+    this.h = h;
+    this.offset = offset;
+    this.totalLength += (end - start) + offset; // bytes consumed so far
+    switch (offset & 7) {
+      case 7: this.d6 = d6;
+      case 6: this.d5 = d5;
+      case 5: this.d4 = d4;
+      case 4: this.d3 = d3;
+      case 3: this.d2 = d2;
+      case 2: this.d1 = d1;
+      case 1: this.d0 = d0;
+    }
+    return this;
+  }
+
+  public long finish() {
+    long k = 0L;
+    switch (offset) {
+      case 7: k ^= (d6 & 0xffL) << 48;
+      case 6: k ^= (d5 & 0xffL) << 40;
+      case 5: k ^= (d4 & 0xffL) << 32;
+      case 4: k ^= (d3 & 0xffL) << 24;
+      case 3: k ^= (d2 & 0xffL) << 16;
+      case 2: k ^= (d1 & 0xffL) << 8;
+      case 1: k ^= (d0 & 0xffL);
+        k *= c1;
+        k = Long.rotateLeft(k, 31);
+        k *= c2;
+        h ^= k;
+    }
+    h ^= totalLength;
+    // fmix64
+    h ^= (h >>> 33);
+    h *= 0xff51afd7ed558ccdL;
+    h ^= (h >>> 33);
+    h *= 0xc4ceb9fe1a85ec53L;
+    h ^= (h >>> 33);
+    return h;
+  }
+
+  /** Reduce the 64-bit hash to 32-bit by XOR'ing the high and low halves. */
+  public static int toInt32(long hash) {
+    return Long.hashCode(hash);
+  }
+
+  /** Reduce the 64-bit hash to 16-bit by XOR'ing all 16-bit halves. */
+  public static short toInt16(long hash) {
+    int h32 = toInt32(hash);
+    return (short) (h32 ^ (h32 >>> 16));
+  }
+
+  /** Reduce the 64-bit hash to 8-bit by XOR'ing all 8-bit halves. */
+  public static byte toInt8(long hash) {
+    int h16 = toInt16(hash) & 0xffff;
+    return (byte) (h16 ^ (h16 >>> 8));
+  }
+}
 ```
 
-## End
+---
+
+## Changes
+The following changes are introduces into version 2 of this specification, compared to version 1:
+
+- Added a specification for how to calculate _logical bytes_ of any _**unit**_, in a way that the same _**unit**_ generates the same _logical bytes_.
+  - This is needed to find similar _**units**_ in the storage via hash.
+  - It is important to logically compare _**units**_.
+  - It as well allows to compare _**units**_ without identifiers to those being already in the storage. It only requires a secondary compare hash, that limits the hash to significant members, which is simply done by removing the values that should not be part of the hash, then calculate the _logical bytes_, hash them and compare the hash and _logical bytes_.
+  - Therefore, the _logical bytes_ is a real unique identifier of _**units**_.
+- Introduction of `kind` and `member`, which do now allow us short term to really implemented much better data compaction, and simplifies the encoder implementation
+- The dictionaries have been renamed into `books`.
+  - This is as well strongly linked to the _logical bytes_, without them, it would be rather as useless as the dictionary, which effectively only stored strings.
+  - So, books now really store deep structures and allow deduplication of whole objects in a standardized simplified way!
+- Improved the way some values are encoded
+  - So, add `uint56` and `uint24`, which are useful as they allocate a fixed space, which again simplifies encoders.
+- Added the `Tuple` structure, which is a special wrapper for maps, which is used to exchange data between services and storages.
+  - This replaces the really weird previous definition of features.
+- Added documentation about the mostly implicit value `undefined`, made it explicit, and improved documentation about `undefined` and `null` 
 
 [Logical Bytes]: #logical-bytes
 [logical bytes]: #logical-bytes
@@ -1314,6 +1343,10 @@ public final class JbonAnnotation extends JbonStructure implements ITuple {
 [Annotation]: #annotation
 [annotation]: #annotation
 [annotations]: #annotation
+[Const]: #const
+[const]: #const
+[Constants]: #const
+[constants]: #const
 [CBOR]: https://www.rfc-editor.org/rfc/rfc8949
 [JSON]: https://www.rfc-editor.org/rfc/rfc8259
 [XML]: https://www.w3.org/TR/xml/
@@ -1331,6 +1364,14 @@ public final class JbonAnnotation extends JbonStructure implements ITuple {
 [ICU4J]: https://mvnrepository.com/artifact/com.ibm.icu/icu4j
 [IANA media types]: https://www.iana.org/assignments/media-types/media-types.xhtml
 [data URL scheme]: https://www.rfc-editor.org/rfc/rfc2397
+[data URL]: https://www.rfc-editor.org/rfc/rfc2397
 [data-url]: https://www.rfc-editor.org/rfc/rfc2397
+[MIME-Type]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types
+[MIME Type]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types
+[MIME type]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types
+[MIME-type]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types
+[mime type]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types
+[mime-type]: https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types
 [HERE]: https://www.here.com/
+[MurMur3]: https://en.wikipedia.org/wiki/MurmurHash
 [murmur3]: https://en.wikipedia.org/wiki/MurmurHash
