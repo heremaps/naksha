@@ -366,7 +366,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     private fun resolveTagNamesArrayOperation(jsonbOperator: String, tagNames: List<String>) {
         val tagKeysArray = tagNames.toTypedArray()
         val tagKeysPlaceholder = placeholderForArg(tagKeysArray, PgType.STRING_ARRAY)
-        where.append("$tagsAsJsonb $jsonbOperator $tagKeysPlaceholder")
+        where.append("$tagsAsJsonb ?$jsonbOperator $tagKeysPlaceholder")
     }
 
     private fun resolveSingleTagQuery(tagQuery: TagQuery) {
