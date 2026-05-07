@@ -14,6 +14,3 @@ kotlin {
         nodejs()
     }
 }
-
-setOverallCoverage(0.0) // only increasing allowed!
-
