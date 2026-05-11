@@ -1,72 +1,156 @@
 # The Naksha Data Model
+
+## Introduction
 The Naksha Data Model _(**NDM**)_ is made to exchange data in the form of [GeoJSON] features between different applications, components, services, and storages. The data model is designed to support efficient storage, retrieval, and query of objects. It's optimized to exchange the data serialized into [JSON], [GeoJSON], [protobuf], and [JBON]. [JBON] is a special binary encoding, highly compact, mostly immutable, and that does not require parsing to read the data, developed specifically for the Naksha data model.
 
 The data model supports operations to manage the data lifecycle, including creation, update, and deletion. It supports in maintaining a history of changes. The data model is also designed to support efficient querying of the data, including queries for specific versions and queries for the latest version _(HEAD)_.
 
 The data model is an abstraction layer that allows to decouple the physical storage from the logical structure of the data. This allows for flexibility in the choice of storage technology and allows for future changes to the storage technology without affecting the logical structure of the data.
 
+### Literals
+The JSON map and array implementations are optimized for low memory consumption. All keys in the JSON map are interned to guarantee that the same key is not in memory multiple times. This is done by wrapping them into a `Literal`. This is already done by the parser. This feature can be used by the application as well via `Literal.get` calls. The JSON parser itself will intern all keys and values to reduce memory consumption. Beware that interning is only guaranteed for strings, all other data types have just a possibility to be interned, but it is not guaranteed.
+
+There are three literal:
+
+```java
+// byte[]
+//   JVM header = 16 byte
+//   int length = 4 byte
+//   ... data
+//   = 20 byte + n byte data
+
+// String
+//   JVM header = 16 byte
+//   byte[] value = 28+ byte (8 byte + 20 byte + n byte character data)
+//   byte coder = 1 byte
+//   int hash = 4 byte
+//   boolean hashIsZero = 1 byte
+//   = 50 byte+ byte
+
+// WeakReference, same applies for Long, Double 
+//   JVM header = 16 byte
+//   referent/value = 8 byte
+//   = 24 byte
+
+public final class Literal implements CharSequence, Comparable<CharSequence> {
+  public static @NotNull Double get(float value) { /* ... */ }
+  public static @NotNull Double get(double value) { /* ... */ }
+  public static @NotNull Double get(@NotNull Double value) { /* ... */ }
+  public static @NotNull Long get(byte value) { /* ... */ }
+  public static @NotNull Long get(short value) { /* ... */ }
+  public static @NotNull Long get(int value) { /* ... */ }
+  public static @NotNull Long get(long value) { /* ... */ }
+  public static @NotNull Long get(@NotNull Long value) { /* ... */ }
+  public static @NotNull Literal get(@NotNull CharSequence value) { /* ... */ }
+  public static @Nullable Literal tryGet(@Nullable CharSequence value) { /* ... */ }
+  Literal(@NotNull String value) { /* ... */ }
+
+  // JVM Header: 16 byte
+  public final @NotNull String value; // 8 byte, 50+ byte = 58+ byte
+  public final long murmurHash; // 8 byte
+  public final @NotNull WeakReference<Literal> weakRef; // 8 byte, 24 byte = 32 byte
+} // = 114 byte+ byte
+```
+
+Therefore, a string literal adds ~64 byte to the memory consumption of a `String`, which uses 50 byte _(plus characters)_. That means, deduplication is only worth the effeort when there are least three usages. Especially for keys there are potentially many thousands of usages. Next to just the memory consumption, two literals can be compared using the `==` operator, which is much faster than the `equals` method.
+
+For the long and double values, only certain specific values are being cached. There is no need for weak references, so we just keep a cache table of a certain size and deduplicate what we can. For example really often used values like `1.0` or `0.0`. Longs are already caches by the JVM, when `Long.valueOf` is used, but this only works for values between `-128` and `127`, so we extend this range with a dynamic cache.
+
+The `Literal` is mostly used internally within `JsonMap` for keys. However, it can be used by applications as well to speed up access in maps.
+
+### Error Handling
+All methods can throw an `LibDataError`, which is a `RuntimeException`. Applications are free to catch this exception or to ignore it and leave the error handling to the caller.
+
 ## Data Types
 To allow interoperability between different storages, applications, modules, and services, the data model supports a set of pre-defined supported data types:
 
-| Java                 | Index | Type-Emum _(Name)_  | Javascript      | Description                                                                                                                         |
-|----------------------|-------|---------------------|-----------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| `Undefined`          |       | `UNDEFINED`         | `undefined`     | The undefined type, a singleton in Java.                                                                                            |
-| `null`               |       | `NULL`              | `null`          | A boolean.                                                                                                                          |
-| `boolean`            | yes   | `BOOL`              | `Boolean`       | A boolean.                                                                                                                          |
-| `byte`               | yes   | `BYTE`              | `number`        | A 8-bit integer.                                                                                                                    |
-| `short`              | yes   | `SHORT`             | `number`        | A 16-bit integer.                                                                                                                   |
-| `int`                | yes   | `INT`               | `number`        | A 32-bit integer.                                                                                                                   |
-| `long`               | yes   | `LONG`              | `BigInt`        | A 64-bit integer.                                                                                                                   |
-| `float`              | yes   | `FLOAT`             | `number`        | A 32-bit floating point number.                                                                                                     |
-| `double`             | yes   | `DOUBLE`            | `number`        | A 64-bit floating point number.                                                                                                     |
-| `byte[]`             | yes   | `BYTEA`             | `Int8Array`     | A byte-array.                                                                                                                       |
-| `short[]`            |       | `SHORTA`            | `Int16Array`    | A 16-bit integer array.                                                                                                             |
-| `int[]`              |       | `INTA`              | `Int32Array`    | A 32-bit integer array.                                                                                                             |
-| `long[]`             |       | `LONGA`             | `BigInt64Array` | A 64-bit integer array.                                                                                                             |
-| `float[]`            |       | `FLOATA`            | `Float32Array`  | A 32-bit floating point number array.                                                                                               |
-| `double[]`           |       | `DOUBLEA`           | `Float64Array`  | A 64-bit floating point number array.                                                                                               |
-| `String`             | yes   | `STRING`            | `String`        | A text of [UNICODE] code-points.                                                                                                    |
-| `Geometry`           |       |                     |                 | `org.locationtech.jts.geom.Geometry` - Interface for all geometries, [GeoJSON] compatible.                                          |
-| `GeometryCollection` |       | `GEO_COLLECTION`    |                 | `org.locationtech.jts.geom.GeometryCollection`                                                                                      |
-| `Point`              | yes   | `POINT`             |                 | `org.locationtech.jts.geom.Point`                                                                                                   |
-| `MultiPoint`         | yes   | `MULTI_POINT`       |                 | `org.locationtech.jts.geom.MultiPoint`                                                                                              |
-| `LineString`         | yes   | `LINE_STRING`       |                 | `org.locationtech.jts.geom.LineString`                                                                                              |
-| `MultiLineString`    | yes   | `MULTI_LINE_STRING` |                 | `org.locationtech.jts.geom.MultiLineString`                                                                                         |
-| `Polygon`            | yes   | `POLYGON`           |                 | `org.locationtech.jts.geom.Polygon`                                                                                                 |
-| `MultiPolygon`       | yes   | `MULTI_POLYGON`     |                 | `org.locationtech.jts.geom.MultiPolygon`                                                                                            |
-| `JsonObject`         |       |                     |                 | The base class for all [JSON] data types that allow proxy linking.                                                                  |
-| `JsonArray`          |       | `ARRAY`             |                 | A list of values, extends [JsonObject].                                                                                             |
-| `JsonMap`            |       | `MAP`               |                 | A set of key-value pairs in insertion order, extends [JsonObject].                                                                  |
-|                      |       |                     |                 |                                                                                                                                     |
-| `JsonProxy`          |       |                     |                 | Abstract base class for all proxies that can be linked to a [JsonObject] to extend the object with custom functions.                |
-| `JsonMapProxy`       |       |                     |                 | A [JsonProxy] that can be linked to a [JsonMap] to extend the map with custom functions.                                            |
-| `JsonArrayProxy`     |       |                     |                 | A [JsonProxy] that can be linked to a [JsonList] to extend the list with custom functions.                                          |
-| `JsonTags`           | _yes_ |                     |                 | A [JsonProxy] for a set of "flat" key-value pairs, linked to [JsonMap] or [JsonList]. The values must be [indexable].               |
-| `JsonFeature`        |       |                     |                 | A [JsonProxy] representing a mutable [GeoJSON] feature linked to a [JsonMap].                                                       |
-| `JsonBytes`          |       |                     |                 | A wrapper for `byte[]`, `short[]`, `int[]`, `long[]`, `float[]`, or `double[]`, granting low level access, implementing [NdmBytes]. |
-|                      |       |                     |                 |                                                                                                                                     |
-| `NdmBytes`           | _yes_ |                     |                 | An interface for low-level access to primitive arrays _(`byte[]`, `short[]`, `int[]`, `long[]`, `float[]`, or `double[]`)_.         |
-| `NdmTupleId`         |       |                     |                 | The immutable im-memory representation of a unique identifier of a single [tuple]; wraps a [string].                                |
-| `NdmTupleNumber`     |       |                     |                 | The immutable im-memory representation of a unique identifier of a single [tuple]; wraps [NdmBytes].                                |
-| `NdmVersion`         |       |                     |                 | The im-memory representation of a [version] within a [database]; wraps a [Tuple].                                                   |
-| `NdmDatabase`        |       |                     |                 | The im-memory representation of a [database].                                                                                       |
-| `NdmMap`             |       |                     |                 | The im-memory representation of a [catalog] within a [database].                                                                    |
-| `NdmCollection`      |       |                     |                 | The im-memory representation of a [collection] within a [catalog].                                                                  |
-| `NdmFeature`         |       |                     |                 | The im-memory representation of a [record] within a [collection].                                                                   |
-| `NdmTuple`           |       |                     |                 | The im-memory representation of a [tuple] within a [record].                                                                        |
-| `NdmBook`            |       |                     |                 | The im-memory representation of a [book].                                                                                           |
-| `NdmKind`            |       |                     |                 | The im-memory representation of a [kind].                                                                                           |
-| `NdmMember`          |       |                     |                 | The im-memory representation of a [member].                                                                                         |
-|                      |       |                     |                 |                                                                                                                                     |
-| `JsonEnum`           |       |                     |                 | A special enumeration implementation that essentially is always encoded as string or number.                                        |
-| `JsonVersion`        |       |                     |                 | The mutable [version] representation as [JsonProxy] linked to a [JsonMap].                                                          |
-| `JsonDatabase`       |       |                     |                 | The mutable [database] as [JsonProxy] linked to a [JsonMap].                                                                        |
-| `JsonCatalog`        |       |                     |                 | The mutable [catalog] as [JsonProxy] linked to a [JsonMap].                                                                         |
-| `JsonCollection`     |       |                     |                 | The mutable [collection] as [JsonProxy] linked to a [JsonMap].                                                                      |
-| `JsonTuple`          |       |                     |                 | The mutable [tuple] as [JsonProxy] linked to a [JsonMap].                                                                           |
-| `JsonBook`           |       |                     |                 | The mutable [book] as [JsonProxy] linked to a [JsonMap].                                                                            |
-| `JsonKind`           |       |                     |                 | The mutable [kind] as [JsonProxy] linked to a [JsonMap].                                                                            |
-| `JsonMember`         |       |                     |                 | The mutable [member] as [JsonProxy] linked to a [JsonMap].                                                                          |
+| Java                 | Idx | Type-Emum _(Name)_  | Javascript           | Description                                                                                                                |
+|----------------------|-----|---------------------|----------------------|----------------------------------------------------------------------------------------------------------------------------|
+| `Undefined`          |     | `UNDEFINED`         | `undefined`          | The undefined type, a singleton in Java.                                                                                   |
+| `null`               |     | `NULL`              | `null`               | A boolean.                                                                                                                 |
+| `boolean`            | yes | `BOOL`              | `Boolean`            | A boolean.                                                                                                                 |
+| `byte`               | yes | `BYTE`              | `number`             | A 8-bit integer.                                                                                                           |
+| `short`              | yes | `SHORT`             | `number`             | A 16-bit integer.                                                                                                          |
+| `int`                | yes | `INT`               | `number`             | A 32-bit integer.                                                                                                          |
+| `long`               | yes | `LONG`              | `BigInt`             | A 64-bit integer.                                                                                                          |
+| `float`              | yes | `FLOAT`             | `number`             | A 32-bit floating point number.                                                                                            |
+| `double`             | yes | `DOUBLE`            | `number`             | A 64-bit floating point number.                                                                                            |
+| `byte[]`             | yes | `BYTEA`             | `Int8Array`          | A byte-array.                                                                                                              |
+| `short[]`            |     | `SHORTA`            | `Int16Array`         | A 16-bit integer array.                                                                                                    |
+| `int[]`              |     | `INTA`              | `Int32Array`         | A 32-bit integer array.                                                                                                    |
+| `long[]`             |     | `LONGA`             | `BigInt64Array`      | A 64-bit integer array.                                                                                                    |
+| `float[]`            |     | `FLOATA`            | `Float32Array`       | A 32-bit floating point number array.                                                                                      |
+| `double[]`           |     | `DOUBLEA`           | `Float64Array`       | A 64-bit floating point number array.                                                                                      |
+| `String`             | yes | `STRING`            | `String`             | A text of [UNICODE] code-points.                                                                                           |
+| `Geometry`           |     |                     | `Geometry`           | `org.locationtech.jts.geom.Geometry` - Interface for all geometries, [GeoJSON] compatible.                                 |
+| `GeometryCollection` |     | `GEO_COLLECTION`    | `GeometryCollection` | `org.locationtech.jts.geom.GeometryCollection`                                                                             |
+| `Point`              | yes | `POINT`             | `Point`              | `org.locationtech.jts.geom.Point`                                                                                          |
+| `MultiPoint`         | yes | `MULTI_POINT`       | `MultiPoint`         | `org.locationtech.jts.geom.MultiPoint`                                                                                     |
+| `LineString`         | yes | `LINE_STRING`       | `LineString`         | `org.locationtech.jts.geom.LineString`                                                                                     |
+| `MultiLineString`    | yes | `MULTI_LINE_STRING` | `MultiLineString`    | `org.locationtech.jts.geom.MultiLineString`                                                                                |
+| `Polygon`            | yes | `POLYGON`           | `Polygon`            | `org.locationtech.jts.geom.Polygon`                                                                                        |
+| `MultiPolygon`       | yes | `MULTI_POLYGON`     | `MultiPolygon`       | `org.locationtech.jts.geom.MultiPolygon`                                                                                   |
+|                      |     |                     |                      |                                                                                                                            |
+|                      |     |                     |                      | JSON                                                                                                                       |
+|                      |     |                     |                      |                                                                                                                            |
+| `JsonObject`         |     |                     |                      | The base class for all [JSON] data types that allow proxy linking.                                                         |
+| `JsonArray`          |     | `ARRAY`             |                      | A list of values, extends [JsonObject], implements mutable `IArray`.                                                       |
+| `JsonMap`            |     | `MAP`               |                      | A set of key-value pairs in insertion order, extends [JsonObject], implements mutable `IMap`.                              |
+|                      |     |                     |                      |                                                                                                                            |
+| `Proxy`              |     |                     |                      | Abstract base class for all proxies that can be linked to a [JsonObject] to extend the object with custom functions.       |
+| `MapProxy`           |     |                     |                      | A [Proxy] that can be linked to any `IMap` to extend the map with custom functions.                                        |
+| `ArrayProxy`         |     |                     |                      | A [Proxy] that can be linked to any `IArray` to extend the list with custom functions.                                     |
+| `Option`             |     |                     |                      | A special enumeration implementation that essentially is always encoded as string or long.                                 |
+|                      |     |                     |                      |                                                                                                                            |
+| `JsonTupleNumber`    |     |                     |                      | Wraps a string as `ITupleNumber`, cached inside of arrays and maps.                                                        |
+| `JsonVersion`        |     |                     |                      | The mutable variant of an `Version` tuple, as [Proxy] linked to an `IMap`.                                                 |
+| `JsonDatabase`       |     |                     |                      | The mutable variant of an `Database` tuple, as [Proxy] linked to an `IMap`.                                                |
+| `JsonCatalog`        |     |                     |                      | The mutable variant of an `Catalog` tuple, as [Proxy] linked to an `IMap`.                                                 |
+| `JsonCollection`     |     |                     |                      | The mutable variant of an `Collection` tuple, as [Proxy] linked to an `IMap`.                                              |
+| `JsonFeature`        |     |                     |                      | The mutable variant of an `Feature` tuple, as [Proxy] linked to an `IMap`.                                                 |
+| `JsonTags`           |     |                     |                      | A [Proxy] to manage a list of tags as "flat" key-value pairs, linked to an `IArray`.                                       |
+|                      |     |                     |                      |                                                                                                                            |
+|                      |     |                     |                      | DATA                                                                                                                       |
+|                      |     |                     |                      |                                                                                                                            |
+| `IObject`            |     |                     |                      | An interface to access general JSON like object that supports proxies.                                                     |
+| `IArray`             |     |                     |                      | An interface to access general JSON like arrays, implements by `JsonArray` and `JbonArray`.                                |
+| `IMap`               |     |                     |                      | An interface to access general JSON like maps, implements by `JsonMap` and `JbonMap`.                                      |
+| `ITupleNumber`       |     |                     |                      | An interface to access a tuple-number.                                                                                     |
+|                      |     |                     |                      |                                                                                                                            |
+| `Bytes`              |     |                     |                      | A static singleton for low-level access to primitive arrays _(`byte[]`, `short[]`, ...)_.                                  |
+| `TupleId`            |     |                     |                      | The immutable im-memory representation of a unique identifier.                                                             |
+| `TupleNumber`        |     |                     |                      | The immutable im-memory representation of a unique identifier.                                                             |
+| `Version`            |     |                     |                      | The immutable im-memory representation of a [version].                                                                     |
+| `VersionProxy`       |     |                     |                      | A [Proxy] for either a `JsonMap` or a `JbonMap`, providing access to a [version] _feature_.                                |
+| `Database`           |     |                     |                      | The immutable im-memory representation of a [database].                                                                    |
+| `DatabaseProxy`      |     |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [database] _feature_.                                                 |
+| `Catalog`            |     |                     |                      | The immutable im-memory representation of a [catalog] within a [database].                                                 |
+| `CatalogTuple`       |     |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [catalog] _feature_.                                                  |
+| `Collection`         |     |                     |                      | The immutable im-memory representation of a [collection] within a [catalog].                                               |
+| `CollectionProxy`    |     |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [collection] _feature_.                                               |
+| `Feature`            |     |                     |                      | The immutable im-memory representation of a [feature] within a [collection].                                               |
+| `Tuple`              |     |                     |                      | A wraper around a `JbonTuple` that encodes an arbitrary [feature].                                                         |
+|                      |     |                     |                      |                                                                                                                            |
+|                      |     |                     |                      | JBON                                                                                                                       |
+|                      |     |                     |                      |                                                                                                                            |
+| `Jbon`               |     |                     |                      | A wrapper above a bunch of bytes that encode a [JBON].                                                                     |
+| `JbonEncoder`        |     |                     |                      | A tool to build a [JBON].                                                                                                  |
+| `JbonBinary`         |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] binary.                                                 |
+| `JbonArray`          |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] array, implementing read-only `IArray`.                 |
+| `JbonMap`            |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] map, implementing read-only `IMap`.                     |
+| `JbonKind`           |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] kind.                                                   |
+| `JbonMember`         |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] member.                                                 |
+| `JbonTupleNumber`    |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] tuple-number.                                           |
+| `JbonTuple`          |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] tuple, implementing read-only `IMap` for the _feature_. |
+| `JbonBook`           |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] book.                                                   |
+| `JbonAnnotation`     |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] annotation.                                             |
+|                      |     |                     |                      |                                                                                                                            |
+|                      |     |                     |                      | STORAGE                                                                                                                    |
+|                      |     |                     |                      |                                                                                                                            |
+| `TupleStorage`       |     |                     |                      |                                                                                                                            |
+| `Storage`            |     |                     |                      |                                                                                                                            |
+| `ReadSession`        |     |                     |                      |                                                                                                                            |
+| `FullSession`        |     |                     |                      |                                                                                                                            |
 
 All data must be represented using these data types to ensure interoperability between different components, storages, and services.
 
@@ -87,13 +171,13 @@ All strings must be interned and encoded in [NFC] form. In memory strings are ke
 
 The data model differentiates mainly between shared immutable binary data, encoded in [JBON], and mutable thread-local data that is represented as [JSON] heap objects. The immutable binary data is used for caching, cross component access, or fast transportation between services, and for very fast lookups _(without the need to decode the [JBON] into [JSON] heap objects)_.
 
-## Proxies
-Having to work with unstructured data is extremely error-prone. Therefore, accessing your own data using `lib-data` supports proxies. A proxy is a data-model that can be added to arbitrary data at runtime. The following example shows a proxy for a simple data model, where a [GeoJSON] feature has a `name` and `age` in the `properties`:
+### Proxies
+Having to work with unstructured data is extremely error-prone, even while the most flexible thing possible. Therefore, `lib-data` supports proxies. A proxy is a data-model that can be added to arbitrary data at runtime _(this allows runtime schema detection)_. The following example shows a proxy for a simple data model, where a [GeoJSON] feature has a `name` and `age` in the `properties`:
 
 ```java
 package naksha.data;
 
-public class Example extends JsonMapProxy {
+public class Example extends MapProxy {
   // This constructor is used to create a new Example instance.
   public Example() {
     super(new JsonMap());
@@ -102,133 +186,43 @@ public class Example extends JsonMapProxy {
     setAge(18);
   }
   // This constructor is called by the "proxy" method to link a proxy to an existing JsonMap, for example when deserializing from JSON.
-  public Example(@NotNull JsonMap map) {
+  public Example(@NotNull IMap map) {
     super(map);
     // We can update internal caches and more, when this happens.
     // It is guaranteed to happen only ones in the lifetime of every object, proxies are never unlinked or relinked!
   }
-  private static final String NAME_KEY = Data.intern("name");
-  private static final String AGE_KEY = Data.intern("age");
-  public boolean hasName() { return this.map.containsKey(NAME_KEY); }
-  public @Nullable String getName() { return this.map.getString(NAME_KEY); }
-  public @Nullable String setName(@Nullable String name) { return this.map.setString(NAME_KEY, name); }
-  public @Nullable String removeName() { return this.map.removeString(NAME_KEY); }
-  public boolean hasAge() { return this.map.containsKey(AGE_KEY); }
-  public @Nullable Integer getAge() { return this.map.getInt(AGE_KEY); }
-  public @Nullable Integer setAge(@Nullable Integer age) { return this.map.setInt(AGE_KEY, name); }
-  public @Nullable Integer removeAge() { return this.map.removeInt(AGE_KEY); }
+  public static final String NAME_KEY = Data.intern("name");
+  public boolean hasName() { return map.containsKey(NAME_KEY); }
+  public @Nullable String getName() { return map.getString(NAME_KEY); }
+  public @Nullable String setName(@Nullable String name) { return map.setString(NAME_KEY, name); }
+  public @Nullable String removeName() { return map.removeString(NAME_KEY); }
+
+  public static final String AGE_KEY = Data.intern("age");
+  public boolean hasAge() { return map.containsKey(AGE_KEY); }
+  public int getAge() { return map.asInt(map.getLong(AGE_KEY), 0); }
+  public int setAge(int age) { return map.asInt(map.setLong(AGE_KEY, age), 0); }
+  public int removeAge() { return map.asInt(map.removeLong(AGE_KEY), 0); }
 }
 public class ExampleUsage {
-  public static void demo(@NotNull JsonFeature feature) {
+  public static void demo(@NotNull JsonMap feature) {
      JsonMap properties = feature.getMap(Const.PROPERTIES);
      assert properties != null;
+     // Request a proxy for the properties, this will link the schema to the data.
      final Example example = properties.proxy(Example.class);
-     // Proxies are cached, so the same proxy instance is returned for the same JsonMap.
+     // Proxies are cached, so requesting the same proxy again, returns the same instance.
      assert example == properties.proxy(Example.class);
+     // Now we can use the proxy to access the data in a type-safe way.
      String name = example.getName();
-     Integer age = example.getAge();
+     int age = example.getAge();
      // Do something with name and age ...
   }
 }
 ```
 
-## Database
-The `Database` represents a unique database, that can be stored at different places. However, only one of the places should be the primary storage, so every storage should know if it is a replication or main storage. Each database has one internal [catalog] named `naksha~admin`. This is a virtual [catalog] that is used to access the management data. This `naksha~admin` [catalog] contains by definition the following [collections]:
+Beware that proxies are not thread-safe them self, the same way the `JsonMap` is not thread-safe. Therefore, only one thread should access the same proxy instance at the same time.
 
-- Meta _(`naksha~meta`)_: A collection that stores internal metadata, for example the [record] of the database configuration itself _(i.e. if this is a replica)_.
-- Catalogs _(`naksha~catalogs`)_: A collection that stores all the [records] of all [catalogs].
-- Versions _(`naksha~versions`)_: A collection that stores all the [records] of all [versions], so basically a transaction history.
-- Books _(`naksha~books`)_: A collection that stores `global` [books].
-
-The admin [catalog] may contain more [collections], but these are the only mandatory ones.
-
-```java
-package naksha.data;
-
-public class Database {
-  Database(long number) { this.number = number; }
-  /** The unique number of the database. */
-  public final long number;
-  /** The weak reference to this database. */
-  public @NotNull WeakReference<Database> weakRef();
-  /** The admin-catalog of the database. */
-  public @NotNull AdminCatalog adminCatalog(); // "naksha~admin": 0
-  /** The catalog with the given catalog-number. */
-  public @NotNull DataCatalog catalog(int catalogNumber); // 1+
-}
-public class AdminCatalog extends DataCatalog { // "naksha~admin": 0
-  AdminCatalog(@NotNull Database db) { super(db, 0); }
-  public @NotNull DataCollection meta(); // "naksha~meta": 0
-  public @NotNull DataCollection catalogs(); // "naksha~catalogs": 1
-  public @NotNull DataCollection versions(); // "naksha~versions": 2
-  public @NotNull DataCollection books(); // "naksha~books": 3
-}
-```
-
-Only a [storage] can create a database.
-
-## Catalog
-A catalog is sub-set of data within each [database]. The catalog represents for example a map, region, or some other organizational unit. Each catalog contains [collections], a deeper sub-set of data organization. The catalog itself is as well a [record] that is tracked in the admin-catalog of the database.
-
-Within every catalog there is one internal [collection] named `naksha~collections`. This is a special [collection] that is used to store the [records] of all [collections] of the [catalog]. It is used for administration.
-
-```java
-package naksha.data;
-public class DataCatalog {
-  DataCatalog(@NotNull Database db, int number) { this.db = db; this.number = number; }
-  /** The database to which the catalog belongs. */
-  public final @NotNull Database db;
-  /** The unique number of the catalog. */
-  public final int number;
-  /** The weak reference to this catalog. */
-  public final @NotNull WeakReference<DataCatalog> weakRef = new WeakReference<>(this);
-  /** The collection storing the collection records of all collections of this catalog, excluding the collections collection itself. */
-  public @NotNull DataCollection collections(); // "naksha~collections": 0
-  /** The collection with the given collection-number. */
-  public @NotNull DataCollection collection(int collectionNumber); // 1+
-}
-```
-
-## Collection
-A collection is a set of [records]. All of them share the same structure. A collection is logically split into _HEAD_ and _HISTORY_. The collection does maintain indices to efficiently query the [records]. The _HEAD_ section of the collection contains only the latest [tuple] of each [record], while the _HISTORY_ section contains all older [tuples] _(states)_.
-
-Beware that replicas do not need to have the same structure as the source, so replication is done logical. The objects stored will always have the same hash, and the same content, but they can be encoded differently, with different indices.
-
-```java
-package naksha.data;
-public final class DataCollection {
-  DataCollection(@NotNull DataCatalog catalog, int number) { this.catalog = catalog; this.number = number; }
-  /** The catalog to which the collection belongs. */
-  public final @NotNull DataCatalog catalog;
-  /** The unique number of the collection. */
-  public final int number;
-  /** The weak reference to this collection. */
-  public final @NotNull WeakReference<DataCollection> weakRef = new WeakReference<>(this);
-  /** The record with the given record-number. */
-  public @NotNull DataRecord record(int recordNumber);
-}
-```
-
-## Record
-A database record represents a unique object with a unique record-number, optionally with a unique identifier. It is a container for the chain of mostly immutable temporal states called [tuple]. Each state is identified by its version, with links to the previous and next version. The record shares the database-number, catalog-number, collection-number, record-number, identifier, and created-at timestamp with all its [tuple].
-
-There is a logical representation of a record within the data model, and in memory, but the same is not necessarily true for within the [storage]. Storages can extrapolate the logical record from the stored [tuple].
-
-```java
-package naksha.data;
-public class DataRecord {
-  DataRecord(@NotNull DataCollection collection, long number) { this.collection = collection; this.number = number; }
-  /** The collection to which the record belongs. */
-  public final @NotNull DataCollection collection;
-  /** The unique number of the record. */
-  public final long number;
-  /** The weak reference to this record. */
-  public final @NotNull WeakReference<DataRecord> weakRef = new WeakReference<>(this);
-}
-```
-
-## ITupleAddress
-A pure marker interface implemented by [tuple-id] and [tuple-number]. It is mainly used to call `resolve` on a storage, which converts the [tuple-id] into a [tuple-number].
+## Identifiers
+The identifiers of the major administration objects, like [database], [catalog], [collection], ..., are restricted. They must be non-empty strings, with a maximum length of 30 byte, only using characters `0-9`, `a-z`, `-`, or `:` or `_`. The dollar (`$`) and tilde (`~`) characters are reserved for internal usage, and no uppercase letters are allowed.
 
 ## ITuple
 This is a marker interface implemented by [tuple] and [tuple-number]. It is used to indicate a [tuple] or a _reference_ to a [tuple].
@@ -236,52 +230,165 @@ This is a marker interface implemented by [tuple] and [tuple-number]. It is used
 ```java
 package naksha.data;
 public interface ITuple {
-  /** The database number of the tuple. */
+  /** The database-number of the tuple. */
   long databaseNumber();
-  /** The catalog number of the tuple. */
+  /** The catalog-number of the tuple. */
   int catalogNumber();
-  /** The collection number of the tuple. */
+  /** The collection-number of the tuple. */
   int collectionNumber();
-  /** The record number of the tuple. */
-  long recordNumber();
+  /** The feature-number of the tuple. */
+  long featureNumber();
   /** The version of the tuple. */
   long version();
+}
+```
+
+## Tuple
+A tuple is a mostly immutable state of a [feature] _(mostly immutable, because the `next_version` can be modified)_. A tuple has the following logical structure:
+
+```java
+public class Tuple implements ITuple {
+  public Tuple(@NotNull JbonTuple jbon) { this.jbon = jbon; }
+  /** The JBON that represents the tuple. */
+  public final @NotNull JbonTuple jbon;
+  /** The weak reference to this tuple for caching. */
+  public final @NotNull WeakReference<Tuple> weakRef = new WeakReference<>(this);
+  /** The soft reference to this tuple for caching. */
+  public final @NotNull SoftReference<Tuple> softRef = new SoftReference<>(this);
+}
+```
+
+Note that the `Tuple` just wraps the `JbonTuple` to allow in-memory caching and extending the class with specific access methods.
+
+## Database
+The `Database` represents a unique database, that can be stored at different places. However, only one of the places should be the primary storage, so every storage should know if it is a replication or main storage. Each database has one internal [catalog] named `naksha~admin`. This is a virtual [catalog] that is used to access the management data. This `naksha~admin` [catalog] contains by definition the following [collections]:
+
+- Meta _(`naksha~meta`)_: A collection that stores internal metadata, for example the [feature] of the database configuration itself _(i.e. if this is a replica)_.
+- Catalogs _(`naksha~catalogs`)_: A collection that stores all the [features] of all [catalogs].
+- Versions _(`naksha~versions`)_: A collection that stores all the [features] of all [versions], so basically a transaction history.
+- Books _(`naksha~books`)_: A collection that stores `global` [books].
+
+The admin [catalog] may contain more [collections], but these are the mandatory ones.
+
+Creating a new [catalog] feature in the `naksha~catalogs` collection creates a new catalog in the database.   is done by creating a new [feature] in the `naksha~catalogs` collection of the admin [catalog]. Deleting a [catalog] is done by deleting the corresponding [feature] from the `naksha~catalogs` collection. The same applies for [versions].
+
+### Java
+
+```java
+package naksha.data;
+public class Database {
+  Database(@NotNull String id, long number) { this.number = number; }
+  /** The unique identifier of the database. */
+  public final @NotNull String id;
+  /** The unique number of the database. */
+  public final long number;
+  /** The weak reference to this database. */
+  public @NotNull WeakReference<Database> weakRef();
+  /** The admin-catalog of the database. */
+  public @NotNull AdminCatalog adminCatalog(); // "naksha~admin": 0
+  /** The catalog with the given catalog-number. */
+  public @NotNull Catalog catalog(int catalogNumber); // 1+
+}
+public class DatabaseTuple {
+  DatabaseTuple(@NotNull JbonTuple tuple) { this.tuple = tuple; }
+  /** The underlying JbonTuple of this database tuple. */
+  public final @NotNull JbonTuple tuple;
+  /** The database represented by this tuple. */
+  public @NotNull Database database();
+}
+```
+
+## Catalog
+The catalog is sub-set of data within a [database]. The catalog represents for example a map, region, or some other higher organizational unit. Each catalog contains [collections] of [feature]. The catalog itself is as well a [feature] that is tracked in the admin-catalog of the database.
+
+Within every catalog there is one mandatory [collection] named `naksha~collections`. This is a special [collection] that is used to store the [features] of the [collections] of the [catalog] them self. It is used for administration. Creating a new feature in this collection creates a new [collection] in the [catalog], and deleting a feature from this collection deletes the corresponding [collection] from the [catalog].
+
+```java
+package naksha.data;
+public class Catalog {
+  Catalog(@NotNull Database db, int number) { this.db = db; this.number = number; }
+  /** The database to which the catalog belongs. */
+  public final @NotNull Database db;
+  /** The unique number of the catalog. */
+  public final int number;
+  /** The weak reference to this catalog. */
+  public final @NotNull WeakReference<Catalog> weakRef = new WeakReference<>(this);
+  /** The collection storing the collection records of all collections of this catalog, excluding the collections collection itself. */
+  public @NotNull Collection collections(); // "naksha~collections": 0
+  /** The collection with the given collection-number. */
+  public @NotNull Collection collection(int collectionNumber); // 1+
+}
+```
+
+## Collection
+A collection is a set of [features]. All of them share the same structure. A collection is logically split into _HEAD_ and _HISTORY_. The collection does maintain indices to efficiently query the [features]. The _HEAD_ section of the collection contains only the latest [tuple] of each [feature], while the _HISTORY_ section contains all older [tuples] _(states)_.
+
+Beware that replicas do not need to have the same structure as the source, so replication is done logical. The objects stored will always have the same hash, and the same content, but they can be encoded differently, with different indices.
+
+```java
+package naksha.data;
+public final class Collection {
+  Collection(@NotNull Catalog catalog, int number) { this.catalog = catalog; this.number = number; }
+  /** The catalog to which the collection belongs. */
+  public final @NotNull Catalog catalog;
+  /** The unique number of the collection. */
+  public final int number;
+  /** The weak reference to this collection. */
+  public final @NotNull WeakReference<Collection> weakRef = new WeakReference<>(this);
+  /** The feature with the given feature-number. */
+  public @NotNull Feature feature(long featureNumber);
+}
+```
+
+## Feature
+A feature represents a unique object with a unique feature-number, optionally with a unique identifier. It has a chain of mostly immutable states, called [tuple]. Each state is identified by its version, with links to the previous and next version.
+
+```java
+package naksha.data;
+public class Feature {
+  Feature(@NotNull Collection collection, long number) { this.collection = collection; this.number = number; }
+  /** The collection to which the record belongs. */
+  public final @NotNull Collection collection;
+  /** The unique number of the feature. */
+  public final long number;
+  /** The weak reference to this feature. */
+  public final @NotNull WeakReference<Feature> weakRef = new WeakReference<>(this);
 }
 ```
 
 ## TupleId
 A tuple-id is a unique reference to a [tuple] using string identifiers. The tuple-id is as well called Global Unique Identifier _(`GUID`)_, it is a string that uniquely identifies a [tuple] within the whole data model. The structure of the tuple-id is like following:
 
-```urn:here:naksha:guid:{database-id}:{catalog-id}:{collection-id}:{record-id}[:{version}]```
+```urn:here:naksha:guid:{database-id}:{catalog-id}:{collection-id}:{feature-id}[:{version}]```
 
-Where the `version` is optional, if the `version` is omitted, it refers to the _HEAD_ state of the record _(`0`)_.
+Where the `version` is optional, if the `version` is omitted, it refers to the [HEAD] state of the feature.
 
 ```java
-public final class TupleId implements ITuple {
+public final class TupleId {
   public TupleId(@NotNull String urn) {
     // TODO: Implement parsing of the urn, and validation of the format, throw DataError in case of error.
   }
-  public TupleId(@NotNull DataCollection collection, @NotNull String recordId) {
-    this(collection, recordId, 0L);
+  public TupleId(@NotNull DataCollection collection, @NotNull String featureId) {
+    this(collection, featureId, 0L);
   }
-  public TupleId(@NotNull DataCollection collection, @NotNull String recordId, long version) {
+  public TupleId(@NotNull DataCollection collection, @NotNull String featureId, long version) {
     // TODO: Implement.
   }
-  public TupleId(@NotNull String databaseId, @NotNull String catalogId, @NotNull String collectionId, @NotNull String recordId, long version) {
+  public TupleId(@NotNull String databaseId, @NotNull String catalogId, @NotNull String collectionId, @NotNull String featureId, long version) {
     this.databaseId = databaseId;
     this.catalogId = catalogId;
     this.collectionId = collectionId;
-    this.recordId = recordId;
+    this.featureId = featureId;
     this.version = version;
   }
-  /** The database id of the tuple. */
+  /** The database-id of the tuple. */
   public final @NotNull String databaseId;
-  /** The catalog id of the tuple. */
+  /** The catalog-id of the tuple. */
   public final @NotNull String catalogId;
-  /** The collection id of the tuple. */
+  /** The collection-id of the tuple. */
   public final @NotNull String collectionId;
-  /** The record id of the tuple. */
-  public final @NotNull String recordId;
+  /** The feature-id of the tuple. */
+  public final @NotNull String featureId;
   /** The version of the tuple. */
   public final long version;
 }
@@ -292,19 +399,19 @@ Converting a tuple-id into a [tuple-number] requires to invoke the `resolve` met
 ## TupleNumber
 All [tuple] are addressed using a unique tuple-number which is 256-bit _(32 byte)_ long in full representation. The structure is like following:
 
-| Bits         | Size | Value               | Description                                                                                                                       |
-|--------------|------|---------------------|-----------------------------------------------------------------------------------------------------------------------------------|
-| `0`..`63`    | 64   | `database_number`   | The unique identifier of the database.                                                                                            |
-| `64`..`95`   | 32   | `catalog_number`    | The identifier of the [catalog] within the [database] in which the [tuple] can be found.                                          |
-| `96`..`127`  | 32   | `collection_number` | The identifier of the [collection] within the [catalog] of the [database] in which the [tuple] can be found.                      |
-| `128`..`191` | 64   | `record_number`     | The identifier of the [record] within the [collection], within the [catalog] of the [database] in which the [tuple] can be found. |
-| `192`..`203` | 12   | _reserved_          | Always `0`.                                                                                                                       |
-| `204`..`255` | 52   | `version`           | The version of the [tuple] _(`{year:12}{month:4}{day:5}{sequence:29}{action:2}`)_.                                                |
+| Bits         | Size | Value               | Description                                                                                                                        |
+|--------------|------|---------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `0`..`63`    | 64   | `database_number`   | The unique identifier of the database.                                                                                             |
+| `64`..`95`   | 32   | `catalog_number`    | The identifier of the [catalog] within the [database] in which the [tuple] can be found.                                           |
+| `96`..`127`  | 32   | `collection_number` | The identifier of the [collection] within the [catalog] of the [database] in which the [tuple] can be found.                       |
+| `128`..`191` | 64   | `feature_number`    | The identifier of the [feature] within the [collection], within the [catalog] of the [database] in which the [tuple] can be found. |
+| `192`..`203` | 12   | _reserved_          | Always `0`.                                                                                                                        |
+| `204`..`255` | 52   | `version`           | The version of the [tuple].                                                                                                        |
 
-The [tuple-number] can be compressed. When all [tuple] are stored in the same [database], the `database_number` can be shared, the same is true for the [catalog], [collection], and [record]. Therefore, the smallest encoding uses only 52-bit per [tuple].
+The [tuple-number] can be compressed. When all [tuple] are stored in the same [database], the `database_number` can be shared, the same is true for the [catalog], [collection], and [feature]. Therefore, the smallest encoding uses only 52-bit per [tuple].
 
 ## Action
-The `action` is encoded into the `version`. Whenever a new version is generated, the lowest two bit are set _(`11b`)_ to signal that this is a pure `VERSION`. For every [record] being part of that version, the lower two bit are then adjusted to the actual `action` applied to the [record], which can be `CREATE` _(00b)_, `UPDATE` _(01b)_, or `DELETE` _(10b)_.
+The `action` is encoded in the lower two bit of the `version`. Whenever a new version is generated, the lowest two bit are set _(`11b`)_ to signal that this is a pure `VERSION`. For every [feature] being part of that version, the lower two bit are then adjusted to the actual `action` applied to the [feature], which can be `CREATE` _(00b)_, `UPDATE` _(01b)_, or `DELETE` _(10b)_.
 
 ```java
 public enum Action {
@@ -326,11 +433,9 @@ public enum Action {
 }
 ```
 
-The reason that the action is encoded into the version is, that it does not harm, and it improves certain queries, plus it is important in views.
+The reason that the action is encoded into the version is that it does not harm, but improves certain queries drastically, plus it optimizes views. In views data is layered on top of each other. When a storage is queried for data, it will return only the [tuple-number]'s of the found [tuple]. Now, when being in a view, the data of a [tuple] does not need to be loaded, when the top most layer contains the record in a `DELETED` state; except deleted data should be shown as well. Therefore, having the `action` in the [tuple-number] does save data loading in views.
 
-In views data is layered on top of each other. When a storage is queried for data, it will return only the [tuple-number]'s of the found [tuple]. Now, when being in a view, the data of a [tuple] does not need to be loaded, when the top most layer contains the record in a `DELETED` state; except deleted data should be shown as well. Therefore, having the `action` in the [tuple-number] does save data loading in views.
-
-When data is queried, having the `action` in the `version` is helpful to not return [records] being deleted. This only requires an additional filter to `version`, so we can directly remove all tuple-numbers that are in deleted state.
+When data is queried, having the `action` in the `version` is helpful to not return [features] being deleted. This only requires an additional filter to `version`, so we can directly remove all tuple-numbers that are in deleted state.
 
 ```java
 public final class TupleNumber implements ITuple, ITupleAddress, Comparable<TupleNumber> {
@@ -409,48 +514,25 @@ This results in a new `record_number` that has the same lowest 16-bit as the ori
 
 Storages may change the algorithm to turn an `id` into a record-number. However, they **must not** change the lowest 16-bit of the record-number. So, the only thing that **must** be guaranteed is that the same `id` is always stored in the same partition it would be in, when using [MurMur3] hash above the identifier. Therefore, the lower 16-bit of the record-number must be the same as the ones generated by hashing the `id` using 64-bit [MurMur3] hash. This means, all storage implementation must use [MurMur3] to calculate the hash above the identifier. The exact way that collisions are handled is storage dependend.
 
-## Tuple
-A tuple is a mostly immutable state of a [record] _(mostly immutable, because the `next_version` can be modified)_. A tuple has the following logical structure:
-
-```java
-public class Tuple implements ITuple, ITupleAddress {
-  public Tuple(@NotNull DataRecord rec, @NotNull JbonTuple jbon) {
-    super(bytes);
-    this.rec = rec;
-    this.jbon = jbon;
-  }
-  /** The record to which the tuple belongs. */
-  public final @NotNull DataRecord rec;
-  /** The JBON that represents the tuple. */
-  public final @NotNull JbonTuple jbon;
-  /** The weak reference to this tuple. */
-  public final @NotNull WeakReference<Tuple> weakRef = new WeakReference<>(this);
-  /** The soft reference to this tuple. */
-  public final @NotNull SoftReference<Tuple> softRef = new SoftReference<>(this);
-}
-```
-
-Note that the `Tuple` just links the `JbonTuple` with the in-memory cache. The in-memory cache will hold a certain threshold of soft-references, plus as much as possible weak-references to tuple.
-
 ## Versioning
-A version is a 52-bit unsigned integer in the following formats:
+A version is a 56-bit unsigned integer in the following formats:
 
 ```
                                                                    action
-              {               automatic version                       }{}
- 00000000-0000yyyy-yyyyyyyy-mmmmdddd--dsssssss-ssssssss-ssssssss-ssssssaa
+          {r}{                automatic version                       }{}
+ 00000000-000yyyyy-yyyyyyym-mmmddddd--ssssssss-ssssssss-ssssssss-ssssssaa
 
                                                                    action
-                       {         manual version                       }{}
- 00000000-00000000-0000vvvv-vvvvvvvv--vvvvvvvv-vvvvvvvv-vvvvvvvv-vvvvvvaa
+          { reserved }{          manual version                       }{}
+ 00000000-00000000-000vvvvv-vvvvvvvv--vvvvvvvv-vvvvvvvv-vvvvvvvv-vvvvvvaa
 
-              {                      HEAD                               }
- 00000000-00001111-11111111-11111111--11111111-11111111-11111111-11111111
+          {r}{                       HEAD                               }
+ 00000000-00011111-11111111-11111111--11111111-11111111-11111111-11111111
 
-              {                      MAX                                }
- 00000000-00001111-11111111-11111111--11111111-11111111-11111111-11111011
+          {r}{                       MAX                                }
+ 00000000-00011111-11111111-11111111--11111111-11111111-11111111-11111011
 
- {                                   NULL                               }
+          {                          NULL                               }
  00000000-00000000-00000000-00000000--00000000-00000000-00000000-00000000
 ```
 
@@ -458,11 +540,16 @@ Therefore, the version has the following general parts:
 - `yyyy-yyyyyyyy`: The year of the version, encoded in 12 bit, a value between `16` and `4095`.
 - `mmmm`: The month of the version, encoded in 4 bit, a value between `1` _(January)_ and `12` _(December)_.
 - `ddddd`: The day of the version, encoded in 5 bit, a value between `1` and `31`.
-- `sssss-ssssssss-ssssssss-ssssssss`: The sequence of the version, encoded in 29 bit, so it can represent up to `536,870,912` versions per day, starting from `0`.
-- `vv-vvvvvvvv-vvvvvvvv-vvvvvvvv-vvvvvvvv-vvvvvvvv`: The version number, encoded in 42 bit, so it can represent up to `17,592,186,044,416` versions, starting from `0`.
+- `ssssss-ssssssss-ssssssss-ssssssss`: The sequence of the version, encoded in 30 bit, so it can represent up to `1,073,741,824` versions per day, starting from `0`.
+- `vvv-vvvvvvvv-vvvvvvvv-vvvvvvvv-vvvvvvvv-vvvvvvvv`: The version number, encoded in 43 bit, so it can represent up to `8,796,093,022,208` versions, starting from `0`.
 - `aa`: The action of the version, encoded in 2 bit.
 
 The lowest two bit of all valid versions are always used to encode the `action`, therefore all version must have them always set to `11b` for pure versions. This is done by left shifting the version by 2, and ORing the version with 3.
+
+The proof that this is compatible with JavaScript:
+
+- `((4095n << 41n)+(12n << 37n)+(31n << 32n)+4294967295n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _true_
+- `(4096n << 41n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _false_
 
 ### Automatic Version
 The **default** versioning, when nothing else is selected, is _automatic version_. This is a database local version that uses a sequential counter in the database, being reset every day to 0. The sequence is shift left by 2, then encoded in the lower 31 bit of the version. This means every day provides up to `536,870,912` versions _(~5326 versions per second)_. The upper 33 bit of the version are used to store the year, month, and day. This is important to organize _HISTORY_.
@@ -471,10 +558,10 @@ The **default** versioning, when nothing else is selected, is _automatic version
 For manual versioning the client needs to come up with some own useful bit pattern, related to history partitioning _(see `shift`ing)_. They are generally simple positive numbers between `1` and `17,592,186,044,416` _(excluding)_.
 
 ### HEAD Version
-The version `4,503,599,627,370,495` _(2^52-1)_ represents the _HEAD_ version, which is the latest version available in the storage. This is a special version that is only used for `next_version` to signal that a [tuple] is in the _HEAD_ state. Clients can use the value to signal, that they want data in the latest available version.
+The version `9,007,199,254,740,991` _(2^53-1)_ represents the _HEAD_ version, which is the latest version available in the storage. This is a special version that is only used for `next_version` to signal that a [tuple] is in the _HEAD_ state. Clients can use the value to signal, that they want data in the latest available version. In _JavaScript_ this maches `Number.MAX_SAFE_INTEGER`.
 
 ### MAX Version
-The version `4,503,599,627,370,491` _(2^52-5)_ represents the maximal valid version.
+The version `9,007,199,254,740,987` _(2^53-5)_ represents the maximal valid version. In _JavaScript_ this matches `Number.MAX_SAFE_INTEGER-4`.
 
 ### NULL Version
 The version `0` is a special version, being used as replacement for the `null`. This can have a bunch of implications, when `null` has a special meaning.
@@ -482,31 +569,31 @@ The version `0` is a special version, being used as replacement for the `null`. 
 ### Querying a version
 We use [SQL] to demonstrate the general concept how versions are searched for.
 
-Before any search can start, the query-version needs to be fixed to a valid value. The maximum version that can be queried is `4,503,599,627,370,491` _(2^52-5)_ and the minimal version that can be queried for is `3`. Therefore, any client request for a version need to be clipped into the range of `3` till `4,503,599,627,370,492` _(excluding)_. Be aware that the lowest two bit of the version must always set to `11b`, therefore the version provided to search for must be logically ORed with `3`. So, we do:
+Before any search can start, the query-version needs to be fixed to a valid `VERSION` value. The maximum version that can be queried is `9,007,199,254,740,987` _(2^53-5)_ and the minimal version that can be queried for is `3`. Therefore, any client request for a version need to be clipped into the range of `3` till `9,007,199,254,740,988` _(excluding)_. Be aware that the lowest two bit of the version must always set to `11b`, therefore the version provided to search for must be logically ORed with `3`. So, we do:
 
 ```javascript
-var query_version = Math.max(3, Math.min(requested_version, 4503599627370491)) | 3;
+var query_version = Math.max(3, Math.min(requested_version, 9007199254740987)) | 3;
 ```
 
 To search for [tuple] in the _HEAD_ state a general query looks like:
 
 ```sql
-SELECT * FROM table WHERE version <= 4503599627370491 AND next_version > 4503599627370491 AND {other-condition};
+SELECT * FROM table WHERE version <= 9007199254740987 AND next_version > 9007199254740987 AND {other-condition};
 ```
 
-This will return the _HEAD_ [tuple] of the searched [record]. This can be generalized into the common query form:
+This will return the _HEAD_ [tuple] of the searched [feature]. This can be generalized into the common query form:
 
 ```sql
 SELECT * FROM table WHERE version <= $version AND next_version > $version AND {other-condition};
 ```
 
-**Note**: It requires a clipped version between `3` and `4,503,599,627,370,492` _(excluding)_, and the version must be logically ORed with `3` to ensure that the lowest two bit are set.
+**Note**: It requires a clipped version between `3` and `9,007,199,254,740,988` _(excluding)_, and the version must be logically ORed with `3` to ensure that the lowest two bit are set.
 
-This general query will only return one [tuple] with the latest state of the [record] that belongs to this [version]. Beware, the returned [tuple] can be in a lower version, this query just ensured that the [tuple] that belongs logically to the queried [version] of the [database] is returned. Let's review this, assume we have the following data:
+This general query will only return one [tuple] with the latest state of the [feature] that belongs to this [version]. Beware, the returned [tuple] can be in a lower version, this query just ensured that the [tuple] that belongs logically to the queried [version] of the [database] is returned. Let's review this, assume we have the following data:
 
 | db-row | id    | version              | next_version     | prev_version | action         |
 |--------|-------|----------------------|------------------|--------------|----------------|
-| 1      | `foo` | 590 (`10010011_10b`) | 4503599627370495 | 77           | DELETE (`10b`) |
+| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | 77           | DELETE (`10b`) |
 | 2      | `foo` | 77 (`10011_01b`)     | 590              | 33           | UPDATE (`01b`) |
 | 3      | `foo` | 33 (`1000_01b`)      | 77               | 13           | UPDATE (`01b`) |
 | 4      | `foo` | 13 (`11_01b`)        | 33               | 4            | UPDATE (`01b`) |
@@ -531,7 +618,7 @@ SELECT * FROM table WHERE version <= 503 AND next_version > 503 AND (version & 3
 This will be a pure index-only scan, and it will return row `#2`, because the lowest two bit of the version are `1` _(update)_ and therefore less than `2` _(delete)_. However, when we change the query to _HEAD_:
 
 ```sql
-SELECT * FROM table WHERE version <= 4503599627370491 AND next_version > 4503599627370491 AND (version & 3) < 2 AND id = 'foo';
+SELECT * FROM table WHERE version <= 9007199254740987 AND next_version > 9007199254740987 AND (version & 3) < 2 AND id = 'foo';
 ```
 
 We can see, that the version condition will select row `#1`, but the added secondary version filter will exclude the row, because the lowest two bit of the version is `2` _(deleted)_. Therefore, this query does not return any row, because in that version the record is deleted.
@@ -541,7 +628,7 @@ Assuming the same data state as above:
 
 | db-row | id    | version              | next_version     | prev_version | action         |
 |--------|-------|----------------------|------------------|--------------|----------------|
-| 1      | `foo` | 590 (`10010011_10b`) | 4503599627370495 | 77           | DELETE (`10b`) |
+| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | 77           | DELETE (`10b`) |
 | 2      | `foo` | 77 (`10011_01b`)     | 590              | 33           | UPDATE (`01b`) |
 | 3      | `foo` | 33 (`1000_01b`)      | 77               | 13           | UPDATE (`01b`) |
 | 4      | `foo` | 13 (`11_01b`)        | 33               | 4            | UPDATE (`01b`) |
@@ -570,7 +657,7 @@ SELECT * FROM table WHERE version > 503 AND id = 'foo';
 
 | db-row | id    | version              | next_version     | prev_version | action         |
 |--------|-------|----------------------|------------------|--------------|----------------|
-| 1      | `foo` | 590 (`10010011_10b`) | 4503599627370495 | 77           | DELETE (`10b`) |
+| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | 77           | DELETE (`10b`) |
 
 Query for all versions in the range of version `15` and `503`:
 
@@ -586,9 +673,9 @@ SELECT * FROM table WHERE version <= 503 AND version > 15 AND id = 'foo
 We additionally can filter on the `action`.
 
 ### Version Records
-The version itself is as well a [record] under [database] management. The `record_number` of the version [record] matches the `version` that it tracks. The `id` of the version [record] is just the stringified representation of the version, so it is the decimal representation of the version number. The version can be modified by clients to store transactional information with it. For example, clients may add annotations into the version, for example comments provided by users. The version features can be queried to check which versions do exist in the storage.
+The version itself is as well a [feature] under [database] management. The `record_number` of the version [feature] matches the `version` that it tracks. The `id` of the version [feature] is just the stringified representation of the version, so it is the decimal representation of the version number. The version can be modified by clients to store transactional information with it. For example, clients may add annotations into the version, for example comments provided by users. The version features can be queried to check which versions do exist in the storage.
 
-Additionally, the version [records] can be used by clients to track the changes in the [database], as each version [record] stores the [catalogs], [collections], and [records] that were modified. It is as well important for caches to understand which [catalogs], [collections], and [records] have changes since the last cache update. It allows caches and replicas to only download the changes they do not yet know about.
+Additionally, the version [features] can be used by clients to track the changes in the [database], as each version [feature] stores the [catalogs], [collections], and [features] that were modified. It is as well important for caches to understand which [catalogs], [collections], and [features] have changes since the last cache update. It allows caches and replicas to only download the changes they do not yet know about.
 
 The version collection can be extended by custom fields, if necessary, the same way normal [collections] can be extended.
 
@@ -607,34 +694,151 @@ The Naksha data mode defines two reference formats:
 - The Tuple-Number _(`TN`)_ as string: `urn:naksha:tn:{storageNumber}:{catalogNumber}:{collectionNumber}:{recordNumber}[:{version}]`
 - The Global Unique Identifier _(`GUID`)_ as string: `urn:naksha:guid:{storageId}:{catalogId}:{collectionId}:{recordId}[:{version}]`
 
-For both variants the _HEAD_ state can be referred by simply omitting the `version`, setting it to `0` or _HEAD_ _(`4,503,599,627,370,495`)_.
+For both variants the _HEAD_ state can be referred by simply omitting the `version`, setting it to `0` or [HEAD] _(`9,007,199,254,740,991`)_.
 
-The storage must internally only operate upon the `TN` variant. Clients are allowed to use the `GUID` variant, because they may create new [tuples] using identifiers only, not yet knowing the [Tuple-Number] or version, when creating the [records], and when adding references to these new [records]. So, the job of the storage is to convert all references given as `GUID` into correct full qualified `TN` variants. It therefore has to search the record and replace all `GUID` references with `TN` references.
+The storage must internally only operate upon the `TN` variant. Clients are allowed to use the `GUID` variant, because they may create new [tuples] using identifiers only, not yet knowing the [Tuple-Number] or version, when creating the [features], and when adding references to these new [features]. So, the job of the storage is to convert all references given as `GUID` into correct full qualified `TN` variants. It therefore has to search the record and replace all `GUID` references with `TN` references.
 
 In a nutshell, [tuple] read from a storage should never contain references in `GUID` format, they should always have them stored in `TN` format.
 
 ## Partitioning
-To store big data efficiently, it needs to be partitioned. Within the Naksha data model there are two major logical sections defined: _HEAD_ and _HISTORY_. They store all the [tuple] of the [records]. They are logical concepts that each storage implementation can use to optimize data storage.
+To store big data efficiently, it needs to be partitioned. Within the Naksha data model there are two major logical sections defined: _HEAD_ and _HISTORY_. They store all the [tuple] of the [features]. They are logical concepts that each storage implementation can use to optimize data storage.
 
 The _HISTORY_ section is partitioned logically first by `next_version`, to allow efficient dropping of historic data. We call this **historic partitioning**, and it is always applied if the _HISTORY_ is enabled for a [collection]. It only happens within the _HISTORY_ section. If _HISTORY_ is disabled for a collection, no **historic partitioning** is done, and `next_version` actually does not matter anymore.
 
 Next to the **historic partitioning** of the _HISTORY_ section, there is a general **distribution partitioning**, which we will clarify first.
 
-The _HEAD_ section and each historic partition are optionally distribution partitioned, if enabled. This is an optional feature that by default is disabled, but can be enabled to store a huge number of [records] and [tuple] in a [collection]. When enabled, we distribute [records] across distribution partitions. The number of distribution partitions can be configured when creating a collection, and defaults to `1` _(so no distribution partitioning)_. To assign [records], and all their [tuple], to the same distribution partition, the lower 16-bit of the record-number are used as **distribution key**. This means, all [tuple] of a [record] are stored in the same distribution partition. So, when loading a [tuple] of a [record] in a specific [version], only a single partition has to be accessed. When searching for data, all partitions can be queried in parallel, improving search performance. This layout therefore speeds up searching for data, while making access to known data faster. Loading the _HEAD_ state _([tuple])_ technically means to query a single partition and is therefore rather very fast. Loading multiple tuple can be done in parallel from all partitions they are in. The distribution is simply done by dividing the unsigned lower 16-bit value of the record-number by the amount of distribution partitions _(`n`)_, using the division rest as partition index. For example, assume the distribution key of a [record] is `1234`, so the unsigned lower 16-bit of the record-number is decimal `1234`, and we have `8` distribution partitions configured in the [collection], then dividing `1234` by `8` gives us `154` with a rest of `2`. Therefore, the partition-number to search in is `2`. This guarantees that we always have a partition index between `0` and `n`-1.
+The _HEAD_ section and each historic partition are optionally distribution partitioned, if enabled. This is an optional feature that by default is disabled, but can be enabled to store a huge number of [features] and [tuple] in a [collection]. When enabled, we distribute [features] across distribution partitions. The number of distribution partitions can be configured when creating a collection, and defaults to `1` _(so no distribution partitioning)_. To assign [features], and all their [tuple], to the same distribution partition, the lower 16-bit of the record-number are used as **distribution key**. This means, all [tuple] of a [feature] are stored in the same distribution partition. So, when loading a [tuple] of a [feature] in a specific [version], only a single partition has to be accessed. When searching for data, all partitions can be queried in parallel, improving search performance. This layout therefore speeds up searching for data, while making access to known data faster. Loading the _HEAD_ state _([tuple])_ technically means to query a single partition and is therefore rather very fast. Loading multiple tuple can be done in parallel from all partitions they are in. The distribution is simply done by dividing the unsigned lower 16-bit value of the record-number by the amount of distribution partitions _(`n`)_, using the division rest as partition index. For example, assume the distribution key of a [feature] is `1234`, so the unsigned lower 16-bit of the record-number is decimal `1234`, and we have `8` distribution partitions configured in the [collection], then dividing `1234` by `8` gives us `154` with a rest of `2`. Therefore, the partition-number to search in is `2`. This guarantees that we always have a partition index between `0` and `n`-1.
 
-The **historic partitioning** is done by the `next_version` of each [tuple]. All [tuple] with `next_version` being `4,503,599,627,370,495`, are located in the _HEAD_ section, and are only distribution partitioned. When a new [tuple] of a [record] is created, the current [tuple] in the _HEAD_ section becomes historic data. It now needs to be moved to history, and `next_version` must be set to the version of the new [tuple]. The [tuple] should be relocated into the _HISTORY_, which is where **historic partitioning** happens. It will stay in _HISTORY_ immutable until being purged. The purging is normally done by deletion of complete historic partitions, which is the reason for this design. Beware that formally the immutability of a [Tuple] slightly broken here, because the `next_version` is modified while moving the [Tuple] into history. However, this is the only exception, and a not significant one for the caches. Actually `next_version` is no reliable field, applications should ignore it. The value can be calculated using the back-references from `prev_version`, starting at _HEAD_.
+The **historic partitioning** is done by the `next_version` of each [tuple]. All [tuple] with `next_version` being `9,007,199,254,740,991`, are located in the _HEAD_ section, and are only distribution partitioned. When a new [tuple] of a [feature] is created, the current [tuple] in the _HEAD_ section becomes historic data. It now needs to be moved to history, and `next_version` must be set to the version of the new [tuple]. The [tuple] should be relocated into the _HISTORY_, which is where **historic partitioning** happens. It will stay in _HISTORY_ immutable until being purged. The purging is normally done by deletion of complete historic partitions, which is the reason for this design. Beware that formally the immutability of a [Tuple] slightly broken here, because the `next_version` is modified while moving the [Tuple] into history. However, this is the only exception, and a not significant one for the caches. Actually `next_version` is no reliable field, applications should ignore it. The value can be calculated using the back-references from `prev_version`, starting at _HEAD_.
 
 Now, when deciding in which historic partition a [Tuple] should be located a **partition-key** is needed. To generate the **partition-key** the value from `next_version` is used. For this, the `next_version` is bitwise-ANDed with `0x000F_FFFF_FFFF_FFFF` _(effectively clearing the top 12-bit)_. Then value is shifted right by a configured `shift` amount. The `shift` is configured when creating a [collection] and must stay constant for the whole lifetime of a [collection]. The `shift` defaults to `40`, which means we store one historic partition per year. Reducing the `shift` to `36` would result in one historic partition per month, and reducing it to `31` would result in one historic partition per day.
 
 **Note**: When manual versioning is used for a collection, it is strongly recommended to adjust the `shift` to a more useful value, because very likely `40` is not the best choice.
 
+
+## TupleStorage
+The abstract `TupleStorage` base class, extended by all [storages] and caches, representing a sink for [tuples] aka _feature_ states. Only allows to read and store tuples using [tuple-numbers].
+
+## TupleCache
+The `TupleCache` is a static in-memory cache for tuples. It holds a certain threshold of soft-references, plus as much as possible weak-references to tuple. The cache is used to speed up access to tuples, and to reduce memory consumption by allowing the garbage collector to reclaim memory when needed.
+
+### Java
+
+```java
+package naksha.data;
+public class TupleCache implements TupleStorage {
+  public static final long IN_MEMORY_LATENCY = 10L; // 10 nanoseconds, this is just an estimation, it can be adjusted based on the actual performance of the cache implementation.
+  public static final long DISK_LATENCY = 1_000_000L; // 1 millisecond, this is just an estimation, it can be adjusted based on the actual performance of the disk storage implementation.
+  public static final long NETWORK_LATENCY = 10_000_000L; // 10 milliseconds, this is just an estimation, it can be adjusted based on the actual performance of the network storage implementation.
+  private static final AtomicReference<@NotNull List<@NotNull TupleCache>> ALL = new AtomicReference(List.of(new TupleCache()));
+  public static @NotNull List<@NotNull TupleCache> all() { return ALL.get(); }
+  public static boolean compareAndSet(@NotNull List<@NotNull TupleCache> existing, @NotNull List<@NotNull TupleCache> updated) {
+    final ArrayList<@NotNull TupleCache> copy = new ArrayList<>(updated);
+    Collections.sort(copy);
+    final List<@NotNull TupleCache> immutable = List.copyOf(copy);
+    return ALL.compareAndSet(existing, immutable);
+  }
+  protected TupleCache() {}
+  /** Iterate all caches in order to return a tuple from the cache, or null if it is not in any cache. */
+  public static @Nullable Tuple get(@NotNull ITuple tupleId) { /* ... */ }
+  /** Iterate all caches in order to replace all tuple in the given array with cached versions being available. Stops ones done, optimizes for latency, requests in parallel, when needed.
+   * Returns the amount of elements that a `Tuple`, so that `tuples.size() - result` is the amount of not loaded tuple. */
+  public static int load(@NotNull List<@Nullable ITuple> tuples) { /* ... */ }
+  // The put methods invokes store at all caches, which work asynchronously, so the put method can return immediately. Errors are logged.
+  public static void put(@NotNull Tuple tuple) { /* ... */ }
+  public static void putAll(@NotNull List<@Nullable Tuple> tuples) { /* ... */ }
+}
+```
+
+## Storage
+Every storage implementation must extend the abstract `Storage` class, which extends the `TupleStorage`. The storage is responsible for managing the data in some storage, including the [databases], [catalogs], [collections], [features], [tuples], [versions], and [books]. It provides better methods to search for data in the storage, and allows data management _(if it is not read-only)_.
+
+All operations return the result of the operation, for example when creating a new [catalog], the created [catalog] is returned as [tuple]. When updating a [catalog] the updated [catalog] is returned as [tuple]. When deleting a [catalog], the deleted [catalog] is returned as [tuple]. Beware, that delete can modify the state of the feature, because the deleted state is a valid tombstone state. The `PURGE` operation moves the deletion state form the _HEAD_ section of the collection to the _HISTORY_ section, so the deleted state is not visible anymore, when reading _HEAD_.
+
+Creating the storage is out of scope of the data model, the application need to create the storage and manage its lifecycle.
+
+However, all storages must support a readonly virtual administration [database] _(`naksha~admin`)_ that contains the management data of the storage.
+
+### Java
+
+```java
+package naksha.data;
+
+public abstract class Storage extends TupleStorage {
+  // The databases them self are not versioned, they exist only in _HEAD_ state.
+  public abstract @NotNull List<@NotNull Database> listDatabases(long version);
+  public abstract @Nullable DatabaseTuple getDatabase(@NotNull String id, long version);
+  public abstract @Nullable DatabaseTuple getDatabase(@NotNull long number, long version);
+  public abstract @NotNull DatabaseTuple createDatabase(@NotNull JsonDatabase database);
+  public abstract @NotNull DatabaseTuple updateDatabase(@NotNull JsonDatabase database);
+  public abstract @NotNull DatabaseTuple deleteDatabase(@NotNull JsonDatabase database);
+
+  public abstract @NotNull List<@NotNull SessionInfo> listSessions();
+  public abstract @NotNull ReadSession readSession(@NotNull Database database, @NotNull SessionOptions options);
+  public abstract @NotNull FullSession fullSession(@NotNull Database database, @NotNull SessionOptions options);
+}
+public record SessionOptions(@Nullable String appId, @Nullable String author, boolean enableTracking) {}
+public interface SessionInfo {
+  @NotNull Storage storage();
+  @NotNull Database database();
+  @NotNull SessionOptions options();
+}
+public interface ReadSession extends AutoClosable {
+  @NotNull SessionInfo info();
+
+  // Only a storage can translate a tuple-identifier into a tuple-number.
+  @Nullable TupleNumber resolve(@NotNull TupleId tupleId);
+  @Nullable ITuple @NotNull [] resolve(@NotNull TupleId @NotNull [] tupleIds);
+
+  // Version methods
+  @NotNull Version getVersion(long version);
+  
+  // Admin methods
+  @NotNull Collection getCollections(@NotNull Database database);
+  
+  // Catalog methods
+  boolean isCatalog(@NotNull Tuple tuple);
+  @NotNull JsonCatalog toCatalogJson(@NotNull Tuple tuple);
+  @NotNull Catalog refresh(@NotNull Catalog catalog);
+  @Nullable Catalog getCatalog(@NotNull String catalogId, boolean includeDeleted);
+  @Nullable Catalog getCatalog(@NotNull int catalogNumber, boolean includeDeleted);
+  @Nullable Catalog createCatalog(@NotNull JsonCatalog catalog);
+  @Nullable Catalog updateCatalog(@NotNull JsonCatalog catalog);
+  void deleteCatalog(@NotNull JsonCatalog catalog) throws StorageError;
+
+  // Collection methods
+  @NotNull List<@NotNull Collection> listCollections(@NotNull Catalog catalog) throws StorageError;
+  boolean hasCollection(@NotNull Catalog catalog, @NotNull String collectionId) throws StorageError;
+  boolean hasCollection(@NotNull Catalog catalog, @NotNull int collectionNumber) throws StorageError;
+  @NotNull Collection refresh(@NotNull Catalog catalog) throws StorageError;
+  @Nullable Collection getCollection(@NotNull Catalog catalog, @NotNull String collectionId, boolean includeDeleted) throws StorageError;
+  @Nullable Collection getCollection(@NotNull Catalog catalog, @NotNull int collectionNumber, boolean includeDeleted) throws StorageError;
+  @Nullable Collection createCollection(@NotNull JsonCatalog catalog) throws StorageError;
+  @Nullable Collection updateCollection(@NotNull JsonCatalog catalog) throws StorageError;
+  void deleteCatalog(@NotNull JsonCatalog catalog) throws StorageError;
+  
+  // Search methods
+  @NotNull TupleNumber @NotNull [] query(@NotNull Query query, @NotNull QueryOptions options) throws StorageError;
+  
+  void close();
+}
+class Query {
+  
+}
+interface Session extends ReadSession {
+  
+  @NotNull Session commit();
+  @NotNull Session rollback();
+}
+```
+
 ## JsonFeature
 
 ## Tags
-The `tags` field is a special field that can be used to store tags for a [record]. The tags are stored as a JSON array of strings, so they can be indexed and searched for. The storage can use the tags to optimize search queries, for example by using an inverted index. The client can use the tags to store any kind of metadata that is useful for searching and indexing. For example, the client can use the tags to store the type of the record, or to store any other kind of classification.
+The `tags` field is a special field that can be used to store tags for a [feature]. The tags are stored as a JSON array of strings, so they can be indexed and searched for. The storage can use the tags to optimize search queries, for example by using an inverted index. The client can use the tags to store any kind of metadata that is useful for searching and indexing. For example, the client can use the tags to store the type of the record, or to store any other kind of classification.
 
 ## XYZ namespace
-For historic reasons this specification formally specifies the so called XYZ namespace. This is a flat map of all dedicated members of all [records] stored in the [collection]. The client may add or remove members from the XYZ namespace, except for the mandatory ones. In classic systems this map is exposed in `root.properties["@ns:com:here:xyz"]`.
+For historic reasons this specification formally specifies the so called XYZ namespace. This is a flat map of all dedicated members of all [features] stored in the [collection]. The client may add or remove members from the XYZ namespace, except for the mandatory ones. In classic systems this map is exposed in `root.properties["@ns:com:here:xyz"]`.
 
 It is the job of the client to copy values from somewhere into the XYZ namespace, and to move the data back. Within the [Naksha-Hub] this is done by adding a corresponding handler directly in front of the storage.
 
@@ -666,16 +870,16 @@ The pre-defined extended set of members that are defined by this specification f
 
 
 Beware that all these values are basically extracted from the object map.
-of the [tuple] of the [record]. These fields are used to store the metadata of the [record], and to store some additional information that can be used for indexing and searching. The fields are defined in the XYZ namespace, which is a flat map of all storage members. The XYZ namespace is defined as follows:
+of the [tuple] of the [feature]. These fields are used to store the metadata of the [feature], and to store some additional information that can be used for indexing and searching. The fields are defined in the XYZ namespace, which is a flat map of all storage members. The XYZ namespace is defined as follows:
 
 
 ## Origin
-The `origin` is an optional value, if enabled it stores a [reference] to the origin of a [record]. When a [record] is modified, normally the _metadata_ of the new [tuple] is not modified by the client. Therefore, the moment the new [tuple] is sent to a storage, the storage can check the [tuple-number] of the [tuple], which will refer to the state the client modified. If this state is located outside the [collection] into which the new [tuple] is stored, the storage automatically fills the `origin` field with a reference to the origin state.
+The `origin` is an optional value, if enabled it stores a [reference] to the origin of a [feature]. When a [feature] is modified, normally the _metadata_ of the new [tuple] is not modified by the client. Therefore, the moment the new [tuple] is sent to a storage, the storage can check the [tuple-number] of the [tuple], which will refer to the state the client modified. If this state is located outside the [collection] into which the new [tuple] is stored, the storage automatically fills the `origin` field with a reference to the origin state.
 
-The `origin` will stay unchanged until a _REBASE_ is done. When a _REBASE_ is done, the `origin` field is updated to the new foreign state to which the [record] is rebased.
+The `origin` will stay unchanged until a _REBASE_ is done. When a _REBASE_ is done, the `origin` field is updated to the new foreign state to which the [feature] is rebased.
 
 ## Replacement
-A replacement is i.e. when splitting a topology into two parts, the original [record] is deleted, and two new [records] are created. Or when a topology is joined, so two [records] are deleted, and a new one is created. All of this should be done in a single version _(transaction)_. This does already indicate a replacement operation. However, as technically multiple  the `replace_id` can be used to link the three [record] together, so that it is possible to find all [record] that belong to the same replacement operation. This is especially useful for tracking the history of changes, and for debugging purposes.
+A replacement is i.e. when splitting a topology into two parts, the original [feature] is deleted, and two new [features] are created. Or when a topology is joined, so two [features] are deleted, and a new one is created. All of this should be done in a single version _(transaction)_. This does already indicate a replacement operation. However, as technically multiple  the `replace_id` can be used to link the three [feature] together, so that it is possible to find all [feature] that belong to the same replacement operation. This is especially useful for tracking the history of changes, and for debugging purposes.
 
 TODO
 
@@ -695,60 +899,9 @@ This section documents the Java API for the **Naksha Data Model**.
 package naksha.data;
 ```
 
-```java
-package naksha.data;
-public class DataType {
-  private DataType() {}
-  public static final class Indexable extends DataType {
-    private Indexable() {}
-    @Override
-    public boolean isIndexable() { return true; }
-  }
-
-  /** If this data-type is indexable. */
-  public boolean isIndexable() { return false; }
-
-  public static final DataType UNDEFINED = new DataType();
-  public static final DataType NULL = new DataType();
-  public static final Indexable BOOL = new Indexable();
-  public static final Indexable BYTE = new Indexable();
-  public static final Indexable SHORT = new Indexable();
-  public static final Indexable INT = new Indexable();
-  public static final Indexable LONG = new Indexable();
-  public static final Indexable FLOAT = new Indexable();
-  public static final Indexable DOUBLE = new Indexable();
-  public static final Indexable BYTEA = new Indexable();
-  public static final DataType SHORTA = new DataType();
-  public static final DataType INTA = new DataType();
-  public static final DataType LONGA = new DataType();
-  public static final DataType FLOATA = new DataType();
-  public static final DataType DOUBLEA = new DataType();
-  public static final Indexable STRING = new Indexable();
-  public static final DataType GEO_COLLECTION = new DataType();
-  public static final Indexable POINT = new Indexable();
-  public static final Indexable MULTI_POINT = new Indexable();
-  public static final Indexable LINE_STRING = new Indexable();
-  public static final Indexable MULTI_LINE_STRING = new Indexable();
-  public static final Indexable POLYGON = new Indexable();
-  public static final Indexable MULTI_POLYGON = new Indexable();
-  public static final DataType MAP = new DataType();
-  public static final DataType ARRAY = new DataType();
-}
-```
-
-## DataError
-All methods can throw the `RuntimeException` named `DataError`. Applications are free to catch this exception or to ignore it and leave the error handling to the caller.
-
-```java
-package naksha.data;
-
-public class DataError extends RuntimeException {
-  // TODO: Document me!
-}
-```
 
 ## DataManager
-A data-manager is a needed root object. An application can just have one _(as static singleton)_ or use multiple. The data-manager is the main entry point to access the data model, it is used by [storages] and the application. It provides methods to access the [storages], [databases], [catalogs], [collections], [records], and [tuples].
+A data-manager is a needed root object. An application can just have one _(as static singleton)_ or use multiple. The data-manager is the main entry point to access the data model, it is used by [storages] and the application. It provides methods to access the [storages], [databases], [catalogs], [collections], [features], and [tuples].
 
 ```java
 package naksha.data;
@@ -838,165 +991,86 @@ public class DataManager extends DataTupleStorage{
 }
 ```
 
-## DataTupleStorage
-The base class for [storages] and caches.
-
 ```java
-package naksha.data;
+import sun.misc.Unsafe;
 
-/**
- * Abstract base class for all data storages, be it caches or full storages.
- */
-public abstract class DataTupleStorage {
-  /** Returns the identifier of the tuple storage. */
-  public abstract @NotNull String id();
+import java.lang.reflect.Field;
 
-  /** Returns the expected latency in nanoseconds when reading tuple. */
-  public long latencyInNanos();
+public final class MarkWordWriter {
+    private static final Unsafe U;
+    private static final long MARK_OFFSET = 0L; // object-relative offset of header
+    private static final boolean IS_64;
 
-  /**
-   * Read a single tuple, if it exists in the storage.
-   * @param dataNumber The tuple-number of the tuple.
-   * @return The tuple, or {@code null}, if it does not exist in the storage.
-   * @throws DataError When an error occurs while reading the tuple.
-   */
-  public abstract @Nullable DataTuple readTuple(@NotNull DataNumber dataNumber);
-  
-  /**
-   * Read a single tuple in a specific version, if it exists in the storage.
-   * @param dataNumber The tuple-number of the tuple.
-   * @param version The version to read the tuple in.
-   * @return The tuple, or {@code null}, if it does not exist in the storage.
-   * @throws DataError When an error occurs while reading the tuple.
-   */
-  public abstract @Nullable DataTuple readTuple(@NotNull DataNumber dataNumber, long version);
+    static {
+        try {
+            Field f = Unsafe.class.getDeclaredField("theUnsafe");
+            f.setAccessible(true);
+            U = (Unsafe) f.get(null);
+            IS_64 = U.arrayIndexScale(Object[].class) == 8;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
-  /**
-   * Read tuples from the storage. Actually, every entry in the given array that is a {@link TupleNumber} or {@link TupleId} is replaced with the corresponding {@link Tuple}, if it exists in the storage, otherwise it is left as is.
-   * @param tuples The tuples to be loaded.
-   * @return the amount of tuple that have been loaded successfully, so the amount of entries in the given array that have been replaced with the corresponding tuple.
-   * @throws DataError When an error occurs while reading the tuple.
-   */
-  public abstract int readTuples(@Nullable ITuple @NotNull [] tuples);
+    public static class Result {
+        public final boolean ok;
+        public final String message;
+        public final long oldMark;
+        public Result(boolean ok, String message, long oldMark) { this.ok = ok; this.message = message; this.oldMark = oldMark; }
+    }
 
-  /**
-   * Read tuples from the storage. Actually, every entry in the given array that is a {@link TupleNumber} or {@link TupleId} is replaced with the corresponding {@link Tuple}, if it exists in the storage, otherwise it is left as is. This method actually ignores the {@code version} encoded within the {@link TupleNumber} or {@link TupleId}, and instead uses the given {@code version} to read the tuple, so that the same tuple can be read in different versions.
-   * @param tuples The tuples to be loaded.
-   * @param version The version in which the tuple should be read. If the tuple does not exist in the given version, they are left as is.
-   * @return the amount of tuple that have been loaded successfully, so the amount of entries in the given array that have been replaced with the corresponding tuple.
-   * @throws DataError When an error occurs while reading the tuple.
-   */
-  public abstract int readTuples(@Nullable ITuple @NotNull [] tuples, long version);
+    // Read raw header (as long on 64-bit, zero-extend on 32-bit)
+    public static long readMark(Object o) {
+        if (IS_64) return U.getLong(o, MARK_OFFSET);
+        return Integer.toUnsignedLong(U.getInt(o, MARK_OFFSET));
+    }
 
-  /**
-   * Store a single tuple in the storage. The method returns instantly, the actual write is queued.
-   * @param tuple The {@link Tuple} to write.
-   * @param errorHandler The <i>(optional)</i> error handler that is called when an error occurs while writing the tuple.
-   * @return {@code true} if the tuple was accepted for writing, {@code false} otherwise.
-   */
-  boolean storeTuple(@NotNull Tuple tuple, @Nullable BiConsumer<@NotNull DataError, @NotNull Tuple> errorHandler);
-  
-  /**
-   * Store tuples in the storage. The method returns instantly, the actual write is queued.
-   * @param tuples The {@link Tuple}s to write.
-   * @param errorHandler The <i>(optional)</i> error handler that is called when an error occurs while writing the tuple.
-   * @throws DataError When an error occurs while writing the tuple, for example when the given array contains {@code null} values.
-   * @return {@code true} if the tuples were accepted for writing, {@code false} otherwise.
-   */
-  boolean storeTuples(@NotNull Tuple @NotNull [] tuples, @Nullable BiConsume<@NotNull DataError, @NotNull Tuple @NotNull []> errorHandler) throws DataError;
+    // Try to write a 32-bit identity hash into the mark word.
+    // Returns Result.ok==true on success; otherwise message explains why.
+    public static Result writeIdentityHash32(Object o, int desiredHash) {
+        long mark = readMark(o);
+
+        // Quick checks — layouts vary across JVM versions. These masks/values are HotSpot-ish.
+        if (!IS_64) {
+            int m = (int) mark;
+            // HotSpot 32-bit mark: lower 2-3 bits are lock bits (01 unlocked?), simple check:
+            int lockBits = m & 0x7;
+            if (lockBits != 0) return new Result(false, "Object appears locked/biased (32-bit lock bits non-zero)", mark);
+            // place hash in upper 29 bits (example); exact layout may differ — be conservative:
+            int newMark = (m & 0x7) | (desiredHash & 0x1FFFFFFF) << 3;
+            U.putInt(o, MARK_OFFSET, newMark);
+            return new Result(true, "Wrote hash (32-bit path)", Integer.toUnsignedLong(newMark));
+        } else {
+            // 64-bit mark word (HotSpot typical): low 3 bits are lock/state
+            long lockState = mark & 0x7L;
+            // Common unlocked pattern is 0x1 (unlocked) or 0x0 depending on flags; treat non-zero heavy states as lock.
+            // Biased locking uses specific bit patterns: bit 0..2==101 (5) is biased (VM-dependent).
+            if (lockState == 0x2L /* locked thin? */ || lockState == 0x4L /* heavy? */) {
+                return new Result(false, "Object appears locked (lock bits indicate lock)", mark);
+            }
+            // HotSpot uses different encodings: when unlocked and hash present, hash sits in high bits.
+            // We try to write a 32-bit hash into the upper bits while preserving low state bits.
+            // Use conservative mask: preserve low 3 bits, put hash into bits 32..63 (if available).
+            long preserved = mark & 0x7L;
+            // Check if mark currently contains a pointer/biased-thread id (heuristic)
+            boolean biased = (mark & 0x80000000L) != 0 && ((mark & 0x7L) == 0x5L || (mark & 0x7L) == 0x1L);
+            if (biased) return new Result(false, "Biased lock state detected; refusing to write", mark);
+
+            // We'll put the 32-bit hash into bits 32..63 (shifted left 32).
+            long newUpper = (Integer.toUnsignedLong(desiredHash) & 0xFFFFFFFFL) << 32;
+            long newMark = newUpper | preserved;
+
+            // CAS to avoid races: replace only if mark didn't change
+            boolean ok = U.compareAndSwapLong(o, MARK_OFFSET, mark, newMark);
+            if (!ok) return new Result(false, "CAS failed — mark changed concurrently", mark);
+            return new Result(true, "Wrote hash into upper 32 bits of mark word (best-effort)", mark);
+        }
+    }
 }
 ```
-
-Technically, every [tuple] has a [tuple-number] that allow the storage to find the tuple. Normally, only caches will support to store tuples.
-
-## DataStorage
-The storage class must be extended by all storages that want to support the Naksha data model. The storage is responsible for managing the data, including the [database], [catalog], [collection], [record], [tuple], and [books]. The storage is defined as:
-
-```java
-public abstract class DataStorage extends DataTupleStorage {
-  // Database handling
-  @NotNull List<@NotNull Database> listDatabases(long version) throws StorageError;
-  @Nullable Database getDatabase(@NotNull String databaseId, long version, boolean includeDeleted) throws StorageError;
-  @Nullable Database getDatabase(@NotNull long databaseNumber, long version, boolean includeDeleted) throws StorageError;
-  @NotNull Database createDatabase(@NotNull JsonDatabase database) throws StorageError;
-  @NotNull Database updateDatabase(@NotNull JsonDatabase database) throws StorageError;
-  void deleteDatabase(@NotNull JsonDatabase database) throws StorageError;
-
-  // Only a storage can translate a tuple-identifier into a tuple-number.
-  @Nullable TupleNumber resolve(@NotNull TupleId tupleId);
-  @Nullable TupleNumber @NotNull [] resolve(@NotNull TupleId @NotNull [] tupleId);
-  
-  @NotNull SessionInfo @NotNull listSessions() throws StorageError;
-  @NotNull ReadSession openReadSession(@NotNull Database database, @NotNull SessionOptions options) throws StorageError;
-  @NotNull Session openSession(@NotNull Database database, @NotNull SessionOptions options) throws StorageError;
-}
-record SessionOptions(
-    @Nullable String appId,
-    @Nullable String author,
-    boolean enableTracking
-) {
-}
-interface SessionInfo {
-  @NotNull Storage storage();
-  @NotNull Database database();
-  @NotNull SessionOptions options();
-}
-interface ReadSession extends SessionInfo, AutoClosable {
-  long head() throws StorageError;
-  long version() throws StorageError;
-  @NotNull ReadSession useVersion(long version) throws StorageError;
-  
-  // Version methods
-  @NotNull Version getVersion(long version) throws StorageError;
-  
-  // Catalog methods
-  boolean isCatalog(@NotNull Tuple tuple) throws StorageError;
-  @NotNull Catalog toCatalog(@NotNull Tuple tuple) throws StorageError;
-  @NotNull Catalog refresh(@NotNull Catalog catalog) throws StorageError;
-  @Nullable Catalog getCatalog(@NotNull String catalogId, boolean includeDeleted) throws StorageError;
-  @Nullable Catalog getCatalog(@NotNull int catalogNumber, boolean includeDeleted) throws StorageError;
-  @Nullable Catalog createCatalog(@NotNull JsonCatalog catalog) throws StorageError;
-  @Nullable Catalog updateCatalog(@NotNull JsonCatalog catalog) throws StorageError;
-  void deleteCatalog(@NotNull JsonCatalog catalog) throws StorageError;
-
-  // Collection methods
-  @NotNull List<@NotNull Collection> listCollections(@NotNull Catalog catalog) throws StorageError;
-  boolean hasCollection(@NotNull Catalog catalog, @NotNull String collectionId) throws StorageError;
-  boolean hasCollection(@NotNull Catalog catalog, @NotNull int collectionNumber) throws StorageError;
-  @NotNull Collection refresh(@NotNull Catalog catalog) throws StorageError;
-  @Nullable Collection getCollection(@NotNull Catalog catalog, @NotNull String collectionId, boolean includeDeleted) throws StorageError;
-  @Nullable Collection getCollection(@NotNull Catalog catalog, @NotNull int collectionNumber, boolean includeDeleted) throws StorageError;
-  @Nullable Collection createCollection(@NotNull JsonCatalog catalog) throws StorageError;
-  @Nullable Collection updateCollection(@NotNull JsonCatalog catalog) throws StorageError;
-  void deleteCatalog(@NotNull JsonCatalog catalog) throws StorageError;
-  
-  // Search methods
-  @NotNull TupleNumber @NotNull [] query(@NotNull Query query, @NotNull QueryOptions options) throws StorageError;
-  
-  void close();
-}
-class Query {
-  
-}
-interface Session extends ReadSession {
-  
-  @NotNull Session commit();
-  @NotNull Session rollback();
-}
-```
-
-Creating the storage is out of scope of the data model, the application need to create the storage and manage its lifecycle.
-
-However, all storages must support a readonly virtual administration [database] that contains the management data of the storage.
-
-Each storage has to provide an internal administration [database]. This is virtual [database] contains a [catalog] named `naksha` that is used to access the management data. This `naksha` [catalog] contains the following [collections]:
-
-- `books`: A storage for the `global` [books].
-- `databases`: A storage for the [database] objects.
-
 
 ---
-As the collections defines the structure of all contained [records], it defines as well the metadata properties above which can be searched. A collection allows to add and remove custom properties, but dependent on the implementation and current data size, different cost come by modifying the structure. Some implementations may even reject structure changes, after the collection was crated _(their will throw a `DataError` exception)_. All custom properties are nullable, when being `null` _(which is the default value for a new custom property)_, they are not indexed. So filtering on custom properties is only possible for set values, because to find those that have `null` values, a full data scan is needed.
+As the collections defines the structure of all contained [features], it defines as well the metadata properties above which can be searched. A collection allows to add and remove custom properties, but dependent on the implementation and current data size, different cost come by modifying the structure. Some implementations may even reject structure changes, after the collection was crated _(their will throw a `DataError` exception)_. All custom properties are nullable, when being `null` _(which is the default value for a new custom property)_, they are not indexed. So filtering on custom properties is only possible for set values, because to find those that have `null` values, a full data scan is needed.
 
 ## Changes
 The following changes have been made to the data model between the original draft and the current version:
@@ -1009,15 +1083,21 @@ The following changes have been made to the data model between the original draf
 
 [Indexable]: #indexable
 [indexable]: #indexable
+[Storage]: #storage
+[storage]: #storage
+[storages]: #storage
+[Database]: #database
+[database]: #database
+[databases]: #database
 [Catalog]: #catalog
 [catalog]: #catalog
 [catalogs]: #catalog
 [Collection]: #collection
 [collection]: #collection
 [collections]: #collection
-[Record]: #record
-[record]: #record
-[records]: #record
+[Feature]: #feature
+[feature]: #feature
+[features]: #feature
 [Tuple]: #tuple
 [tuple]: #tuple
 [tuples]: #tuple

@@ -10,7 +10,6 @@ The goals of **JBON** are:
 - The same object should result in the same hash and logical bytes, no matter how it is encoded.
 - Be compatible with _Java_.
 - Be compatible with _JavaScript_.
-- Be compatible with [GeoJSON].
 - Deduplicate data as much as possible to reduce the size.
 - Keep the binary as small as possible, while allow reading of the data without parsing.
 - Allow efficient caching of the data, especially on the JVM heap _(deduplicated)_.
@@ -28,7 +27,7 @@ As the format name indicates, this format is object-oriented. All **JBON** data 
 - `Binary`: A special _**unit**_ that encodes a types binary as byte-array, i.e. [TWKB].
 - `Array`: A list of _**units**_.
 - `Map`: A list of key-value pairs.
-- `Kind`: An array or map template _(a class like structure, but to a real class!)_, actually a list of [members], and some optional annotations.
+- `Kind`: An array or map template, actually a list of [members], and some optional annotations.
 - `Member`: A single [member] of a [kind], effectively a key, a default value, and some optional annotations.
 - `TupleNumber`: A special standardized addressing scheme for [Tuple], defined in the [Naksha data model].
 - `Tuple`: A special encoding of a _**unit**_ with some metadata to cooperate with the [Naksha data model].
@@ -124,6 +123,9 @@ The decoder will always read and decode the header at ones, automatically decodi
 When "enter" is executed, the current state is compacted into a `long`, then stored at the current _SP_ index, then _SP_ is incremented by one. When "leave" is executed, it will just decrease the _SP_ by one, read the `long` from stack, and restore the engine state by reparsing the **lead-in** byte.
 
 **Note**: The buffers may overlap, so the whole **JBON** can be stored in a single byte-array, each buffer is just a slice of the actual byte-array. This means, it does not matter if the **JBON** is physically encoded in a single byte-array or split into up to 5 byte-arrays.
+
+## JBON Header
+All JBON files start with the string `JBON` followed by the version as big-endian short, so `0x0002`. This is the only header of a JBON file, there is no footer or other metadata. The actual data starts immediately after the header. The header is in big-endian encoding equal to the integer `0x4A424F4E`, followed by a short being `0x0002`. The reason for this design is that this is a valid zero-terminates C string to be shown in clear text editors.
 
 ## Lead-in byte
 All _**units**_ start with a **lead-in** byte, which describes the actual type of the _**unit**_, and sometimes as well the value:
@@ -456,12 +458,12 @@ The primary [logical bytes] of the array are calculated by adding the empty **le
 ### Map
 A map is a key-value store with the **lead-in** byte being `11ss_0010`; with `ss` encoding the size of the size, as usual.
 
-| Name        | Type                     | Description                                                                                                       |
-|-------------|--------------------------|-------------------------------------------------------------------------------------------------------------------|
-| lead_in     | `byte`                   | The **lead-in** byte, `11ss_0010`.                                                                                |
-| byte_size   | `int64`                  | The total size of the structure, including the **lead-in**, in bytes.                                             |
-| kind / keys | [kind] / [array]<[unit]> | Either the [kind] of the map or a set of _**units**_, encoding the keys of the members.                           |
-| values      | [array]?<[unit]?>        | An _(optional)_ array with the values of the [members], in the same order as the keys or [members] of the [kind]. |
+| Name        | Type                          | Description                                                                                                       |
+|-------------|-------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| lead_in     | `byte`                        | The **lead-in** byte, `11ss_0010`.                                                                                |
+| byte_size   | `int64`                       | The total size of the structure, including the **lead-in**, in bytes.                                             |
+| kind / keys | [ref]<[kind]/[array]<[unit]>> | A reference either to the [kind] of the map or to a set of _**units**_ encoding the keys of the members.          |
+| values      | [array]?<[unit]?>             | An _(optional)_ array with the values of the [members], in the same order as the keys or [members] of the [kind]. |
 
 If the `byte_size` is zero _(**lead-in** is `1100_0010`)_ , this implies an empty map (`{}`).
 
@@ -484,7 +486,8 @@ A kind is a set of [members] with additional metadata like a name and annotation
 |-------------|------------------------|-----------------------------------------------------------------------|
 | lead_in     | `byte`                 | The **lead-in** byte, `11ss_0011`.                                    |
 | byte_size   | `int64`                | The total size of the structure, including the **lead-in**, in bytes. |
-| members     | [array]<[member]>      | An array of all [members] of this kind.                               |
+| keys        | [array]<[string]>      | An array of all keys of this kind.                                    |
+| values      | [array]<[unit]>        | An array of all values of this kind.                                  |
 | name        | [string]?              | The _(optional)_ name of the kind.                                    |
 | annotations | [array]?<[annotation]> | The _(optional)_ array of annotations for the kind.                   |
 
@@ -541,52 +544,52 @@ This form of encoding reduces the encoding size of multiple tuple-numbers greatl
 | lead_in           | `byte`  | The **lead-in** byte, `11ss_0101`.                                                                                                  |
 | byte_size         | `int64` | The total size of the structure, including the **lead-in**, in bytes.                                                               |
 | database_number   | `int64` | Either `null` (one byte) or the shared database number of each [tuple] in the array.                                                |
-| map_number        | `int32` | Only if `database_number` is not `null`, then either `null` (one byte) or the shared map number of each [tuple] in the array.       |
+| catalog_number    | `int32` | Only if `database_number` is not `null`, then either `null` (one byte) or the shared catalog number of each [tuple] in the array.   |
 | collection_number | `int32` | Only if `map_number` is not `null`, then either `null` (one byte) or the shared collection number of each [tuple] in the array.     |
 | feature_number    | `int64` | Only if `collection_number` is not `null`, then either `null` (one byte) or the shared feature number of each [tuple] in the array. |
 | entries           | `bytea` | The actual tuple-numbers encoded as specified in the [Naksha data model Tuple-Number] section, except for the shared components.    |
 
 Therefore:
 - If `database_number` is `null`, then each entry is encoded in 32 byte.
-- If `map_number` is `null`, then each entry is encoded in 24 byte, all of them are sharing the same `database`.
-- If `collection_number` is `null`, then each entry is encoded in 20 byte, all of them are sharing the same `database` and `map`.
-- If `feature_number` is `null`, then each entry is encoded in 16 byte, all of them are sharing the same `database`, `map` and `collection`.
+- If `catalog_number` is `null`, then each entry is encoded in 24 byte, all of them are sharing the same `database`.
+- If `collection_number` is `null`, then each entry is encoded in 20 byte, all of them are sharing the same `database` and `catalog`.
+- If `feature_number` is `null`, then each entry is encoded in 16 byte, all of them are sharing the same `database`, `catalog` and `collection`.
 - If none of them is `null`, then each entry is encoded in 8 byte, all of them refer to the same _feature_, just in different versions.
 
-So, if `database_number`, `map_number`, `collection_number` and `feature_number` are all given, all [Tuple] are of the same _feature_, so they only differ in the `version`. This happens for example when loading all states of a specific _feature_ form the database. This uses the least amount of space per entry, only 8 byte per entry.
+So, if `database_number`, `catalog_number`, `collection_number` and `feature_number` are all given, all [Tuple] are of the same _feature_, so they only differ in the `version`. This happens for example when loading all states of a specific _feature_ form the database. This uses the least amount of space per entry, only 8 byte per entry.
 
-The most common encoding will have `database_number`, `map_number` and `collection_number` set, but `feature_number` being `null`. This happens as result of a query from a single collection. In this case, each entry need to encode `feature_number`, and `version`, which requires 16 byte per entry.
+The most common encoding will have `database_number`, `catalog_number` and `collection_number` set, but `feature_number` being `null`. This happens as result of a query from a single collection. In this case, each entry need to encode `feature_number`, and `version`, which requires 16 byte per entry.
 
-The second most common encoding will have `database_number` and `map_number` set, but `collection_number` and `feature_number` will be `null`, then each entry is 20 byte.
+The second most common encoding will have `database_number` and `catalog_number` set, but `collection_number` and `feature_number` will be `null`, then each entry is 20 byte.
 
-Potentially rarely found are encodings where `map_number` or even `database_number` are `null`, as this wildly mixes data from different sources. However, it is not totally impossible!
+Potentially rarely found are encodings where `catalog_number` or even `database_number` are `null`, as this wildly mixes data from different sources. However, it is not totally impossible!
 
-**Note**: A single tuple-number can be encoded smaller as defined by the [Naksha data model Tuple-Number], because we can encode the `database_number`, `map_number`, `collection_number` and `feature_number` in less than 8 byte, if the value is smaller. Therefore, the smallest single tuple-number would encode in **lead-in** _(1 byte)_, `byte_size` _(1 byte)_, `database_number` _(1 byte)_, `map_number` _(1 byte)_, `collection_number` _(1 byte)_, `feature_number` _(1 byte)_, and the `version` as single value _(8 byte)_; therefore, resulting in 14 byte in total, while the [Naksha data model Tuple-Number] encoding does always require 32 byte.
+**Note**: A single tuple-number can be encoded smaller as defined by the [Naksha data model Tuple-Number], because we can encode the `database_number`, `catalog_number`, `collection_number` and `feature_number` in less than 8 byte, if the value is smaller. Therefore, the smallest single tuple-number would encode in **lead-in** _(1 byte)_, `byte_size` _(1 byte)_, `database_number` _(1 byte)_, `catalog_number` _(1 byte)_, `collection_number` _(1 byte)_, `feature_number` _(1 byte)_, and the `version` as single value _(8 byte)_; therefore, resulting in 14 byte in total, while the [Naksha data model Tuple-Number] encoding does always require 32 byte.
 
 A single tuple-number should be encoded in 35 byte, so **lead-in** _(1 byte)_, `byte_size` _(1 byte)_, `database_number` as `null` _(1 byte)_ and the actual tuple-number value as full qualified _(32 byte)_. Optionally, the `byte_size` can be encoded in two byte, which align the rest of the tuple-number to 4 byte, so that it can be faster processed by some CPU architectures. This would result in 36 byte for a single tuple-number.
 
 #### Primary Logical Bytes
-The primary [logical bytes] of a tuple-number are generated by adding the empty **lead-in** `1100_0101`, followed by the bytes of each contained tuple-number in full encoding as specified by the [Naksha data model Tuple-Number]. Each tuple-number actually is added as fixed size 32 byte value in big-endian byte-order. This means, that for each tuple-number the `database_number`, `map_number`, `collection_number`, and `feature_number` are added to the [logical bytes] simply as 32-bit or 64-bit integers, in big-endian byte-order. The `version` is encoded into one 64-bit integer -(with top 12 bit being always zero)_, and then added to the [logical bytes].
+The primary [logical bytes] of a tuple-number are generated by adding the empty **lead-in** `1100_0101`, followed by the bytes of each contained tuple-number in full encoding as specified by the [Naksha data model Tuple-Number]. Each tuple-number actually is added as fixed size 32 byte value in big-endian byte-order. This means, that for each tuple-number the `database_number`, `catalog_number`, `collection_number`, and `feature_number` are added to the [logical bytes] simply as 32-bit or 64-bit integers, in big-endian byte-order. The `version` is encoded into one 64-bit integer -(with top 12 bit being always zero)_, and then added to the [logical bytes].
 
 ### Tuple
 The tuple is a special **JBON** container designed to exchange [GeoJSON] _features_ between services, components, caches, and storages like a database or a file; the **lead-in** is `11ss_0110`.
 
 The tuple is a special encoding linked to the [Naksha data model]. All tuple are encoded in the following basic layout:
 
-| Section        | Type                   | Description                                                                                                                      |
-|----------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------|
-| lead_in        | `byte`                 | The **lead-in** byte, `11ss_0110`.                                                                                               |
-| byte_size      | `int64`                | The total size of the structure, including the **lead-in**, in bytes.                                                            |
-| feature        | [map]                  | The _feature_ to be stored, can be an empty map _(so only one byte)_.                                                            |
-| local_book     | [Book]?                | The _(optional)_ `local` book.                                                                                                   |
-| annotations    | [array]?<[annotation]> | An _(optional)_ array of [annotations].                                                                                          |
-|                |                        |                                                                                                                                  |
-| attachment     | [Binary]?              | If `null`, the attachment is explicitly not existing, `undefined` means a context related _attachment_ state.                    |
-| next_version   | [uint56]               | The next version of the tuple, if the tuple is in _HEAD_ state, the value will be `4_503_599_627_370_495L`.                      |
-| prev_version   | `int64`?               | The previous version of the tuple; `null` _(one byte)_, if this is the first state.                                              |
-| tuple_number   | [TupleNumber]          | The [tuple-number] of this tuple.                                                                                                |
-| global_book_tn | [TupleNumber]?         | Either `null` (one byte) when no global book is needed; otherwise the [Tuple-Number] of the `global` [book] needed to decode.    |
-| storage_book   | [Book]?                | The `storage` book with values from the storage.                                                                                 |
+| Section        | Type                   | Description                                                                                                                   |
+|----------------|------------------------|-------------------------------------------------------------------------------------------------------------------------------|
+| lead_in        | `byte`                 | The **lead-in** byte, `11ss_0110`.                                                                                            |
+| byte_size      | `int64`                | The total size of the structure, including the **lead-in**, in bytes.                                                         |
+| feature        | [map]                  | The _feature_ to be stored, can be an empty map _(so only one byte)_.                                                         |
+| local_book     | [Book]?                | The _(optional)_ `local` book.                                                                                                |
+| annotations    | [array]?<[annotation]> | An _(optional)_ array of [annotations].                                                                                       |
+| attachment     | [Binary]?              | If `null`, the attachment is explicitly not existing, `undefined` means a context related _attachment_ state.                 |
+|                |                        |                                                                                                                               |
+| next_version   | [uint56]               | The next version of the tuple, if the tuple is in _HEAD_ state, the value will be `9_007_199_254_740_991L`.                   |
+| prev_version   | `int64`?               | The previous version of the tuple; `null` _(one byte)_, if this is the first state.                                           |
+| tuple_number   | [TupleNumber]          | The [tuple-number] of this tuple.                                                                                             |
+| global_book_tn | [TupleNumber]?         | Either `null` (one byte) when no global book is needed; otherwise the [Tuple-Number] of the `global` [book] needed to decode. |
+| storage_book   | [Book]?                | The `storage` book with values from the storage.                                                                              |
 
 The `attachment` is special when encoded as `undefined`. The meaning has to be interpreted by the application considering the context in that case. When the tuple is encoded as an `UPDATE` or `DELETE` action, then an `undefined` attachment means that the attachment is not changed, so the old attachment should be kept. When the tuple is encoded as a `CREATE` action, then `undefined` means that there is no attachment, so it should simply become `null`.
 
@@ -603,10 +606,10 @@ When reading back a tuple from the storage, the PostgresQL storage-engine re-con
 This concept makes reading of data very efficient and quite simple, while writing is slightly more expensive. The design of [books] is very supportive for this design.
 
 #### Primary Logical Bytes
-The primary [logical bytes] of a tuple are calculated by adding the empty **lead-in** `1100_0110`, then the `object`, `annotations`, and finally the `attachment`.
+The primary [logical bytes] of a tuple are calculated by adding the empty **lead-in** `1100_0110`, then the `feature`, `annotations`, and finally the `attachment`.
 
 #### Secondary Logical Bytes
-The secondary [logical bytes] of a tuple are calculated by dding the empty **lead-in** `1100_0110`, then the `object`, ignoring the `annotations`, and the `attachment`.
+The secondary [logical bytes] of a tuple are calculated by dding the empty **lead-in** `1100_0110`, then the `feature`, ignoring the `annotations`, and the `attachment`.
 
 In some use cases the secondary [logical bytes] may be preferable, for example for [JSON] clients, which do not receive the `attachemnt` or `annotaions`. Inside the database however, and for caches, the `annotations` and `attachment` are significant, so the primary [logical bytes] are more useful.
 
@@ -1311,10 +1314,6 @@ The following changes are introduces into version 2 of this specification, compa
 [String]: #string
 [string]: #string
 [strings]: #string
-[Scalars]: #scalars
-[Scalar]: #scalars
-[scalar]: #scalars
-[scalars]: #scalars
 [Structure]: #structures
 [structure]: #structures
 [Structures]: #structures
