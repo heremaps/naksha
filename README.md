@@ -256,8 +256,16 @@ Before running Gradle, set the environment variables for the mode you want.
 export NAKSHA_APP_SERVICE_TEST_CONTEXT=LOCAL_STANDALONE
 export NAKSHA_TEST_STORAGE_ID=local_psql_test_storage
 export HUB_ADMIN_STORAGE_ID=local_psql_test_storage
-export NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
+
+# For `here-naksha-lib-psql` tests.
 export NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
+
+# For `here-naksha-app-service` admin storage tests.
+export NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
+
+# For `here-naksha-app-service` data storage tests.
+# Kept separate from the admin DB URL to allow deployment-like test setups, 
+# where administrative entities are stored in a different database/storage than data entities.
 export NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
 
 ./gradlew cleanAndTest

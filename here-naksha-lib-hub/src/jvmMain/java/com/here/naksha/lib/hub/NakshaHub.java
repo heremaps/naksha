@@ -172,7 +172,7 @@ public class NakshaHub implements INaksha {
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config
     NakshaContext nakshaContext = setupMapAndContext(adminMapId);
-    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, nakshaContext);
+    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, nakshaContext, adminMapId);
     if (finalCfg == null) {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
@@ -218,19 +218,19 @@ public class NakshaHub implements INaksha {
   private @Nullable NakshaHubConfig storageSetup(
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId,
-      final @NotNull NakshaContext nakshaContext
-  ) {
+      final @NotNull NakshaContext nakshaContext,
+      final @NotNull String adminMapId) {
     // 1. Create all Admin collections in Admin DB
-    createAdminCollections(nakshaContext);
+    createAdminCollections(nakshaContext, adminMapId);
 
     // 2. fetch / add latest config
-    return configSetup(nakshaContext, customCfg, configId);
+    return configSetup(nakshaContext, customCfg, configId, adminMapId);
   }
 
-  private void createAdminCollections(NakshaContext nakshaContext) {
+  private void createAdminCollections(NakshaContext nakshaContext, String adminMapId) {
     getAdminStorage().runInWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       logger.info("WriteCollections Request for {}, against Admin storage.", ALL_HUB_INTERNAL_COLLECTIONS);
-      final Response createAdminCollectionsResponse = admin.execute(upsertAdminCollectionsRequest());
+      final Response createAdminCollectionsResponse = admin.execute(upsertAdminCollectionsRequest(adminMapId));
       if (createAdminCollectionsResponse instanceof SuccessResponse successResponse) {
         NakshaFeatureList createdCollections = successResponse.getFeatures();
         for (NakshaFeature createdCollection : createdCollections) {
@@ -253,10 +253,10 @@ public class NakshaHub implements INaksha {
     });
   }
 
-  private static WriteRequest upsertAdminCollectionsRequest() {
+  private static WriteRequest upsertAdminCollectionsRequest(@NotNull String adminMapId) {
     final WriteRequest writeRequest = new WriteRequest();
     for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
-      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, NakshaHubAdminStorageIdentifiers.getHubAdminMapId())));
+      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, adminMapId)));
     }
     return writeRequest;
   }
@@ -264,7 +264,8 @@ public class NakshaHub implements INaksha {
   private @Nullable NakshaHubConfig configSetup(
       final @NotNull NakshaContext nakshaContext,
       final @Nullable NakshaHubConfig customCfg,
-      final @Nullable String configId) {
+      final @Nullable String configId,
+      final @NotNull String adminMapId) {
     /*
      * Config preference, for a given configId (e.g. "custom-config"):
      * 1. Custom config - If provided, persist the same in DB, and use the same for NakshaHub
@@ -276,7 +277,7 @@ public class NakshaHub implements INaksha {
     return getAdminStorage().useWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       if (customCfg != null) {
         WriteRequest writeCustomCfg = new WriteRequest()
-            .add(new Write().upsertFeature(NakshaHubAdminStorageIdentifiers.getHubAdminMapId(), CONFIGS, customCfg));
+            .add(new Write().upsertFeature(adminMapId, CONFIGS, customCfg));
         Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();
