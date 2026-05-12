@@ -10,6 +10,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 class JsonParserTest {
@@ -33,6 +34,7 @@ class JsonParserTest {
         Files.writeString(pathToFile, "{}");
         File file = pathToFile.toFile();
         assumeTrue(file.setReadable(false), "Can not set file as unreadable!");
+        assumeFalse(Files.isReadable(pathToFile), "File is still readable by the process, skipping test");
         JsonParser jsonParser = new JsonParser();
 
         // When & Then

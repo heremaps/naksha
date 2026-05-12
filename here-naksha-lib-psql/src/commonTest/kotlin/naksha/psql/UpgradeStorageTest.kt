@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.common.test.CommonTestConstants
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
 import naksha.model.objects.NakshaStorage
@@ -26,7 +27,7 @@ class UpgradeStorageTest : PgTestBase() {
         // Downgrade storage, we need `override` instruction for this.
         val downgradeVersion = NakshaVersion.of("1.0.0")
         val downgradeConfig = NakshaStorage.fromJSON("""{
-  "id": "local_psql_test_storage",
+  "id": "${CommonTestConstants.getTestStorageId()}",
   "className": "naksha.psql.PsqlTestStorage",
   "version": "$downgradeVersion",
   "override": true

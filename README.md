@@ -243,8 +243,41 @@ The service will respond with the inserted geo features:
 
 # Testing locally
 
-To run tests locally run Gradle `cleanAndTest` task:
+Naksha tests can currently run in two modes:
+
+1. Against a Postgres database that you start yourself (for example the containerized Postgres described above).
+2. Against a Postgres container started automatically by the build via [Testcontainers](https://github.com/testcontainers).
+
+Before running Gradle, set the environment variables for the mode you want.
+
+### Option 1: Run tests against a local standalone Postgres
+
 ```bash
+export NAKSHA_APP_SERVICE_TEST_CONTEXT=LOCAL_STANDALONE
+export NAKSHA_TEST_STORAGE_ID=local_psql_test_storage
+export HUB_ADMIN_STORAGE_ID=local_psql_test_storage
+
+# For `here-naksha-lib-psql` tests.
+export NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
+
+# For `here-naksha-app-service` admin storage tests.
+export NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
+
+# For `here-naksha-app-service` data storage tests.
+# Kept separate from the admin DB URL to allow deployment-like test setups, 
+# where administrative entities are stored in a different database/storage than data entities.
+export NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
+
+./gradlew cleanAndTest
+```
+
+### Option 2: Run tests with Testcontainers-managed Postgres
+
+```bash
+export NAKSHA_APP_SERVICE_TEST_CONTEXT=TEST_CONTAINERS
+export HUB_ADMIN_STORAGE_ID=local_psql_test_storage
+export NAKSHA_TEST_STORAGE_ID=local_psql_test_storage
+
 ./gradlew cleanAndTest
 ```
 
