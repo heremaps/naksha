@@ -165,6 +165,19 @@ public class RequestSender {
             this.maxRetries = maxRetries;
         }
 
+        public static @NotNull KeyProperties fromHttpStorageProperties(
+                @NotNull String name,
+                @NotNull HttpStorageProperties properties) {
+            return new KeyProperties(
+                    name,
+                    properties.getUrl(),
+                    properties.getHeaders(),
+                    properties.getConnectTimeout(),
+                    properties.getSocketTimeout(),
+                    properties.getMaxRetries()
+            );
+        }
+
         public @NotNull String getName() {
             return name;
         }

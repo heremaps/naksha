@@ -334,9 +334,10 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                 if(containsOnlyTagExists(tagQuery)){
                     // for tags without values we can utilize top-level-key based '?|' operand
                     // https://www.postgresql.org/docs/current/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
+                    val tagNames = tagQuery.filterIsInstance<TagExists>().map { it.name }
                     resolveTagNamesArrayOperation(
-                        jsonbOperator = "jsonb_exists_any", // equivalent of '?|'
-                        tagNames = (tagQuery as ListProxy<TagExists>).mapNotNull { it?.name }
+                        jsonbOperator = "?|", // 'jsonb_exists_any' is equivalent but will not hit the GIN index
+                        tagNames = tagNames
                     )
                 } else {
                     or(tagQuery.filterNotNull(), this::whereNestedTags)
@@ -346,9 +347,10 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                 if(containsOnlyTagExists(tagQuery)){
                     // for tags without values we can utilize top-level-key based '?&' operand
                     // https://www.postgresql.org/docs/current/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
+                    val tagNames = tagQuery.filterIsInstance<TagExists>().map { it.name }
                     resolveTagNamesArrayOperation(
-                        jsonbOperator = "jsonb_exists_all", // equivalent of '?&'
-                        tagNames = (tagQuery as ListProxy<TagExists>).mapNotNull { it?.name }
+                        jsonbOperator = "?&", // 'jsonb_exists_all' is equivalent but MIGHT not hit the GIN index
+                        tagNames = tagNames
                     )
                 } else {
                     and(tagQuery.filterNotNull(), this::whereNestedTags)
@@ -359,12 +361,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     private fun containsOnlyTagExists(container: ListProxy<ITagQuery>): Boolean =
-        container.all { it is TagExists }
+        container.all { it == null || it is TagExists }
 
     private fun resolveTagNamesArrayOperation(jsonbOperator: String, tagNames: List<String>) {
         val tagKeysArray = tagNames.toTypedArray()
         val tagKeysPlaceholder = placeholderForArg(tagKeysArray, PgType.STRING_ARRAY)
-        where.append("$jsonbOperator($tagsAsJsonb, $tagKeysPlaceholder)")
+        where.append("$tagsAsJsonb ?$jsonbOperator $tagKeysPlaceholder")
     }
 
     private fun resolveSingleTagQuery(tagQuery: TagQuery) {

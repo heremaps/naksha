@@ -1,0 +1,12 @@
+{
+  "id": "http-storage",
+  "type": "Storage",
+  "className": "com.here.naksha.storage.http.HttpStorage",
+  "properties": {
+    "url": "https://example.org",
+    "headers": {
+      "Authorization": "Bearer boxed-token",
+      "X-Tenant": "demo"
+    }
+  }
+}
