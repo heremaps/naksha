@@ -1,16 +1,14 @@
 # The Naksha Data Model
 
 ## Introduction
-The Naksha Data Model _(**NDM**)_ is made to exchange data in the form of [GeoJSON] features between different applications, components, services, and storages. The data model is designed to support efficient storage, retrieval, and query of objects. It's optimized to exchange the data serialized into [JSON], [GeoJSON], [protobuf], and [JBON]. [JBON] is a special binary encoding, highly compact, mostly immutable, and that does not require parsing to read the data, developed specifically for the Naksha data model.
+The Naksha Data Model _(**NDM**)_ is made to exchange data in the form of [GeoJSON] features between different applications, components, services, and storages. The data model is designed to support efficient storage, retrieval, and query of objects. It's optimized to exchange the data serialized into [JSON], [GeoJSON], [protobuf], and [JBON]. [JBON] is a special binary encoding, highly compact, mostly immutable, and does not require parsing to read the data, developed specifically for the Naksha data model.
 
 The data model supports operations to manage the data lifecycle, including creation, update, and deletion. It supports in maintaining a history of changes. The data model is also designed to support efficient querying of the data, including queries for specific versions and queries for the latest version _(HEAD)_.
 
 The data model is an abstraction layer that allows to decouple the physical storage from the logical structure of the data. This allows for flexibility in the choice of storage technology and allows for future changes to the storage technology without affecting the logical structure of the data.
 
-### Literals
+## Literals
 The JSON map and array implementations are optimized for low memory consumption. All keys in the JSON map are interned to guarantee that the same key is not in memory multiple times. This is done by wrapping them into a `Literal`. This is already done by the parser. This feature can be used by the application as well via `Literal.get` calls. The JSON parser itself will intern all keys and values to reduce memory consumption. Beware that interning is only guaranteed for strings, all other data types have just a possibility to be interned, but it is not guaranteed.
-
-There are three literal:
 
 ```java
 // byte[]
@@ -33,16 +31,16 @@ There are three literal:
 //   = 24 byte
 
 public final class Literal implements CharSequence, Comparable<CharSequence> {
-  public static @NotNull Double get(float value) { /* ... */ }
-  public static @NotNull Double get(double value) { /* ... */ }
-  public static @NotNull Double get(@NotNull Double value) { /* ... */ }
-  public static @NotNull Long get(byte value) { /* ... */ }
-  public static @NotNull Long get(short value) { /* ... */ }
-  public static @NotNull Long get(int value) { /* ... */ }
-  public static @NotNull Long get(long value) { /* ... */ }
-  public static @NotNull Long get(@NotNull Long value) { /* ... */ }
-  public static @NotNull Literal get(@NotNull CharSequence value) { /* ... */ }
-  public static @Nullable Literal tryGet(@Nullable CharSequence value) { /* ... */ }
+  public static @NotNull Double of(float value) { /* ... */ }
+  public static @NotNull Double of(double value) { /* ... */ }
+  public static @NotNull Double of(@NotNull Double value) { /* ... */ }
+  public static @NotNull Long of(byte value) { /* ... */ }
+  public static @NotNull Long of(short value) { /* ... */ }
+  public static @NotNull Long of(int value) { /* ... */ }
+  public static @NotNull Long of(long value) { /* ... */ }
+  public static @NotNull Long of(@NotNull Long value) { /* ... */ }
+  public static @NotNull Literal of(@NotNull CharSequence value) { /* ... */ }
+  public static @Nullable Literal get(@Nullable CharSequence value) { /* ... */ }
   Literal(@NotNull String value) { /* ... */ }
 
   // JVM Header: 16 byte
@@ -52,105 +50,104 @@ public final class Literal implements CharSequence, Comparable<CharSequence> {
 } // = 114 byte+ byte
 ```
 
-Therefore, a string literal adds ~64 byte to the memory consumption of a `String`, which uses 50 byte _(plus characters)_. That means, deduplication is only worth the effeort when there are least three usages. Especially for keys there are potentially many thousands of usages. Next to just the memory consumption, two literals can be compared using the `==` operator, which is much faster than the `equals` method.
+Therefore, a string literal adds ~64 byte to the memory consumption of a `String`, which uses 50 byte _(plus characters)_. That means, deduplication is only beneficial to memory consumption, when there are least three usages. However, especially for keys there are potentially many thousands of usages. Next to just the memory consumption, two literals can be compared using the `==` operator, which is much faster than the `equals` method.
 
 For the long and double values, only certain specific values are being cached. There is no need for weak references, so we just keep a cache table of a certain size and deduplicate what we can. For example really often used values like `1.0` or `0.0`. Longs are already caches by the JVM, when `Long.valueOf` is used, but this only works for values between `-128` and `127`, so we extend this range with a dynamic cache.
 
 The `Literal` is mostly used internally within `JsonMap` for keys. However, it can be used by applications as well to speed up access in maps.
 
-### Error Handling
+## Error Handling
 All methods can throw an `LibDataError`, which is a `RuntimeException`. Applications are free to catch this exception or to ignore it and leave the error handling to the caller.
 
 ## Data Types
 To allow interoperability between different storages, applications, modules, and services, the data model supports a set of pre-defined supported data types:
 
-| Java                 | Idx | Type-Emum _(Name)_  | Javascript           | Description                                                                                                                |
-|----------------------|-----|---------------------|----------------------|----------------------------------------------------------------------------------------------------------------------------|
-| `Undefined`          |     | `UNDEFINED`         | `undefined`          | The undefined type, a singleton in Java.                                                                                   |
-| `null`               |     | `NULL`              | `null`               | A boolean.                                                                                                                 |
-| `boolean`            | yes | `BOOL`              | `Boolean`            | A boolean.                                                                                                                 |
-| `byte`               | yes | `BYTE`              | `number`             | A 8-bit integer.                                                                                                           |
-| `short`              | yes | `SHORT`             | `number`             | A 16-bit integer.                                                                                                          |
-| `int`                | yes | `INT`               | `number`             | A 32-bit integer.                                                                                                          |
-| `long`               | yes | `LONG`              | `BigInt`             | A 64-bit integer.                                                                                                          |
-| `float`              | yes | `FLOAT`             | `number`             | A 32-bit floating point number.                                                                                            |
-| `double`             | yes | `DOUBLE`            | `number`             | A 64-bit floating point number.                                                                                            |
-| `byte[]`             | yes | `BYTEA`             | `Int8Array`          | A byte-array.                                                                                                              |
-| `short[]`            |     | `SHORTA`            | `Int16Array`         | A 16-bit integer array.                                                                                                    |
-| `int[]`              |     | `INTA`              | `Int32Array`         | A 32-bit integer array.                                                                                                    |
-| `long[]`             |     | `LONGA`             | `BigInt64Array`      | A 64-bit integer array.                                                                                                    |
-| `float[]`            |     | `FLOATA`            | `Float32Array`       | A 32-bit floating point number array.                                                                                      |
-| `double[]`           |     | `DOUBLEA`           | `Float64Array`       | A 64-bit floating point number array.                                                                                      |
-| `String`             | yes | `STRING`            | `String`             | A text of [UNICODE] code-points.                                                                                           |
-| `Geometry`           |     |                     | `Geometry`           | `org.locationtech.jts.geom.Geometry` - Interface for all geometries, [GeoJSON] compatible.                                 |
-| `GeometryCollection` |     | `GEO_COLLECTION`    | `GeometryCollection` | `org.locationtech.jts.geom.GeometryCollection`                                                                             |
-| `Point`              | yes | `POINT`             | `Point`              | `org.locationtech.jts.geom.Point`                                                                                          |
-| `MultiPoint`         | yes | `MULTI_POINT`       | `MultiPoint`         | `org.locationtech.jts.geom.MultiPoint`                                                                                     |
-| `LineString`         | yes | `LINE_STRING`       | `LineString`         | `org.locationtech.jts.geom.LineString`                                                                                     |
-| `MultiLineString`    | yes | `MULTI_LINE_STRING` | `MultiLineString`    | `org.locationtech.jts.geom.MultiLineString`                                                                                |
-| `Polygon`            | yes | `POLYGON`           | `Polygon`            | `org.locationtech.jts.geom.Polygon`                                                                                        |
-| `MultiPolygon`       | yes | `MULTI_POLYGON`     | `MultiPolygon`       | `org.locationtech.jts.geom.MultiPolygon`                                                                                   |
-|                      |     |                     |                      |                                                                                                                            |
-|                      |     |                     |                      | JSON                                                                                                                       |
-|                      |     |                     |                      |                                                                                                                            |
-| `JsonObject`         |     |                     |                      | The base class for all [JSON] data types that allow proxy linking.                                                         |
-| `JsonArray`          |     | `ARRAY`             |                      | A list of values, extends [JsonObject], implements mutable `IArray`.                                                       |
-| `JsonMap`            |     | `MAP`               |                      | A set of key-value pairs in insertion order, extends [JsonObject], implements mutable `IMap`.                              |
-|                      |     |                     |                      |                                                                                                                            |
-| `Proxy`              |     |                     |                      | Abstract base class for all proxies that can be linked to a [JsonObject] to extend the object with custom functions.       |
-| `MapProxy`           |     |                     |                      | A [Proxy] that can be linked to any `IMap` to extend the map with custom functions.                                        |
-| `ArrayProxy`         |     |                     |                      | A [Proxy] that can be linked to any `IArray` to extend the list with custom functions.                                     |
-| `Option`             |     |                     |                      | A special enumeration implementation that essentially is always encoded as string or long.                                 |
-|                      |     |                     |                      |                                                                                                                            |
-| `JsonTupleNumber`    |     |                     |                      | Wraps a string as `ITupleNumber`, cached inside of arrays and maps.                                                        |
-| `JsonVersion`        |     |                     |                      | The mutable variant of an `Version` tuple, as [Proxy] linked to an `IMap`.                                                 |
-| `JsonDatabase`       |     |                     |                      | The mutable variant of an `Database` tuple, as [Proxy] linked to an `IMap`.                                                |
-| `JsonCatalog`        |     |                     |                      | The mutable variant of an `Catalog` tuple, as [Proxy] linked to an `IMap`.                                                 |
-| `JsonCollection`     |     |                     |                      | The mutable variant of an `Collection` tuple, as [Proxy] linked to an `IMap`.                                              |
-| `JsonFeature`        |     |                     |                      | The mutable variant of an `Feature` tuple, as [Proxy] linked to an `IMap`.                                                 |
-| `JsonTags`           |     |                     |                      | A [Proxy] to manage a list of tags as "flat" key-value pairs, linked to an `IArray`.                                       |
-|                      |     |                     |                      |                                                                                                                            |
-|                      |     |                     |                      | DATA                                                                                                                       |
-|                      |     |                     |                      |                                                                                                                            |
-| `IObject`            |     |                     |                      | An interface to access general JSON like object that supports proxies.                                                     |
-| `IArray`             |     |                     |                      | An interface to access general JSON like arrays, implements by `JsonArray` and `JbonArray`.                                |
-| `IMap`               |     |                     |                      | An interface to access general JSON like maps, implements by `JsonMap` and `JbonMap`.                                      |
-| `ITupleNumber`       |     |                     |                      | An interface to access a tuple-number.                                                                                     |
-|                      |     |                     |                      |                                                                                                                            |
-| `Bytes`              |     |                     |                      | A static singleton for low-level access to primitive arrays _(`byte[]`, `short[]`, ...)_.                                  |
-| `TupleId`            |     |                     |                      | The immutable im-memory representation of a unique identifier.                                                             |
-| `TupleNumber`        |     |                     |                      | The immutable im-memory representation of a unique identifier.                                                             |
-| `Version`            |     |                     |                      | The immutable im-memory representation of a [version].                                                                     |
-| `VersionProxy`       |     |                     |                      | A [Proxy] for either a `JsonMap` or a `JbonMap`, providing access to a [version] _feature_.                                |
-| `Database`           |     |                     |                      | The immutable im-memory representation of a [database].                                                                    |
-| `DatabaseProxy`      |     |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [database] _feature_.                                                 |
-| `Catalog`            |     |                     |                      | The immutable im-memory representation of a [catalog] within a [database].                                                 |
-| `CatalogTuple`       |     |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [catalog] _feature_.                                                  |
-| `Collection`         |     |                     |                      | The immutable im-memory representation of a [collection] within a [catalog].                                               |
-| `CollectionProxy`    |     |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [collection] _feature_.                                               |
-| `Feature`            |     |                     |                      | The immutable im-memory representation of a [feature] within a [collection].                                               |
-| `Tuple`              |     |                     |                      | A wraper around a `JbonTuple` that encodes an arbitrary [feature].                                                         |
-|                      |     |                     |                      |                                                                                                                            |
-|                      |     |                     |                      | JBON                                                                                                                       |
-|                      |     |                     |                      |                                                                                                                            |
-| `Jbon`               |     |                     |                      | A wrapper above a bunch of bytes that encode a [JBON].                                                                     |
-| `JbonEncoder`        |     |                     |                      | A tool to build a [JBON].                                                                                                  |
-| `JbonBinary`         |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] binary.                                                 |
-| `JbonArray`          |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] array, implementing read-only `IArray`.                 |
-| `JbonMap`            |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] map, implementing read-only `IMap`.                     |
-| `JbonKind`           |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] kind.                                                   |
-| `JbonMember`         |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] member.                                                 |
-| `JbonTupleNumber`    |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] tuple-number.                                           |
-| `JbonTuple`          |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] tuple, implementing read-only `IMap` for the _feature_. |
-| `JbonBook`           |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] book.                                                   |
-| `JbonAnnotation`     |     |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] annotation.                                             |
-|                      |     |                     |                      |                                                                                                                            |
-|                      |     |                     |                      | STORAGE                                                                                                                    |
-|                      |     |                     |                      |                                                                                                                            |
-| `TupleStorage`       |     |                     |                      |                                                                                                                            |
-| `Storage`            |     |                     |                      |                                                                                                                            |
-| `ReadSession`        |     |                     |                      |                                                                                                                            |
-| `FullSession`        |     |                     |                      |                                                                                                                            |
+| Java                 | Idx    | Type-Emum _(Name)_  | Javascript           | Description                                                                                                                |
+|----------------------|--------|---------------------|----------------------|----------------------------------------------------------------------------------------------------------------------------|
+| `Undefined`          |        | `UNDEFINED`         | `undefined`          | The undefined type, a singleton in Java.                                                                                   |
+| `null`               |        | `NULL`              | `null`               | A boolean.                                                                                                                 |
+| `boolean`            | yes    | `BOOL`              | `Boolean`            | A boolean.                                                                                                                 |
+| `byte`               | yes    | `BYTE`              | `number`             | A 8-bit integer.                                                                                                           |
+| `short`              | yes    | `SHORT`             | `number`             | A 16-bit integer.                                                                                                          |
+| `int`                | yes    | `INT`               | `number`             | A 32-bit integer.                                                                                                          |
+| `long`               | yes    | `LONG`              | `BigInt`             | A 64-bit integer.                                                                                                          |
+| `float`              | yes    | `FLOAT`             | `number`             | A 32-bit floating point number.                                                                                            |
+| `double`             | yes    | `DOUBLE`            | `number`             | A 64-bit floating point number.                                                                                            |
+| `byte[]`             | yes    | `BYTEA`             | `Int8Array`          | A byte-array.                                                                                                              |
+| `short[]`            |        | `SHORTA`            | `Int16Array`         | A 16-bit integer array.                                                                                                    |
+| `int[]`              |        | `INTA`              | `Int32Array`         | A 32-bit integer array.                                                                                                    |
+| `long[]`             |        | `LONGA`             | `BigInt64Array`      | A 64-bit integer array.                                                                                                    |
+| `float[]`            |        | `FLOATA`            | `Float32Array`       | A 32-bit floating point number array.                                                                                      |
+| `double[]`           |        | `DOUBLEA`           | `Float64Array`       | A 64-bit floating point number array.                                                                                      |
+| `String`             | yes    | `STRING`            | `String`             | A text of [UNICODE] code-points.                                                                                           |
+| `Geometry`           |        |                     | `Geometry`           | `org.locationtech.jts.geom.Geometry` - Interface for all geometries, [GeoJSON] compatible.                                 |
+| `GeometryCollection` |        | `GEO_COLLECTION`    | `GeometryCollection` | `org.locationtech.jts.geom.GeometryCollection`                                                                             |
+| `Point`              | yes    | `POINT`             | `Point`              | `org.locationtech.jts.geom.Point`                                                                                          |
+| `MultiPoint`         | yes    | `MULTI_POINT`       | `MultiPoint`         | `org.locationtech.jts.geom.MultiPoint`                                                                                     |
+| `LineString`         | yes    | `LINE_STRING`       | `LineString`         | `org.locationtech.jts.geom.LineString`                                                                                     |
+| `MultiLineString`    | yes    | `MULTI_LINE_STRING` | `MultiLineString`    | `org.locationtech.jts.geom.MultiLineString`                                                                                |
+| `Polygon`            | yes    | `POLYGON`           | `Polygon`            | `org.locationtech.jts.geom.Polygon`                                                                                        |
+| `MultiPolygon`       | yes    | `MULTI_POLYGON`     | `MultiPolygon`       | `org.locationtech.jts.geom.MultiPolygon`                                                                                   |
+|                      |        |                     |                      |                                                                                                                            |
+|                      |        |                     |                      | JSON                                                                                                                       |
+|                      |        |                     |                      |                                                                                                                            |
+| `JsonObject`         |        |                     |                      | The base class for all [JSON] data types that allow proxy linking.                                                         |
+| `JsonArray`          | string | `ARRAY`             |                      | A list of values, extends [JsonObject], implements mutable `IArray`.                                                       |
+| `JsonMap`            | flat   | `MAP`               |                      | A set of key-value pairs in insertion order, extends [JsonObject], implements mutable `IMap`.                              |
+|                      |        |                     |                      |                                                                                                                            |
+| `Proxy`              |        |                     |                      | Abstract base class for all proxies that can be linked to a [JsonObject] to extend the object with custom functions.       |
+| `MapProxy`           |        |                     |                      | A [Proxy] that can be linked to any `IMap` to extend the map with custom functions.                                        |
+| `ArrayProxy`         |        |                     |                      | A [Proxy] that can be linked to any `IArray` to extend the list with custom functions.                                     |
+| `Option`             |        |                     |                      | A special enumeration implementation that essentially is always encoded as string or long.                                 |
+|                      |        |                     |                      |                                                                                                                            |
+| `JsonTupleNumber`    |        |                     |                      | Wraps a string as `ITupleNumber`, cached inside of arrays and maps.                                                        |
+| `JsonVersion`        |        |                     |                      | The mutable variant of an `Version` tuple, as [Proxy] linked to an `IMap`.                                                 |
+| `JsonDatabase`       |        |                     |                      | The mutable variant of an `Database` tuple, as [Proxy] linked to an `IMap`.                                                |
+| `JsonCatalog`        |        |                     |                      | The mutable variant of an `Catalog` tuple, as [Proxy] linked to an `IMap`.                                                 |
+| `JsonCollection`     |        |                     |                      | The mutable variant of an `Collection` tuple, as [Proxy] linked to an `IMap`.                                              |
+| `JsonFeature`        |        |                     |                      | The mutable variant of an `Feature` tuple, as [Proxy] linked to an `IMap`.                                                 |
+| `JsonTags`           |        |                     |                      | A [Proxy] to manage a list of tags as "flat" key-value pairs, linked to an `IArray`.                                       |
+|                      |        |                     |                      |                                                                                                                            |
+|                      |        |                     |                      | DATA                                                                                                                       |
+|                      |        |                     |                      |                                                                                                                            |
+| `IObject`            |        |                     |                      | An interface to access general JSON like object that supports proxies.                                                     |
+| `IArray`             |        |                     |                      | An interface to access general JSON like arrays, implements by `JsonArray` and `JbonArray`.                                |
+| `IMap`               |        |                     |                      | An interface to access general JSON like maps, implements by `JsonMap` and `JbonMap`.                                      |
+| `ITupleNumber`       |        |                     |                      | An interface to access a tuple-number.                                                                                     |
+|                      |        |                     |                      |                                                                                                                            |
+| `Bytes`              |        |                     |                      | A static singleton for low-level access to primitive arrays _(`byte[]`, `short[]`, ...)_.                                  |
+| `Binary`             |        |                     |                      | A helper class for binaries, supports MIME types, parameters, and compression.                                             |
+| `TupleId`            |        |                     |                      | The immutable im-memory representation of a unique identifier.                                                             |
+| `TupleNumber`        |        |                     |                      | The immutable im-memory representation of a unique identifier.                                                             |
+| `Version`            |        |                     |                      | The immutable im-memory representation of a [version].                                                                     |
+| `VersionProxy`       |        |                     |                      | A [Proxy] for either a `JsonMap` or a `JbonMap`, providing access to a [version] _feature_.                                |
+| `Database`           |        |                     |                      | The immutable im-memory representation of a [database].                                                                    |
+| `DatabaseProxy`      |        |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [database] _feature_.                                                 |
+| `Catalog`            |        |                     |                      | The immutable im-memory representation of a [catalog] within a [database].                                                 |
+| `CatalogTuple`       |        |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [catalog] _feature_.                                                  |
+| `Collection`         |        |                     |                      | The immutable im-memory representation of a [collection] within a [catalog].                                               |
+| `CollectionProxy`    |        |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [collection] _feature_.                                               |
+| `Feature`            |        |                     |                      | The immutable im-memory representation of a [feature] within a [collection].                                               |
+| `Tuple`              |        |                     |                      | A wraper around a `JbonTuple` that encodes an arbitrary [feature].                                                         |
+|                      |        |                     |                      |                                                                                                                            |
+|                      |        |                     |                      | JBON                                                                                                                       |
+|                      |        |                     |                      |                                                                                                                            |
+| `Jbon`               |        |                     |                      | A wrapper above a bunch of bytes that encode a [JBON].                                                                     |
+| `JbonEncoder`        |        |                     |                      | A tool to build a [JBON].                                                                                                  |
+| `JbonBinary`         |        |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] binary.                                                 |
+| `JbonArray`          |        |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] array, implementing read-only `IArray`.                 |
+| `JbonMap`            |        |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] map, implementing read-only `IMap`.                     |
+| `JbonTupleNumber`    |        |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] tuple-number.                                           |
+| `JbonTuple`          |        |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] tuple, implementing read-only `IMap` for the _feature_. |
+| `JbonBook`           |        |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] book.                                                   |
+| `JbonAnnotation`     |        |                     |                      | A wrapper above a `Jbon` positioned at bytes that encodes a [JBON] annotation.                                             |
+|                      |        |                     |                      |                                                                                                                            |
+|                      |        |                     |                      | STORAGE                                                                                                                    |
+|                      |        |                     |                      |                                                                                                                            |
+| `TupleStorage`       |        |                     |                      |                                                                                                                            |
+| `Storage`            |        |                     |                      |                                                                                                                            |
+| `ReadSession`        |        |                     |                      |                                                                                                                            |
+| `FullSession`        |        |                     |                      |                                                                                                                            |
 
 All data must be represented using these data types to ensure interoperability between different components, storages, and services.
 
@@ -162,8 +159,8 @@ This design is important for many of the features offered by the data model, for
 - Arrays
 - Geometries
 
-### Indexable
-The following sections will sometimes refer to `indexable` types, this refers to one of the above indexable data types.
+## Indexable
+The following sections will sometimes refer to `indexable` types, this refers to the data types that are marked as `idx`.
 
 When a byte-array is compared, then the compare **must** be done byte-by-byte. The smaller byte decides which byte-array is smaller. When the end of a byte-array is reached, and so far all bytes are equal, but one array does have more bytes, then the shorter array is _(by definition)_ less than the longer array. Otherwise, if both arrays are of same length, and all bytes equal, they are equal.
 
@@ -171,15 +168,21 @@ All strings must be interned and encoded in [NFC] form. In memory strings are ke
 
 The data model differentiates mainly between shared immutable binary data, encoded in [JBON], and mutable thread-local data that is represented as [JSON] heap objects. The immutable binary data is used for caching, cross component access, or fast transportation between services, and for very fast lookups _(without the need to decode the [JBON] into [JSON] heap objects)_.
 
-### Proxies
+The `Map` is marked as _flat_ indexable. This means, maps are indexable, but not recursively. So, all keys of a map, where the value is an indexable type, are `indexable`. For this the storage need to have some mechanism. **Beware that this indexing is potentially very expensive and should be avoided!**
+
+The `Array` is marked as _string_ indexable. This means, for downward compatibility, arrays that only contain strings are as well `indexable`. They are converted into a _flat_ `Map` following this algorithm:
+
+**TODO: Write down the algorithm used in previous Naksha and Wikvaya released, how tags are parsed into maps.**
+
+## Proxies
 Having to work with unstructured data is extremely error-prone, even while the most flexible thing possible. Therefore, `lib-data` supports proxies. A proxy is a data-model that can be added to arbitrary data at runtime _(this allows runtime schema detection)_. The following example shows a proxy for a simple data model, where a [GeoJSON] feature has a `name` and `age` in the `properties`:
 
 ```java
 package naksha.data;
 
-public class Example extends MapProxy {
+public class ExampleType extends MapProxy {
   // This constructor is used to create a new Example instance.
-  public Example() {
+  public ExampleType() {
     super(new JsonMap());
     // We can do normal initialization here, for example setting default values.
     setName("Hello World");
@@ -191,18 +194,23 @@ public class Example extends MapProxy {
     // We can update internal caches and more, when this happens.
     // It is guaranteed to happen only ones in the lifetime of every object, proxies are never unlinked or relinked!
   }
+  
+  // The property methods for name.
   public static final String NAME_KEY = Data.intern("name");
   public boolean hasName() { return map.containsKey(NAME_KEY); }
   public @Nullable String getName() { return map.getString(NAME_KEY); }
   public @Nullable String setName(@Nullable String name) { return map.setString(NAME_KEY, name); }
   public @Nullable String removeName() { return map.removeString(NAME_KEY); }
 
+  // The property methods for age.
   public static final String AGE_KEY = Data.intern("age");
   public boolean hasAge() { return map.containsKey(AGE_KEY); }
   public int getAge() { return map.asInt(map.getLong(AGE_KEY), 0); }
   public int setAge(int age) { return map.asInt(map.setLong(AGE_KEY, age), 0); }
   public int removeAge() { return map.asInt(map.removeLong(AGE_KEY), 0); }
 }
+
+// Usage example:
 public class ExampleUsage {
   public static void demo(@NotNull JsonMap feature) {
      JsonMap properties = feature.getMap(Const.PROPERTIES);
@@ -249,16 +257,20 @@ A tuple is a mostly immutable state of a [feature] _(mostly immutable, because t
 ```java
 public class Tuple implements ITuple {
   public Tuple(@NotNull JbonTuple jbon) { this.jbon = jbon; }
-  /** The JBON that represents the tuple. */
+  /** The JBON encodes feature. Can be queried to avoid conversion into a full JVM heap object, safes memory. */
   public final @NotNull JbonTuple jbon;
   /** The weak reference to this tuple for caching. */
   public final @NotNull WeakReference<Tuple> weakRef = new WeakReference<>(this);
   /** The soft reference to this tuple for caching. */
   public final @NotNull SoftReference<Tuple> softRef = new SoftReference<>(this);
+  /** Return the tuple as GeoJSON feature on the JVM heap. The method must not cache the object, every call should create a new feature instance. */
+  public @NotNull JsonMap feature();
+  /** Decodes the attachment. The method must not cache the attachment, every call should return a new copy. Read-only zero copy access is granted through the JBON tuple. */
+  public @Nullable Binary attachment();
 }
 ```
 
-Note that the `Tuple` just wraps the `JbonTuple` to allow in-memory caching and extending the class with specific access methods.
+Note that the `Tuple` just wraps the `JbonTuple` to allow in-memory caching and extending the class with specific access methods. It as well simplifies decoding into a [GeoJSON] _feature_.
 
 ## Database
 The `Database` represents a unique database, that can be stored at different places. However, only one of the places should be the primary storage, so every storage should know if it is a replication or main storage. Each database has one internal [catalog] named `naksha~admin`. This is a virtual [catalog] that is used to access the management data. This `naksha~admin` [catalog] contains by definition the following [collections]:
@@ -359,7 +371,7 @@ public class Feature {
 ## TupleId
 A tuple-id is a unique reference to a [tuple] using string identifiers. The tuple-id is as well called Global Unique Identifier _(`GUID`)_, it is a string that uniquely identifies a [tuple] within the whole data model. The structure of the tuple-id is like following:
 
-```urn:here:naksha:guid:{database-id}:{catalog-id}:{collection-id}:{feature-id}[:{version}]```
+```urn:here:naksha:guid:{databaseId}:{catalogId}:{collectionId}:{featureId}[:{version}]```
 
 Where the `version` is optional, if the `version` is omitted, it refers to the [HEAD] state of the feature.
 
@@ -368,10 +380,10 @@ public final class TupleId {
   public TupleId(@NotNull String urn) {
     // TODO: Implement parsing of the urn, and validation of the format, throw DataError in case of error.
   }
-  public TupleId(@NotNull DataCollection collection, @NotNull String featureId) {
+  public TupleId(@NotNull Collection collection, @NotNull String featureId) {
     this(collection, featureId, 0L);
   }
-  public TupleId(@NotNull DataCollection collection, @NotNull String featureId, long version) {
+  public TupleId(@NotNull Collection collection, @NotNull String featureId, long version) {
     // TODO: Implement.
   }
   public TupleId(@NotNull String databaseId, @NotNull String catalogId, @NotNull String collectionId, @NotNull String featureId, long version) {
@@ -489,11 +501,7 @@ public final class TupleNumber implements ITuple, ITupleAddress, Comparable<Tupl
 }
 ```
 
-A tuple-number can stringified into a [URN]:
-
-```urn:here:naksha:tn:{database-number}:{catalog-number}:{collection-number}:{record-number}[:{version}]```
-
-When the `version` is omitted, it refers to the _HEAD_ state of the record, which is effectively the same as setting `version` to zero _(`0`)_.
+A tuple-number can stringified into a [URN], see [references].
 
 ## TupleId to TupleNumber
 By default, the storage will convert a tuple-id into a tuple-number by looking at the given `id`. If the `id` is a valid unsigned 63-bit integer in decimal notation, so a string between `0` and `9223372036854775807`, it will parse it into a number and use this number as _record-number_.
@@ -548,14 +556,16 @@ The lowest two bit of all valid versions are always used to encode the `action`,
 
 The proof that this is compatible with JavaScript:
 
-- `((4095n << 41n)+(12n << 37n)+(31n << 32n)+4294967295n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _true_
-- `(4096n << 41n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _false_
+- `9006786937880575`: `((4095n << 41n)+(12n << 37n)+(31n << 32n)+4294967295n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _true_ 
+- `9007199254740992`: `(4096n << 41n) <= BigInt(Number.MAX_SAFE_INTEGER)`: _false_
+
+The values between `9006786937880575` and `9007199254740992` are by specification invalid states.
 
 ### Automatic Version
 The **default** versioning, when nothing else is selected, is _automatic version_. This is a database local version that uses a sequential counter in the database, being reset every day to 0. The sequence is shift left by 2, then encoded in the lower 31 bit of the version. This means every day provides up to `536,870,912` versions _(~5326 versions per second)_. The upper 33 bit of the version are used to store the year, month, and day. This is important to organize _HISTORY_.
 
 ### Manual Version
-For manual versioning the client needs to come up with some own useful bit pattern, related to history partitioning _(see `shift`ing)_. They are generally simple positive numbers between `1` and `17,592,186,044,416` _(excluding)_.
+For manual versioning the client needs to come up with some own useful bit pattern, related to history partitioning _(see `shift`ing)_. They are generally simple positive numbers between `1` and `8,796,093,022,208` _(excluding)_.
 
 ### HEAD Version
 The version `9,007,199,254,740,991` _(2^53-1)_ represents the _HEAD_ version, which is the latest version available in the storage. This is a special version that is only used for `next_version` to signal that a [tuple] is in the _HEAD_ state. Clients can use the value to signal, that they want data in the latest available version. In _JavaScript_ this maches `Number.MAX_SAFE_INTEGER`.
@@ -682,7 +692,7 @@ The version collection can be extended by custom fields, if necessary, the same 
 ## Two-Phase-Queries
 A major concept of the Naksha data model is that data reading is always split into two phases.
 
-The first phase is to execute a query against the storage to find all [tuple] matching certain criteria. These queries can be done against _HEAD_ or a specific [version]. When the query returns, it does not return the actual data, it only returns the [tuple-numbers] of the [tuple] being part of the result-set. This uses _(mostly)_ index-only scans, so normally every index contains the `record_number`, `version`, and `next_version`.
+The first phase is to execute a query against the storage to find all [tuple] matching certain criteria. These queries can be done against _HEAD_ or a specific [version]. When the query returns it does not return the actual data, it only returns the [tuple-numbers] of the [tuple] being part of the result-set. This uses _(mostly)_ index-only scans, so normally every index contains the `fn` _(feature-number)_ and `version` to they can be used as index-only scans.
 
 The second phase is then loading the actual [tuple], because [tuples] are by definition mostly immutable, no [tuple] ever has to be loaded twice, as the [tuple] are cached on the JVM heap by the `lib-data`. This caching is done using [Soft-References], which allows to use all available and free heap for data caching. Additionally, the [tuple] can be cached in external services like [Redis] or simply at ephemeral SSDs _(we should use all resource we can get for cheap local caching)_.
 
@@ -692,9 +702,9 @@ Even while it theoretically would be possible to only load parts of a [tuple], t
 The Naksha data mode defines two reference formats:
 
 - The Tuple-Number _(`TN`)_ as string: `urn:naksha:tn:{storageNumber}:{catalogNumber}:{collectionNumber}:{recordNumber}[:{version}]`
-- The Global Unique Identifier _(`GUID`)_ as string: `urn:naksha:guid:{storageId}:{catalogId}:{collectionId}:{recordId}[:{version}]`
+- The Global Unique Identifier _(`GUID`)_ as string: `urn:naksha:guid:{storageId}:{catalogId}:{collectionId}:{featureId}[:{version}]`
 
-For both variants the _HEAD_ state can be referred by simply omitting the `version`, setting it to `0` or [HEAD] _(`9,007,199,254,740,991`)_.
+For both variants the _HEAD_ state can be referred by simply omitting the `version`, setting it to `0` or [HEAD] _(`9,007,199,254,740,991`)_. In the context of reference parsing the [NULL version] is interpreted as [HEAD version] reference.
 
 The storage must internally only operate upon the `TN` variant. Clients are allowed to use the `GUID` variant, because they may create new [tuples] using identifiers only, not yet knowing the [Tuple-Number] or version, when creating the [features], and when adding references to these new [features]. So, the job of the storage is to convert all references given as `GUID` into correct full qualified `TN` variants. It therefore has to search the record and replace all `GUID` references with `TN` references.
 
@@ -711,13 +721,12 @@ The _HEAD_ section and each historic partition are optionally distribution parti
 
 The **historic partitioning** is done by the `next_version` of each [tuple]. All [tuple] with `next_version` being `9,007,199,254,740,991`, are located in the _HEAD_ section, and are only distribution partitioned. When a new [tuple] of a [feature] is created, the current [tuple] in the _HEAD_ section becomes historic data. It now needs to be moved to history, and `next_version` must be set to the version of the new [tuple]. The [tuple] should be relocated into the _HISTORY_, which is where **historic partitioning** happens. It will stay in _HISTORY_ immutable until being purged. The purging is normally done by deletion of complete historic partitions, which is the reason for this design. Beware that formally the immutability of a [Tuple] slightly broken here, because the `next_version` is modified while moving the [Tuple] into history. However, this is the only exception, and a not significant one for the caches. Actually `next_version` is no reliable field, applications should ignore it. The value can be calculated using the back-references from `prev_version`, starting at _HEAD_.
 
-Now, when deciding in which historic partition a [Tuple] should be located a **partition-key** is needed. To generate the **partition-key** the value from `next_version` is used. For this, the `next_version` is bitwise-ANDed with `0x000F_FFFF_FFFF_FFFF` _(effectively clearing the top 12-bit)_. Then value is shifted right by a configured `shift` amount. The `shift` is configured when creating a [collection] and must stay constant for the whole lifetime of a [collection]. The `shift` defaults to `40`, which means we store one historic partition per year. Reducing the `shift` to `36` would result in one historic partition per month, and reducing it to `31` would result in one historic partition per day.
+Now, when deciding in which historic partition a [Tuple] should be located a **partition-key** is needed. To generate the **partition-key** the value from `next_version` is used. For this, the `next_version` is bitwise-ANDed with `0x000F_FFFF_FFFF_FFFF` _(effectively clearing the top 12-bit)_. Then value is shifted right by a configured `shift` amount. The `shift` is configured when creating a [collection] and must stay constant for the whole lifetime of a [collection]. The `shift` defaults to `41`, which means we store one historic partition per year. Reducing the `shift` to `37` would result in one historic partition per month, and reducing it to `32` would result in one historic partition per day.
 
-**Note**: When manual versioning is used for a collection, it is strongly recommended to adjust the `shift` to a more useful value, because very likely `40` is not the best choice.
-
+**Note**: When manual versioning is used for a collection, the default `shift` value is reduced to `24` _(so ~16 million versions are stored per partition)_.
 
 ## TupleStorage
-The abstract `TupleStorage` base class, extended by all [storages] and caches, representing a sink for [tuples] aka _feature_ states. Only allows to read and store tuples using [tuple-numbers].
+The abstract `TupleStorage` base class, extended by all [storages] and [caches], representing a sink for [tuples] aka _feature_ states. Only allows to read and store tuples using [tuple-numbers].
 
 ## TupleCache
 The `TupleCache` is a static in-memory cache for tuples. It holds a certain threshold of soft-references, plus as much as possible weak-references to tuple. The cache is used to speed up access to tuples, and to reduce memory consumption by allowing the garbage collector to reclaim memory when needed.
@@ -826,11 +835,60 @@ class Query {
   
 }
 interface Session extends ReadSession {
-  
   @NotNull Session commit();
   @NotNull Session rollback();
 }
 ```
+
+## Custom Members
+Not all storages can read the binary encoded [tuple]. To ensure that data needed for indexing and searching is accessible to the storage, applications can define custom members. A custom member is an [indexable] property extracted from the [tuple]. Only members can be searched for, see [indexable].
+
+Not all implementations may need to extract the member from the data, some may be able to directly index properties from the data. Not all implementations may actually store [JBON] encoded binaries. However, all storages need to return [JBON] encoded binaries as [tuple], no matter in which format the data is actually stored, and accept [JsonFeature] objects with [Binary] as input. The storage can use the default [JBON] encode to generate it.
+
+### Java
+The `CustomMember` class is a [proxy] for a [JsonMap].
+
+```java
+package naksha.data;
+public class CustomMember extends MapProxy {
+  public static final Literal NAME = Literal.of("name");
+  // TODO: Add setter/getter for name as String
+  public static final Literal TYPE = Literal.of("type");
+  // TODO: Add setter/getter for type as DataType
+  public static final Literal PATH = Literal.of("path");
+  // TODO: Add setter/getter for path as StringArray/StringList
+}
+```
+
+## Custom Indices
+To improve query performance above [custom members], custom indices can be defined above members.
+
+### Java
+
+```java
+package naksha.data;
+public class CustomIndexType extends JsEnum {
+  public CustomIndexType(@NotNull String value, @NotNull DataType ... types) { super(value); }
+  
+  // Index for certain data-types, should host a list of DataType being supported.
+  public static final CustomIndexType BTREE = new CustomIndexType("btree");
+  public static final CustomIndexType SPATIAL = new CustomIndexType("spatial");
+  public static final CustomIndexType TAGS = new CustomIndexType("tags");
+  public static final CustomIndexType FLAT = new CustomIndexType("flat");
+}
+public class CustomIndex extends MapProxy {
+  public static final Literal NAME = Literal.of("name");
+  // TODO: Add setter/getter for name as String
+  
+  public static final Literal TYPE = Literal.of("type");
+  // TODO: Add setter/getter for type as CustomIndexType
+  
+  public static final Literal PATH = Literal.of("path");
+  // TODO: Add setter/getter for path as StringArray/StringList
+}
+```
+
+We do not allow custom unique indices, because they do not work with partitioning _(as we partition the data, we can't guarantee uniqueness)_. We can think about some additional mechanism to guarantee uniqueness of custom members.
 
 ## JsonFeature
 
@@ -872,7 +930,6 @@ The pre-defined extended set of members that are defined by this specification f
 Beware that all these values are basically extracted from the object map.
 of the [tuple] of the [feature]. These fields are used to store the metadata of the [feature], and to store some additional information that can be used for indexing and searching. The fields are defined in the XYZ namespace, which is a flat map of all storage members. The XYZ namespace is defined as follows:
 
-
 ## Origin
 The `origin` is an optional value, if enabled it stores a [reference] to the origin of a [feature]. When a [feature] is modified, normally the _metadata_ of the new [tuple] is not modified by the client. Therefore, the moment the new [tuple] is sent to a storage, the storage can check the [tuple-number] of the [tuple], which will refer to the state the client modified. If this state is located outside the [collection] into which the new [tuple] is stored, the storage automatically fills the `origin` field with a reference to the origin state.
 
@@ -891,14 +948,6 @@ TODO
 These fields can be used by applications to track versions with custom information, for example to track replacements. The reason there are pre-defined fields is that the version table can't be created by the client, as it is part of the administrative data of the database, so the client can't define custom fields on it. Therefore, we provide a set of pre-defined fields that can be used for this purpose. The fields are optional, so they can be left `null` if not needed, and will not consume much space.
 
 The `global_version` field can be used to translate global versions into local versions.
-
-## Java
-This section documents the Java API for the **Naksha Data Model**.
-
-```java
-package naksha.data;
-```
-
 
 ## DataManager
 A data-manager is a needed root object. An application can just have one _(as static singleton)_ or use multiple. The data-manager is the main entry point to access the data model, it is used by [storages] and the application. It provides methods to access the [storages], [databases], [catalogs], [collections], [features], and [tuples].
@@ -991,87 +1040,6 @@ public class DataManager extends DataTupleStorage{
 }
 ```
 
-```java
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
-
-public final class MarkWordWriter {
-    private static final Unsafe U;
-    private static final long MARK_OFFSET = 0L; // object-relative offset of header
-    private static final boolean IS_64;
-
-    static {
-        try {
-            Field f = Unsafe.class.getDeclaredField("theUnsafe");
-            f.setAccessible(true);
-            U = (Unsafe) f.get(null);
-            IS_64 = U.arrayIndexScale(Object[].class) == 8;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static class Result {
-        public final boolean ok;
-        public final String message;
-        public final long oldMark;
-        public Result(boolean ok, String message, long oldMark) { this.ok = ok; this.message = message; this.oldMark = oldMark; }
-    }
-
-    // Read raw header (as long on 64-bit, zero-extend on 32-bit)
-    public static long readMark(Object o) {
-        if (IS_64) return U.getLong(o, MARK_OFFSET);
-        return Integer.toUnsignedLong(U.getInt(o, MARK_OFFSET));
-    }
-
-    // Try to write a 32-bit identity hash into the mark word.
-    // Returns Result.ok==true on success; otherwise message explains why.
-    public static Result writeIdentityHash32(Object o, int desiredHash) {
-        long mark = readMark(o);
-
-        // Quick checks — layouts vary across JVM versions. These masks/values are HotSpot-ish.
-        if (!IS_64) {
-            int m = (int) mark;
-            // HotSpot 32-bit mark: lower 2-3 bits are lock bits (01 unlocked?), simple check:
-            int lockBits = m & 0x7;
-            if (lockBits != 0) return new Result(false, "Object appears locked/biased (32-bit lock bits non-zero)", mark);
-            // place hash in upper 29 bits (example); exact layout may differ — be conservative:
-            int newMark = (m & 0x7) | (desiredHash & 0x1FFFFFFF) << 3;
-            U.putInt(o, MARK_OFFSET, newMark);
-            return new Result(true, "Wrote hash (32-bit path)", Integer.toUnsignedLong(newMark));
-        } else {
-            // 64-bit mark word (HotSpot typical): low 3 bits are lock/state
-            long lockState = mark & 0x7L;
-            // Common unlocked pattern is 0x1 (unlocked) or 0x0 depending on flags; treat non-zero heavy states as lock.
-            // Biased locking uses specific bit patterns: bit 0..2==101 (5) is biased (VM-dependent).
-            if (lockState == 0x2L /* locked thin? */ || lockState == 0x4L /* heavy? */) {
-                return new Result(false, "Object appears locked (lock bits indicate lock)", mark);
-            }
-            // HotSpot uses different encodings: when unlocked and hash present, hash sits in high bits.
-            // We try to write a 32-bit hash into the upper bits while preserving low state bits.
-            // Use conservative mask: preserve low 3 bits, put hash into bits 32..63 (if available).
-            long preserved = mark & 0x7L;
-            // Check if mark currently contains a pointer/biased-thread id (heuristic)
-            boolean biased = (mark & 0x80000000L) != 0 && ((mark & 0x7L) == 0x5L || (mark & 0x7L) == 0x1L);
-            if (biased) return new Result(false, "Biased lock state detected; refusing to write", mark);
-
-            // We'll put the 32-bit hash into bits 32..63 (shifted left 32).
-            long newUpper = (Integer.toUnsignedLong(desiredHash) & 0xFFFFFFFFL) << 32;
-            long newMark = newUpper | preserved;
-
-            // CAS to avoid races: replace only if mark didn't change
-            boolean ok = U.compareAndSwapLong(o, MARK_OFFSET, mark, newMark);
-            if (!ok) return new Result(false, "CAS failed — mark changed concurrently", mark);
-            return new Result(true, "Wrote hash into upper 32 bits of mark word (best-effort)", mark);
-        }
-    }
-}
-```
-
----
-As the collections defines the structure of all contained [features], it defines as well the metadata properties above which can be searched. A collection allows to add and remove custom properties, but dependent on the implementation and current data size, different cost come by modifying the structure. Some implementations may even reject structure changes, after the collection was crated _(their will throw a `DataError` exception)_. All custom properties are nullable, when being `null` _(which is the default value for a new custom property)_, they are not indexed. So filtering on custom properties is only possible for set values, because to find those that have `null` values, a full data scan is needed.
-
 ## Changes
 The following changes have been made to the data model between the original draft and the current version:
 
@@ -1111,8 +1079,11 @@ The following changes have been made to the data model between the original draf
 [Versioning]: #versioning
 [versioning]: #versioning
 [HEAD]: #head-version
+[HEAD version]: #head-version
 [MAX]: #max-version
+[MAX version]: #max-version
 [NULL]: #null-version
+[NULL version]: #null-version
 [Version]: #versioning
 [version]: #versioning
 [versions]: #versioning
@@ -1122,12 +1093,12 @@ The following changes have been made to the data model between the original draf
 [origin]: #origin
 [Replacement]: #replacement
 [replacement]: #replacement
-[book]: ./JBON.md#books
-[books]: ./JBON.md#books
+[book]: JBON2.md#books
+[books]: JBON2.md#books
 [JSON]: https://www.rfc-editor.org/rfc/rfc8259
 [GeoJSON]: https://datatracker.ietf.org/doc/html/rfc7946
 [TWKB]: https://github.com/TWKB/Specification/blob/master/twkb.md
-[JBON]: ./JBON.md
+[JBON]: JBON2.md
 [UNICODE]: https://home.unicode.org/
 [SQL]: https://en.wikipedia.org/wiki/Sql
 [Redis]: https://redis.io/
@@ -1145,3 +1116,18 @@ The following changes have been made to the data model between the original draf
 [MurMur3]: https://en.wikipedia.org/wiki/MurmurHash
 [murmur3]: https://en.wikipedia.org/wiki/MurmurHash
 
+
+
+```
+	1.	Lead contact of RCA? - Alexander Lowey-Weber
+	2.	Likelihood of reoccurrence (Low/Medium/High)? - Low
+	3.	Mitigation plan in case of reoccurrence? - None
+	4.	Preliminary root cause (Fault Diagnosis and Initial Root Cause Analysis) - Network issue, connection failed to HERE account and AWS S3 at the same time, very likely, and no errors in HA logs.
+	5.	Corrective Actions? (What happened and what action resolved the issue? - None
+	6.	Lessons Learned/Recommendations? - None
+	7.	Impact Statement (Customer impact---What couldn't the customers do or receive?) - None, because related to HERE internal network
+	8.	Start Time and End Time in UTC - ?
+	9.	Was the manual failover implemented within first 10 mins (Yes/No). If no, why not? (NOT APPPLICABLE) 
+ 10.  If Incident caused by a change, were all the change deployment checklist items complied with? What checklist item(s) were missed that lead to this incident? No Change
+
+```

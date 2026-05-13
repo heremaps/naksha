@@ -13,7 +13,7 @@ The PostgresQL storage-engine will map:
 ## Databases
 Each database is initialized by creating an administration schema named `naksha~admin`, exposed as a `Catalog` with the same name. Within this schema, the following collections are created:
 
-- `naksha~version~seq`: The version sequence, reset daily to `1`.
+- `naksha~version~seq`: The version sequence, reset daily to `0`.
 - `naksha~versions`: This collection holds all versions of the storage, actually a transaction log. Beware that when data is imported, the versions are not created, they have to be imported as well.
 - `naksha~catalogs`: This collection holds all catalogs under management.
 - `naksha~books`: This collection holds all global books under management.
@@ -28,8 +28,8 @@ Within PostgresQL a collection is a set of database tables. All these tables are
 
 - `{collection}`: The _HEAD_ table. It is either a plain simple table or a partitioned table. When being partitioned, this is done as `PARTITION BY BY RANGE (fn % {partitions})`.
 - `{collection}~{i}`: The _HEAD_ partitions (`PARTITION OF {collection} FOR VALUES WITH (MODULUS {parititions}, REMAINDER {i})`) with `i` being the feature-number modulo the number of partitions.
-- `{collection}~hst`: The _HISTORY_ table, this is always a partitioned table, partitioned by `next_version` (`PARTITION BY BY RANGE ((next_version >> ${shift}))`). The `shift` value is configured in the collection feature and defaults to `40`, so that the history is normally the year of the next-version.
-- `{collection}~hst~{y}`: The history partition for a specific year (`PARTITION OF {collection}$hst FOR VALUES FROM {y} TO {y+1}`, optionally partitioned again by `fn` (`PARTITION BY BY RANGE (fn % {partitions})`), when partitioning is enabled. The value of `y` is `next_version >> {shift}` with `shift` being configured in the collection, defaulting to `40`.
+- `{collection}~hst`: The _HISTORY_ table, this is always a partitioned table, partitioned by `next_version` (`PARTITION BY BY RANGE ((next_version >> ${shift}))`). The `shift` value is configured in the collection feature and defaults to `41`, so that the history is normally the year of the next-version.
+- `{collection}~hst~{y}`: The history partition for a specific year (`PARTITION OF {collection}$hst FOR VALUES FROM {y} TO {y+1}`, optionally partitioned again by `fn` (`PARTITION BY BY RANGE (fn % {partitions})`), when partitioning is enabled. The value of `y` is `next_version >> {shift}` with `shift` being configured in the collection, defaulting to `41`.
 - `{collection}~hst~{y}~{i}`: The history partition of a specific year, if partitioning is enabled (`PARTITION OF {collection}$hst${y} FOR VALUES WITH (MODULUS {partitions}, REMAINDER {i})`.
 - `{collection}~meta`: The meta table that stores metadata.
 
@@ -44,47 +44,49 @@ The dollar (`$`) and tilde (`~`) are reserved and used internally to avoid colli
 ## Table layout
 All tables used in the Naksha PostgresQL implementation have the same general layout:
 
-| Column         | Type  | Java-Constant        | External-Name     | Modifiers      | Description                                                                                        |
-|----------------|-------|----------------------|-------------------|----------------|----------------------------------------------------------------------------------------------------|
-| fn             | int8  | `FnCol`              | `fn`              | NOT NULL       | The feature number.                                                                                |
-| version        | int8  | `VersionCol`         | `version`         | NOT NULL       | The feature version.                                                                               |
-| next_version   | int8  | `NextVersionCol`     | `nextVersion`     | NOT NULL       | The next-version does not exist in _HEAD_, because it would always be `4,503,599,627,370,495`.     |
-| prev_version   | int8  | `PrevVersionCol`     | `prevVersion`     |                | The previous version, `null` if this is the first tuple.                                           |
-|                |       |                      |                   |                |                                                                                                    |
-|                |       |                      |                   |                | **Pre-Defined Custom Columns**                                                                     |
-|                |       |                      |                   |                |                                                                                                    |
-| base_version   | int8  | `BaseVersionCol`     | `baseVersion`     |                | When two versions are merged by a client, the base of the two merged changes.                      |
-| id             | text  | `IdCol`              | `id`              |                | The unique identifier of the feature.                                                              |
-| origin         | text  | `OriginCol`          | `origin`          |                | The origin of the feature, needed for rebase operations.                                           |
-| replacement_id | text  | `ReplacementCol`     | `replacement`     |                | The replacement-id, to link multiple changes together as a replacement, needed for rebase.         |
-| cluster_id     | text  | `ClusterCol`         | `cluster`         |                | The cluster-id, to link multiple features together as a logical cluster to ensure consistent maps. |
-| f_jbon         | bytea | `JbonFeatureCol`     | `jbonFeature`     |                | The [JBON] encoded feature.                                                                        |
-| f_json_gz      | bytea | `JsonGzipFeatureCol` | `jsonGzipFeature` |                | The GZIP compressed [JSON] encoded feature.                                                        |
-| f_json         | json  | `JsonFeatureCol`     | `jsonFeature`     |                | The [JSON] encoded feature _(only compressed at storage level)_                                    |
-| f_jsonb        | jsonb | `JsonbFeatureCol`    | `jsonbFeature`    |                | The `JSONB` encoded feature _(only compressed at storage-level)_.                                  |
-| attachemnt     | bytea | `AttachmentCol`      | `attachment`      |                | The attachemnt.                                                                                    |
-| geo            | bytea | `GeometryCol`        | `geo`             |                | The [TWKB] encoded geometry of the feature _(7 decimal digits precision)_.                         |
-| ref_point      | bytea | `RefPointCol`        | `refPoint`        |                | The [TWKB] encoded reference point of the feature _(7 decimal digits precision)_.                  |
-| tags           | jsonb | `TagsCol`            | `tags`            |                | Helper with customer key-values that can be indexed using a GIN index. Deprecated.                 |
-| pub_number     | int8  | `PubNumberCol`       | `pubNumber`       |                | A publication number assigned by a background job to get versions in sequential publication order. |
-| pub_time       | int8  | `PubTimeCol`         | `pubTime`         |                | A publication time assigned by a background job to get versions in sequential publication order.   |
+| Column       | Type  | Java-Constant    | External-Name | Modifiers      | Description                                                                                    |
+|--------------|-------|------------------|---------------|----------------|------------------------------------------------------------------------------------------------|
+| fn           | int8  | `FnCol`          | `fn`          | NOT NULL       | The feature number.                                                                            |
+| version      | int8  | `VersionCol`     | `version`     | NOT NULL       | The feature version.                                                                           |
+| next_version | int8  | `NextVersionCol` | `nextVersion` | NOT NULL       | The next-version does not exist in _HEAD_, because it would always be `4,503,599,627,370,495`. |
+| prev_version | int8  | `PrevVersionCol` | `prevVersion` |                | The previous version, `null` if this is the first tuple.                                       |
+| id           | text  | `IdCol`          | `id`          |                | The _(optional)_ unique identifier of the feature.                                             |
+| data         | bytea | `DataCol`        | `data`        |                | The [JBON] encoded tuple.                                                                      |
 
-All other columns are configurable. The queries are already explained very well in the [lib-data documentation](./LIB_DATA.md#querying-a-version).
+All other columns are configurable. The queries are already explained very well in the [lib-data documentation](./LIB_DATA.md#querying-a-version). The `id` column is special in that when the _feature-number_ is a positive integer, the `id` must be `null`, and in the [GeoJSON] it is the stringified _feature-number_. Otherwise, the lower 16-bit of the _feature-number_ must match the 64-bit [MurMur3] hash above the `id`. This is as well specified in [lib-data identifiers](./LIB_DATA.md#identifiers). This means, the minimal overhead per row is 24-byte in _HEAD_, and 32-byte in _HISTORY_.
 
-This means, the minimal overhead per row is 24-byte in _HEAD_, and 32-byte in _HISTORY_.
+The following table shows the pre-defined columns:
+
+| Column         | Type  | Java-Constant        | External-Name     | Modifiers      | Description                                                                                            |
+|----------------|-------|----------------------|-------------------|----------------|--------------------------------------------------------------------------------------------------------|
+| created_at     | int8  | `CreatedAtCol`       | `createdAt`       |                | The UNIX epoch time in millis, when the feature was created.                                           |
+| updated_at     | int8  | `UpdatedAtCol`       | `updatedAt`       |                | The UNIX epoch time in millis, when this tuple was created.                                            |
+| base_version   | int8  | `BaseVersionCol`     | `baseVersion`     |                | When two versions are merged by a client, the base of the two merged changes.                          |
+| origin         | text  | `OriginCol`          | `origin`          |                | The origin of the feature, needed for rebase operations.                                               |
+| replacement_id | text  | `ReplacementCol`     | `replacement`     |                | The replacement-id, to link multiple changes together as a replacement, needed for rebase.             |
+| cluster_id     | text  | `ClusterCol`         | `cluster`         |                | The cluster-id, to link multiple features together as a logical cluster to ensure consistent maps.     |
+| author         | text  | `AuthorCol`          | `author`          |                | The UNIX epoch in millis, when the author changed. Must match `updatedAt` of this or a previous state. |
+| author_ts      | int8  | `AuthorTsCol`        | `authorTs`        |                | The author of the feature.                                                                             |
+| app_id         | text  | `AppIdCol`           | `author`          |                | The application-identifier of the application that created this tuple.                                 |
+| attachemnt     | bytea | `AttachmentCol`      | `attachment`      |                | The attachemnt.                                                                                        |
+| geo            | bytea | `GeometryCol`        | `geo`             |                | The [TWKB] encoded geometry of the feature _(7 decimal digits precision)_.                             |
+| ref_point      | bytea | `RefPointCol`        | `refPoint`        |                | The [TWKB] encoded reference point of the feature _(7 decimal digits precision)_.                      |
+| tags           | jsonb | `TagsCol`            | `tags`            |                | Helper with customer key-values that can be indexed using a GIN index. Deprecated.                     |
+| pub_number     | int8  | `PubNumberCol`       | `pubNumber`       |                | A publication number assigned by a background job to get versions in sequential publication order.     |
+| pub_time       | int8  | `PubTimeCol`         | `pubTime`         |                | A publication time assigned by a background job to get versions in sequential publication order.       |
 
 ## Indices
 Generally, indices are named like the table plus `${index-name}`.
 
-In the _HEAD_ the primary key is defined as unique index above (`fn`) including `version` as `pkey`. Additionally, a secondary _(none-unique)_ index above (`version`, `fn`) is created as `skey`. All custom indices need to include `fn` and `version` so that queries are always execute as index-only scans.
+In the _HEAD_ the primary key is defined as unique index above (`fn`), including `version` as `pkey`. Additionally, a secondary _(none-unique)_ index above (`version`, `fn`) is created as `skey`. All custom indices need to include `fn` and `version` so that queries are always execute as index-only scans.
 
-In the _HISTORY_ the primary key is defined as unique index above (`fn`, `version`) as `pkey`. Additionally, a secondary _(none-unique)_ index above (`version`, `next_version`, `fn`) is created as `skey`. All custom indices need to start with `version`, including `fn` and `next_version`, so that queries are always execute as index-only scans. Actually, all queries in _HISTORY_ always require to query for `version`.
+In the _HISTORY_ the primary key is defined as unique index above (`fn`, `version`), including `next_version` as `pkey`. Additionally, a secondary _(none-unique)_ index above (`version`, `next_version`, `fn`) is created as `skey`. All custom indices need to start with `version`, and they need to include `fn` and `next_version`, so that individual queries are execute as index-only scans. Actually, all queries in _HISTORY_ always require to query for `version`.
 
 All **text** columns and all **btree** indices should always be created with `COLLATE "C"` to ensure deterministic ordering in the table, long term stable determinism and default support for _like_ operation. Basically, `text_pattern_ops` is exactly doing the same thing _(should be set additionally to be explicit about this)_. This improves as well deduplication. All queries should always enforce `COLLATE "C"` too. When text is encoded, we should use `normalize(text, 'NFKC')` to ensure the same binary encoding for all values, no matter if written from Java or directly inside the database. Available collations can be queried using `SELECT * FROM pg_collation;` and `ucs_basic` may be another option, but not recommended so far.
 
 When creating indices for columns being unique, [disabling deduplication](https://www.postgresql.org/docs/18/btree.html#BTREE-DEDUPLICATION) should be done. Actually, because deduplication does not work with _include_, and we need it basically for every index, we should simply always turn it off to not pay any performance, so we will always use `WITH (deduplicate_items=OFF)`.
 
-## Management
+## Data Management
 People are very well able to make a decision if data is expected to be big or not. However, they struggle when they have to make decisions how many partitions should be used. To simplify this, we made the following assumptions:
 
 - We are either on AWS Aurora, on AWS EC2, or on a local system
@@ -92,9 +94,11 @@ People are very well able to make a decision if data is expected to be big or no
   - This is true in AWS and in most local network stacks.
 - When partitioning is enabled, and we're not on AWS Aurora, we should create distinct tablespaces for each partition.
   - We should split as well between _HEAD_ and _HISTORY_.
-- At AWS, when using EBS, we know that we should stick to `gp3` volumes, which provides 3000 IOPS and 125 MiB/s throughput for $0.08/GB/month.
+- At AWS, when using EBS, we know that we should stick to:
+  - a) `gp3` volumes, which provides 3000 IOPS and 125 MiB/s throughput for $0.08/GB/month.
+  - b) ephemeral SSD, if a temporary storage is needed
 
-Considering these values, we need to compile PostgresQL with 32,768 byte per page, when running our own PostgresQL cluster on EC2 or local, so we get a minimum of 96,000 KiB/s _(93.75 MiB/s)_ throughput for the 3000 IOPS. We have three general sections we need to optimize:
+Considering these values, we need to compile PostgresQL with 32,768 byte per page, when running our own PostgresQL cluster on EC2 or local, so we get a minimum of 96,000 KiB/s _(93.75 MiB/s)_ throughput for the 3000 IOPS. We have four general sections we need to optimize:
 
 - WAL logs
 - _HEAD_
@@ -112,38 +116,40 @@ And we have two use cases:
 - For temporary storage, data loss is acceptable
 - For consistent storage, data loss is not acceptable
 
-We will simply the whole set up by having a single configuraiton entry: `storage`
+We will simplify the whole set up by having a two configuraiton entries:
+- `storage`: `docker` or `aurora` _(default)_ 
+- `persistence`: `temporary` or `consistent` _(default)_
 
-## Aurora - `default`
-The default storage configuration, when the user does not select any, is the Aurora storage type. We can not configure the disk layout, WAL log, or any other storage related thing. Therefore, on `default` storage we simply operate not using tablespaces.
+### Aurora - `aurora`
+The default storage configuration, when the user does not select any, is the Aurora storage type. We can not configure the disk layout, WAL log, or any other storage related thing. Therefore, on `auto` storage we simply operate not using tablespaces.
 
-## Docker/EBS - `docker`
-We first have to think about the guaranteed throughput we want. When we use 16 partitions, we get 16 * 93.75 MiB/s, resulting in 1,500 MiB/s. _(around 1.46 TiB/s)_. This allows to import 1 TiB of data in around one second, considering overhead. This seems to be fast enough for all our use cases. The generaly data layout for our docker container therefore is:
+### Docker/EBS - `docker`
+We first have to think about the guaranteed throughput we want. When we use 16 partitions, we get 16 * 93.75 MiB/s, resulting in ~1,500 MiB/s. _(~1.46 TiB/s)_. This allows to import 1 TiB of data in around one second, considering overhead. This seems to be fast enough for all our use cases. The generaly data layout for our docker container therefore is:
 
 - `/pgdata/main` for `PGDATA` - `pg_default`
 - `/pgdata/head` 
   - `/pgdata/head/main` for not partitioned _HEAD_ - `ts_head`
-  - `/pgdata/head/{i}` for _HEAD_ partitions - `ts_head_{i}`
+  - `/pgdata/head/{i}` for 16 _HEAD_ partitions - `ts_head_{i}`
 - `/pgdata/hst`
   - `/pgdata/hst/main` for not partitioned _HISTORY_ - `ts_hst`
-  - `/pgdata/hst/{i}` for _HISTORY_ partitions - `ts_hst_{i}`
+  - `/pgdata/hst/{i}` for 16 _HISTORY_ partitions - `ts_hst_{i}`
 - `/pgdata/wal`
 - `/pgdata/tmp` for temp spill files - `ts_tmp`
 
 With `i` being a value between `0` and `15`. We often copy from _HEAD_ to _HISTORY_, therfore, we want that each thread uses a dedicated physical storage for _HEAD_ and _HISTORY_ to avoid that the load of one partition impacts the others.
 
-The WAL log now becomes a bottleneck, when we keep it as is. So we need to mount it to a RAID 0, persisting out of yet another bunch of EBS volumes. When bulk loading, we know that the WAL log can grow fast. We will soft-limit the WAL log to 768 MiB of data, and mount it into a RAID 0 volume with 16 EBS 64 GiB `gp3` EBS volumes, with around 1500 MiB/s throughput and 1,024 GiB of total disk space. This leaves enough buffer, because the WAL log maximum size is only a soft-cap. We will use `mdadm` to link the EBS volumns together into one big WAL log volume using RAID 0.
+The WAL log now becomes a bottleneck, when we keep it as is. So we need to mount it to a RAID 0, persisting out of yet another bunch of EBS volumes. When bulk loading, we know that the WAL log can grow fast. We will soft-limit the WAL log to 768 GiB of data, and mount it into a RAID 0 volume with 16 EBS volumes, each being a 64 GiB `gp3` EBS volumes, with around ~1500 MiB/s throughput and a total of 1,024 GiB of disk space. This leaves enough buffer, because the WAL log maximum size is only a soft-cap. We will use `mdadm` to link the EBS volumns together into one big WAL log volume using RAID 0.
 
-This setup allows us to have only one docker container for all environments, including the ephemeral setup, which simply counts as _local_, so is the same as on the developer laptop. For the consistent store on EC2, we will need the following volumes:
+This setup allows us to have only one docker container for all environments, including the ephemeral setup, which simply uses `auto` storage type, so the docker works as well on the developer laptop. For the consistent store on EC2, we will need the following volumes:
 
-- `{database-id}_main` - A single EBS volume. Even when partitions are used, should be at least 256 GiB.
-- `{database-id}_wal_{i}` - 16 `gp3` EBS volumes, each being 64 GiB _(therefore 1,024 MiB total, with configure max WAL log size of 1 TiB)_. This costs ~$81.92/month.
+- `{database-id}_main` - A single EBS volume. Even when partitions are used, should be at least 256 GiB `ext4` volume.
+- `{database-id}_wal_{i}` - 16 `gp3` EBS volumes, each being 64 GiB _(therefore 1,024 MiB total, with configure max WAL log size of 768 GiB)_. This costs $81.92/month.
 - `{database-id}_head_{i}` - 16 `gp3` EBS volumes, each being 1/8'th of the expected maximum data size, summing to two times the expected data size.
 - `{database-id}_hst_{i}` - 16 `gp3` EBS volumes, each being 1/4'rd of the expected maximum data size, summing to four times the expected data size.
 
-On a _local_ setup, we simply mount `pgdata` into a single directory, which we _(optionally)_ can mount to a RAID 0 of local ephemeral SSD disks.
+This totals to `1280 GiB + 6 times {expected data size in GiB}`. On a _local_ setup, we simply mount `pgdata` into a single directory with `storage` set to `auto`.
 
-For the EC2 Instance use-case this means, that each database persists either out of a local RAID 0, or 49 EBS volumes for consistent data. For the EBS use-case, we will need to reserve 1280 MiB + 6 times the expected data size. Assuming we expect 2 TiB of data, we need to reserve EBS volumes with a total size of `1280 MiB + 6 * 2048 MiB = 7424 MiB`. At cost of $0.08/GiB/month this sums to ~$600/month. Adding the needed [r8idn.32xlarge](https://instances.vantage.sh/aws/ec2/r8idn.32xlarge?currency=USD) instance with `$15.006/h on demand * 730h/month = 10,954.38 $/month` cost, this sums to $15,600/month. This would be the cost for a consistent store. For temporary stores the cost are just the instance for the time it is needed, which will be a fixed cost of `$15/hour`. A cheaper alternative can be [r6idn.x32large](https://instances.vantage.sh/aws/ec2/r6idn.32xlarge?currency=USD) instance.
+For the EC2 Instance use-case this means, that each database persists either out of a local RAID 0, or 49 EBS volumes for consistent data. For the EBS use-case, we will need to reserve 1280 MiB + 6 times the expected data size. Assuming we expect 2 TiB of data, we need to reserve EBS volumes with a total size of `1280 MiB + 6 * 2048 MiB = 7424 MiB`. At cost of \$0.08/GiB/month this sums to ~\$600/month. Adding the needed [r8idn.32xlarge](https://instances.vantage.sh/aws/ec2/r8idn.32xlarge?currency=USD) instance with `$15.006/h on demand * 730h/month = 10,954.38 $/month` cost, this sums to $15,600/month. This would be the cost for a consistent store. For temporary stores the cost are just the instance for the time it is needed, which will be a fixed cost of `$15/hour`. A cheaper alternative can be [r6idn.x32large](https://instances.vantage.sh/aws/ec2/r6idn.32xlarge?currency=USD) instance.
 
 Backups can be made using AWS CLI tool, like `aws ec2 create-snapshots --instance-specification InstanceId=i-xxxxxxxx`. This will make a snapshot of all EBS volumes. It should do the snapshot of all volumes in parallel and as each volume is relatively small, it should be done in a few seconds.
 
@@ -206,7 +212,7 @@ With a limit of 1,000,000 tuple as hard-cap, and for example 30 KiB topology, we
 
 When the result-set becomes bigger, the best option is to just read the data as a stream and to filter it. This can be done by reading ordered from the primary key mentioned above, so what we can seek through the index. When only reading the necessary reference tuple _(16 byte, `fn` and `version`)_ we are sure that we can perform an index-only scan. Doing so allows the client to utilize memory cache or other forms of caching.
 
-### Property Search
+### Member Search
 As properties are stored in the `feature` they should never be searched in the database!
 
 This will always be very bad, as it requires to decode the `feature` column. Reading this column means for the topology example result-set, to read 4 GiB of compressed JSON, to decompress it into 28 GiB of JSON, then to parse it into JSONB, and eventually to filter it. Note that indexing will only help to some degree with that, and only for _btree_ indices, because often the HEAP tuple still has to be accessed.
