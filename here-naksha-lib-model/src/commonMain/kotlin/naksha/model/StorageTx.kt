@@ -125,8 +125,8 @@ open class StorageTx private constructor(
             .withOperation(operation)
             .withAction(action)
         val xyz = feature.properties.xyz
-        val actionBits = (action.intValue shr ACTION_SHIFT).toLong()
-        val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, Version(version.txn or actionBits))
+        val actionBits = Int64((action.intValue shr ACTION_SHIFT).toLong())
+        val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, Version(version.txn and Int64(-4L) or actionBits))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
         val prev_tn: TupleNumber? = if (operation == Operation.CREATED || (operation == Operation.UPDATED && !atomic)) null else {

@@ -186,7 +186,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree (naksha_tn_version(tn) DESC) INCLUDE ($c_tn, $c_id, $c_tn_next)""",
+                        """btree ((naksha_tn_version(tn) & -4) DESC) INCLUDE ($c_tn, $c_id, $c_tn_next)""",
                         table, unique = true, addFillFactor = true, where = null
                     )
                 ).close()

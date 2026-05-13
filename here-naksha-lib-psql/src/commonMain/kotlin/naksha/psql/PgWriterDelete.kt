@@ -74,8 +74,8 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
     ((head_row.flags & -196609) | (2 << 16) | (2 << 12)) AS ${PgColumn.flags},
     (head_row.cc + 1) AS ${PgColumn.cc},
     naksha_tn_128(naksha_tn_feature_number(head_row.tn), (${tx.version.txn}::int8 | 2)) AS ${PgColumn.tn}, 
-    naksha_tn_64((${tx.version.txn}::int8 | 2)) AS ${PgColumn.next_tn}, 
-    substring(head_row.tn, 9) AS ${PgColumn.prev_tn}, 
+    naksha_tn_128(naksha_tn_feature_number(head_row.tn), (${tx.version.txn}::int8 | 2)) AS ${PgColumn.next_tn}, 
+    head_row.tn AS ${PgColumn.prev_tn}, 
     null::bytea AS ${PgColumn.base_tn}, 
     ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row, query
@@ -85,7 +85,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // Insert the current `head_row` into history
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
   INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT substring(tombstone.tn, 9) AS ${PgColumn.next_tn},
+  SELECT tombstone.tn AS ${PgColumn.next_tn},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN tombstone ON tombstone.id = head_row.id

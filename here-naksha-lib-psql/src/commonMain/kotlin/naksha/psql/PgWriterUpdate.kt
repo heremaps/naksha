@@ -70,7 +70,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
         // Insert the current `head_row` into history
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
   INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT substring(new_row.tn, 9) AS ${PgColumn.next_tn},
+  SELECT new_row.tn AS ${PgColumn.next_tn},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.id = head_row.id

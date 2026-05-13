@@ -412,10 +412,10 @@ SELECT basics.*, procs.* FROM basics, procs;
                     }
                     if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
                         logger.info("Transaction counter is still at wrong day, rollover to next day")
-                        // Rollover, we update sequence of the day.
-                        version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(1))
+                        // Rollover, we update sequence of the day. Start at seq=4 to keep bits 0-1 clean for action encoding.
+                        version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(4))
                         txn = version.txn
-                        conn.execute("SELECT setval($1, $2)", arrayOf(txnSequenceOid, txn + 1)).close()
+                        conn.execute("SELECT setval($1, $2)", arrayOf(txnSequenceOid, txn + 4)).close()
                     }
                     logger.info("Release advisory lock")
                     conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()

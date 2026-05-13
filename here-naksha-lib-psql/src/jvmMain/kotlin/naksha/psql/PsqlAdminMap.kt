@@ -180,7 +180,7 @@ class PsqlAdminMap internal constructor(
             )
         )
         logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
-        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 1 CACHE 10;").close()
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 4 INCREMENT BY 4 CACHE 40;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
         createPgCollection(conn, collections) // 0

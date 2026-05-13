@@ -43,7 +43,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
         val selectedUpdatedFeatures = updateResp.features.subList(2, 4) // take 2 features from the middle
         val selectedTns = selectedUpdatedFeatures.map { it!!.tupleNumber }
         val serializedTns: Array<ByteArray> = selectedTns
-            .map { it.toByteArray(TupleNumberVariant.B96) } // `next_tn` is 96-bit encoded
+            .map { it.toByteArray(TupleNumberVariant.B128) } // `next_tn` is 128-bit encoded
             .toTypedArray()
 
         // When: querying for features which `nextTn` is specified

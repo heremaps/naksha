@@ -396,7 +396,7 @@ $TABLESPACE"""
             // DELETED (this) -> PARTITION
             val SQL = """$CREATE_TABLE $quotedName (
 ${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }},
-CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (${if (isDeleted(name)) "next_tn = naksha_tn_64(tn)" else "next_tn IS NULL"})
+CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (${if (isDeleted(name)) "next_tn = tn" else "next_tn IS NULL"})
 ) PARTITION BY RANGE (naksha_tn_partition_index(tn, $partitionCount)) 
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)

@@ -53,7 +53,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
         // Insert the current `head_row` into history.
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
   INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT substring(new_row.tn, 9) AS ${PgColumn.next_tn},
+  SELECT naksha_tn_128(naksha_tn_feature_number(new_row.tn), (naksha_tn_version(new_row.tn) & -4) | 1) AS ${PgColumn.next_tn},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.id = head_row.id
@@ -94,7 +94,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
   SELECT
     ((new_row.flags & -196609) | (1 << 16) | (1 << 12)) AS ${PgColumn.flags},
     (head_row.cc + 1) AS ${PgColumn.cc},
-    substring(head_row.tn, 9) AS ${PgColumn.prev_tn},
+    head_row.tn AS ${PgColumn.prev_tn},
     CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment,
     naksha_tn_128(naksha_tn_feature_number(new_row.tn), (naksha_tn_version(new_row.tn) & -4) | 1) AS ${PgColumn.tn},
     ${PgColumn.updateColumns.joinToString(", ") { "new_row.${it.name} AS ${it.name}" }}
@@ -182,7 +182,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     val changeCount: Int = outRows.getInt(row, "cc") ?:
                         throw generalException("Missing 'cc' in update result for feature '$id'")
                     val attachment: ByteArray? = outRows.getByteArray(row, "attachment")
-                    val prev_tn = outRows.getB64(row, "prev_tn", tn.featureNumber)
+                    val prev_tn = outRows.getB128(row, "prev_tn")
                     val write = writeByTn[tn] ?: throw generalException("Missing write state for feature '$id'")
                     val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
                     write.tupleNumber = updated_tn

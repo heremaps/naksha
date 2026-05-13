@@ -2,8 +2,8 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.model.*
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
@@ -199,13 +199,13 @@ internal class PgColumnRows {
     fun getTuple(row: Int, storageNumber: Int64, mapNumber: Int, collectionNumber: Int): Tuple? {
         if (row < 0 || row >= size) return null
         val tn_raw = getByteArray(row, PgColumn.tn) ?: return null
-        val tupleNumber = TupleNumber.fromByteArray(tn_raw, 0, B160, storageNumber, mapNumber, collectionNumber)
+        val tupleNumber = TupleNumber.fromByteArray(tn_raw, 0, B128, storageNumber, mapNumber, collectionNumber)
         val prev_tn = getByteArray(row, PgColumn.prev_tn)
-        val prevTupleNumber = if (prev_tn != null) TupleNumber.fromByteArray(prev_tn, 0, B96, tupleNumber) else null
+        val prevTupleNumber = if (prev_tn != null) TupleNumber.fromByteArray(prev_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val base_tn = getByteArray(row, PgColumn.base_tn)
-        val baseTupleNumber = if (base_tn != null) TupleNumber.fromByteArray(base_tn, 0, B96, tupleNumber) else null
+        val baseTupleNumber = if (base_tn != null) TupleNumber.fromByteArray(base_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val next_tn = getByteArray(row, PgColumn.next_tn)
-        val nextTupleNumber = if (next_tn != null) TupleNumber.fromByteArray(next_tn, 0, B96, tupleNumber) else null
+        val nextTupleNumber = if (next_tn != null) TupleNumber.fromByteArray(next_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val meta = Metadata(
             tupleNumber = tupleNumber,
             flags = getInt(row, PgColumn.flags) ?: return null,
@@ -276,9 +276,9 @@ internal class PgColumnRows {
         set(row, PgColumn.flags, meta.flags)
         set(row, PgColumn.cc, meta.changeCount)
         set(row, PgColumn.tn, meta.tupleNumber.toB128())
-        set(row, PgColumn.next_tn, meta.nextTupleNumber?.toB64())
-        set(row, PgColumn.prev_tn, meta.prevTupleNumber?.toB64())
-        set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB64())
+        set(row, PgColumn.next_tn, meta.nextTupleNumber?.toB128())
+        set(row, PgColumn.prev_tn, meta.prevTupleNumber?.toB128())
+        set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB128())
         set(row, PgColumn.id, meta.id)
         set(row, PgColumn.app_id, meta.appId)
         set(row, PgColumn.author, meta.author)
