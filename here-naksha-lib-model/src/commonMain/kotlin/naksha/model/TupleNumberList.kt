@@ -10,11 +10,11 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set
 import naksha.model.BinaryUtil.BinaryUtil_C.TYPE_TUPLE_NUMBER_ARRAY
 import naksha.model.BinaryUtil.BinaryUtil_C.writeSimpleHeader
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B224
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B288
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B256
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
 import naksha.model.request.FeatureTuple
 import naksha.model.request.FeatureTupleList
 import kotlin.js.JsExport
@@ -76,8 +76,8 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
                 continue
             }
             if (variant == null) {
-                // We found a first tuple, we hope that each tuple can be encoded in 96-bit only.
-                variant = B96
+                // We found a first tuple, we hope that each tuple can be encoded in 64-bit only.
+                variant = B64
                 storageNumber = tupleNumber.storageNumber
                 mapNumber = tupleNumber.mapNumber
                 collectionNumber = tupleNumber.collectionNumber
@@ -86,48 +86,48 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
             }
             if (storageNumber != tupleNumber.storageNumber) {
                 // We need to encode all values individually
-                variant = B288
+                variant = B256
                 storageNumber = null
                 mapNumber = null
                 collectionNumber = null
                 featureNumber = null
                 break
             }
-            if (variant === B224) continue
+            if (variant === B192) continue
             if (mapNumber != tupleNumber.mapNumber) {
                 // We need to encode individual map-, collection-, and feature-numbers
-                variant = B224
+                variant = B192
                 mapNumber = null
                 collectionNumber = null
                 featureNumber = null
                 continue
             }
-            if (variant === B192) continue
+            if (variant === B160) continue
             if (collectionNumber != tupleNumber.collectionNumber) {
                 // We need to encode individual collection-, and feature-numbers
-                variant = B192
+                variant = B160
                 collectionNumber = null
                 featureNumber = null
                 continue
             }
-            if (variant === B160) continue // We need to encode at least individual feature-numbers
+            if (variant === B128) continue // We need to encode at least individual feature-numbers
             if (featureNumber != tupleNumber.featureNumber) {
                 // We need to encode individual feature-numbers
-                variant = B160
+                variant = B128
                 featureNumber = null
                 continue
             }
             // So far, we found the same storage-, map-, collection-, and feature-numbers for all tuple-numbers.
-            check(variant === B96)
+            check(variant === B64)
         }
         // If the list is empty, return empty bytes.
         if (variant == null || length == 0) return byteArrayOf()
         // Dependent on which variant is the smallest, we will encode for each tuple-number:
-        // 36 byte = storage:8, map:4, collection:4, feature:8, version:8, uid:4
-        // 28 byte = map:4, collection:4, feature:8, version:8, uid:4
-        // 24 byte = collection:4, feature:8, version:8, uid:4
-        // 20 byte = feature:8, version:8, uid:4
-        // 12 byte = version:8, uid:4
+        // 32 byte = storage:8, map:4, collection:4, feature:8, txn:8
+        // 24 byte = map:4, collection:4, feature:8, txn:8
+        // 20 byte = collection:4, feature:8, txn:8
+        // 16 byte = feature:8, txn:8
+        //  8 byte = txn:8
         val SIZE = 8 + variant.sharedBytes + variant.encodingBytes * length
         val bytes = ByteArray(SIZE)
         val view = Platform.newDataView(bytes)
@@ -135,7 +135,7 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
         var i = 8
         if (variant.sharedStorageNumber()) {
             dataview_set_int64(view, i, storageNumber!!)
-            i + 8
+            i += 8
         }
         if (variant.sharedMapNumber()) {
             dataview_set_int32(view, i, mapNumber!!)
@@ -147,7 +147,7 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
         }
         if (variant.sharedFeatureNumber()) {
             dataview_set_int64(view, i, featureNumber!!)
-            i + 8
+            i += 8
         }
         check(i == variant.sharedBytes)
         for (tupleNumber in this) {
@@ -170,8 +170,6 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
             }
             dataview_set_int64(view, i, tupleNumber.txn)
             i += 8
-            dataview_set_int32(view, i, tupleNumber.uid)
-            i += 4
         }
         check(i == SIZE)
         return bytes

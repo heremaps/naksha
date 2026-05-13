@@ -56,7 +56,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
          allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }
     else "head.id AS id, head.tn AS tn, head.attachment AS attachment"}
   FROM ${headTable.quotedName} AS head, new_row
-  WHERE head.id = new_row.id AND (new_row.version IS NULL OR new_row.version = naksha_tn_version(head.tn))
+  WHERE head.id = new_row.id AND (new_row.version IS NULL OR (new_row.version & -4) = (naksha_tn_version(head.tn) & -4))
   FOR UPDATE NOWAIT
 )"""
 
@@ -168,7 +168,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 val head_id = rows.getString(rowNum, "head_id")
                 if (head_id != id) { // Conflict!
                     val expectedVersion = write.version ?: throw illegalState("Missing expected version for feature '$id'")
-                    val tn = TupleNumber.fromB160(existing_tn, storageNumber, mapNumber, collectionNumber)
+                    val tn = TupleNumber.fromB128(existing_tn, storageNumber, mapNumber, collectionNumber)
                     throw conflict("The feature '$id' was expected in version $expectedVersion, but actually found in ${tn.version}")
                 }
                 // Update the attachment, if we should keep it.

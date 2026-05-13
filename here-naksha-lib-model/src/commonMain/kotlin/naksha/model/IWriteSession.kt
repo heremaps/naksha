@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.AtomicInt
 import naksha.model.objects.NakshaTx
 import kotlin.js.JsExport
 
@@ -11,14 +10,6 @@ import kotlin.js.JsExport
  */
 @JsExport
 interface IWriteSession: IReadSession {
-
-    /**
-     * The atomic `uid` counter (unique identifier within a transaction).
-     *
-     * This value is reset to `0` after every [commit] or [rollback].
-     * @since 3.0.0
-     */
-    val uid: AtomicInt
 
     /**
      * Acquire a storage lock, that is automatically released when the session is [closed][close].

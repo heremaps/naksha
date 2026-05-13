@@ -10,8 +10,8 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
 
 /**
  * A column descriptor for database columns, especially helpful when reading columns using `SELECT * FROM table`.
@@ -278,16 +278,15 @@ class PgColumn : JsEnum() {
         //max: 72 byte ; 56 + 4 * 4
 
         /**
-         * The [tuple-number][naksha.model.TupleNumber] of this row in [160-bit][B160] encoding _(20 byte)_.
+         * The [tuple-number][naksha.model.TupleNumber] of this row in [128-bit][B128] encoding _(16 byte)_.
          *
          * This column is created as `PRIMARY KEY`, which is very important for some functions of PostgresQL, e.g. in joins it relies upon this, we rely upon this to load unique versions _(aka [Tuple][naksha.model.Tuple])_, even from history.
          *
          * The encoding stores, in order, Big-Endian encoded:
          * - feature-number: 64
-         * - version: 64
-         * - uid: 32
+         * - txn: 64 (lower 2 bits encode action)
          * @since 3.0
-         * @see [B160]
+         * @see [B128]
          */
         @JvmField
         @JsStatic
@@ -298,15 +297,14 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * If this is the latest [tuple][naksha.model.Tuple] (state) of the [feature][naksha.model.objects.NakshaFeature], the value is `null`; otherwise it stores the [next tuple-number][naksha.model.TupleNumber], using the [96-bit encoding][B96].
+         * If this is the latest [tuple][naksha.model.Tuple] (state) of the [feature][naksha.model.objects.NakshaFeature], the value is `null`; otherwise it stores the [next tuple-number][naksha.model.TupleNumber], using the [64-bit encoding][B64].
          *
          * If this is a tombstone state, so actually the end of the feature lifetime, then this is the same as [tn].
          *
          * The encoding stores, in order, Big-Endian encoded:
-         * - version: 64
-         * - uid: 32
+         * - version (with action in lower 2 bits): 64
          * @since 3.0
-         * @see [B96]
+         * @see [B64]
          */
         @JvmField
         @JsStatic
@@ -317,13 +315,12 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The [previous tuple-number][naksha.model.TupleNumber], using the [96-bit encoding][B96].
+         * The [previous tuple-number][naksha.model.TupleNumber], using the [64-bit encoding][B64].
          *
          * The encoding stores, in order, Big-Endian encoded:
-         * - version: 64
-         * - uid: 32
+         * - version (with action in lower 2 bits): 64
          * @since 3.0
-         * @see [B96]
+         * @see [B64]
          */
         @JvmField
         @JsStatic
@@ -334,7 +331,7 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The [tuple-number][naksha.model.TupleNumber] of the _BASE_ state upon which a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge) was done, using the [96-bit encoding][B96].
+         * The [tuple-number][naksha.model.TupleNumber] of the _BASE_ state upon which a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge) was done, using the [64-bit encoding][B64].
          *
          * This value is set, when a client reads the _HEAD_ state of a feature, then modifies it into some _NEW_ state, and tries to save its changes, but meanwhile other clients did the same, and a conflict arises. The changes the client did are based upon an older _HEAD_, which we will name _BASE_, and do not reflect the changes the other clients did meanwhile.
          *
@@ -345,10 +342,9 @@ class PgColumn : JsEnum() {
          * This technically allows to calculate back, what the client actually modified. For this, the difference between _HEAD_ and _BASE_ is calculated, and then the difference between [prev_tn] and _BASE_ is subtracted, resulting in a patch that can be applied to _BASE_ to receive the original _NEW_ state the client had in memory and wanted to persist. This difference will as well document which properties were changed by the client.
          *
          * The encoding stores, in order, Big-Endian encoded:
-         * - version: 64
-         * - uid: 32
+         * - version (with action in lower 2 bits): 64
          * @since 3.0
-         * @see [B96]
+         * @see [B64]
          */
         @JvmField
         @JsStatic
@@ -683,7 +679,7 @@ class PgColumn : JsEnum() {
          * In that case we copy from _HEAD_ into a temporary CTE table, then further to _HISTORY_ and/or _SHADOW_, but we need to update some columns, therefore this excludes the columns that need updates:
          * - [next_tn] - will become the current [tn] to signal tombstone state _(dead-end)_
          * - [flags] - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED]
-         * - [tn] - must be updated to match current `version`, with a new `seq` and `uid` (this is the `final_tn`)
+         * - [tn] - must be updated to match current `version`, with action bits set to DELETED (this is the `final_tn`)
          * - [prev_tn] - is copied from [tn] of the current _HEAD_ record
          * - [base_tn] - needs to be set to `null`
          * @since 3.0

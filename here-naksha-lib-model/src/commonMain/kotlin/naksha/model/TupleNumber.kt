@@ -10,11 +10,11 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set
 import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B96
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B224
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B288
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B256
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -25,11 +25,11 @@ import kotlin.jvm.JvmStatic
 /**
  * The in-memory representation of the unique [Tuple] identifier.
  *
- * The full qualified [Tuple] identifier is a 288-bit value _(36 byte)_, persisting out of the storage-number, map-number, collection-number, feature-number, [transaction-number][Version], and the local unique identifier (`uid`). Note that the lower two bit of the `uid` encode the [action][Action].
+ * The full qualified [Tuple] identifier is a 256-bit value _(32 byte)_, persisting out of the storage-number, map-number, collection-number, feature-number, and [transaction-number][Version]. Note that the lower two bits of `version.txn` encode the [action][Action].
  *
  * The tuple-number is stringified into:
  * ```
- * {storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}:{uid}
+ * {storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}
  * ```
  *
  * - There are no two [tuples][Tuple] with the same [tuple-number][TupleNumber]; world-wide.
@@ -64,16 +64,11 @@ data class TupleNumber(
 
     /**
      * The version _(transaction)_ of which the [Tuple] is part of.
+     * The lower 2 bits of [Version.txn] encode the [Action].
      * @since 3.0
      * @see [Version.HEAD]
      */
     @JvmField val version: Version,
-
-    /**
-     * The unique identifier within the version _(transaction)_.
-     * @since 3.0
-     */
-    @JvmField val uid: Int,
 ) : Comparable<TupleNumber> {
     /**
      * The transaction-number.
@@ -91,10 +86,11 @@ data class TupleNumber(
 
     /**
      * The [Action] applied to generate the [Tuple] referred by this [TupleNumber].
+     * Decoded from the lower 2 bits of [version.txn].
      * @since 3.0
      */
     val action: Action
-        get() = Action.fromValue((uid and 3) shl ACTION_SHIFT)
+        get() = Action.fromValue((version.txn.toInt() and 3) shl ACTION_SHIFT)
 
     /**
      * Calculates the partition-index where this [Tuple] will be located.
@@ -106,7 +102,7 @@ data class TupleNumber(
      */
     fun partitionIndex(partitions: Int): Int = if (partitions <= 1) 0 else (partitionNumber % partitions) and 0xffff
 
-    override fun hashCode(): Int = version.hashCode() xor uid
+    override fun hashCode(): Int = version.hashCode()
 
     override fun compareTo(other: TupleNumber): Int {
         var i64_diff = storageNumber - other.storageNumber
@@ -127,9 +123,6 @@ data class TupleNumber(
         i32_diff = version.compareTo(other.version)
         if (i32_diff < 0) return -1
         if (i32_diff > 1) return 1
-        i32_diff = uid - other.uid
-        if (i32_diff < 0) return -1
-        if (i32_diff > 1) return 1
         return 0
     }
 
@@ -141,14 +134,13 @@ data class TupleNumber(
             && collectionNumber == other.collectionNumber
             && featureNumber == other.featureNumber
             && version.txn == other.version.txn
-            && uid == other.uid
     }
 
     private lateinit var _string: String
 
     /**
      * Return the [TupleNumber] as string.
-     * @return `{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}:{uid}`
+     * @return `{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}`
      * @since 3.0.0
      * @see [fromString]
      * @see [toUrn]
@@ -156,7 +148,7 @@ data class TupleNumber(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-            _string = "$storageNumber:$mapNumber:$collectionNumber:$featureNumber:$version:$uid"
+            _string = "$storageNumber:$mapNumber:$collectionNumber:$featureNumber:$version"
         }
         return _string
     }
@@ -177,7 +169,7 @@ data class TupleNumber(
         val fn = this.featureNumber
         if (fn >= 0) throw NakshaException(ILLEGAL_STATE, "The feature-number is not auto-generated, failed to calculate alternative")
         val new_fn = Naksha.alternativeInt64(fn)
-        return TupleNumber(storageNumber, mapNumber, collectionNumber, new_fn, version, uid)
+        return TupleNumber(storageNumber, mapNumber, collectionNumber, new_fn, version)
     }
 
     private var _urn: String? = null
@@ -192,7 +184,7 @@ data class TupleNumber(
     /**
      * Convert this [TupleNumber] into a [URN](https://datatracker.ietf.org/doc/html/rfc8141), the exact format will be:
      * ```
-     * urn:naksha:tn:{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}:{uid}
+     * urn:naksha:tn:{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}
      * ```
      * @return the [URN](https://datatracker.ietf.org/doc/html/rfc8141) that describes this state world-wide uniquely.
      * @since 3.0
@@ -209,29 +201,26 @@ data class TupleNumber(
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
      * - `txn` _(aka [Version])_
-     * - `uid`
      * @since 3.0
      */
-    fun toB96(): ByteArray = toByteArray(B96)
+    fun toB64(): ByteArray = toByteArray(B64)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
      * - `feature-number`
      * - `txn` _(aka [Version])_
-     * - `uid`
      * @since 3.0
      */
-    fun toB160(): ByteArray = toByteArray(B160)
+    fun toB128(): ByteArray = toByteArray(B128)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
      * - `collection-number`
      * - `feature-number`
      * - `txn` _(aka [Version])_
-     * - `uid`
      * @since 3.0
      */
-    fun toB192(): ByteArray = toByteArray(B192)
+    fun toB160(): ByteArray = toByteArray(B160)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
@@ -239,10 +228,9 @@ data class TupleNumber(
      * - `collection-number`
      * - `feature-number`
      * - `txn` _(aka [Version])_
-     * - `uid`
      * @since 3.0
      */
-    fun toB224(): ByteArray = toByteArray(B224)
+    fun toB192(): ByteArray = toByteArray(B192)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
@@ -251,10 +239,9 @@ data class TupleNumber(
      * - `collection-number`
      * - `feature-number`
      * - `txn` _(aka [Version])_
-     * - `uid`
      * @since 3.0
      */
-    fun toB288(): ByteArray = toByteArray(B288)
+    fun toB256(): ByteArray = toByteArray(B256)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront.
@@ -289,7 +276,6 @@ data class TupleNumber(
             offset += 8
         }
         dataview_set_int64(view, offset, version.txn)
-        dataview_set_int32(view, offset + 8, uid)
         return byteArray
     }
 
@@ -302,8 +288,7 @@ data class TupleNumber(
         internal const val MONTH = 5
         internal const val DAY = 6
         internal const val SEQ = 7
-        internal const val UID = 8
-        internal const val ALL_PARTS = 9
+        internal const val ALL_PARTS = 8
 
         internal const val URN = 0
         internal const val NAKSHA = 1
@@ -315,7 +300,6 @@ data class TupleNumber(
          * Helper to create a new tuple-number based upon some values from an existing.
          *
          * @param tn the tuple-number from which to copy.
-         * @param uid if not `null`, overrides `tn.uid`
          * @param version if not `null`, overrides `tn.version`
          * @param featureNumber if not `null`, overrides `tn.featureNumber`
          * @param collectionNumber if not `null`, overrides `tn.collectionNumber`
@@ -328,7 +312,6 @@ data class TupleNumber(
         @JvmOverloads
         fun copy(
             tn: TupleNumber,
-            uid: Int? = null,
             version: Version? = null,
             featureNumber: Int64? = null,
             collectionNumber: Int? = null,
@@ -340,7 +323,6 @@ data class TupleNumber(
             collectionNumber ?: tn.collectionNumber,
             featureNumber ?: tn.featureNumber,
             version ?: tn.version,
-            uid ?: tn.uid
         )
 
         /**
@@ -349,7 +331,7 @@ data class TupleNumber(
          * This happens for various reasons, for example when a [Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a valid tuple-number.
          * @since 3.0
          */
-        val HEAD = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD, 0)
+        val HEAD = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD)
 
         /**
          * Restore a [TupleNumber] from a binary encoding.
@@ -368,26 +350,26 @@ data class TupleNumber(
             tn: TupleNumber
         ): TupleNumber = fromBinary(Binary(bytes, offset), variant, tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber)
 
-        fun fromB288(bytes: ByteArray)
-                = fromByteArray(bytes, 0, B288)
-        fun fromB224(bytes: ByteArray, storageNumber: Int64)
-                = fromByteArray(bytes, 0, B224, storageNumber)
-        fun fromB192(bytes: ByteArray, storageNumber: Int64, mapNumber: Int)
-                = fromByteArray(bytes, 0, B192, storageNumber, mapNumber)
-        fun fromB160(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int)
-                = fromByteArray(bytes, 0, B160, storageNumber, mapNumber, collectionNumber)
-        fun fromB96(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int, featureNumber: Int64)
-                = fromByteArray(bytes, 0, B96, storageNumber, mapNumber, collectionNumber, featureNumber)
+        fun fromB256(bytes: ByteArray)
+                = fromByteArray(bytes, 0, B256)
+        fun fromB192(bytes: ByteArray, storageNumber: Int64)
+                = fromByteArray(bytes, 0, B192, storageNumber)
+        fun fromB160(bytes: ByteArray, storageNumber: Int64, mapNumber: Int)
+                = fromByteArray(bytes, 0, B160, storageNumber, mapNumber)
+        fun fromB128(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int)
+                = fromByteArray(bytes, 0, B128, storageNumber, mapNumber, collectionNumber)
+        fun fromB64(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int, featureNumber: Int64)
+                = fromByteArray(bytes, 0, B64, storageNumber, mapNumber, collectionNumber, featureNumber)
 
         /**
          * Restore a [TupleNumber] from a binary encoding.
          * @param bytes the binary to read.
          * @param offset the index of the first byte to read.
          * @param variant the variant to read.
-         * @param storageNumber if the binary does not encode the storage-number _(anything other than [B288])_, so variant is [B96], [B160], [B192], or [B224].
-         * @param mapNumber if the binary does not encode the map-number, so variant is [B96], [B160], or [B192].
-         * @param collectionNumber if the binary does not encode the collection-number, so variant is [B96] or [B160].
-         * @param featureNumber if the binary does not encode the feature-number, so variant is [B96].
+         * @param storageNumber if the binary does not encode the storage-number _(anything other than [B256])_, so variant is [B64], [B128], [B160], or [B192].
+         * @param mapNumber if the binary does not encode the map-number, so variant is [B64], [B128], or [B160].
+         * @param collectionNumber if the binary does not encode the collection-number, so variant is [B64] or [B128].
+         * @param featureNumber if the binary does not encode the feature-number, so variant is [B64].
          */
         @JsStatic
         @JvmStatic
@@ -407,10 +389,10 @@ data class TupleNumber(
          *
          * @param binary the binary to read.
          * @param variant the variant to read.
-         * @param storageNumber if the binary does not encode the storage-number _(anything other than [B288])_, so variant is [B96], [B160], [B192], or [B224].
-         * @param mapNumber if the binary does not encode the map-number, so variant is [B96], [B160], or [B192].
-         * @param collectionNumber if the binary does not encode the collection-number, so variant is [B96] or [B160].
-         * @param featureNumber if the binary does not encode the feature-number, so variant is [B96].
+         * @param storageNumber if the binary does not encode the storage-number _(anything other than [B256])_, so variant is [B64], [B128], [B160], or [B192].
+         * @param mapNumber if the binary does not encode the map-number, so variant is [B64], [B128], or [B160].
+         * @param collectionNumber if the binary does not encode the collection-number, so variant is [B64] or [B128].
+         * @param featureNumber if the binary does not encode the feature-number, so variant is [B64].
          */
         @JsStatic
         @JvmStatic
@@ -432,8 +414,7 @@ data class TupleNumber(
             val f_num = if (variant.encodeFeatureNumber()) binary.readInt64() else featureNumber
                 ?: throw illegalArg("Missing collection-number for given tuple-number variant $variant")
             val txn = binary.readInt64()
-            val uid = binary.readInt32()
-            return TupleNumber(storage_num, map_num, col_num, f_num, Version(txn), uid)
+            return TupleNumber(storage_num, map_num, col_num, f_num, Version(txn))
         }
 
         /**
@@ -481,8 +462,7 @@ data class TupleNumber(
          * - `year` _(15-bit integer)_
          * - `month` _(4-bit integer)_
          * - `day` _(5-bit integer)_
-         * - `sequence` _(32-bit integer)_
-         * - `uid` _(32-bit integer)_
+         * - `sequence` _(32-bit integer, lower 2 bits encode action)_
          * @param parts the string parts of the tuple-number.
          * @param offset the index in the given list where the `storage-number` is located, defaults to `0`.
          * @return the deserialized [TupleNumber].
@@ -502,9 +482,8 @@ data class TupleNumber(
             val month = parts[offset + MONTH].toInt(10)
             val day = parts[offset + DAY].toInt(10)
             val seq = Int64(parts[offset + SEQ].toLong())
-            val uid = parts[offset + UID].toInt()
             val version = Version.of(year, month, day, seq)
-            return TupleNumber(storageNumber, mapNumber, colNumber, featureNumber, version, uid)
+            return TupleNumber(storageNumber, mapNumber, colNumber, featureNumber, version)
         }
     }
 }

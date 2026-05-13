@@ -2,8 +2,8 @@
 
 package naksha.model
 
-import naksha.base.AtomicInt
 import naksha.base.Int64
+import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
 import naksha.jbon.IDictReader
 import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.Metadata.Metadata_C.calculateHereTile
@@ -98,12 +98,6 @@ open class StorageTx private constructor(
         get() = transaction.time
 
     /**
-     * The transaction local identifier to create unique operations within this transaction.
-     * @since 3.0
-     */
-    open val uid: UidManager = UidManager()
-
-    /**
      * Method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
      *
      * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given arguments are not sufficient to generate the new metadata.
@@ -131,7 +125,8 @@ open class StorageTx private constructor(
             .withOperation(operation)
             .withAction(action)
         val xyz = feature.properties.xyz
-        val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, version, uid.next(action))
+        val actionBits = (action.intValue shr ACTION_SHIFT).toLong()
+        val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, Version(version.txn or actionBits))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
         val prev_tn: TupleNumber? = if (operation == Operation.CREATED || (operation == Operation.UPDATED && !atomic)) null else {

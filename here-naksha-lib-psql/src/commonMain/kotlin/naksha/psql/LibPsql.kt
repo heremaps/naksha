@@ -116,9 +116,7 @@ internal const val NKC_STORAGE_CLASS = "storageClass"
 
 internal const val COL_TXN_NEXT = "txn_next"
 internal const val COL_TXN = "txn"
-internal const val COL_UID = "uid"
 internal const val COL_PTXN = "ptxn"
-internal const val COL_PUID = "puid"
 internal const val COL_FLAGS = "flags"
 internal const val COL_VERSION = "version"
 internal const val COL_CREATED_AT = "created_at"
@@ -138,9 +136,7 @@ internal const val COL_FNVA1 = "fnva1"
 internal val COL_ALL: String = arrayOf(
     COL_TXN_NEXT,
     COL_TXN,
-    COL_UID,
     COL_PTXN,
-    COL_PUID,
     COL_FLAGS,
     COL_VERSION,
     COL_CREATED_AT,

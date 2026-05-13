@@ -96,7 +96,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
     (head_row.cc + 1) AS ${PgColumn.cc},
     substring(head_row.tn, 9) AS ${PgColumn.prev_tn},
     CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment,
-    naksha_tn_160(naksha_tn_feature_number(new_row.tn), naksha_tn_version(new_row.tn), ((naksha_tn_uid(new_row.tn) & -4) | 1)) AS ${PgColumn.tn},
+    naksha_tn_128(naksha_tn_feature_number(new_row.tn), (naksha_tn_version(new_row.tn) & -4) | 1) AS ${PgColumn.tn},
     ${PgColumn.updateColumns.joinToString(", ") { "new_row.${it.name} AS ${it.name}" }}
   FROM new_row
   LEFT JOIN head_row ON head_row.id = new_row.id
@@ -149,7 +149,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .addColumn("head_to_history_tn", PgType.BYTE_ARRAY)
         if (writes.isEmpty()) return
         val plan = plan(conn, collection)
-        // TupleNumber.fromB160(inRows.columns[11].values_field[0] as ByteArray, naksha.base.Int64(0), 0, 0).partitionNumber % 16
+        // TupleNumber.fromB128(inRows.columns[11].values_field[0] as ByteArray, naksha.base.Int64(0), 0, 0).partitionNumber % 16
         val array = inRows.values()
         val session = this.session
         if (PlatformUtil.ENABLE_INFO) {
@@ -172,17 +172,17 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             outRows.addAll(cursor)
             for (row in 0 until outRows.size) {
                 val id = outRows.getString(row, "id") ?: throw generalException("Missing 'id' in SQL result")
-                val tn = outRows.getB160(row, "tn") ?: throw generalException("Missing 'tn' in SQL result")
+                val tn = outRows.getB128(row, "tn") ?: throw generalException("Missing 'tn' in SQL result")
 
                 // We need to patch the tuple of all inserts, that were replaced with updates!
                 // The content is the same, but the action, operation, change-count, and prev_tn change!
-                val updated_tn = outRows.getB160(row, "updated_tn")
+                val updated_tn = outRows.getB128(row, "updated_tn")
                 if (updated_tn != null) {
                     // If an update was done, we need the following values to be available:
                     val changeCount: Int = outRows.getInt(row, "cc") ?:
                         throw generalException("Missing 'cc' in update result for feature '$id'")
                     val attachment: ByteArray? = outRows.getByteArray(row, "attachment")
-                    val prev_tn = outRows.getB96(row, "prev_tn", tn.featureNumber)
+                    val prev_tn = outRows.getB64(row, "prev_tn", tn.featureNumber)
                     val write = writeByTn[tn] ?: throw generalException("Missing write state for feature '$id'")
                     val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
                     write.tupleNumber = updated_tn

@@ -60,8 +60,6 @@ data class Metadata(
         get() = tupleNumber.partitionNumber
     override val version: Version
         get() = tupleNumber.version
-    override val uid: Int
-        get() = tupleNumber.uid
     override val txn: Int64
         get() = version.txn
 

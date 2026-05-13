@@ -22,93 +22,88 @@ class TupleNumberVariant internal constructor() : JsEnum() {
 
     companion object TupleNumberVariant_C {
         /**
-         * The 288-bit _(36 byte)_ encoding, variant `0`.
+         * The 256-bit _(32 byte)_ encoding, variant `0`.
          * - `storage-number`
          * - `map-number`
          * - `collection-number`
          * - `feature-number`
          * - `txn` _(aka [Version])_
-         * - `uid`
          * @since 3.0
          */
         @JsStatic
         @JvmField
-        val B288 = def(TupleNumberVariant::class, 0) { self ->
+        val B256 = def(TupleNumberVariant::class, 0) { self ->
             self.subType = 0
-            self.encodingBytes = 36
+            self.encodingBytes = 32
             self.sharedBytes = 0
             self.bits = self.encodingBytes * 8
-            check(self.encodingBytes + self.sharedBytes == 36)
+            check(self.encodingBytes + self.sharedBytes == 32)
         }
 
         /**
-         * The 224-bit _(28 byte)_ encoding, variant `1`.
+         * The 192-bit _(24 byte)_ encoding, variant `1`.
          * - `map-number`
          * - `collection-number`
          * - `feature-number`
          * - `txn` _(aka [Version])_
-         * - `uid`
          * @since 3.0
          */
         @JsStatic
         @JvmField
-        val B224 = def(TupleNumberVariant::class, 1) { self ->
+        val B192 = def(TupleNumberVariant::class, 1) { self ->
             self.subType = 1
-            self.encodingBytes = 28
+            self.encodingBytes = 24
             self.sharedBytes = 8
             self.bits = self.encodingBytes * 8
-            check(self.encodingBytes + self.sharedBytes == 36)
+            check(self.encodingBytes + self.sharedBytes == 32)
         }
 
         /**
-         * The 192-bit _(24 byte)_ encoding, variant `2`.
+         * The 160-bit _(20 byte)_ encoding, variant `2`.
          * - `collection-number`
          * - `feature-number`
          * - `txn` _(aka [Version])_
-         * - `uid`
          * @since 3.0
          */
         @JsStatic
         @JvmField
-        val B192 = def(TupleNumberVariant::class, 2) { self ->
+        val B160 = def(TupleNumberVariant::class, 2) { self ->
             self.subType = 2
-            self.encodingBytes = 24
+            self.encodingBytes = 20
             self.sharedBytes = 12
             self.bits = self.encodingBytes * 8
-            check(self.encodingBytes + self.sharedBytes == 36)
+            check(self.encodingBytes + self.sharedBytes == 32)
         }
 
         /**
-         * The 160-bit _(20 byte)_ encoding, variant `3`.
+         * The 128-bit _(16 byte)_ encoding, variant `3`.
          * - `feature-number`
          * - `txn` _(aka [Version])_
-         * - `uid`
          * @since 3.0
          */
         @JsStatic
         @JvmField
-        val B160 = def(TupleNumberVariant::class, 3) { self ->
+        val B128 = def(TupleNumberVariant::class, 3) { self ->
             self.subType = 3
-            self.encodingBytes = 20
+            self.encodingBytes = 16
             self.sharedBytes = 16
             self.bits = self.encodingBytes * 8
-            check(self.encodingBytes + self.sharedBytes == 36)
+            check(self.encodingBytes + self.sharedBytes == 32)
         }
 
         /**
-         * The 96-bit _(12 byte)_ encoding, variant `4`.
+         * The 64-bit _(8 byte)_ encoding, variant `4`.
          * - `txn` _(aka [Version])_
-         * - `uid`
          * @since 3.0
          */
         @JsStatic
         @JvmField
-        val B96 = def(TupleNumberVariant::class, 4) { self ->
+        val B64 = def(TupleNumberVariant::class, 4) { self ->
             self.subType = 4
-            self.encodingBytes = 12
+            self.encodingBytes = 8
             self.sharedBytes = 24
             self.bits = self.encodingBytes * 8
-            check(self.encodingBytes + self.sharedBytes == 36)
+            check(self.encodingBytes + self.sharedBytes == 32)
         }
 
         /**
@@ -120,13 +115,9 @@ class TupleNumberVariant internal constructor() : JsEnum() {
         val UNDEFINED = def(TupleNumberVariant::class, "undefined")
 
         private val FROM_STRING = mapOf(
-            Pair(B288.subType.toString(), B288),
-            Pair(B288.encodingBytes.toString(), B288),
-            Pair(B288.bits.toString(), B288),
-
-            Pair(B224.subType.toString(), B224),
-            Pair(B224.encodingBytes.toString(), B224),
-            Pair(B224.bits.toString(), B224),
+            Pair(B256.subType.toString(), B256),
+            Pair(B256.encodingBytes.toString(), B256),
+            Pair(B256.bits.toString(), B256),
 
             Pair(B192.subType.toString(), B192),
             Pair(B192.encodingBytes.toString(), B192),
@@ -136,19 +127,19 @@ class TupleNumberVariant internal constructor() : JsEnum() {
             Pair(B160.encodingBytes.toString(), B160),
             Pair(B160.bits.toString(), B160),
 
-            Pair(B96.subType.toString(), B96),
-            Pair(B96.bits.toString(), B96),
-            Pair(B96.encodingBytes.toString(), B96),
+            Pair(B128.subType.toString(), B128),
+            Pair(B128.encodingBytes.toString(), B128),
+            Pair(B128.bits.toString(), B128),
+
+            Pair(B64.subType.toString(), B64),
+            Pair(B64.bits.toString(), B64),
+            Pair(B64.encodingBytes.toString(), B64),
         )
 
         private val FROM_VALUE = mapOf(
-            Pair(B288.subType, B288),
-            Pair(B288.encodingBytes, B288),
-            Pair(B288.bits, B288),
-
-            Pair(B224.subType, B224),
-            Pair(B224.encodingBytes, B224),
-            Pair(B224.bits, B224),
+            Pair(B256.subType, B256),
+            Pair(B256.encodingBytes, B256),
+            Pair(B256.bits, B256),
 
             Pair(B192.subType, B192),
             Pair(B192.encodingBytes, B192),
@@ -158,9 +149,13 @@ class TupleNumberVariant internal constructor() : JsEnum() {
             Pair(B160.encodingBytes, B160),
             Pair(B160.bits, B160),
 
-            Pair(B96.subType, B96),
-            Pair(B96.bits, B96),
-            Pair(B96.encodingBytes, B96),
+            Pair(B128.subType, B128),
+            Pair(B128.encodingBytes, B128),
+            Pair(B128.bits, B128),
+
+            Pair(B64.subType, B64),
+            Pair(B64.bits, B64),
+            Pair(B64.encodingBytes, B64),
         )
 
         /**
@@ -230,7 +225,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
     /**
      * Tests if this variant encodes the `storage-number`.
      */
-    fun encodeStorageNumber(): Boolean = subType <= B288.subType
+    fun encodeStorageNumber(): Boolean = subType <= B256.subType
 
     /**
      * Tests if this variant encodes the `map-number` in the header.
@@ -240,7 +235,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
     /**
      * Tests if this variant encodes the `map-number`.
      */
-    fun encodeMapNumber(): Boolean = subType <= B224.subType
+    fun encodeMapNumber(): Boolean = subType <= B192.subType
 
     /**
      * Tests if this variant encodes the `collection-number` in the header.
@@ -250,7 +245,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
     /**
      * Tests if this variant encodes the `collection-number`.
      */
-    fun encodeCollectionNumber(): Boolean = subType <= B192.subType
+    fun encodeCollectionNumber(): Boolean = subType <= B160.subType
 
     /**
      * Tests if this variant encodes the `feature-number` in the header.
@@ -260,5 +255,5 @@ class TupleNumberVariant internal constructor() : JsEnum() {
     /**
      * Tests if this variant encodes the `feature-number`.
      */
-    fun encodeFeatureNumber(): Boolean = subType <= B160.subType
+    fun encodeFeatureNumber(): Boolean = subType <= B128.subType
 }

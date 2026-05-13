@@ -52,19 +52,13 @@ interface IMetadata {
     val version: Version
 
     /**
-     * The transaction local identifier of this [Tuple].
-     * @since 3.0
-     */
-    val uid: Int
-
-    /**
      * The transaction-number, being the same as [version].
      * @since 3.0
      */
     val txn: Int64
 
     /**
-     * The [TupleNumber] of this [Tuple], which will be a combination of [storageNumber], [mapNumber], [collectionNumber], [partitionNumber], [txn], and [uid].
+     * The [TupleNumber] of this [Tuple], which will be a combination of [storageNumber], [mapNumber], [collectionNumber], [partitionNumber], and [txn].
      * @since 3.0.0
      */
     val tupleNumber: TupleNumber

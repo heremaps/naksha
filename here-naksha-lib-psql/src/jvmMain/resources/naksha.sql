@@ -129,68 +129,68 @@ AS $$
   SELECT ${storageNumber}
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_288(storage_num int8, map_num int4, col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_256(storage_num int8, map_num int4, col_num int4, feature_num int8, txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int8send(storage_num) || int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+  SELECT int8send(storage_num) || int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_224(map_num int4, col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_192(map_num int4, col_num int4, feature_num int8, txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+  SELECT int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_192(col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_160(col_num int4, feature_num int8, txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+  SELECT int4send(col_num) || int8send(feature_num) || int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_160(feature_num int8, txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_128(feature_num int8, txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int8send(feature_num) || int8send(txn) || int4send(uid)
+  SELECT int8send(feature_num) || int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_96(txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_64(txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int8send(txn) || int4send(uid)
+  SELECT int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_96(any_tn bytea) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_64(any_tn bytea) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT substring(any_tn FROM length(any_tn) - 11 FOR 12)
+  SELECT substring(any_tn FROM length(any_tn) - 7 FOR 8)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_storage_number(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int8recv(tn, length(tn) - 36)
+  SELECT int8recv(tn, length(tn) - 32)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_map_number(tn bytea) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int4recv(tn, length(tn) - 28)
+  SELECT int4recv(tn, length(tn) - 24)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_collection_number(tn bytea) RETURNS int
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-    SELECT int4recv(tn, length(tn) - 24)
+    SELECT int4recv(tn, length(tn) - 20)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_feature_number(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int8recv(tn, length(tn) - 20)
+  SELECT int8recv(tn, length(tn) - 16)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_partition_number(tn bytea) RETURNS int4
@@ -198,7 +198,7 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   -- The partition-number is the same as the lower 16-bit in the feature-number.
-  SELECT int2recv(tn, length(tn) - 14)::int4 & 65535
+  SELECT int2recv(tn, length(tn) - 10)::int4 & 65535
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_partition_index(tn bytea, partitions int4) RETURNS int4
@@ -206,14 +206,14 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   -- The partition-number is the same as the lower 16-bit in the feature-number.
-  SELECT (int2recv(tn, length(tn) - 14)::int4 & 65535) % partitions
+  SELECT (int2recv(tn, length(tn) - 10)::int4 & 65535) % partitions
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_version(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int8recv(tn, length(tn) - 12)
+  SELECT int8recv(tn, length(tn) - 8)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_year(tn bytea) RETURNS int4
@@ -225,21 +225,14 @@ AS $$
   -- So, we read the 16-bit, shift right by one, then set all top bit to zero,
   --     because PostgresQL does only have arithmetic shift right (>>), but no
   --     logical shift right (>>>)
-  SELECT ((int2recv(tn, length(tn) - 11)::int4) >> 1) & 32767
-$$;
-
-CREATE OR REPLACE FUNCTION naksha_tn_uid(tn bytea) RETURNS int4
-LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
-AS $$
-  SELECT int4recv(tn, length(tn) - 4)
+  SELECT ((int2recv(tn, length(tn) - 7)::int4) >> 1) & 32767
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_action(tn bytea) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int4recv(tn, length(tn) - 4) & 3
+  SELECT (int8recv(tn, length(tn) - 8) & 3)::int4
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_feature_number(id text) RETURNS int8

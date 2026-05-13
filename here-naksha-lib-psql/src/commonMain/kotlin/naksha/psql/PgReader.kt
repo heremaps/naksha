@@ -62,7 +62,7 @@ class PgReader(
                     while (cursor.next()) {
                         val col_num: Int = collectionNumber ?: cursor["col_num"]
                         val tn: ByteArray = cursor["tn"]
-                        featureTuples.add(FeatureTuple(TupleNumber.fromB160(tn, storageNumber, mapNumber, col_num)))
+                        featureTuples.add(FeatureTuple(TupleNumber.fromB128(tn, storageNumber, mapNumber, col_num)))
                     }
                 }
                 return SuccessResponse().withFeatureTupleList(featureTuples)

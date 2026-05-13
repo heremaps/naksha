@@ -7,7 +7,6 @@ import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.model.UidManager
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
@@ -83,8 +82,8 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
     }
 
     @Test
-    fun shouldSaveCorrectUuid() {
-        testWithCollection("shouldSaveCorrectUuid")
+    fun shouldSaveCorrectAction() {
+        testWithCollection("shouldSaveCorrectAction")
 
         // Given
         val features = RandomFeatures.randomFeatures(count = 20)
@@ -102,26 +101,13 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
         val featureTuples = response.featureTupleList
         Naksha.cache.load(featureTuples)
 
-        // Generate expected UIDs, but beware, the order is not guaranteed
-        val uidManager = UidManager()
+        // Then: all created tuples have Action.CREATED encoded in their tuple number
         assertEquals(20, featureTuples.size)
-        val expectedUids = mutableMapOf<Int, Boolean>()
-        for (i in 0 until featureTuples.size) {
-            val expectedUid = uidManager.next(Action.CREATED)
-            expectedUids[expectedUid] = true
-        }
-        // Then: tuples have been correctly persisted, and have UIDs between 0 and 19
-        featureTuples.filterNotNull().sortedBy { it.tupleNumber.uid }.forEach { featureTuple ->
+        featureTuples.filterNotNull().forEach { featureTuple ->
             val tuple = featureTuple.tuple
             assertNotNull(tuple)
-            val id = featureTuple.id
-            assertEquals(id, tuple.meta.id)
-            val requested = featuresById[id]
-            assertNotNull(requested)
-            val inserted = expectedUids.remove(tuple.tupleNumber.uid)
-            assertTrue(inserted == true)
+            assertEquals(featuresById[featureTuple.id]?.id, tuple.meta.id)
+            assertEquals(Action.CREATED, featureTuple.tupleNumber.action)
         }
-        // We expect that every UID is encountered exactly ones!
-        assertTrue(expectedUids.isEmpty())
     }
 }

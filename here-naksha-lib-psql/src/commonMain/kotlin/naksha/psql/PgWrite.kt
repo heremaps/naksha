@@ -34,12 +34,6 @@ internal data class PgWrite(val original: Write, val i: Int) {
     lateinit var collection: PgCollection
 
     /**
-     * The `uid` (unique transaction local identifier) of the tombstone state, if this is a [DELETE][WriteOp.DELETE] or [PURGE][WriteOp.PURGE].
-     * @since 3.0
-     */
-    var final_uid: Int? = null
-
-    /**
      * The write operation to perform, [WriteOp.CREATE], [WriteOp.UPDATE], [WriteOp.UPSERT], [WriteOp.DELETE], or [WriteOp.PURGE].
      * @since 3.0
      */

@@ -546,11 +546,11 @@ class XyzNs : AnyObject() {
         get() = guid?.tupleNumber?.txn
 
     /**
-     * The `uid` (unique transaction local identity) of the [Tuple] within the [transaction][naksha.model.objects.NakshaTx].
+     * The action of the [Tuple], encoded as the lower 2 bits of the transaction number.
      * @since 3.0
      */
     val uid: Int?
-        get() = guid?.tupleNumber?.uid
+        get() = guid?.tupleNumber?.action?.intValue
 
     /**
      * The change-count, so how often the feature has been changed since it was created. The value starts with 1.

@@ -125,10 +125,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertNull(createdTuple.meta.createdAt)
         assertNotNull(createdTuple.meta.updatedAt)
         assertEquals(createdTuple.meta.hereTile, updatedTuple.meta.hereTile)
-        assertEquals(1, updatedTuple.meta.uid)
-        assertEquals(0, createdTuple.meta.uid)
-        assertEquals(1, updatedTuple.tupleNumber.uid)
-        assertEquals(0, createdTuple.tupleNumber.uid)
+        assertEquals(Action.UPDATED, updatedTuple.tupleNumber.action)
+        assertEquals(Action.CREATED, createdTuple.tupleNumber.action)
         assertNotEquals(createdTuple.meta.authorTs, updatedTuple.meta.authorTs)
     }
 

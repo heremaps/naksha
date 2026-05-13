@@ -184,8 +184,6 @@ open class PgSession(
         conn.execute(query).close()
     }
 
-    override val uid: AtomicInt = AtomicInt(0)
-
     /**
      * The last [PostgreSQL Error Code](https://www.postgresql.org/docs/current/errcodes-appendix.html) or _null_, if no error has happened.
      * @since 3.0
@@ -264,7 +262,6 @@ open class PgSession(
      * Reset the session into the initial state.
      */
     private fun clear() {
-        uid.set(0)
         error = null
         tx = null
         try {
@@ -415,7 +412,7 @@ open class PgSession(
         }
         sql.append(")\nSELECT ").append(rows.namesAggregate()).append(" FROM result")
         val SQL = sql.toString()
-        val tupleNumbers: Array<Any?> = reads.map { it.tupleNumber!!.toB160() }.toTypedArray()
+        val tupleNumbers: Array<Any?> = reads.map { it.tupleNumber!!.toB128() }.toTypedArray()
         conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
             plan.execute(arrayOf(tupleNumbers)).fetch().use { cursor ->
                 rows.addAggregated(cursor)

@@ -72,78 +72,72 @@ data class TupleNumberBinaryArray(
     private val collectionNumberOffset: Int
     private val featureNumberOffset: Int
     private val txnOffset: Int
-    private val uidOffset: Int
     init {
         when (val subtype = BinaryUtil.getSubType(view)) {
-            0 -> { // 288-bit (storage-number, map-number, collection-number, feature-number, version, uid)
+            0 -> { // 256-bit (storage-number, map-number, collection-number, feature-number, txn)
                 contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = 0
                 mapNumberOffset = 8
                 collectionNumberOffset = 12
                 featureNumberOffset = 16
                 txnOffset = 24
-                uidOffset = 32
-                entrySize = 36
+                entrySize = 32
                 sharedStorageNumber = null
                 sharedMapNumber = null
                 sharedCollectionNumber = null
                 sharedFeatureNumber = null
                 dataOffset = contentOffset
             }
-            1 -> { // 224-bit (map-number, collection-number, feature-number, version, uid)
+            1 -> { // 192-bit (map-number, collection-number, feature-number, txn)
                 contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = -1
                 mapNumberOffset = 0
                 collectionNumberOffset = 4
                 featureNumberOffset = 12
                 txnOffset = 20
-                uidOffset = 24
-                entrySize = 28
+                entrySize = 24
                 sharedStorageNumber = dataview_get_int64(view, contentOffset)
                 sharedMapNumber = null
                 sharedCollectionNumber = null
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 8
             }
-            2 -> { // 192-bit (collection-number, feature-number, version, uid)
+            2 -> { // 160-bit (collection-number, feature-number, txn)
                 contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = 0
                 featureNumberOffset = 4
                 txnOffset = 12
-                uidOffset = 20
-                entrySize = 24
+                entrySize = 20
                 sharedStorageNumber = dataview_get_int64(view, contentOffset)
                 sharedMapNumber = dataview_get_int32(view, contentOffset + 8)
                 sharedCollectionNumber = null
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 12
             }
-            3 -> { // 160-bit (feature-number, version, uid)
+            3 -> { // 128-bit (feature-number, txn)
                 contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = -1
                 featureNumberOffset = 0
                 txnOffset = 8
-                uidOffset = 16
-                entrySize = 20
+                entrySize = 16
                 sharedStorageNumber = dataview_get_int64(view, contentOffset)
                 sharedMapNumber = dataview_get_int32(view, contentOffset + 8)
                 sharedCollectionNumber = dataview_get_int32(view, contentOffset + 12)
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 16
             }
-            4 -> { // 96-bit (version, uid)
+            4 -> { // 64-bit (txn)
                 contentOffset = BinaryUtil.getContentOffset(view)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = -1
                 featureNumberOffset = -1
                 txnOffset = 0
-                uidOffset = 8
-                entrySize = 12
+                entrySize = 8
                 sharedStorageNumber = dataview_get_int64(view, contentOffset)
                 sharedMapNumber = dataview_get_int32(view, contentOffset + 8)
                 sharedCollectionNumber = dataview_get_int32(view, contentOffset + 12)
@@ -153,7 +147,7 @@ data class TupleNumberBinaryArray(
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "The header of the binary stores subtype $subtype, which is invalid")
         }
     }
-    private val last: Int = if (length <= 0 || bytes.size < 36) 0 else dataOffset + (length-1) * entrySize
+    private val last: Int = if (length <= 0 || bytes.size < 32) 0 else dataOffset + (length-1) * entrySize
     private var tupleNumberCache = EMPTY
 
     /**
@@ -220,8 +214,7 @@ data class TupleNumberBinaryArray(
         val collectionNumber = sharedCollectionNumber ?: dataview_get_int32(view, offset + collectionNumberOffset)
         val featureNumber = sharedFeatureNumber ?: dataview_get_int64(view, offset + featureNumberOffset)
         val txn = dataview_get_int64(view, offset + txnOffset)
-        val uid = dataview_get_int32(view, offset + uidOffset)
-        val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, Version(txn), uid)
+        val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, Version(txn))
         if (!disableCache) {
             var cache = tupleNumberCache
             if (index <= cache.size) { // Note: This only happens, when being EMPTY
@@ -299,18 +292,6 @@ data class TupleNumberBinaryArray(
         val offset = offset(index)
         if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
         return dataview_get_int64(view, offset + txnOffset)
-    }
-
-    /**
-     * Returns the uid at the given index.
-     * @param index the index.
-     * @return the uid.
-     * @since 3.0.0
-     */
-    fun getUid(index: Int): Int {
-        val offset = offset(index)
-        if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
-        return dataview_get_int32(view, offset + uidOffset)
     }
 
     /**
@@ -408,8 +389,7 @@ data class TupleNumberBinaryArray(
                 && element.mapNumber == getMapNumber(i)
                 && element.collectionNumber == getCollectionNumber(i)
                 && element.featureNumber == getFeatureNumber(i)
-                && element.version.txn == getTxn(i)
-                && element.uid == getUid(i)) return i
+                && element.version.txn == getTxn(i)) return i
         }
         return -1
     }
@@ -421,8 +401,7 @@ data class TupleNumberBinaryArray(
                 && element.mapNumber == getMapNumber(i)
                 && element.collectionNumber == getCollectionNumber(i)
                 && element.featureNumber == getFeatureNumber(i)
-                && element.version.txn == getTxn(i)
-                && element.uid == getUid(i)) return i
+                && element.version.txn == getTxn(i)) return i
         }
         return -1
     }

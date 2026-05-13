@@ -53,7 +53,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private fun whereGuids() {
         val tupleNumbers: Array<ByteArray> = request.guids
-            .mapNotNull { it?.tupleNumber?.toByteArray(TupleNumberVariant.B160) }
+            .mapNotNull { it?.tupleNumber?.toByteArray(TupleNumberVariant.B128) }
             .toTypedArray()
         if (tupleNumbers.isNotEmpty()) {
             if (where.isNotEmpty()) where.append(" AND ")

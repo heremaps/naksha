@@ -172,26 +172,26 @@ internal class PgColumnRows {
         return if (value is ByteArray) value else null
     }
     fun getByteArray(row: Int, column: PgColumn): ByteArray? = getByteArray(row, column.name)
-    fun getB96(row: Int, column: PgColumn, featureNumber: Int64): TupleNumber? = getB96(row, column.name, featureNumber)
-    fun getB96(row: Int, columnName: String, featureNumber: Int64): TupleNumber? {
+    fun getB64(row: Int, column: PgColumn, featureNumber: Int64): TupleNumber? = getB64(row, column.name, featureNumber)
+    fun getB64(row: Int, columnName: String, featureNumber: Int64): TupleNumber? {
         val raw = getByteArray(row, columnName) ?: return null
         val storageNumber = this.storageNumber ?: return null
         val mapNumber = this.mapNumber ?: return null
         val collectionNumber = this.collectionNumber ?: return null
         return try {
-            TupleNumber.fromB96(raw, storageNumber, mapNumber, collectionNumber, featureNumber)
+            TupleNumber.fromB64(raw, storageNumber, mapNumber, collectionNumber, featureNumber)
         } catch (_: Exception) {
             null
         }
     }
-    fun getB160(row: Int, column: PgColumn): TupleNumber? = getB160(row, column.name)
-    fun getB160(row: Int, columnName: String): TupleNumber? {
+    fun getB128(row: Int, column: PgColumn): TupleNumber? = getB128(row, column.name)
+    fun getB128(row: Int, columnName: String): TupleNumber? {
         val raw = getByteArray(row, columnName) ?: return null
         val storageNumber = this.storageNumber ?: return null
         val mapNumber = this.mapNumber ?: return null
         val collectionNumber = this.collectionNumber ?: return null
         return try {
-            TupleNumber.fromB160(raw, storageNumber, mapNumber, collectionNumber)
+            TupleNumber.fromB128(raw, storageNumber, mapNumber, collectionNumber)
         } catch (_: Exception) {
             null
         }
@@ -275,10 +275,10 @@ internal class PgColumnRows {
         set(row, PgColumn.here_tile, meta.hereTile)
         set(row, PgColumn.flags, meta.flags)
         set(row, PgColumn.cc, meta.changeCount)
-        set(row, PgColumn.tn, meta.tupleNumber.toB160())
-        set(row, PgColumn.next_tn, meta.nextTupleNumber?.toB96())
-        set(row, PgColumn.prev_tn, meta.prevTupleNumber?.toB96())
-        set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB96())
+        set(row, PgColumn.tn, meta.tupleNumber.toB128())
+        set(row, PgColumn.next_tn, meta.nextTupleNumber?.toB64())
+        set(row, PgColumn.prev_tn, meta.prevTupleNumber?.toB64())
+        set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB64())
         set(row, PgColumn.id, meta.id)
         set(row, PgColumn.app_id, meta.appId)
         set(row, PgColumn.author, meta.author)
