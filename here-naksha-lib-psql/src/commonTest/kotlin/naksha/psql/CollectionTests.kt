@@ -121,7 +121,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             CS2_IDX,
             CS3_IDX,
         )
-        collection.withIndices(indices)
+        // The closed-enum opt-in list was removed; PgMap.createPgCollection always applies PgIndex.DEFAULT_INDICES.
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)

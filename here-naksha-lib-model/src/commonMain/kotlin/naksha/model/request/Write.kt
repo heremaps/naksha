@@ -449,6 +449,24 @@ open class Write : AnyObject() {
     }
 
     /**
+     * If `true`, destructive collection-schema changes (currently: dropping a [naksha.model.objects.CustomMember]) are allowed during UPSERT/UPDATE.
+     *
+     * Without `force`, removing a [CustomMember][naksha.model.objects.CustomMember] from [NakshaCollection.members][naksha.model.objects.NakshaCollection.members] throws [NakshaError.ILLEGAL_ARGUMENT].
+     *
+     * Default `false`.
+     * @since 3.0
+     */
+    var force by BOOLEAN_FALSE
+
+    /**
+     * @see [force]
+     */
+    fun withForce(value: Boolean): Write {
+        force = value
+        return this
+    }
+
+    /**
      * Create a new dictionary.
      * @param dict the dictionary to create.
      * @return this.
