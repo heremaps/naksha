@@ -468,8 +468,7 @@ class PropertyFilterTest {
                 mapNumber,
                 collectionNumber,
                 featureNumber(feature.id),
-                version,
-                0
+                version
             )
             val tuple = Tuple(
                 meta = Metadata(

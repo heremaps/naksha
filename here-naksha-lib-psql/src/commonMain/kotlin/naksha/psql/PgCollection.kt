@@ -170,4 +170,129 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
             )
         }
     }
+
+    /**
+     * Diff the [prev] and [next] collection definitions and apply the resulting schema changes (ADD/DROP COLUMN, CREATE/DROP custom index) to all variant tables (HEAD, HISTORY, DELETED, META).
+     *
+     * Members:
+     * - Same name + same `dataType` → no-op.
+     * - Same name + different `dataType` → throws [NakshaError.ILLEGAL_ARGUMENT] (type changes are not supported).
+     * - Added → `ALTER TABLE ADD COLUMN` on each root variant.
+     * - Removed → requires [force] = `true`; otherwise throws [NakshaError.ILLEGAL_ARGUMENT]. With `force`, emits `ALTER TABLE DROP COLUMN` on each root variant.
+     *
+     * Custom indexes:
+     * - Identity is `(name, type, on, include, unique)`. Any difference → drop + create.
+     *
+     * Only root tables are touched; partition tables inherit `ADD/DROP COLUMN` via Postgres declarative partitioning.
+     *
+     * @since 3.0
+     */
+    internal fun applyMembersAndIndexes(
+        conn: PgConnection,
+        prev: NakshaCollection,
+        next: NakshaCollection,
+        force: Boolean
+    ) {
+        diffMembers(conn, prev, next, force)
+        diffIndexes(conn, prev, next)
+    }
+
+    private fun diffMembers(conn: PgConnection, prev: NakshaCollection, next: NakshaCollection, force: Boolean) {
+        val prevMembers = prev.members
+        val nextMembers = next.members
+        val prevByName = mutableMapOf<String, naksha.model.objects.CustomMember>()
+        val nextByName = mutableMapOf<String, naksha.model.objects.CustomMember>()
+        if (prevMembers != null) for (m in prevMembers) if (m != null) prevByName[m.name] = m
+        if (nextMembers != null) for (m in nextMembers) if (m != null) nextByName[m.name] = m
+
+        // Type-change check.
+        for ((name, nm) in nextByName) {
+            val pm = prevByName[name] ?: continue
+            if (pm.dataType != nm.dataType) {
+                throw naksha.model.illegalArg(
+                    "Change of dataType for member '$name' is not supported (was ${pm.dataType}, requested ${nm.dataType})"
+                )
+            }
+        }
+
+        // Added.
+        for ((name, nm) in nextByName) {
+            if (prevByName.containsKey(name)) continue
+            val pgIdent = "\"${PgCustomMemberValues.pgColumnName(name)}\""
+            val pgType = PgCustomMemberValues.pgSqlTypeFor(nm.dataType)
+            for (root in mutableRootTables()) {
+                val sql = "ALTER TABLE ${root.quotedName} ADD COLUMN IF NOT EXISTS $pgIdent $pgType"
+                conn.execute(sql).close()
+            }
+        }
+
+        // Removed.
+        for ((name, _) in prevByName) {
+            if (nextByName.containsKey(name)) continue
+            if (!force) {
+                throw naksha.model.illegalArg(
+                    "Member '$name' is being removed from collection '$id', but Write.force is false. " +
+                        "Set Write.force = true to allow ALTER TABLE DROP COLUMN."
+                )
+            }
+            val pgIdent = "\"${PgCustomMemberValues.pgColumnName(name)}\""
+            for (root in mutableRootTables()) {
+                val sql = "ALTER TABLE ${root.quotedName} DROP COLUMN IF EXISTS $pgIdent"
+                conn.execute(sql).close()
+            }
+        }
+    }
+
+    private fun diffIndexes(conn: PgConnection, prev: NakshaCollection, next: NakshaCollection) {
+        val prevIdx = prev.indices
+        val nextIdx = next.indices
+        val prevByName = mutableMapOf<String, naksha.model.objects.CustomIndex>()
+        val nextByName = mutableMapOf<String, naksha.model.objects.CustomIndex>()
+        if (prevIdx != null) for (ci in prevIdx) if (ci != null) prevByName[ci.name] = ci
+        if (nextIdx != null) for (ci in nextIdx) if (ci != null) nextByName[ci.name] = ci
+
+        // Removed (or changed): drop on every root.
+        for ((name, pi) in prevByName) {
+            val ni = nextByName[name]
+            if (ni == null || !customIndexEquals(pi, ni)) {
+                for (root in mutableRootTables()) root.dropCustomIndex(conn, name)
+            }
+        }
+
+        // Added (or changed): create on every root.
+        for ((name, ni) in nextByName) {
+            val pi = prevByName[name]
+            if (pi == null || !customIndexEquals(pi, ni)) {
+                for (root in mutableRootTables()) root.createCustomIndex(conn, ni)
+            }
+        }
+    }
+
+    private fun customIndexEquals(a: naksha.model.objects.CustomIndex, b: naksha.model.objects.CustomIndex): Boolean {
+        if (a.name != b.name) return false
+        if (a.type != b.type) return false
+        if (a.unique != b.unique) return false
+        if (!listsEqual(a.on, b.on)) return false
+        if (!listsEqual(a.include, b.include)) return false
+        return true
+    }
+
+    private fun listsEqual(a: naksha.base.StringList?, b: naksha.base.StringList?): Boolean {
+        if (a == null && b == null) return true
+        if (a == null || b == null) return a?.isEmpty() ?: b?.isEmpty() ?: true
+        if (a.size != b.size) return false
+        for (i in 0 until a.size) {
+            if (a[i] != b[i]) return false
+        }
+        return true
+    }
+
+    private fun mutableRootTables(): List<PgTable> {
+        val result = mutableListOf<PgTable>()
+        result.add(headTable)
+        deletedTable?.let { result.add(it) }
+        historyTable?.let { result.add(it) }
+        metaTable?.let { result.add(it) }
+        return result
+    }
 }

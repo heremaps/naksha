@@ -332,6 +332,9 @@ open class PgWriter internal constructor(
                         throw collectionExists(
                             "The write #${write.i} failed, because the collection '$featureId' does exist already in map '$mapId'"
                         )
+                    } else {
+                        // UPSERT or UPDATE on an existing collection: diff schema (members + custom indexes) and apply.
+                        pgCollection.applyMembersAndIndexes(conn, pgCollection.head, nakshaCollection, write.original.force)
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
                     if (pgCollection != null) {

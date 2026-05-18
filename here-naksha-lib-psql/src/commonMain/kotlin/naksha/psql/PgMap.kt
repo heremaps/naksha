@@ -148,19 +148,11 @@ open class PgMap internal constructor(
     open fun createPgCollection(conn: PgConnection, collection: PgCollection) {
         // Ensure that all tables and indices are created in the correct map!
         setSearchPath(conn)
-        val indices: List<PgIndex>
-        val indexNames = collection.head.indices ?: PgIndex.DEFAULT_INDICES
-        indices = mutableListOf()
-        for (indexName in indexNames) {
-            if (indexName == null) continue
-            val index = PgIndex.of(indexName.toString())
-            if (index != null
-                && !indices.contains(index)
-                && !index.internal) {
-                indices.add(index)
-            }
-        }
+        // Default built-in optional indexes are always applied; user-defined indices come from collection.head.indices.
+        val indices: List<PgIndex> = PgIndex.DEFAULT_INDICES.filter { !it.internal }
         val NOW = Epoch()
+
+        val customIndexes = collection.head.indices
 
         if (collection is PgNakshaTransactions) {
             val txn = PgTransactions(collection)
@@ -173,6 +165,7 @@ open class PgMap internal constructor(
             for (index in indices) {
                 txn.createIndex(conn, index)
             }
+            if (customIndexes != null) for (ci in customIndexes) if (ci != null) txn.createCustomIndex(conn, ci)
 
             // We can have a meta table for transactions, but no history or deleted!
             if (collection.metaTable != null) {
@@ -184,6 +177,7 @@ open class PgMap internal constructor(
                 for (index in indices) {
                     meta.createIndex(conn, index)
                 }
+                if (customIndexes != null) for (ci in customIndexes) if (ci != null) meta.createCustomIndex(conn, ci)
             }
             return
         }
@@ -196,6 +190,7 @@ open class PgMap internal constructor(
         for (index in indices) {
             head.createIndex(conn, index)
         }
+        if (customIndexes != null) for (ci in customIndexes) if (ci != null) head.createCustomIndex(conn, ci)
 
         val deleted = collection.deletedTable
         if (deleted != null) {
@@ -206,6 +201,7 @@ open class PgMap internal constructor(
             for (index in indices) {
                 deleted.createIndex(conn, index)
             }
+            if (customIndexes != null) for (ci in customIndexes) if (ci != null) deleted.createCustomIndex(conn, ci)
         }
 
         val meta = collection.metaTable
@@ -217,6 +213,7 @@ open class PgMap internal constructor(
             for (index in indices) {
                 meta.createIndex(conn, index)
             }
+            if (customIndexes != null) for (ci in customIndexes) if (ci != null) meta.createCustomIndex(conn, ci)
         }
 
         val history = collection.historyTable
@@ -230,6 +227,7 @@ open class PgMap internal constructor(
             for (index in indices) {
                 history.createIndex(conn, index)
             }
+            if (customIndexes != null) for (ci in customIndexes) if (ci != null) history.createCustomIndex(conn, ci)
         }
         invalidateCollection(collection)
     }

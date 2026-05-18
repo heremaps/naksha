@@ -21,6 +21,8 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
     init {
         inRows.addColumns(allColumns)
         inRows.addColumn("version", PgType.INT64) // needed to do atomic updates
+        val members = collection.head.members
+        inRows.addCustomMembers(members)
         var i = 0
         for (write in writes) {
             val tuple = write.tuple
@@ -28,6 +30,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
                 writeById[write.id] = write
                 inRows[i] = tuple
                 inRows.set(i, "version", write.version?.txn)
+                inRows.setCustomMembers(i, write.feature, members)
                 i++
             }
         }

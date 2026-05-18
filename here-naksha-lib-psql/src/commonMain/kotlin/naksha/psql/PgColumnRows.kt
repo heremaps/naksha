@@ -261,6 +261,35 @@ internal class PgColumnRows {
         return false
     }
     fun set(row: Int, column: PgColumn, value: Any?): Boolean = set(row, column.name, value)
+    /**
+     * Adds one [PgColumnEntry] per declared [naksha.model.objects.CustomMember].
+     *
+     * Idempotent — built-in names are never re-added by addColumns(allColumns), and members are checked individually.
+     */
+    fun addCustomMembers(members: naksha.model.objects.CustomMemberList?): PgColumnRows {
+        if (members == null) return this
+        for (m in members) {
+            if (m == null) continue
+            addColumn(PgCustomMemberValues.pgColumnName(m.name), PgCustomMemberValues.pgTypeFor(m.dataType))
+        }
+        return this
+    }
+
+    /**
+     * Populates the [CustomMember][naksha.model.objects.CustomMember] columns for the given row by walking the [feature] using each member's [path][naksha.model.objects.CustomMember.effectivePath] and coercing the value to the SQL type.
+     *
+     * Missing keys and mismatched types both produce a NULL column value. Mismatches additionally emit a warning via [naksha.base.Platform.PlatformCompanion.logger].
+     */
+    fun setCustomMembers(row: Int, feature: naksha.model.objects.NakshaFeature?, members: naksha.model.objects.CustomMemberList?) {
+        if (feature == null || members == null) return
+        for (m in members) {
+            if (m == null) continue
+            val raw = PgCustomMemberValues.walkFeature(feature, m.effectivePath())
+            val coerced = PgCustomMemberValues.coerce(raw, m.dataType, feature.id, m.name)
+            set(row, PgCustomMemberValues.pgColumnName(m.name), coerced)
+        }
+    }
+
     operator fun set(row: Int, tuple: Tuple) {
         withMinSize(row)
         val meta = tuple.meta

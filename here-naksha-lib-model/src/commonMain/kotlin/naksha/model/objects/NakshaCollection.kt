@@ -8,6 +8,8 @@ import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.Flags
 import naksha.model.Naksha
+import naksha.model.NakshaError
+import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -252,93 +254,122 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * The index list with all indices to add to the collection; if set to `null`, default indices are created.
+     * The user-defined columns to materialize on this collection.
      *
-     * For `lib-psql` the following indices are available:
-     * - `id`: Index above the `id` property _(added by default into HEAD)_, includes `tn`, and `next_tn`.
-     * - `here_tile`: Index above `here_tile`, includes `id`, `tn`, and `next_tn`.
-     * - `app_id`: Index above `app_id`, includes `updated_at`, `id`, `tn`, and `next_tn`.
-     * - `author`: Index above `author`, includes `author_ts`, `id`, `tn`, and `tn_next`.
-     * - `tags`: Index above tags, does not allow index-only scans or pre-ordering.
-     * - `ref_point`: Index above reference point geometry, does not allow index-only scans or pre-ordering.
-     * - `gist_geo` or `spgist_geo`: Index above geometry, does not allow index-only scans or pre-ordering.
-     * - `ft`: Index above `ft`, includes `id`, `tn`, and `next_tn`.
-     * - `cv0`, `cv1`, `cv2`, and `cv3`: Index above `cvX`, includes `id`, `tn`, and `next_tn`, does not index `null` values.
-     * - `cs0`, `cs1`, `cs2`, and `cs3`: Index above `csX`, includes `id`, `tn`, and `next_tn`, does not index `null` values.
+     * Each [CustomMember] declares a name, a [CustomMemberType] (defaults to [CustomMemberType.STRING]), and an optional [JsonPath] to extract the value from the feature. At write time, the storage walks the feature using the path, coerces the value to the declared type, and stores it as a real column on the underlying table. The value also remains in the encoded feature blob.
      *
-     * To use a specific set of indices, create an own list of indices out of the above given values.
+     * Members are immutable in shape: changing a member's [CustomMember.dataType] after creation is not supported. To remove a member, the upsert must explicitly opt in to dropping the column (storage-specific `force` flag).
      *
-     * **It is not recommended, to add multiple geometry indices, this can become extreme costly.**
+     * The [name] of a member must be a valid Naksha identifier (see [Naksha.verifyId]); storages reserve a separate namespace for user columns to avoid collisions with built-ins.
+     *
      * @since 3.0
      */
-    var indices by INDICES
+    var members: CustomMemberList? by MEMBERS
 
     /**
-     * Adds all given indices.
+     * @see [members]
+     */
+    @JsName("withMemberList")
+    open fun withMembers(values: CustomMemberList): NakshaCollection {
+        val list = CustomMemberList()
+        list.setCapacity(values.size)
+        list.addAll(values.toList())
+        this.members = list
+        return this
+    }
+
+    /**
+     * @see [members]
+     */
+    open fun withMembers(vararg values: CustomMember): NakshaCollection {
+        val list = CustomMemberList()
+        list.setCapacity(values.size)
+        for (v in values) list.add(v)
+        this.members = list
+        return this
+    }
+
+    /**
+     * Adds the given [CustomMember] to [members].
      *
-     * ### Note
-     * This method does **not** add the given list, this method copies the elements from the given list into a new list.
-     * @param values the indices to add.
+     * Validates that the [CustomMember.name] is a valid Naksha identifier (see [Naksha.verifyId]) and does not already exist on this collection. Caps the list at [CustomMemberList.MAX_MEMBERS] entries.
+     * @param value the member to add.
      * @return this.
      * @since 3.0
+     */
+    open fun addMember(value: CustomMember): NakshaCollection {
+        Naksha.verifyId(value.name)
+        var list = this.members
+        if (list == null) {
+            list = CustomMemberList()
+            this.members = list
+        }
+        for (existing in list) {
+            if (existing != null && existing.name == value.name) {
+                throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Duplicate member name: '${value.name}'")
+            }
+        }
+        if (list.size >= CustomMemberList.MAX_MEMBERS) {
+            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Cannot add more than ${CustomMemberList.MAX_MEMBERS} members to a collection")
+        }
+        list.add(value)
+        return this
+    }
+
+    /**
+     * The user-defined indices to maintain on this collection.
+     *
+     * Each [CustomIndex] declares a name, a [CustomIndexType] ([CustomIndexType.BTREE] / [CustomIndexType.SPATIAL] / [CustomIndexType.FLAT_MAP]), the column(s) to index, an optional include-list (for [CustomIndexType.BTREE]), and a `unique` flag.
+     *
+     * Indices are applied to every variant of the collection (HEAD, HISTORY, DELETED, META) by the storage.
+     * @since 3.0
+     */
+    var indices: CustomIndexList? by INDICES
+
+    /**
      * @see [indices]
      */
     @JsName("withIndexList")
-    open fun withIndices(values: StringList): NakshaCollection {
-        val indices = StringList()
-        indices.setCapacity(values.size)
-        indices.addAll(values)
-        this.indices = indices
+    open fun withIndices(values: CustomIndexList): NakshaCollection {
+        val list = CustomIndexList()
+        list.setCapacity(values.size)
+        list.addAll(values.toList())
+        this.indices = list
         return this
     }
 
     /**
-     * Adds all given indices.
-     * @param values the indices to add.
+     * @see [indices]
+     */
+    open fun withIndices(vararg values: CustomIndex): NakshaCollection {
+        val list = CustomIndexList()
+        list.setCapacity(values.size)
+        for (v in values) list.add(v)
+        this.indices = list
+        return this
+    }
+
+    /**
+     * Adds the given [CustomIndex] to [indices].
+     *
+     * Validates that the index [CustomIndex.name] is a valid Naksha identifier (see [Naksha.verifyId]) and is unique within this collection.
+     * @param value the index to add.
      * @return this.
      * @since 3.0
-     * @see [indices]
      */
-    open fun withIndices(vararg values: String): NakshaCollection {
-        val indices = StringList()
-        indices.setCapacity(values.size)
-        for (value in values) indices.append(value)
-        this.indices = indices
-        return this
-    }
-
-    /**
-     * Adds the given `index` into the list of [indices], when not being in already.
-     * @param value the index to add to [indices].
-     * @return this.
-     * @see [indices]
-     */
-    open fun addIndex(value: String): NakshaCollection {
-        var indices = this.indices
-        if (indices == null) {
-            indices = StringList()
-            this.indices = indices
+    open fun addCustomIndex(value: CustomIndex): NakshaCollection {
+        Naksha.verifyId(value.name)
+        var list = this.indices
+        if (list == null) {
+            list = CustomIndexList()
+            this.indices = list
         }
-        if (!indices.contains(value)) indices.add(value)
-        return this
-    }
-
-    /**
-     * Adds the given `indices` into the list of [indices], when not being in already.
-     * @param values the indices to add to [indices].
-     * @return this.
-     * @see [indices]
-     */
-    open fun addIndices(vararg values: String): NakshaCollection {
-        @Suppress("SENSELESS_COMPARISON")
-        if (values != null && values.isNotEmpty()) {
-            var indices = this.indices
-            if (indices == null) {
-                indices = StringList()
-                this.indices = indices
+        for (existing in list) {
+            if (existing != null && existing.name == value.name) {
+                throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Duplicate index name: '${value.name}'")
             }
-            for (value in values) if (!indices.contains(value)) indices.add(value)
         }
+        list.add(value)
         return this
     }
 
@@ -508,7 +539,8 @@ open class NakshaCollection() : NakshaFeature() {
         private val MAP_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> TYPE }
-        private val INDICES = NullableProperty<NakshaCollection, StringList>(StringList::class)
+        private val MEMBERS = NullableProperty<NakshaCollection, CustomMemberList>(CustomMemberList::class)
+        private val INDICES = NullableProperty<NakshaCollection, CustomIndexList>(CustomIndexList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }

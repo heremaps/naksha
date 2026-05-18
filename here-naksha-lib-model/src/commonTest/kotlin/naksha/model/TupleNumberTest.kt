@@ -1,7 +1,11 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.model.TupleNumberVariant.*
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
+import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B256
 import kotlin.test.Test
 import kotlin.test.assertEquals
 

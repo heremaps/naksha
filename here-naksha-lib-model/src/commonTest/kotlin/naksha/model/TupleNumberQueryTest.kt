@@ -18,8 +18,8 @@ class TupleNumberQueryTest {
     fun shouldStoreTnsAsByteArray() {
         // Given:
         val serializedTupleNumbers: Array<ByteArray> = arrayOf(
-            randomTupleNumber().toByteArray(TupleNumberVariant.B96),
-            randomTupleNumber().toByteArray(TupleNumberVariant.B96)
+            randomTupleNumber().toByteArray(TupleNumberVariant.B64),
+            randomTupleNumber().toByteArray(TupleNumberVariant.B64)
         )
         val metaQuery = MetaQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, serializedTupleNumbers)
 
@@ -33,7 +33,6 @@ class TupleNumberQueryTest {
             mapNumber = random.nextInt(10),
             collectionNumber = random.nextInt(10),
             featureNumber = Int64(random.nextInt(10)),
-            version = Version(Int64(random.nextInt(10))),
-            uid = random.nextInt(10)
+            version = Version(Int64(random.nextInt(10)))
         )
 }
