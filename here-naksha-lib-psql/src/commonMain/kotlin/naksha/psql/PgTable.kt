@@ -371,9 +371,9 @@ $TABLESPACE"""
             // HISTORY (this) -> YEARLY
             // HISTORY (this) -> YEARLY -> PARTITION
             val SQL = """$CREATE_TABLE $quotedName (
-${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }},
+${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
 CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_tn IS NOT NULL)
-) PARTITION BY RANGE (naksha_tn_year(next_tn)) 
+) PARTITION BY RANGE (naksha_tn_year(next_tn))
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)
         }
@@ -382,7 +382,7 @@ $TABLESPACE"""
         if (partitionColumn == null) {
             // HEAD, META, or DELETED.
             val SQL = """$CREATE_TABLE $quotedName (
-${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }},
+${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
 CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn})
 )
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
@@ -395,9 +395,9 @@ $TABLESPACE"""
             // HEAD (this) -> PARTITION
             // DELETED (this) -> PARTITION
             val SQL = """$CREATE_TABLE $quotedName (
-${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }},
+${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
 CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (${if (isDeleted(name)) "next_tn = tn" else "next_tn IS NULL"})
-) PARTITION BY RANGE (naksha_tn_partition_index(tn, $partitionCount)) 
+) PARTITION BY RANGE (naksha_tn_partition_index(tn, $partitionCount))
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)
         }
@@ -489,6 +489,133 @@ $TABLESPACE"""
             index.drop(conn, this)
             indices = indices - index
         }
+    }
+
+    /**
+     * Returns the SQL fragment with extra column definitions for user-declared [members][naksha.model.objects.NakshaCollection.members].
+     *
+     * The result is empty when there are no members, otherwise it is comma-prefixed and ready to be appended to the built-in column list in `CREATE TABLE`.
+     */
+    internal fun extraColumnDefinitions(): String {
+        val members = collection.head.members ?: return ""
+        if (members.isEmpty()) return ""
+        val sb = StringBuilder()
+        for (member in members) {
+            if (member == null) continue
+            sb.append(",\n").append(PgCustomMemberValues.sqlDefinitionFor(member))
+        }
+        return sb.toString()
+    }
+
+    /**
+     * Returns the unique identifier for a user-defined index on this table.
+     *
+     * The result follows the pattern `{table-name}$ci_{index-name}` and is truncated to 63 bytes (Postgres identifier limit).
+     */
+    internal fun customIndexId(indexName: String): String {
+        val id = "${name}${PG_CUSTOM_IDX}${indexName}"
+        return if (id.length > 63) id.substring(0, 63) else id
+    }
+
+    /**
+     * Creates a [CustomIndex][naksha.model.objects.CustomIndex] on this table.
+     *
+     * Internal naming follows `{table-name}$ci_{index.name}`; truncated to Postgres's 63-byte identifier limit.
+     * @param conn the connection to use to execute the creation.
+     * @param index the index to create.
+     */
+    open fun createCustomIndex(conn: PgConnection, index: naksha.model.objects.CustomIndex) {
+        val sql = buildCustomIndexSql(index) ?: return
+        conn.execute(sql).close()
+    }
+
+    /**
+     * Drops a [CustomIndex][naksha.model.objects.CustomIndex] from this table.
+     */
+    open fun dropCustomIndex(conn: PgConnection, indexName: String) {
+        val id = customIndexId(indexName)
+        conn.execute("DROP INDEX IF EXISTS ${quoteIdent(id)} CASCADE").close()
+    }
+
+    private fun buildCustomIndexSql(index: naksha.model.objects.CustomIndex): String? {
+        val on = index.on
+        if (on.isEmpty()) return null
+        val id = quoteIdent(customIndexId(index.name))
+        val unique = if (index.unique) "UNIQUE INDEX" else "INDEX "
+        val fillFactor = if (isVolatile) "WITH (deduplicate_items=OFF, fillfactor=80)" else "WITH (deduplicate_items=OFF, fillfactor=100)"
+        val members = collection.head.members
+        val firstCol = on[0] ?: return null
+        return when (index.type) {
+            naksha.model.objects.CustomIndexType.BTREE -> {
+                val cols = on.filterNotNull().joinToString(", ") { col ->
+                    val pgIdent = quoteIdent(physicalColumnName(col, members))
+                    val opclass = if (isTextColumn(col, members)) " text_pattern_ops" else ""
+                    "$pgIdent$opclass DESC"
+                }
+                val include = index.include?.takeIf { !it.isEmpty() }?.let { inc ->
+                    " INCLUDE (${inc.filterNotNull().joinToString(", ") { quoteIdent(physicalColumnName(it, members)) }})"
+                } ?: ""
+                """
+CREATE $unique IF NOT EXISTS $id ON ${quotedName}
+USING btree ($cols)$include
+$fillFactor ${TABLESPACE};""".trim()
+            }
+            naksha.model.objects.CustomIndexType.SPATIAL -> {
+                if (firstCol != "geo") {
+                    throw naksha.model.illegalArg("SPATIAL custom index '${index.name}' only supports the built-in 'geo' column in v3.0")
+                }
+                val cFlags = PgColumn.flags.ident
+                val cGeo = PgColumn.geo.ident
+                """
+CREATE INDEX  IF NOT EXISTS $id ON ${quotedName}
+USING gist (naksha_2d($cGeo, $cFlags))
+WITH (fillfactor=${if (isVolatile) 80 else 100}) ${TABLESPACE}
+WHERE naksha_2d($cGeo, $cFlags) IS NOT NULL;""".trim()
+            }
+            naksha.model.objects.CustomIndexType.FLAT_MAP -> {
+                if (!isFlatMapColumn(firstCol, members)) {
+                    throw naksha.model.illegalArg("FLAT_MAP custom index '${index.name}' must target a member of dataType FLAT_MAP or TAGS")
+                }
+                val pgIdent = quoteIdent(physicalColumnName(firstCol, members))
+                """
+CREATE INDEX  IF NOT EXISTS $id ON ${quotedName}
+USING gin ($pgIdent)
+$fillFactor ${TABLESPACE};""".trim()
+            }
+            else -> null
+        }
+    }
+
+    private fun physicalColumnName(name: String, members: naksha.model.objects.CustomMemberList?): String {
+        if (members != null) {
+            for (m in members) {
+                if (m != null && m.name == name) return PgCustomMemberValues.pgColumnName(name)
+            }
+        }
+        return name
+    }
+
+    private fun isTextColumn(name: String, members: naksha.model.objects.CustomMemberList?): Boolean {
+        if (members != null) {
+            for (m in members) {
+                if (m != null && m.name == name) {
+                    return m.dataType == naksha.model.objects.CustomMemberType.STRING
+                }
+            }
+        }
+        if (name == "id" || name == "app_id" || name == "author" || name == "ft" || name == "origin" || name == "target") return true
+        return false
+    }
+
+    private fun isFlatMapColumn(name: String, members: naksha.model.objects.CustomMemberList?): Boolean {
+        if (members == null) return false
+        for (m in members) {
+            if (m != null && m.name == name) {
+                return m.dataType == naksha.model.objects.CustomMemberType.FLAT_MAP
+                    || m.dataType == naksha.model.objects.CustomMemberType.TAGS
+            }
+        }
+        return false
     }
 }
 

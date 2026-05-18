@@ -19,12 +19,16 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
 
     init {
         inRows.addColumns(allColumns)
+        val members = collection.head.members
+        inRows.addCustomMembers(members)
         var i = 0
         for (write in writes) {
             val tuple = write.tuple
             if (tuple != null) {
-                inRows[i++] = tuple
+                inRows[i] = tuple
+                inRows.setCustomMembers(i, write.feature, members)
                 writeByTn[tuple.tupleNumber] = write
+                i++
             }
         }
     }

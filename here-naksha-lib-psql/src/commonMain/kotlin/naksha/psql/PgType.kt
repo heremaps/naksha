@@ -125,6 +125,16 @@ class PgType : JsEnum() {
         }
 
         /**
+         * JSONB column type, bound as text (JSON).
+         *
+         * Used by storages to materialize [naksha.model.objects.CustomMemberType.FLAT_MAP] and [naksha.model.objects.CustomMemberType.TAGS] members.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val JSONB = defIgnoreCase(PgType::class, "jsonb")
+
+        /**
          * Returns the [PgType] from the given string.
          * @param name the name, for example `"int"`.
          * @return the matching [PgType] or `null`, if none matches.

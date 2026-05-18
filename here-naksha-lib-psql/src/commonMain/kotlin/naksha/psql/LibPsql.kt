@@ -60,6 +60,11 @@ internal const val PG_META = "${PG_S}meta"
 internal const val PG_IDX = "${PG_S}i_"
 
 /**
+ * `$ci_???`: The prefix used for user-defined (custom) indices, followed by the index identifier, e.g. `$ci_my_idx`.
+ */
+internal const val PG_CUSTOM_IDX = "${PG_S}ci_"
+
+/**
  * `$c_??`: The prefix used for constraints, followed by the identifier of the constraint.
  */
 internal const val PG_CONSTRAINT = "${PG_S}c_"
