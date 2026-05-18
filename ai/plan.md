@@ -14,3 +14,6 @@
   - Change algorithm that performs insert, update, delete, purge to no longer copy into deletion table
 - update queries so they no longer access deletion table
   - they need to remove deleted objects, when not requested, using `AND ((version & 3) < 2)`
+
+
+
