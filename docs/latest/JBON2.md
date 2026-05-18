@@ -121,7 +121,9 @@ When "enter" is executed, the current state is compacted into a `long`, then sto
 **Note**: The buffers may overlap, so the whole **JBON** can be stored in a single byte-array, each buffer is just a slice of the actual byte-array. This means, it does not matter if the **JBON** is physically encoded in a single byte-array or split into up to 5 byte-arrays.
 
 ## JBON Header
-All JBON files start with the string `JBON` followed by the version as big-endian short, so `0x0002`. This is the only header of a JBON file, there is no footer or other metadata. The actual data starts immediately after the header. The header is in big-endian encoding equal to the integer `0x4A424F4E`, followed by a short being `0x0002`. The reason for this design is that this is a valid zero-terminates C string to be shown in clear text editors.
+All JBON files start with the string `JBON` followed by the version as big-endian short, so `0x0002`. This is the only header of a JBON file, there is no footer or other metadata. The actual data starts immediately after the header. The header is in big-endian encoding equal to the integer `0x4A424F4E`, followed by a short being `0x0002`. The reason for this design is that this is a valid zero-terminated C string to be shown in clear text editors.
+
+**This header is optional and only recommended for disk files!**
 
 ## Lead-in byte
 All _**units**_ start with a **lead-in** byte, which describes the actual type of the _**unit**_, and sometimes as well the value:
@@ -164,14 +166,13 @@ All _**units**_ start with a **lead-in** byte, which describes the actual type o
     - ss=3: Size is **uint32**, 4 byte unsigned integer size
     - tttt=0: [Binary]
     - tttt=1: [Array]
-    - tttt=2: [Map]
-    - tttt=3: [ArrayKind]
+    - tttt=2: [ArrayKind]
+    - tttt=3: [Map]
     - tttt=4: [MapKind]
     - tttt=5: [TupleNumber]
     - tttt=6: [Tuple]
     - tttt=7: [Book]
-    - tttt=8: [Annotation]
-    - tttt=9-15: _reserved_
+    - tttt=8-15: _reserved_
 
 Technically, the **lead-in** byte can be decoded using one big switch statement with 256 cases (128 negative, 128 positive). The negatives are [String] and [Structures], while the positives are [primitives]. Beware that [primitives] must not be replaced with [References]. Therefore, because the [reference] is treated as [primitive], it is not possible to have a [reference] to a [reference], which simplifies the implementation and reduces the possibility of circular [references].
 
@@ -406,151 +407,100 @@ If it is not empty, and the lowest four bit (`tttt`) encode the type of the stru
 
 For the `Type` column in the following structure tables the maximum allowed type is used. The **lead-in** is always a single byte of type `byte`, while all other values are **JBON** flexible encoded types, for example **int32** for size means that the size is encoded as integer with maximal size of 32-bit, so that the value `0` can be actually encoded as `int5`. A question mark _(`?`)_ behind a type means that the value is nullable, so `null` can be stored instead of the actual value. If that is not the case, the value must not be `null`, nor a [reference] to `null` or a `null`-reference are allowed. Beware that all [string] and [structures] can always be replaced with a [reference] to relocate the _**unit**_ into a [book].
 
+### Null/Undefined in structures
+A structure eventually **must not** have any `undefined` values. However, the encoder can inject explicitly `undefined` to indicate that a value should be set to its default. The documentation will clarify what is to be done by the decoder, when `undefined` is encountered. In doubt, the decoder must replace all illegally left over `undefined` values with `null`. If that leads to an invalid document, it should throw an exception indicating a broken **JBON** binary.
+
 ### Binary
 The binary structure is used to store binary content, actually byte-arrays of custom data. They are used for example to encode [TWKB]. The **lead-in** of a binary is `11ss_0000`; with `ss` encoding the size of the size, as usual. The binary format is like:
 
-| Name        | Type      | Description                                                                                     |
-|-------------|-----------|-------------------------------------------------------------------------------------------------|
-| lead_in     | `byte`    | The **lead-in** byte, `11ss_0000`.                                                              |
-| byte_size   | `int64`   | The total size of the structure, including the **lead-in**, in bytes.                           |
-| mime_type   | [string]  | The MIME-Type of the binary, defaults to `application/octet-stream` from `const` book.          |
-| parameters  | [map]?    | Additional _(optional)_ paramters, the [map] must use only [strings] as key and value.          |
-| compression | [string]? | The compression algorith used; `null` if not compressed.                                        |
-| target_size | `int64`?  | If a compression algorithm is used, the amount of decompressed bytes _(for buffer allocation)_. |
-| data_size   | `int64`   | The amount of bytes following that represent the binary.                                        |
-| data        | `bytes`   | The bytes of the binary.                                                                        |
-| tail        | `bytes`   | Arbitrary tail bytes _(padding)_.                                                               |
+| Name        | Type      | Description                                                                                                       |
+|-------------|-----------|-------------------------------------------------------------------------------------------------------------------|
+| lead_in     | `byte`    | The **lead-in** byte, `11ss_0000`.                                                                                |
+| byte_size   | `int64`   | The total size of the structure, including the **lead-in**, in bytes.                                             |
+| mime_type   | [string]  | The MIME-Type of the binary, defaults to `application/octet-stream` from `const` book.                            |
+| compression | [string]? | The compression algorith used; `null` if not compressed.                                                          |
+| target_size | `int64`?  | If a compression algorithm is used, the amount of decompressed bytes _(for buffer allocation)_; otherwise `null`. |
+| parameters  | [map]?    | Additional _(optional)_ paramters, the [map] must use only [strings] as key and value.                            |
+| data_size   | `int64`   | The amount of bytes following that represent the binary.                                                          |
+| data        | `bytes`   | The bytes of the binary.                                                                                          |
 
-The [JSON] and [XML] the binary is encoded as a string using the [data URL scheme]. So, in the format `data:[<media-type>][;<parameter]*[;base64],<data>`, like `data:application/twkb;base64,{encoded-data}`. The `mime_type` is encoded as [media-type] of the [data URL]. The `parameters` are added as parameters to the [media-type], the general form is `{type}/{subtype};[parameter=value;]*base64,{data}`. For example, a binary using some parameters, with `mime_type` being `application/foo` can look like: `data:application/foo;content-encoding=GZIP;charset=UTF-8;data,eyJ4IjoxfQ==`. As mostly all the values are part of the [const] book, the [data URL] is only a few bytes extra, compared to the actual binary data.
+The [JSON] and [XML] the binary is encoded as a string using the [data URL scheme]. So, in the format `data:[<media-type>][;<parameter]*;base64,<data>`, like `data:application/twkb;base64,{encoded-data}`. The `mime_type` is encoded as [media-type] of the [data URL]. The `parameters` are added as parameters to the [media-type], the general form is `{type}/{subtype};[parameter=value;]*base64,{data}`. For example, a binary using some parameters, with `mime_type` being `application/foo` can look like: `data:application/foo;compression=GZIP;target_size=123456;charset=UTF-8;data,eyJ4IjoxfQ==`.
 
-```javascript
-async function dataUrlToUint8Array(dataUrl) {
-  const res = await fetch(dataUrl);
-  const buf = await res.arrayBuffer();
-  return new Uint8Array(buf);
-}
-var data = dataUrlToUint8Array("data:application/foo;data,eyJ4IjoxfQ==");
-var test = new URL("data:application/foo;content-encoding=GZIP;charset=UTF-8;data,eyJ4IjoxfQ==")
-```
+The dedicated [MIME type] parameter is used to identify the type of the binary, normally values from the [IANA media types] are used. If no official MIME type is available, an own one should be used. For example HERE will use `application/twkb` for TWKB binaries, and `application/jbon` for **JBON** binaries. If no MIME type is available, `application/octet-stream` should be expected, resulting in a simple `byte[]`.
 
-The [MIME type] parameter is used to identify the type of the binary, normally values from the [IANA media types] are used. If no official MIME type is available, an own one should be used. For example HERE will use `application/twkb` for TWKB binaries, and `application/jbon` for **JBON** binaries. If no MIME type is available, `application/octet-stream` should be expected, resulting in a simple `byte[]`.
-
-There are pre-defined well-known parameters, for which in the [const] book there are pre-defined values:
-
-- `mime_type`: The [mime type] of the data
-- `encoding`: The compression algorithm , encoding, and charset.
+The dedicated `compression` parameter and `target_size` are used to make it easier to extract the binary, when it is compressed. It specifically allows to allocate the target buffer in the correct size ahead, very helpful for `LZ4` extraction.
 
 #### Primary Logical Bytes
-The primary [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, followed by `parameters`, and finally by the decompressed `data`. This ignores the `compression`, `byte_size`, `data_size`, and `tail`.
+The primary [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, then `mime_type`, followed by all `parameters`, and finally by the decompressed `data`. This ignores the `compression`, `target_size`, `byte_size`, `data_size`, and `tail`.
 
 #### Secondary Logical Bytes
-The secondary [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, followed by `mime_type`, `compression`, `encoding`, `charset`, `data`, and `tail`. This actually represents the [logical bytes] of the binary as it is encoded.
+The secondary [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, followed by `mime_type`, `compression`, `target_size`, `parameters`, `data_size`, `data`, and `tail`. This actually represents the [logical bytes] of the binary as it is encoded.
 
 ### Array
 An array of arbitrary other _**units**_, using the **lead-in** byte `11ss_0001`; with `ss` encoding the size of the size, as usual.
 
-| Name      | Type              | Description                                                           |
-|-----------|-------------------|-----------------------------------------------------------------------|
-| lead_in   | `byte`            | The **lead-in** byte, `11ss_0001`.                                    |
-| byte_size | `int64`           | The total size of the structure, including the **lead-in**, in bytes. |
-| kind      | [ref]<[Array]>?   | An _(optional)_ reference to another array to be used as template.    |
-| values    | [array]?<[unit]?> | The _**units**_ encoding the array values.                            |
+| Name      | Type                | Description                                                           |
+|-----------|---------------------|-----------------------------------------------------------------------|
+| lead_in   | `byte`              | The **lead-in** byte, `11ss_0001`.                                    |
+| byte_size | `int64`             | The total size of the structure, including the **lead-in**, in bytes. |
+| kind      | [ref]<[ArrayKind]>? | An _(optional)_ reference to an [ArrayKind] to be used as template.   |
+| elements  | [array]<[unit]?>    | The _**units**_ encoding the array values.                            |
 
-If the `byte_size` is zero _(**lead-in** is `1100_0001`)_, the array is empty (`[]`).
+If the `byte_size` is zero _(**lead-in** is `1100_0001`)_, the array is empty (`[]`). This means, there is minimally one element, when the byte-size is greater than zero!
 
-If the `kind` of the array is not `undefined` or `null`, the default values of the [ArrayKind] are defining the minimum length of the array. If a value in the `values` is `undefined` _(explicitly or implicit)_, then the default value is used. Beware that the order of the default values of the [kind] matches the `values` order. Therefore, providing an [ArrayKind] will set a minimum lnegth for the array, and potentially already all values.
+If the `kind` of the array is not `null`, then the elements must have minimally the same length as the `kind` array. Any value in the `elements` that is `undefined` _(explicitly or implicit)_, will be replaced with the value from the `kind` array. This means a given `kind` defines a minimum length of the array. It is allowed that the encoder reduces the size of the elements to zero, which means that the `elements` array is `undefined`. In this case the array is just a clone fo the `kind` array. If the encoded `elements` are shorter than the `kind` array, then it is expanded and the additional values are filled with values from the `kind` array, logically.
+
+It is not valid **JBON** if, after applying the `kind`, any element is `undefined`. Therefore, no element must be `undefined` eventually, it should get either an explicit value or a value from the `kind`.
 
 #### Primary Logical Bytes
-The primary [logical bytes] of the array are calculated by adding the empty **lead-in** `1100_0001` _(empty array)_, followed by all `values` in order, if there are any. If any value is `undefined`, the default value from the [ArrayKind] is used, if there is any. So, the default values have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are. This ensures that two equal arrays produce the exact same [logical bytes], no matter if they were encoded using an [ArrayKind] or not.
+The primary [logical bytes] of the array are calculated by adding the empty **lead-in** `1100_0001` _(empty array)_, followed by all `elements` in order, if there are any. The same rules apply while generating the [logical bytes] that apply generally when decoding. So `elements` being `undefined` are taken from the `kind`, it is not allowed to have eventually any `undefined` elements. So, the default values have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are. This ensures that two equal arrays produce the exact same [logical bytes], no matter if they were encoded using an `kind` or not.
+
+### ArrayKind
+An array of arbitrary other _**units**_ without an own `kind`, using the **lead-in** byte `11ss_0010`; with `ss` encoding the size of the size, as usual.
+
+| Name      | Type             | Description                                                              |
+|-----------|------------------|--------------------------------------------------------------------------|
+| lead_in   | `byte`           | The **lead-in** byte, `11ss_0010`.                                       |
+| byte_size | `int64`          | The total size of the structure, including the **lead-in**, in bytes.    |
+| elements  | [array]<[unit]?> | The _**units**_ encoding the array values, must not contain `undefined`. |
+
+This is encoded like the [array], the [logical bytes] are as well the same. The only difference is that this array must not have an own `kind`. Therefore, the only difference to the [array] is the **lead-in** and the missing kind.
 
 ### Map
-A map is a key-value store with the **lead-in** byte being `11ss_0010`; with `ss` encoding the size of the size, as usual.
+A map is a key-value store with the **lead-in** byte being `11ss_0011`; with `ss` encoding the size of the size, as usual.
 
-| Name      | Type              | Description                                                                                                              |
-|-----------|-------------------|--------------------------------------------------------------------------------------------------------------------------|
-| lead_in   | `byte`            | The **lead-in** byte, `11ss_0010`.                                                                                       |
-| byte_size | `int64`           | The total size of the structure, including the **lead-in**, in bytes.                                                    |
-| kind      | [ref]<[MapKind]>  | A reference to the [MapKind] of the map.                                                                                 |
-| values    | [array]?<[unit]?> | An _(optional)_ array with the values of the members, in the same order as the keys and default values of the [MapKind]. |
+| Name      | Type              | Description                                                                |
+|-----------|-------------------|----------------------------------------------------------------------------|
+| lead_in   | `byte`            | The **lead-in** byte, `11ss_0011`.                                         |
+| byte_size | `int64`           | The total size of the structure, including the **lead-in**, in bytes.      |
+| kind      | [ref]<[MapKind]>? | An _(optional)_ reference to a [MapKind] to be used as template.           |
+| entries   | [array]?<[unit]?> | An _(optional)_ array with the keys and values of the entries in this map. |
 
-If the `byte_size` is zero _(**lead-in** is `1100_0010`)_ , this implies an empty map (`{}`).
+If the `byte_size` is zero _(**lead-in** is `1100_0010`)_ , this implies an empty map (`{}`). This means, there is minimally one entry, when the byte-size is greater than zero!
 
-If the `values` array is `undefined`, or `byte_size` does not leave any room for values, or the array is simply too short compared to the members of the [MapKind], then the missing values are set to the default values of the [MapKind]. This can be used as a trick to save space when encoding, so the encoder moves those members backwards in the member list of the [MapKind], that are mostly kept at their default value. In a nutshell: Members rarely changed should be located at the end of the member list in an [MapKind].
+If `kind` is given, then all `entries` from the `kind` map are added logically into this map first. Afterward, the `entries` defined in this map will override the `entries` from the `kind`. This means, if the `entries` are `undefined` _(explicit or implicit)_, then this is map is just a clone of the `kind`. The `entries` can be `undefined` either implicitly, if `byte_size` does not leave any room for `entries`. Otherwise, when there are `entries` given, all `entries` in this map override the entries imported from the `kind`. To remove an entry coming from the `kind`, the encoder will re-define the entry with the same key, but with the value `undefined`. This undefines the entry, actually removing it from the map. This differs from how arrays are using the `kind`.
+
+Every entry is encoded as two _**units**_, being the key and the value. The value `undefined` removes the entry from the map _(see above)_. The decoder will first search in the map itself, then fallback to the `kind`, if the key is not in the current map. If the key is found and the value is `undefined`, the encoder will report actually that the entry does not exist.
 
 **Notes**
 - To stay [JSON] compatible, keys of the map should be [string] only.
 
 #### Primary Logical Bytes
-The primary [logical bytes] of the map are created by adding the empty **lead-in** `1100_0010`, followed by all members, in ascending order. Therefore, first an internal key list is created, then [sorted] ascending. Afterward, all keys are iterated, adding the key to the [logical bytes], then the value. If default values of a member from the [MapKind] is used, it has to be treated as if it was embedded; so default values need to be added to the [logical bytes] just as if they would have been a directly encoded as key and value. This is done to ensure that two maps always generate the same [logical bytes], when they contain the same data; independent of the encoding and key order. Note that by sorting the keys, we ensure that the order of the keys do not matter for the [logical bytes], which is important so that `{a:1,b:2}` actually equals `{b:2,a:1}`. This means, effectively the [MapKind] is transparent for the [logical bytes].
+The primary [logical bytes] of the map are created by adding the empty **lead-in** `1100_0010`, followed by all entries, in ascending order. Therefore, first an internal key list is created, then [sorted] ascending. Afterward, all keys are iterated, adding the key and value to the [logical bytes]. The order is applied to both keys, from the current map and the `kind`, if given. So entries from a `kind` are treated as if they are embedded. This is done to ensure that two maps always generate the same [logical bytes], when they contain the same data; independent of the encoding and entry order. Note that by sorting the keys, we ensure that the order of the keys do not matter for the [logical bytes], which is important so that `{a:1,b:2}` actually equals `{b:2,a:1}`. This means, effectively the `kind` is transparent for the [logical bytes].
 
 #### Secondary Logical Bytes
-The secondary [logical bytes] of a map are created by adding all keys, without the values. The keys are [sorted] in ascending order, before being added to the [logical bytes]. This is done to ensure that two maps with the same keys, but different values, generate the same secondary [logical bytes], which is important for encoding, because it allows to find a good fitting [kind] for a map. In a nutshell, the secondary [logical bytes] do only contain the keys, no values.
-
-### ArrayKind
-An _ArrayKind_ is a set of default values; the **lead-in** is `11ss_0011`, with `ss` encoding the size of the size, as usual.
-
-| Name        | Type                   | Description                                                           |
-|-------------|------------------------|-----------------------------------------------------------------------|
-| lead_in     | `byte`                 | The **lead-in** byte, `11ss_0011`.                                    |
-| byte_size   | `int64`                | The total size of the structure, including the **lead-in**, in bytes. |
-| values      | [array]<[unit]>        | An array of all values of this kind.                                  |
-| name        | [string]?              | The _(optional)_ name of the kind.                                    |
-| annotations | [array]?<[annotation]> | The _(optional)_ array of annotations for the kind.                   |
-
-This design allows to have multiple kinds with different default values for the same type, which improves compression in certain cases, as some [arrays] do only occur in a handful of variations. Having all of them in a `global` [book] grows the `global` [book], but allows to reduce all their occurrences using just an _ArrayKind_ reference, without encoding individual values _(which often allows compression down to less than 1%)_. A larger `global` [book] is normally not really harmful, because [books] are immutable, and they are used for huge amount of objects, so there are only a few [books] for billions of [arrays], making this highly efficient.
-
-The annotations should only be used in `global` or `storage` [books]. They can consume plenty of space, but may carry information for the application, UI, or others.
-
-**Note**: Remember, a _**kind**_ is **NOT** a type like a class! There can be multiple _**kinds**_ for the exact same type, by intention. The _**kind**_ is more like a template for an object, with the goal to deduplicate data. It is used to save space when encoding, even while it allows adding annotations as hints. Therefore, do not think of a _**kind**_ as a class!
-
-#### Primary Logical Bytes
-An _ArrayKind_ is a transparent _**unit**_ the very same way [reference] is, and therefore should never be part of the normal [logical bytes].
-
-However, the _ArrayKind_ has an own primary [logical bytes] representation. The order of the default values is relevant for the [logical bytes] of the _ArrayKind_ itself, they are processed in natural order. First the empty **lead-in** `1100_0011` is added into the [logical bytes], then the default values are added in the given order. If a `name` is given, it is added next, in any case the string is terminated with an ASCII-0. If annotations are given, they are added after the name.
-
-The primary [logical bytes] will ignore the `name` and `annotations` of the kind. This results in [logical bytes] for the _ArrayKind_ where the order is significant, and [logical bytes] for [maps] where the order of the [members] is not significant. It allows to quickly find similar kinds.
-
-#### Secondary Logical Bytes
-An _ArrayKind_ is a transparent _**unit**_ the very same way [reference] is, and therefore should never be part of the normal [logical bytes].
-
-However, the _ArrayKind_ has an own primary [logical bytes] representation. The order of the default values is relevant for the [logical bytes] of the _ArrayKind_ itself. They are processed in natural order. First the empty **lead-in** `1100_0011` is added into the [logical bytes], then the default value is added.
-
-The primary [logical bytes] will ignore the `name` and `annotations` of the kind. This results in [logical bytes] for the _ArrayKind_ where the order is significant, and [logical bytes] for [maps] where the order of the [members] is not significant. It allows to quickly find similar kinds.
-
-
-The secondary [logical bytes] are only supported for [map] kinds, so when all [members] have a `key`. It is calculated by adding the keys of the [members], [sorted] ascending. The values and all other attributes are ignored for the secondary [logical bytes]. The secondary [logical bytes] are only available if all [members] have a `key`, so for [maps]. The secondary [logical bytes] allows to quickly find similar kinds of similar [maps]. So, it finds kinds with the same members, even when the values are different, which is helpful for encoding. It is normally used by the encoder to find a good kind for a [map] to be encoded. Many encoders do first generate plenty of kinds with each having different default values, to later compact them to a reduced set. It is part of encoder optimizations to find the best fitting kind for an object, so that the default values of the [members] are safe as much as possible.
-
-**Note**: The secondary [logical bytes] of a [kind] are the same as the primary [logical bytes] of a [map], this is done by intention, so encoders can find matches.
+The secondary [logical bytes] of a map are created by adding the empty **lead-in** `1100_0010`, followed by all keys, without the values. The keys are [sorted] in ascending order, before being added to the [logical bytes]. This is done to ensure that two maps with the same keys, but different values, generate the same secondary [logical bytes], which is important for encoding, because it allows to find a good fitting [kind] for a map. In a nutshell, the secondary [logical bytes] do only contain the keys, no values.
 
 ### MapKind
-A kind is a set of [members] with additional metadata like a name and annotations; the **lead-in** is `11ss_0100`, with `ss` encoding the size of the size, as usual.
+A map is a key-value store without an `kind`, using the **lead-in** byte `11ss_0100`; with `ss` encoding the size of the size, as usual.
 
-| Name        | Type                   | Description                                                           |
-|-------------|------------------------|-----------------------------------------------------------------------|
-| lead_in     | `byte`                 | The **lead-in** byte, `11ss_0100`.                                    |
-| byte_size   | `int64`                | The total size of the structure, including the **lead-in**, in bytes. |
-| keys        | [array]<[string]>      | An array of all keys of this kind.                                    |
-| values      | [array]<[unit]>        | An array of all values of this kind.                                  |
-| name        | [string]?              | The _(optional)_ name of the kind.                                    |
-| annotations | [array]?<[annotation]> | The _(optional)_ array of annotations for the kind.                   |
+| Name      | Type             | Description                                                                                 |
+|-----------|------------------|---------------------------------------------------------------------------------------------|
+| lead_in   | `byte`           | The **lead-in** byte, `11ss_0100`.                                                          |
+| byte_size | `int64`          | The total size of the structure, including the **lead-in**, in bytes.                       |
+| entries   | [array]<[unit]?> | An array with the keys and values of the entries in this map. Must not contain `undefined`. |
 
-This design allows to have multiple kinds with different default values for the same type, which improves compression in certain cases, as some [maps] do only occur in a handful of variations. Having all of them in a `global` [book] grows the `global` [book], but allows to reduce all their occurrences to [maps] with just a [kind] references without encoding individual values _(which often allows compression down to less than 1%)_. A larger `global` [book] is normally not really harmful, because [books] are immutable, and they are used for huge amount of objects, so there are only a few [books] for billions of [maps], making this highly efficient.
-
-The annotations should only be used in `global` or `storage` [books]. They can consume plenty of space, but can carry important information for the application.
-
-**Note**: Remember, a _**kind**_ is **NOT** a type like a class! There can be multiple _**kinds**_ for the exact same [map] or [array], by intention. The _**kind**_ is more like a template for an [map] or [array], with the goal to deduplicate data. It is used to save space when encoding, even while it allows adding annotations as hints. Therefore, do not think of a _**kind**_ as a class!
-
-#### Primary Logical Bytes
-A _**kind**_ is a transparent _**unit**_ the very same way [reference] is, and therefore should never be part of any [map] or [array] hash.
-
-However, the **kind** has an own primary [logical bytes] representation. When all [members] of the kind do have a `key`, then first all [members] are [sorted] ascending by `key`. Otherwise _(when this kind is for an [array])_, the order of the [members] is relevant for the [logical bytes], and they are processed in natural order. Eventually the _(optionally [sorted])_ members are iterated. First the empty **lead-in** `1100_0011` is added into the [logical bytes]. If this is a [map] kind, so all [members] have keys, the `key` of the member is added first to the [logical bytes]; otherwise the `key` is ignored. Then the default value of the member is added.
-
-The primary [logical bytes] will ignore the `name` and `annotations` of the kind. This results in [logical bytes] for [arrays] where the order is significant, and [logical bytes] for [maps] where the order of the [members] is not significant. It allows to quickly find similar kinds.
-
-#### Secondary Logical Bytes
-The secondary [logical bytes] are only supported for [map] kinds, so when all [members] have a `key`. It is calculated by adding the keys of the [members], [sorted] ascending. The values and all other attributes are ignored for the secondary [logical bytes]. The secondary [logical bytes] are only available if all [members] have a `key`, so for [maps]. The secondary [logical bytes] allows to quickly find similar kinds of similar [maps]. So, it finds kinds with the same members, even when the values are different, which is helpful for encoding. It is normally used by the encoder to find a good kind for a [map] to be encoded. Many encoders do first generate plenty of kinds with each having different default values, to later compact them to a reduced set. It is part of encoder optimizations to find the best fitting kind for an object, so that the default values of the [members] are safe as much as possible.
-
-**Note**: The secondary [logical bytes] of a [kind] are the same as the primary [logical bytes] of a [map], this is done by intention, so encoders can find matches.
+This is encoded like the [map], the [logical bytes] are as well the same. The only difference is that this map must not have an own `kind` or contain value [references] _(keys can be [references])_. Therefore, the only difference to the [map] is the **lead-in** and the missing kind/value-references.
 
 ### TupleNumber
 A tuple is a unique immutable state of some arbitrary feature, uniquely addressed using a tuple-number. The tuple-number encoding can represent a single tuple-number or a list of tuple-numbers. It is a specialized data encoding with shared upfront data; the **lead-in** is `11ss_0101`.
@@ -644,20 +594,27 @@ All **JBON**'s have four books used for encoding and decoding, named `local`, `s
 | `global`  | The `global` book is located outside of the **JBON**, it is shared between multiple **JBONs**.                                                                                                                                                                                                                                                                                                                                                                                                                          | to `global` and `const`.                    |
 | `const`   | The `const` book is hardcoded in the **JBON** specification, as the name suggests it is constant.                                                                                                                                                                                                                                                                                                                                                                                                                       | to `const` only.                            |
 
-The content of a book is basically just an array of arbitrary _**units**_, referred to by other _**units**_ using a [reference]. The [reference] does use the index in the book, not the byte-position, to address a _**unit**_ within a book.
+The content of a book is basically just an array of _**units**_, referred to by other _**units**_ using a [reference]. The [reference] does use the index in the book, not the byte-position, to address a _**unit**_ within a book.
 
 The layout of a book is as follows:
 
-| Section     | Type                   | Description                                                           |
-|-------------|------------------------|-----------------------------------------------------------------------|
-| lead_in     | `byte`                 | The **lead-in** byte, `11ss_0111`.                                    |
-| byte_size   | `int64`                | The total size of the structure, including the **lead-in**, in bytes. |
-| book_id     | [String]?              | Either _null_ (one byte) or the identifier of this book.              |
-| book_tn     | [TupleNumber]?         | Either _null_ (one byte) or the [Tuple-Number] of this book.          |
-| entries     | [array]<[unit]>        | An array of arbitrary values.                                         |
-| annotations | [array]?<[annotation]> | The _(optional)_ array of [annotations] for the book.                 |
+| Section     | Type             | Description                                                           |
+|-------------|------------------|-----------------------------------------------------------------------|
+| lead_in     | `byte`           | The **lead-in** byte, `11ss_0111`.                                    |
+| byte_size   | `int64`          | The total size of the structure, including the **lead-in**, in bytes. |
+| book_id     | [String]?        | Either _null_ (one byte) or the identifier of this book.              |
+| book_tn     | [TupleNumber]?   | Either _null_ (one byte) or the [Tuple-Number] of this book.          |
+| entries     | [array]<`value`> | An array of values.                                                   |
 
 Note that `book_id` and `book_tn` can be both present, only one of them, or none of them, for example `local` books do not have a `book_id` or `book_tn`, while `global` books normally always have at least a `book_tn`.
+
+The values must be one of the following:
+- [Primitive]
+- [String]
+- [ArrayKind]
+- [MapKind]
+
+Therefore, the content of a book is limited.
 
 #### Primary Logical Bytes
 A book is transparent and therefore not part of the [logical bytes] of any [map] or [array].
@@ -666,28 +623,6 @@ The primary [logical bytes] are calculated by adding the empty **lead-in** `1100
 
 #### Secondary Logical Bytes
 A secondary [logical bytes] are calculated by adding the empty **lead-in** `1100_0111`, followed by all `entries` in order, ignoring the `byte_size`, `book_id`, `book_tn`, and the `annotations`. This can be used to find similar books, and is helpful for encoders.
-
-### Annotation
-An annotation is a special purpose object; the **lead-in** is `11ss_1000`.
-
-Annotation are planed to be used to transport meta information, like range limits for values or rendering instructions. They are not yet fully specified, but the basic layout is as follows:
-
-| Section   | Type                   | Description                                                                       |
-|-----------|------------------------|-----------------------------------------------------------------------------------|
-| lead_in   | `byte`                 | The **lead-in** byte, `11ss_1000`.                                                |
-| byte_size | `int64`                | The total size of the structure, including the **lead-in**, in bytes.             |
-| id        | [String]?              | Either _null_ (one byte) or the identifier of this annotation.                    |
-| value     | [unit]?                | The main annotation value, can be anything, even `null`.                          |
-| tail      | `bytes`                | Additional space, not yet specified, reserved for version 3 of the specification. |
-
-Therefore, decoders can decode them, except for the unspecified `tail`. However, it is yet not clear, how exactly they are used. It is recommended to not support annotations in encoders until the specification is complete.
-
-#### Logical Bytes
-An annotation is transparent and therefore not part of the [logical bytes] of any [map] or [array], it must not be added into them.
-
-The [logical bytes] of an annotation is calculated by adding the empty **lead-in** `1100_1000`, then the `id`, followed by the `value`, and eventually adding the `tail`. As the `tail` is not yet specified, it is currently ignored for the [logical bytes].
-
-**WARNING**: It is not recommended to use annotations, until the specification is complete!
 
 ## Why not CBOR
 This section explains why [CBOR] was not selected. The formats are similar in many points, when you read the two specification. So, why do something new? The major two difference between them are:
@@ -1393,3 +1328,17 @@ The following changes are introduces into version 2 of this specification, compa
 [HERE]: https://www.here.com/
 [MurMur3]: https://en.wikipedia.org/wiki/MurmurHash
 [murmur3]: https://en.wikipedia.org/wiki/MurmurHash
+
+## TODO
+- Actually, we only need references, and a KeySet with all keys
+- if an array of map is the same, refer to it, otherwise refer to keyset
+- for abstraction, the JBON should have a linked list of objects
+  - the objects are indexed using the offset
+  - this allows us to only create objects for array, map, and book
+  - all others can be decoded through JBON base class
+  - the JBON should have a weak-reference to the chain of objects _(implementing IObject)_
+  - and each object needs next and first
+  - so that when someone gets a strong reference to any element, all elements refer to first, and then from first to all other
+  - therefore no GC can happen, while the data is in use
+- this should be simple, but at the same time highly efficient!
+
