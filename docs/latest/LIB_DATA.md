@@ -601,13 +601,13 @@ SELECT * FROM table WHERE version <= $version AND next_version > $version AND {o
 
 This general query will only return one [tuple] with the latest state of the [feature] that belongs to this [version]. Beware, the returned [tuple] can be in a lower version, this query just ensured that the [tuple] that belongs logically to the queried [version] of the [database] is returned. Let's review this, assume we have the following data:
 
-| db-row | id    | version              | next_version     | prev_version | action         |
-|--------|-------|----------------------|------------------|--------------|----------------|
-| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | 77           | DELETE (`10b`) |
-| 2      | `foo` | 77 (`10011_01b`)     | 590              | 33           | UPDATE (`01b`) |
-| 3      | `foo` | 33 (`1000_01b`)      | 77               | 13           | UPDATE (`01b`) |
-| 4      | `foo` | 13 (`11_01b`)        | 33               | 4            | UPDATE (`01b`) |
-| 6      | `foo` | 4 (`10_00b`)         | 13               | 0            | CREATE (`00b`) |
+| db-row | id    | version              | next_version     | action         |
+|--------|-------|----------------------|------------------|----------------|
+| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | DELETE (`10b`) |
+| 2      | `foo` | 77 (`10011_01b`)     | 590              | UPDATE (`01b`) |
+| 3      | `foo` | 33 (`1000_01b`)      | 77               | UPDATE (`01b`) |
+| 4      | `foo` | 13 (`11_01b`)        | 33               | UPDATE (`01b`) |
+| 6      | `foo` | 4 (`10_00b`)         | 13               | CREATE (`00b`) |
 
 **Note**: The lower two bit of the version of a [tuple] encodes the action!
 
@@ -636,13 +636,13 @@ We can see, that the version condition will select row `#1`, but the added secon
 ### Query multiple versions
 Assuming the same data state as above:
 
-| db-row | id    | version              | next_version     | prev_version | action         |
-|--------|-------|----------------------|------------------|--------------|----------------|
-| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | 77           | DELETE (`10b`) |
-| 2      | `foo` | 77 (`10011_01b`)     | 590              | 33           | UPDATE (`01b`) |
-| 3      | `foo` | 33 (`1000_01b`)      | 77               | 13           | UPDATE (`01b`) |
-| 4      | `foo` | 13 (`11_01b`)        | 33               | 4            | UPDATE (`01b`) |
-| 6      | `foo` | 4 (`10_00b`)         | 13               | 0            | CREATE (`00b`) |
+| db-row | id    | version              | next_version     | action         |
+|--------|-------|----------------------|------------------|----------------|
+| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | DELETE (`10b`) |
+| 2      | `foo` | 77 (`10011_01b`)     | 590              | UPDATE (`01b`) |
+| 3      | `foo` | 33 (`1000_01b`)      | 77               | UPDATE (`01b`) |
+| 4      | `foo` | 13 (`11_01b`)        | 33               | UPDATE (`01b`) |
+| 6      | `foo` | 4 (`10_00b`)         | 13               | CREATE (`00b`) |
 
 We can search for multiple versions of a feature, an only limit the lower or upper end. So, search for all version till version `500`:
 
@@ -652,12 +652,12 @@ SELECT * FROM table WHERE version <= 503 AND id = 'foo';
 
 Result is:
 
-| db-row | id    | version              | next_version     | prev_version | action         |
-|--------|-------|----------------------|------------------|--------------|----------------|
-| 2      | `foo` | 77 (`10011_01b`)     | 590              | 33           | UPDATE (`01b`) |
-| 3      | `foo` | 33 (`1000_01b`)      | 77               | 13           | UPDATE (`01b`) |
-| 4      | `foo` | 13 (`11_01b`)        | 33               | 4            | UPDATE (`01b`) |
-| 6      | `foo` | 4 (`10_00b`)         | 13               | 0            | CREATE (`00b`) |
+| db-row | id    | version              | next_version     | action         |
+|--------|-------|----------------------|------------------|----------------|
+| 2      | `foo` | 77 (`10011_01b`)     | 590              | UPDATE (`01b`) |
+| 3      | `foo` | 33 (`1000_01b`)      | 77               | UPDATE (`01b`) |
+| 4      | `foo` | 13 (`11_01b`)        | 33               | UPDATE (`01b`) |
+| 6      | `foo` | 4 (`10_00b`)         | 13               | CREATE (`00b`) |
 
 To query for all versions beyond version `500`:
 
@@ -665,9 +665,9 @@ To query for all versions beyond version `500`:
 SELECT * FROM table WHERE version > 503 AND id = 'foo';
 ```
 
-| db-row | id    | version              | next_version     | prev_version | action         |
-|--------|-------|----------------------|------------------|--------------|----------------|
-| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | 77           | DELETE (`10b`) |
+| db-row | id    | version              | next_version     | action         |
+|--------|-------|----------------------|------------------|----------------|
+| 1      | `foo` | 590 (`10010011_10b`) | 9007199254740991 | DELETE (`10b`) |
 
 Query for all versions in the range of version `15` and `503`:
 
@@ -675,10 +675,10 @@ Query for all versions in the range of version `15` and `503`:
 SELECT * FROM table WHERE version <= 503 AND version > 15 AND id = 'foo
 ```
 
-| db-row | id    | version              | next_version     | prev_version | action         |
-|--------|-------|----------------------|------------------|--------------|----------------|
-| 2      | `foo` | 77 (`10011_01b`)     | 590              | 33           | UPDATE (`01b`) |
-| 3      | `foo` | 33 (`1000_01b`)      | 77               | 13           | UPDATE (`01b`) |
+| db-row | id    | version              | next_version     | action         |
+|--------|-------|----------------------|------------------|----------------|
+| 2      | `foo` | 77 (`10011_01b`)     | 590              | UPDATE (`01b`) |
+| 3      | `foo` | 33 (`1000_01b`)      | 77               | UPDATE (`01b`) |
 
 We additionally can filter on the `action`.
 
@@ -719,7 +719,7 @@ Next to the **historic partitioning** of the _HISTORY_ section, there is a gener
 
 The _HEAD_ section and each historic partition are optionally distribution partitioned, if enabled. This is an optional feature that by default is disabled, but can be enabled to store a huge number of [features] and [tuple] in a [collection]. When enabled, we distribute [features] across distribution partitions. The number of distribution partitions can be configured when creating a collection, and defaults to `1` _(so no distribution partitioning)_. To assign [features], and all their [tuple], to the same distribution partition, the lower 16-bit of the record-number are used as **distribution key**. This means, all [tuple] of a [feature] are stored in the same distribution partition. So, when loading a [tuple] of a [feature] in a specific [version], only a single partition has to be accessed. When searching for data, all partitions can be queried in parallel, improving search performance. This layout therefore speeds up searching for data, while making access to known data faster. Loading the _HEAD_ state _([tuple])_ technically means to query a single partition and is therefore rather very fast. Loading multiple tuple can be done in parallel from all partitions they are in. The distribution is simply done by dividing the unsigned lower 16-bit value of the record-number by the amount of distribution partitions _(`n`)_, using the division rest as partition index. For example, assume the distribution key of a [feature] is `1234`, so the unsigned lower 16-bit of the record-number is decimal `1234`, and we have `8` distribution partitions configured in the [collection], then dividing `1234` by `8` gives us `154` with a rest of `2`. Therefore, the partition-number to search in is `2`. This guarantees that we always have a partition index between `0` and `n`-1.
 
-The **historic partitioning** is done by the `next_version` of each [tuple]. All [tuple] with `next_version` being `9,007,199,254,740,991`, are located in the _HEAD_ section, and are only distribution partitioned. When a new [tuple] of a [feature] is created, the current [tuple] in the _HEAD_ section becomes historic data. It now needs to be moved to history, and `next_version` must be set to the version of the new [tuple]. The [tuple] should be relocated into the _HISTORY_, which is where **historic partitioning** happens. It will stay in _HISTORY_ immutable until being purged. The purging is normally done by deletion of complete historic partitions, which is the reason for this design. Beware that formally the immutability of a [Tuple] slightly broken here, because the `next_version` is modified while moving the [Tuple] into history. However, this is the only exception, and a not significant one for the caches. Actually `next_version` is no reliable field, applications should ignore it. The value can be calculated using the back-references from `prev_version`, starting at _HEAD_.
+The **historic partitioning** is done by the `next_version` of each [tuple]. All [tuple] in the _HEAD_ section have no `next_version` (it is intrinsically [HEAD], `9,007,199,254,740,991`, and is therefore not stored in HEAD rows). When a new [tuple] of a [feature] is created, the current [tuple] in the _HEAD_ section becomes historic data. It is moved into _HISTORY_, and at insertion time `next_version` is set to the version of the new [tuple]. From that point on the [tuple] is immutable in _HISTORY_ until being purged. The purging is normally done by deletion of complete historic partitions, which is the reason for this design. The walk-back from a known _HEAD_ to its predecessors is performed via `next_version`, by searching _HISTORY_ for the row whose `next_version` matches the known later version.
 
 Now, when deciding in which historic partition a [Tuple] should be located a **partition-key** is needed. To generate the **partition-key** the value from `next_version` is used. For this, the `next_version` is bitwise-ANDed with `0x001F_FFFF_FFFF_FFFF` _(effectively clearing the top 12-bit)_. Then value is shifted right by a configured `shift` amount. The `shift` is configured when creating a [collection] and must stay constant for the whole lifetime of a [collection]. The `shift` defaults to `41`, which means we store one historic partition per year. Reducing the `shift` to `37` would result in one historic partition per month, and reducing it to `32` would result in one historic partition per day.
 
@@ -906,8 +906,7 @@ The minimal **mandatory** members that are defined by this specification for all
 
 - `number`: `int64` - The record number. If negative, the `id` of the record is stored in the `meta` section of the collection. If positive, the `id` of the record is the number as decimal string.
 - `version`: `uint52` - The version of the record.
-- `prev_version`: `uint52` - The previous version of the record, defaulting to [NULL].
-- `next_version`: `uint52` - The next version of the record, defaulting to [HEAD].
+- `next_version`: `uint52` - The next version of the record, defaulting to [HEAD]. Only stored in _HISTORY_ — in _HEAD_ this is intrinsically [HEAD].
 - `global_book_id`: `uint32?` - The _(optional)_ identifier into the constants of this collection that store the identifier of the global book to use for this record.
 - `uuid`: `string` - The _(optional)_ identifier into the constants of this collection that store the identifier of the global book to use for this record.
 
