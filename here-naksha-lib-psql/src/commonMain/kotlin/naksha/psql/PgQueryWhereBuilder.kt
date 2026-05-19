@@ -322,6 +322,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             } else {
                 where.append(" (")
             }
+            where.append("($tagsAsJsonb IS NOT NULL) AND ")
             whereNestedTags(tagQuery)
             where.append(")")
         }
