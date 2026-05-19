@@ -48,8 +48,7 @@ All tables used in the Naksha PostgresQL implementation have the same general la
 |--------------|-------|------------------|---------------|----------------|------------------------------------------------------------------------------------------------|
 | fn           | int8  | `FnCol`          | `fn`          | NOT NULL       | The feature number.                                                                            |
 | version      | int8  | `VersionCol`     | `version`     | NOT NULL       | The feature version.                                                                           |
-| next_version | int8  | `NextVersionCol` | `nextVersion` | NOT NULL       | The next-version does not exist in _HEAD_, because it would always be `4,503,599,627,370,495`. |
-| prev_version | int8  | `PrevVersionCol` | `prevVersion` |                | The previous version, `null` if this is the first tuple.                                       |
+| next_version | int8  | `NextVersionCol` | `nextVersion` | NOT NULL       | _HISTORY only_. The next-version does not exist in _HEAD_, because it would always be `4,503,599,627,370,495`. |
 | id           | text  | `IdCol`          | `id`          |                | The _(optional)_ unique identifier of the feature.                                             |
 | data         | bytea | `DataCol`        | `data`        |                | The [JBON] encoded tuple.                                                                      |
 
@@ -349,20 +348,20 @@ Writing will implement these steps:
 - Sort all features by partition-number, feature-number
   - **This is very important to avoid deadlocks!**
 - Technically we now need to do, in order:
-  - Select the current _HEAD_ state of all features to be modified.
+  - Select the current _HEAD_ state of all features to be modified, capturing each row's existing `version` as `existing_version` so the client can do atomic-write checks.
   - Copy the _HEAD_ state into _HISTORY_, setting `next_version` to the current version.
-  - Insert all tuple that do not exist yet in _HEAD_ table with `version` set to the current version, `prev_version` set to `null`.
+  - Insert all tuple that do not exist yet in _HEAD_ table with `version` set to the current version.
     - This includes `DELETE` entries for deleted and purged objects.
-    - This should return `action=INSERT`, `fn`, `version`, and `prev_version` as `null`.
-  - Update all _HEAD_ rows, copy `version` into `prev_version` and set `version` to current version.
+    - This should return `action=INSERT`, `fn`, `version`, and `existing_version` as `null`.
+  - Update all _HEAD_ rows, setting `version` to current version.
     - This includes `DELETE` entries for deleted and purged objects.
-    - This should return `action=UPDATE`, `fn`, `version`, and `prev_version`.
+    - This should return `action=UPDATE`, `fn`, `version`, and `existing_version`.
   - Finally, for those that should be purged.
     - Copy the _HEAD_ state into _HISTORY_.
     - Delete the _HEAD_ state.
-    - Return `action=PURGE`, `fn`, `version`, and `prev_version`.
-  - Eventually, the whole CTE selects the `action`, `fn`, `version`, and `prev_version` from all sub-queries _(UNION ALL)_.
-  - The client now compares if all features are modified, and their `version` and `prev_version` is in the expected state.
+    - Return `action=PURGE`, `fn`, `version`, and `existing_version`.
+  - Eventually, the whole CTE selects the `action`, `fn`, `version`, and `existing_version` from all sub-queries _(UNION ALL)_.
+  - The client now compares if all features are modified, and their `version` and `existing_version` is in the expected state.
     - If it is, the client can commit.
     - Otherwise, it needs to roll back and return a conflict for those objects with wrong version.
 
