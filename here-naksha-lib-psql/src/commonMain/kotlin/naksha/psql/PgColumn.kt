@@ -316,32 +316,15 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The [previous tuple-number][naksha.model.TupleNumber], using the [128-bit encoding][B128].
-         *
-         * The encoding stores, in order, Big-Endian encoded:
-         * - feature-number: 64
-         * - version (with action in lower 2 bits): 64
-         * @since 3.0
-         * @see [B128]
-         */
-        @JvmField
-        @JsStatic
-        val prev_tn = def(PgColumn::class, "prev_tn") { self ->
-            self._i = 13
-            self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $PLAIN" // prevents either compression or out-of-line storage
-        }
-
-        /**
          * The [tuple-number][naksha.model.TupleNumber] of the _BASE_ state upon which a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge) was done, using the [128-bit encoding][B128].
          *
          * This value is set, when a client reads the _HEAD_ state of a feature, then modifies it into some _NEW_ state, and tries to save its changes, but meanwhile other clients did the same, and a conflict arises. The changes the client did are based upon an older _HEAD_, which we will name _BASE_, and do not reflect the changes the other clients did meanwhile.
          *
-         * In this situation an automatic [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge) can be done. The changes of the other clients are calculated as difference between _HEAD_ and _BASE_, and the changes the client did is calculated as difference between _NEW_ and _BASE_. Then the difference are added to a patch. This can fail, if both clients changes the same properties, what will cause a conflict. If successful, the patch is applied to _BASE_ and will produce a new _NEW2_ state, that actually contains the changes of the client plus the changes of the other clients. This _NEW2_ state can be written into the storage, and it can refer via [prev_tn] to the old _HEAD_. This can fail again, if others were faster in doing the same, but is an idempotent operation, and can simply be repeated until either conflicting or solved.
+         * In this situation an automatic [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge) can be done. The changes of the other clients are calculated as difference between _HEAD_ and _BASE_, and the changes the client did is calculated as difference between _NEW_ and _BASE_. Then the difference are added to a patch. This can fail, if both clients changes the same properties, what will cause a conflict. If successful, the patch is applied to _BASE_ and will produce a new _NEW2_ state, that actually contains the changes of the client plus the changes of the other clients. This _NEW2_ state can be written into the storage; it references the old _HEAD_ as its previous tuple. This can fail again, if others were faster in doing the same, but is an idempotent operation, and can simply be repeated until either conflicting or solved.
          *
          * To document that this happened, the shared _BASE_ state is referred vai `base_tn`.
          *
-         * This technically allows to calculate back, what the client actually modified. For this, the difference between _HEAD_ and _BASE_ is calculated, and then the difference between [prev_tn] and _BASE_ is subtracted, resulting in a patch that can be applied to _BASE_ to receive the original _NEW_ state the client had in memory and wanted to persist. This difference will as well document which properties were changed by the client.
+         * This technically allows to calculate back, what the client actually modified. For this, the difference between _HEAD_ and _BASE_ is calculated, and then the difference between the previous tuple and _BASE_ is subtracted, resulting in a patch that can be applied to _BASE_ to receive the original _NEW_ state the client had in memory and wanted to persist. This difference will as well document which properties were changed by the client.
          *
          * The encoding stores, in order, Big-Endian encoded:
          * - feature-number: 64
@@ -352,7 +335,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val base_tn = def(PgColumn::class, "base_tn") { self ->
-            self._i = 14
+            self._i = 13
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $PLAIN" // prevents either compression or out-of-line storage
         }
@@ -364,7 +347,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val id = def(PgColumn::class, "id") { self ->
-            self._i = 15
+            self._i = 14
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -376,7 +359,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val app_id = def(PgColumn::class, "app_id") { self ->
-            self._i = 16
+            self._i = 15
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\""
         }
@@ -388,7 +371,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val author = def(PgColumn::class, "author") { self ->
-            self._i = 17
+            self._i = 16
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\""
         }
@@ -404,7 +387,7 @@ class PgColumn : JsEnum() {
          *
          * To perform an actual rebase, the client that will do the rebase, will first find the latest state of the originating feature, _ORIGIN-HEAD_. Then it will read the state that `origin` refers to as _ORIGIN-BASE_, calculating a difference between the _ORIGIN-HEAD_ and the _ORIGIN-BASE_, being _ORIGIN-DIFF_. Now the history of the rebase feature need to read, until the moment is found, where the origin was set. This is the _REBASE-BASE_ state. Then the latest version of the feature is looked up, and read as _REBASE-HEAD_. This allows to calculate the difference, being _REBASE-DIFF_.
          *
-         * Now, we have two differences, the _ORIGIN-DIFF_, describing what was changed in the origin since the feature was forked, and _REBASE-DIFF_, which describes what was change in the to rebase collection, since the feature was forked. This allows to add both differences, resulting in a _REBASE-PATCH_ or a conflict, if both collections modified the same properties. Some of these conflicts can be automatically solved by one wins over the other, but this is out of scope of this description. Eventually, when successfully created the _REBASE_PATCH_, this patch can be applied to _REBASE-BASE_ to produce a _REBASE-NEW_ state, that has _REBASE-HEAD_ as precedence state ([prev_tn]). When this is applied, the `origin` need to be updated to the one to which the rebase was performed.
+         * Now, we have two differences, the _ORIGIN-DIFF_, describing what was changed in the origin since the feature was forked, and _REBASE-DIFF_, which describes what was change in the to rebase collection, since the feature was forked. This allows to add both differences, resulting in a _REBASE-PATCH_ or a conflict, if both collections modified the same properties. Some of these conflicts can be automatically solved by one wins over the other, but this is out of scope of this description. Eventually, when successfully created the _REBASE_PATCH_, this patch can be applied to _REBASE-BASE_ to produce a _REBASE-NEW_ state, that has _REBASE-HEAD_ as precedence state. When this is applied, the `origin` need to be updated to the one to which the rebase was performed.
          *
          * This was a simplified description, but should allow to understand the basic concepts and meaning of this property.
          *
@@ -414,7 +397,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val origin = def(PgColumn::class, "origin") { self ->
-            self._i = 18
+            self._i = 17
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -429,7 +412,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val target = def(PgColumn::class, "target") { self ->
-            self._i = 19
+            self._i = 18
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -441,7 +424,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val ft = def(PgColumn::class, "ft") { self ->
-            self._i = 20
+            self._i = 19
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -453,7 +436,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cs0 = def(PgColumn::class, "cs0") { self ->
-            self._i = 21
+            self._i = 20
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -465,7 +448,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cs1 = def(PgColumn::class, "cs1") { self ->
-            self._i = 22
+            self._i = 21
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -477,7 +460,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cs2 = def(PgColumn::class, "cs2") { self ->
-            self._i = 23
+            self._i = 22
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -489,7 +472,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cs3 = def(PgColumn::class, "cs3") { self ->
-            self._i = 24
+            self._i = 23
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -510,7 +493,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val tags = def(PgColumn::class, "tags") { self ->
-            self._i = 25
+            self._i = 24
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -522,7 +505,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val ref_point = def(PgColumn::class, "ref_point") { self ->
-            self._i = 26
+            self._i = 25
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -534,7 +517,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val geo = def(PgColumn::class, "geo") { self ->
-            self._i = 27
+            self._i = 26
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -546,7 +529,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val feature = def(PgColumn::class, "feature") { self ->
-            self._i = 28
+            self._i = 27
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -558,7 +541,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val attachment = def(PgColumn::class, "attachment") { self ->
-            self._i = 29
+            self._i = 28
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -573,7 +556,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
-            tn, next_tn, prev_tn, base_tn,
+            tn, next_tn, base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -633,7 +616,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
-            tn, prev_tn, base_tn, // removed: next_tn
+            tn, base_tn, // removed: next_tn, prev_tn
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -653,7 +636,6 @@ class PgColumn : JsEnum() {
          * This excludes the columns that need updates:
          * - [flags] - we need to set operation to [UPDATED][naksha.model.Operation.UPDATED], action to [UPDATED][naksha.model.Action.UPDATED]
          * - [cc] - we need to increment change-count
-         * - [prev_tn] - is copied from [tn] of the current _HEAD_ record
          * @since 3.0
          */
         @JvmField
@@ -662,7 +644,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, // removed: flags, cc
-            next_tn, base_tn, // removed: tn, prev_tn
+            next_tn, base_tn, // removed: tn
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature // removed: attachment (needs special handling)
@@ -683,7 +665,6 @@ class PgColumn : JsEnum() {
          * - [next_tn] - will become the current [tn] to signal tombstone state _(dead-end)_
          * - [flags] - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED]
          * - [tn] - must be updated to match current `version`, with action bits set to DELETED (this is the `final_tn`)
-         * - [prev_tn] - is copied from [tn] of the current _HEAD_ record
          * - [base_tn] - needs to be set to `null`
          * @since 3.0
          */
@@ -693,7 +674,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, // removed: flags, cc
-            // removed: tn, next_tn, prev_tn, and base_tn,
+            // removed: tn, next_tn, and base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -728,7 +709,6 @@ class PgColumn : JsEnum() {
             MetaColumn.FLAGS -> flags
             MetaColumn.CHANGE_COUNT -> cc
             MetaColumn.TUPLE_NUMBER -> tn
-            MetaColumn.PREV_TUPLE_NUMBER -> prev_tn
             MetaColumn.BASE_TUPLE_NUMBER -> base_tn
             MetaColumn.ID -> id
             MetaColumn.APP_ID -> app_id

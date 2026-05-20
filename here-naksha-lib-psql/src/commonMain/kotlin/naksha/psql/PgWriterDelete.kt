@@ -73,10 +73,9 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
   SELECT
     ((head_row.flags & -196609) | (2 << 16) | (2 << 12)) AS ${PgColumn.flags},
     (head_row.cc + 1) AS ${PgColumn.cc},
-    naksha_tn_128(naksha_tn_feature_number(head_row.tn), (${tx.version.txn}::int8 | 2)) AS ${PgColumn.tn}, 
-    naksha_tn_128(naksha_tn_feature_number(head_row.tn), (${tx.version.txn}::int8 | 2)) AS ${PgColumn.next_tn}, 
-    head_row.tn AS ${PgColumn.prev_tn}, 
-    null::bytea AS ${PgColumn.base_tn}, 
+    naksha_tn_128(naksha_tn_feature_number(head_row.tn), (${tx.version.txn}::int8 | 2)) AS ${PgColumn.tn},
+    naksha_tn_128(naksha_tn_feature_number(head_row.tn), (${tx.version.txn}::int8 | 2)) AS ${PgColumn.next_tn},
+    null::bytea AS ${PgColumn.base_tn},
     ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row, query
   WHERE head_row.id = query.id
@@ -101,16 +100,16 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
 
         // Copy the tombstone into history.
         val history_tombstone = if (insert_into_history != null) """, history_tombstone AS (
- INSERT INTO ${insert_into_history.quotedName} 
- (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.prev_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+ INSERT INTO ${insert_into_history.quotedName}
+ (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
  SELECT * FROM tombstone
  RETURNING id, tn
 )""" else ""
 
         // Copy the tombstone into shadow
         val shadow_tombstone = if (insert_into_shadow != null) """, shadow_tombstone AS (
- INSERT INTO ${insert_into_shadow.quotedName} 
- (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.prev_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+ INSERT INTO ${insert_into_shadow.quotedName}
+ (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
  SELECT * FROM tombstone
  RETURNING id, tn
 )""" else ""

@@ -107,9 +107,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
 
         // Then
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)
-        assertNull(createdTuple.meta.prevTupleNumber)
         assertEquals(createdTuple.meta.nextTupleNumber, updatedTuple.tupleNumber)
-        assertEquals(updatedTuple.meta.prevTupleNumber, createdTuple.tupleNumber)
         assertNull(updatedTuple.meta.nextTupleNumber)
         assertNotEquals(createdTuple.meta.flags, updatedTuple.meta.flags)
         assertEquals(1, createdTuple.meta.changeCount)

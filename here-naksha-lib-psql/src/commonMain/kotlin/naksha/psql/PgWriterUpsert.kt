@@ -91,21 +91,19 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
   INSERT INTO ${headTable.quotedName} (
     ${PgColumn.flags},
     ${PgColumn.cc},
-    ${PgColumn.prev_tn},
     ${PgColumn.attachment},
     ${PgColumn.tn},
     ${PgColumn.updateColumnsNames})
   SELECT
     ((new_row.flags & -196609) | (1 << 16) | (1 << 12)) AS ${PgColumn.flags},
     (head_row.cc + 1) AS ${PgColumn.cc},
-    head_row.tn AS ${PgColumn.prev_tn},
     CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment,
     naksha_tn_128(naksha_tn_feature_number(new_row.tn), (naksha_tn_version(new_row.tn) & -4) | 1) AS ${PgColumn.tn},
     ${PgColumn.updateColumns.joinToString(", ") { "new_row.${it.name} AS ${it.name}" }}
   FROM new_row
   LEFT JOIN head_row ON head_row.id = new_row.id
-  WHERE new_row.id IN (SELECT id FROM head_deleted) 
-  RETURNING id, tn, prev_tn, cc, attachment
+  WHERE new_row.id IN (SELECT id FROM head_deleted)
+  RETURNING id, tn, cc, attachment
 )"""
 
         val SQL = """$new_row$head_row$clear_shadow$head_deleted$head_to_history$head_inserted$head_updated
@@ -113,7 +111,6 @@ SELECT
     new_row.id AS id,
     new_row.tn AS tn,
     head_updated.tn AS updated_tn,
-    head_updated.prev_tn AS prev_tn,
     head_updated.cc AS cc,
     head_updated.attachment AS attachment,
     head_row.tn AS head_row_tn,
@@ -143,7 +140,6 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .addColumn(PgColumn.flags)
             .addColumn(PgColumn.tn)
             .addColumn(PgColumn.attachment)
-            .addColumn(PgColumn.prev_tn)
             .addColumn(PgColumn.cc)
             .addColumn("updated_tn", PgType.BYTE_ARRAY)
             .addColumn("head_row_tn", PgType.BYTE_ARRAY)
@@ -179,14 +175,13 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 val tn = outRows.getB128(row, "tn") ?: throw generalException("Missing 'tn' in SQL result")
 
                 // We need to patch the tuple of all inserts, that were replaced with updates!
-                // The content is the same, but the action, operation, change-count, and prev_tn change!
+                // The content is the same, but the action, operation, and change-count change.
                 val updated_tn = outRows.getB128(row, "updated_tn")
                 if (updated_tn != null) {
                     // If an update was done, we need the following values to be available:
                     val changeCount: Int = outRows.getInt(row, "cc") ?:
                         throw generalException("Missing 'cc' in update result for feature '$id'")
                     val attachment: ByteArray? = outRows.getByteArray(row, "attachment")
-                    val prev_tn = outRows.getB128(row, "prev_tn")
                     val write = writeByTn[tn] ?: throw generalException("Missing write state for feature '$id'")
                     val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
                     write.tupleNumber = updated_tn
@@ -195,7 +190,6 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                             tupleNumber = updated_tn,
                             flags = tuple.meta.flags.withAction(Action.UPDATED).withOperation(Operation.UPDATED),
                             changeCount = changeCount,
-                            prevTupleNumber = prev_tn,
                         ),
                         attachment = attachment,
                     )

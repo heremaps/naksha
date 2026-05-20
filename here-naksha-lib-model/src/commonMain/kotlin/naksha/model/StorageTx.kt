@@ -129,13 +129,14 @@ open class StorageTx private constructor(
         val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, Version(version.txn and Int64(-4L) or actionBits))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
-        val prev_tn: TupleNumber? = if (operation == Operation.CREATED || (operation == Operation.UPDATED && !atomic)) null else {
-            xyz.guid?.tupleNumber ?: throw illegalArg("$operation with atomic=$atomic requires that the feature has a UUID!")
+        val isExistingFeature = !(operation == Operation.CREATED || (operation == Operation.UPDATED && !atomic))
+        if (isExistingFeature && xyz.guid == null) {
+            throw illegalArg("$operation with atomic=$atomic requires that the feature has a UUID!")
         }
         // Transactions are special, they are partitioned over `next_tn` in the HEAD, before being partitioned over `tn` in the year!
         val next_tn: TupleNumber? = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) tn else null
         val updatedAt: Int64 = this.updatedAt
-        val createdAt: Int64? = if (prev_tn != null) xyz.createdAt else null
+        val createdAt: Int64? = if (isExistingFeature) xyz.createdAt else null
         val author: String?
         val authorTs: Int64?
         if (xyz.author == null || xyz.author != this.author) {
@@ -160,7 +161,6 @@ open class StorageTx private constructor(
             createdAt = createdAt,
             authorTs = authorTs,
             nextTupleNumber = next_tn,
-            prevTupleNumber = prev_tn,
             baseTupleNumber = base_tn,
             changeCount = xyz.changeCount + 1,
             hash = calculateHash(feature),
@@ -187,7 +187,6 @@ open class StorageTx private constructor(
      *
      * ### Note
      * This method can be used for `upsert` as well, just that on-conflict the following values have to be updated form the already existing feature:
-     * - `prev_tn` - should be `tn` of the existing version
      * - `created_at` - should be `created_at` of the existing version.
      * - `cc` - _(change-count)_ should be set to the existing value + 1
      * - `author` - if the previous `author` is not the same as the current, then set to the current author _(author changed)_, otherwise set it to the previous one _(unchanged)_.

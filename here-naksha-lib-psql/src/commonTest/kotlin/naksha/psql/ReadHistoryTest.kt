@@ -98,28 +98,24 @@ class ReadHistoryTest : PgTestBase() {
             assertEquals(featureId, delete.id)
             assertEquals(Action.DELETED, delete.properties.xyz.action)
             assertEquals(Action.DELETED, delete.properties.xyz.guid?.tupleNumber?.action)
-            assertEquals(delete.properties.xyz.pguid, update2.properties.xyz.guid)
             assertEquals(delete.properties.xyz.nguid, delete.properties.xyz.guid)
 
             assertEquals(featureId, update2.id)
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
             assertEquals(Action.UPDATED, update2.properties.xyz.guid?.tupleNumber?.action)
             assertEquals("second_update", update2.properties[ALIAS])
-            assertEquals(update2.properties.xyz.pguid, update1.properties.xyz.guid)
             assertEquals(update2.properties.xyz.nguid, delete.properties.xyz.guid)
 
             assertEquals(featureId, update1.id)
             assertEquals(Action.UPDATED, update1.properties.xyz.action)
             assertEquals(Action.UPDATED, update1.properties.xyz.guid?.tupleNumber?.action)
             assertEquals("first_update", update1.properties[ALIAS])
-            assertEquals(update1.properties.xyz.pguid, create.properties.xyz.guid)
             assertEquals(update1.properties.xyz.nguid, update2.properties.xyz.guid)
 
             assertEquals(featureId, create.id)
             assertEquals(Action.CREATED, create.properties.xyz.action)
             assertEquals(Action.CREATED, create.properties.xyz.guid?.tupleNumber?.action)
             assertNull(create.properties[ALIAS])
-            assertNull(create.properties.xyz.pguid)
             assertEquals(create.properties.xyz.nguid, update1.properties.xyz.guid)
         }
 
@@ -139,7 +135,6 @@ class ReadHistoryTest : PgTestBase() {
 
             assertEquals(featureId, delete.id)
             assertEquals(Action.DELETED, delete.properties.xyz.action)
-            assertEquals(delete.properties.xyz.pguid, update2.properties.xyz.guid)
             assertEquals(delete.properties.xyz.nguid, delete.properties.xyz.guid)
 
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
@@ -167,7 +162,6 @@ class ReadHistoryTest : PgTestBase() {
             assertEquals(Action.UPDATED, update2.properties.xyz.action)
 
             assertEquals(update2.guid, update1.properties.xyz.nguid)
-            assertEquals(update1.guid, update2.properties.xyz.pguid)
         }
     }
 }

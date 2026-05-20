@@ -35,12 +35,6 @@ class XyzNs : AnyObject() {
         const val UUID = "uuid"
 
         /**
-         * The key of the [puuid] property.
-         * @since 3.0
-         */
-        const val PUUID = "puuid"
-
-        /**
          * The key of the [muuid] property.
          * @since 3.0
          */
@@ -210,12 +204,10 @@ class XyzNs : AnyObject() {
             val tn = meta.tupleNumber
             val guid = Guid(meta.id, tn)
             val next_tn = meta.nextTupleNumber
-            val prev_tn = meta.prevTupleNumber
             val base_tn = meta.baseTupleNumber
             return AnyObject().apply {
                 setRaw(UUID, guid.toString())
                 if (next_tn != null) setRaw(NUUID, Guid(meta.id, next_tn).toString())
-                if (prev_tn != null) setRaw(PUUID, Guid(meta.id, prev_tn).toString())
                 if (base_tn != null) setRaw(MUUID, Guid(meta.id, base_tn).toString())
                 if (meta.createdAt != meta.updatedAt) setRaw(CREATED_AT, meta.createdAt)
                 if (meta.authorTs != meta.updatedAt) setRaw(AUTHOR_TS, meta.authorTs)
@@ -296,48 +288,15 @@ class XyzNs : AnyObject() {
         }
 
     /**
-     * The universal unique identifier of the previous state of a feature.
-     *
-     * This field is populated by Interactive API, Data Hub, XYZ Hub and Naksha.
-     * - **Interactive API**: This field is set, when history is enabled for the layer.
-     * - **Data Hub**: This field is set, when history or UUID is enabled for the space.
-     * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
-     * - **Naksha**: This field is set for updated, deletion, and merge, but is a [Guid] (global unique identifier), not a [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier).
-     *
-     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0
-     */
-    val puuid by _STRING_NULL
-    private var _puuid: String? = null
-    private var _pguid: Guid? = null
-
-    /**
-     * Returns the [puuid] as [Guid].
-     * @return the [puuid] as [Guid].
-     * @since 3.0
-     */
-    val pguid: Guid?
-        get() {
-            var pguid = _pguid
-            var puuid = _puuid
-            if (puuid === this.puuid) return pguid
-            puuid = this.puuid
-            pguid = try { if (puuid == null) null else Guid.fromString(puuid) } catch (_: Exception) { null }
-            this._puuid = puuid
-            this._pguid = pguid
-            return pguid
-        }
-
-    /**
      * The universal unique identifier of the state of the feature that was used to merge with the previous state to produce this state.
      *
      * This happens when concurrent modifications are done, but an automatic merge was possible. This field is populated by Interactive API, Data Hub or XYZ Hub.
      * - **Interactive API**: This field is set when history is enabled for the layer.
      * - **Data Hub**: This field is set when history or UUID is enabled for the space.
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
-     * - **Naksha**: Set when an auto-merge is done, stores the [Guid] of the base-version, so which version the previous-version ([puuid]), and this version ([uuid]) share as base
+     * - **Naksha**: Set when an auto-merge is done, stores the [Guid] of the base-version that the previous version and this version share as base.
      *
-     * In **Naksha** the [muuid] can be used to calculate the changes the client originally did, which are not persisted anywhere in the case of an auto-merge. This is done by first creating a total difference, so what was changed between the current version ([uuid]), and the _base_ version ([muuid]). Then the changes that other clients did can be calculated as difference between the previous state ([puuid]), and the _base_ state ([muuid]). Now this difference need to be subtracted from the total difference. The resulting difference is what the client originally modified, when being applied as patch to the _base_ state ([muuid]), then the feature, that originally was created by the client, can be calculated, even while it was not persisted anywhere.
+     * In **Naksha** the [muuid] can be used to calculate the changes the client originally did, which are not persisted anywhere in the case of an auto-merge. This is done by first creating a total difference, so what was changed between the current version ([uuid]), and the _base_ version ([muuid]). Then the changes that other clients did can be calculated as difference between the previous state and the _base_ state ([muuid]). Now this difference need to be subtracted from the total difference. The resulting difference is what the client originally modified, when being applied as patch to the _base_ state ([muuid]), then the feature, that originally was created by the client, can be calculated, even while it was not persisted anywhere.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 1.0
