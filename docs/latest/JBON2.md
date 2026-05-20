@@ -225,9 +225,7 @@ Reading is as simple, because we only read the 32-bit integer using big-endian e
 The uint246 is hashed with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value _(so exactly like a 64-bit integer)_.
 
 ## Reference
-A reference is used to relocate [structures] or [strings] into [books]. From a decoder perspective, it requires an "enter" instruction, and pushes a return-address to the stack for "leave". Actually, that means a reference is transparent _(technically, entering a references jumps into a [structure] the same way entering the [structure] itself would)_. Therefore, even while it is a [primitive], it works like [structures]. A reference redirects to a value stored in one of the four context related [books]. Actually, it encodes the index in the [book].
-
-**Note**: All [strings] and [structures] can be _(optionally)_ relocated using a _reference_!
+A reference is used to relocate _**units**_ into [books]. From a decoder perspective, it requires an "enter" instruction, and pushes a return-address to the stack for "leave". Actually, that means a reference is transparent. A reference redirects to a _**unit**_ stored in one of the four context related [books]. Actually, it encodes the index in the [book].
 
 The **lead-in** byte has the format `0011_bbss`.
 
@@ -245,9 +243,9 @@ The `ss` bits encode the size of the index.
 
 The `const` [book] is a virtual book, it contains certain hard-coded values, like for example some MIME types.
 
-**Beware that references must not refer to references, and that each [book] can only reference itself or a [book] of higher order.** In other words, `const` entries can only refer to them self, references in `global` can only refer to `global` or `const`, references in `storage` can refer to `storage`, `global` and `const`, while references in `local` can refer to all [books]. This reduces the possibility of circular references, and makes detection of them easy.
+**Beware that references must not refer to references, and that each [book] can only reference itself or a [book] of higher order.** In other words, `const` entries can only refer to them self, references in `global` can only refer to `global` or `const`, references in `storage` can refer to `storage`, `global` and `const`, while references in `local` can refer to all [books]. This prevents circular references.
 
-The **hash** of a reference is calculated by hashing the value it points to, so that the reference itself stays transparent.
+The **hash** of a reference is calculated by hashing the value it points to, so that the reference itself stays truely transparent.
 
 ## String
 A string is technically, from the decoder and logical perspective, a single value. Even while it technically persists out of code-points, can include [references], and can be referenced, the decoder should always just represent them as a single Java `String` instance, using caching.
@@ -373,11 +371,10 @@ As a [reference] consume 2, 3 or 5 byte, it does not make sense to use a [refere
 
 **Note**: The appendable-bits (`aa`) improve the compression rate, because the encoder will split strings mostly at a spaces, dots, or colons. Exactly where these splits happen, we do not need to encode these separation characters. The reason to cut at these characters is that most often street-names or other human text uses the space as separator. The dot is often used in [JSON] paths, domain names, and human text. Finally, the colon is often used in URL's, URN's and other structured Web data.
 
-#### Primary Logical Bytes
-The primary [logical bytes] of a string start with the empty **lead-in** byte `1000_0000`, followed by the UTF-16 encoded _(big-endian)_ code-units. If there are [references] embedded, then the content of the [reference] is added, so that the [references] stay transparent. This means that the [hash] of a string is independent of how it is actually encoded, and only depends on the actual code-units of the string.
+#### Logical Bytes
+The primary [logical bytes] of a string start with the empty **lead-in** byte `1000_0000`, followed by the UTF-16 encoded _(big-endian)_ code-units. If there are [references] embedded, then the content of the [reference] is added, so that the [references] are not encoded into the [logical bytes]. This means that the [hash] of a string is independent of how it is actually encoded, and only depends on the actual code-units of the string.
 
-#### Secondary Logical Bytes
-The secondary [logical bytes] are generated exactly the same, just that the **lead-in** is left away, so that a standard _Java_ hash can be calculated. So, `s[0]*31^(n-1) + s[1]*31^(n-2) + ... + s[n-1]`, where `s` is the UTF-16 encoded string as `char[]`.
+If a _Java_ hash is needed, the [logical bytes] are generated exactly the same that the _Java_ hash needs it, just that the **lead-in** must be skipped. So, a standard _Java_ hash can be calculated by skipping over the **lead-in** byte, and then via `s[0]*31^(n-1) + s[1]*31^(n-2) + ... + s[n-1]`, where `s` is the UTF-16 encoded string as `char[]`.
 
 ## Null
 The value `null` is a normal value, encoded as `0000_0000`. In this document all types are annotated with a question mark _(`?`)_ when they are allowed to be `null`. This includes _**unit**_, therefore `[unit]` means any value, except for `null`, while `[unit]?` means any value, including `null`. The same is true for other types like `int32`, which means the integer must be encoded, while `int32?` means that the value can be either an integer with maximum 32-bits, or `null`.
@@ -414,15 +411,19 @@ The binary structure is used to store binary content, actually byte-arrays of cu
 | Name        | Type                             | Description                                                                                                       |
 |-------------|----------------------------------|-------------------------------------------------------------------------------------------------------------------|
 | lead_in     | `byte`                           | The **lead-in** byte, `11ss_0000`.                                                                                |
-| byte_size   | `int64`                          | The total size of the structure, including the **lead-in**, in bytes.                                             |
+| byte_size   | `int32`                          | The total size of the structure, including the **lead-in**, in bytes.                                             |
 | mime_type   | [string]                         | The MIME-Type of the binary, defaults to `application/octet-stream` from `const` book.                            |
 | compression | [string]?                        | The compression algorith used; `null` if not compressed.                                                          |
 | target_size | `int64`?                         | If a compression algorithm is used, the amount of decompressed bytes _(for buffer allocation)_; otherwise `null`. |
 | parameters  | [ref]<[Map]<[string],[string]>?? | An optional [reference] to additional paramters.                                                                  |
-| data_size   | `int64`                          | The amount of bytes following that represent the binary.                                                          |
+| data_size   | `int32`                          | The amount of bytes following that represent the binary.                                                          |
 | data        | `bytes`                          | The bytes of the binary.                                                                                          |
 
-The [JSON] and [XML] the binary is encoded as a string using the [data URL scheme]. So, in the format `data:[<media-type>][;<parameter]*;base64,<data>`, like `data:application/twkb;base64,{encoded-data}`. The `mime_type` is encoded as [media-type] of the [data URL]. The `parameters` are added as parameters to the [media-type], the general form is `{type}/{subtype};[parameter=value;]*base64,{data}`. For example, a binary using some parameters, with `mime_type` being `application/foo` can look like: `data:application/foo;compression=GZIP;target_size=123456;charset=UTF-8;data,eyJ4IjoxfQ==`.
+The [JSON] and [XML] the binary is encoded as a string using the [data URL scheme]. The gernal syntax is:
+
+`data:<mime-type>[;<parameter]*[;base64]+,<data>`
+
+For example `data:application/twkb;base64,{encoded-data}`. The `mime_type` is encoded as [media-type] of the [data URL]. The `parameters` are added as parameters to the [media-type]. For example, a binary using some parameters, with `mime_type` being `application/foo` can look like `data:application/foo;compression=GZIP;target_size=123456;charset=UTF-8;base64,eyJ4IjoxfQ==`. A timestamp is i.e. encoded as `data:application/epoch,12345678`.
 
 The dedicated [MIME type] parameter is used to identify the type of the binary, normally values from the [IANA media types] are used. If no official MIME type is available, an own one should be used. For example HERE will use `application/twkb` for TWKB binaries, and `application/jbon` for **JBON** binaries. If no MIME type is available, `application/octet-stream` should be expected, resulting in a simple `byte[]`.
 
@@ -434,11 +435,11 @@ The [logical bytes] of a binary are calculated by adding the empty **lead-in** `
 ### Array
 An array of arbitrary other _**units**_, using the **lead-in** byte `11ss_0001`; with `ss` encoding the size of the size, as usual.
 
-| Name      | Type                     | Description                                                           |
-|-----------|--------------------------|-----------------------------------------------------------------------|
-| lead_in   | `byte`                   | The **lead-in** byte, `11ss_0001`.                                    |
-| byte_size | `int64`                  | The total size of the structure, including the **lead-in**, in bytes. |
-| elements  | [unit]?...               | The values of the array.                                              |
+| Name      | Type        | Description                                                           |
+|-----------|-------------|-----------------------------------------------------------------------|
+| lead_in   | `byte`      | The **lead-in** byte, `11ss_0001`.                                    |
+| byte_size | `int32`     | The total size of the structure, including the **lead-in**, in bytes. |
+| elements  | [unit]?...  | The values of the array.                                              |
 
 If the `byte_size` is zero _(**lead-in** is `1100_0001`)_, the array is empty (`[]`). This means, there is minimally one element, when the byte-size is greater than zero!
 
@@ -450,11 +451,11 @@ The [logical bytes] of the array are calculated by adding the empty **lead-in** 
 ### Set
 A set is a sorted array with unique elements, using the **lead-in** byte `11ss_0010`; with `ss` encoding the size of the size, as usual.
 
-| Name      | Type                  | Description                                                                |
-|-----------|-----------------------|----------------------------------------------------------------------------|
-| lead_in   | `byte`                | The **lead-in** byte, `11ss_0010`.                                         |
-| byte_size | `int64`               | The total size of the structure, including the **lead-in**, in bytes.      |
-| elements  | [unit]...             | The values of the set, must not contain `null`, `undefined` or duplicates. |
+| Name      | Type      | Description                                                                |
+|-----------|-----------|----------------------------------------------------------------------------|
+| lead_in   | `byte`    | The **lead-in** byte, `11ss_0010`.                                         |
+| byte_size | `int32`   | The total size of the structure, including the **lead-in**, in bytes.      |
+| elements  | [unit]... | The values of the set, must not contain `null`, `undefined` or duplicates. |
 
 If the `byte_size` is zero _(**lead-in** is `1100_0001`)_, the array is empty (`[]`). This means, there is minimally one element, when the byte-size is greater than zero!
 
@@ -467,7 +468,7 @@ A map is a key-value store with the **lead-in** byte being `11ss_0011`; with `ss
 | Name      | Type                     | Description                                                           |
 |-----------|--------------------------|-----------------------------------------------------------------------|
 | lead_in   | `byte`                   | The **lead-in** byte, `11ss_0011`.                                    |
-| byte_size | `int64`                  | The total size of the structure, including the **lead-in**, in bytes. |
+| byte_size | `int32`                  | The total size of the structure, including the **lead-in**, in bytes. |
 | keys      | [Set]<[unit]>            | The keys.                                                             |
 | template  | [ref]<[Array]<[unit]?>>? | An optional [reference] to a template.                                |
 | values    | [Array]<[unit]?>         | The values, in same same order as keys, and with the same length.     |
@@ -496,7 +497,7 @@ This form of encoding reduces the encoding size of multiple tuple-numbers greatl
 | Section           | Type    | Description                                                                                                                         |
 |-------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------|
 | lead_in           | `byte`  | The **lead-in** byte, `11ss_0100`.                                                                                                  |
-| byte_size         | `int64` | The total size of the structure, including the **lead-in**, in bytes.                                                               |
+| byte_size         | `int32` | The total size of the structure, including the **lead-in**, in bytes.                                                               |
 | database_number   | `int64` | Either `null` (one byte) or the shared database number of each [tuple] in the array.                                                |
 | catalog_number    | `int32` | Only if `database_number` is not `null`, then either `null` (one byte) or the shared catalog number of each [tuple] in the array.   |
 | collection_number | `int32` | Only if `map_number` is not `null`, then either `null` (one byte) or the shared collection number of each [tuple] in the array.     |
@@ -530,19 +531,19 @@ The tuple is a special **JBON** container designed to exchange [GeoJSON] _featur
 
 The tuple is a special encoding linked to the [Naksha data model]. All tuple are encoded in the following basic layout:
 
-| Section        | Type                   | Description                                                                                                                   |
-|----------------|------------------------|-------------------------------------------------------------------------------------------------------------------------------|
-| lead_in        | `byte`                 | The **lead-in** byte, `11ss_0101`.                                                                                            |
-| byte_size      | `int64`                | The total size of the structure, including the **lead-in**, in bytes.                                                         |
-| feature        | [Map]                  | The _feature_ to be stored, can be an empty map _(so only one byte)_.                                                         |
-| local_book     | [Book]?                | The _(optional)_ `local` book.                                                                                                |
-| attachment     | [Binary]?              | If `null`, the attachment is explicitly not existing, `undefined` means a context related _attachment_ state.                 |
-|                |                        |                                                                                                                               |
-| next_version   | [uint56]               | The next version of the tuple, if the tuple is in _HEAD_ state, the value will be `9_007_199_254_740_991L`.                   |
-| tuple_number   | [TupleNumber]          | The [tuple-number] of this tuple.                                                                                             |
-| id             | [String]?              | The identifier of this tuple, if the _feature-number_ is no positive integer; otherwise `null`.                               |
-| global_book_tn | [TupleNumber]?         | Either `null` (one byte) when no global book is needed; otherwise the [Tuple-Number] of the `global` [book] needed to decode. |
-| storage_book   | [Book]?                | The `storage` book with values from the storage.                                                                              |
+| Section        | Type           | Description                                                                                                                   |
+|----------------|----------------|-------------------------------------------------------------------------------------------------------------------------------|
+| lead_in        | `byte`         | The **lead-in** byte, `11ss_0101`.                                                                                            |
+| byte_size      | `int32`        | The total size of the structure, including the **lead-in**, in bytes.                                                         |
+| feature        | [Map]          | The _feature_ to be stored, can be an empty map _(so only one byte)_.                                                         |
+| local_book     | [Book]?        | The _(optional)_ `local` book.                                                                                                |
+| attachment     | [Binary]?      | If `null`, the attachment is explicitly not existing, `undefined` means a context related _attachment_ state.                 |
+|                |                |                                                                                                                               |
+| next_version   | [uint56]       | The next version of the tuple, if the tuple is in _HEAD_ state, the value will be `9_007_199_254_740_991L`.                   |
+| tuple_number   | [TupleNumber]  | The [tuple-number] of this tuple.                                                                                             |
+| id             | [String]?      | The identifier of this tuple, if the _feature-number_ is no positive integer; otherwise `null`.                               |
+| global_book_tn | [TupleNumber]? | Either `null` (one byte) when no global book is needed; otherwise the [Tuple-Number] of the `global` [book] needed to decode. |
+| storage_book   | [Book]?        | The `storage` book with member values from the storage.                                                                       |
 
 The `attachment` is special when encoded as `undefined`. The meaning has to be interpreted by the application considering the context in that case. When the tuple is encoded as an `UPDATE` or `DELETE` action, then an `undefined` attachment means that the attachment is not changed, so the old attachment should be kept. When the tuple is encoded as a `CREATE` action, then `undefined` means that there is no attachment, so it should simply become `null`.
 
@@ -564,6 +565,18 @@ The [logical bytes] of a tuple are calculated by adding the empty **lead-in** `1
 ### Book
 A book is a special data container; the **lead-in** is `11ss_0110`.
 
+The layout of a book is as follows:
+
+| Section     | Type           | Description                                                           |
+|-------------|----------------|-----------------------------------------------------------------------|
+| lead_in     | `byte`         | The **lead-in** byte, `11ss_0110`.                                    |
+| byte_size   | `int32`        | The total size of the structure, including the **lead-in**, in bytes. |
+| book_id     | [String]?      | Either _null_ (one byte) or the identifier of this book.              |
+| book_tn     | [TupleNumber]? | Either _null_ (one byte) or the [Tuple-Number] of this book.          |
+| entries     | [unit]...      | All values.                                                           |
+
+Note that `book_id` and `book_tn` can be both present, only one of them, or none of them; for example local books do not have a `book_id` or `book_tn`, while `global` books normally always have at least a `book_tn`, and optionally as well a `book_id`.
+
 All **JBON**'s have four books used for encoding and decoding, named `local`, `storage`, `global`, or `const`. Each book has a specific purposes.
 
 | Book      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | References                                  |
@@ -573,19 +586,7 @@ All **JBON**'s have four books used for encoding and decoding, named `local`, `s
 | `global`  | The `global` book is located outside of the **JBON**, it is shared between multiple **JBONs**.                                                                                                                                                                                                                                                                                                                                                                                                                          | to `global` and `const`.                    |
 | `const`   | The `const` book is hardcoded in the **JBON** specification, as the name suggests it is constant.                                                                                                                                                                                                                                                                                                                                                                                                                       | to `const` only.                            |
 
-The content of a book is basically just an array of _**units**_, referred to by other _**units**_ using a [reference]. The [reference] does use the index in the book, not the byte-position, to address a _**unit**_ within a book.
-
-The layout of a book is as follows:
-
-| Section     | Type           | Description                                                           |
-|-------------|----------------|-----------------------------------------------------------------------|
-| lead_in     | `byte`         | The **lead-in** byte, `11ss_0110`.                                    |
-| byte_size   | `int64`        | The total size of the structure, including the **lead-in**, in bytes. |
-| book_id     | [String]?      | Either _null_ (one byte) or the identifier of this book.              |
-| book_tn     | [TupleNumber]? | Either _null_ (one byte) or the [Tuple-Number] of this book.          |
-| entries     | [unit]...      | All values.                                                           |
-
-Note that `book_id` and `book_tn` can be both present, only one of them, or none of them; for example local books do not have a `book_id` or `book_tn`, while `global` books normally always have at least a `book_tn`, and optionally as well a `book_id`.
+The content of a book is basically just an array of _**units**_, referred to by other _**units**_ using a [reference]. The [reference] use the index in the book, **not the offset** _(the byte-position)_.
 
 #### Logical Bytes
 A book is transparent and therefore not part of the [logical bytes] of any [map] or [array].
@@ -896,61 +897,63 @@ Clearly, we could somehow add the dictionaries and text encoding to [CBOR] using
 ## Const
 The `const` book is a special book, which is not encoded in the binary, but is hardcoded in the specification. It contains values that are commonly used, so that they do not have to be encoded in the binary, but can be just referenced by their index in the `const` book. This saves space and makes encoding more efficient.
 
-| Number | Const                      | Value                      | Description                                                                             |
-|--------|----------------------------|----------------------------|-----------------------------------------------------------------------------------------|
-| `0001` | `NAKSHA`                   | `Naksha`                   |                                                                                         |
-| `0002` | `GEO_JSON`                 | `GeoJSON`                  |                                                                                         |
-| `0003` | `JSON`                     | `JSON`                     |                                                                                         |
-| `0004` | `PROPERTIES`               | `properties`               |                                                                                         |
-| `0005` | `GEOMETRY`                 | `geometry`                 |                                                                                         |
-| `0006` | `REFERENCE_POINT`          | `referencePoint`           |                                                                                         |
-| `0007` | `NS_COM_HERE_XYZ`          | `@ns:com:here:xyz`         | The XYZ namespace key.                                                                  |
-|        |                            |                            |                                                                                         |
-| `7000` | `APPLICATION_OCTET_STREAM` | `application/octet-stream` | The MIME-type for arbitrary binaries _(`byte[]` / `Int8Array`)_.                        |
-| `7001` | `APPLICATION_JBON`         | `application/jbon`         | The custom MIME-type for **JBON** binaries _(`byte[]` / `Int8Array`)_.                  |
-| `7002` | `APPLICATION_TEXT`         | `application/text`         | The MIME-type for arbitrary text _(`String` / `String`)_.                               |
-| `7003` | `APPLICATION_JSON`         | `application/json`         | The custom MIME-type for **JSON** strings _(`String` / `String`)_.                      |
-| `7004` | `APPLICATION_TWKB`         | `application/twkb`         | The custom MIME-type for [TWKB] binaries _(`byte[]` / `Int8Array`)_.                    |
-|        |                            |                            |                                                                                         |
-| `7070` | `APPLICATION_INT8A`        | `application/int8a`        | The custom MIME-type for a 8-bit integer-array _(`byte[]` / `Int8Array`)_.              |
-| `7071` | `APPLICATION_INT16A`       | `application/int16a`       | The custom MIME-type for a 16-bit integer-array _(`short[]` / `Int16Array`)_.           |
-| `7072` | `APPLICATION_INT32A`       | `application/int32a`       | The custom MIME-type for a 32-bit integer-array _(`int[]` / `Int32Array`)_.             |
-| `7073` | `APPLICATION_INT64A`       | `application/int64a`       | The custom MIME-type for a 64-bit integer-array _(`long[]` / `BigInt64Array`)_.         |
-| `7074` | `APPLICATION_INT128A`      | `application/int128a`      | The custom MIME-type for a 128-bit integer-array .                                      |
-|        |                            |                            |                                                                                         |
-| `7080` | `APPLICATION_FLOAT8A`      | `application/float8a`      | The custom MIME-type for a 8-bit floating-point-array.                                  |
-| `7081` | `APPLICATION_FLOAT16A`     | `application/float16a`     | The custom MIME-type for a 16-bit floating-point-array _(N/A / `Float16Array`)_.        |
-| `7082` | `APPLICATION_FLOAT32A`     | `application/float32a`     | The custom MIME-type for a 32-bit floating-point-array _(`float[]` / `Float32Array`)_.  |
-| `7083` | `APPLICATION_FLOAT64A`     | `application/float64a`     | The custom MIME-type for a 64-bit floating-point-array _(`double[]` / `Float64Array`)_. |
-| `7084` | `APPLICATION_FLOAT128A`    | `application/float128a`    | The custom MIME-type for a 128-bit floating-point-array.                                |
-|        |                            |                            |                                                                                         |
-| `7100` | `CONTENT_ENCODING`         | `content-encoding`         | The encoding or compression algorithm being used in a [Binary] _(or other places)_.     |
-| `7101` | `GZIP`                     | `GZIP`                     | The binary is [GZIP] compressed.                                                        |
-| `7102` | `LZ4`                      | `LZ4`                      | The binary is [LZ4] compressed.                                                         |
-|        |                            |                            |                                                                                         |
-| `7200` | `CHARSET`                  | `charset`                  | The character-set being used in a [Binary] _(or other places)_.                         |
-| `7201` | `ISO_8859_1`               | `ISO-8859-1`               | Legacy Western European.                                                                |
-| `7202` | `ISO_8859_2`               | `ISO-8859-2`               | Legacy Central/Eastern European.                                                        |
-| `7205` | `ISO_8859_5`               | `ISO-8859-5`               | Legacy Cyrillic.                                                                        |
-| `7215` | `ISO_8859_15`              | `ISO-8859-15`              | Legacy Western European, same as `ISO-8859-1`, but includes `€`.                        |
-| `7219` | `US_ASCII`                 | `US-ASCII`                 |                                                                                         |
-|        |                            |                            |                                                                                         |
-| `7220` | `UTF_8`                    | `UTF-8`                    | UTF-8 encoding.                                                                         |
-| `7221` | `UTF_16`                   | `UTF-16`                   | UTF-16 in platform encoding.                                                            |
-| `7222` | `UTF_16BE`                 | `UTF-16BE`                 | UTF-16 in big-endian byte-order _(network byte order)_.                                 |
-| `7223` | `UTF_16LE`                 | `UTF-16LE`                 | UTF-16 in little-endian byte-order.                                                     |
-| `7224` | `UTF_32`                   | `UTF-32`                   | UTF-32 in platform encoding.                                                            |
-| `7225` | `UTF_32BE`                 | `UTF-32BE`                 | UTF-32 in big-endian byte-order _(network byte order)_.                                 |
-| `7226` | `UTF_32LE`                 | `UTF-32LE`                 | UTF-32 in little-endian byte-order.                                                     |
-|        |                            |                            |                                                                                         |
-| `7230` | `SHIFT_JIS`                | `Shift_JIS`                | Legacy Japanese.                                                                        |
-| `7231` | `EUC_JP`                   | `EUC-JP`                   | Legacy Japanese.                                                                        |
-| `7232` | `GBK`                      | `GBK`                      | Legacy Common Chinese.                                                                  |
-| `7233` | `BIG5`                     | `Big5`                     | Legacy Traditional Chinese.                                                             |
-| `7234` | `KOI8_R`                   | `KOI8-R`                   | Legacy Russian.                                                                         |
-|        |                            |                            |                                                                                         |
-| `7251` | `WINDOWS_1251`             | `Windows-1251`             | Very common legacy Western encoding on Windows.                                         |
-| `7252` | `WINDOWS_1252`             | `Windows-1252`             | Cyrillic on Windows.                                                                    |
+| Number | Const                      | Value                      | Description                                                                                 |
+|--------|----------------------------|----------------------------|---------------------------------------------------------------------------------------------|
+| `0001` | `NAKSHA`                   | `Naksha`                   |                                                                                             |
+| `0002` | `GEO_JSON`                 | `GeoJSON`                  |                                                                                             |
+| `0003` | `JSON`                     | `JSON`                     |                                                                                             |
+| `0004` | `PROPERTIES`               | `properties`               |                                                                                             |
+| `0005` | `GEOMETRY`                 | `geometry`                 |                                                                                             |
+| `0006` | `REFERENCE_POINT`          | `referencePoint`           |                                                                                             |
+| `0007` | `NS_COM_HERE_XYZ`          | `@ns:com:here:xyz`         | The XYZ namespace key.                                                                      |
+|        |                            |                            |                                                                                             |
+| `7000` | `APPLICATION_OCTET_STREAM` | `application/octet-stream` | The MIME-type for arbitrary binaries _(`byte[]` / `Int8Array`)_.                            |
+| `7001` | `APPLICATION_JBON`         | `application/jbon`         | The custom MIME-type for **JBON** binaries _(`byte[]` / `Int8Array`)_.                      |
+| `7002` | `APPLICATION_TEXT`         | `application/text`         | The MIME-type for arbitrary text _(`String` / `String`)_.                                   |
+| `7003` | `APPLICATION_JSON`         | `application/json`         | The custom MIME-type for **JSON** strings _(`String` / `String`)_.                          |
+| `7004` | `APPLICATION_TWKB`         | `application/twkb`         | The custom MIME-type for [TWKB] binaries _(`byte[]` / `Int8Array`)_.                        |
+| `7005` | `APPLICATION_TIMESTAMP`    | `application/epoch`        | The custom MIME-type for a EPOCH timestamp in milliseconds _(`long` / `Number`)_.           |
+| `7006` | `APPLICATION_BIGINT`       | `application/bigint`       | The custom MIME-type for a 64-bit integer in JSON comatible encoding _(`long` / `BigInt`)_. |
+|        |                            |                            |                                                                                             |
+| `7070` | `APPLICATION_INT8A`        | `application/int8a`        | The custom MIME-type for a 8-bit integer-array _(`byte[]` / `Int8Array`)_.                  |
+| `7071` | `APPLICATION_INT16A`       | `application/int16a`       | The custom MIME-type for a 16-bit integer-array _(`short[]` / `Int16Array`)_.               |
+| `7072` | `APPLICATION_INT32A`       | `application/int32a`       | The custom MIME-type for a 32-bit integer-array _(`int[]` / `Int32Array`)_.                 |
+| `7073` | `APPLICATION_INT64A`       | `application/int64a`       | The custom MIME-type for a 64-bit integer-array _(`long[]` / `BigInt64Array`)_.             |
+| `7074` | `APPLICATION_INT128A`      | `application/int128a`      | The custom MIME-type for a 128-bit integer-array .                                          |
+|        |                            |                            |                                                                                             |
+| `7080` | `APPLICATION_FLOAT8A`      | `application/float8a`      | The custom MIME-type for a 8-bit floating-point-array.                                      |
+| `7081` | `APPLICATION_FLOAT16A`     | `application/float16a`     | The custom MIME-type for a 16-bit floating-point-array _(N/A / `Float16Array`)_.            |
+| `7082` | `APPLICATION_FLOAT32A`     | `application/float32a`     | The custom MIME-type for a 32-bit floating-point-array _(`float[]` / `Float32Array`)_.      |
+| `7083` | `APPLICATION_FLOAT64A`     | `application/float64a`     | The custom MIME-type for a 64-bit floating-point-array _(`double[]` / `Float64Array`)_.     |
+| `7084` | `APPLICATION_FLOAT128A`    | `application/float128a`    | The custom MIME-type for a 128-bit floating-point-array.                                    |
+|        |                            |                            |                                                                                             |
+| `7100` | `CONTENT_ENCODING`         | `content-encoding`         | The encoding or compression algorithm being used in a [Binary] _(or other places)_.         |
+| `7101` | `GZIP`                     | `GZIP`                     | The binary is [GZIP] compressed.                                                            |
+| `7102` | `LZ4`                      | `LZ4`                      | The binary is [LZ4] compressed.                                                             |
+|        |                            |                            |                                                                                             |
+| `7200` | `CHARSET`                  | `charset`                  | The character-set being used in a [Binary] _(or other places)_.                             |
+| `7201` | `ISO_8859_1`               | `ISO-8859-1`               | Legacy Western European.                                                                    |
+| `7202` | `ISO_8859_2`               | `ISO-8859-2`               | Legacy Central/Eastern European.                                                            |
+| `7205` | `ISO_8859_5`               | `ISO-8859-5`               | Legacy Cyrillic.                                                                            |
+| `7215` | `ISO_8859_15`              | `ISO-8859-15`              | Legacy Western European, same as `ISO-8859-1`, but includes `€`.                            |
+| `7219` | `US_ASCII`                 | `US-ASCII`                 |                                                                                             |
+|        |                            |                            |                                                                                             |
+| `7220` | `UTF_8`                    | `UTF-8`                    | UTF-8 encoding.                                                                             |
+| `7221` | `UTF_16`                   | `UTF-16`                   | UTF-16 in platform encoding.                                                                |
+| `7222` | `UTF_16BE`                 | `UTF-16BE`                 | UTF-16 in big-endian byte-order _(network byte order)_.                                     |
+| `7223` | `UTF_16LE`                 | `UTF-16LE`                 | UTF-16 in little-endian byte-order.                                                         |
+| `7224` | `UTF_32`                   | `UTF-32`                   | UTF-32 in platform encoding.                                                                |
+| `7225` | `UTF_32BE`                 | `UTF-32BE`                 | UTF-32 in big-endian byte-order _(network byte order)_.                                     |
+| `7226` | `UTF_32LE`                 | `UTF-32LE`                 | UTF-32 in little-endian byte-order.                                                         |
+|        |                            |                            |                                                                                             |
+| `7230` | `SHIFT_JIS`                | `Shift_JIS`                | Legacy Japanese.                                                                            |
+| `7231` | `EUC_JP`                   | `EUC-JP`                   | Legacy Japanese.                                                                            |
+| `7232` | `GBK`                      | `GBK`                      | Legacy Common Chinese.                                                                      |
+| `7233` | `BIG5`                     | `Big5`                     | Legacy Traditional Chinese.                                                                 |
+| `7234` | `KOI8_R`                   | `KOI8-R`                   | Legacy Russian.                                                                             |
+|        |                            |                            |                                                                                             |
+| `7251` | `WINDOWS_1251`             | `Windows-1251`             | Very common legacy Western encoding on Windows.                                             |
+| `7252` | `WINDOWS_1252`             | `Windows-1252`             | Cyrillic on Windows.                                                                        |
 
 ## Java
 This section documents the Java API for **JBON**.
@@ -984,17 +987,34 @@ public interface JbonLogicalBytes {
 
 // The basic node, which is called unit within JBON.
 public final class JbonUnit {
-  // A unit without any parent.
+  // Create the shared unit.
   JbonUnit(@NotNull Jbon jbon) {
     this.jbon = jbon;
     this.parent = null;
   }
-  // A child-unit.
-  JbonUnit(@NotNull JbonUnit parent) {
+  // Create the root unit at the given offset.
+  JbonUnit(@NotNull Jbon jbon, int offset) {
+    this.jbon = jbon;
+    this.parent = null;
+    decode(offset);
+  }
+  // Create a child-unit at the given offset.
+  JbonUnit(@NotNull JbonUnit parent, int offset) {
     this.jbon = parent.jbon;
     this.parent = parent;
+    decode(offset);
+  }
+  // Create a child-unit from the decoded shared unit.
+  JbonUnit(@NotNull JbonUnit parent, @NotNull JbonUnit unit) {
+    this.jbon = parent.jbon;
+    this.parent = parent;
+    // TODO: Copy all values from unit into this (copy references).
+    this.offset = unit.offset;
+    // ...
   }
   
+  // Decode the unit
+  // Normally always invoked directly after creation, but 
   @NotNull JbonUnit decode(int offset) {
     this.offset = offset;
     // TODO: Decode the unit from the given offset!
@@ -1007,7 +1027,7 @@ public final class JbonUnit {
   
   // Information always available.
   @NotNull DataType type; // The data type of the unit, represents as well true and false.
-  int offset; // The index in the JBON where the unit is located.
+  int offset = -1; // The index in the JBON where the unit is located.
   byte lead_in; // The lead-in byte read.
   int size; // The total size of the unit in byte.
   int length; // The length of the unit; -1 if not known or available.
@@ -1020,10 +1040,18 @@ public final class JbonUnit {
   double float_value;
   @Nullable Literal string_value;
   @Nullable JbonStruct struct_value;
+  
+  private int offset() {
+    if (offset < 0) throw new DataError("The JBON unit was not yet decoded");
+    return offset;
+  }
+  public boolean isStruct() { return struct_value != null; }
+  public @Nullable JbonStruct struct() { return struct_value; }
 }
 
-// The JBON decoder.
+// The not thread safe JBON decoder. When caching tuple on the heap, only the bytes should be cached. 
 public class Jbon {
+  public Jbon(byte @NotNull [] bytes) { this.bytes=bytes; this.offset=0; }
   public Jbon(byte @NotNull [] bytes, int offset) { this.bytes=bytes; this.offset=offset; }
   
   @Nullable JbonBook localBook; // 0
@@ -1032,7 +1060,7 @@ public class Jbon {
   public final byte @NotNull [] bytes;
   public final int offset;
   // A shared unit to decode primitives and strings.
-  @NotNull JbonUnit unit = new JbonUnit(this);
+  final @NotNull JbonUnit unit = new JbonUnit(this);
   
   public @Nullable JbonBook getGlobalBook() {}
   public @Nullable JbonBook setGlobalBook(@Nullable JbonBook globalBook) {}
@@ -1045,34 +1073,51 @@ public class Jbon {
   // The moment the application does not need access to the parsed values, the GC will throw them away.
   @Nullable WeakReference<JbonUnit> root;
   public @NotNull JbonUnit root() {
-    // TODO: Return the existing root or create the root unit, add into root; return the new root unit.
+    // TODO: Return the existing root or create the root unit, invoke decode(), add into "root"; return the new "root" unit.
   }
 }
 
-public abstract class JbonStruct implements IObject {
-  JbonObject(@NotNull JbonUnit unit) { this.unit = unit; }
-  public final @NotNull JbonUnit unit; // The unit to which this structure belongs, the unit refers back to this via `struct_value`.
+public interface IJbonStruct { 
+  // Returns the unit to which this structure belongs; the unit refers back to this via `struct_value`.
+  @NotNull JbonUnit unit();
 }
-public final class JbonBinary extends JbonStructure implements IBinary {
-  public JbonBinary(@NotNull JbonUnit unit) { super(unit); }
+public final class JbonBinary implements IJbonStruct {
+  public JbonBinary(@NotNull JbonUnit unit) { this.unit = unit; }
+  private final @NotNull JbonUnit unit;
+  @Override public @NotNull JbonUnit unit() { return unit; }
 }
-public final class JbonArray extends JbonStructure implements IArray {
+public abstract class JbonObject extends Proxyable implements IJbonStruct, IObject, IProxyable {
+  public JbonObject(@NotNull JbonUnit unit) { this.unit = unit; }
+  private final @NotNull JbonUnit unit;
+  @Override public @NotNull JbonUnit unit() { return unit; }
+}
+public final class JbonArray extends JbonObject implements IArray {
   public JbonArray(@NotNull JbonUnit unit) { super(unit); }
 }
-public final class JbonSet extends JbonStructure implements ISet {
+public final class JbonSet extends JbonObject implements ISet {
   public JbonObject(@NotNull JbonUnit unit) { super(unit); }
 }
-public final class JbonMap extends JbonStructure implements IMap {
-  public JbonKind(@NotNull JbonUnit unit) { super(unit); }
+public final class JbonMap extends JbonObject implements IMap {
+  public JbonMap(@NotNull JbonUnit unit) { super(unit); }
 }
-public final class JbonTupleNumber extends JbonStructure implements ITuple {
-  public JbonTupleNumber(@NotNull JbonUnit unit) { super(unit); }
+public final class JbonTupleNumber implements IJbonStruct, ITuple {
+  public JbonTupleNumber(@NotNull JbonUnit unit) { this.unit = unit; }
+  private final @NotNull JbonUnit unit;
+  @Override public @NotNull JbonUnit unit() { return unit; }
 }
-public final class JbonTuple extends JbonStructure implements ITuple {
-  public JbonTuple(@NotNull JbonUnit unit) { super(unit); }
+public final class JbonTuple implements IJbonStruct, ITuple {
+  public JbonTuple(@NotNull JbonUnit unit) { this.unit = unit; }
+  private final @NotNull JbonUnit unit;
+  @Override public @NotNull JbonUnit unit() { return unit; }
+
+  /** Convert this tuple into a GeoJSON feature, using the storage column mapping as specified in the given collection configuration. */
+  public @NotNull JsonFeature toGeoJson(@Nullable Map<String, String> columnMap);
+  // TODO: Add methods to read the JbonTupleNumber and other encoded values.
 }
-public final class JbonBook extends JbonStructure {
-  public JbonBook(@NotNull JbonUnit unit) { super(unit); }
+public final class JbonBook implements IJbonStruct {
+  public JbonBook(@NotNull JbonUnit unit) { this.unit = unit; }
+  private final @NotNull JbonUnit unit;
+  @Override public @NotNull JbonUnit unit() { return unit; }
 }
 
 public class MurMur3 implements JbonLogicalBytes {
