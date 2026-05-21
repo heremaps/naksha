@@ -133,8 +133,8 @@ open class StorageTx private constructor(
         if (isExistingFeature && xyz.guid == null) {
             throw illegalArg("$operation with atomic=$atomic requires that the feature has a UUID!")
         }
-        // Transactions are special, they are partitioned over `next_tn` in the HEAD, before being partitioned over `tn` in the year!
-        val next_tn: TupleNumber? = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) tn else null
+        // Transactions are special: they are partitioned over `next_version` in the HEAD, before being partitioned over `tn` in the year!
+        val next_version: Int64? = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) tn.version.txn else null
         val updatedAt: Int64 = this.updatedAt
         val createdAt: Int64? = if (isExistingFeature) xyz.createdAt else null
         val author: String?
@@ -160,7 +160,7 @@ open class StorageTx private constructor(
             updatedAt = updatedAt,
             createdAt = createdAt,
             authorTs = authorTs,
-            nextTupleNumber = next_tn,
+            nextVersion = next_version,
             baseTupleNumber = base_tn,
             changeCount = xyz.changeCount + 1,
             hash = calculateHash(feature),

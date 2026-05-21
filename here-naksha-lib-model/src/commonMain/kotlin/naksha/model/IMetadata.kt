@@ -64,7 +64,9 @@ interface IMetadata {
     val tupleNumber: TupleNumber
 
     /**
-     * The [TupleNumber] of the next tuple, if a newer one is known.
+     * The version of the next tuple, if a newer one is known.
+     *
+     * The `featureNumber` of the next tuple is always the same as this tuple's [featureNumber] (it is the same feature), so only the [Version] is stored; callers that need a full [TupleNumber] reconstruct it from [featureNumber] + this value.
      *
      * ### Warning
      * If this property is `null`, there is no guarantee that there is no newer state, so this acts as an inverse bloom filter, if the value is set, you can be sure that this [Tuple] is a historic one, otherwise it is only likely that this [Tuple] is the latest one _(HEAD state)_.
@@ -72,7 +74,7 @@ interface IMetadata {
      * Not all storages will support this property, therefore use should be done with care.
      * @since 3.0
      */
-    val nextTupleNumber: TupleNumber?
+    val nextVersion: Int64?
 
     /**
      * The [TupleNumber] of the _base_ [Tuple], when this [Tuple] is the result of an auto-merge.

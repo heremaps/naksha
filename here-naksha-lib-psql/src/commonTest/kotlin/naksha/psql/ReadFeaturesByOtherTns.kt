@@ -1,7 +1,7 @@
 package naksha.psql
 
+import naksha.base.Int64
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.TupleNumberVariant
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
@@ -39,27 +39,26 @@ class ReadFeaturesByOtherTns : PgTestBase(
         }
         val updateResp = executeWrite(update)
 
-        // And: tuple numbers of updated version
+        // And: bigint versions of updated tuples (next_version is now an int8 column, not a B128 byte-array)
         val selectedUpdatedFeatures = updateResp.features.subList(2, 4) // take 2 features from the middle
-        val selectedTns = selectedUpdatedFeatures.map { it!!.tupleNumber }
-        val serializedTns: Array<ByteArray> = selectedTns
-            .map { it.toByteArray(TupleNumberVariant.B128) } // `next_tn` is 128-bit encoded
+        val selectedNextVersions: Array<Int64> = selectedUpdatedFeatures
+            .map { it!!.tupleNumber.version.txn }
             .toTypedArray()
 
-        // When: querying for features which `nextTn` is specified
-        val nextTnQuery = MetaQuery(
+        // When: querying for features whose `next_version` matches any of the selected versions
+        val nextVersionQuery = MetaQuery(
             MetaColumn.nextVersion(),
             AnyOp.IS_ANY_OF,
-            serializedTns
+            selectedNextVersions
         )
         val byNextTnResp = executeRead(ReadFeatures().apply {
             mapId = collection.mapId
             collectionIds += collection.id
-            query.metadata = nextTnQuery
+            query.metadata = nextVersionQuery
             queryHistory = true
         })
 
-        // Then: we fetched initial features based on `next_tn` pointing to updated features
+        // Then: we fetched initial features based on `next_version` pointing to updated features
         val fetchedFeatures = byNextTnResp.features
         assertEquals(2, fetchedFeatures.size)
         val expectedIds = selectedUpdatedFeatures.map { it!!.id }.toSet()

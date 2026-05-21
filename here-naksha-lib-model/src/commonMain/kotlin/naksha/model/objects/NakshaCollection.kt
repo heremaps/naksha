@@ -417,19 +417,19 @@ open class NakshaCollection() : NakshaFeature() {
 
     companion object NakshaCollection_C {
         /**
-         * Index above the `id` property, includes `tn`, and `next_tn`.
+         * Index above the `id` property, includes `tn`, and `next_version` (HISTORY only).
          * @since 3.0
          */
         const val ID_IDX = "id"
 
         /**
-         * Index above `here_tile`, includes `id`, `tn`, and `next_tn`.
+         * Index above `here_tile`, includes `id`, `tn`, and `next_version` (HISTORY only).
          * @since 3.0
          */
         const val HERE_TILE_IDX = "here_tile"
 
         /**
-         * Index above `app_id`, includes `updated_at`, `id`, `tn`, and `next_tn`.
+         * Index above `app_id`, includes `updated_at`, `id`, `tn`, and `next_version` (HISTORY only).
          * @since 3.0
          */
         const val APP_ID_IDX = "app_id"
@@ -519,7 +519,7 @@ open class NakshaCollection() : NakshaFeature() {
         const val CS3_IDX = "cs3"
 
         /**
-         * Index above `ft` _(aka feature-type)_, includes `id`, `tn`, and `next_tn`.
+         * Index above `ft` _(aka feature-type)_, includes `id`, `tn`, and `next_version` (HISTORY only).
          * @since 3.0
          */
         const val FEATURE_TYPE = "naksha.Collection"

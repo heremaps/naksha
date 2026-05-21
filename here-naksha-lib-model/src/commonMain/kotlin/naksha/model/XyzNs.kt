@@ -203,11 +203,14 @@ class XyzNs : AnyObject() {
         fun fromMetadata(meta: Metadata): XyzNs {
             val tn = meta.tupleNumber
             val guid = Guid(meta.id, tn)
-            val next_tn = meta.nextTupleNumber
+            val nextVersion = meta.nextVersion
+            val nextTn = if (nextVersion != null) TupleNumber(
+                tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber, Version(nextVersion)
+            ) else null
             val base_tn = meta.baseTupleNumber
             return AnyObject().apply {
                 setRaw(UUID, guid.toString())
-                if (next_tn != null) setRaw(NUUID, Guid(meta.id, next_tn).toString())
+                if (nextTn != null) setRaw(NUUID, Guid(meta.id, nextTn).toString())
                 if (base_tn != null) setRaw(MUUID, Guid(meta.id, base_tn).toString())
                 if (meta.createdAt != meta.updatedAt) setRaw(CREATED_AT, meta.createdAt)
                 if (meta.authorTs != meta.updatedAt) setRaw(AUTHOR_TS, meta.authorTs)

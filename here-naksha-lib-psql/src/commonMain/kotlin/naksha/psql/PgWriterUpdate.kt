@@ -5,8 +5,8 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
-import naksha.psql.PgColumn.PgColumnCompanion.allColumnNames
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumnCompanion.headColumnNames
+import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
  * Execute a [UPDATE][naksha.model.request.WriteOp.UPDATE].
@@ -19,7 +19,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
     private val writeById = mutableMapOf<String, PgWrite>()
 
     init {
-        inRows.addColumns(allColumns)
+        inRows.addColumns(headColumns)
         inRows.addColumn("version", PgType.INT64) // needed to do atomic updates
         val members = collection.head.members
         inRows.addCustomMembers(members)
@@ -53,10 +53,10 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
 
         // If the client requested an atomic update, so it provided a `version`, then
         // we only update the head row, when the version matches.
-        // If we need to create a history entry, select all columns, otherwise only `id` and `tn`
+        // If we need to create a history entry, select all HEAD columns, otherwise only `id` and `tn`
         val head_row = """, head_row AS (
   SELECT ${if (insert_into_history != null)
-         allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }
+         headColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }
     else "head.id AS id, head.tn AS tn, head.attachment AS attachment"}
   FROM ${headTable.quotedName} AS head, new_row
   WHERE head.id = new_row.id AND (new_row.version IS NULL OR (new_row.version & -4) = (naksha_tn_version(head.tn) & -4))
@@ -70,10 +70,10 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
   RETURNING id, tn
 )""" else ""
 
-        // Insert the current `head_row` into history
+        // Insert the current `head_row` into history. The new tuple's version becomes the demoted row's next_version.
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT new_row.tn AS ${PgColumn.next_tn},
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
+  SELECT naksha_tn_version(new_row.tn) AS ${PgColumn.next_version},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.id = head_row.id
@@ -88,8 +88,8 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
 )"""
 
         val inserted = """, inserted AS (
-INSERT INTO ${headTable.quotedName} ($allColumnNames)
-SELECT ${allColumns.joinToString(", ") {
+INSERT INTO ${headTable.quotedName} ($headColumnNames)
+SELECT ${headColumns.joinToString(", ") {
     if (it === PgColumn.attachment)
     "CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment"
     else "new_row.${it.name} AS ${it.name}"

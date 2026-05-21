@@ -27,7 +27,7 @@ data class Metadata(
     override val updatedAt: Int64 = Platform.currentMillis(),
     override val createdAt: Int64? = null,
     override val authorTs: Int64? = null,
-    override val nextTupleNumber: TupleNumber? = null,
+    override val nextVersion: Int64? = null,
     override val baseTupleNumber: TupleNumber? = null,
     override val changeCount: Int = 1,
     override val hash: Int = 0,
@@ -182,7 +182,7 @@ data class Metadata(
             return Metadata(
                 tupleNumber = tupleNumber,
                 flags = flags,
-                nextTupleNumber = null,
+                nextVersion = null,
                 updatedAt = updatedAt,
                 createdAt = createdAt,
                 authorTs = authorTs,
@@ -213,7 +213,7 @@ data class Metadata(
                 other.updatedAt,
                 other.createdAt,
                 other.authorTs,
-                other.nextTupleNumber,
+                other.nextVersion,
                 other.baseTupleNumber,
                 other.changeCount,
                 other.hash,
@@ -246,7 +246,7 @@ data class Metadata(
             val guid = xyz.guid ?: return null
             return Metadata(
                 tupleNumber = guid.tupleNumber,
-                nextTupleNumber = xyz.nguid?.tupleNumber,
+                nextVersion = xyz.nguid?.tupleNumber?.version?.txn,
                 baseTupleNumber = xyz.mguid?.tupleNumber,
                 flags = xyz.flags ?: Flags().withAction(xyz.action).withOperation(xyz.operation),
                 updatedAt = xyz.updatedAt,

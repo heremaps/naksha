@@ -223,21 +223,21 @@ open class MetaColumn() : AnyObject() {
         fun hash(): MetaColumn = MetaColumn(HASH)
 
         /**
-         * The name of the virtual columns that stores the [next tuple-number][naksha.model.Metadata.nextTupleNumber].
+         * The name of the virtual column that stores the [next version][naksha.model.Metadata.nextVersion].
          *
          * Supported [query operations][AnyOp] are:
          * - [DoubleOp]
          * - [AnyOp.IS_ANY_OF]
          */
-        const val NEXT_TN = "txn_next"
+        const val NEXT_VERSION = "next_version"
 
         /**
-         * Returns a new meta-column for [NEXT_TN].
+         * Returns a new meta-column for [NEXT_VERSION].
          * @return a new meta-column.
          */
         @JvmStatic
         @JsStatic
-        fun nextVersion(): MetaColumn = MetaColumn(NEXT_TN)
+        fun nextVersion(): MetaColumn = MetaColumn(NEXT_VERSION)
 
         /**
          * The name of the virtual columns that stores the [version][naksha.model.Metadata.version] (_transaction number_).

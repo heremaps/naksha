@@ -297,22 +297,19 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * If this is the latest [tuple][naksha.model.Tuple] (state) of the [feature][naksha.model.objects.NakshaFeature], the value is `null`; otherwise it stores the [next tuple-number][naksha.model.TupleNumber], using the [128-bit encoding][B128].
+         * The next version of the tuple (with action in the lower 2 bits).
          *
-         * If this is a tombstone state, so actually the end of the feature lifetime, then this is the same as [tn].
+         * Stored only in _HISTORY_ tables. In _HEAD_ this is intrinsically [HEAD][naksha.model.Version.HEAD] (the row is the head state); the column is omitted from HEAD DDL.
          *
-         * The encoding stores, in order, Big-Endian encoded:
-         * - feature-number: 64
-         * - version (with action in lower 2 bits): 64
+         * For a tombstone state (final row of a feature's lifetime), this equals the row's own `version`.
          * @since 3.0
-         * @see [B128]
          */
         @JvmField
         @JsStatic
-        val next_tn = def(PgColumn::class, "next_tn") { self ->
+        val next_version = def(PgColumn::class, "next_version") { self ->
             self._i = 12
-            self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $PLAIN" // prevents either compression or out-of-line storage
+            self._type = PgType.INT64
+            self._extra = "STORAGE $PLAIN" // prevents out-of-line storage
         }
 
         /**
@@ -556,11 +553,27 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
-            tn, next_tn, base_tn,
+            tn, next_version, base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
         )
+
+        /**
+         * Columns present in a _HEAD_ table — same as [allColumns] except for [next_version], which is intrinsically [HEAD][naksha.model.Version.HEAD] in HEAD rows and therefore not stored.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val headColumns = allColumns.filter { it !== next_version }
+
+        /**
+         * The names of all HEAD database columns, as comma-separated list.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmField
+        val headColumnNames = headColumns.joinToString(",") { it.name }
 
         /**
          * The names of all database columns, as comma separated list.
@@ -607,7 +620,7 @@ class PgColumn : JsEnum() {
 
         /**
          * All columns that are needed when we copy a feature from _HEAD_ into _HISTORY_, so all except for:
-         * - [next_tn]
+         * - [next_version]
          * @since 3.0
          */
         @JvmField
@@ -616,7 +629,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
-            tn, base_tn, // removed: next_tn, prev_tn
+            tn, base_tn, // removed: next_version, prev_tn
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -644,7 +657,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, // removed: flags, cc
-            next_tn, base_tn, // removed: tn
+            base_tn, // removed: tn, next_version (HEAD has no next_version column)
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature // removed: attachment (needs special handling)
@@ -662,7 +675,7 @@ class PgColumn : JsEnum() {
          * All columns that we copy, when we create a tombstone state (deleted).
          *
          * In that case we copy from _HEAD_ into a temporary CTE table, then further to _HISTORY_ and/or _SHADOW_, but we need to update some columns, therefore this excludes the columns that need updates:
-         * - [next_tn] - will become the current [tn] to signal tombstone state _(dead-end)_
+         * - [next_version] - will become the current `version` to signal tombstone state _(dead-end)_
          * - [flags] - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED]
          * - [tn] - must be updated to match current `version`, with action bits set to DELETED (this is the `final_tn`)
          * - [base_tn] - needs to be set to `null`
@@ -674,7 +687,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, // removed: flags, cc
-            // removed: tn, next_tn, and base_tn,
+            // removed: tn, next_version, and base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -696,7 +709,7 @@ class PgColumn : JsEnum() {
         @JvmStatic
         @JsStatic
         fun ofRowColumn(metaColumn: MetaColumn): PgColumn? = when (metaColumn.name) {
-            MetaColumn.NEXT_TN -> next_tn
+            MetaColumn.NEXT_VERSION -> next_version
             MetaColumn.UPDATED_AT -> updated_at
             MetaColumn.CREATED_AT -> created_at
             MetaColumn.AUTHOR_TS -> author_ts

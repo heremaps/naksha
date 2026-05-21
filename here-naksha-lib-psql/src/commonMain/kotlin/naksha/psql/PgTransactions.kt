@@ -17,7 +17,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class PgTransactions(c: PgNakshaTransactions)
-    : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.next_tn) {
+    : PgHead(c, "${c.id}${PG_HEAD}", PgStorageClass.Consistent, false, partitionBy = PgColumn.next_version) {
 
     /**
      * All partitions, with key being the year (`txn >> 41`).
