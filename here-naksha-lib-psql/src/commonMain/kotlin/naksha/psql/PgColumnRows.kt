@@ -200,8 +200,6 @@ internal class PgColumnRows {
         if (row < 0 || row >= size) return null
         val tn_raw = getByteArray(row, PgColumn.tn) ?: return null
         val tupleNumber = TupleNumber.fromByteArray(tn_raw, 0, B128, storageNumber, mapNumber, collectionNumber)
-        val prev_tn = getByteArray(row, PgColumn.prev_tn)
-        val prevTupleNumber = if (prev_tn != null) TupleNumber.fromByteArray(prev_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val base_tn = getByteArray(row, PgColumn.base_tn)
         val baseTupleNumber = if (base_tn != null) TupleNumber.fromByteArray(base_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val next_tn = getByteArray(row, PgColumn.next_tn)
@@ -214,7 +212,6 @@ internal class PgColumnRows {
             createdAt = getInt64(row, PgColumn.created_at),
             authorTs = getInt64(row, PgColumn.author_ts),
             nextTupleNumber = nextTupleNumber,
-            prevTupleNumber = prevTupleNumber,
             baseTupleNumber = baseTupleNumber,
             hash = getInt(row, PgColumn.hash) ?: -1,
             hereTile = getInt(row, PgColumn.here_tile) ?: -1,
@@ -306,7 +303,6 @@ internal class PgColumnRows {
         set(row, PgColumn.cc, meta.changeCount)
         set(row, PgColumn.tn, meta.tupleNumber.toB128())
         set(row, PgColumn.next_tn, meta.nextTupleNumber?.toB128())
-        set(row, PgColumn.prev_tn, meta.prevTupleNumber?.toB128())
         set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB128())
         set(row, PgColumn.id, meta.id)
         set(row, PgColumn.app_id, meta.appId)

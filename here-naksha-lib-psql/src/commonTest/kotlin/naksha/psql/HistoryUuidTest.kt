@@ -54,16 +54,13 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
         val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETED }!!
 
         // And:
-        assertNull(retrievedCreatedFeature.properties.xyz.puuid)
         assertNotNull(retrievedCreatedFeature.properties.xyz.uuid)
         assertEquals(retrievedCreatedFeature.properties.xyz.nuuid, retrievedUpdatedFeature.properties.xyz.uuid)
 
         // And:
-        assertEquals(retrievedUpdatedFeature.properties.xyz.puuid, retrievedCreatedFeature.properties.xyz.uuid)
         assertEquals(retrievedUpdatedFeature.properties.xyz.nuuid, retrievedDeletedFeature.properties.xyz.uuid)
 
         // And:
-        assertEquals(retrievedDeletedFeature.properties.xyz.puuid, retrievedUpdatedFeature.properties.xyz.uuid)
         assertEquals(retrievedDeletedFeature.properties.xyz.nuuid, retrievedDeletedFeature.properties.xyz.uuid)
     }
 
@@ -103,16 +100,13 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
         val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETED }!!
 
         // And:
-        assertNull(retrievedCreatedFeature.properties.xyz.puuid)
         assertNotNull(retrievedCreatedFeature.properties.xyz.uuid)
         assertEquals(retrievedCreatedFeature.properties.xyz.nuuid, retrievedUpsertedFeature.properties.xyz.uuid) // TODO: FAILS
 
         // And:
-        assertEquals(retrievedUpsertedFeature.properties.xyz.puuid, retrievedCreatedFeature.properties.xyz.uuid)
         assertEquals(retrievedUpsertedFeature.properties.xyz.nuuid, retrievedDeletedFeature.properties.xyz.uuid)
 
         // And:
-        assertEquals(retrievedDeletedFeature.properties.xyz.puuid, retrievedUpsertedFeature.properties.xyz.uuid)
         assertEquals(retrievedDeletedFeature.properties.xyz.nuuid, retrievedDeletedFeature.properties.xyz.uuid)
     }
 }

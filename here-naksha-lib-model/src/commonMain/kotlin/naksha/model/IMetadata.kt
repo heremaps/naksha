@@ -69,21 +69,15 @@ interface IMetadata {
      * ### Warning
      * If this property is `null`, there is no guarantee that there is no newer state, so this acts as an inverse bloom filter, if the value is set, you can be sure that this [Tuple] is a historic one, otherwise it is only likely that this [Tuple] is the latest one _(HEAD state)_.
      *
-     * Not all storages will support this property, therefore use should be done with care. If the storage does not support it, finding the next state can be done by querying for the [Tuple] that has [prevTupleNumber] set to this [tupleNumber].
+     * Not all storages will support this property, therefore use should be done with care.
      * @since 3.0
      */
     val nextTupleNumber: TupleNumber?
 
     /**
-     * The [TupleNumber] of the previous tuple, if any.
-     * @since 3.0
-     */
-    val prevTupleNumber: TupleNumber?
-
-    /**
      * The [TupleNumber] of the _base_ [Tuple], when this [Tuple] is the result of an auto-merge.
      *
-     * The _BASE_ [Tuple] is the shared previous state that the _principal_, and other concurrently operating _principals_, changed (base of the changes). The previous tuple, referred to via [prevTupleNumber], is the _OTHER_ state, so the state that the other _principals_ produced. The state this _principal_ produced is not persisted, we call it _NEW_. This [Tuple] (_HEAD_) is the result of creating a difference between _OTHER_ and _BASE_ (what others changes), and then adding the difference between _NEW_ and _BASE_ (what this _principal_ changed) into a _patch_, applying the _patch_ to _BASE_, resulting in _HEAD_.
+     * The _BASE_ [Tuple] is the shared previous state that the _principal_, and other concurrently operating _principals_, changed (base of the changes). The state of the _OTHER_ _principals_ is the state immediately preceding this one (one can find it by walking back via the most recent version of the same feature with `version < this.version`). The state this _principal_ produced is not persisted, we call it _NEW_. This [Tuple] (_HEAD_) is the result of creating a difference between _OTHER_ and _BASE_ (what others changes), and then adding the difference between _NEW_ and _BASE_ (what this _principal_ changed) into a _patch_, applying the _patch_ to _BASE_, resulting in _HEAD_.
      *
      * Keeping track of _BASE_ allows to calculate back _NEW_, which was never persisted, and is the state the _principal_ originally created, before the auto-merge was done. Calculating it back is done by reverting the above described. So, calculate the difference between _OTHER_ (previous tuple) and _BASE_, resulting in other-diff, then calculate the difference between _HEAD_ and _BASE_, resulting in total-diff, finally subtracting the other-diff from the total-diff, resulting in a patch that only contains the changes done by this _principal_, and when applied to _BASE_, produces _NEW_.
      * @since 3.0

@@ -252,7 +252,6 @@ data class TupleNumber(
      * @return the binary encoded [tuple-number][TupleNumber].
      * @since 3.0
      * @see [naksha.model.request.query.MetaColumn.TUPLE_NUMBER]
-     * @see [naksha.model.request.query.MetaColumn.PREV_TUPLE_NUMBER]
      * @see [naksha.model.request.query.MetaColumn.BASE_TUPLE_NUMBER]
      */
     fun toByteArray(variant: TupleNumberVariant): ByteArray {

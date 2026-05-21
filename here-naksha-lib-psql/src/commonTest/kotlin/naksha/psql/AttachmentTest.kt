@@ -141,9 +141,6 @@ class AttachmentTest : PgTestBase() {
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("end", feature.properties["test"])
             assertEquals(Action.UPDATED, feature.properties.xyz.guid?.tupleNumber?.action)
-            val pguid = feature.properties.xyz.pguid
-            assertNotNull(pguid)
-            assertEquals(insertedFeatureGuid.tupleNumber, pguid.tupleNumber)
 
             val featureTupleList = this.featureTupleList
             assertEquals(1, featureTupleList.size)
@@ -233,9 +230,6 @@ class AttachmentTest : PgTestBase() {
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("end", feature.properties["test"])
             assertEquals(Action.UPDATED, feature.properties.xyz.guid?.tupleNumber?.action)
-            val pguid = feature.properties.xyz.pguid
-            assertNotNull(pguid)
-            assertEquals(insertedFeatureGuid.tupleNumber, pguid.tupleNumber)
 
             val featureTupleList = this.featureTupleList
             assertEquals(1, featureTupleList.size)
