@@ -7,29 +7,10 @@ The data model supports operations to manage the data lifecycle, including creat
 
 The data model is an abstraction layer that allows to decouple the physical storage from the logical structure of the data. This allows for flexibility in the choice of storage technology and allows for future changes to the storage technology without affecting the logical structure of the data.
 
-## Literals
-The JSON map, set and array implementations are optimized for low memory consumption. All keys in the JSON map are interned to guarantee that the same key is not in memory multiple times. This is done by wrapping them into a `Literal`. This is already done by the parser. This feature can be used by the application as well via `Literal.get` calls. The JSON parser itself will intern all keys and values to reduce memory consumption. Beware that interning is only guaranteed for strings, all other data types have just a possibility to be interned, but it is not guaranteed.
+## Data
+The data class is a central singleton to collect helper methods. Mainly used for interning, but as well things like [JSON] parser and transformer.
 
 ```java
-// byte[]
-//   JVM header = 16 byte
-//   int length = 4 byte
-//   ... data
-//   = 20 byte + n byte data
-
-// String
-//   JVM header = 16 byte
-//   byte[] value = 28+ byte (8 byte pointer + 20 byte header + `n` byte data)
-//   byte coder = 1 byte
-//   int hash = 4 byte
-//   boolean hashIsZero = 1 byte
-//   = 50 byte+ byte
-
-// WeakReference, same applies for Long, Double 
-//   JVM header = 16 byte
-//   referent/value = 8 byte
-//   = 24 byte
-
 public final class Data {
   public static @NotNull Double intern(float value) { /* ... */ }
   public static @NotNull Double intern(double value) { /* ... */ }
@@ -52,8 +33,39 @@ public final class Data {
   public static @NotNull String asString(@Nullable CharSequence chars, @NotNull CharSequence alternative) {
     return Literal.of(chars != null ? chars : alternative).toString();
   }
+  public static Object parse(@NotNull CharSequence chars, @Nullable ParseOptions options);
+  public static Object parse(byte @NotNull [] utf8_bytes, @Nullable ParseOptions options);
+  public static byte @NotNull [] serialize(@Nullable Object object, @Nullable SerializeOptions options);
+  public static void stringify(@Nullable Object object, @Nullable StringifyOptions options, @NotNull Appendable buffer);
+  public static @NotNull String stringify(@Nullable Object object, @Nullable StringifyOptions options);
+  public static <T> @NotNull T transform(@NotNull IStruct source, @NotNull Class<T> target);
+  // Will throw DataError if the source can't be transformed into a JSON structure.
+  public static @NotNull IStruct transform(@NotNull T source);
 }
+```
 
+## Literals
+The JSON map, set and array implementations are optimized for low memory consumption. All keys in the JSON map are interned to guarantee that the same key is not in memory multiple times. This is done by wrapping them into a `Literal`. This is already done by the parser. This feature can be used by the application as well via `Literal.get` calls. The JSON parser itself will intern all keys and values to reduce memory consumption. Beware that interning is only guaranteed for strings, all other data types have just a possibility to be interned, but it is not guaranteed.
+
+```java
+// byte[]
+//   JVM header = 16 byte
+//   int length = 4 byte
+//   ... data
+//   = 20 byte + n byte data
+
+// String
+//   JVM header = 16 byte
+//   byte[] value = 28+ byte (8 byte pointer + 20 byte header + `n` byte data)
+//   byte coder = 1 byte
+//   int hash = 4 byte
+//   boolean hashIsZero = 1 byte
+//   = 50 byte+ byte
+
+// WeakReference, same applies for Long, Double 
+//   JVM header = 16 byte
+//   referent/value = 8 byte
+//   = 24 byte
 public final class Literal implements CharSequence, Comparable<CharSequence> {
   public static @NotNull Literal of(@NotNull CharSequence value) { /* ... */ }
   public static @Nullable Literal get(@Nullable CharSequence value) { /* ... */ }
@@ -85,7 +97,7 @@ public class DataError extends RuntimeException {
 ## Data Types
 To allow interoperability between different storages, applications, modules, and services, the data model supports a set of pre-defined supported data types:
 
-| Java                 | Idx              | Prim | Type-Emum _(Name)_  | Javascript           | Description                                                                                                    |
+| Java                 | Idx              | Prim | Type-Emum           | Javascript           | Description                                                                                                    |
 |----------------------|------------------|------|---------------------|----------------------|----------------------------------------------------------------------------------------------------------------|
 | `Undefined`          |                  |      | `UNDEFINED`         | `undefined`          | The undefined type, a singleton in Java.                                                                       |
 | `null`               | btree            | yes  | `NULL`              | `null`               | A boolean.                                                                                                     |
@@ -104,7 +116,7 @@ To allow interoperability between different storages, applications, modules, and
 | `double[]`           |                  |      | `DOUBLEA`           | `Float64Array`       | A 64-bit floating point number array.                                                                          |
 | `Timestamp`          | btree            | yes  | `TIMESTAMP`         | `Date`               | A 48-bit unsigned interger representing a UNIX epoch timestamp in milliseconds.                                |
 | `String`             | btree            | yes  | `STRING`            | `String`             | A text of [UNICODE] code-points.                                                                               |
-| `Geometry`           |                  |      |                     | `Geometry`           | `org.locationtech.jts.geom.Geometry` - Interface for all geometries, [GeoJSON] compatible.                     |
+| `Geometry`           |                  |      |                     | `Geometry`           | `org.locationtech.jts.geom.Geometry`; Interface for all geometries, [GeoJSON] compatible.                      |
 | `GeometryCollection` |                  |      | `GEO_COLLECTION`    | `GeometryCollection` | `org.locationtech.jts.geom.GeometryCollection`                                                                 |
 | `Point`              | spatial          |      | `POINT`             | `Point`              | `org.locationtech.jts.geom.Point`                                                                              |
 | `MultiPoint`         | spatial          |      | `MULTI_POINT`       | `MultiPoint`         | `org.locationtech.jts.geom.MultiPoint`                                                                         |
@@ -115,24 +127,26 @@ To allow interoperability between different storages, applications, modules, and
 |                      |                  |      |                     |                      |                                                                                                                |
 |                      |                  |      |                     |                      | **INTERFACES**                                                                                                 |
 |                      |                  |      |                     |                      |                                                                                                                |
-| `Proxyable`          |                  |      |                     |                      | An interface that is implemented by all objects that support proxies.                                          |
-| `IObject`            |                  |      |                     |                      | An interface to access general JSON like object that supports proxies.                                         |
+| `Proxyable`          |                  |      |                     |                      | An interface that is implemented by all structures that support proxies.                                       |
+| `IStruct`            |                  |      |                     |                      | An interface to access general JSON like object that supports proxies.                                         |
 | `IArray`             |                  |      |                     |                      | An interface to access general JSON like arrays.                                                               |
 | `ISet`               |                  |      |                     |                      | An interface to access general JSON like arrays that contain unique values.                                    |
 | `IMap`               |                  |      |                     |                      | An interface to access general JSON like maps.                                                                 |
+| `IObject`            |                  |      |                     |                      | An interface to access general JSON like objects _(with keys limited to be strings)_.                          |
 | `ITupleNumber`       |                  |      |                     |                      | An interface to access a tuple-number.                                                                         |
 |                      |                  |      |                     |                      |                                                                                                                |
 |                      |                  |      |                     |                      | **JSON**                                                                                                       |
 |                      |                  |      |                     |                      |                                                                                                                |
-| `JsonObject`         |                  |      |                     |                      | The base class for all [JSON] data types that allow proxy linking.                                             |
-| `JsonArray`          | array/map/object |      | `ARRAY`             |                      | A list of values, extends [JsonObject], implements mutable `IArray`.                                           |
-| `JsonSet`            | array/map/object |      | `SET`               |                      | A list of unique values, not being `null`, extends [JsonObject], implements mutable `ISet`.                    |
-| `JsonMap`            | array/map/object |      | `MAP`               |                      | A set of key-value pairs in insertion order, extends [JsonObject], implements mutable `IMap`.                  |
+| `JsonStruct`         |                  |      |                     |                      | The base class for all [JSON] data types that allow proxy linking, implements `IStruct`.                       |
+| `JsonArray`          | array/map/object |      | `ARRAY`             |                      | A list of values, extends [JsonStruct], implements mutable `IArray`.                                           |
+| `JsonSet`            | array/map/object |      | `SET`               |                      | A list of unique values, not being `null`, extends [JsonStruct], implements mutable `ISet`.                    |
+| `JsonMap`            | array/map/object |      | `MAP`               |                      | A set of key-value pairs in insertion order, extends [JsonStruct], implements mutable `IMap`.                  |
+| `JsonObject`         | array/map/object |      | `OBJECT`            |                      | A set of key-value pairs with all keys being [strings], extends [JsonStruct], implements mutable `IObject`.    |
 |                      |                  |      |                     |                      |                                                                                                                |
 |                      |                  |      |                     |                      | **PROXIES**                                                                                                    |
 |                      |                  |      |                     |                      |                                                                                                                |
-| `Proxy`              |                  |      |                     |                      | Abstract base class for all proxies that can be linked to a [JsonObject] or [JbonObject].                      |
-| `ObjectProxy<P, O>`  |                  |      |                     |                      | Abstract base class extending [Proxy] with shared methods for extending proxies.                               |
+| `Proxy`              |                  |      |                     |                      | Abstract base class for all proxies that can be linked to a [JsonStruct] or [JbonObject].                      |
+| `StructProxy<P, O>`  |                  |      |                     |                      | Abstract base class extending [Proxy] with shared methods for extending proxies.                               |
 | `ArrayProxy`         |                  |      |                     |                      | A [Proxy] that can be linked to any `IArray` to extend the array with custom functions.                        |
 | `TypedArrayProxy<E>` |                  |      |                     |                      | A [Proxy] that can be linked to any `IArray` to view it as a typed-array.                                      |
 | `SetProxy`           |                  |      |                     |                      | A [Proxy] that can be linked to any `ISet` to extend the set with custom functions.                            |
@@ -179,9 +193,9 @@ To allow interoperability between different storages, applications, modules, and
 |                      |                  |      |                     |                      |                                                                                                                |
 |                      |                  |      |                     |                      | **STORAGE**                                                                                                    |
 |                      |                  |      |                     |                      |                                                                                                                |
-| `TupleStorage`       |                  |      |                     |                      |                                                                                                                |
-| `Storage`            |                  |      |                     |                      |                                                                                                                |
-| `ReadSession`        |                  |      |                     |                      |                                                                                                                |
+| `TupleStorage`       |                  |      |                     |                      | A stateless storage in which [tuple] can be stored, and from which they can be read.                           |
+| `Storage`            |                  |      |                     |                      | Extends `TupleStorage`, an extended storage that manages [database], [catalog], [collection], and [feature].   |
+| `ReadSession`        |                  |      |                     |                      | A session into a storage to execute complex read queries.                                                      |
 | `FullSession`        |                  |      |                     |                      |                                                                                                                |
 
 All data must be represented using these data types to ensure interoperability between different components, storages, and services.
@@ -192,6 +206,7 @@ This design is important for many of the features offered by the data model, for
 - Arrays
 - Sets
 - Maps
+- Objects
 - Geometries
 
 ## Indices
@@ -212,27 +227,30 @@ All geometries can be indexed using `spatial` index. The spatial index only oper
 ### Array
 The `Map`, `Set`, and `Array` data types can all be indexed as `array`. This basically means to convert the data into a list of primitives, and then to index the values, allowing to search for values or values at position.
 
-- For the `Map`, the values are converted into an array and indexed.
-- For the `Set`, all elements are converted into an array and indexed.
 - For the `Array`, all elements are converted into an array and indexed.
+- For the `Set`, all elements are converted into an array and indexed.
+- For the `Map`, the values are converted into an array and indexed.
+- For the `Object`, the values are converted into an array and indexed.
 
 **Note**: Entries where the value is no primitive, have undefined behavior.
 
 ### Map
 The `Map`, `Set`, and `Array` data types can all be indexed as `map`. This basically means to convert the data into a list of entries, each having a key and a value being a primitive. Then indexing the key-value pair, allow to search for key, value, or a combination.
 
-- For the `Map`, simply all entries are indexed.
-- For the `Set`, all elements are converted into keys with value being the boolean `true`, then indexed.
 - For the `Array`, all elements are converted into keys with value being the boolean `true`, then indexed.
+- For the `Set`, all elements are converted into keys with value being the boolean `true`, then indexed.
+- For the `Map`, simply all entries are indexed.
+- For the `Object`, simply all entries are indexed.
 
 **Note**: Entries where the key is no string or the value is no primitive, have undefined behavior.
 
 ### Object
 The `Map`, `Set`, and `Array` data types can all be indexed as `object`. This basically means to convert the data into a list of entries, each having a key being a string and value being a primitive. Then indexing the key-value pair, allow to search for key, value, or a combination.
 
-- For the `Map` all keys are stringified, values are used as is, finally the key-value pairs are indexed.
-- For the `Set`, all elements are stringified, then split using [tag split] algorithm, eventually the resulting key-value pairs are indexed.
 - For the `Array`, all elements are stringified, then split using [tag split] algorithm, eventually the resulting key-value pairs are indexed.
+- For the `Set`, all elements are stringified, then split using [tag split] algorithm, eventually the resulting key-value pairs are indexed.
+- For the `Map` all keys are stringified, values are used as is, finally the key-value pairs are indexed.
+- For the `Object` all keys are already strings, therefore simply all entries are indexed.
 
 **Note**: Entries where the key is no string or the value is no primitive, have undefined behavior.
 
@@ -269,7 +287,7 @@ This means for example that `foo:=true` is split into the key `foo` and the _boo
 There are two ways to encode data, as mutable _HEAP_ objects or as immutable binaries in [JBON]. Both should be transparent, when just reading and processing data. Therefore, both support some basic interfaces.
 
 ### IProxyable
-All objects that support proxies must implement this interface. This interface is implemented by [Proxy], which redirects to the underlying `IObject`, which is either [JsonObject] or [JbonObject], both as well implementing [IProxyable].
+All objects that support proxies must implement this interface. This interface is implemented by [Proxy], which redirects to the underlying `IStruct`, which is either [JsonStruct] or [JbonObject], both as well implementing [IProxyable].
 
 ```java
 public interface IProxyable {
@@ -277,18 +295,28 @@ public interface IProxyable {
 }
 ```
 
-### IObject
-All object will implement this interface. Within the [JBON] specification these units are _structures_, they only persist out of array, set, and map.
+### IStruct
+All object will implement this interface. Within the [JBON] specification these units are _structures_, they only persist out of array, set, map, and object.
 
 ```java
-public interface IObject extends Proxyable {
+public interface IStruct extends Proxyable {
   boolean isArray();
   boolean isSet();
   boolean isMap();
-  /** Tests if an invocation of `mutable()` will return this (true) or create a new instance (false). */
+  boolean isObject();
+  /** Tests if an invocation of `mutable(true)` will return this (true) or create a new instance (false). */
   boolean isMutable();
-  /** Returns this object as mutable instance. If this is mutable, returns this; otherwise, creates a mutable clone and returns it. */
-  @NotNull JsonObject mutable();
+  /** Create a mutable clone of this object. If this is immutable, the copy will always be recursive; otherwise, the copy is recursive or not, dependent on the {@code recursive} argument. */
+  @NotNull JsonStruct copy(boolean recursive);
+  /**
+   * Returns this object as mutable instance.
+   * <ul>
+   * <li>If this structure is mutable, returns this.
+   * <li>If this structure is immutable (JBON) and {@code copy} argument is {@code false}, throws an DataError.
+   * <li>If this structure is immutable (JBON) and {@code copy} argument is {@code true}, recursively copy this object to <i>HEAP</i> and returns the copy.
+   * </ul>
+   **/
+  @NotNull JsonStruct mut(boolean copy);
 }
 ```
 
@@ -296,8 +324,8 @@ public interface IObject extends Proxyable {
 An array is a list of child-units.
 
 ```java
-public interface IArray extends IObject {
-  @Override @NotNull JsonArray mutable();
+public interface IArray extends IStruct {
+  @Override @NotNull JsonArray mut(boolean copy);
   // TODO: Add 'array' methods.
 }
 ```
@@ -306,31 +334,41 @@ public interface IArray extends IObject {
 A set is a sorted list of unique child-units.
 
 ```java
-public interface ISet extends IObject {
-  @Override @NotNull JsonSet mutable();
+public interface ISet extends IStruct {
+  @Override @NotNull JsonSet mut(boolean copy);
   // TODO: Add 'set' methods.
 }
 ```
 
 ### IMap
-A map is an unordered list of entries, each persisting out of a key and a value.
+A map is an unordered list of entries, each persisting out of a key and a value. Internally, keys being strings are stored as `Literal`. Only [primitives] are allows as keys.
 
 ```java
-public interface IMap extends IObject {
-  @Override @NotNull JsonMap mutable();
+public interface IMap extends IStruct {
+  @Override @NotNull JsonMap mut(boolean copy);
   // TODO: Add 'map' methods.
 }
 ```
 
+### IObject
+An object is an unordered list of entries, each persisting out of a key and a value. The difference to the `IMap` is that the `IObject` only allows [string] keys. Internally all strings used as keys are stored as `Literal`.
+
+```java
+public interface IObject extends IStruct {
+  @Override @NotNull JsonObject mut(boolean copy);
+  // TODO: Add 'object' methods, basically a map where the key is always a string.
+}
+```
+
 ## Proxyable
-The proxyable object is the default implementation of the [IProxyable] interface. This is the abstract base class for [JsonObject] and [JbonObject].
+The proxyable object is the default implementation of the [IProxyable] interface. This is the abstract base class for [JsonStruct] and [JbonObject].
 
 ```java
 package naksha.data;
 
-// Base class for JsonObject and JbonObject. 
+// Base class for JsonStruct and JbonObject. 
 public abstract class Proxyable implements IProxyable {
-  // We only allow JsonObject and JbonObject to extend the Proxyable. 
+  // We only allow JsonStruct and JbonObject to extend the Proxyable. 
   Proxyable() {}
   
   // Allows applications to define which proxy implementation to use for certain interfaces or abstract classes.
@@ -413,18 +451,125 @@ public abstract class Proxyable implements IProxyable {
 Having to work with untyped data is extremely error-prone, even while the most flexible thing possible. So close the gap, `lib-data` supports proxies. A proxy is a data-model that can be attached to arbitrary data at runtime _(this allows runtime schema detection)_. All proxies must extend the [Proxyable] base class.
 
 ## Json
-For 64-bit integers, there are two possibilities. Either serialize into a normal decimal number, which will cause precision loos, and removes the type information, or _(default)_ encode into a [data URL] in the format `data:application/long,{decimal}`. This requires some post-processing of the parsed JSON, but this is anyway be needed to support [JsonSet].
+The standard [JSON] specification does not support sets, primitive-arrays, or maps. Many implementations even do not support 64-bit integers, even while the original specification didn't state that here is a limit, it is more an issue that results from the history of _JavaScript_, and the way it originally was implemented.
 
-Apart from these two hacks, we need more hacks for maps that hold keys not being strings. So there are more [data URL] encodings for `application/boolean`, `application/int`, and `application/double`. We only support primitives as keys, therefore no other hacks are needed.
+We need a solution to be compatible with [JSON] parses that support 64-bit integers, and with _JavaScript_ [JSON] parsers, that do not support this out of the box. Actually, there is no official support in [JSON] for a set, primitive-arrays and maps. Therefore, we first define extended [JSON], which will only be supported by our own parser. Therefore, clients can add into HTTP-header which [JSON] they support, and the corresponding format will be used.
 
-### JsonObject
+```java
+package naksha.data;
+import static naksha.data.Data.literal;
+import static naksha.data.Const.*;
+
+public class JsonFormat extends Option {
+  public JsonFormat(@NotNull Literal value) { super(value); }
+  /** Standard JSON without comments, not supporting 64-bit integer */
+  public static final JsonFormat JAVASCRIPT_JSON = new JsonFormat(Const.APPLICATION_JSON);
+  /** Standard JSON without comments, but with support for 64-bit integer */
+  public static final JsonFormat JAVA_JSON = new JsonFormat(Const.APPLICATION_JSON64);
+  /** Standard JSON with comments, but without support for 64-bit integer */
+  public static final JsonFormat JSONC = new JsonFormat(Const.APPLICATION_JSONC);
+  /** Standard JSON with comments, and with support for 64-bit integer */
+  public static final JsonFormat JSONC64 = new JsonFormat(Const.APPLICATION_JSONC64);
+  /** Standard JSON with comments, 64-bit integer, sets, maps, and primitive-arrays */
+  public static final JsonFormat JSONX = new JsonFormat(Const.APPLICATION_JSONX);
+}
+```
+
+As the parser that comes with `lib-data` supports `JSONX`, which supports all features, it always as well support all lower tier [JSON] formats. So while parsing, there is no need to specify the format. However, when serializing, the target is required to generate the correct format. The default target is `JAVASCRIPT_JSON`, which is most restrictive.
+
+When 64-bit integers are not supported, then they will be encoded into a [data URL] in the format `data:application/long,{decimal}`. This requires some post-processing of the parsed JSON or a special JSON handler while serializing, at least when being in _JavaScript_, so that the parsed [JSON] can be converted into the correct objects. In standard `JSON` sets are encoded as `{"@type": "naksha:Set", elements: [VALUE, ...]}`. Maps are encoded as `{"@type": "naksha.Map", entries:[KEY, VALUE, ...]}`. Primitive arrays are encoded as [data URL], like `data:application/bytea;base64,...`, with `...` being the [base64] encoded binary representation.
+
+The `JSONX` format supports the following extensions:
+
+- C-style comments
+  - Line comments: `// line comment`
+  - Block level comments: `/* comment */`
+  - Bash comments: `# comment line`
+- Supports 64-bit integers, like `9223372036854775807`
+- Strings can be quoted either with double quotes _(`"`)_ or single quotes _(`"`)_
+- C-Escaping can be used everywhere, so a backslash in front of any character not being `0-9a-zA-Z` escapes the character.
+  - `\n` is line feed
+  - `\r` is carriage return
+  - `\b` is bell
+  - `\0` is ASCII-0
+  - ...
+- Empty or duplicate commas in maps and objects are ignored, for example `{a:1,b:2,}` is used as `{a:1,b:2}`
+  - In arrays commas are significant, e.g. `[1,2,]` means `[1,2,null]` not `[1,2]`.
+- Arrays can optionally be encoded as `@array[VALUE, ...]`
+- Sets are encoded as `@set[VALUE, ...]`
+- Maps are encoded as `@map[KEY: VALUE, ...]`
+  - Beware that the keys must be boolean, double, long, or string.
+  - Strings must be quoted, when they conflict with numbers or boolean.
+- Objects can optionally be encoded as `@object[KEY: VALUE, ...]`
+- Primitive-Arrays are encoded as `@TYPE[VALUE, ...]`.
+  - With `TYPE` being `i8`, `i16`, `i32`, `i64`, `f32`, or `f64`
+  - Example: `@f64[1, 2, 3]` becomes in _Java_ `double[]{1.0, 2.0, 3.0}`.
+  - For byte-arrays a special syntax is supported: `@hex[BYTES]`. The `BYTES` being the hex-encoded bytes, like `0e100047`.
+
+Example JSON:
+
+```
+{
+  type: Feature,
+  properties: {
+    name: "Jim",
+    tags: @map[
+      foo: 5,
+      bar: 'Hello World'
+      15: no
+    ],
+    next_version: 9223372036854775807,
+  },
+}
+```
+
+This is a valid extended [JSON], equivalent to the following [JSON] compatible encoding:
+
+```json
+{
+  "type": "Feature",
+  "properties": {
+    "name": "Jim",
+    "tags": {
+      "@type": "naksha:Map",
+      "entries": [
+        "foo", 5,
+        "bar", "Hello World",
+        15, "no"
+      ]
+    },
+    "next_version": "data:application/long,9223372036854775807"
+  }
+}
+```
+
+Apart from these hacks, we need more hacks for maps that hold keys not being strings. So there are more [data URL] encodings for `application/boolean`, `application/int`, and `application/double`. We only support primitives as keys, therefore no other hacks are needed.
+
+### Java
+The standard [JSON] parse will support _transformation` to convert structures into [POJOs] and vice versa, [POJOs] into structures. It supports Jackson annotation via reflection _(so we do not depend on the annotation, but support them)_. Example:
+
+```java
+@JsonTypeName("MyClass") // To be encoded as "@type"
+public class MyClass implements MyInterface { }
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "@type")
+@JsonSubTypes({
+    @JsonSubTypes.Type(value = MyClass.class, name = "MyClass"),
+    @JsonSubTypes.Type(value = OtherClass.class, name = "OtherClass")
+})
+public interface MyInterface { }
+```
+
+### JsonStruct
+The abstract base class of all [JSON] structures.
+
 ```java
 package naksha.data;
 import static naksha.data.Data.literal;
 
-public abstract class JsonObject extends Proxiable implements IObject, IProxyable {
+public abstract class JsonStruct extends Proxiable implements IStruct, IProxyable {
   // We only allow JsonArray, JsonSet, and JsonMap to extend this.
-  JsonObject() {}
+  JsonStruct() {}
 
   private static final long OBJECT = 0; // 00b
   private static final long MAP = 1; // 01b
@@ -437,15 +582,21 @@ public abstract class JsonObject extends Proxiable implements IObject, IProxyabl
   // For Map: The elements are keys at even positions, and values at odd positions.
   @NotNull Object @NotNull [] data = EMPTY_OBJECT;
   // TODO: We have an implementation, we need to copy code here.
+  // TODO: Add implementation of `copy()` and `mut()`, with `mut()` always returning this.
 }
 ```
 
 ### JsonArray
+
+```json
+[]
+```
+
 ### JsonSet
 To indicate that an array is a set, it wrapped into an object:
 
 ```json
-{"type": "Set", "elements": []}
+{"@type": "naksha:Set", "elements": []}
 ```
 
 The JSON parser of `lib-data` will, when it encounters such an object, convert it into a `JsonSet`.
@@ -454,17 +605,27 @@ The JSON parser of `lib-data` will, when it encounters such an object, convert i
 
 ### JsonMap
 
+```json
+{"@type": "naksha:Map", "entries": []}
+```
+
+### JsonObject
+
+```json
+{}
+```
+
 ## Jbon
 Details about [JBON] objects, so `Jbon`, `JbonObject`, `JbonArray`, `JbonSet`, and `JbonMap`, can be found in the [JBON2.md](./JBON2.md), specifically in the [JBON Java Section](./JBON2.md#java).
 
-### Proxy
-A base class implementing the [Proxyable] interface, providing a standard implementation of the `proxy()` method. This class is the base for [JsonObject] and [JbonObject]:
+## Proxy
+A base class implementing the [Proxyable] interface, providing a standard implementation of the `proxy()` method. This class is the base for [JsonStruct] and [JbonObject]:
 
 ```java
 package naksha.data;
 
 public abstract class Proxy implements IProxyable {
-  // We only allow ObjectProxy to extend the Proxy.
+  // We only allow StructProxy to extend the Proxy.
   Proxy() {}
   // Needed chain multiple proxies.
   Proxy nextProxy;
@@ -473,21 +634,23 @@ public abstract class Proxy implements IProxyable {
 }
 ```
 
-### ObjectProxy
-A base class that all proxies must extend. It extends the raw [Proxy] and adds support for object binding, so that either [JsonObject] or [JbonObject] can be linked to the proxy.
+### StructProxy
+A base class that all proxies must extend. It extends the raw [Proxy] and adds support for object binding, so that either [JsonStruct] or [JbonObject] can be linked to the proxy.
 
 ```java
 package naksha.data;
 
-public abstract class ObjectProxy<I extends IObject, O extends JsonObject> extends Proxy implements IObject {
+public abstract class StructProxy<I extends IStruct, O extends JsonStruct> extends Proxy implements IStruct {
   // We only allow ArrayProxy, SetProxy, and MapProxy to extend this class.
-  ObjectProxy(@NotNull I object) { this.object = object; }
-  private final @NotNull I object;
-  protected @NotNull I object() { return object; }
+  StructProxy(@NotNull I struct) { this.struct = struct; }
+  private final @NotNull I struct;
+  protected @NotNull I object() { return object;}
   protected abstract @NotNull O mutable();
-  
+
   // Proxies redirect proxy requests to the underlying.
-  public @NotNull <P extends Proxy> proxy(final @NotNull Class<P> proxyClass) {return object.proxy(proxyClass); }
+  public @NotNull <P extends Proxy> proxy(final @NotNull Class<P> proxyClass) {
+    return object.proxy(proxyClass);
+  }
 }
 ```
 
@@ -495,7 +658,7 @@ public abstract class ObjectProxy<I extends IObject, O extends JsonObject> exten
 ```java
 package naksha.data;
 
-public class ArrayProxy extends ObjectProxy<IArray, JsonArray> {
+public class ArrayProxy extends StructProxy<IArray, JsonArray> {
   public ArrayProxy() { super(new JsonArray()); }
   public ArrayProxy(@NotNull IArray array) { super(array); }
   @Override protected @NotNull JsonArray mutable() {
@@ -511,7 +674,7 @@ public class ArrayProxy extends ObjectProxy<IArray, JsonArray> {
 ```java
 package naksha.data;
 
-public class SetProxy extends ObjectProxy<ISet, JsonSet> {
+public class SetProxy extends StructProxy<ISet, JsonSet> {
   public SetProxy() { super(new JsonSet()); }
   public SetProxy(@NotNull ISet set) { super(set); }
   @Override protected @NotNull JsonSet mutable() {
@@ -527,12 +690,30 @@ public class SetProxy extends ObjectProxy<ISet, JsonSet> {
 ```java
 package naksha.model;
 
-public class MapProxy extends ObjectProxy<IMap, JsonMap> {
+public class MapProxy extends StructProxy<IMap, JsonMap> {
   public MapProxy() { super(new JsonMap()); }
   public MapProxy(@NotNull IMap map) { super(map); }
   @Override protected @NotNull JsonMap mutable() {
     if (object() instanceof JsonMap map) return map;
     throw new DataError("The map is immutable");
+  }
+  // TODO: Add protected methods to read and write the map.
+  //       If the object is not mutable, modification will throw an DataError.
+}
+```
+
+### ObjectProxy
+Objects are maps with string keys. There is no typed variant, because this is not what objects are used for.
+
+```java
+package naksha.model;
+
+public class ObjectProxy extends StructProxy<IObject, JsonObject> {
+  public ObjectProxy() { super(new JsonObject()); }
+  public ObjectProxy(@NotNull IObject object) { super(object); }
+  @Override protected @NotNull JsonObject mutable() {
+    if (object() instanceof JsonObject object) return object;
+    throw new DataError("The object is immutable");
   }
   // TODO: Add protected methods to read and write the map.
   //       If the object is not mutable, modification will throw an DataError.
@@ -1330,7 +1511,7 @@ interface Session extends ReadSession {
 }
 ```
 
-## Data
+## Other
 To manage data, it is split into members that together form the [GeoJSON] _feature_. This is a low level data definition, that is as well replicated in the [JBON] binary encoding.
 
 ### Option
@@ -1413,17 +1594,35 @@ public class IndexProxy extends MapProxy {
 
 We do not allow secondary unique indices, because this would not work with partitioning. As we partition the data, we can't guarantee uniqueness over secondary members. The reason is that we isolate the partitions, so that when we write, we can only check uniqueness within the partition we use. A secondary unique index would require to crosscheck and update other partitions, which breaks the isolation and would drag the performance down. Therefore, there is only one secondary unique index, being `id`, which is guaranteed to be located in the correct partition using some special rules.
 
-## Members
+## Mandatory-Members
+The members that can not be removed. However, storage do not need to really store all of them exactly as defined here. For example, `lib-psql` does not store the `TupleNumber`, it is deducted from the `feature_number` and `version`, plus from where the _feature_ is stored, so from the [collection], [catalog], and [database] in which it is located. Therefore, this member is not physically stored in this specific implementation. Other implementations may do similar hacks. Still, searching for these mandatory members _(except for `FeatureMember`)_ is mandatory for storage implementations.
+
+### FeatureNumberMember
+The `feature_number` as `long`.
+
+### VersionMember
+The version of the [tuple] as `long`.
+
+Beware that the version encodes as well the action, which is why there is no explicit action member!
+
+### TupleNumberMember
+The full qualified [tuple-number] as `TupleNumber`.
+
+### NextVersionMember
+The version of the next [tuple]; if any. The data-type is `long` with [HEAD] representing _HEAD_ state.
+
+### IdMember
+The `id` member as data-type `String`. Beware, when the `feature_number` is between `0` and `4,611,686,018,427,387,903` _(including)_, the `id` must be the stringified, and therefore the `id` can be stored as `null`, because it is the same as the `feature_number`, just stringified.
 
 ### FeatureMember
-### TupleNumberMember
-### VersionMember
-### NextVersionMember
-### IdMember
+Stores all data of the feature that is not extracted into dedicated members. The data-type is `byte[]`.
+
+## Optional-Members
+These are optional standard members with some logic of what the represent. They as well have standard [JSON] paths where the information normally can be found.
+
 ### GeometryMember
 ### RefPointMember
 ### AttachmentMember
-
 ### CreatedAtMember
 ### UpdatedAtMember
 ### HashMember
@@ -1432,9 +1631,6 @@ We do not allow secondary unique indices, because this would not work with parti
 ### AuthorMember
 ### AuthorTsMember
 ### TagsMember
-### OriginMember
-### ClusterMember
-### ReplacementMember
 
 ### OriginMember
 The `origin` is an optional value, if enabled it stores a [reference] to the origin of a [feature]. When a [feature] is modified, normally the _metadata_ of the new [tuple] is not modified by the client. Therefore, the moment the new [tuple] is sent to a storage, the storage can check the [tuple-number] of the [tuple], which will refer to the state the client modified. If this state is located outside the [collection] into which the new [tuple] is stored, the storage automatically fills the `origin` field with a reference to the origin state.
@@ -1449,7 +1645,15 @@ A replacement is a special form of clustering. For example, when splitting a top
 
 , so that it is possible to find all [feature] that belong to the same replacement operation. This is especially useful for tracking the history of changes, and for debugging purposes.
 
-TODO
+### PubTimeMember
+The publication time as `Timestamp`, so actually a `long`. This is set together with [PubVersionMember].
+
+### PubVersionMember
+The publication version as `long`.
+
+TODO: Explain why we need a publications version. So, publication versions have no holes, and they are the order in which the data has become visible. They are the only reliable way to replicate the data, as versions can be uncommitted.
+
+### TODO
 
 - `global`: A custom global version, which is a 52-bit unsigned integer.
 - `next_global`: The next global version, `null` if this is the latest global version.
@@ -1460,7 +1664,7 @@ These fields can be used by applications to track versions with custom informati
 
 The `global_version` field can be used to translate global versions into local versions.
 
-### Feature Members
+#### Feature Members
 As mentioned, members are mapped into a [GeoJSON] _feature_ and vice versa, so the [GeoJSON] feature is split into members. The default members are mapped like following:
 
 | Member               | Name         | [JSON] Path      | Relocate | Data-Type   | Description                                                                                        |
@@ -1480,7 +1684,7 @@ As mentioned, members are mapped into a [GeoJSON] _feature_ and vice versa, so t
 
 All the columns flagged as _relocate_ can be relocated to a different JSON path in the configuration of the collection. Beware, this can be modified later, because it only defines where the values are exposed, when converting the feature into [GeoJSON].
 
-### Xyz Members
+#### Xyz Members
 For historic reasons this specification formally defines a standard XYZ column-set. This is a map of dedicated members for all [features] stored in a [collection], following the historic XYZ pattern. In classic systems _metadata_ was exposed in `properties["@ns:com:here:xyz"]`. The pre-defined XYZ column-set is defined as:
 
 | Member              | [JSON] Path                                     | Data-Type         | Description                                                                                                        |
@@ -1590,10 +1794,12 @@ public class DataManager extends DataTupleStorage{
 }
 ```
 
+---
+
 ## Changes
 The following changes have been made to the data model between the original draft and the current version:
 
-- The biggest change is that we now merge `lib-base`, `lib-jbon`, `lib-json`, and `lib-model` into one library, being `lib-data`.
+- The biggest change is that we now merge `lib-base`, `lib-jbon`, `lib-json`, `lib-geo`, and `lib-model` into one library, being `lib-data`.
   - This simplifies everything and makes it more consistent.
   - Clients that include `lib-data` always have everything they need.
 - We made the difference between JSON objects and proxies clear.
@@ -1609,6 +1815,8 @@ The following changes have been made to the data model between the original draf
 - Most members have been made optional.
   - This reduces the mandatory overhead per tuple to only 16 byte in _HEAD_ and 24 byte in _HISTORY_.
   - Again, this is important for internal projects, where we store billions of features.
+
+---
 
 [Indices]: #indices
 [indices]: #indices
@@ -1634,9 +1842,9 @@ The following changes have been made to the data model between the original draf
 [Tuple]: #tuple
 [tuple]: #tuple
 [tuples]: #tuple
-[Tuple-Number]: #tuple-number
-[tuple-number]: #tuple-number
-[tuple-numbers]: #tuple-number
+[Tuple-Number]: #tuplenumber
+[tuple-number]: #tuplenumber
+[tuple-numbers]: #tuplenumber
 [Reference]: #references
 [reference]: #references
 [References]: #references
@@ -1655,18 +1863,18 @@ The following changes have been made to the data model between the original draf
 [Partitioning]: #versioning
 [partitioning]: #versioning
 [Data]: #data
-[Data Member]: #datamember
-[data member]: #datamember
-[data members]: #datamember
-[member]: #datamember
-[members]: #datamember
-[Data Index]: #dataindex
-[data index]: #dataindex
-[data indices]: #dataindex
-[data indexes]: #dataindex
-[index]: #dataindex
-[indices]: #dataindex
-[indexes]: #dataindex
+[Data Member]: #memberproxy
+[data member]: #memberproxy
+[data members]: #memberproxy
+[member]: #memberproxy
+[members]: #memberproxy
+[Data Index]: #indexproxy
+[data index]: #indexproxy
+[data indices]: #indexproxy
+[data indexes]: #indexproxy
+[index]: #indexproxy
+[indices]: #indexproxy
+[indexes]: #indexproxy
 [Origin]: #originmember
 [origin]: #originmember
 [Cluster]: #clustermember
@@ -1697,19 +1905,3 @@ The following changes have been made to the data model between the original draf
 [NFKD]: https://www.unicode.org/reports/tr15/#Norm_Forms
 [MurMur3]: https://en.wikipedia.org/wiki/MurmurHash
 [murmur3]: https://en.wikipedia.org/wiki/MurmurHash
-
-
-
-```
-	1.	Lead contact of RCA? - Alexander Lowey-Weber
-	2.	Likelihood of reoccurrence (Low/Medium/High)? - Low
-	3.	Mitigation plan in case of reoccurrence? - None
-	4.	Preliminary root cause (Fault Diagnosis and Initial Root Cause Analysis) - Network issue, connection failed to HERE account and AWS S3 at the same time, very likely, and no errors in HA logs.
-	5.	Corrective Actions? (What happened and what action resolved the issue? - None
-	6.	Lessons Learned/Recommendations? - None
-	7.	Impact Statement (Customer impact---What couldn't the customers do or receive?) - None, because related to HERE internal network
-	8.	Start Time and End Time in UTC - ?
-	9.	Was the manual failover implemented within first 10 mins (Yes/No). If no, why not? (NOT APPPLICABLE) 
- 10.  If Incident caused by a change, were all the change deployment checklist items complied with? What checklist item(s) were missed that lead to this incident? No Change
-
-```

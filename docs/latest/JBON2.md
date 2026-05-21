@@ -26,13 +26,11 @@ As the format name indicates, this format is object-oriented. All **JBON** data 
 - `String`: A special _**unit**_ that encodes a list of [UNICODE] code points, optionally including [references] to sub-strings. Strings are split using the [UNICODE] word boundary algorithm from [ICU4J].
 - `Binary`: A special _**unit**_ that encodes a types binary as byte-array, i.e. [TWKB].
 - `Array`: A list of _**units**_.
+- `Set`: A unique list of _**units**_.
 - `Map`: A list of key-value pairs.
-- `ArrayKind`: An array template with default values, plus some optional annotations.
-- `MapKind`: A map template with keys and _(optionally)_ default values, plus some optional annotations.
 - `TupleNumber`: A special standardized addressing scheme for [Tuple], defined in the [Naksha data model].
 - `Tuple`: A special encoding of a _**unit**_ with some metadata to cooperate with the [Naksha data model].
 - `Book`: A special container _(basically an array)_ of _**units**_ that can be referred to.
-- `Annotation`: A special _**unit**_ that can be attached to some other _**units**_, to add metadata.
 
 The header of all _**units**_ start with the **lead-in** byte, which identifies the type of the _**unit**_ and in some special cases indicates it's value (one-byte encoding). If **lead-in** byte signals anything except a [primitive] or empty _**unit**_, then it is followed by an unsigned integer encoded in 1, 2 or 4 byte (big-endian) storing the total size of structure/string in byte. This can be used to skip over the _**unit**_ by adding the value to the current offset. Therefore, all _**units**_ always have a size, either implicit or explicit. This allows a decoder to navigate the data without parsing, just by remembering the start of the _**unit**_, next to the offset within the _**unit**_, if the _**unit**_ is navigatable. These values can be encoded in a single long, simplifying a navigation stack implementation.
 
@@ -165,10 +163,11 @@ All _**units**_ start with a **lead-in** byte, which describes the actual type o
     - tttt=1: [Array]
     - tttt=2: [Set]
     - tttt=3: [Map]
-    - tttt=4: [TupleNumber]
-    - tttt=5: [Tuple]
-    - tttt=6: [Book]
-    - tttt=7-15: _reserved_
+    - tttt=4: [Object]
+    - tttt=5: [TupleNumber]
+    - tttt=6: [Tuple]
+    - tttt=7: [Book]
+    - tttt=8-15: _reserved_
 
 Technically, the **lead-in** byte can be decoded using one big switch statement with 256 cases (128 negative, 128 positive). The negatives are [String] and [Structures], while the positives are [primitives]. Beware that [primitives] must not be replaced with [References]. Therefore, because the [reference] is treated as [primitive], it is not possible to have a [reference] to a [reference], which simplifies the implementation and reduces the possibility of circular [references].
 
@@ -470,10 +469,37 @@ A map is a key-value store with the **lead-in** byte being `11ss_0011`; with `ss
 | lead_in   | `byte`                   | The **lead-in** byte, `11ss_0011`.                                    |
 | byte_size | `int32`                  | The total size of the structure, including the **lead-in**, in bytes. |
 | keys      | [Set]<[unit]>            | The keys.                                                             |
-| template  | [ref]<[Array]<[unit]?>>? | An optional [reference] to a template.                                |
+| template  | [ref]<[Array]<[unit]?>>? | An optional [reference] to a value template.                          |
 | values    | [Array]<[unit]?>         | The values, in same same order as keys, and with the same length.     |
 
-If the `byte_size` is zero _(**lead-in** is `1100_0010`)_ , this implies an empty map (`{}`). This means, there is minimally one entry, when the byte-size is greater than zero!
+If the `byte_size` is zero _(**lead-in** is `1100_0011`)_ , this implies an empty map (`{}`). This means, there is minimally one entry, when the byte-size is greater than zero!
+
+If a value is `default`, the decoder reads the value from the `template`. If no `template` is available or there are too few values in the `template`, then the value becomes `null`, **not** `undefined`! Therefore, the `default` _**unit**_ never becomes `undefined`!
+
+If a value is `undefined` _(explicit or implicit)_, the entry is removed from the map. This is a way to remove keys from the map, when the used `keys` contain too many entries. Encoders can optimize encoding by referring to keys that are larger than what is needed.
+
+Encoders can use this definition by moving the keys that are most often removed to the end of the keys-set. In that case the map can be truncated by the encoder, so that those keys that need to be removed are located at the end of the `values` array. This will automatically make their value `undefined` and, therefore, they are removed.
+
+**Notes**
+- To stay [JSON] compatible, keys of the map should be [String] only.
+
+#### Logical Bytes
+The [logical bytes] of the map are created by adding the empty **lead-in** `1100_0010`, followed by all entries, in ascending order of the keys. Therefore, first an internal key list is created, then [sorted] ascending. Afterward, all keys are iterated, adding the key and value to the [logical bytes]. This is done to ensure that two maps always generate the same [logical bytes], when they contain the same entries; independent of the encoding and entry order. Note that by sorting the keys, we ensure that the order of the keys do not matter for the [logical bytes], which is important so that `{a:1,b:2}` actually equals `{b:2,a:1}`.
+
+Encoders can use the [logical bytes] of the `keys` to find similarities.
+
+### Object
+An object is a key-value store with the **lead-in** byte being `11ss_0100`; with `ss` encoding the size of the size, as usual. All keys must be [strings].
+
+| Name      | Type                     | Description                                                           |
+|-----------|--------------------------|-----------------------------------------------------------------------|
+| lead_in   | `byte`                   | The **lead-in** byte, `11ss_0100`.                                    |
+| byte_size | `int32`                  | The total size of the structure, including the **lead-in**, in bytes. |
+| keys      | [Set]<[string]>          | The keys.                                                             |
+| template  | [ref]<[Array]<[unit]?>>? | An optional [reference] to a value template.                          |
+| values    | [Array]<[unit]?>         | The values, in same same order as keys, and with the same length.     |
+
+If the `byte_size` is zero _(**lead-in** is `1100_0100`)_ , this implies an empty object (`{}`). This means, there is minimally one entry, when the byte-size is greater than zero!
 
 If a value is `default`, the decoder reads the value from the `template`. If no `template` is available or there are too few values in the `template`, then the value becomes `null`, **not** `undefined`! Therefore, the `default` _**unit**_ never becomes `undefined`!
 
@@ -897,66 +923,71 @@ Clearly, we could somehow add the dictionaries and text encoding to [CBOR] using
 ## Const
 The `const` book is a special book, which is not encoded in the binary, but is hardcoded in the specification. It contains values that are commonly used, so that they do not have to be encoded in the binary, but can be just referenced by their index in the `const` book. This saves space and makes encoding more efficient.
 
-| Number  | Const                      | Value                      | Description                                                                                   |
-|---------|----------------------------|----------------------------|-----------------------------------------------------------------------------------------------|
-| `0001`  | `NAKSHA`                   | `Naksha`                   |                                                                                               |
-| `0002`  | `GEO_JSON`                 | `GeoJSON`                  |                                                                                               |
-| `0003`  | `JSON`                     | `JSON`                     |                                                                                               |
-| `0004`  | `PROPERTIES`               | `properties`               |                                                                                               |
-| `0005`  | `GEOMETRY`                 | `geometry`                 |                                                                                               |
-| `0006`  | `REFERENCE_POINT`          | `referencePoint`           |                                                                                               |
-| `0007`  | `NS_COM_HERE_XYZ`          | `@ns:com:here:xyz`         | The XYZ namespace key.                                                                        |
-|         |                            |                            |                                                                                               |
-| `7000`  | `APPLICATION_OCTET_STREAM` | `application/octet-stream` | The MIME-type for arbitrary binaries _(`byte[]` / `Int8Array`)_.                              |
-| `7001`  | `APPLICATION_JBON`         | `application/jbon`         | The custom MIME-type for **JBON** binaries _(`byte[]` / `Int8Array`)_.                        |
-| `7002`  | `APPLICATION_TEXT`         | `application/text`         | The MIME-type for arbitrary text _(`String` / `String`)_.                                     |
-| `7003`  | `APPLICATION_JSON`         | `application/json`         | The custom MIME-type for **JSON** strings _(`String` / `String`)_.                            |
-| `7004`  | `APPLICATION_TWKB`         | `application/twkb`         | The custom MIME-type for [TWKB] binaries _(`byte[]` / `Int8Array`)_.                          |
-| `7005`  | `APPLICATION_TIMESTAMP`    | `application/epoch`        | The custom MIME-type for a EPOCH timestamp in milliseconds _(`long` / `Number`)_.             |
-| `7006`  | `APPLICATION_BOOLEAN`      | `application/boolean`      | The custom MIME-type for a 8-bit integer in JSON comatible encoding _(`boolean` / `Number`)_. |
-| `7007`  | `APPLICATION_INT`          | `application/int`          | The custom MIME-type for a 16-bit integer in JSON comatible encoding _(`int` / `Number`)_.    |
-| `7008`  | `APPLICATION_LONG`         | `application/long`         | The custom MIME-type for a 64-bit integer in JSON comatible encoding _(`long` / `BigInt`)_.   |
-| `7009`  | `APPLICATION_DOUBLE`       | `application/double`       | The custom MIME-type for a 32-bit integer in JSON comatible encoding _(`double` / `Number`)_. |
-|         |                            |                            |                                                                                               |
-| `7070`  | `APPLICATION_INT8A`        | `application/int8a`        | The custom MIME-type for a 8-bit integer-array _(`byte[]` / `Int8Array`)_.                    |
-| `7071`  | `APPLICATION_INT16A`       | `application/int16a`       | The custom MIME-type for a 16-bit integer-array _(`short[]` / `Int16Array`)_.                 |
-| `7072`  | `APPLICATION_INT32A`       | `application/int32a`       | The custom MIME-type for a 32-bit integer-array _(`int[]` / `Int32Array`)_.                   |
-| `7073`  | `APPLICATION_INT64A`       | `application/int64a`       | The custom MIME-type for a 64-bit integer-array _(`long[]` / `BigInt64Array`)_.               |
-| `7074`  | `APPLICATION_INT128A`      | `application/int128a`      | The custom MIME-type for a 128-bit integer-array.                                             |
-|         |                            |                            |                                                                                               |
-| `7080`  | `APPLICATION_FLOAT8A`      | `application/float8a`      | The custom MIME-type for a 8-bit floating-point-array.                                        |
-| `7081`  | `APPLICATION_FLOAT16A`     | `application/float16a`     | The custom MIME-type for a 16-bit floating-point-array _(N/A / `Float16Array`)_.              |
-| `7082`  | `APPLICATION_FLOAT32A`     | `application/float32a`     | The custom MIME-type for a 32-bit floating-point-array _(`float[]` / `Float32Array`)_.        |
-| `7083`  | `APPLICATION_FLOAT64A`     | `application/float64a`     | The custom MIME-type for a 64-bit floating-point-array _(`double[]` / `Float64Array`)_.       |
-| `7084`  | `APPLICATION_FLOAT128A`    | `application/float128a`    | The custom MIME-type for a 128-bit floating-point-array.                                      |
-|         |                            |                            |                                                                                               |
-| `7100`  | `CONTENT_ENCODING`         | `content-encoding`         | The encoding or compression algorithm being used in a [Binary] _(or other places)_.           |
-| `7101`  | `GZIP`                     | `GZIP`                     | The binary is [GZIP] compressed.                                                              |
-| `7102`  | `LZ4`                      | `LZ4`                      | The binary is [LZ4] compressed.                                                               |
-|         |                            |                            |                                                                                               |
-| `7200`  | `CHARSET`                  | `charset`                  | The character-set being used in a [Binary] _(or other places)_.                               |
-| `7201`  | `ISO_8859_1`               | `ISO-8859-1`               | Legacy Western European.                                                                      |
-| `7202`  | `ISO_8859_2`               | `ISO-8859-2`               | Legacy Central/Eastern European.                                                              |
-| `7205`  | `ISO_8859_5`               | `ISO-8859-5`               | Legacy Cyrillic.                                                                              |
-| `7215`  | `ISO_8859_15`              | `ISO-8859-15`              | Legacy Western European, same as `ISO-8859-1`, but includes `€`.                              |
-| `7219`  | `US_ASCII`                 | `US-ASCII`                 |                                                                                               |
-|         |                            |                            |                                                                                               |
-| `7220`  | `UTF_8`                    | `UTF-8`                    | UTF-8 encoding.                                                                               |
-| `7221`  | `UTF_16`                   | `UTF-16`                   | UTF-16 in platform encoding.                                                                  |
-| `7222`  | `UTF_16BE`                 | `UTF-16BE`                 | UTF-16 in big-endian byte-order _(network byte order)_.                                       |
-| `7223`  | `UTF_16LE`                 | `UTF-16LE`                 | UTF-16 in little-endian byte-order.                                                           |
-| `7224`  | `UTF_32`                   | `UTF-32`                   | UTF-32 in platform encoding.                                                                  |
-| `7225`  | `UTF_32BE`                 | `UTF-32BE`                 | UTF-32 in big-endian byte-order _(network byte order)_.                                       |
-| `7226`  | `UTF_32LE`                 | `UTF-32LE`                 | UTF-32 in little-endian byte-order.                                                           |
-|         |                            |                            |                                                                                               |
-| `7230`  | `SHIFT_JIS`                | `Shift_JIS`                | Legacy Japanese.                                                                              |
-| `7231`  | `EUC_JP`                   | `EUC-JP`                   | Legacy Japanese.                                                                              |
-| `7232`  | `GBK`                      | `GBK`                      | Legacy Common Chinese.                                                                        |
-| `7233`  | `BIG5`                     | `Big5`                     | Legacy Traditional Chinese.                                                                   |
-| `7234`  | `KOI8_R`                   | `KOI8-R`                   | Legacy Russian.                                                                               |
-|         |                            |                            |                                                                                               |
-| `7251`  | `WINDOWS_1251`             | `Windows-1251`             | Very common legacy Western encoding on Windows.                                               |
-| `7252`  | `WINDOWS_1252`             | `Windows-1252`             | Cyrillic on Windows.                                                                          |
+| Number | Const                      | Value                      | Description                                                                                                                 |
+|--------|----------------------------|----------------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| `0001` | `NAKSHA`                   | `Naksha`                   |                                                                                                                             |
+| `0002` | `GEO_JSON`                 | `GeoJSON`                  |                                                                                                                             |
+| `0003` | `JSON`                     | `JSON`                     |                                                                                                                             |
+| `0004` | `PROPERTIES`               | `properties`               |                                                                                                                             |
+| `0005` | `GEOMETRY`                 | `geometry`                 |                                                                                                                             |
+| `0006` | `REFERENCE_POINT`          | `referencePoint`           |                                                                                                                             |
+| `0007` | `NS_COM_HERE_XYZ`          | `@ns:com:here:xyz`         | The XYZ namespace key.                                                                                                      |
+|        |                            |                            |                                                                                                                             |
+| `7000` | `APPLICATION_OCTET_STREAM` | `application/octet-stream` | The MIME-type for arbitrary binaries _(`byte[]` / `Int8Array`)_.                                                            |
+| `7001` | `APPLICATION_JBON`         | `application/jbon`         | The custom MIME-type for **JBON** binaries _(`byte[]` / `Int8Array`)_.                                                      |
+| `7002` | `APPLICATION_TWKB`         | `application/twkb`         | The custom MIME-type for [TWKB] binaries _(`byte[]` / `Int8Array`)_.                                                        |
+| `7003` | `APPLICATION_TIMESTAMP`    | `application/epoch`        | The custom MIME-type for a EPOCH timestamp in milliseconds _(`long` / `Number`)_.                                           |
+| `7004` | `APPLICATION_BOOLEAN`      | `application/boolean`      | The custom MIME-type for a 8-bit integer in JSON comatible encoding _(`boolean` / `Number`)_.                               |
+| `7005` | `APPLICATION_INT`          | `application/int`          | The custom MIME-type for a 16-bit integer in JSON comatible encoding _(`int` / `Number`)_.                                  |
+| `7006` | `APPLICATION_LONG`         | `application/long`         | The custom MIME-type for a 64-bit integer in JSON comatible encoding _(`long` / `BigInt`)_.                                 |
+| `7007` | `APPLICATION_DOUBLE`       | `application/double`       | The custom MIME-type for a 32-bit integer in JSON comatible encoding _(`double` / `Number`)_.                               |
+|        |                            |                            |                                                                                                                             |
+| `7010` | `APPLICATION_TEXT`         | `application/text`         | The MIME-type for arbitrary text _(`String` / `String`)_.                                                                   |
+| `7011` | `APPLICATION_JSON`         | `application/json`         | The custom MIME-type for **JSON** strings _(`String` / `String`)_.                                                          |
+| `7012` | `APPLICATION_JSON64`       | `application/json64`       | The custom MIME-type for **JSON** with suport for 64-bit integer _(`String` / `String`)_.                                   |
+| `7013` | `APPLICATION_JSONC`        | `application/jsonc`        | The custom MIME-type for **JSON** with comments _(`String` / `String`)_.                                                    |
+| `7013` | `APPLICATION_JSONC64`      | `application/jsonc64`      | The custom MIME-type for **JSON** with comments, and 64-bit integers _(`String` / `String`)_.                               |
+| `7014` | `APPLICATION_JSONX`        | `application/jsonx`        | The custom MIME-type for **JSON** with comments, 64-bit integers, sets, maps, and primitive-arrays _(`String` / `String`)_. |
+|        |                            |                            |                                                                                                                             |
+| `7070` | `APPLICATION_INT8A`        | `application/int8a`        | The custom MIME-type for a 8-bit integer-array _(`byte[]` / `Int8Array`)_.                                                  |
+| `7071` | `APPLICATION_INT16A`       | `application/int16a`       | The custom MIME-type for a 16-bit integer-array _(`short[]` / `Int16Array`)_.                                               |
+| `7072` | `APPLICATION_INT32A`       | `application/int32a`       | The custom MIME-type for a 32-bit integer-array _(`int[]` / `Int32Array`)_.                                                 |
+| `7073` | `APPLICATION_INT64A`       | `application/int64a`       | The custom MIME-type for a 64-bit integer-array _(`long[]` / `BigInt64Array`)_.                                             |
+| `7074` | `APPLICATION_INT128A`      | `application/int128a`      | The custom MIME-type for a 128-bit integer-array.                                                                           |
+|        |                            |                            |                                                                                                                             |
+| `7080` | `APPLICATION_FLOAT8A`      | `application/float8a`      | The custom MIME-type for a 8-bit floating-point-array.                                                                      |
+| `7081` | `APPLICATION_FLOAT16A`     | `application/float16a`     | The custom MIME-type for a 16-bit floating-point-array _(N/A / `Float16Array`)_.                                            |
+| `7082` | `APPLICATION_FLOAT32A`     | `application/float32a`     | The custom MIME-type for a 32-bit floating-point-array _(`float[]` / `Float32Array`)_.                                      |
+| `7083` | `APPLICATION_FLOAT64A`     | `application/float64a`     | The custom MIME-type for a 64-bit floating-point-array _(`double[]` / `Float64Array`)_.                                     |
+| `7084` | `APPLICATION_FLOAT128A`    | `application/float128a`    | The custom MIME-type for a 128-bit floating-point-array.                                                                    |
+|        |                            |                            |                                                                                                                             |
+| `7100` | `CONTENT_ENCODING`         | `content-encoding`         | The encoding or compression algorithm being used in a [Binary] _(or other places)_.                                         |
+| `7101` | `GZIP`                     | `GZIP`                     | The binary is [GZIP] compressed.                                                                                            |
+| `7102` | `LZ4`                      | `LZ4`                      | The binary is [LZ4] compressed.                                                                                             |
+|        |                            |                            |                                                                                                                             |
+| `7200` | `CHARSET`                  | `charset`                  | The character-set being used in a [Binary] _(or other places)_.                                                             |
+| `7201` | `ISO_8859_1`               | `ISO-8859-1`               | Legacy Western European.                                                                                                    |
+| `7202` | `ISO_8859_2`               | `ISO-8859-2`               | Legacy Central/Eastern European.                                                                                            |
+| `7205` | `ISO_8859_5`               | `ISO-8859-5`               | Legacy Cyrillic.                                                                                                            |
+| `7215` | `ISO_8859_15`              | `ISO-8859-15`              | Legacy Western European, same as `ISO-8859-1`, but includes `€`.                                                            |
+| `7219` | `US_ASCII`                 | `US-ASCII`                 |                                                                                                                             |
+|        |                            |                            |                                                                                                                             |
+| `7220` | `UTF_8`                    | `UTF-8`                    | UTF-8 encoding.                                                                                                             |
+| `7221` | `UTF_16`                   | `UTF-16`                   | UTF-16 in platform encoding.                                                                                                |
+| `7222` | `UTF_16BE`                 | `UTF-16BE`                 | UTF-16 in big-endian byte-order _(network byte order)_.                                                                     |
+| `7223` | `UTF_16LE`                 | `UTF-16LE`                 | UTF-16 in little-endian byte-order.                                                                                         |
+| `7224` | `UTF_32`                   | `UTF-32`                   | UTF-32 in platform encoding.                                                                                                |
+| `7225` | `UTF_32BE`                 | `UTF-32BE`                 | UTF-32 in big-endian byte-order _(network byte order)_.                                                                     |
+| `7226` | `UTF_32LE`                 | `UTF-32LE`                 | UTF-32 in little-endian byte-order.                                                                                         |
+|        |                            |                            |                                                                                                                             |
+| `7230` | `SHIFT_JIS`                | `Shift_JIS`                | Legacy Japanese.                                                                                                            |
+| `7231` | `EUC_JP`                   | `EUC-JP`                   | Legacy Japanese.                                                                                                            |
+| `7232` | `GBK`                      | `GBK`                      | Legacy Common Chinese.                                                                                                      |
+| `7233` | `BIG5`                     | `Big5`                     | Legacy Traditional Chinese.                                                                                                 |
+| `7234` | `KOI8_R`                   | `KOI8-R`                   | Legacy Russian.                                                                                                             |
+|        |                            |                            |                                                                                                                             |
+| `7251` | `WINDOWS_1251`             | `Windows-1251`             | Very common legacy Western encoding on Windows.                                                                             |
+| `7252` | `WINDOWS_1252`             | `Windows-1252`             | Cyrillic on Windows.                                                                                                        |
 
 ## Java
 This section documents the Java API for **JBON**.
@@ -1089,18 +1120,23 @@ public final class JbonBinary implements IJbonStruct {
   private final @NotNull JbonUnit unit;
   @Override public @NotNull JbonUnit unit() { return unit; }
 }
-public abstract class JbonObject extends Proxyable implements IJbonStruct, IObject, IProxyable {
-  public JbonObject(@NotNull JbonUnit unit) { this.unit = unit; }
+public abstract class JbonStruct extends Proxyable implements IJbonStruct, IStruct, IProxyable {
+  public JbonStruct(@NotNull JbonUnit unit) { this.unit = unit; }
   private final @NotNull JbonUnit unit;
   @Override public @NotNull JbonUnit unit() { return unit; }
+  // TODO: Add implementation of `copy()`
+  //       Implement `mut()`, throwing an exception when copy argument is false, otherwise just returning `this.copy(true)`.
 }
-public final class JbonArray extends JbonObject implements IArray {
+public final class JbonArray extends JbonStruct implements IArray {
   public JbonArray(@NotNull JbonUnit unit) { super(unit); }
 }
-public final class JbonSet extends JbonObject implements ISet {
-  public JbonObject(@NotNull JbonUnit unit) { super(unit); }
+public final class JbonSet extends JbonStruct implements ISet {
+  public JbonStruct(@NotNull JbonUnit unit) { super(unit); }
 }
-public final class JbonMap extends JbonObject implements IMap {
+public final class JbonMap extends JbonStruct implements IMap {
+  public JbonMap(@NotNull JbonUnit unit) { super(unit); }
+}
+public final class JbonObject extends JbonStruct implements IObject {
   public JbonMap(@NotNull JbonUnit unit) { super(unit); }
 }
 public final class JbonTupleNumber implements IJbonStruct, ITuple {
