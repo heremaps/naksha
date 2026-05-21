@@ -897,63 +897,66 @@ Clearly, we could somehow add the dictionaries and text encoding to [CBOR] using
 ## Const
 The `const` book is a special book, which is not encoded in the binary, but is hardcoded in the specification. It contains values that are commonly used, so that they do not have to be encoded in the binary, but can be just referenced by their index in the `const` book. This saves space and makes encoding more efficient.
 
-| Number | Const                      | Value                      | Description                                                                                 |
-|--------|----------------------------|----------------------------|---------------------------------------------------------------------------------------------|
-| `0001` | `NAKSHA`                   | `Naksha`                   |                                                                                             |
-| `0002` | `GEO_JSON`                 | `GeoJSON`                  |                                                                                             |
-| `0003` | `JSON`                     | `JSON`                     |                                                                                             |
-| `0004` | `PROPERTIES`               | `properties`               |                                                                                             |
-| `0005` | `GEOMETRY`                 | `geometry`                 |                                                                                             |
-| `0006` | `REFERENCE_POINT`          | `referencePoint`           |                                                                                             |
-| `0007` | `NS_COM_HERE_XYZ`          | `@ns:com:here:xyz`         | The XYZ namespace key.                                                                      |
-|        |                            |                            |                                                                                             |
-| `7000` | `APPLICATION_OCTET_STREAM` | `application/octet-stream` | The MIME-type for arbitrary binaries _(`byte[]` / `Int8Array`)_.                            |
-| `7001` | `APPLICATION_JBON`         | `application/jbon`         | The custom MIME-type for **JBON** binaries _(`byte[]` / `Int8Array`)_.                      |
-| `7002` | `APPLICATION_TEXT`         | `application/text`         | The MIME-type for arbitrary text _(`String` / `String`)_.                                   |
-| `7003` | `APPLICATION_JSON`         | `application/json`         | The custom MIME-type for **JSON** strings _(`String` / `String`)_.                          |
-| `7004` | `APPLICATION_TWKB`         | `application/twkb`         | The custom MIME-type for [TWKB] binaries _(`byte[]` / `Int8Array`)_.                        |
-| `7005` | `APPLICATION_TIMESTAMP`    | `application/epoch`        | The custom MIME-type for a EPOCH timestamp in milliseconds _(`long` / `Number`)_.           |
-| `7006` | `APPLICATION_BIGINT`       | `application/bigint`       | The custom MIME-type for a 64-bit integer in JSON comatible encoding _(`long` / `BigInt`)_. |
-|        |                            |                            |                                                                                             |
-| `7070` | `APPLICATION_INT8A`        | `application/int8a`        | The custom MIME-type for a 8-bit integer-array _(`byte[]` / `Int8Array`)_.                  |
-| `7071` | `APPLICATION_INT16A`       | `application/int16a`       | The custom MIME-type for a 16-bit integer-array _(`short[]` / `Int16Array`)_.               |
-| `7072` | `APPLICATION_INT32A`       | `application/int32a`       | The custom MIME-type for a 32-bit integer-array _(`int[]` / `Int32Array`)_.                 |
-| `7073` | `APPLICATION_INT64A`       | `application/int64a`       | The custom MIME-type for a 64-bit integer-array _(`long[]` / `BigInt64Array`)_.             |
-| `7074` | `APPLICATION_INT128A`      | `application/int128a`      | The custom MIME-type for a 128-bit integer-array .                                          |
-|        |                            |                            |                                                                                             |
-| `7080` | `APPLICATION_FLOAT8A`      | `application/float8a`      | The custom MIME-type for a 8-bit floating-point-array.                                      |
-| `7081` | `APPLICATION_FLOAT16A`     | `application/float16a`     | The custom MIME-type for a 16-bit floating-point-array _(N/A / `Float16Array`)_.            |
-| `7082` | `APPLICATION_FLOAT32A`     | `application/float32a`     | The custom MIME-type for a 32-bit floating-point-array _(`float[]` / `Float32Array`)_.      |
-| `7083` | `APPLICATION_FLOAT64A`     | `application/float64a`     | The custom MIME-type for a 64-bit floating-point-array _(`double[]` / `Float64Array`)_.     |
-| `7084` | `APPLICATION_FLOAT128A`    | `application/float128a`    | The custom MIME-type for a 128-bit floating-point-array.                                    |
-|        |                            |                            |                                                                                             |
-| `7100` | `CONTENT_ENCODING`         | `content-encoding`         | The encoding or compression algorithm being used in a [Binary] _(or other places)_.         |
-| `7101` | `GZIP`                     | `GZIP`                     | The binary is [GZIP] compressed.                                                            |
-| `7102` | `LZ4`                      | `LZ4`                      | The binary is [LZ4] compressed.                                                             |
-|        |                            |                            |                                                                                             |
-| `7200` | `CHARSET`                  | `charset`                  | The character-set being used in a [Binary] _(or other places)_.                             |
-| `7201` | `ISO_8859_1`               | `ISO-8859-1`               | Legacy Western European.                                                                    |
-| `7202` | `ISO_8859_2`               | `ISO-8859-2`               | Legacy Central/Eastern European.                                                            |
-| `7205` | `ISO_8859_5`               | `ISO-8859-5`               | Legacy Cyrillic.                                                                            |
-| `7215` | `ISO_8859_15`              | `ISO-8859-15`              | Legacy Western European, same as `ISO-8859-1`, but includes `€`.                            |
-| `7219` | `US_ASCII`                 | `US-ASCII`                 |                                                                                             |
-|        |                            |                            |                                                                                             |
-| `7220` | `UTF_8`                    | `UTF-8`                    | UTF-8 encoding.                                                                             |
-| `7221` | `UTF_16`                   | `UTF-16`                   | UTF-16 in platform encoding.                                                                |
-| `7222` | `UTF_16BE`                 | `UTF-16BE`                 | UTF-16 in big-endian byte-order _(network byte order)_.                                     |
-| `7223` | `UTF_16LE`                 | `UTF-16LE`                 | UTF-16 in little-endian byte-order.                                                         |
-| `7224` | `UTF_32`                   | `UTF-32`                   | UTF-32 in platform encoding.                                                                |
-| `7225` | `UTF_32BE`                 | `UTF-32BE`                 | UTF-32 in big-endian byte-order _(network byte order)_.                                     |
-| `7226` | `UTF_32LE`                 | `UTF-32LE`                 | UTF-32 in little-endian byte-order.                                                         |
-|        |                            |                            |                                                                                             |
-| `7230` | `SHIFT_JIS`                | `Shift_JIS`                | Legacy Japanese.                                                                            |
-| `7231` | `EUC_JP`                   | `EUC-JP`                   | Legacy Japanese.                                                                            |
-| `7232` | `GBK`                      | `GBK`                      | Legacy Common Chinese.                                                                      |
-| `7233` | `BIG5`                     | `Big5`                     | Legacy Traditional Chinese.                                                                 |
-| `7234` | `KOI8_R`                   | `KOI8-R`                   | Legacy Russian.                                                                             |
-|        |                            |                            |                                                                                             |
-| `7251` | `WINDOWS_1251`             | `Windows-1251`             | Very common legacy Western encoding on Windows.                                             |
-| `7252` | `WINDOWS_1252`             | `Windows-1252`             | Cyrillic on Windows.                                                                        |
+| Number  | Const                      | Value                      | Description                                                                                   |
+|---------|----------------------------|----------------------------|-----------------------------------------------------------------------------------------------|
+| `0001`  | `NAKSHA`                   | `Naksha`                   |                                                                                               |
+| `0002`  | `GEO_JSON`                 | `GeoJSON`                  |                                                                                               |
+| `0003`  | `JSON`                     | `JSON`                     |                                                                                               |
+| `0004`  | `PROPERTIES`               | `properties`               |                                                                                               |
+| `0005`  | `GEOMETRY`                 | `geometry`                 |                                                                                               |
+| `0006`  | `REFERENCE_POINT`          | `referencePoint`           |                                                                                               |
+| `0007`  | `NS_COM_HERE_XYZ`          | `@ns:com:here:xyz`         | The XYZ namespace key.                                                                        |
+|         |                            |                            |                                                                                               |
+| `7000`  | `APPLICATION_OCTET_STREAM` | `application/octet-stream` | The MIME-type for arbitrary binaries _(`byte[]` / `Int8Array`)_.                              |
+| `7001`  | `APPLICATION_JBON`         | `application/jbon`         | The custom MIME-type for **JBON** binaries _(`byte[]` / `Int8Array`)_.                        |
+| `7002`  | `APPLICATION_TEXT`         | `application/text`         | The MIME-type for arbitrary text _(`String` / `String`)_.                                     |
+| `7003`  | `APPLICATION_JSON`         | `application/json`         | The custom MIME-type for **JSON** strings _(`String` / `String`)_.                            |
+| `7004`  | `APPLICATION_TWKB`         | `application/twkb`         | The custom MIME-type for [TWKB] binaries _(`byte[]` / `Int8Array`)_.                          |
+| `7005`  | `APPLICATION_TIMESTAMP`    | `application/epoch`        | The custom MIME-type for a EPOCH timestamp in milliseconds _(`long` / `Number`)_.             |
+| `7006`  | `APPLICATION_BOOLEAN`      | `application/boolean`      | The custom MIME-type for a 8-bit integer in JSON comatible encoding _(`boolean` / `Number`)_. |
+| `7007`  | `APPLICATION_INT`          | `application/int`          | The custom MIME-type for a 16-bit integer in JSON comatible encoding _(`int` / `Number`)_.    |
+| `7008`  | `APPLICATION_LONG`         | `application/long`         | The custom MIME-type for a 64-bit integer in JSON comatible encoding _(`long` / `BigInt`)_.   |
+| `7009`  | `APPLICATION_DOUBLE`       | `application/double`       | The custom MIME-type for a 32-bit integer in JSON comatible encoding _(`double` / `Number`)_. |
+|         |                            |                            |                                                                                               |
+| `7070`  | `APPLICATION_INT8A`        | `application/int8a`        | The custom MIME-type for a 8-bit integer-array _(`byte[]` / `Int8Array`)_.                    |
+| `7071`  | `APPLICATION_INT16A`       | `application/int16a`       | The custom MIME-type for a 16-bit integer-array _(`short[]` / `Int16Array`)_.                 |
+| `7072`  | `APPLICATION_INT32A`       | `application/int32a`       | The custom MIME-type for a 32-bit integer-array _(`int[]` / `Int32Array`)_.                   |
+| `7073`  | `APPLICATION_INT64A`       | `application/int64a`       | The custom MIME-type for a 64-bit integer-array _(`long[]` / `BigInt64Array`)_.               |
+| `7074`  | `APPLICATION_INT128A`      | `application/int128a`      | The custom MIME-type for a 128-bit integer-array.                                             |
+|         |                            |                            |                                                                                               |
+| `7080`  | `APPLICATION_FLOAT8A`      | `application/float8a`      | The custom MIME-type for a 8-bit floating-point-array.                                        |
+| `7081`  | `APPLICATION_FLOAT16A`     | `application/float16a`     | The custom MIME-type for a 16-bit floating-point-array _(N/A / `Float16Array`)_.              |
+| `7082`  | `APPLICATION_FLOAT32A`     | `application/float32a`     | The custom MIME-type for a 32-bit floating-point-array _(`float[]` / `Float32Array`)_.        |
+| `7083`  | `APPLICATION_FLOAT64A`     | `application/float64a`     | The custom MIME-type for a 64-bit floating-point-array _(`double[]` / `Float64Array`)_.       |
+| `7084`  | `APPLICATION_FLOAT128A`    | `application/float128a`    | The custom MIME-type for a 128-bit floating-point-array.                                      |
+|         |                            |                            |                                                                                               |
+| `7100`  | `CONTENT_ENCODING`         | `content-encoding`         | The encoding or compression algorithm being used in a [Binary] _(or other places)_.           |
+| `7101`  | `GZIP`                     | `GZIP`                     | The binary is [GZIP] compressed.                                                              |
+| `7102`  | `LZ4`                      | `LZ4`                      | The binary is [LZ4] compressed.                                                               |
+|         |                            |                            |                                                                                               |
+| `7200`  | `CHARSET`                  | `charset`                  | The character-set being used in a [Binary] _(or other places)_.                               |
+| `7201`  | `ISO_8859_1`               | `ISO-8859-1`               | Legacy Western European.                                                                      |
+| `7202`  | `ISO_8859_2`               | `ISO-8859-2`               | Legacy Central/Eastern European.                                                              |
+| `7205`  | `ISO_8859_5`               | `ISO-8859-5`               | Legacy Cyrillic.                                                                              |
+| `7215`  | `ISO_8859_15`              | `ISO-8859-15`              | Legacy Western European, same as `ISO-8859-1`, but includes `€`.                              |
+| `7219`  | `US_ASCII`                 | `US-ASCII`                 |                                                                                               |
+|         |                            |                            |                                                                                               |
+| `7220`  | `UTF_8`                    | `UTF-8`                    | UTF-8 encoding.                                                                               |
+| `7221`  | `UTF_16`                   | `UTF-16`                   | UTF-16 in platform encoding.                                                                  |
+| `7222`  | `UTF_16BE`                 | `UTF-16BE`                 | UTF-16 in big-endian byte-order _(network byte order)_.                                       |
+| `7223`  | `UTF_16LE`                 | `UTF-16LE`                 | UTF-16 in little-endian byte-order.                                                           |
+| `7224`  | `UTF_32`                   | `UTF-32`                   | UTF-32 in platform encoding.                                                                  |
+| `7225`  | `UTF_32BE`                 | `UTF-32BE`                 | UTF-32 in big-endian byte-order _(network byte order)_.                                       |
+| `7226`  | `UTF_32LE`                 | `UTF-32LE`                 | UTF-32 in little-endian byte-order.                                                           |
+|         |                            |                            |                                                                                               |
+| `7230`  | `SHIFT_JIS`                | `Shift_JIS`                | Legacy Japanese.                                                                              |
+| `7231`  | `EUC_JP`                   | `EUC-JP`                   | Legacy Japanese.                                                                              |
+| `7232`  | `GBK`                      | `GBK`                      | Legacy Common Chinese.                                                                        |
+| `7233`  | `BIG5`                     | `Big5`                     | Legacy Traditional Chinese.                                                                   |
+| `7234`  | `KOI8_R`                   | `KOI8-R`                   | Legacy Russian.                                                                               |
+|         |                            |                            |                                                                                               |
+| `7251`  | `WINDOWS_1251`             | `Windows-1251`             | Very common legacy Western encoding on Windows.                                               |
+| `7252`  | `WINDOWS_1252`             | `Windows-1252`             | Cyrillic on Windows.                                                                          |
 
 ## Java
 This section documents the Java API for **JBON**.

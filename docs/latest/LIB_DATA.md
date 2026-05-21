@@ -85,107 +85,104 @@ public class DataError extends RuntimeException {
 ## Data Types
 To allow interoperability between different storages, applications, modules, and services, the data model supports a set of pre-defined supported data types:
 
-| Java                 | Idx              | Prim | Type-Emum _(Name)_  | Javascript           | Description                                                                                        |
-|----------------------|------------------|------|---------------------|----------------------|----------------------------------------------------------------------------------------------------|
-| `Undefined`          |                  |      | `UNDEFINED`         | `undefined`          | The undefined type, a singleton in Java.                                                           |
-| `null`               | btree            | yes  | `NULL`              | `null`               | A boolean.                                                                                         |
-| `boolean`            | btree            | yes  | `BOOL`              | `Boolean`            | A boolean.                                                                                         |
-| `byte`               | btree            | yes  | `BYTE`              | `number`             | A 8-bit integer.                                                                                   |
-| `short`              | btree            | yes  | `SHORT`             | `number`             | A 16-bit integer.                                                                                  |
-| `int`                | btree            | yes  | `INT`               | `number`             | A 32-bit integer.                                                                                  |
-| `long`               | btree            | yes  | `LONG`              | `BigInt`             | A 64-bit integer, can be encoded as [JSON] compatible string: `data:application/bigint,{decimal}`. |
-| `float`              | btree            | yes  | `FLOAT`             | `number`             | A 32-bit floating point number.                                                                    |
-| `double`             | btree            | yes  | `DOUBLE`            | `number`             | A 64-bit floating point number.                                                                    |
-| `byte[]`             | btree            |      | `BYTEA`             | `Int8Array`          | A byte-array.                                                                                      |
-| `short[]`            |                  |      | `SHORTA`            | `Int16Array`         | A 16-bit integer array.                                                                            |
-| `int[]`              |                  |      | `INTA`              | `Int32Array`         | A 32-bit integer array.                                                                            |
-| `long[]`             |                  |      | `LONGA`             | `BigInt64Array`      | A 64-bit integer array.                                                                            |
-| `float[]`            |                  |      | `FLOATA`            | `Float32Array`       | A 32-bit floating point number array.                                                              |
-| `double[]`           |                  |      | `DOUBLEA`           | `Float64Array`       | A 64-bit floating point number array.                                                              |
-| `Timestamp`          | btree            | yes  | `TIMESTAMP`         | `Date`               | A 48-bit unsigned interger representing a UNIX epoch timestamp in milliseconds.                    |
-| `String`             | btree            | yes  | `STRING`            | `String`             | A text of [UNICODE] code-points.                                                                   |
-| `Geometry`           |                  |      |                     | `Geometry`           | `org.locationtech.jts.geom.Geometry` - Interface for all geometries, [GeoJSON] compatible.         |
-| `GeometryCollection` |                  |      | `GEO_COLLECTION`    | `GeometryCollection` | `org.locationtech.jts.geom.GeometryCollection`                                                     |
-| `Point`              | spatial          |      | `POINT`             | `Point`              | `org.locationtech.jts.geom.Point`                                                                  |
-| `MultiPoint`         | spatial          |      | `MULTI_POINT`       | `MultiPoint`         | `org.locationtech.jts.geom.MultiPoint`                                                             |
-| `LineString`         | spatial          |      | `LINE_STRING`       | `LineString`         | `org.locationtech.jts.geom.LineString`                                                             |
-| `MultiLineString`    | spatial          |      | `MULTI_LINE_STRING` | `MultiLineString`    | `org.locationtech.jts.geom.MultiLineString`                                                        |
-| `Polygon`            | spatial          |      | `POLYGON`           | `Polygon`            | `org.locationtech.jts.geom.Polygon`                                                                |
-| `MultiPolygon`       | spatial          |      | `MULTI_POLYGON`     | `MultiPolygon`       | `org.locationtech.jts.geom.MultiPolygon`                                                           |
-|                      |                  |      |                     |                      |                                                                                                    |
-|                      |                  |      |                     |                      | **INTERFACES**                                                                                     |
-|                      |                  |      |                     |                      |                                                                                                    |
-| `Proxyable`          |                  |      |                     |                      | An interface that is implemented by all objects that support proxies.                              |
-| `IObject`            |                  |      |                     |                      | An interface to access general JSON like object that supports proxies.                             |
-| `IArray`             |                  |      |                     |                      | An interface to access general JSON like arrays.                                                   |
-| `ISet`               |                  |      |                     |                      | An interface to access general JSON like arrays that contain unique values.                        |
-| `IMap`               |                  |      |                     |                      | An interface to access general JSON like maps.                                                     |
-| `ITupleNumber`       |                  |      |                     |                      | An interface to access a tuple-number.                                                             |
-|                      |                  |      |                     |                      |                                                                                                    |
-|                      |                  |      |                     |                      | **JSON**                                                                                           |
-|                      |                  |      |                     |                      |                                                                                                    |
-| `JsonObject`         |                  |      |                     |                      | The base class for all [JSON] data types that allow proxy linking.                                 |
-| `JsonArray`          | array/map/object |      | `ARRAY`             |                      | A list of values, extends [JsonObject], implements mutable `IArray`.                               |
-| `JsonSet`            | array/map/object |      | `SET`               |                      | A list of unique values, not being `null`, extends [JsonObject], implements mutable `ISet`.        |
-| `JsonMap`            | array/map/object |      | `MAP`               |                      | A set of key-value pairs in insertion order, extends [JsonObject], implements mutable `IMap`.      |
-|                      |                  |      |                     |                      |                                                                                                    |
-|                      |                  |      |                     |                      | **Proxies**                                                                                        |
-|                      |                  |      |                     |                      |                                                                                                    |
-| `Proxy`              |                  |      |                     |                      | Abstract base class for all proxies that can be linked to a [JsonObject] or [JbonObject].          |
-| `ObjectProxy<P, O>`  |                  |      |                     |                      | Abstract base class extending [Proxy] with shared methods for extending proxies.                   |
-| `ArrayProxy`         |                  |      |                     |                      | A [Proxy] that can be linked to any `IArray` to extend the array with custom functions.            |
-| `TypedArrayProxy<E>` |                  |      |                     |                      | A [Proxy] that can be linked to any `IArray` to view it as a typed-array.                          |
-| `SetProxy`           |                  |      |                     |                      | A [Proxy] that can be linked to any `ISet` to extend the set with custom functions.                |
-| `TypedSetProxy<E>`   |                  |      |                     |                      | A [Proxy] that can be linked to any `ISet` to view it as a typed-set.                              |
-| `MapProxy`           |                  |      |                     |                      | A [Proxy] that can be linked to any `IMap` to extend the map with custom functions.                |
-| `TypedMapProxy<K,V>` |                  |      |                     |                      | A [Proxy] that can be linked to any `IMap` to view it as a typed-map.                              |
-|                      |                  |      |                     |                      |                                                                                                    |
-| `JsonTupleNumber`    |                  |      |                     |                      | Wraps a string as `ITupleNumber`, cached inside of arrays and maps.                                |
-| `JsonVersion`        |                  |      |                     |                      | The mutable variant of an `Version` tuple, as [Proxy] linked to an `IMap`.                         |
-| `JsonDatabase`       |                  |      |                     |                      | The mutable variant of an `Database` tuple, as [Proxy] linked to an `IMap`.                        |
-| `JsonCatalog`        |                  |      |                     |                      | The mutable variant of an `Catalog` tuple, as [Proxy] linked to an `IMap`.                         |
-| `JsonCollection`     |                  |      |                     |                      | The mutable variant of an `Collection` tuple, as [Proxy] linked to an `IMap`.                      |
-| `JsonFeature`        |                  |      |                     |                      | The mutable variant of an `Feature` tuple, as [Proxy] linked to an `IMap`.                         |
-| `JsonTags`           |                  |      |                     |                      | A [Proxy] to manage a list of tags as "flat" key-value pairs, linked to an `IArray`.               |
-|                      |                  |      |                     |                      |                                                                                                    |
-|                      |                  |      |                     |                      | **INTERFACES**                                                                                     |
-|                      |                  |      |                     |                      |                                                                                                    |
-| `Option`             |                  |      |                     |                      | A special enumeration implementation that essentially is always encoded as string or long.         |
-| `Bytes`              |                  |      |                     |                      | A static singleton for low-level access to primitive arrays _(`byte[]`, `short[]`, ...)_.          |
-| `Binary`             |                  |      |                     |                      | A helper class for binaries, supports MIME types, parameters, and compression.                     |
-| `TupleId`            |                  |      |                     |                      | The immutable im-memory representation of a unique identifier.                                     |
-| `TupleNumber`        |                  |      |                     |                      | The immutable im-memory representation of a unique identifier.                                     |
-| `Version`            |                  |      |                     |                      | The immutable im-memory representation of a [version].                                             |
-| `VersionProxy`       |                  |      |                     |                      | A [Proxy] for either a `JsonMap` or a `JbonMap`, providing access to a [version] _feature_.        |
-| `Database`           |                  |      |                     |                      | The immutable im-memory representation of a [database].                                            |
-| `DatabaseProxy`      |                  |      |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [database] _feature_.                         |
-| `Catalog`            |                  |      |                     |                      | The immutable im-memory representation of a [catalog] within a [database].                         |
-| `CatalogTuple`       |                  |      |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [catalog] _feature_.                          |
-| `Collection`         |                  |      |                     |                      | The immutable im-memory representation of a [collection] within a [catalog].                       |
-| `CollectionProxy`    |                  |      |                     |                      | Extends [Proxy], a wrapper around a `JbonTuple` of a [collection] _feature_.                       |
-| `Feature`            |                  |      |                     |                      | The immutable im-memory representation of a [feature] within a [collection].                       |
-| `Tuple`              |                  |      |                     |                      | A wraper around a `JbonTuple` that encodes an arbitrary [feature].                                 |
-| `DataMember`         |                  |      |                     |                      | A [data member].                                                                                   |
-| `DataIndex`          |                  |      |                     |                      | A [data index] above a [data member].                                                              |
-|                      |                  |      |                     |                      |                                                                                                    |
-|                      |                  |      |                     |                      | JBON                                                                                               |
-|                      |                  |      |                     |                      |                                                                                                    |
-| `Jbon`               |                  |      |                     |                      | A wrapper above a bunch of bytes that encode a [JBON].                                             |
-| `JbonEncoder`        |                  |      |                     |                      | A tool to build a [JBON].                                                                          |
-| `JbonBinary`         |                  |      |                     |                      | A wrapper above a `Jbon` encoding a [JBON] binary.                                                 |
-| `JbonArray`          |                  |      |                     |                      | A wrapper above a `Jbon` encoding a [JBON] array, implementing read-only `IArray`.                 |
-| `JbonSet`            |                  |      |                     |                      | A wrapper above a `Jbon` encoding a [JBON] set, implementing read-only `ISet`.                     |
-| `JbonMap`            |                  |      |                     |                      | A wrapper above a `Jbon` encoding a [JBON] map, implementing read-only `IMap`.                     |
-| `JbonTupleNumber`    |                  |      |                     |                      | A wrapper above a `Jbon` encoding a [JBON] tuple-number.                                           |
-| `JbonTuple`          |                  |      |                     |                      | A wrapper above a `Jbon` encoding a [JBON] tuple, implementing read-only `IMap` for the _feature_. |
-| `JbonBook`           |                  |      |                     |                      | A wrapper above a `Jbon` encoding a [JBON] book.                                                   |
-|                      |                  |      |                     |                      |                                                                                                    |
-|                      |                  |      |                     |                      | STORAGE                                                                                            |
-|                      |                  |      |                     |                      |                                                                                                    |
-| `TupleStorage`       |                  |      |                     |                      |                                                                                                    |
-| `Storage`            |                  |      |                     |                      |                                                                                                    |
-| `ReadSession`        |                  |      |                     |                      |                                                                                                    |
-| `FullSession`        |                  |      |                     |                      |                                                                                                    |
+| Java                 | Idx              | Prim | Type-Emum _(Name)_  | Javascript           | Description                                                                                                    |
+|----------------------|------------------|------|---------------------|----------------------|----------------------------------------------------------------------------------------------------------------|
+| `Undefined`          |                  |      | `UNDEFINED`         | `undefined`          | The undefined type, a singleton in Java.                                                                       |
+| `null`               | btree            | yes  | `NULL`              | `null`               | A boolean.                                                                                                     |
+| `boolean`            | btree            | yes  | `BOOL`              | `Boolean`            | A boolean.                                                                                                     |
+| `byte`               | btree            | yes  | `BYTE`              | `number`             | A 8-bit integer.                                                                                               |
+| `short`              | btree            | yes  | `SHORT`             | `number`             | A 16-bit integer.                                                                                              |
+| `int`                | btree            | yes  | `INT`               | `number`             | A 32-bit integer.                                                                                              |
+| `long`               | btree            | yes  | `LONG`              | `BigInt`             | A 64-bit integer, can be encoded as [JSON] compatible string: `data:application/long,{decimal}`.               |
+| `float`              | btree            | yes  | `FLOAT`             | `number`             | A 32-bit floating point number.                                                                                |
+| `double`             | btree            | yes  | `DOUBLE`            | `number`             | A 64-bit floating point number.                                                                                |
+| `byte[]`             | btree            |      | `BYTEA`             | `Int8Array`          | A byte-array.                                                                                                  |
+| `short[]`            |                  |      | `SHORTA`            | `Int16Array`         | A 16-bit integer array.                                                                                        |
+| `int[]`              |                  |      | `INTA`              | `Int32Array`         | A 32-bit integer array.                                                                                        |
+| `long[]`             |                  |      | `LONGA`             | `BigInt64Array`      | A 64-bit integer array.                                                                                        |
+| `float[]`            |                  |      | `FLOATA`            | `Float32Array`       | A 32-bit floating point number array.                                                                          |
+| `double[]`           |                  |      | `DOUBLEA`           | `Float64Array`       | A 64-bit floating point number array.                                                                          |
+| `Timestamp`          | btree            | yes  | `TIMESTAMP`         | `Date`               | A 48-bit unsigned interger representing a UNIX epoch timestamp in milliseconds.                                |
+| `String`             | btree            | yes  | `STRING`            | `String`             | A text of [UNICODE] code-points.                                                                               |
+| `Geometry`           |                  |      |                     | `Geometry`           | `org.locationtech.jts.geom.Geometry` - Interface for all geometries, [GeoJSON] compatible.                     |
+| `GeometryCollection` |                  |      | `GEO_COLLECTION`    | `GeometryCollection` | `org.locationtech.jts.geom.GeometryCollection`                                                                 |
+| `Point`              | spatial          |      | `POINT`             | `Point`              | `org.locationtech.jts.geom.Point`                                                                              |
+| `MultiPoint`         | spatial          |      | `MULTI_POINT`       | `MultiPoint`         | `org.locationtech.jts.geom.MultiPoint`                                                                         |
+| `LineString`         | spatial          |      | `LINE_STRING`       | `LineString`         | `org.locationtech.jts.geom.LineString`                                                                         |
+| `MultiLineString`    | spatial          |      | `MULTI_LINE_STRING` | `MultiLineString`    | `org.locationtech.jts.geom.MultiLineString`                                                                    |
+| `Polygon`            | spatial          |      | `POLYGON`           | `Polygon`            | `org.locationtech.jts.geom.Polygon`                                                                            |
+| `MultiPolygon`       | spatial          |      | `MULTI_POLYGON`     | `MultiPolygon`       | `org.locationtech.jts.geom.MultiPolygon`                                                                       |
+|                      |                  |      |                     |                      |                                                                                                                |
+|                      |                  |      |                     |                      | **INTERFACES**                                                                                                 |
+|                      |                  |      |                     |                      |                                                                                                                |
+| `Proxyable`          |                  |      |                     |                      | An interface that is implemented by all objects that support proxies.                                          |
+| `IObject`            |                  |      |                     |                      | An interface to access general JSON like object that supports proxies.                                         |
+| `IArray`             |                  |      |                     |                      | An interface to access general JSON like arrays.                                                               |
+| `ISet`               |                  |      |                     |                      | An interface to access general JSON like arrays that contain unique values.                                    |
+| `IMap`               |                  |      |                     |                      | An interface to access general JSON like maps.                                                                 |
+| `ITupleNumber`       |                  |      |                     |                      | An interface to access a tuple-number.                                                                         |
+|                      |                  |      |                     |                      |                                                                                                                |
+|                      |                  |      |                     |                      | **JSON**                                                                                                       |
+|                      |                  |      |                     |                      |                                                                                                                |
+| `JsonObject`         |                  |      |                     |                      | The base class for all [JSON] data types that allow proxy linking.                                             |
+| `JsonArray`          | array/map/object |      | `ARRAY`             |                      | A list of values, extends [JsonObject], implements mutable `IArray`.                                           |
+| `JsonSet`            | array/map/object |      | `SET`               |                      | A list of unique values, not being `null`, extends [JsonObject], implements mutable `ISet`.                    |
+| `JsonMap`            | array/map/object |      | `MAP`               |                      | A set of key-value pairs in insertion order, extends [JsonObject], implements mutable `IMap`.                  |
+|                      |                  |      |                     |                      |                                                                                                                |
+|                      |                  |      |                     |                      | **PROXIES**                                                                                                    |
+|                      |                  |      |                     |                      |                                                                                                                |
+| `Proxy`              |                  |      |                     |                      | Abstract base class for all proxies that can be linked to a [JsonObject] or [JbonObject].                      |
+| `ObjectProxy<P, O>`  |                  |      |                     |                      | Abstract base class extending [Proxy] with shared methods for extending proxies.                               |
+| `ArrayProxy`         |                  |      |                     |                      | A [Proxy] that can be linked to any `IArray` to extend the array with custom functions.                        |
+| `TypedArrayProxy<E>` |                  |      |                     |                      | A [Proxy] that can be linked to any `IArray` to view it as a typed-array.                                      |
+| `SetProxy`           |                  |      |                     |                      | A [Proxy] that can be linked to any `ISet` to extend the set with custom functions.                            |
+| `TypedSetProxy<E>`   |                  |      |                     |                      | A [Proxy] that can be linked to any `ISet` to view it as a typed-set.                                          |
+| `MapProxy`           |                  |      |                     |                      | A [Proxy] that can be linked to any `IMap` to extend the map with custom functions.                            |
+| `TypedMapProxy<K,V>` |                  |      |                     |                      | A [Proxy] that can be linked to any `IMap` to view it as a typed-map.                                          |
+|                      |                  |      |                     |                      |                                                                                                                |
+| `TagsProxy`          |                  |      |                     |                      | A [Proxy] for an `IArray` to be treated as a list of tags, split and made available as a map.                  |
+| `VersionProxy`       |                  |      |                     |                      | A [Proxy] for an `IMap` representing a [version] _feature.                                                     |
+| `FeatureProxy`       |                  |      |                     |                      | A [Proxy] for an `IMap` representing a [GeoJson] feature.                                                      |
+| `PropertiesProxy`    |                  |      |                     |                      | A [Proxy] for an `IMap` representing the properties of a [GeoJson] feature.                                    |
+| `DatabaseProxy`      |                  |      |                     |                      | A [Proxy] for an `IMap` representing a [database] _feature_.                                                   |
+| `CatalogProxy`       |                  |      |                     |                      | A [Proxy] for an `IMap` representing a [catalog] _feature_.                                                    |
+| `CollectionProxy`    |                  |      |                     |                      | A [Proxy] for an `IMap` representing a [collection] _feature_.                                                 |
+| `MemberProxy`        |                  |      |                     |                      | A [Proxy] for an `IMap` representing a [member].                                                               |
+| `IndexProxy`         |                  |      |                     |                      | A [Proxy] for an `IMap` representing an index above a [member].                                                |
+|                      |                  |      |                     |                      |                                                                                                                |
+|                      |                  |      |                     |                      | **DATA**                                                                                                       |
+|                      |                  |      |                     |                      |                                                                                                                |
+| `Option`             |                  |      |                     |                      | A special enumeration implementation that essentially is always encoded as string or long.                     |
+| `IndexOption`        |                  |      |                     |                      | An enumeration of all supported indices above [members].                                                       |
+| `Bytes`              |                  |      |                     |                      | A static singleton for low-level access to primitive arrays _(`byte[]`, `short[]`, ...)_.                      |
+| `Binary`             |                  |      |                     |                      | A helper class for binaries, supports MIME types, parameters, and compression.                                 |
+| `TupleId`            |                  |      |                     |                      | The immutable im-memory representation of a unique identifier.                                                 |
+| `TupleNumber`        |                  |      |                     |                      | The immutable im-memory representation of a unique identifier.                                                 |
+| `Version`            |                  |      |                     |                      | The immutable im-memory representation of a [version].                                                         |
+| `Database`           |                  |      |                     |                      | The immutable im-memory representation of a [database].                                                        |
+| `Catalog`            |                  |      |                     |                      | The immutable im-memory representation of a [catalog] within a [database].                                     |
+| `Collection`         |                  |      |                     |                      | The immutable im-memory representation of a [collection] within a [catalog].                                   |
+| `Feature`            |                  |      |                     |                      | The immutable im-memory representation of a [feature] within a [collection].                                   |
+| `Tuple`              |                  |      |                     |                      | A wraper around a `JbonTuple` that encodes an [feature].                                                       |
+|                      |                  |      |                     |                      |                                                                                                                |
+|                      |                  |      |                     |                      | **JBON**                                                                                                       |
+|                      |                  |      |                     |                      |                                                                                                                |
+| `Jbon`               |                  |      |                     |                      | A wrapper above a bunch of bytes that encode a [JBON].                                                         |
+| `JbonEncoder`        |                  |      |                     |                      | A tool to build a [JBON].                                                                                      |
+| `JbonBinary`         |                  |      |                     |                      | A [JBON] encoded binary.                                                                                       |
+| `JbonArray`          |                  |      |                     |                      | A [JBON] encoded array, implementing read-only `IArray`.                                                       |
+| `JbonSet`            |                  |      |                     |                      | A [JBON] encoded set, implementing read-only `ISet`.                                                           |
+| `JbonMap`            |                  |      |                     |                      | A [JBON] encoded map, implementing read-only `IMap`.                                                           |
+| `JbonTupleNumber`    |                  |      |                     |                      | A [JBON] encoded tuple-number, implementing `ITuple`.                                                          |
+| `JbonTuple`          |                  |      |                     |                      | A [JBON] encoded tuple, implementing `ITuple` with root being a `JbonMap`, representing a [GeoJSON] _feature_. |
+| `JbonBook`           |                  |      |                     |                      | A [JBON] encoded book.                                                                                         |
+|                      |                  |      |                     |                      |                                                                                                                |
+|                      |                  |      |                     |                      | **STORAGE**                                                                                                    |
+|                      |                  |      |                     |                      |                                                                                                                |
+| `TupleStorage`       |                  |      |                     |                      |                                                                                                                |
+| `Storage`            |                  |      |                     |                      |                                                                                                                |
+| `ReadSession`        |                  |      |                     |                      |                                                                                                                |
+| `FullSession`        |                  |      |                     |                      |                                                                                                                |
 
 All data must be represented using these data types to ensure interoperability between different components, storages, and services.
 
@@ -271,11 +268,11 @@ This means for example that `foo:=true` is split into the key `foo` and the _boo
 ## Interfaces
 There are two ways to encode data, as mutable _HEAP_ objects or as immutable binaries in [JBON]. Both should be transparent, when just reading and processing data. Therefore, both support some basic interfaces.
 
-### Proxyable
-All objects that support proxies must implement this interface, actually there is a reference implementation that should be used: [Proxy].
+### IProxyable
+All objects that support proxies must implement this interface. This interface is implemented by [Proxy], which redirects to the underlying `IObject`, which is either [JsonObject] or [JbonObject], both as well implementing [IProxyable].
 
 ```java
-public interface Proxyable {
+public interface IProxyable {
   @NotNull <P extends Proxy> proxy(final @NotNull Class<P> proxyClass);
 }
 ```
@@ -325,31 +322,30 @@ public interface IMap extends IObject {
 }
 ```
 
-## Proxies
-Having to work with untyped data is extremely error-prone, even while the most flexible thing possible. So close the gap, `lib-data` supports proxies. A proxy is a data-model that can be attached to arbitrary data at runtime _(this allows runtime schema detection)_. All proxies must extend the [Proxyable] base class.
-
-### Proxy
-A base class implementing the [Proxyable] interface, providing a standard implementation of the `proxy()` method. This class is the base for [JsonObject] and [JbonObject]:
+## Proxyable
+The proxyable object is the default implementation of the [IProxyable] interface. This is the abstract base class for [JsonObject] and [JbonObject].
 
 ```java
 package naksha.data;
 
-public abstract class Proxy implements Proxyable {
+// Base class for JsonObject and JbonObject. 
+public abstract class Proxyable implements IProxyable {
+  // We only allow JsonObject and JbonObject to extend the Proxyable. 
+  Proxyable() {}
+  
   // Allows applications to define which proxy implementation to use for certain interfaces or abstract classes.
   @SuppressWarnings("rawtypes")
   private static final ConcurrentHashMap<Class, Class> defaultImplementation = new ConcurrentHashMap<>();
   // TODO: Add methods to register interface/abstract class mapping to concrete instances.
   //       We want to implement checks that ensure that everything is compatible, and `defaultImplementation` only contains valid entries.
-  
+
+  // Needed to add proxies to an object.
   private @Nullable WeakReference<Proxy> firstProxy;
-  // Needed to add multiple proxies to an object.
-  private Proxy nextProxy;
-  // Needed to prevent that the GC collects proxies while the user holds a reference to one of them.
-  private Proxy prevProxy;
   
-  @Override public @NotNull <P extends IProxy> proxy(@NotNull Class<P> proxyClass) {
+  @Override public @NotNull <P extends Proxy> proxy(@NotNull Class<P> proxyClass) {
     Proxy proxy = firstProxy != null ? firstProxy.get() : null;
     Proxy lastProxy = proxy;
+    // Iterate proxy list, find the requested proxy or remember the last proxy.
     while (proxy != null) {
       Class<?> proxy_class = proxy.getClass();
       if (proxyClass == proxy_class) return proxyClass.cast(proxy);
@@ -357,12 +353,16 @@ public abstract class Proxy implements Proxyable {
       lastProxy = proxy;
       proxy = proxy.nextProxy;
     }
-    // No existing proxy found, create one.
+    // No existing proxy found, we need to create a new proxy.
+    
+    // If the requested proxy is an interface or abstract class, we need a default implementation.
     if (proxyClass.isInterface() || Modifier.isAbstract(proxyClass.getModifiers())) {
       final Class<P> implClass = (Class<P>) defaultImplementation.get(proxyClass);
-      if (implClass != null) throw new DataError("Interface or abstract class requested as proxy, but default implementation unknown");
+      if (implClass == null) throw new DataError("Interface or abstract class requested as proxy, but default implementation unknown");
       proxyClass = implClass;
     }
+    
+    // At this point we know that the proxyClass is instantiable, generally.
     if (this instanceof IArray) {
       if (!ArrayProxy.class.isAssignableFrom(proxyClass)) throw new DataError("The given proxy is no ArrayProxy, but this is an IArray");
       final Constructor<P> proxyConstructor;
@@ -397,13 +397,79 @@ public abstract class Proxy implements Proxyable {
       throw new DataError("Invalid proxy implementation, must extend ArrayProxy, SetProxy, or MapProxy, but does not!");
     }
     if (lastProxy == null) {
+      // New first proxy.
       firstProxy = new WeakReference<>(proxy);
     } else {
+      // Append to proxy list.
       proxy.prevProxy = lastProxy;
       lastProxy.nextProxy = proxy;
     }
     return proxyClass.cast(proxy);
   }
+}
+```
+
+## Proxies
+Having to work with untyped data is extremely error-prone, even while the most flexible thing possible. So close the gap, `lib-data` supports proxies. A proxy is a data-model that can be attached to arbitrary data at runtime _(this allows runtime schema detection)_. All proxies must extend the [Proxyable] base class.
+
+## Json
+For 64-bit integers, there are two possibilities. Either serialize into a normal decimal number, which will cause precision loos, and removes the type information, or _(default)_ encode into a [data URL] in the format `data:application/long,{decimal}`. This requires some post-processing of the parsed JSON, but this is anyway be needed to support [JsonSet].
+
+Apart from these two hacks, we need more hacks for maps that hold keys not being strings. So there are more [data URL] encodings for `application/boolean`, `application/int`, and `application/double`. We only support primitives as keys, therefore no other hacks are needed.
+
+### JsonObject
+```java
+package naksha.data;
+import static naksha.data.Data.literal;
+
+public abstract class JsonObject extends Proxiable implements IObject, IProxyable {
+  // We only allow JsonArray, JsonSet, and JsonMap to extend this.
+  JsonObject() {}
+
+  private static final long OBJECT = 0; // 00b
+  private static final long MAP = 1; // 01b
+  private static final long ARRAY = 2; // 10b
+  private static final long SET = 3; // 11b
+  // encodes type:2, start:30, end:30 _(negative for array, positive for map)_
+  private long typeStartAndEnd = 0L;
+
+  // The elements of the array, valid values are located from start to end.
+  // For Map: The elements are keys at even positions, and values at odd positions.
+  @NotNull Object @NotNull [] data = EMPTY_OBJECT;
+  // TODO: We have an implementation, we need to copy code here.
+}
+```
+
+### JsonArray
+### JsonSet
+To indicate that an array is a set, it wrapped into an object:
+
+```json
+{"type": "Set", "elements": []}
+```
+
+The JSON parser of `lib-data` will, when it encounters such an object, convert it into a `JsonSet`.
+
+**Beware that the wrapper must only have exactly two properties being `type` and `elements` with `elements` being an array and `type` being the string `"Set"`. Only when this is exactly the case, the JSON parser will convert it into a `JsonSet`.
+
+### JsonMap
+
+## Jbon
+Details about [JBON] objects, so `Jbon`, `JbonObject`, `JbonArray`, `JbonSet`, and `JbonMap`, can be found in the [JBON2.md](./JBON2.md), specifically in the [JBON Java Section](./JBON2.md#java).
+
+### Proxy
+A base class implementing the [Proxyable] interface, providing a standard implementation of the `proxy()` method. This class is the base for [JsonObject] and [JbonObject]:
+
+```java
+package naksha.data;
+
+public abstract class Proxy implements IProxyable {
+  // We only allow ObjectProxy to extend the Proxy.
+  Proxy() {}
+  // Needed chain multiple proxies.
+  Proxy nextProxy;
+  // Needed to prevent that the GC collects proxies while the user holds a reference to one of them.
+  Proxy prevProxy;
 }
 ```
 
@@ -414,10 +480,14 @@ A base class that all proxies must extend. It extends the raw [Proxy] and adds s
 package naksha.data;
 
 public abstract class ObjectProxy<I extends IObject, O extends JsonObject> extends Proxy implements IObject {
+  // We only allow ArrayProxy, SetProxy, and MapProxy to extend this class.
   ObjectProxy(@NotNull I object) { this.object = object; }
   private final @NotNull I object;
   protected @NotNull I object() { return object; }
   protected abstract @NotNull O mutable();
+  
+  // Proxies redirect proxy requests to the underlying.
+  public @NotNull <P extends Proxy> proxy(final @NotNull Class<P> proxyClass) {return object.proxy(proxyClass); }
 }
 ```
 
@@ -437,20 +507,6 @@ public class ArrayProxy extends ObjectProxy<IArray, JsonArray> {
 }
 ```
 
-### TypedArrayProxy
-Basically the same as an `ArrayProxy`, but implementing the `List` interface, with added type safety for all elements. Used to implement some standard collections via proxies like `StringArray`.
-
-```java
-package naksha.data;
-
-public abstract class TypedArrayProxy<E> extends ArrayProxy implements List<E> {
-  public TypedArrayProxy() { super(); }
-  public TypedArrayProxy(@NotNull IArray array) { super(array); }
-  public abstract Class<E> elementClass();
-  // TODO: Implement the List interface.
-}
-```
-
 ### SetProxy
 ```java
 package naksha.data;
@@ -467,20 +523,6 @@ public class SetProxy extends ObjectProxy<ISet, JsonSet> {
 }
 ```
 
-### TypedSetProxy
-Basically the same as an `SetProxy`, but implementing the `Set` interface, with added type safety for all elements. Used to implement some standard sets via proxies like `StringSet`.
-
-```java
-package naksha.data;
-
-public abstract class TypedSetProxy<E> extends SetProxy implements Set<E> {
-  public TypedSetProxy() { super(); }
-  public TypedSetProxy(@NotNull ISet set) { super(set); }
-  public abstract Class<E> elementClass();
-  // TODO: Implement the Set interface.
-}
-```
-
 ### MapProxy
 ```java
 package naksha.model;
@@ -494,6 +536,34 @@ public class MapProxy extends ObjectProxy<IMap, JsonMap> {
   }
   // TODO: Add protected methods to read and write the map.
   //       If the object is not mutable, modification will throw an DataError.
+}
+```
+
+### TypedArrayProxy
+Basically the same as an `ArrayProxy`, but implementing the `List` interface, with added type safety for all elements. Used to implement some standard collections via proxies like `StringArray`.
+
+```java
+package naksha.data;
+
+public abstract class TypedArrayProxy<E> extends ArrayProxy implements List<E> {
+  public TypedArrayProxy() { super(); }
+  public TypedArrayProxy(@NotNull IArray array) { super(array); }
+  public abstract Class<E> elementClass();
+  // TODO: Implement the List interface.
+}
+```
+
+### TypedSetProxy
+Basically the same as an `SetProxy`, but implementing the `Set` interface, with added type safety for all elements. Used to implement some standard sets via proxies like `StringSet`.
+
+```java
+package naksha.data;
+
+public abstract class TypedSetProxy<E> extends SetProxy implements Set<E> {
+  public TypedSetProxy() { super(); }
+  public TypedSetProxy(@NotNull ISet set) { super(set); }
+  public abstract Class<E> elementClass();
+  // TODO: Implement the Set interface.
 }
 ```
 
@@ -515,14 +585,6 @@ public abstract class TypedMapProxy<K, V> extends MapProxy implements Map<K, V> 
 ### FeatureProxy
 The feature proxy provides typing for [GeoJSON] features. 
 
-### CollectionProxy
-### CatalogProxy
-### DatabaseProxy
-### VersionProxy
-
-### Custom Proxies
-The following example shows a proxy for a simple data model, where a [GeoJSON] feature has a `name` and `age` in the `properties`:
-
 ```java
 package naksha.data;
 
@@ -537,19 +599,32 @@ public class FeatureProxy extends MapProxy {
 public class PropertiesProxy extends MapProxy {}
 ```
 
-The following shows the usage of the proxies, so how to create a data-model for an example type, that can be added at runtime.
+### CollectionProxy
+### CatalogProxy
+### DatabaseProxy
+### VersionProxy
+### XyzProxy
+
+### Custom Proxies
+The following example shows a custom proxy for a simple data model, where a [GeoJSON] feature has a `name` and `age` in the `properties`:
 
 ```java
-public class ExampleType extends MapProxy {
+public class ExampleFeature extends FeatureProxy {
+  public ExampleFeature() { super(); }
+  public ExampleFeature(@NotNull IMap map) { super(map); }
+  // TODO: Override setter and getter for properties to return ExampleProperties.
+}
+
+public class ExampleProperties extends PropertiesProxy {
   // This constructor is used to create a new Example instance.
-  public ExampleType() {
-    super(new JsonMap());
+  public ExampleProperties() {
+    super();
     // We can do normal initialization here, for example setting default values.
     setName("Hello World");
     setAge(18);
   }
   // This constructor is called by the "proxy" method to link a proxy to an existing JsonMap or JbonMap.
-  public Example(@NotNull IMap map) {
+  public ExampleProperties(@NotNull IMap map) {
     super(map);
     // We can update internal caches and more, when this happens.
     // It is guaranteed to happen only ones in the lifetime of every object, proxies are never unlinked or relinked!
@@ -1258,59 +1333,6 @@ interface Session extends ReadSession {
 ## Data
 To manage data, it is split into members that together form the [GeoJSON] _feature_. This is a low level data definition, that is as well replicated in the [JBON] binary encoding.
 
-### DataMember
-Members are defined in the [collection], and they describe how storages have to split a [GeoJSON] feature into dedicated parts to allow indexing and searching for the data.
-
-Not all storages can read the binary encoded [tuple] or will even store the data in [JBON] encoding. To ensure that data needed for indexing and searching is accessible to the storage, applications must define data members. A data member is a property extracted from the [tuple]. Only members can be searched for, they are [indexable]. All storages need to return the data read as [JBON] encoded binary, so as [tuple], no matter in which format they actually really store the data. All storages must accept [JSON] features as input, and [tuple] for replication _(tuple are [JBON] encoded binaries)_.
-
-The `DataMember` class is a [proxy] for a [JsonMap], so it can be used in the [JsonCollection].
-
-```java
-package naksha.data;
-import static naksha.data.Data.literal;
-
-public class DataMember extends MapProxy {
-  public static final Literal NAME = literal("name");
-  // TODO: Add setter/getter for name as String
-  public static final Literal TYPE = literal("type");
-  // TODO: Add setter/getter for type as DataType
-  public static final Literal PATH = literal("path");
-  // TODO: Add setter/getter for path as StringArray
-}
-```
-
-### DataIndex
-To improve query performance above [members], custom indices can be defined above [members].
-
-```java
-package naksha.data;
-import static naksha.data.Data.literal;
-
-public class CustomIndex extends MapProxy {
-  public CustomIndex(@NotNull IMap map) { super(map); }
-  public CustomIndex(@NotNull Literal name) { super(map); }
-  public static final Literal NAME = literal("name");
-  // TODO: Add setter/getter for name as String
-  public static final Literal TYPE = literal("type");
-  // TODO: Add setter/getter for type as CustomIndexType
-  public static final Literal PATH = literal("path");
-  // TODO: Add setter/getter for path as StringArray/StringList
-}
-
-public class CustomIndexType extends Option {
-  public CustomIndexType(@NotNull Literal value, @NotNull DataType ... types) { super(value); }
-  
-  // Index for certain data-types, should host a list of DataType being supported.
-  public static final CustomIndexType BTREE = new CustomIndexType(literal("btree"));
-  public static final CustomIndexType SPATIAL = new CustomIndexType(literal("spatial"));
-  public static final CustomIndexType ARRAY = new CustomIndexType(literal("array"));
-  public static final CustomIndexType MAP = new CustomIndexType(literal("map"));
-  public static final CustomIndexType OBJECT = new CustomIndexType(literal("object"));
-}
-```
-
-We do not allow secondary unique indices, because this would not work with partitioning. As we partition the data, we can't guarantee uniqueness over secondary members. The reason is that we isolate the partitions, so that when we write, we can only check uniqueness within the partition we use. A secondary unique index would require to crosscheck and update other partitions, which breaks the isolation and would drag the performance down. Therefore, there is only one secondary unique index, being `id`, which is guaranteed to be located in the correct partition using some special rules.
-
 ### Option
 Neither [JSON] nor [JBON] are enumeration aware, so there is no explicit enumeration type. The reason is that every enumeration value is actually exactly this: A value. Therefore, within `lib-data` enumeration values are always stored and encoded as values. To have constants while programming, the `Option` was introduced. An `Option` is a way to create uniquely instances for values. The assumption is that there are only a limited amount of possible instances.
 
@@ -1327,73 +1349,69 @@ public class Option implements CharSequence {
 A timestamp is the time as EPOCH in milliseconds. The value is a 48-bit unsigned integer. As [JSON] has no representation for timestamps, they are serialized either as normal double _(losing the type information, but more compatible for custom clients)_ or as [data url] with MIME-type being `application/epoch`, therefore as `data:application/epoch,12345678`.
 
 ### Geometry
+The geometry uses JTS. In the binary representation it is encoded as [TWKB] with 7 decimal digits.
 
-## Json
+### IndexOption
+An enumeration above all available indices above [members].
 
-### JsonObject
 ```java
 package naksha.data;
-public class JsonObject implements IObject, IProxyable {
-  @Nullable Object @NotNull [] data;
-  @Nullable WeakReference<Proxy> firstProxy;
-  @Override public @NotNull <P extends IProxy> proxy(final @NotNull Class<I> proxyClass) {
-    Proxy proxy = firstProxy != null ? firstProxy.get() : null;
-    Proxy lastProxy = proxy;
-    while (proxy != null) {
-      if (proxyClass == proxy.getClass()) return (P) proxy;
-      lastProxy = proxy;
-      proxy = proxy.nextProxy;
-    }
-    // No existing proxy found.
-  }
-  // ...
+import static naksha.data.Data.literal;
+
+public class IndexOption extends Option {
+  public IndexOption(@NotNull Literal value, @NotNull DataType ... types) { super(value); }
+  
+  // Index for certain data-types, should host a list of DataType being supported.
+  public static final IndexOption BTREE = new IndexOption(literal("btree"));
+  public static final IndexOption SPATIAL = new IndexOption(literal("spatial"));
+  public static final IndexOption ARRAY = new IndexOption(literal("array"));
+  public static final IndexOption MAP = new IndexOption(literal("map"));
+  public static final IndexOption OBJECT = new IndexOption(literal("object"));
 }
 ```
 
-### JsonArray
+### MemberProxy
+Members are defined in the [collection] _feature_, and they describe how storages have to split a [GeoJSON] _feature_ into dedicated parts to allow indexing and searching for the data.
+
+Rarely any storage can read the binary encoded [tuple], some will even not store the data in [JBON] encoding. To ensure that data needed for indexing and searching is accessible to the storage, applications must define _**members**_. A _**member**_ is a property extracted from the [tuple]. Only _**member**_ can be searched for, and they are [indexable]. All storages need to return the data read as [tuple], so as [JBON] encoded binary; no matter in which format they actually really store the data. All storages must accept [JSON] features as input, and [tuple] _([JBON] encoded binaries)_  for replication.
+
+The `MemberProxy` is a [proxy] for an `IMap`, so it can be used in the [CollectionProxy].
+
 ```java
+package naksha.data;
+import static naksha.data.Data.literal;
+
+public class MemberProxy extends MapProxy {
+  public static final Literal NAME = literal("name");
+  // TODO: Add setter/getter for name as String
+  public static final Literal TYPE = literal("type");
+  // TODO: Add setter/getter for type as DataType
+  public static final Literal PATH = literal("path");
+  // TODO: Add setter/getter for path as StringArray
+}
+```
+
+### IndexProxy
+To improve query performance above [members], custom indices can be defined above [members].
+
+```java
+package naksha.data;
+import static naksha.data.Data.literal;
+
+public class IndexProxy extends MapProxy {
+  public IndexProxy(@NotNull IMap map) { super(map); }
+  public IndexProxy(@NotNull Literal name) { super(map); }
+  public static final Literal NAME = literal("name");
+  // TODO: Add setter/getter for name as String
+  public static final Literal TYPE = literal("type");
+  // TODO: Add setter/getter for type as CustomIndexType
+  public static final Literal PATH = literal("path");
+  // TODO: Add setter/getter for path as StringArray/StringList
+}
 
 ```
-### JsonSet
-### JsonMap
-### JsonFeature
-As mentioned, members are mapped into a [GeoJSON] _feature_ and vice versa, so the [GeoJSON] feature is split into members. The default members are mapped like following:
 
-| Member               | Name         | [JSON] Path      | Relocate | Data-Type   | Description                                                                                        |
-|----------------------|--------------|------------------|----------|-------------|----------------------------------------------------------------------------------------------------|
-| [FeatureMember]      | feature      | @                | no       | `JsonMap`   | The feature root, decoded from [JBON] into a [JsonMap], then all other members are added.          |
-| [TupleNumberMember]  | tn           | `tn`             | yes      | `string`    | The [TN] reference to the [tuple], generated from the tuple-number.                                |
-| [VersionMember]      | version      | `version`        | yes      | `uint56`    | The feature version as unsigned 56-bit integer.                                                    |
-| [NextVersionMember]  | next_version |                  | yes      | `uint56`    | The next version as unsigned 56-bit integer, normally not exposed.                                 |
-| [IdMember]           | id           | `id`             | no       | `string`    | The unique identifier of the feature, either from `id` column or the stringified `feature_number`. |
-|                      | type         | `type`           | no       | `string`    | The [GeoJSON] type, always the string `Feature`.                                                   |
-|                      |              |                  |          |             |                                                                                                    |
-| **Optional Members** |              |                  |          |             |                                                                                                    |
-|                      |              |                  |          |             |                                                                                                    |
-| [GeometryMember]     | geometry     | `geometry`       | yes      | `Geometry`? | The WGS'84 geometry of the feature.                                                                |
-| [RefPointMember]     | ref_point    | `referencePoint` | yes      | `Point`?    | The WGS'84 reference point where to anchor the feature _(when locating it in tiles)_.              |
-| [AttachmentMember]   | attachment   | `attachment`     | yes      | `bytea`?    | The attachment, `undefined` when not exposed, `null` when there is no attachment.                  |
-
-All the columns flagged as _relocate_ can be relocated to a different JSON path in the configuration of the collection. Beware, this can be modified later, because it only defines where the values are exposed, when converting the feature into [GeoJSON].
-
-### XyzNamespace
-For historic reasons this specification formally defines a standard XYZ column-set. This is a map of dedicated members for all [features] stored in a [collection], following the historic XYZ pattern. In classic systems _metadata_ was exposed in `properties["@ns:com:here:xyz"]`. The pre-defined XYZ column-set is defined as:
-
-| Member              | [JSON] Path                                     | Data-Type         | Description                                                                                                        |
-|---------------------|-------------------------------------------------|-------------------|--------------------------------------------------------------------------------------------------------------------|
-| [TupleNumberMember] | `properties`->`@ns:com:here:xyz`->`uuid`        | `string`          | The [TN] reference to the [tuple] _(redirected from the feature root)_.                                            | 
-| [VersionMember]     | `properties`->`@ns:com:here:xyz`->`version`     | `uint56`          | The feature version _(redirected from the feature root)_.                                                          |
-| [CreatedAtMember]   | `properties`->`@ns:com:here:xyz`->`createdAt`   | `Timestamp`?      | When the feature was created.                                                                                      |
-| [UpdatedAtMember]   | `properties`->`@ns:com:here:xyz`->`updatedAt`   | `Timestamp`?      | When the tuple was created.                                                                                        |
-| [HashMember]        | `properties`->`@ns:com:here:xyz`->`hash`        | `int64`?          | The 64-bit [MurMur3] hash of the tuple; using [JBON] to produce it.                                                |
-| [ChangeCountMember] | `properties`->`@ns:com:here:xyz`->`changeCount` | `int32`?          | The change count, defaults to `1` _(when created)_.                                                                |
-| [AppMember]         | `properties`->`@ns:com:here:xyz`->`app`         | `string`?         | The application-identifier of the application that created this tuple.                                             |
-| [AuthorMember]      | `properties`->`@ns:com:here:xyz`->`author`      | `string`?         | The identifier of the user or application that claims authorship of feature.                                       |
-| [AuthorTsMember]    | `properties`->`@ns:com:here:xyz`->`authorTs`    | `Timestamp`?      | When the `updated_at` timestamp when the author last changed.                                                      |
-| ~~[TagsMember]~~    | `properties`->`@ns:com:here:xyz`->`tags`        | `List\<string\>`? | A list of strings used as tags; deprecated.                                                                        |
-| [OriginMember]      | `properties`->`@ns:com:here:xyz`->`origin`      | `string`?         | The [origin] of the feature, [reference] to the source from which the record originates.                           |
-| [ClusterMember]     | `properties`->`@ns:com:here:xyz`->`cluster`     | `string`?         | The [reference] to the [cluster] to which the feature belongs, `undefined` if not part of a cluster.               |
-| [ReplacementMember] | `properties`->`@ns:com:here:xyz`->`replacement` | `string`?         | The [reference] to the [replacement] group to which the feature belongs, `undefined` if not part of a replacement. |
+We do not allow secondary unique indices, because this would not work with partitioning. As we partition the data, we can't guarantee uniqueness over secondary members. The reason is that we isolate the partitions, so that when we write, we can only check uniqueness within the partition we use. A secondary unique index would require to crosscheck and update other partitions, which breaks the isolation and would drag the performance down. Therefore, there is only one secondary unique index, being `id`, which is guaranteed to be located in the correct partition using some special rules.
 
 ## Members
 
@@ -1441,6 +1459,45 @@ TODO
 These fields can be used by applications to track versions with custom information, for example to track replacements. The reason there are pre-defined fields is that the version table can't be created by the client, as it is part of the administrative data of the database, so the client can't define custom fields on it. Therefore, we provide a set of pre-defined fields that can be used for this purpose. The fields are optional, so they can be left `null` if not needed, and will not consume much space.
 
 The `global_version` field can be used to translate global versions into local versions.
+
+### Feature Members
+As mentioned, members are mapped into a [GeoJSON] _feature_ and vice versa, so the [GeoJSON] feature is split into members. The default members are mapped like following:
+
+| Member               | Name         | [JSON] Path      | Relocate | Data-Type   | Description                                                                                        |
+|----------------------|--------------|------------------|----------|-------------|----------------------------------------------------------------------------------------------------|
+| [FeatureMember]      | feature      | @                | no       | `JsonMap`   | The feature root, decoded from [JBON] into a [JsonMap], then all other members are added.          |
+| [TupleNumberMember]  | tn           | `tn`             | yes      | `string`    | The [TN] reference to the [tuple], generated from the tuple-number.                                |
+| [VersionMember]      | version      | `version`        | yes      | `uint56`    | The feature version as unsigned 56-bit integer.                                                    |
+| [NextVersionMember]  | next_version |                  | yes      | `uint56`    | The next version as unsigned 56-bit integer, normally not exposed.                                 |
+| [IdMember]           | id           | `id`             | no       | `string`    | The unique identifier of the feature, either from `id` column or the stringified `feature_number`. |
+|                      | type         | `type`           | no       | `string`    | The [GeoJSON] type, always the string `Feature`.                                                   |
+|                      |              |                  |          |             |                                                                                                    |
+| **Optional Members** |              |                  |          |             |                                                                                                    |
+|                      |              |                  |          |             |                                                                                                    |
+| [GeometryMember]     | geometry     | `geometry`       | yes      | `Geometry`? | The WGS'84 geometry of the feature.                                                                |
+| [RefPointMember]     | ref_point    | `referencePoint` | yes      | `Point`?    | The WGS'84 reference point where to anchor the feature _(when locating it in tiles)_.              |
+| [AttachmentMember]   | attachment   | `attachment`     | yes      | `bytea`?    | The attachment, `undefined` when not exposed, `null` when there is no attachment.                  |
+
+All the columns flagged as _relocate_ can be relocated to a different JSON path in the configuration of the collection. Beware, this can be modified later, because it only defines where the values are exposed, when converting the feature into [GeoJSON].
+
+### Xyz Members
+For historic reasons this specification formally defines a standard XYZ column-set. This is a map of dedicated members for all [features] stored in a [collection], following the historic XYZ pattern. In classic systems _metadata_ was exposed in `properties["@ns:com:here:xyz"]`. The pre-defined XYZ column-set is defined as:
+
+| Member              | [JSON] Path                                     | Data-Type         | Description                                                                                                        |
+|---------------------|-------------------------------------------------|-------------------|--------------------------------------------------------------------------------------------------------------------|
+| [TupleNumberMember] | `properties`->`@ns:com:here:xyz`->`uuid`        | `string`          | The [TN] reference to the [tuple] _(redirected from the feature root)_.                                            | 
+| [VersionMember]     | `properties`->`@ns:com:here:xyz`->`version`     | `uint56`          | The feature version _(redirected from the feature root)_.                                                          |
+| [CreatedAtMember]   | `properties`->`@ns:com:here:xyz`->`createdAt`   | `Timestamp`?      | When the feature was created.                                                                                      |
+| [UpdatedAtMember]   | `properties`->`@ns:com:here:xyz`->`updatedAt`   | `Timestamp`?      | When the tuple was created.                                                                                        |
+| [HashMember]        | `properties`->`@ns:com:here:xyz`->`hash`        | `int64`?          | The 64-bit [MurMur3] hash of the tuple; using [JBON] to produce it.                                                |
+| [ChangeCountMember] | `properties`->`@ns:com:here:xyz`->`changeCount` | `int32`?          | The change count, defaults to `1` _(when created)_.                                                                |
+| [AppMember]         | `properties`->`@ns:com:here:xyz`->`app`         | `string`?         | The application-identifier of the application that created this tuple.                                             |
+| [AuthorMember]      | `properties`->`@ns:com:here:xyz`->`author`      | `string`?         | The identifier of the user or application that claims authorship of feature.                                       |
+| [AuthorTsMember]    | `properties`->`@ns:com:here:xyz`->`authorTs`    | `Timestamp`?      | When the `updated_at` timestamp when the author last changed.                                                      |
+| ~~[TagsMember]~~    | `properties`->`@ns:com:here:xyz`->`tags`        | `List\<string\>`? | A list of strings used as tags; deprecated.                                                                        |
+| [OriginMember]      | `properties`->`@ns:com:here:xyz`->`origin`      | `string`?         | The [origin] of the feature, [reference] to the source from which the record originates.                           |
+| [ClusterMember]     | `properties`->`@ns:com:here:xyz`->`cluster`     | `string`?         | The [reference] to the [cluster] to which the feature belongs, `undefined` if not part of a cluster.               |
+| [ReplacementMember] | `properties`->`@ns:com:here:xyz`->`replacement` | `string`?         | The [reference] to the [replacement] group to which the feature belongs, `undefined` if not part of a replacement. |
 
 ## DataManager
 A data-manager is a needed root object. An application can just have one _(as static singleton)_ or use multiple. The data-manager is the main entry point to access the data model, it is used by [storages] and the application. It provides methods to access the [storages], [databases], [catalogs], [collections], [features], and [tuples].
