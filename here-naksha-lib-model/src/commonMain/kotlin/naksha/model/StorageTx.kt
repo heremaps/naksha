@@ -98,14 +98,14 @@ open class StorageTx private constructor(
         get() = transaction.time
 
     /**
-     * Method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
+     * Method to create the new metadata for the given write action on a feature.
      *
      * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given arguments are not sufficient to generate the new metadata.
      * @param map the map into which to persist the feature.
      * @param collection the collection into which to persist the feature.
      * @param feature the new _(modified)_ state of the feature, for which the metadata should be created.
-     * @param operation the [operation][Operation] that is performed.
-     * @param action the [action][Action] being performed, if not given, it is expected that the given [operation][Operation] has a [fixed action][Operation.action].
+     * @param action the [action][Action] being performed.
+     * @param atomic whether the write should be performed atomically.
      * @return the new metadata that is correct for the new state, based upon the given data.
      * @since 3.0.0
      * @see [StorageTx]
@@ -114,24 +114,19 @@ open class StorageTx private constructor(
         map: NakshaMap,
         collection: NakshaCollection,
         feature: NakshaFeature,
-        operation: Operation,
-        action: Action = operation.action ?: throw illegalArg("There is no default action defined for operation $operation"),
+        action: Action,
         atomic: Boolean = false
     ): Metadata {
-        if (operation.action != action && operation.action != null) {
-            throw illegalArg("The operation $operation is hard linked to the action ${operation.action}, therefore $action is an invalid action!")
-        }
         val flags = getEncodingFlags(feature, collection)
-            .withOperation(operation)
             .withAction(action)
         val xyz = feature.properties.xyz
         val actionBits = Int64((action.intValue shr ACTION_SHIFT).toLong())
         val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, Version(version.txn and Int64(-4L) or actionBits))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
-        val isExistingFeature = !(operation == Operation.CREATED || (operation == Operation.UPDATED && !atomic))
+        val isExistingFeature = !(action == Action.CREATED || (action == Action.UPDATED && !atomic))
         if (isExistingFeature && xyz.guid == null) {
-            throw illegalArg("$operation with atomic=$atomic requires that the feature has a UUID!")
+            throw illegalArg("$action with atomic=$atomic requires that the feature has a UUID!")
         }
         // Transactions are special: they are partitioned over `next_version` in the HEAD, before being partitioned over `tn` in the year!
         val next_version: Int64? = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) tn.version.txn else null
@@ -183,7 +178,7 @@ open class StorageTx private constructor(
     }
 
     /**
-     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [created][Operation.CREATED].
+     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was created.
      *
      * ### Note
      * This method can be used for `upsert` as well, just that on-conflict the following values have to be updated form the already existing feature:
@@ -191,7 +186,7 @@ open class StorageTx private constructor(
      * - `cc` - _(change-count)_ should be set to the existing value + 1
      * - `author` - if the previous `author` is not the same as the current, then set to the current author _(author changed)_, otherwise set it to the previous one _(unchanged)_.
      * - `author_ts` - if the previous `author` is not the same as the current, set to `null` _(same as `updatedAt`)_, otherwise set to the previous value.
-     * - `flags` - if the previous `author` is not the same as the current, set `authorTs` flag, otherwise clear it. Always set the `createdAt` flag _(basically these are only two binary AND/OR's)_, change the `operation` and `action` both to `UPDATED`.
+     * - `flags` - if the previous `author` is not the same as the current, set `authorTs` flag, otherwise clear it. Always set the `createdAt` flag _(basically these are only two binary AND/OR's)_, change the `action` to `UPDATED`.
      *
      * About author, beware that comparing `NULL` via `=` to any other value, is by definition always `false` in SQL, so if the previous author, the current author, or both are `null`, we treat this as a changed author!
      *
@@ -210,7 +205,7 @@ open class StorageTx private constructor(
         feature: NakshaFeature,
         attachment: ByteArray?
     ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Operation.CREATED, Action.CREATED)
+        val metadata = metadataOf(map, collection, feature, Action.CREATED)
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,
@@ -224,7 +219,7 @@ open class StorageTx private constructor(
     }
 
     /**
-     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [updated][Operation.UPDATED].
+     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was updated.
      * @param map the map in which the feature is going to be created.
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
@@ -238,7 +233,7 @@ open class StorageTx private constructor(
         attachment: ByteArray?,
         atomic: Boolean = false,
     ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Operation.UPDATED, Action.UPDATED, atomic)
+        val metadata = metadataOf(map, collection, feature, Action.UPDATED, atomic)
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,
@@ -252,7 +247,7 @@ open class StorageTx private constructor(
     }
 
     /**
-     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was [deleted][Operation.DELETED].
+     * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was deleted.
      *
      * ### Note
      * There is no difference between purge and delete, except that on a purge, the [Tuple] is not persisted in shadow and/or history, which means that the [TupleNumber] of the purged feature potentially can't be load from storage or cache, so the [Tuple] is not available.
@@ -268,7 +263,7 @@ open class StorageTx private constructor(
         feature: NakshaFeature,
         attachment: ByteArray?
     ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Operation.DELETED, Action.DELETED)
+        val metadata = metadataOf(map, collection, feature, Action.DELETED)
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,

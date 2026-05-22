@@ -656,7 +656,7 @@ class PgColumn : JsEnum() {
          * All columns that we copy from the user data, when we update a row.
          *
          * This excludes the columns that need updates:
-         * - [flags] - we need to set operation to [UPDATED][naksha.model.Operation.UPDATED], action to [UPDATED][naksha.model.Action.UPDATED]
+         * - [flags] - we need to set action to [UPDATED][naksha.model.Action.UPDATED]
          * - [cc] - we need to increment change-count
          * @since 3.0
          */
@@ -684,9 +684,9 @@ class PgColumn : JsEnum() {
          * All columns that we copy, when we create a tombstone state (deleted).
          *
          * In that case we copy from _HEAD_ into a temporary CTE table, then further to _HISTORY_ and/or _SHADOW_, but we need to update some columns, therefore this excludes the columns that need updates:
-         * - [next_version] - will become the current `version` to signal tombstone state _(dead-end)_
-         * - [flags] - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED]
-         * - [version] - must be updated to the current transaction's version, with action bits set to DELETED
+         * - [next_tn] - will become the current [tn] to signal tombstone state _(dead-end)_
+         * - [flags] - we need to set action to [DELETED][naksha.model.Action.DELETED]
+         * - [tn] - must be updated to match current `version`, with action bits set to DELETED (this is the `final_tn`)
          * - [fn] - copied from the HEAD row directly
          * - [base_tn] - needs to be set to `null`
          * @since 3.0

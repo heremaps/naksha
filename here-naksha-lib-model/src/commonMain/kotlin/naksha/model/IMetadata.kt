@@ -155,34 +155,24 @@ interface IMetadata {
     /**
      * The stringified [Guid] from where the feature originates.
      * @since 3.0
-     * @see [Operation.FORKED]
-     * @see [Operation.SPLIT]
-     * @see [Operation.JOINED]
-     * @see [Operation.REBASED]
      */
     val origin: String?
 
     /**
      * The [origin] as [Guid]; _null_ if the [origin] is _null_, empty string, or no valid [Guid].
      * @since 3.0
-     * @see [Operation.FORKED]
-     * @see [Operation.SPLIT]
-     * @see [Operation.JOINED]
-     * @see [Operation.REBASED]
      */
     val originGuid: Guid?
 
     /**
      * The stringified [Guid] of the [Tuple] into which a feature was merged.
      * @since 3.0
-     * @see [Operation.JOINED]
      */
     val target: String?
 
     /**
      * The [target] as [Guid]; _null_ if the [target] is _null_, empty string, or no valid [Guid].
      * @since 3.0
-     * @see [Operation.JOINED]
      */
     val targetGuid: Guid?
 

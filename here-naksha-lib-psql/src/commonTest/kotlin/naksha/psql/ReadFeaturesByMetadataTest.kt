@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.model.Action
-import naksha.model.Operation
 import naksha.model.SessionOptions
 import naksha.model.XyzNs
 import naksha.model.objects.NakshaFeature
@@ -404,52 +403,6 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         assertEquals(10, featuresByAppIdAndAuthor.size)
         assertTrue(featuresByAppIdAndAuthor.map { it!!.id }
             .containsAll(featuresToCreate.map { it.id }))
-    }
-
-    @Test
-    fun readFeaturesByOperation(){
-        testWithCollection("readFeaturesByOperation")
-
-        // Given
-        val feature = randomFeature(featureId = TEST_FEATURE_ID).apply {
-            title = "Title no 1"
-        }
-
-        // When: feature is created
-        val creationResp = insertFeatures(feature)
-        val createdFeature = creationResp.features[0] ?: fail("Expected non-empty creation response")
-
-        // And: feature is modified
-        val modifiedTitle = "Title no 2"
-        val modifyFeature = WriteRequest().add(Write().updateFeature(
-            collection,
-            createdFeature.apply { title = modifiedTitle },
-            true
-        ))
-        executeWrite(modifyFeature)
-
-        // And: feature is deleted
-        val deleteFeature = WriteRequest().add(Write().deleteFeatureById(collection, feature.id))
-        executeWrite(deleteFeature)
-
-        // And: Collection (with history & deleted tables) is queried for UPDATE
-        val getHistoryWithoutUpdates = ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
-            queryHistory = true
-            queryDeleted = true
-            query = RequestQuery().apply {
-                metadata = MetaQuery(MetaColumn.operation(), DoubleOp.EQ, Operation.UPDATED.intValue)
-            }
-        }
-        val response = executeRead(getHistoryWithoutUpdates)
-        val retrievedFeatures = response.features
-
-        // Then: We only got UPDATED state - the one matching updated feature
-        assertEquals(1, retrievedFeatures.size)
-        val singleRetrievedHistoryFeature = retrievedFeatures[0]!!
-        assertEquals(modifiedTitle, singleRetrievedHistoryFeature.title)
-        assertEquals(Operation.UPDATED, singleRetrievedHistoryFeature.properties.xyz.operation)
     }
 
     @Test
