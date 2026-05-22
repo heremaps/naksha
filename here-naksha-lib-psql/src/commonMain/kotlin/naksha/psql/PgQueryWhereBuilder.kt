@@ -52,13 +52,15 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereGuids() {
-        val tupleNumbers: Array<ByteArray> = request.guids
-            .mapNotNull { it?.tupleNumber?.toByteArray(TupleNumberVariant.B128) }
-            .toTypedArray()
+        val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber }
         if (tupleNumbers.isNotEmpty()) {
             if (where.isNotEmpty()) where.append(" AND ")
-            val placeholder = placeholderForArg(tupleNumbers, PgType.BYTE_ARRAY_ARRAY)
-            where.append("${PgColumn.tn} = ANY($placeholder)")
+            val fns: Array<Any?> = tupleNumbers.map { it.featureNumber }.toTypedArray()
+            val versions: Array<Any?> = tupleNumbers.map { it.version.txn }.toTypedArray()
+            val fnPlaceholder = placeholderForArg(fns, PgType.INT64_ARRAY)
+            val versionPlaceholder = placeholderForArg(versions, PgType.INT64_ARRAY)
+            // Tuple-IN against two parallel int8 arrays.
+            where.append("(${PgColumn.fn}, ${PgColumn.version}) IN (SELECT * FROM unnest($fnPlaceholder::int8[], $versionPlaceholder::int8[]))")
         }
     }
 
@@ -66,12 +68,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         val txn = request.version
         if (txn != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("naksha_tn_version(${PgColumn.tn}) <= ${txn.txn}")
+            where.append("${PgColumn.version} <= ${txn.txn}")
         }
         val min_txn = request.minVersion
         if (min_txn != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("naksha_tn_version(${PgColumn.tn}) >= ${min_txn.txn}")
+            where.append("${PgColumn.version} >= ${min_txn.txn}")
         }
     }
 

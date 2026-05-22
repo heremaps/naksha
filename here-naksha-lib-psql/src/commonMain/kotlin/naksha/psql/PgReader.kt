@@ -61,8 +61,9 @@ class PgReader(
                     val collectionNumber = query.collectionNumber
                     while (cursor.next()) {
                         val col_num: Int = collectionNumber ?: cursor["col_num"]
-                        val tn: ByteArray = cursor["tn"]
-                        featureTuples.add(FeatureTuple(TupleNumber.fromB128(tn, storageNumber, mapNumber, col_num)))
+                        val fn: naksha.base.Int64 = cursor["fn"]
+                        val version: naksha.base.Int64 = cursor["version"]
+                        featureTuples.add(FeatureTuple(TupleNumber(storageNumber, mapNumber, col_num, fn, Version(version))))
                     }
                 }
                 return SuccessResponse().withFeatureTupleList(featureTuples)

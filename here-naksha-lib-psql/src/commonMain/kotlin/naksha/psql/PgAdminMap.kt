@@ -576,7 +576,7 @@ WHERE id = $1"""
         val SQL = """
             SELECT ${outRows.names()}
             FROM "naksha~admin".${maps.headTable.quotedName}
-            WHERE naksha_tn_feature_number(tn) = $1
+            WHERE fn = $1
             """.trimIndent()
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         conn.execute(getSearchPath())

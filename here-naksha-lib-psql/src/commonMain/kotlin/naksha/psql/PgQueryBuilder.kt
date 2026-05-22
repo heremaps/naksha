@@ -67,8 +67,8 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val whereQuery = whereClause?.where ?: ""
         val thePgCollection = if (pgCollections.size == 1) pgCollections[0] else null
 
-        // Columns to select, so `col_num`, `tn`, and whatever is needed for ordering.
-        val select_cols = mutableListOf("col_num", "tn")
+        // Columns to select, so `col_num`, `fn`, `version`, and whatever is needed for ordering.
+        val select_cols = mutableListOf("col_num", "fn", "version")
         // Column name and ordering (ASC | DESC) for customer order.
         val order_by = mutableListOf<Pair<String,String>>()
         req.orderBy?.also { orderBy ->
@@ -88,8 +88,10 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                         val pgColumn = when (col_name) {
                             MetaColumn.ATTACHMENT -> PgColumn.attachment
                             MetaColumn.ID -> PgColumn.id
-                            MetaColumn.VERSION -> PgColumn.tn
-                            MetaColumn.TUPLE_NUMBER -> PgColumn.tn
+                            MetaColumn.VERSION -> PgColumn.version
+                            // No single "tuple-number" column exists post-refactor; sort by `fn`
+                            // as a pragmatic approximation of the natural primary order.
+                            MetaColumn.TUPLE_NUMBER -> PgColumn.fn
                             MetaColumn.HASH -> PgColumn.hash
                             MetaColumn.HERE_TILE -> PgColumn.here_tile
                             MetaColumn.AUTHOR -> PgColumn.author
@@ -114,9 +116,6 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                             val SORT = if (o.sortOrder == ASCENDING) "ASC" else "DESC"
                             order_by.add(when (pgColumn) {
                                 PgColumn.author_ts -> Pair("COALESCE(${PgColumn.author_ts}, ${PgColumn.updated_at})", SORT)
-                                PgColumn.tn -> if (col_name == MetaColumn.VERSION)
-                                                Pair("naksha_tn_version(tn)", SORT)
-                                           else Pair("tn", SORT)
                                 else -> Pair(pgColumn.name, SORT)
                             })
                         }
@@ -174,29 +173,6 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         // Restore original value for `col_num` selection.
         select_cols[0] = "col_num"
 
-        // The final tuple-number-binary to be returned, optimized for size!
-        val gzip = if (thePgCollection == null)
-        // If we select from multiple collections, we have to encode the collection-number in the tuple-number.
-        // This results in 128-bit per row, aka 16-byte per row, but 4 byte less in the header.
-        """(
-  int4send((0 << 28)|(2 << 24)|sum(1)::int)|| -- type (0), subtype (2), length
-  int4send(20 + sum(1)::int*16)|| -- byte-size
-  int8send(${pgStorage.number})|| -- shared storage-number
-  int4send(${pgMap.number})|| -- shared map-number
-  bytea_agg(int4send(col_num)||tn) -- aggregate all tuple-number, embed collection-number
-)""" else
-    // If we select only from exactly one table, we can embed the collection-number into the binary header.
-    // This reduces the encoding of each tuple-number to 96-bit (12-byte), but adds 4-byte into the header
-    // for the shared collection-number.
-    """(
-  int4send((0 << 28)|(3 << 24)|sum(1)::int)|| -- type (0), subtype (3), length
-  int4send(24 + sum(1)::int*12)|| -- byte-size
-  int8send(${pgStorage.number})|| -- shared storage-number
-  int4send(${pgMap.number})|| -- shared map-number
-  int4send(${thePgCollection.number})|| -- shared collection-number
-  bytea_agg(tn) -- aggregate all tuple-number
-)"""
-
         // The columns we need until the last final result building.
         val select_cols_string = select_cols.joinToString(", ")
 
@@ -205,7 +181,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val part = if (req.queryHistory && versions > 1) """, query_with_v AS (
   SELECT
     $select_cols_string,
-    ROW_NUMBER() OVER (PARTITION BY col_num, naksha_tn_feature_number(tn) ORDER BY tn DESC) AS v
+    ROW_NUMBER() OVER (PARTITION BY col_num, fn ORDER BY version DESC) AS v
   FROM query
 ), part AS (
   SELECT $select_cols_string
@@ -221,18 +197,17 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
   SELECT $select_cols_string
   FROM ${if (part.isNotEmpty()) "part" else "query"}
   ${if (order_by_string.isNotEmpty()) "ORDER BY $order_by_string " // Explicit ordering.
-    else if (part.isNotEmpty()) "ORDER BY col_num DESC, tn DESC " // If multiple versions requested, order by version.
+    else if (part.isNotEmpty()) "ORDER BY col_num DESC, fn DESC, version DESC " // If multiple versions requested, order by version.
     else "" // No explicit ordering, no multiple versions, use random oder
   }LIMIT $REQ_LIMIT
 )"""
 
         // The final SQL query.
-        // We only need `col_num` and `tn`, the additional columns in limit were only for sorting!
-        // If we only select from a single collection (thePgCollection != null), then we only need
-        // the tuple-numbers, because we know the collection we read from!
+        // We only need `col_num`, `fn`, and `version`; the additional columns in limit were only for sorting.
+        // If we only select from a single collection (thePgCollection != null), `col_num` is implicit.
         val SQL = """WITH query AS (
 $selects)$part$limited
-SELECT ${if (thePgCollection == null) "col_num, tn" else "tn"} FROM limited"""
+SELECT ${if (thePgCollection == null) "col_num, fn, version" else "fn, version"} FROM limited"""
         return PgQuery(
             sql = SQL,
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),

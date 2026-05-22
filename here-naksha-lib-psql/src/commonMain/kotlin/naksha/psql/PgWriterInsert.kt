@@ -40,21 +40,21 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
         val clear_shadow = if (shadowTable != null) """, clear_shadow AS (
   DELETE FROM ${shadowTable.quotedName}
   WHERE id IN (SELECT id FROM new_row)
-  RETURNING id, tn
+  RETURNING id, fn, version
 )""" else ""
 
         // Insert the features
         val inserted = """, inserted AS (
 INSERT INTO ${headTable.quotedName} (${inRows.names()})
 SELECT * FROM new_row
-RETURNING id, tn
+RETURNING id, fn, version
 )"""
 
         // Actually perform the insert.
         val SQL = """$new_row$clear_shadow$inserted
-SELECT inserted.id AS id, inserted.tn AS tn${if (clear_shadow.isNotEmpty()) ", clear_shadow.tn AS clear_tn" else ""}
+SELECT inserted.id AS id, inserted.fn AS fn, inserted.version AS version${if (clear_shadow.isNotEmpty()) ", clear_shadow.fn AS clear_fn, clear_shadow.version AS clear_version" else ""}
 FROM inserted
-${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = inserted.id" else ""} 
+${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = inserted.id" else ""}
 """
         val typeNames = inRows.typeNames()
         val pgPlan = conn.prepare(SQL, typeNames)

@@ -47,6 +47,31 @@ open class PgSession(
     companion object PgSession_C {
         private val nextSessionId = newAtomicInt64(longToInt64(0L))
         private val ONE = longToInt64(1L)
+
+        // Decodes each 16-byte entry of `$1::bytea[]` into `(fn, version)` bigints (big-endian halves).
+        private const val TUPLE_LOOKUP_CTE: String =
+            "lookup AS (\n" +
+            "  SELECT (\n" +
+            "      (get_byte(b,0)::bigint << 56) |\n" +
+            "      (get_byte(b,1)::bigint << 48) |\n" +
+            "      (get_byte(b,2)::bigint << 40) |\n" +
+            "      (get_byte(b,3)::bigint << 32) |\n" +
+            "      (get_byte(b,4)::bigint << 24) |\n" +
+            "      (get_byte(b,5)::bigint << 16) |\n" +
+            "      (get_byte(b,6)::bigint << 8)  |\n" +
+            "       get_byte(b,7)::bigint\n" +
+            "    ) AS fn, (\n" +
+            "      (get_byte(b,8)::bigint  << 56) |\n" +
+            "      (get_byte(b,9)::bigint  << 48) |\n" +
+            "      (get_byte(b,10)::bigint << 40) |\n" +
+            "      (get_byte(b,11)::bigint << 32) |\n" +
+            "      (get_byte(b,12)::bigint << 24) |\n" +
+            "      (get_byte(b,13)::bigint << 16) |\n" +
+            "      (get_byte(b,14)::bigint << 8)  |\n" +
+            "       get_byte(b,15)::bigint\n" +
+            "    ) AS version\n" +
+            "  FROM unnest(\$1::bytea[]) AS t(b)\n" +
+            ")"
     }
 
     /**
@@ -389,28 +414,36 @@ open class PgSession(
         val headTables = first.headTables
         val historyTables = first.historyTables
         val sql = StringBuilder()
-        sql.append("WITH result AS(\n")
-        var unionAll = false
-        val rowNames = rows.names()
+        // Prefix selected columns with `t.` so they don't collide with `fn` / `version` from the lookup CTE.
+        val prefixedRowNames = rows.columns.joinToString(", ") { "t.${it.name}" }
         // HEAD has no `next_version` column; substitute NULL so the UNION ALL shape matches HISTORY/SHADOW.
-        val rowNamesForHead = rowNames.split(",").joinToString(",") { col ->
-            if (col.trim() == PgColumn.next_version.name) "NULL::int8 AS ${PgColumn.next_version.name}" else col
+        val prefixedRowNamesForHead = rows.columns.joinToString(", ") {
+            if (it.name == PgColumn.next_version.name) "NULL::int8 AS ${it.name}"
+            else "t.${it.name}"
         }
+        sql.append("WITH ").append(TUPLE_LOOKUP_CTE).append(",\nresult AS(\n")
+        var unionAll = false
         for (headTable in headTables) {
             if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
-            sql.append("SELECT ").append(rowNamesForHead).append(" FROM ").append(headTable.quotedName).append(" WHERE tn = ANY(\$1)\n")
+            sql.append("SELECT ").append(prefixedRowNamesForHead)
+                .append(" FROM ").append(headTable.quotedName)
+                .append(" t JOIN lookup l ON (t.fn, t.version) = (l.fn, l.version)\n")
         }
         if (historyTables != null) {
             for (hstTable in historyTables) {
                 if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
-                sql.append("SELECT ").append(rowNames).append(" FROM ").append(hstTable.quotedName).append(" WHERE tn = ANY(\$1)\n")
+                sql.append("SELECT ").append(prefixedRowNames)
+                    .append(" FROM ").append(hstTable.quotedName)
+                    .append(" t JOIN lookup l ON (t.fn, t.version) = (l.fn, l.version)\n")
             }
         } else {
             val shadowTables = first.shadowTables
             if (shadowTables != null) {
                 for (shadowTable in shadowTables) {
                     if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
-                    sql.append("SELECT ").append(rowNames).append(" FROM ").append(shadowTable.quotedName).append(" WHERE tn = ANY(\$1)\n")
+                    sql.append("SELECT ").append(prefixedRowNames)
+                        .append(" FROM ").append(shadowTable.quotedName)
+                        .append(" t JOIN lookup l ON (t.fn, t.version) = (l.fn, l.version)\n")
                 }
             }
         }
