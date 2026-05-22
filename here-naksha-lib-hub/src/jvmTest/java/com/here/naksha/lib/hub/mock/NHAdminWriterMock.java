@@ -23,7 +23,6 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import naksha.base.AtomicInt;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
@@ -236,11 +235,6 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   @Override
   public void rollback() {
     // do nothing
-  }
-
-  @Override
-  public @NotNull AtomicInt getUid() {
-    return null;
   }
 
   @Override

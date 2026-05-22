@@ -29,17 +29,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import naksha.base.AnyList;
+import naksha.base.Int64;
 import naksha.base.JvmInt64;
 import naksha.model.Action;
 import naksha.model.Guid;
-import naksha.model.GuidList;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.TupleNumber;
-import naksha.model.TupleNumberVariant;
 import naksha.model.Version;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
@@ -355,28 +353,8 @@ class ActivityLogHandlerTest {
   }
 
   @Test
-  void shouldFetchSuccessorsDirectlyByVersionIfPossible() {
-    // Given
-    List<ReadRequest> predecessorRequests = new ArrayList<>();
-    Guid puuid = guid("sample_feature", randomVersion());
-    configureSpaceStorage(
-        initialHistoryAwareRequestReturns(List.of(featureWithPuuidOnly(puuid.toString()))),
-        capturingOnlyPredecessorRequest(predecessorRequests)
-    );
-
-    // When: handler processes event bearing such request
-    handler.processEvent(eventWith(new ReadFeatures()));
-
-    // Then:
-    assertEquals(1, predecessorRequests.size());
-    ReadFeatures predecessorReq = assertInstanceOf(ReadFeatures.class, predecessorRequests.get(0));
-    assertTrue(containsGuuidQuery(predecessorReq, puuid));
-    assertFalse(containsNextVersionMetaQuery(predecessorReq));
-  }
-
-  @Test
-  void shouldFetchSuccessorIndirectlyByNextTnAsFallback() {
-    // Given
+  void shouldFetchPredecessorViaNextVersionLookup() {
+    // Given: one root feature missing its predecessor in the initial fetch
     List<ReadRequest> predecessorRequests = new ArrayList<>();
     Guid uuid = guid("sample_feature", randomVersion());
     configureSpaceStorage(
@@ -387,23 +365,22 @@ class ActivityLogHandlerTest {
     // When: handler processes event bearing such request
     handler.processEvent(eventWith(new ReadFeatures()));
 
-    // Then:
+    // Then: a single next_version meta-query is issued with the root's own version
     assertEquals(1, predecessorRequests.size());
     ReadFeatures predecessorReq = assertInstanceOf(ReadFeatures.class, predecessorRequests.get(0));
-    assertFalse(containsGuuidQuery(predecessorReq));
     assertTrue(containsNextVersionMetaQuery(predecessorReq, uuid.tupleNumber));
   }
 
   @Test
-  void shouldCombineDirectAndIndirectSuccessorsRetrieval() {
-    // Given
+  void shouldBundleAllMissingPredecessorLookupsIntoSingleQuery() {
+    // Given: two root features, neither paired via nuuid in the initial fetch
     List<ReadRequest> predecessorRequests = new ArrayList<>();
-    Guid firstFeatureUuid = guid("sample_feature_1", randomVersion());
-    Guid secondFeaturePuid = guid("sample_feature_2", randomVersion());
+    Guid firstUuid = guid("sample_feature_1", randomVersion());
+    Guid secondUuid = guid("sample_feature_2", randomVersion());
     configureSpaceStorage(
         initialHistoryAwareRequestReturns(List.of(
-            featureWithUuidOnly(firstFeatureUuid.toString()),
-            featureWithPuuidOnly(secondFeaturePuid.toString())
+            featureWithUuidOnly(firstUuid.toString()),
+            featureWithUuidOnly(secondUuid.toString())
         )),
         capturingOnlyPredecessorRequest(predecessorRequests)
     );
@@ -411,16 +388,10 @@ class ActivityLogHandlerTest {
     // When: handler processes event bearing such request
     handler.processEvent(eventWith(new ReadFeatures()));
 
-    // Then:
-    assertEquals(2, predecessorRequests.size());
-    assertTrue(predecessorRequests.stream().anyMatch(req -> containsGuuidQuery((ReadFeatures) req, secondFeaturePuid)));
-    assertTrue(predecessorRequests.stream().anyMatch(req -> containsNextVersionMetaQuery((ReadFeatures) req, firstFeatureUuid.tupleNumber)));
-  }
-
-  private NakshaFeature featureWithPuuidOnly(String puuid) {
-    return featureWithXyzFields(Map.of(
-        XyzNs.PUUID, puuid
-    ));
+    // Then: both predecessors are looked up in ONE next_version query
+    assertEquals(1, predecessorRequests.size());
+    ReadFeatures predecessorReq = assertInstanceOf(ReadFeatures.class, predecessorRequests.get(0));
+    assertTrue(containsNextVersionMetaQuery(predecessorReq, firstUuid.tupleNumber, secondUuid.tupleNumber));
   }
 
   private NakshaFeature featureWithUuidOnly(String uuid) {
@@ -476,16 +447,12 @@ class ActivityLogHandlerTest {
 
   private ArgumentMatcher<ReadRequest> initialRequestMatcher() {
     return readRequest -> isHistoryAwareReadFeatures(readRequest)
-                          && !containsNextVersionMetaQuery((ReadFeatures) readRequest)
-                          && !containsGuuidQuery((ReadFeatures) readRequest);
+                          && !containsNextVersionMetaQuery((ReadFeatures) readRequest);
   }
 
   private ArgumentMatcher<ReadRequest> predecessorRequestMatcher() {
     return readRequest -> isHistoryAwareReadFeatures(readRequest)
-                          && (
-                              containsNextVersionMetaQuery((ReadFeatures) readRequest)
-                              || containsGuuidQuery((ReadFeatures) readRequest)
-                          );
+                          && containsNextVersionMetaQuery((ReadFeatures) readRequest);
   }
 
   private boolean isHistoryAwareReadFeatures(ReadRequest readRequest) {
@@ -495,33 +462,20 @@ class ActivityLogHandlerTest {
     return false;
   }
 
-  private boolean containsGuuidQuery(ReadFeatures readFeatures, Guid... expectedGuids) {
-    GuidList guids = readFeatures.getGuids();
-    if (expectedGuids.length == 0) {
-      return !guids.isEmpty();
-    } else {
-      return guids.getSize() == expectedGuids.length && guids.containsAll(Arrays.asList(expectedGuids));
-    }
-  }
-
-  private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedNextTns) {
+  private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
     IMetaQuery metaQuery = readFeatures.getQuery().getMetadata();
-    if (metaQuery instanceof MetaQuery mq) {
-      boolean basicCheck = mq.getColumn().equals(MetaColumn.nextVersion())
-                           && mq.getOp().equals(AnyOp.IS_ANY_OF)
-                           && mq.getValue() instanceof AnyList;
-      if (basicCheck && expectedNextTns.length > 0) {
-        List queryNextTns = ((AnyList) mq.getValue()).asList();
-        return queryNextTns.size() == expectedNextTns.length
-               && Arrays.stream(expectedNextTns)
-                   .map(tn -> tn.toByteArray(TupleNumberVariant.B96))
-                   .allMatch(expectedTnAsBytes -> queryNextTns.stream()
-                       .anyMatch(queryTnAsBytes -> Arrays.equals(expectedTnAsBytes, (byte[]) queryTnAsBytes))
-                   );
-      }
-      return basicCheck;
-    }
-    return false;
+    if (!(metaQuery instanceof MetaQuery mq)) return false;
+    boolean basicCheck = mq.getColumn().equals(MetaColumn.nextVersion())
+                         && mq.getOp().equals(AnyOp.IS_ANY_OF);
+    if (!basicCheck) return false;
+    if (expectedTns.length == 0) return mq.getValue() != null;
+    // next_version is an int8 column — the query value is an Int64[] of version values
+    Object value = mq.getValue();
+    if (!(value instanceof Int64[] versions)) return false;
+    if (versions.length != expectedTns.length) return false;
+    return Arrays.stream(expectedTns)
+        .map(tn -> tn.version.txn)
+        .allMatch(expected -> Arrays.stream(versions).anyMatch(expected::equals));
   }
 
   private IReadSession mockReadSession(ReadBehavior... readBehavior) {

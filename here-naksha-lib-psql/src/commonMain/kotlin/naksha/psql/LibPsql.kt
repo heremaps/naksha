@@ -70,7 +70,7 @@ internal const val PG_CUSTOM_IDX = "${PG_S}ci_"
 internal const val PG_CONSTRAINT = "${PG_S}c_"
 
 /**
- * The name of the constraint above [tn_next][PgColumn.next_tn] (yearly partition).
+ * The name of the constraint above [next_version][PgColumn.next_version] (yearly partition).
  */
 internal const val PG_TN_NEXT_CONSTRAINT = "${PG_CONSTRAINT}nt"
 

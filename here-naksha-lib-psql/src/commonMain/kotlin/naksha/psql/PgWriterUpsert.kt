@@ -5,7 +5,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
  * Execute [UPSERT][naksha.model.request.WriteOp.UPSERT] into a collection.
@@ -18,7 +18,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
     private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
     init {
-        inRows.addColumns(allColumns)
+        inRows.addColumns(headColumns)
         val members = collection.head.members
         inRows.addCustomMembers(members)
         var i = 0
@@ -54,10 +54,10 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
   RETURNING id, tn
 )""" else ""
 
-        // Insert the current `head_row` into history.
+        // Insert the current `head_row` into history. next_version is the new tuple's version with action set to UPDATE.
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT naksha_tn_128(naksha_tn_feature_number(new_row.tn), (naksha_tn_version(new_row.tn) & -4) | 1) AS ${PgColumn.next_tn},
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
+  SELECT ((naksha_tn_version(new_row.tn) & -4) | 1) AS ${PgColumn.next_version},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.id = head_row.id

@@ -8,7 +8,7 @@ import kotlin.js.JsName
 import kotlin.jvm.JvmField
 
 /**
- * The HISTORY table, partitioned by [next_tn][PgColumn.next_tn].
+ * The HISTORY table, partitioned by [next_version][PgColumn.next_version].
  * @since 3.0
  * @see [PgTable]
  * @see [PgHistoryYear]
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmField
 @JsExport
 class PgHistory(val head: PgHead) : PgTable(
     head.collection, "${head.collection.id}${PG_HST}", head.storageClass, false,
-    partitionByColumn = PgColumn.next_tn
+    partitionByColumn = PgColumn.next_version
 ) {
     /**
      * All partitions, with key being the year (`txn >> 41`).

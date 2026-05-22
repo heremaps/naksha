@@ -17,7 +17,7 @@ public final class GuidUtil {
 
   public static Guid guid(String featureId, Version version) {
     return new Guid(featureId, new TupleNumber(
-        new JvmInt64(0), 0, 0, new JvmInt64(0), version, 0
+        new JvmInt64(0), 0, 0, new JvmInt64(0), version
     ));
   }
 }

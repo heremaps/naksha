@@ -6,6 +6,7 @@ import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE].
@@ -55,7 +56,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // If the client requested an atomic deleted, so it provided a `version`, then
         // we only delete the head row, when the version matches.
         val head_row = """, head_row AS (
-  SELECT ${allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
+  SELECT ${headColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR (query.version & -4) = (naksha_tn_version(head.tn) & -4))
 )"""
@@ -69,22 +70,23 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
 
         // Create a tombstone row for each head_row (row actually to be deleted)
         // We either return this, or we insert it into history and/or shadow!
+        // The tombstone's `next_version` is the row's own (delete) version - signals end-of-lifetime.
         val tombstone = """, tombstone AS (
   SELECT
     ((head_row.flags & -196609) | (2 << 16) | (2 << 12)) AS ${PgColumn.flags},
     (head_row.cc + 1) AS ${PgColumn.cc},
     naksha_tn_128(naksha_tn_feature_number(head_row.tn), (${tx.version.txn}::int8 | 2)) AS ${PgColumn.tn},
-    naksha_tn_128(naksha_tn_feature_number(head_row.tn), (${tx.version.txn}::int8 | 2)) AS ${PgColumn.next_tn},
+    (${tx.version.txn}::int8 | 2) AS ${PgColumn.next_version},
     null::bytea AS ${PgColumn.base_tn},
     ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row, query
   WHERE head_row.id = query.id
 )"""
 
-        // Insert the current `head_row` into history
+        // Insert the current `head_row` into history; its next_version becomes the tombstone's version (with DELETE action bits).
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_tn}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT tombstone.tn AS ${PgColumn.next_tn},
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
+  SELECT naksha_tn_version(tombstone.tn) AS ${PgColumn.next_version},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN tombstone ON tombstone.id = head_row.id
@@ -101,7 +103,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // Copy the tombstone into history.
         val history_tombstone = if (insert_into_history != null) """, history_tombstone AS (
  INSERT INTO ${insert_into_history.quotedName}
- (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+ (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_version}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
  SELECT * FROM tombstone
  RETURNING id, tn
 )""" else ""
@@ -109,7 +111,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // Copy the tombstone into shadow
         val shadow_tombstone = if (insert_into_shadow != null) """, shadow_tombstone AS (
  INSERT INTO ${insert_into_shadow.quotedName}
- (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_tn}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+ (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.tn}, ${PgColumn.next_version}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
  SELECT * FROM tombstone
  RETURNING id, tn
 )""" else ""
