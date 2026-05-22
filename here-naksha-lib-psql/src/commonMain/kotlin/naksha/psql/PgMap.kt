@@ -18,7 +18,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 import kotlin.js.JsExport
@@ -412,7 +412,7 @@ open class PgMap internal constructor(
             .withStorageNumber(storage.number)
             .withMapNumber(this.number)
             .withCollectionNumber(COLLECTIONS_COL_NUMBER)
-            .addColumns(allColumns)
+            .addColumns(headColumns)
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
 FROM ${collections.headTable.quotedName}
@@ -456,7 +456,7 @@ WHERE id = $1"""
             .withStorageNumber(storage.number)
             .withMapNumber(this.number)
             .withCollectionNumber(COLLECTIONS_COL_NUMBER)
-            .addColumns(allColumns)
+            .addColumns(headColumns)
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
 FROM ${collections.headTable.quotedName}

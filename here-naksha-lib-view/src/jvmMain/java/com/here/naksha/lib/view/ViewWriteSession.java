@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.base.AtomicInt;
 import naksha.base.StringList;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
@@ -117,10 +116,5 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   @Override
   public @Nullable NakshaTx getTransaction() {
     return getSession().getTransaction();
-  }
-
-  @Override
-  public @NotNull AtomicInt getUid() {
-    return getSession().getUid();
   }
 }

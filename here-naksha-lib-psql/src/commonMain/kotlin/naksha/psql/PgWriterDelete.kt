@@ -6,6 +6,7 @@ import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE].
@@ -55,7 +56,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // If the client requested an atomic deleted, so it provided a `version`, then
         // we only delete the head row, when the version matches.
         val head_row = """, head_row AS (
-  SELECT ${allColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
+  SELECT ${headColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id AND (query.version IS NULL OR (query.version & -4) = (naksha_tn_version(head.tn) & -4))
 )"""

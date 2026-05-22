@@ -39,17 +39,14 @@ class ReadFeaturesByOtherTns : PgTestBase(
         }
         val updateResp = executeWrite(update)
 
-        // And: bigint versions of updated tuples (next_version is now an int8 column, not a B128 byte-array)
-        val selectedUpdatedFeatures = updateResp.features.subList(2, 4) // take 2 features from the middle
-        val selectedNextVersions: Array<Int64> = selectedUpdatedFeatures
-            .map { it!!.tupleNumber.version.txn }
-            .toTypedArray()
+        // And: the shared `next_version` of all updated features (all 5 updates ran in one transaction).
+        val updatedVersion: Int64 = updateResp.features[0]!!.tupleNumber.version.txn
 
-        // When: querying for features whose `next_version` matches any of the selected versions
+        // When: querying for features whose `next_version` matches that version
         val nextVersionQuery = MetaQuery(
             MetaColumn.nextVersion(),
             AnyOp.IS_ANY_OF,
-            selectedNextVersions
+            arrayOf(updatedVersion)
         )
         val byNextTnResp = executeRead(ReadFeatures().apply {
             mapId = collection.mapId
@@ -58,10 +55,10 @@ class ReadFeaturesByOtherTns : PgTestBase(
             queryHistory = true
         })
 
-        // Then: we fetched initial features based on `next_version` pointing to updated features
+        // Then: all 5 initial features are returned — they share next_version since they were demoted together.
         val fetchedFeatures = byNextTnResp.features
-        assertEquals(2, fetchedFeatures.size)
-        val expectedIds = selectedUpdatedFeatures.map { it!!.id }.toSet()
+        assertEquals(5, fetchedFeatures.size)
+        val expectedIds = initialFeatures.map { it!!.id }.toSet()
         fetchedFeatures.forEach { fetchedPredecessor ->
             assertNotNull(fetchedPredecessor)
             assertTrue(fetchedPredecessor.id in expectedIds)

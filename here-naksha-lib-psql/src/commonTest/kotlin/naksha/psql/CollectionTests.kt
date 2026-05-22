@@ -94,8 +94,9 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 args = arrayOf(collection.id)
             ).use { cursor ->
                 while (cursor.next()) columns.add(cursor["column_name"])
-                assertEquals(PgColumn.allColumns.size, columns.size)
-                assertTrue(PgColumn.allColumns.all { column -> columns.contains(column.name) })
+                // HEAD has no `next_version` column (intrinsically HEAD); the table should match `headColumns`.
+                assertEquals(PgColumn.headColumns.size, columns.size)
+                assertTrue(PgColumn.headColumns.all { column -> columns.contains(column.name) })
             }
         }
     }

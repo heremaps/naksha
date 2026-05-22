@@ -140,9 +140,13 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             val select_cols_string = select_cols.joinToString(", ")
 
             val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
+            // HEAD has no `next_version` column — substitute with NULL so predicates referencing
+            // it evaluate to NULL (no HEAD rows match), matching the "no successor yet" semantics.
+            val whereForHead = if (whereQuery.isEmpty()) "" else
+                "WHERE ${whereQuery.replace(Regex("\\b${next_version.name}\\b"), "NULL::int8")}"
             for (head in read.headTables) {
                 if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $where)\n")
+                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $whereForHead)\n")
             }
 
             val deletedTables = read.shadowTables

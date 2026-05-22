@@ -31,25 +31,21 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.handlers.AbstractEventHandler;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import naksha.base.Int64;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.PlatformUtil;
 import naksha.base.StringList;
 import naksha.model.Action;
-import naksha.model.Guid;
-import naksha.model.GuidList;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.TupleNumber;
-import naksha.model.TupleNumberVariant;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -132,11 +128,14 @@ public class ActivityLogHandler extends AbstractEventHandler {
     return new CollectedFeatures(fetchFeatures(readFeatures, context));
   }
 
-  // TODO: CASL-1094: in V2 this method was utilizing `properties.xyz.puuid` field to combine subsequent versions of feature
-  // During v3 alignment (CASL-1057) it was observed that sometimes puuids of UPDATED & DELETED features are missing
-  // Because of that, a bypass that uses `properties.xyz.nuuid` was introduced - logically, it's still correct to combine subsequent versions like that
-  // However, this is not expected behavior, as both `puuid` and `nuuid` are expected to be populated in middle features, which is not the case
-  // CASL-1094 aims to find the cause and fix missing puuids, then we should consider moving back to the logic that was in place in V2
+  // Pairs each root feature with its immediate predecessor.
+  //
+  // Strategy: find every root that wasn't already paired via `nuuid` walking inside the initial fetch,
+  // then issue ONE additional history read that looks up rows whose `next_version` matches the root's
+  // own version. That gives us the predecessor — which then gets merged back via `addPredecessors`.
+  //
+  // (Historical note: this used to have a puuid-based fast path; puuid was removed from XyzNs as part
+  // of the prev_tn cleanup, and the next_version-based lookup is the canonical mechanism per spec.)
   private List<FeatureWithPredecessor> featuresWithPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
     collectMissingPredecessors(collectedFeatures, context);
     return collectedFeatures.getActivityLogRoots().stream()
@@ -148,52 +147,28 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private void collectMissingPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
-    List<String> availablePuuids = new ArrayList<>();
-    List<TupleNumber> tnsOfFeaturesWithoutPuuids = new ArrayList<>();
-    collectedFeatures.activityLogRoots.stream()
+    List<TupleNumber> tnsOfRootsMissingPredecessor = collectedFeatures.activityLogRoots.stream()
         .filter(f -> !collectedFeatures.allByNuuid.containsKey(f.getId()))
-        .forEach(feature -> {
-          String puuid = puuid(feature);
-          if(puuid != null) {
-            availablePuuids.add(puuid);
-          } else {
-            tnsOfFeaturesWithoutPuuids.add(feature.getTupleNumber());
-          }
-        });
-    if(!availablePuuids.isEmpty()) {
-      List<NakshaFeature> missingPredecessorsByPuuids = fetchFeatures(featuresWhereTnMatchesOneOf(availablePuuids), context);
-      collectedFeatures.addPredecessors(missingPredecessorsByPuuids);
-    }
-    if (!tnsOfFeaturesWithoutPuuids.isEmpty()) {
-      List<NakshaFeature> missingPredecessorsByNextTns = fetchFeatures(featuresWhereNextTnIsOneOf(tnsOfFeaturesWithoutPuuids), context);
-      collectedFeatures.addPredecessors(missingPredecessorsByNextTns);
+        .map(NakshaFeature::getTupleNumber)
+        .toList();
+    if (!tnsOfRootsMissingPredecessor.isEmpty()) {
+      List<NakshaFeature> missingPredecessorsByNextVersion =
+          fetchFeatures(featuresWhereNextVersionIsOneOf(tnsOfRootsMissingPredecessor), context);
+      collectedFeatures.addPredecessors(missingPredecessorsByNextVersion);
     }
   }
 
-  private static @Nullable String puuid(NakshaFeature feature){
-    return feature.getProperties().getXyz().getPuuid();
-  }
-
-  private ReadFeatures featuresWhereTnMatchesOneOf(List<String> uuids){
-    GuidList guids = GuidList.fromRawGuids(uuids);
-    ReadFeatures requestPredecessors = new ReadFeatures();
-    requestPredecessors.setCollectionIds(StringList.of(properties.getSpaceId()));
-    requestPredecessors.setQueryHistory(true);
-    requestPredecessors.setGuids(guids);
-    return requestPredecessors;
-  }
-
-  private ReadFeatures featuresWhereNextTnIsOneOf(List<TupleNumber> tupleNumbers) {
-    // we will compare against `next_tn` which is encodded with 96-bit encoding
-    byte[][] b96tns = new byte[tupleNumbers.size()][];
+  private ReadFeatures featuresWhereNextVersionIsOneOf(List<TupleNumber> tupleNumbers) {
+    // next_version is a plain int8 column, so we pass an Int64[] of the version values.
+    Int64[] versions = new Int64[tupleNumbers.size()];
     for (int i = 0; i < tupleNumbers.size(); i++) {
-      b96tns[i] = tupleNumbers.get(i).toByteArray(TupleNumberVariant.B96);
+      versions[i] = tupleNumbers.get(i).version.txn;
     }
-    MetaQuery nuidQuery = new MetaQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, b96tns);
+    MetaQuery nextVersionQuery = new MetaQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, versions);
     ReadFeatures requestPredecessors = new ReadFeatures();
     requestPredecessors.setCollectionIds(StringList.of(properties.getSpaceId()));
     requestPredecessors.setQueryHistory(true);
-    requestPredecessors.getQuery().setMetadata(nuidQuery);
+    requestPredecessors.getQuery().setMetadata(nextVersionQuery);
     return requestPredecessors;
   }
 

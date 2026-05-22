@@ -392,9 +392,13 @@ open class PgSession(
         sql.append("WITH result AS(\n")
         var unionAll = false
         val rowNames = rows.names()
+        // HEAD has no `next_version` column; substitute NULL so the UNION ALL shape matches HISTORY/SHADOW.
+        val rowNamesForHead = rowNames.split(",").joinToString(",") { col ->
+            if (col.trim() == PgColumn.next_version.name) "NULL::int8 AS ${PgColumn.next_version.name}" else col
+        }
         for (headTable in headTables) {
             if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
-            sql.append("SELECT ").append(rowNames).append(" FROM ").append(headTable.quotedName).append(" WHERE tn = ANY(\$1)\n")
+            sql.append("SELECT ").append(rowNamesForHead).append(" FROM ").append(headTable.quotedName).append(" WHERE tn = ANY(\$1)\n")
         }
         if (historyTables != null) {
             for (hstTable in historyTables) {

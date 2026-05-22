@@ -35,34 +35,28 @@ public class ObligatoryLayersResolverTest {
         0,
         0,
         Naksha.featureNumber(id),
-        Version.of(2024,1,1, intToInt64(0)),
-        0
+        Version.of(2024,1,1, intToInt64(0))
     );
     final Int64 updatedAt = Platform.currentMillis();
     return new Metadata(
         tupleNumber,
         withAction(0, Action.CREATED),
-        null,
-        updatedAt, null, null,
-        null,
-        null,
-        1,
-        0,
-        0,
+        updatedAt,    // updatedAt
+        null,         // createdAt
+        null,         // authorTs
+        null,         // nextVersion
+        null,         // baseTupleNumber
+        1,            // changeCount
+        0,            // hash
+        0,            // hereTile
         id,
-        "test",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
+        "test",       // appId
+        null,         // author
+        null,         // origin
+        null,         // target
+        null,         // ft
+        null, null, null, null,  // cv0..cv3
+        null, null, null, null   // cs0..cs3
     );
   }
 

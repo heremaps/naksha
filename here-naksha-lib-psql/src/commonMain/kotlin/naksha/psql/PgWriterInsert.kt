@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
+import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
@@ -14,7 +15,9 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
     : PgWriterBase(writer, collection, partition, writes)
 {
     init {
-        inRows.addColumns(headColumns)
+        // Transactions HEAD is the one HEAD partitioned by `next_version` and must include the column.
+        val targetColumns = if (collection.headTable.partitionByColumn == PgColumn.next_version) allColumns else headColumns
+        inRows.addColumns(targetColumns)
         val members = collection.head.members
         inRows.addCustomMembers(members)
         var i = 0

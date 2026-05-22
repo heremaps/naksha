@@ -20,7 +20,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.objects.NakshaMap
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -537,7 +537,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_MAP_NUMBER)
             .withCollectionNumber(MAPS_COL_NUMBER)
-            .addColumns(allColumns)
+            .addColumns(headColumns)
         val SQL = """SELECT ${outRows.names()}
 FROM "naksha~admin".${maps.headTable.quotedName}
 WHERE id = $1"""
@@ -572,7 +572,7 @@ WHERE id = $1"""
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_MAP_NUMBER)
             .withCollectionNumber(MAPS_COL_NUMBER)
-            .addColumns(allColumns)
+            .addColumns(headColumns)
         val SQL = """
             SELECT ${outRows.names()}
             FROM "naksha~admin".${maps.headTable.quotedName}

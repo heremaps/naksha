@@ -1,7 +1,6 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.storage.http.connector.ConnectorInterfaceWriteExecute;
-import naksha.base.AtomicInt;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
@@ -50,11 +49,6 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
             log.warn("We got exception while executing Write request.", e);
             return new ErrorResponse(NakshaError.EXCEPTION, e.getMessage(), e);
         }
-    }
-
-    @Override
-    public @NotNull AtomicInt getUid() {
-        return null;
     }
 
     @Override
