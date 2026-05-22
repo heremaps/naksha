@@ -50,7 +50,7 @@ open class PgTable(
      */
     @JvmField val partitionOfValue: Int = -1,
     /**
-     * The column by which to partition, if this is a partitioned table; must be either [PgColumn.tn] or [PgColumn.next_version].
+     * The column by which to partition, if this is a partitioned table; must be either [PgColumn.fn] or [PgColumn.next_version].
      * @since 3.0
      */
     @JvmField val partitionByColumn: PgColumn? = null,
@@ -58,7 +58,7 @@ open class PgTable(
      * If this table is performance-partitioned, the amount of partitions, therefore
      * - `0` when [partitionByColumn] is `null`
      * - `0` when [partitionByColumn] is [PgColumn.next_version], so the partitions are years.
-     * - `2 .. 1000` when [partitionByColumn] is [PgColumn.tn], so this is a performance-partitioned table.
+     * - `2 .. 1000` when [partitionByColumn] is [PgColumn.fn], so this is a performance-partitioned table.
      * @since 3.0
      */
     @JvmField val partitionCount: Int = 0
@@ -217,7 +217,7 @@ open class PgTable(
                 "The table '${name}' is a partition of '${parentTable.name}', but the parent does not declare 'partitionBy'"
             }
             when (parentTable.partitionByColumn) {
-                PgColumn.tn -> {
+                PgColumn.fn -> {
                     require(partitionValue >= 0 && partitionValue < parentTable.partitionCount) {
                         """The table '$name' is a partition of '${parentTable.name}', but does not declare a valid 'partitionOfValue' (0 to ${parentTable.partitionCount}): $partitionValue"""
                     }
@@ -230,7 +230,7 @@ open class PgTable(
                 }
 
                 else -> throw IllegalArgumentException(
-                    """The table '$name' is partitioned by invalid column: ${parentTable.partitionByColumn} (must be ${PgColumn.tn.name} or ${PgColumn.next_version.name})"""
+                    """The table '$name' is partitioned by invalid column: ${parentTable.partitionByColumn} (must be ${PgColumn.fn.name} or ${PgColumn.next_version.name})"""
                 )
             }
         }
@@ -239,7 +239,7 @@ open class PgTable(
         if (partitionColumn != null) {
             when (partitionColumn) {
                 // The children are performance tables, partitioned by partition-number.
-                PgColumn.tn -> {
+                PgColumn.fn -> {
                     require(partitionCount in 2..1000) { "Invalid partition-count, expect 2 .. 1000, found : $partitionCount" }
                 }
                 // The children are yearly tables, either in transaction table or history table, partition by year.
@@ -296,10 +296,11 @@ open class PgTable(
                 if (partitionValue !in 0 ..< parentPartCount) {
                     throw illegalState("The table '${name}' is performance-partitioned with an partition-number being illegal: $partitionValue; expected 0 till $parentPartCount")
                 }
+                // HISTORY year + perf-partition leaf: PK includes (fn, version, next_version) because next_version is the year-partition key.
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
-  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn}),
+  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
   CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=${superPartValue}),
-  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (naksha_tn_partition_index(tn, $parentPartCount)=$partitionValue),
+  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue),
   CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
@@ -316,22 +317,20 @@ $TABLESPACE"""
                 // If this table is further partitioned, this must be part of history.
                 // HISTORY -> YEARLY (this) -> PARTITION
                 if (partitionColumn != null) {
-                    if (partitionColumn != PgColumn.tn) {
-                        throw illegalState("The history table '$name' must be partitioned only by `tn`, but ${partitionColumn.name} was used!")
+                    if (partitionColumn != PgColumn.fn) {
+                        throw illegalState("The history table '$name' must be partitioned only by `fn`, but ${partitionColumn.name} was used!")
                     }
                     val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
   CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
-PARTITION BY RANGE (naksha_tn_partition_index(tn, $partitionCount))
+PARTITION BY RANGE (((fn & 65535)::int4 % $partitionCount))
 $TABLESPACE"""
                     return Pair(SQL, TABLESPACE)
                 }
 
-                // This is either a partition of history or transaction with no further children, but
-                // no matter which one it is, it looks like:
-                // HISTORY/TX -> YEARLY (this)
+                // HISTORY/TX yearly leaf (no further partitioning). PK includes (fn, version, next_version).
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
-  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn}),
+  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
   CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
@@ -339,9 +338,9 @@ $TABLESPACE"""
                 return Pair(SQL, TABLESPACE)
             }
 
-            // If parent is partitioned by `tn`, then this is a performance partition either of HEAD or DELETED:
+            // If parent is partitioned by `fn`, then this is a performance partition either of HEAD or DELETED:
             // HEAD/DELETED -> PARTITION (this)
-            if (parentTable.partitionByColumn == PgColumn.tn) {
+            if (parentTable.partitionByColumn == PgColumn.fn) {
                 if (partitionColumn != null) {
                     throw illegalState("The performance partition '$name' must not be partitioned further, but is by $partitionColumn")
                 }
@@ -350,11 +349,11 @@ $TABLESPACE"""
                     throw illegalState("The table '${name}' is performance-partitioned with an partition-number being illegal: $partitionValue; expected 0 till $parentPartCount")
                 }
                 val nextVersionConstraint = if (isDeleted(parentTable.name))
-                    "  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version = naksha_tn_version(tn)),\n"
+                    "  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version = version),\n"
                 else ""
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
-  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn}),
-$nextVersionConstraint  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (naksha_tn_partition_index(tn, $parentPartCount)=$partitionValue),
+  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version}),
+$nextVersionConstraint  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue),
   CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
@@ -382,12 +381,12 @@ $TABLESPACE"""
 
         // If the root table is not partitioned.
         if (partitionColumn == null) {
-            // HEAD, META, or DELETED.
+            // HEAD, META, or DELETED. One row per feature; PK = (fn) INCLUDE (version).
             // HEAD has no next_version column (intrinsically HEAD); META and DELETED keep all columns.
             val columns = if (isAnyHead(name) || isMeta(name)) PgColumn.headColumns else PgColumn.allColumns
             val SQL = """$CREATE_TABLE $quotedName (
 ${columns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
-CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.tn})
+CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version})
 )
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
@@ -395,16 +394,16 @@ $TABLESPACE"""
         }
 
         // If performance partitioned and not META.
-        if (partitionColumn == PgColumn.tn && !isMeta(name)) {
+        if (partitionColumn == PgColumn.fn && !isMeta(name)) {
             // HEAD (this) -> PARTITION
             // DELETED (this) -> PARTITION
             val columns = if (isDeleted(name)) PgColumn.allColumns else PgColumn.headColumns
             val nextVersionConstraint = if (isDeleted(name))
-                "CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version = naksha_tn_version(tn))"
+                "CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version = version)"
             else ""
             val SQL = """$CREATE_TABLE $quotedName (
 ${columns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()}${if (nextVersionConstraint.isNotEmpty()) ",\n$nextVersionConstraint" else ""}
-) PARTITION BY RANGE (naksha_tn_partition_index(tn, $partitionCount))
+) PARTITION BY RANGE (((fn & 65535)::int4 % $partitionCount))
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)
         }
@@ -445,7 +444,7 @@ $TABLESPACE"""
      * If this table is performance partitioned, so features are stored based upon their ID.
      */
     @JvmField
-    val hasTnPartitions: Boolean = (partitionByColumn == PgColumn.tn) && partitionCount >= 2
+    val hasTnPartitions: Boolean = (partitionByColumn == PgColumn.fn) && partitionCount >= 2
 
     /**
      * Create the table and its partitions.

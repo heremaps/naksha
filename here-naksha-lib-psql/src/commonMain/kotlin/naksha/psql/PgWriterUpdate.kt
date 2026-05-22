@@ -20,7 +20,9 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
 
     init {
         inRows.addColumns(headColumns)
-        inRows.addColumn("version", PgType.INT64) // needed to do atomic updates
+        // Separate column for the expected/atomic version, because `version` itself
+        // is now a real HEAD column carrying the new tuple's version.
+        inRows.addColumn("expected_version", PgType.INT64) // needed to do atomic updates
         val members = collection.head.members
         inRows.addCustomMembers(members)
         var i = 0
@@ -29,7 +31,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
             if (tuple != null) {
                 writeById[write.id] = write
                 inRows[i] = tuple
-                inRows.set(i, "version", write.version?.txn)
+                inRows.set(i, "expected_version", write.version?.txn)
                 inRows.setCustomMembers(i, write.feature, members)
                 i++
             }
@@ -44,22 +46,22 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
 
-        // select `id` and `tn` of all rows that match new_row.id
+        // select `id` and version of all rows that match new_row.id
         val head_select = """, head_select AS (
-  SELECT head.id AS id, head.tn AS tn
+  SELECT head.id AS id, head.fn AS fn, head.version AS version
   FROM ${headTable.quotedName} AS head, new_row
   WHERE head.id = new_row.id
 )"""
 
-        // If the client requested an atomic update, so it provided a `version`, then
+        // If the client requested an atomic update, so it provided an `expected_version`, then
         // we only update the head row, when the version matches.
-        // If we need to create a history entry, select all HEAD columns, otherwise only `id` and `tn`
+        // If we need to create a history entry, select all HEAD columns, otherwise only the bits we need.
         val head_row = """, head_row AS (
   SELECT ${if (insert_into_history != null)
          headColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }
-    else "head.id AS id, head.tn AS tn, head.attachment AS attachment"}
+    else "head.id AS id, head.fn AS fn, head.version AS version, head.attachment AS attachment"}
   FROM ${headTable.quotedName} AS head, new_row
-  WHERE head.id = new_row.id AND (new_row.version IS NULL OR (new_row.version & -4) = (naksha_tn_version(head.tn) & -4))
+  WHERE head.id = new_row.id AND (new_row.expected_version IS NULL OR (new_row.expected_version & -4) = (head.version & -4))
   FOR UPDATE NOWAIT
 )"""
 
@@ -67,24 +69,24 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
         val clear_shadow = if (shadowTable != null) """, clear_shadow AS (
   DELETE FROM ${shadowTable.quotedName}
   WHERE id IN (SELECT id FROM head_row)
-  RETURNING id, tn
+  RETURNING id, fn, version
 )""" else ""
 
         // Insert the current `head_row` into history. The new tuple's version becomes the demoted row's next_version.
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
   INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT naksha_tn_version(new_row.tn) AS ${PgColumn.next_version},
+  SELECT new_row.version AS ${PgColumn.next_version},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.id = head_row.id
-  RETURNING id, tn
+  RETURNING id, fn, version
 )""" else ""
 
         // Delete `head_row` from HEAD.
         val head_deleted = """, head_deleted AS (
   DELETE FROM ${headTable.quotedName}
-  WHERE tn IN (SELECT tn FROM head_row)
-  RETURNING id, tn
+  WHERE (fn, version) IN (SELECT fn, version FROM head_row)
+  RETURNING id, fn, version
 )"""
 
         val inserted = """, inserted AS (
@@ -96,15 +98,16 @@ SELECT ${headColumns.joinToString(", ") {
         }}
 FROM new_row
 LEFT JOIN head_row ON head_row.id = new_row.id
-RETURNING id, tn, attachment
+RETURNING id, fn, version, attachment
 )"""
 
         val SQL = """$query$head_select$head_row$head_to_history$clear_shadow$head_deleted$inserted
 SELECT
     new_row.id AS id,
-    new_row.tn AS tn,
+    new_row.fn AS fn,
+    new_row.version AS version,
     head_select.id AS existing_id,
-    head_select.tn AS existing_tn,
+    head_select.version AS existing_version,
     head_row.id AS head_id,
     ${if (head_to_history.isNotEmpty()) "head_to_history.id AS history_id," else ""}
     ${if (clear_shadow.isNotEmpty()) "clear_shadow.id AS clear_shadow_id," else ""}
@@ -132,7 +135,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
             .withCollectionNumber(collectionNumber)
             .addColumn("id", PgType.STRING)
             .addColumn("existing_id", PgType.STRING)
-            .addColumn("existing_tn", PgType.BYTE_ARRAY)
+            .addColumn("existing_version", PgType.INT64)
             .addColumn("head_id", PgType.STRING)
             .addColumn("attachment", PgType.BYTE_ARRAY)
         val plan = plan(conn, collection)
@@ -163,7 +166,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 if (existing_id != id) {
                     throw featureNotFound("Failed to update feature '$id', no such feature exists")
                 }
-                val existing_tn = rows.getByteArray(rowNum, "existing_tn") ?: throw illegalState("Missing tuple-number in HEAD select for feature '$id'")
+                val existing_version = rows.getInt64(rowNum, "existing_version") ?: throw illegalState("Missing version in HEAD select for feature '$id'")
                 // Fetch the original write and tuple for this row.
                 val write = writeById[id] ?: throw illegalState("Missing write state for feature '$id'")
                 val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
@@ -171,8 +174,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 val head_id = rows.getString(rowNum, "head_id")
                 if (head_id != id) { // Conflict!
                     val expectedVersion = write.version ?: throw illegalState("Missing expected version for feature '$id'")
-                    val tn = TupleNumber.fromB128(existing_tn, storageNumber, mapNumber, collectionNumber)
-                    throw conflict("The feature '$id' was expected in version $expectedVersion, but actually found in ${tn.version}")
+                    throw conflict("The feature '$id' was expected in version $expectedVersion, but actually found in ${Version(existing_version)}")
                 }
                 // Update the attachment, if we should keep it.
                 val attachment = rows.getByteArray(rowNum, "attachment")

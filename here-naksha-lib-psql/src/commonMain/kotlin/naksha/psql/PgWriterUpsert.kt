@@ -51,38 +51,38 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
         val clear_shadow = if (shadowTable != null) """, clear_shadow AS (
   DELETE FROM ${shadowTable.quotedName}
   WHERE id IN (SELECT id FROM head_row)
-  RETURNING id, tn
+  RETURNING id, fn, version
 )""" else ""
 
         // Insert the current `head_row` into history. next_version is the new tuple's version with action set to UPDATE.
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
   INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
-  SELECT ((naksha_tn_version(new_row.tn) & -4) | 1) AS ${PgColumn.next_version},
+  SELECT ((new_row.version & -4) | 1) AS ${PgColumn.next_version},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.id = head_row.id
-  RETURNING id, tn
+  RETURNING id, fn, version
 )""" else ""
 
         // Delete `head_row` from HEAD.
         val head_deleted = """, head_deleted AS (
   DELETE FROM ${headTable.quotedName}
   WHERE id IN (SELECT id FROM head_row)
-  RETURNING id, tn
+  RETURNING id, fn, version
 )"""
 
         // Insert new_row's, so for which there was no existing HEAD version deleted.
         // Note, when the client selected UNDEFINED for attachment, we need to turn this value into `null`!
         val head_inserted = """, head_inserted AS (
   INSERT INTO ${headTable.quotedName} (${inRows.names()})
-  SELECT ${inRows.columns.joinToString(", ") { 
+  SELECT ${inRows.columns.joinToString(", ") {
   if (PgColumn.attachment.name == it.name)
       "CASE WHEN attachment = convert_to('undefined', 'UTF8') THEN null ELSE attachment END AS attachment"
   else
       it.name
   }} FROM new_row
-  WHERE new_row.id NOT IN (SELECT id FROM head_deleted) 
-  RETURNING id, tn
+  WHERE new_row.id NOT IN (SELECT id FROM head_deleted)
+  RETURNING id, fn, version
 )"""
 
         // Update means insert new_rows, but with patched values.
@@ -92,32 +92,36 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
     ${PgColumn.flags},
     ${PgColumn.cc},
     ${PgColumn.attachment},
-    ${PgColumn.tn},
+    ${PgColumn.fn},
+    ${PgColumn.version},
     ${PgColumn.updateColumnsNames})
   SELECT
     ((new_row.flags & -196609) | (1 << 16) | (1 << 12)) AS ${PgColumn.flags},
     (head_row.cc + 1) AS ${PgColumn.cc},
     CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment,
-    naksha_tn_128(naksha_tn_feature_number(new_row.tn), (naksha_tn_version(new_row.tn) & -4) | 1) AS ${PgColumn.tn},
+    new_row.fn AS ${PgColumn.fn},
+    ((new_row.version & -4) | 1) AS ${PgColumn.version},
     ${PgColumn.updateColumns.joinToString(", ") { "new_row.${it.name} AS ${it.name}" }}
   FROM new_row
   LEFT JOIN head_row ON head_row.id = new_row.id
   WHERE new_row.id IN (SELECT id FROM head_deleted)
-  RETURNING id, tn, cc, attachment
+  RETURNING id, fn, version, cc, attachment
 )"""
 
         val SQL = """$new_row$head_row$clear_shadow$head_deleted$head_to_history$head_inserted$head_updated
 SELECT
     new_row.id AS id,
-    new_row.tn AS tn,
-    head_updated.tn AS updated_tn,
+    new_row.fn AS fn,
+    new_row.version AS version,
+    head_updated.fn AS updated_fn,
+    head_updated.version AS updated_version,
     head_updated.cc AS cc,
     head_updated.attachment AS attachment,
-    head_row.tn AS head_row_tn,
-    head_deleted.tn AS head_deleted_tn,
-    head_inserted.tn AS head_inserted_tn,
-    ${if (clear_shadow.isNotEmpty()) "clear_shadow.tn AS clear_shadow_tn," else "null AS clear_shadow_tn,"}
-    ${if (head_to_history.isNotEmpty()) "head_to_history.tn AS head_to_history_tn" else "null AS head_to_history_tn"}
+    head_row.version AS head_row_version,
+    head_deleted.version AS head_deleted_version,
+    head_inserted.version AS head_inserted_version,
+    ${if (clear_shadow.isNotEmpty()) "clear_shadow.version AS clear_shadow_version," else "null AS clear_shadow_version,"}
+    ${if (head_to_history.isNotEmpty()) "head_to_history.version AS head_to_history_version" else "null AS head_to_history_version"}
 FROM new_row
 LEFT JOIN head_updated ON head_updated.id = new_row.id
 LEFT JOIN head_row ON head_row.id = new_row.id
@@ -138,15 +142,17 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .withCollectionNumber(collectionNumber)
             .addColumn(PgColumn.id)
             .addColumn(PgColumn.flags)
-            .addColumn(PgColumn.tn)
+            .addColumn(PgColumn.fn)
+            .addColumn(PgColumn.version)
             .addColumn(PgColumn.attachment)
             .addColumn(PgColumn.cc)
-            .addColumn("updated_tn", PgType.BYTE_ARRAY)
-            .addColumn("head_row_tn", PgType.BYTE_ARRAY)
-            .addColumn("clear_shadow_tn", PgType.BYTE_ARRAY)
-            .addColumn("head_deleted_tn", PgType.BYTE_ARRAY)
-            .addColumn("head_inserted_tn", PgType.BYTE_ARRAY)
-            .addColumn("head_to_history_tn", PgType.BYTE_ARRAY)
+            .addColumn("updated_fn", PgType.INT64)
+            .addColumn("updated_version", PgType.INT64)
+            .addColumn("head_row_version", PgType.INT64)
+            .addColumn("clear_shadow_version", PgType.INT64)
+            .addColumn("head_deleted_version", PgType.INT64)
+            .addColumn("head_inserted_version", PgType.INT64)
+            .addColumn("head_to_history_version", PgType.INT64)
         if (writes.isEmpty()) return
         val plan = plan(conn, collection)
         // TupleNumber.fromB128(inRows.columns[11].values_field[0] as ByteArray, naksha.base.Int64(0), 0, 0).partitionNumber % 16
@@ -172,12 +178,16 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             outRows.addAll(cursor)
             for (row in 0 until outRows.size) {
                 val id = outRows.getString(row, "id") ?: throw generalException("Missing 'id' in SQL result")
-                val tn = outRows.getB128(row, "tn") ?: throw generalException("Missing 'tn' in SQL result")
+                val fn = outRows.getInt64(row, "fn") ?: throw generalException("Missing 'fn' in SQL result")
+                val versionTxn = outRows.getInt64(row, "version") ?: throw generalException("Missing 'version' in SQL result")
+                val tn = TupleNumber(storageNumber, mapNumber, collectionNumber, fn, Version(versionTxn))
 
                 // We need to patch the tuple of all inserts, that were replaced with updates!
                 // The content is the same, but the action, operation, and change-count change.
-                val updated_tn = outRows.getB128(row, "updated_tn")
-                if (updated_tn != null) {
+                val updatedFn = outRows.getInt64(row, "updated_fn")
+                val updatedVersionTxn = outRows.getInt64(row, "updated_version")
+                if (updatedFn != null && updatedVersionTxn != null) {
+                    val updated_tn = TupleNumber(storageNumber, mapNumber, collectionNumber, updatedFn, Version(updatedVersionTxn))
                     // If an update was done, we need the following values to be available:
                     val changeCount: Int = outRows.getInt(row, "cc") ?:
                         throw generalException("Missing 'cc' in update result for feature '$id'")

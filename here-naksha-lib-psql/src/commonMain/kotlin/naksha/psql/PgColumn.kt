@@ -278,22 +278,31 @@ class PgColumn : JsEnum() {
         //max: 72 byte ; 56 + 4 * 4
 
         /**
-         * The [tuple-number][naksha.model.TupleNumber] of this row in [128-bit][B128] encoding _(16 byte)_.
+         * The feature-number — the per-collection identifier of the feature this tuple belongs to.
          *
-         * This column is created as `PRIMARY KEY`, which is very important for some functions of PostgresQL, e.g. in joins it relies upon this, we rely upon this to load unique versions _(aka [Tuple][naksha.model.Tuple])_, even from history.
-         *
-         * The encoding stores, in order, Big-Endian encoded:
-         * - feature-number: 64
-         * - txn: 64 (lower 2 bits encode action)
+         * Together with [version], forms the primary identification of a tuple within a collection. The lower 16 bits of this value are used as the partition key for distribution partitioning (see [naksha.model.Naksha.featureNumber]).
          * @since 3.0
-         * @see [B128]
          */
         @JvmField
         @JsStatic
-        val tn = def(PgColumn::class, "tn") { self ->
+        val fn = def(PgColumn::class, "fn") { self ->
             self._i = 11
-            self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $PLAIN NOT NULL" // prevents either compression or out-of-line storage
+            self._type = PgType.INT64
+            self._extra = "STORAGE $PLAIN NOT NULL"
+        }
+
+        /**
+         * The version (with action in the lower 2 bits) of this tuple.
+         *
+         * Together with [fn], forms the primary identification of a tuple within a collection. See [naksha.model.Version] for the layout.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val version = def(PgColumn::class, "version") { self ->
+            self._i = 12
+            self._type = PgType.INT64
+            self._extra = "STORAGE $PLAIN NOT NULL"
         }
 
         /**
@@ -307,7 +316,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val next_version = def(PgColumn::class, "next_version") { self ->
-            self._i = 12
+            self._i = 13
             self._type = PgType.INT64
             self._extra = "STORAGE $PLAIN" // prevents out-of-line storage
         }
@@ -332,7 +341,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val base_tn = def(PgColumn::class, "base_tn") { self ->
-            self._i = 13
+            self._i = 14
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $PLAIN" // prevents either compression or out-of-line storage
         }
@@ -344,7 +353,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val id = def(PgColumn::class, "id") { self ->
-            self._i = 14
+            self._i = 15
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -356,7 +365,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val app_id = def(PgColumn::class, "app_id") { self ->
-            self._i = 15
+            self._i = 16
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\""
         }
@@ -368,7 +377,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val author = def(PgColumn::class, "author") { self ->
-            self._i = 16
+            self._i = 17
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\""
         }
@@ -394,7 +403,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val origin = def(PgColumn::class, "origin") { self ->
-            self._i = 17
+            self._i = 18
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -409,7 +418,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val target = def(PgColumn::class, "target") { self ->
-            self._i = 18
+            self._i = 19
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -421,18 +430,6 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val ft = def(PgColumn::class, "ft") { self ->
-            self._i = 19
-            self._type = PgType.STRING
-            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
-        }
-
-        /**
-         * A custom string, _null_ if not used.
-         * @since 3.0
-         */
-        @JvmField
-        @JsStatic
-        val cs0 = def(PgColumn::class, "cs0") { self ->
             self._i = 20
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
@@ -444,7 +441,7 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val cs1 = def(PgColumn::class, "cs1") { self ->
+        val cs0 = def(PgColumn::class, "cs0") { self ->
             self._i = 21
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
@@ -456,7 +453,7 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val cs2 = def(PgColumn::class, "cs2") { self ->
+        val cs1 = def(PgColumn::class, "cs1") { self ->
             self._i = 22
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
@@ -468,8 +465,20 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val cs3 = def(PgColumn::class, "cs3") { self ->
+        val cs2 = def(PgColumn::class, "cs2") { self ->
             self._i = 23
+            self._type = PgType.STRING
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
+        }
+
+        /**
+         * A custom string, _null_ if not used.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val cs3 = def(PgColumn::class, "cs3") { self ->
+            self._i = 24
             self._type = PgType.STRING
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
@@ -490,7 +499,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val tags = def(PgColumn::class, "tags") { self ->
-            self._i = 24
+            self._i = 25
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -502,7 +511,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val ref_point = def(PgColumn::class, "ref_point") { self ->
-            self._i = 25
+            self._i = 26
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -514,7 +523,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val geo = def(PgColumn::class, "geo") { self ->
-            self._i = 26
+            self._i = 27
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -526,7 +535,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val feature = def(PgColumn::class, "feature") { self ->
-            self._i = 27
+            self._i = 28
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -538,7 +547,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val attachment = def(PgColumn::class, "attachment") { self ->
-            self._i = 28
+            self._i = 29
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -553,7 +562,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
-            tn, next_version, base_tn,
+            fn, version, next_version, base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -629,7 +638,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, flags, cc,
-            tn, base_tn, // removed: next_version, prev_tn
+            fn, version, base_tn, // removed: next_version, prev_tn
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -657,7 +666,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, // removed: flags, cc
-            base_tn, // removed: tn, next_version (HEAD has no next_version column)
+            base_tn, // removed: fn, version (PK columns; not set via updates), next_version (HEAD has none)
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature // removed: attachment (needs special handling)
@@ -677,7 +686,8 @@ class PgColumn : JsEnum() {
          * In that case we copy from _HEAD_ into a temporary CTE table, then further to _HISTORY_ and/or _SHADOW_, but we need to update some columns, therefore this excludes the columns that need updates:
          * - [next_version] - will become the current `version` to signal tombstone state _(dead-end)_
          * - [flags] - we need to set operation to [DELETED][naksha.model.Operation.DELETED], action to [DELETED][naksha.model.Action.DELETED]
-         * - [tn] - must be updated to match current `version`, with action bits set to DELETED (this is the `final_tn`)
+         * - [version] - must be updated to the current transaction's version, with action bits set to DELETED
+         * - [fn] - copied from the HEAD row directly
          * - [base_tn] - needs to be set to `null`
          * @since 3.0
          */
@@ -687,7 +697,7 @@ class PgColumn : JsEnum() {
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, // removed: flags, cc
-            // removed: tn, next_version, and base_tn,
+            // removed: fn, version, next_version, and base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
             tags, ref_point, geo, feature, attachment
@@ -721,7 +731,8 @@ class PgColumn : JsEnum() {
             MetaColumn.HERE_TILE -> here_tile
             MetaColumn.FLAGS -> flags
             MetaColumn.CHANGE_COUNT -> cc
-            MetaColumn.TUPLE_NUMBER -> tn
+            MetaColumn.TUPLE_NUMBER -> fn // tn is split: callers comparing the binary form must decode to (fn, version)
+            MetaColumn.VERSION -> version
             MetaColumn.BASE_TUPLE_NUMBER -> base_tn
             MetaColumn.ID -> id
             MetaColumn.APP_ID -> app_id

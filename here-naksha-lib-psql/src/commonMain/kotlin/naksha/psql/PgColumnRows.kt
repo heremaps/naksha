@@ -198,8 +198,9 @@ internal class PgColumnRows {
     }
     fun getTuple(row: Int, storageNumber: Int64, mapNumber: Int, collectionNumber: Int): Tuple? {
         if (row < 0 || row >= size) return null
-        val tn_raw = getByteArray(row, PgColumn.tn) ?: return null
-        val tupleNumber = TupleNumber.fromByteArray(tn_raw, 0, B128, storageNumber, mapNumber, collectionNumber)
+        val fn = getInt64(row, PgColumn.fn) ?: return null
+        val version = getInt64(row, PgColumn.version) ?: return null
+        val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, fn, naksha.model.Version(version))
         val base_tn = getByteArray(row, PgColumn.base_tn)
         val baseTupleNumber = if (base_tn != null) TupleNumber.fromByteArray(base_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val nextVersion = getInt64(row, PgColumn.next_version)
@@ -300,7 +301,8 @@ internal class PgColumnRows {
         set(row, PgColumn.here_tile, meta.hereTile)
         set(row, PgColumn.flags, meta.flags)
         set(row, PgColumn.cc, meta.changeCount)
-        set(row, PgColumn.tn, meta.tupleNumber.toB128())
+        set(row, PgColumn.fn, meta.tupleNumber.featureNumber)
+        set(row, PgColumn.version, meta.tupleNumber.version.txn)
         set(row, PgColumn.next_version, meta.nextVersion)
         set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB128())
         set(row, PgColumn.id, meta.id)
