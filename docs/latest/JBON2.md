@@ -1,5 +1,5 @@
-# JBON2
-This is version 2 of the **JBON** specification. As the first version was never used in any production system, it seamlessly replaces [version 1](./JBON1.md).
+# JBON2 _(draft in progress)_
+This is version 2 of the **JBON** specification. It replaces [version 1](./JBON1.md), but stays downward compatible, so the `v2` reader will still be able to read [JBON1].
 
 ## Introduction
 **JBON** is a shortcut for Java Binary Object Notation. In this binary format all values are stored as objects in a tree like structure that can be navigated. It is optimized to reduce the size of the binary, while at the same time being readable without having to parse the data structure. Furthermore, it is intended to play nicely with the [Naksha data model].
@@ -24,13 +24,14 @@ As the format name indicates, this format is object-oriented. All **JBON** data 
 
 - `Primitive`: All _**units**_ that encode a fixed size value _(null, integer, float, timestamp, references, ...)_
 - `String`: A special _**unit**_ that encodes a list of [UNICODE] code points, optionally including [references] to sub-strings. Strings are split using the [UNICODE] word boundary algorithm from [ICU4J].
-- `Binary`: A special _**unit**_ that encodes a types binary as byte-array, i.e. [TWKB].
 - `Array`: A list of _**units**_.
+- `Object`: A list of key-value pairs with all keys are being strings.
 - `Set`: A unique list of _**units**_.
-- `Map`: A list of key-value pairs.
+- `Map`: A list of key-value pairs with keys being any primitive _(does not allow structures as keys)_.
 - `TupleNumber`: A special standardized addressing scheme for [Tuple], defined in the [Naksha data model].
 - `Tuple`: A special encoding of a _**unit**_ with some metadata to cooperate with the [Naksha data model].
 - `Book`: A special container _(basically an array)_ of _**units**_ that can be referred to.
+- `Binary`: A special _**unit**_ that encodes a types binary as byte-array, i.e. [TWKB].
 
 The header of all _**units**_ start with the **lead-in** byte, which identifies the type of the _**unit**_ and in some special cases indicates it's value (one-byte encoding). If **lead-in** byte signals anything except a [primitive] or empty _**unit**_, then it is followed by an unsigned integer encoded in 1, 2 or 4 byte (big-endian) storing the total size of structure/string in byte. This can be used to skip over the _**unit**_ by adding the value to the current offset. Therefore, all _**units**_ always have a size, either implicit or explicit. This allows a decoder to navigate the data without parsing, just by remembering the start of the _**unit**_, next to the offset within the _**unit**_, if the _**unit**_ is navigatable. These values can be encoded in a single long, simplifying a navigation stack implementation.
 
@@ -76,7 +77,7 @@ Hashing is part of the **JBON** specification. When all participants hash the sa
 To be able to calculate a hash, the _**unit**_ first needs to be converted into [logical bytes].
 
 ## Logical Bytes
-To compare two **JBON** _**units**_ logically, they need to be converted into a sequence of comparable bytes, called _logical bytes_. As the **JBON** binary is highly compressed, the same logical data can be encoded in many different ways. Two **JBON** binaries can be logically similar, even while they are binary totally different. This happens for many different reasons, different `global` [books] being used, different `storage` [books], or just different encoders. Therefore, to logically compare two **JBON** _**units**_, all _**child-units**_ of the **JBON** have to be logically serialized and hashed, recursively in a streaming way, in fixed order. Therefore, a uniform logical serialization is needed to compare two **JBON** _**units**_ by value. The **JBON** encoder and decoder can generate such a logical bytes.
+To compare two **JBON** _**units**_ logically, they need to be converted into a sequence of comparable bytes, called _logical bytes_. As the **JBON** binary is highly compressed, the same logical data can be encoded in many different ways. Two **JBON** binaries can be logically similar, even while they are binary totally different. This happens for many reasons, different `global` [books], different `storage` [books], or just different encoders. Therefore, to logically compare two **JBON** _**units**_, all _**child-units**_ of the **JBON** have to be logically serialized, recursively in a streaming way, in fixed order. Therefore, a uniform logical serialization is needed to compare two **JBON** _**units**_ by value. The **JBON** encoder and decoder can generate such a logical bytes.
 
 In other words: Logically `{a:1,b:2}` is equal to `{b:2,a:1}`, therefore both need to result in the same [logical bytes], and therefore in the same hash.
 
@@ -116,41 +117,41 @@ When "enter" is executed, the current state is compacted into a `long`, then sto
 **Note**: The buffers may overlap, so the whole **JBON** can be stored in a single byte-array, each buffer is just a slice of the actual byte-array. This means, it does not matter if the **JBON** is physically encoded in a single byte-array or split into up to 5 byte-arrays.
 
 ## JBON Header
-All JBON files start with the string `JBON` followed by the version as big-endian short, so `0x0002`. This is the only header of a JBON file, there is no footer or other metadata. The actual data starts immediately after the header. The header is in big-endian encoding equal to the integer `0x4A424F4E`, followed by a short being `0x0002`. The reason for this design is that this is a valid zero-terminated C string to be shown in clear text editors.
+All JBON files start with the string `@JB`, followed by the version, i.e. `0x02`. This is the only header of a JBON file, there is no footer or other metadata. The actual data starts immediately after the header. Therefore, reading the first four byte of a **JBON2** binary should be `0x404A4202` _(big-endian)_, or decimal `1,078,608,386`. This is the only way to detect `JBON2` encoding. **This header is mandatory for JBON2**. The root unit follows directly after the header.
 
-**This header is optional and only recommended for disk files!**
+In [JBON1] the `@` encodes the integer `0`, so when testing the header and the highest 8-bit are `@` aka `64`, then we encountered a old [JBON1] document. When viewing a **JBON2** document in an editor results in the first three characters being `@JB`, the rest will be gibberish.
 
 ## Lead-in BYTE
 All _**units**_ start with a **lead-in** byte, which describes the actual type of the _**unit**_, and sometimes as well the value:
 
 - `00`: mixed
-  - `0000_0000`: **null**
-  - `0000_0001`: **undefined**
-  - `0000_0010`: Boolean, **false**
-  - `0000_0011`: Boolean, **true**
-  - `0000_01vv`: Integer _(**int**)_
-    - `0000_0100`: Integer, + 1 byte signed integer value _(**int8**)_
-    - `0000_0101`: Integer, + 2 byte BE signed integer value _(**int16**)_
-    - `0000_0110`: Integer, + 4 byte BE signed integer value _(**int32**)_
-    - `0000_0111`: Integer, + 8 byte BE signed integer value _(**int64**)_
-  - `0000_10vv`: Floating point _(**float**)_
+  - `0000_0000`: **undefined**
+  - `0000_0001`: **null**
+  - `0000_0010`: boolean, **false**
+  - `0000_0011`: boolean, **true**
+  - `0000_01vv`: integer _(**int**)_
+    - `0000_0100`: integer, + 1 byte signed integer value _(**int8**)_
+    - `0000_0101`: integer, + 2 byte BE signed integer value _(**int16**)_
+    - `0000_0110`: integer, + 4 byte BE signed integer value _(**int32**)_
+    - `0000_0111`: integer, + 8 byte BE signed integer value _(**int64**)_
+  - `0000_10vv`: floating point _(**float**)_
     - `0000_1000`: _**reserved**_ + 2 byte BE [binary16] floating point value _(**float16**, not yet supported)_
-    - `0000_1001`: Float, + 4 byte BE [binary32] floating point value _(**float32**)_
-    - `0000_1010`: Float, + 8 byte BE [binary64] floating point value _(**float64**)_
+    - `0000_1001`: float, + 4 byte BE [binary32] floating point value _(**float32**)_
+    - `0000_1010`: float, + 8 byte BE [binary64] floating point value _(**float64**)_
     - `0000_1011`: _**reserved**_ + 16 byte BE [binary128] floating point value _(**float128**, not yet supported)_
-  - `0000_1100`: [Timestamp] + 7 byte BE unsigned integer value
-  - `0000_1101`: [UInt56], unsigned 56-bit integer, + 7 byte BE unsigned integer value _(**uint56**)_
-  - `0000_1110`: [UInt24], unsigned 24-bit integer, + 3 byte BE unsigned integer value _(**uint24**)_
-  - `0000_1111`: **default**
-  - `0001_vvvv`: _reserved_ _(16 values)_
-  - `0010_vvvv`: _reserved_ _(16 values)_
-  - `0011_bbss`: [Reference]
+  - `0000_1100`: [timestamp] + 7 byte BE unsigned integer value
+  - `0000_1101`: [uint56], unsigned 56-bit integer, + 7 byte BE unsigned integer value _(**uint56**)_
+  - `0000_1110`: [uint24], unsigned 24-bit integer, + 3 byte BE unsigned integer value _(**uint24**)_
+  - `0000_1111`: _reserved_
+  - `0001_vvvv`: tiny local-[reference], **ref5**, 0 to 15
+  - `0010_vvvv`: tiny storage-[reference], **ref5**, 0 to 15 _(v1: Was used to refer to global dictionary, but never used)_
+  - `0011_bbss`: [reference]
 - `01`: tiny-value
-  - `0100_vvvv`: Integer, (0 to 15) _(**int5**)_
-  - `0101_vvvv`: Integer, (-16 to -1) _(**int5**)_
-  - `0110_vvvv`: Float, (0.0 to 15.0) _(**float5**)_
-  - `0111_vvvv`: Float, (-16.0 to -1.0) _(**float5**)_
-- `10`: [String]
+  - `0100_vvvv`: integer, (0 to 15) _(**int5**)_
+  - `0101_vvvv`: integer, (-16 to -1) _(**int5**)_
+  - `0110_vvvv`: float, (0.0 to 15.0) _(**float5**)_
+  - `0111_vvvv`: float, (-16.0 to -1.0) _(**float5**)_
+- `10`: [string]
   - `10ss_ssss`: size 0-60, 61=uint8, 62=uint16, 63=uint32
     - If the size is not embedded (61-63), then the size follows the **lead-in**, encoded as 1, 2 or 4 byte biased unsigned integer (biased by 61), BE encoded.
 - `11`: structure
@@ -159,15 +160,22 @@ All _**units**_ start with a **lead-in** byte, which describes the actual type o
     - ss=1: Size is **uint8**, 1 byte unsigned integer size
     - ss=2: Size is **uint16**, 2 byte unsigned integer size
     - ss=3: Size is **uint32**, 4 byte unsigned integer size
-    - tttt=0: [Binary]
-    - tttt=1: [Array]
-    - tttt=2: [Set]
-    - tttt=3: [Map]
-    - tttt=4: [Object]
-    - tttt=5: [TupleNumber]
-    - tttt=6: [Tuple]
-    - tttt=7: [Book]
-    - tttt=8-15: _reserved_
+    - tttt= 0 / `11ss_0000`: [Array] _(v1: [Array])_
+    - tttt= 1 / `11ss_0001`: [Object] _(v1: `Map`)_
+    - tttt= 2 / `11ss_0010`: [Book] _(v1: `Dictionary`)_
+    - tttt= 3 / `11ss_0011`: [TupleNumber] _(v1: reserved)_
+    - tttt= 4 / `11ss_0100`: [Tuple] _(v1: [Feature] with 1 byte variant)_
+    - tttt= 5 / `11ss_0101`: [Set] _(v1: reserved)_
+    - tttt= 6 / `11ss_0110`: [Map] _(v1: reserved)_
+    - tttt= 7 / `11ss_0111`: [TWKB] _(v1: [Custom] with 1 byte variant)_
+    - tttt= 8 / `11ss_1000`: [Binary] _(v1: [Feature] with 2 byte variant)_
+    - tttt= 9 / `11ss_1001`: _reserved_ _(v1: reserved)_
+    - tttt=10 / `11ss_1010`: _reserved_ _(v1: reserved)_
+    - tttt=11 / `11ss_1011`: _reserved_ _(v1: [Custom] with 2 byte variant)_
+    - tttt=12 / `11ss_1100`: _reserved_ _(v1: [Feature] with 4 byte variant)_
+    - tttt=13 / `11ss_1101`: _reserved_ _(v1: reserved)_
+    - tttt=14 / `11ss_1110`: _reserved_ _(v1: reserved)_
+    - tttt=15 / `11ss_1111`: _reserved_ _(v1: [Custom] with 4 byte variant)_
 
 Technically, the **lead-in** byte can be decoded using one big switch statement with 256 cases (128 negative, 128 positive). The negatives are [String] and [Structures], while the positives are [primitives]. Beware that [primitives] must not be replaced with [References]. Therefore, because the [reference] is treated as [primitive], it is not possible to have a [reference] to a [reference], which simplifies the implementation and reduces the possibility of circular [references].
 
@@ -176,23 +184,24 @@ JBON values are always copy-on-write, that means, every modification requires to
 There is additionally to these **JBON** encoded values a way to defined raw data, so data without **lead-in**. It is being documented using `byte` for a single real byte, `bytes`, for a dynamic amount of byte, and `byte[{size}]` for a specified amount of bytes.
 
 ## Primitives
-As described in the **lead-in** section, scalars and fixed size encodings are simple. The size of their encoding is implied by the **lead-in** byte, and sometimes even the value. If not, the value follows directly after the **lead-in** byte, and is always encoded in big-endian encoding.
+As indicated in the **lead-in** section, scalars and fixed size encodings are primitives. The size of their encoding is implied by the **lead-in** byte, and sometimes even the value. If not, the value follows directly after the **lead-in** byte, and is always encoded in big-endian encoding.
 
-All **lead-in** bytes between `0` and `127` do represent [primitives].
+All **lead-in** bytes between `0` and `191` do represent [primitives]. Therefore, this includes [strings].
 
-The [hash] of a primitive is calculated simply above the binary representation of the value like:
+The [logical bytes] of a primitive is generated simply above the binary representation of the value like:
 
-- `null`, `undefined`, `false` an `true` are hashed by their **lead-in** byte.
-- All floating point numbers are hashed with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the [IEEE-754] binary value.
-- All integers are hashed with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value.
-- The [uint56] is hashed with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value.
-- The [uint24] is hashed with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value.
-- The [timestamp] is hashed with the **lead-in** byte `0000_1100`, followed by the big-endian encoded 7-byte of the unsigned integer value _(so as is)_.
-- All raw bytes _(`byte`, `bytes`, `byte[{size}]`)_ are hashed as is, no **lead-in** is being used.
+- `null`, `undefined`, `false` an `true` are encoded as their **lead-in** byte.
+- All floating point numbers are encoded with the **lead-in** byte `0000_1010`, followed by the big-endian encoded 8-byte of the [IEEE-754] binary value.
+- All integers are encoded with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value.
+- The [uint56] is encoded with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value.
+- The [uint24] is encoded with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value.
+- The [timestamp] is encoded with the **lead-in** byte `0000_1100`, followed by the big-endian encoded 7-byte of the unsigned integer value _(so as is)_.
+- All raw bytes _(`byte`, `byte[]`, `byte[{size}]`)_ are encoded as is, no **lead-in** is being used.
+- For [strings] a UTF-16 encoding is selected, see below.
 
-This means, that all floating point numbers and integers are hashed as if they were 8 byte values, even when they are actually stored in a smaller encoding. This allows to have the same hash for the same value, even when it is encoded differently, for example `int8` with value `1` and `int64` with value `1` will have the same hash.
+This means, that all floating point numbers and integers are encoded as if they were full 8 byte values, even when they are actually stored in a smaller encoding. This allows to have the same hash for the same value, even when it is encoded differently, for example `int8` with value `1` and `int64` with value `1` will have the same hash.
 
-Adding the **lead-in** means that [hashing] of the boolean _false_ is different from the [hash] of the integer `0`, which is different from `null`. This guarantees that we do get a different [hash] for them, which is helpful, while the integer `1` is always hashed the same, no matter how it is encoded.
+Adding the **lead-in** guarantees that the [logical bytes] of the boolean _false_ is different from the [logical bytes] of the integer `0`, which is different from `null` and `undefined`. This guarantees that we do get different [logical bytes] for them. It means as well that the integer `1` is always encoded in the [logical bytes] the same way, no matter how it as originally encoded.
 
 ## Timestamp
 A timestamp, encoded with a **lead-in** byte `0000_1100`. It encodes a unix epoch timestamp (UTC) in milliseconds, stored in big-endian encoding as 7-byte value following the **lead-in**. Therefore, it belongs to the primitives. We choose this encoding, because a year has 31,536,000,000 milliseconds, therefore 36-bit can encode 2 years, 40-bit encode 34 years, 48-bit encode already 8925 years, with 56-bit encoding around 2 million years, more than enough. Reducing the size from full 8 byte to 7 byte, saves one byte per value, but more significant, it allows to read timestamps atomically as a single 64-bit integer, then binary-ANDing with `0x00FF_FFFF_FFFF_FFFF` to get the timestamp in milliseconds.
@@ -230,11 +239,11 @@ The **lead-in** byte has the format `0011_bbss`.
 
 The `bb` bits encode the [book] into which the reference directs:
 - 0: `local`
-- 1: `storage`
+- 1: `storage` _(`dictionary` when used in [JBON1] compatibility mode)_
 - 2: `global`
 - 3: `const`
 
-The `ss` bits encode the size of the index.
+The `ss` bits encode the size of the index _(same as in [JBON1])_.
 - 0: **null** reference _(treated as value `null`)_
 - 1: + 1 byte unsigned integer _(**ref8**)_
 - 2: + 2 byte BE unsigned integer _(**ref16**)_
@@ -245,6 +254,13 @@ The `const` [book] is a virtual book, it contains certain hard-coded values, lik
 **Beware that references must not refer to references, and that each [book] can only reference itself or a [book] of higher order.** In other words, `const` entries can only refer to them self, references in `global` can only refer to `global` or `const`, references in `storage` can refer to `storage`, `global` and `const`, while references in `local` can refer to all [books]. This prevents circular references.
 
 The **hash** of a reference is calculated by hashing the value it points to, so that the reference itself stays truely transparent.
+
+### v1
+In [JBON1] references were defined different. The **lead-in** byte was defined as `0111_b?vv`.
+
+If the `b`-bit is set, then this is a back-reference. The index is turned into a relative or absolute offset: `1avv`. When the `a` bit is set, the offset is unsigned and absolute. Otherwise, the offset is relative and signed. The encoder never supported this, so there are no [JBON1] documents that use this.
+
+If the `b`-bit is zero, then this is a reference into a dictionary. The lower 3-bits are: `0gvv`. If the `g` bit is set, the reference was into the global dictionary, otherwise to the local dictionary. The encoder never used global dictionaries, so in reality, there is no [JBON1] document that uses a global dictionary.
 
 ## String
 A string is technically, from the decoder and logical perspective, a single value. Even while it technically persists out of code-points, can include [references], and can be referenced, the decoder should always just represent them as a single Java `String` instance, using caching.
@@ -271,6 +287,21 @@ For embedded [references] the lower four bit _(0..3)_ match the meaning of the s
 - `10`: Add a dot (`.`) behind the string.
 - `11`: Add a colon (`:`) behind the string.
 
+### v1
+In v1 the code-points where encoded differently:
+
+- `0vvv_vvvv`: The value encodes the code point value. Allows values between 0 and 127 (ASCII).
+- `10_vvvvvv`: The value should be AND masks `0011_1111`, then shift-left by 8, the value of the next byte should be added using OR, and finally 128 should be added. Allows values between 128 and 16511 (2^14+128-1).
+- `110_vvvvv`: The value should be AND masks `0001_1111`, then shift-left by 16, and eventually the value of the next two byte (read big-endian) should be added using OR. Allows values between 0 and 2097151 (2^21-1).
+- `111_ssgvv`: The value is a **string-reference**. The three lower bits (`gvv`) have the same meaning as for a **reference**, but must not refer to anything but a string. The `ss`-bits (bit number 4 and 5) signal if a special character should be added behind the referred string. The following values are defined:
+  - `00`: Do not encode any additional character.
+  - `01`: Add a space behind the string.
+  - `10`: Add an underscore (`_`) behind the string.
+  - `11`: Add a colon (`:`) behind the string.
+
+As we increased the amount of books _(previously called dictionaries)_, we needed to modify the encoding, so that have two bit available for the book selection instead of only one, but without reducing the efficacy of the encoding.
+
+### split
 When strings are split by the encoder, it uses the `BreakIterator` from the [ICU4J] library to for that purpose. Pseudocode:
 
 ```java
@@ -370,18 +401,18 @@ As a [reference] consume 2, 3 or 5 byte, it does not make sense to use a [refere
 
 **Note**: The appendable-bits (`aa`) improve the compression rate, because the encoder will split strings mostly at a spaces, dots, or colons. Exactly where these splits happen, we do not need to encode these separation characters. The reason to cut at these characters is that most often street-names or other human text uses the space as separator. The dot is often used in [JSON] paths, domain names, and human text. Finally, the colon is often used in URL's, URN's and other structured Web data.
 
-#### Logical Bytes
+### Logical Bytes
 The primary [logical bytes] of a string start with the empty **lead-in** byte `1000_0000`, followed by the UTF-16 encoded _(big-endian)_ code-units. If there are [references] embedded, then the content of the [reference] is added, so that the [references] are not encoded into the [logical bytes]. This means that the [hash] of a string is independent of how it is actually encoded, and only depends on the actual code-units of the string.
 
 If a _Java_ hash is needed, the [logical bytes] are generated exactly the same that the _Java_ hash needs it, just that the **lead-in** must be skipped. So, a standard _Java_ hash can be calculated by skipping over the **lead-in** byte, and then via `s[0]*31^(n-1) + s[1]*31^(n-2) + ... + s[n-1]`, where `s` is the UTF-16 encoded string as `char[]`.
 
 ## Null
-The value `null` is a normal value, encoded as `0000_0000`. In this document all types are annotated with a question mark _(`?`)_ when they are allowed to be `null`. This includes _**unit**_, therefore `[unit]` means any value, except for `null`, while `[unit]?` means any value, including `null`. The same is true for other types like `int32`, which means the integer must be encoded, while `int32?` means that the value can be either an integer with maximum 32-bits, or `null`.
+The value `null` is a normal value, encoded as `0000_0001`. In this document all types are annotated with a question mark _(`?`)_ when they are allowed to be `null`. This includes _**unit**_, therefore `[unit]` means any value, except for `null`, while `[unit]?` means any value, including `null`. The same is true for other types like `int32`, which means the integer must be encoded, while `int32?` means that the value can be either an integer with maximum 32-bits, or `null`.
 
 ## Undefined
-The `undefined` value is a special value, that is either set explicit by encoding the **lead-in** `0000_0001`, or deducted implicitly. For example, when an [array] should have 5 elements, but it has only 1, then the last four elements are implicitly `undefined` _(deducted from context/situation)_. If the first element is explicitly set to `undefined`, then all elements are `undefined`.
+The `undefined` value is a special value, that is either set explicit by encoding the **lead-in** `0000_0000`, or deducted implicitly. For example, when an [array] should have 5 elements, but it has only 1, then the last four elements are implicitly `undefined` _(deducted from context/situation)_. If the first element is explicitly set to `undefined`, then all elements are `undefined`.
 
-The meaning of `undefined` is context dependent, but often used to refer to some default values or states. Generally it is important to understand that `undefined` is a valid value and often has some special handling. It is different from `null` in that the value `null` is always explicit _(encoded as `0000_0000`)_, while the value `undefined` can be explicit _(`0000_0001`)_ or implicit, deducted by not being available or from context/situation.
+The meaning of `undefined` is context dependent, but often used to refer to some default values or states. Generally it is important to understand that `undefined` is a valid value and often has some special handling. It is different from `null` in that the value `null` is always explicit _(encoded as `0000_0001`)_, while the value `undefined` can be explicit _(`0000_0000`)_ or implicit, deducted by not being available or from context/situation.
 
 **Important**
 
@@ -404,116 +435,78 @@ A structure eventually **must not** contain any `undefined` or `default` _**unit
 
 The values `undefined` and `default` can be used in special situations to indicate default value usage or to revoke keys from a map. The documentation will clarify what is to be done by the decoder, when `undefined` or `default` are encountered. In doubt, the decoder must replace all illegally left over `undefined` and `default` values with `null`. If that leads to an invalid document, it should throw an exception indicating a broken **JBON** binary.
 
-### Binary
-The binary structure is used to store binary content, actually byte-arrays of custom data. They are used for example to encode [TWKB]. The **lead-in** of a binary is `11ss_0000`; with `ss` encoding the size of the size, as usual. The binary format is like:
-
-| Name        | Type                             | Description                                                                                                       |
-|-------------|----------------------------------|-------------------------------------------------------------------------------------------------------------------|
-| lead_in     | `byte`                           | The **lead-in** byte, `11ss_0000`.                                                                                |
-| byte_size   | `int32`                          | The total size of the structure, including the **lead-in**, in bytes.                                             |
-| mime_type   | [string]                         | The MIME-Type of the binary, defaults to `application/octet-stream` from `const` book.                            |
-| compression | [string]?                        | The compression algorith used; `null` if not compressed.                                                          |
-| target_size | `int64`?                         | If a compression algorithm is used, the amount of decompressed bytes _(for buffer allocation)_; otherwise `null`. |
-| parameters  | [ref]<[Map]<[string],[string]>?? | An optional [reference] to additional paramters.                                                                  |
-| data_size   | `int32`                          | The amount of bytes following that represent the binary.                                                          |
-| data        | `bytes`                          | The bytes of the binary.                                                                                          |
-
-The [JSON] and [XML] the binary is encoded as a string using the [data URL scheme]. The gernal syntax is:
-
-`data:<mime-type>[;<parameter]*[;base64]+,<data>`
-
-For example `data:application/twkb;base64,{encoded-data}`. The `mime_type` is encoded as [media-type] of the [data URL]. The `parameters` are added as parameters to the [media-type]. For example, a binary using some parameters, with `mime_type` being `application/foo` can look like `data:application/foo;compression=GZIP;target_size=123456;charset=UTF-8;base64,eyJ4IjoxfQ==`. A timestamp is i.e. encoded as `data:application/epoch,12345678`.
-
-The dedicated [MIME type] parameter is used to identify the type of the binary, normally values from the [IANA media types] are used. If no official MIME type is available, an own one should be used. For example HERE will use `application/twkb` for TWKB binaries, and `application/jbon` for **JBON** binaries. If no MIME type is available, `application/octet-stream` should be expected, resulting in a simple `byte[]`.
-
-The dedicated `compression` parameter and `target_size` are used to make it easier to extract the binary, when it is compressed. It specifically allows to allocate the target buffer in the correct size ahead, very helpful for `LZ4` extraction.
-
-#### Logical Bytes
-The [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, then `mime_type`, followed by all `parameters`, and finally by the decompressed `data`. This ignores the `compression`, `target_size`, `byte_size`, `data_size`, and `tail`.
-
 ### Array
-An array of arbitrary other _**units**_, using the **lead-in** byte `11ss_0001`; with `ss` encoding the size of the size, as usual.
+An array of arbitrary other _**units**_, using the **lead-in** byte `11ss_0000`; with `ss` encoding the size of the size, as usual.
 
-| Name      | Type        | Description                                                           |
-|-----------|-------------|-----------------------------------------------------------------------|
-| lead_in   | `byte`      | The **lead-in** byte, `11ss_0001`.                                    |
-| byte_size | `int32`     | The total size of the structure, including the **lead-in**, in bytes. |
-| elements  | [unit]?...  | The values of the array.                                              |
+| Name      | Type         | Description                                                           |
+|-----------|--------------|-----------------------------------------------------------------------|
+| lead_in   | `byte`       | The **lead-in** byte, `11ss_0000`.                                    |
+| byte_size | `int32`      | The total size of the structure, including the **lead-in**, in bytes. |
+| elements  | ([unit]?)... | The values of the array.                                              |
 
-If the `byte_size` is zero _(**lead-in** is `1100_0001`)_, the array is empty (`[]`). This means, there is minimally one element, when the byte-size is greater than zero!
+If the `byte_size` is zero _(**lead-in** is `1100_0000`)_, the array is empty (`[]`). This means, there is minimally one element, when the byte-size is greater than zero!
 
 The `elements` may contain an `undefined` value _(explicit or implicit by truncated encoding)_. The `undefined` value is allowed by intention, in that case the array contains a logical hole. In other words, an array of the length `3`, can have only two valid values `0` and `2`, with `1` being `undefined` and therefore a logical hole.
 
 #### Logical Bytes
-The [logical bytes] of the array are calculated by adding the empty **lead-in** `1100_0001` _(empty array)_, followed by all `elements` in order, if there are any. The same rules apply while generating the [logical bytes] that apply generally when decoding. So `elements` being [references], have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are. Due to that `undefined` is a valid value, it can as well be encoded into the primary logical bytes.
-
-### Set
-A set is a sorted array with unique elements, using the **lead-in** byte `11ss_0010`; with `ss` encoding the size of the size, as usual.
-
-| Name      | Type      | Description                                                                |
-|-----------|-----------|----------------------------------------------------------------------------|
-| lead_in   | `byte`    | The **lead-in** byte, `11ss_0010`.                                         |
-| byte_size | `int32`   | The total size of the structure, including the **lead-in**, in bytes.      |
-| elements  | [unit]... | The values of the set, must not contain `null`, `undefined` or duplicates. |
-
-If the `byte_size` is zero _(**lead-in** is `1100_0001`)_, the array is empty (`[]`). This means, there is minimally one element, when the byte-size is greater than zero!
-
-#### Logical Bytes
-The [logical bytes] of the set are calculated by adding the empty **lead-in** `1100_0010` _(empty set)_, followed by all `elements` [sorted] in ascending order, if there are any. The same rules apply while generating the [logical bytes] that apply generally when decoding. So `keys` being [references], have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are.
-
-### Map
-A map is a key-value store with the **lead-in** byte being `11ss_0011`; with `ss` encoding the size of the size, as usual.
-
-| Name      | Type                     | Description                                                           |
-|-----------|--------------------------|-----------------------------------------------------------------------|
-| lead_in   | `byte`                   | The **lead-in** byte, `11ss_0011`.                                    |
-| byte_size | `int32`                  | The total size of the structure, including the **lead-in**, in bytes. |
-| keys      | [Set]<[unit]>            | The keys.                                                             |
-| template  | [ref]<[Array]<[unit]?>>? | An optional [reference] to a value template.                          |
-| values    | [Array]<[unit]?>         | The values, in same same order as keys, and with the same length.     |
-
-If the `byte_size` is zero _(**lead-in** is `1100_0011`)_ , this implies an empty map (`{}`). This means, there is minimally one entry, when the byte-size is greater than zero!
-
-If a value is `default`, the decoder reads the value from the `template`. If no `template` is available or there are too few values in the `template`, then the value becomes `null`, **not** `undefined`! Therefore, the `default` _**unit**_ never becomes `undefined`!
-
-If a value is `undefined` _(explicit or implicit)_, the entry is removed from the map. This is a way to remove keys from the map, when the used `keys` contain too many entries. Encoders can optimize encoding by referring to keys that are larger than what is needed.
-
-Encoders can use this definition by moving the keys that are most often removed to the end of the keys-set. In that case the map can be truncated by the encoder, so that those keys that need to be removed are located at the end of the `values` array. This will automatically make their value `undefined` and, therefore, they are removed.
-
-**Notes**
-- To stay [JSON] compatible, keys of the map should be [String] only.
-
-#### Logical Bytes
-The [logical bytes] of the map are created by adding the empty **lead-in** `1100_0010`, followed by all entries, in ascending order of the keys. Therefore, first an internal key list is created, then [sorted] ascending. Afterward, all keys are iterated, adding the key and value to the [logical bytes]. This is done to ensure that two maps always generate the same [logical bytes], when they contain the same entries; independent of the encoding and entry order. Note that by sorting the keys, we ensure that the order of the keys do not matter for the [logical bytes], which is important so that `{a:1,b:2}` actually equals `{b:2,a:1}`.
-
-Encoders can use the [logical bytes] of the `keys` to find similarities.
+The [logical bytes] of the array are calculated by adding the empty **lead-in** `1100_0000` _(empty array)_, followed by all `elements` in order, if there are any. The same rules apply while generating the [logical bytes] that apply generally when decoding. So `elements` being [references], have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are. Due to that `undefined` is a valid value, it can as well be encoded into the primary logical bytes.
 
 ### Object
-An object is a key-value store with the **lead-in** byte being `11ss_0100`; with `ss` encoding the size of the size, as usual. All keys must be [strings].
+An object is a key-value store with the **lead-in** byte being `11ss_0001`; with `ss` encoding the size of the size, as usual. All keys must be [strings].
 
-| Name      | Type                     | Description                                                           |
-|-----------|--------------------------|-----------------------------------------------------------------------|
-| lead_in   | `byte`                   | The **lead-in** byte, `11ss_0100`.                                    |
-| byte_size | `int32`                  | The total size of the structure, including the **lead-in**, in bytes. |
-| keys      | [Set]<[string]>          | The keys.                                                             |
-| template  | [ref]<[Array]<[unit]?>>? | An optional [reference] to a value template.                          |
-| values    | [Array]<[unit]?>         | The values, in same same order as keys, and with the same length.     |
+| Name         | Type                         | Description                                                            |
+|--------------|------------------------------|------------------------------------------------------------------------|
+| lead_in      | `byte`                       | The **lead-in** byte, `11ss_0001`.                                     |
+| byte_size    | `int32`                      | The total size of the structure, including the **lead-in**, in bytes.  |
+| default_keys | [ref]<[Set]<[string]>>?      | The _optional_ reference to a key-set to be used for `undefined` keys. |
+| entries      | ([ref]<[string]>,[unit]?)... | The key-value pairs of this object.                                    |
 
-If the `byte_size` is zero _(**lead-in** is `1100_0100`)_ , this implies an empty object (`{}`). This means, there is minimally one entry, when the byte-size is greater than zero!
+If the `byte_size` is zero _(**lead-in** is `1100_0000`)_ , this implies an empty object (`{}`). This means, there is minimally one entry, when the byte-size is greater than zero!
 
-If a value is `default`, the decoder reads the value from the `template`. If no `template` is available or there are too few values in the `template`, then the value becomes `null`, **not** `undefined`! Therefore, the `default` _**unit**_ never becomes `undefined`!
+The entries need to be sorted ascending, before encoding.
 
-If a value is `undefined` _(explicit or implicit)_, the entry is removed from the map. This is a way to remove keys from the map, when the used `keys` contain too many entries. Encoders can optimize encoding by referring to keys that are larger than what is needed.
+When the key in the entries is `null`, `undefined` or a [NULL reference], then the key at same index of default-keys is used. The decoder should raise an exception, if the key is invalid and there is no default-key as replacement. 
 
-Encoders can use this definition by moving the keys that are most often removed to the end of the keys-set. In that case the map can be truncated by the encoder, so that those keys that need to be removed are located at the end of the `values` array. This will automatically make their value `undefined` and, therefore, they are removed.
-
-**Notes**
-- To stay [JSON] compatible, keys of the map should be [String] only.
+#### v1
+When reading in `v1` compatibility mode, the decoder need to be aware that the keys are not ordered, and that the object does not have `default_keys`, so it should simply internally set them to `null`.
 
 #### Logical Bytes
-The [logical bytes] of the map are created by adding the empty **lead-in** `1100_0010`, followed by all entries, in ascending order of the keys. Therefore, first an internal key list is created, then [sorted] ascending. Afterward, all keys are iterated, adding the key and value to the [logical bytes]. This is done to ensure that two maps always generate the same [logical bytes], when they contain the same entries; independent of the encoding and entry order. Note that by sorting the keys, we ensure that the order of the keys do not matter for the [logical bytes], which is important so that `{a:1,b:2}` actually equals `{b:2,a:1}`.
+The [logical bytes] of the object are created by adding the empty **lead-in** `1100_0001`, followed by all entries. The sorted keys are iterated, adding the key and value to the [logical bytes]. This is needed to ensure that two objects always generate the same [logical bytes], when they contain the same entries; independent of the encoding and entry order. Note that by sorting the keys, we ensure that the order of the keys do not matter for the [logical bytes], which is important so that `{a:1,b:2}` actually equals `{b:2,a:1}`.
+
+For `v1` the decoder need first to create an internal key list, [sorted] ascending. 
 
 Encoders can use the [logical bytes] of the `keys` to find similarities.
+
+### Book
+A book is a special data container; the **lead-in** is `11ss_0010`.
+
+The layout of a book is as follows:
+
+| Section     | Type           | Description                                                           |
+|-------------|----------------|-----------------------------------------------------------------------|
+| lead_in     | `byte`         | The **lead-in** byte, `11ss_0010`.                                    |
+| byte_size   | `int32`        | The total size of the structure, including the **lead-in**, in bytes. |
+| book_id     | [String]?      | Either _null_ (one byte) or the identifier of this book.              |
+| book_tn     | [TupleNumber]? | Either _null_ (one byte) or the [Tuple-Number] of this book.          |
+| entries     | [unit]...      | All values.                                                           |
+
+Note that `book_id` and `book_tn` can be both present, only one of them, or none of them; for example local books do not have a `book_id` or `book_tn`, while `global` books normally always have at least a `book_tn`, and optionally as well a `book_id`.
+
+All **JBON**'s have four books used for encoding and decoding, named `local`, `storage`, `global`, or `const`. Each book has a specific purposes.
+
+| Book      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | References                                  |
+|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
+| `local`   | The `local` book encodes all the data that is accessed via references from the encoded **JBON**. Some things require references, like [Map] encoding, therefore a **JBON** always requires a `local` book.                                                                                                                                                                                                                                                                                                              | to `local`, `storage`, `global` or `const`. |
+| `storage` | The `storage` book is used by storage-engines to offload data from the `local` or `global` book into the storage. For example, when a **JBON** is stored in a database, and some data should be indexed, then this data need to be stored in a dedicated table column. The storage-engine therefore will move the data into the `storage` book, and remove it from the `local` book. The storage-engine later can add this data back without reading the whole **JBON**, because it has the data in the `storage` book. | to `storage`, `global` or `const`.          |
+| `global`  | The `global` book is located outside of the **JBON**, it is shared between multiple **JBONs**.                                                                                                                                                                                                                                                                                                                                                                                                                          | to `global` and `const`.                    |
+| `const`   | The `const` book is hardcoded in the **JBON** specification, as the name suggests it is constant.                                                                                                                                                                                                                                                                                                                                                                                                                       | to `const` only.                            |
+
+The content of a book is basically just an array of _**units**_, referred to by other _**units**_ using a [reference]. The [reference] use the index in the book, **not the offset** _(the byte-position)_.
+
+#### Logical Bytes
+A book is transparent and therefore not part of the [logical bytes] of any [map] or [array].
+
+Still, there are [logical bytes] of the book itself, which are calculated by adding the empty **lead-in** `1100_0010`, then the [logical bytes] of the `book_id`, the `book_tn`, followed by all `entries` in order.
 
 ### TupleNumber
 A tuple is a unique immutable state of some arbitrary feature, uniquely addressed using a tuple-number. The tuple-number encoding can represent a single tuple-number or a list of tuple-numbers. It is a specialized data encoding with shared upfront data; the **lead-in** is `11ss_0100`.
@@ -588,36 +581,75 @@ This concept makes reading of data very efficient and quite simple, while writin
 #### Logical Bytes
 The [logical bytes] of a tuple are calculated by adding the empty **lead-in** `1100_0101`, then the [logical bytes] of the `feature`, and finally of the `attachment`.
 
-### Book
-A book is a special data container; the **lead-in** is `11ss_0110`.
+### Set
+A set is a sorted array with unique elements, using the **lead-in** byte `11ss_0010`; with `ss` encoding the size of the size, as usual.
 
-The layout of a book is as follows:
+| Name      | Type      | Description                                                                |
+|-----------|-----------|----------------------------------------------------------------------------|
+| lead_in   | `byte`    | The **lead-in** byte, `11ss_0010`.                                         |
+| byte_size | `int32`   | The total size of the structure, including the **lead-in**, in bytes.      |
+| elements  | [unit]... | The values of the set, must not contain `null`, `undefined` or duplicates. |
 
-| Section     | Type           | Description                                                           |
-|-------------|----------------|-----------------------------------------------------------------------|
-| lead_in     | `byte`         | The **lead-in** byte, `11ss_0110`.                                    |
-| byte_size   | `int32`        | The total size of the structure, including the **lead-in**, in bytes. |
-| book_id     | [String]?      | Either _null_ (one byte) or the identifier of this book.              |
-| book_tn     | [TupleNumber]? | Either _null_ (one byte) or the [Tuple-Number] of this book.          |
-| entries     | [unit]...      | All values.                                                           |
-
-Note that `book_id` and `book_tn` can be both present, only one of them, or none of them; for example local books do not have a `book_id` or `book_tn`, while `global` books normally always have at least a `book_tn`, and optionally as well a `book_id`.
-
-All **JBON**'s have four books used for encoding and decoding, named `local`, `storage`, `global`, or `const`. Each book has a specific purposes.
-
-| Book      | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | References                                  |
-|-----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|---------------------------------------------|
-| `local`   | The `local` book encodes all the data that is accessed via references from the encoded **JBON**. Some things require references, like [Map] encoding, therefore a **JBON** always requires a `local` book.                                                                                                                                                                                                                                                                                                              | to `local`, `storage`, `global` or `const`. |
-| `storage` | The `storage` book is used by storage-engines to offload data from the `local` or `global` book into the storage. For example, when a **JBON** is stored in a database, and some data should be indexed, then this data need to be stored in a dedicated table column. The storage-engine therefore will move the data into the `storage` book, and remove it from the `local` book. The storage-engine later can add this data back without reading the whole **JBON**, because it has the data in the `storage` book. | to `storage`, `global` or `const`.          |
-| `global`  | The `global` book is located outside of the **JBON**, it is shared between multiple **JBONs**.                                                                                                                                                                                                                                                                                                                                                                                                                          | to `global` and `const`.                    |
-| `const`   | The `const` book is hardcoded in the **JBON** specification, as the name suggests it is constant.                                                                                                                                                                                                                                                                                                                                                                                                                       | to `const` only.                            |
-
-The content of a book is basically just an array of _**units**_, referred to by other _**units**_ using a [reference]. The [reference] use the index in the book, **not the offset** _(the byte-position)_.
+If the `byte_size` is zero _(**lead-in** is `1100_0001`)_, the array is empty (`[]`). This means, there is minimally one element, when the byte-size is greater than zero!
 
 #### Logical Bytes
-A book is transparent and therefore not part of the [logical bytes] of any [map] or [array].
+The [logical bytes] of the set are calculated by adding the empty **lead-in** `1100_0010` _(empty set)_, followed by all `elements` [sorted] in ascending order, if there are any. The same rules apply while generating the [logical bytes] that apply generally when decoding. So `keys` being [references], have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are.
 
-Still, there are [logical bytes] of the book itself, which are calculated by adding the empty **lead-in** `1100_0110`, then the [logical bytes] of the `book_id`, the `book_tn`, followed by all `entries` in order.
+### Map
+A map is a key-value store with the **lead-in** byte being `11ss_0011`; with `ss` encoding the size of the size, as usual.
+
+| Name      | Type                     | Description                                                           |
+|-----------|--------------------------|-----------------------------------------------------------------------|
+| lead_in   | `byte`                   | The **lead-in** byte, `11ss_0011`.                                    |
+| byte_size | `int32`                  | The total size of the structure, including the **lead-in**, in bytes. |
+| keys      | [Set]<[unit]>            | The keys.                                                             |
+| template  | [ref]<[Array]<[unit]?>>? | An optional [reference] to a value template.                          |
+| values    | [Array]<[unit]?>         | The values, in same same order as keys, and with the same length.     |
+
+If the `byte_size` is zero _(**lead-in** is `1100_0011`)_ , this implies an empty map (`{}`). This means, there is minimally one entry, when the byte-size is greater than zero!
+
+If a value is `default`, the decoder reads the value from the `template`. If no `template` is available or there are too few values in the `template`, then the value becomes `null`, **not** `undefined`! Therefore, the `default` _**unit**_ never becomes `undefined`!
+
+If a value is `undefined` _(explicit or implicit)_, the entry is removed from the map. This is a way to remove keys from the map, when the used `keys` contain too many entries. Encoders can optimize encoding by referring to keys that are larger than what is needed.
+
+Encoders can use this definition by moving the keys that are most often removed to the end of the keys-set. In that case the map can be truncated by the encoder, so that those keys that need to be removed are located at the end of the `values` array. This will automatically make their value `undefined` and, therefore, they are removed.
+
+**Notes**
+- To stay [JSON] compatible, keys of the map should be [String] only.
+
+#### Logical Bytes
+The [logical bytes] of the map are created by adding the empty **lead-in** `1100_0010`, followed by all entries, in ascending order of the keys. Therefore, first an internal key list is created, then [sorted] ascending. Afterward, all keys are iterated, adding the key and value to the [logical bytes]. This is done to ensure that two maps always generate the same [logical bytes], when they contain the same entries; independent of the encoding and entry order. Note that by sorting the keys, we ensure that the order of the keys do not matter for the [logical bytes], which is important so that `{a:1,b:2}` actually equals `{b:2,a:1}`.
+
+Encoders can use the [logical bytes] of the `keys` to find similarities.
+
+### TWKB
+
+### Binary
+The binary structure is used to store binary content, actually byte-arrays of custom data. They are used for example to encode [TWKB]. The **lead-in** of a binary is `11ss_0000`; with `ss` encoding the size of the size, as usual. The binary format is like:
+
+| Name        | Type                             | Description                                                                                                       |
+|-------------|----------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| lead_in     | `byte`                           | The **lead-in** byte, `11ss_0000`.                                                                                |
+| byte_size   | `int32`                          | The total size of the structure, including the **lead-in**, in bytes.                                             |
+| mime_type   | [string]                         | The MIME-Type of the binary, defaults to `application/octet-stream` from `const` book.                            |
+| compression | [string]?                        | The compression algorith used; `null` if not compressed.                                                          |
+| target_size | `int64`?                         | If a compression algorithm is used, the amount of decompressed bytes _(for buffer allocation)_; otherwise `null`. |
+| parameters  | [ref]<[Map]<[string],[string]>?? | An optional [reference] to additional paramters.                                                                  |
+| data_size   | `int32`                          | The amount of bytes following that represent the binary.                                                          |
+| data        | `bytes`                          | The bytes of the binary.                                                                                          |
+
+The [JSON] and [XML] the binary is encoded as a string using the [data URL scheme]. The gernal syntax is:
+
+`data:<mime-type>[;<parameter]*[;base64]+,<data>`
+
+For example `data:application/twkb;base64,{encoded-data}`. The `mime_type` is encoded as [media-type] of the [data URL]. The `parameters` are added as parameters to the [media-type]. For example, a binary using some parameters, with `mime_type` being `application/foo` can look like `data:application/foo;compression=GZIP;target_size=123456;charset=UTF-8;base64,eyJ4IjoxfQ==`. A timestamp is i.e. encoded as `data:application/epoch,12345678`.
+
+The dedicated [MIME type] parameter is used to identify the type of the binary, normally values from the [IANA media types] are used. If no official MIME type is available, an own one should be used. For example HERE will use `application/twkb` for TWKB binaries, and `application/jbon` for **JBON** binaries. If no MIME type is available, `application/octet-stream` should be expected, resulting in a simple `byte[]`.
+
+The dedicated `compression` parameter and `target_size` are used to make it easier to extract the binary, when it is compressed. It specifically allows to allocate the target buffer in the correct size ahead, very helpful for `LZ4` extraction.
+
+#### Logical Bytes
+The [logical bytes] of a binary are calculated by adding the empty **lead-in** `1100_0000`, then `mime_type`, followed by all `parameters`, and finally by the decompressed `data`. This ignores the `compression`, `target_size`, `byte_size`, `data_size`, and `tail`.
 
 ## Why not CBOR
 This section explains why [CBOR] was not selected. The formats are similar in many points, when you read the two specification. So, why do something new? The major two difference between them are:
@@ -1302,6 +1334,8 @@ public class MurMur3 implements JbonLogicalBytes {
 ## Changes
 The following changes are introduces into version 2 of this specification, compared to version 1:
 
+- Added header to detect **JBON1**.
+- Added `UInt56` and `UInt24` encodings.
 - Added a specification for how to calculate _logical bytes_ of any _**unit**_, in a way that the same _**unit**_ generates the same _logical bytes_.
   - This is needed to find similar _**units**_ in the storage via hash.
   - It is important to logically compare _**units**_.
@@ -1342,6 +1376,12 @@ The following changes are introduces into version 2 of this specification, compa
 [reference]: #reference
 [References]: #reference
 [references]: #reference
+[NULL Reference]: #reference
+[NULL References]: #reference
+[NULL reference]: #reference
+[NULL references]: #reference
+[null reference]: #reference
+[null references]: #reference
 [ref]: #reference
 [String]: #string
 [string]: #string
@@ -1406,3 +1446,4 @@ The following changes are introduces into version 2 of this specification, compa
 [HERE]: https://www.here.com/
 [MurMur3]: https://en.wikipedia.org/wiki/MurmurHash
 [murmur3]: https://en.wikipedia.org/wiki/MurmurHash
+[JBON1]: ./JBON1.md
