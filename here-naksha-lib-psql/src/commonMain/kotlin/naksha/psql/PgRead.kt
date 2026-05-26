@@ -137,36 +137,6 @@ internal data class PgRead(
      */
     val metaTable: PgTable? = collection.metaTable
 
-    private fun initShadowTables(): List<PgTable>? {
-        val deletedTable = collection.deletedTable ?: return null
-        if (readPartition) {
-            val delPartitions = deletedTable.partitions
-            // If it is enough to read a single partition, because we know where the feature is
-            if (partition >= 0) return listOf(delPartitions[partition])
-            // Otherwise read all partitions
-            val tables = ArrayList<PgTable>(delPartitions.size)
-            for (i in delPartitions.indices) {
-                tables.add(delPartitions[i])
-            }
-            return tables
-        }
-        return listOf(deletedTable)
-    }
-
-    private var _shadowTables: List<PgTable>? = UNDEFINED
-
-    /**
-     * All shadow tables to read.
-     */
-    val shadowTables: List<PgTable>?
-        get() {
-            var tables = _shadowTables
-            if (tables !== UNDEFINED) return tables
-            tables = initShadowTables()
-            _shadowTables = tables
-            return tables
-        }
-
     fun initHistoryTables(): List<PgTable>? {
         val history = collection.historyTable ?: return null
         // TODO: hack to be be fixed as part of CASL-1095

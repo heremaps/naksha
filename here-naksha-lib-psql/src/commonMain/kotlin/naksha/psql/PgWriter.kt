@@ -370,8 +370,7 @@ open class PgWriter internal constructor(
         // PURGE
         val purges = byWriteOp[WriteOp.PURGE]
         if (purges != null) {
-            // TODO: We somehow need to pass through purge option!
-            val tupleWriter = PgWriterDelete(this, collection, partition, purges)
+            val tupleWriter = PgWriterDelete(this, collection, partition, purges, purge = true)
             tupleWriter.execute(conn)
         }
 

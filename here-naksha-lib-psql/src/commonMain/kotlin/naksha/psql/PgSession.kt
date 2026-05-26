@@ -416,9 +416,11 @@ open class PgSession(
         val sql = StringBuilder()
         // Prefix selected columns with `t.` so they don't collide with `fn` / `version` from the lookup CTE.
         val prefixedRowNames = rows.columns.joinToString(", ") { "t.${it.name}" }
-        // HEAD has no `next_version` column; substitute NULL so the UNION ALL shape matches HISTORY/SHADOW.
+        // HEAD has no `next_version` column; substitute NULL for live rows, but for tombstones
+        // (version & 3 == 2) set next_version = version so the tombstone is self-referential (terminal).
         val prefixedRowNamesForHead = rows.columns.joinToString(", ") {
-            if (it.name == PgColumn.next_version.name) "NULL::int8 AS ${it.name}"
+            if (it.name == PgColumn.next_version.name)
+                "CASE WHEN (t.version & 3) >= 2 THEN t.version ELSE NULL::int8 END AS ${it.name}"
             else "t.${it.name}"
         }
         sql.append("WITH ").append(TUPLE_LOOKUP_CTE).append(",\nresult AS(\n")
@@ -437,15 +439,7 @@ open class PgSession(
                     .append(" t JOIN lookup l ON (t.fn, t.version) = (l.fn, l.version)\n")
             }
         } else {
-            val shadowTables = first.shadowTables
-            if (shadowTables != null) {
-                for (shadowTable in shadowTables) {
-                    if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
-                    sql.append("SELECT ").append(prefixedRowNames)
-                        .append(" FROM ").append(shadowTable.quotedName)
-                        .append(" t JOIN lookup l ON (t.fn, t.version) = (l.fn, l.version)\n")
-                }
-            }
+            // No history tables: HEAD contains tombstones for deleted rows; no separate shadow table.
         }
         sql.append(")\nSELECT ").append(rows.namesAggregate()).append(" FROM result")
         val SQL = sql.toString()

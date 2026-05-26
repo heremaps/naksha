@@ -85,6 +85,7 @@ class ReadHistoryTest : PgTestBase() {
             collectionIds.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
+            queryDeleted = true
             versions = 10
         }).apply {
             // We expect to get 4 versions back, in descending order: deleted, updated2, updated1, created
@@ -124,6 +125,7 @@ class ReadHistoryTest : PgTestBase() {
             collectionIds.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
+            queryDeleted = true
             versions = 2
         }).apply {
             // We expect to have 4 versions, but only want the latest 2 back

@@ -192,18 +192,6 @@ open class PgMap internal constructor(
         }
         if (customIndexes != null) for (ci in customIndexes) if (ci != null) head.createCustomIndex(conn, ci)
 
-        val deleted = collection.deletedTable
-        if (deleted != null) {
-            deleted.create(conn)
-            //deleted.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
-            deleted.createIndex(conn, PgIndex.id_unique)
-            deleted.createIndex(conn, PgIndex.version)
-            for (index in indices) {
-                deleted.createIndex(conn, index)
-            }
-            if (customIndexes != null) for (ci in customIndexes) if (ci != null) deleted.createCustomIndex(conn, ci)
-        }
-
         val meta = collection.metaTable
         if (meta != null) {
             meta.create(conn)
@@ -249,9 +237,6 @@ open class PgMap internal constructor(
             val headIndices: MutableList<PgIndex> = mutableListOf()
             val headPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
             val headYears: MutableMap<Int, PgRelation> = mutableMapOf()
-            var deletedRelation: PgRelation? = null
-            val deletedIndices: MutableList<PgIndex> = mutableListOf()
-            val deletedPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
             var historyRelation: PgRelation? = null
             val historyIndices: MutableList<PgIndex> = mutableListOf()
             val historyYears: MutableMap<Int, PgRelation> = mutableMapOf()
@@ -284,17 +269,6 @@ open class PgMap internal constructor(
                         } else if (rel.isIndex()) {
                             val index = PgIndex.of(rel.name)
                             if (index != null && index !in headIndices) headIndices.add(index)
-                        }
-                    }
-                    if (rel.isAnyDeleteRelation()) {
-                        if (rel.isDeleteRootRelation()) {
-                            deletedRelation = rel
-                        } else if (rel.isTable()) {
-                            val i = rel.partitionNumber()
-                            if (i >= 0) deletedPartitions[i] = rel
-                        } else if (rel.isIndex()) {
-                            val index = PgIndex.of(rel.name)
-                            if (index != null && index !in deletedIndices) deletedIndices.add(index)
                         }
                     }
                     if (rel.isAnyHistoryRelation()) {
@@ -348,11 +322,6 @@ open class PgMap internal constructor(
                 collection.historyTable = history
                 for (entry in historyYears) history.years[entry.key] = PgHistoryYear(history, entry.key)
             }
-            if (deletedRelation != null) {
-                val deleted = PgDeleted(collection.headTable)
-                collection.deletedTable = deleted
-                for (index in deletedIndices) deleted.addIndex(index)
-            }
             if (metaRelation != null) {
                 val meta = PgMeta(collection.headTable)
                 collection.metaTable = meta
@@ -373,8 +342,6 @@ open class PgMap internal constructor(
         val builder = StringBuilder()
         val head = collection.headTable
         builder.append("DROP TABLE IF EXISTS ${head.quotedName} CASCADE;\n")
-        val deleted = collection.deletedTable
-        if (deleted != null) builder.append("DROP TABLE IF EXISTS ${deleted.quotedName} CASCADE;\n")
         val meta = collection.metaTable
         if (meta != null) builder.append("DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;\n")
         val history = collection.historyTable

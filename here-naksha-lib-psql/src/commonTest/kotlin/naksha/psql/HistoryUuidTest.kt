@@ -45,6 +45,7 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
             collectionIds += collection.id
             featureIds += feature.id
             queryHistory = true
+            queryDeleted = true
         }).features.filterNotNull()
 
         // Then:
@@ -91,6 +92,7 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
             collectionIds += collection.id
             featureIds += feature.id
             queryHistory = true
+            queryDeleted = true
         }).features.filterNotNull()
 
         // Then:
