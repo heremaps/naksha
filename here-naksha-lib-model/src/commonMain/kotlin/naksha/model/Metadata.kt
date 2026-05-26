@@ -138,67 +138,7 @@ data class Metadata(
     companion object Metadata_C {
 
         /**
-         * Helper method to create the new metadata, when performing the given operation, with the given feature as outcome of the operation, in the given session.
-         *
-         * Actually this method should be used, when the new metadata need to be calculated.
-         * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given arguments are not sufficient to generate the new metadata.
-         * @param session the session for which to perform the operation.
-         * @param feature the new _(modified)_ state of the feature, for which the metadata should be created.
-         * @param tupleNumber the new [TupleNumber] that is generated for the new state.
-         * @param operation the [operation][Operation] that is performed.
-         * @param action the [action][Action] being performed, if not given, it is expected that the given [operation][Operation] has a [fixed action][Operation.action].
-         * @return the new metadata that is correct for the new state, based upon the given data.
-         * @since 3.0.0
-         * @see [StorageTx]
-         */
-        @JvmStatic
-        @JsStatic
-        fun forOperation(
-            session: IWriteSession,
-            feature: NakshaFeature,
-            tupleNumber: TupleNumber,
-            operation: Operation,
-            action: Action = operation.action ?:
-                throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "There is no default action defined for operation $operation")
-        ): Metadata {
-            var flags = session.storage.getEncodingFlags(feature, null)
-                .withOperation(operation)
-                .withAction(action)
-            val xyz = feature.properties.xyz
-            val updatedAt: Int64 = Platform.currentMillis()
-            val createdAt: Int64? = xyz.createdAt
-            val author: String?
-            val authorTs: Int64? = if (xyz.author == null || xyz.author != session.options.author) {
-                // authorTs is always the same as updatedAt, when the author is updated.
-                // If the previous author was null, we simply always assume a change.
-                author = session.options.author
-                null
-            } else {
-                // If the author stays the same as before, we need to remember the previous timestamp!
-                author = xyz.author
-                xyz.authorTs
-            }
-            val baseTupleNumber = xyz.mguid?.tupleNumber
-            return Metadata(
-                tupleNumber = tupleNumber,
-                flags = flags,
-                nextVersion = null,
-                updatedAt = updatedAt,
-                createdAt = createdAt,
-                authorTs = authorTs,
-                baseTupleNumber = baseTupleNumber,
-                changeCount = xyz.changeCount + 1,
-                hash = calculateHash(feature),
-                hereTile = calculateHereTile(feature),
-                id = feature.id,
-                appId = session.options.appId,
-                author = author,
-                origin = null, // TODO: Fix this, we need to detect foreign features!
-                target = null, // TODO: Fix this, we need to detect join operations!
-            )
-        }
 
-        /**
          * Import other metadata into the heap representation.
          * @param other the other metadata.
          * @since 3.0.0
@@ -248,7 +188,7 @@ data class Metadata(
                 tupleNumber = guid.tupleNumber,
                 nextVersion = xyz.nguid?.tupleNumber?.version?.txn,
                 baseTupleNumber = xyz.mguid?.tupleNumber,
-                flags = xyz.flags ?: Flags().withAction(xyz.action).withOperation(xyz.operation),
+                flags = xyz.flags ?: Flags().withAction(xyz.action),
                 updatedAt = xyz.updatedAt,
                 createdAt = if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt,
                 authorTs = if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs,

@@ -160,36 +160,19 @@ inline fun Flags.tagsGzipOn(): Flags = this or TAGS_GZIP_BIT
 inline fun Flags.tagsGzipOff(): Flags = this and TAGS_GZIP_BIT.inv()
 
 /**
- * Returns the operation encoding.
+ * Returns the operation encoding (raw bit value). The operation bits are reserved in the flags for future use.
  * @return the operation encoding.
  * @since 3.0.0
  */
 inline fun Flags.operation(): Int = this and OP_MASK
 
 /**
- * Returns the operation-enumeration value from the encoding.
- * @return the operation-enumeration value from the encoding.
- * @since 3.0.0
- */
-inline fun Flags.operationEnum(): Operation = Operation.fromValue(operation())
-
-/**
  * Updates the operation encoding.
  * @param value the encoding to set.
  * @return the new flags.
  * @since 3.0.0
- * @see [Operation]
  */
 inline fun Flags.withOperation(value: Int): Flags = (this and OP_CLEAR) or (value and OP_MASK)
-
-/**
- * Updates the operation encoding.
- * @param op the operation to set.
- * @return the new flags.
- * @since 3.0.0
- * @see [Operation]
- */
-inline fun Flags.withOperation(op: Operation): Flags = (this and OP_CLEAR) or (op.intValue)
 
 /**
  * Returns the action encoding.

@@ -260,7 +260,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
             is MetaQuery -> {
                 val pgColumn =
-                    if (metaQuery.column == MetaColumn.operation() || metaQuery.column == MetaColumn.action()) {
+                    if (metaQuery.column == MetaColumn.action()) {
                         PgColumn.flags
                     } else {
                         PgColumn.ofRowColumn(metaQuery.column) ?: throw NakshaException(
@@ -268,9 +268,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
                             "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
                         )
                     }
-                val leftOperand = if (metaQuery.column == MetaColumn.operation()) {
-                    "${PgColumn.flags.name} & ${FlagsBits.OP_MASK}"
-                } else if (metaQuery.column == MetaColumn.action()) {
+                val leftOperand = if (metaQuery.column == MetaColumn.action()) {
                     "${PgColumn.flags.name} & ${FlagsBits.ACTION_MASK}"
                 } else if (pgColumn == PgColumn.created_at || pgColumn == PgColumn.author_ts) {
                     "COALESCE(${pgColumn.name}, ${PgColumn.updated_at.name})"

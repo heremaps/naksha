@@ -12,7 +12,6 @@ import kotlin.reflect.KClass
  * An enumeration about the action that actually was performed for a feature in a storage, being [CREATED], [UPDATED], or [DELETED].
  *
  * @since 1.0.0
- * @see [Operation]
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport

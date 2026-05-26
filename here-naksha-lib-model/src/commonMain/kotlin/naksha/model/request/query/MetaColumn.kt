@@ -166,25 +166,6 @@ open class MetaColumn() : AnyObject() {
         fun changeCount(): MetaColumn = MetaColumn(CHANGE_COUNT)
 
         /**
-         * The name of the virtual columns that stores the binary [operation][naksha.model.Operation], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
-         *
-         * This value is exposed through [naksha.model.XyzNs.operation].
-         *
-         * Supported [query operations][AnyOp] are:
-         * - [DoubleOp]
-         * - [AnyOp.IS_ANY_OF]
-         */
-        const val OPERATION = "operation"
-
-        /**
-         * Returns a new meta-column for [OPERATION].
-         * @return a new meta-column.
-         */
-        @JvmStatic
-        @JsStatic
-        fun operation(): MetaColumn = MetaColumn(OPERATION)
-
-        /**
          * The name of the virtual columns that stores the binary [action][naksha.model.Action], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
          *
          * This value is exposed through [naksha.model.XyzNs.action].
