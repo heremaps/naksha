@@ -131,7 +131,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
         checkIndicesCreatedForTable(collection.id, indices)
         checkIndicesCreatedForTable("${collection.id}\$meta", indices)
-        checkIndicesCreatedForTable("${collection.id}\$del", indices)
+        // Note: $del table no longer exists; deleted rows are kept in HEAD with (version & 3) == 2.
         checkIndicesCreatedForTable("${collection.id}\$hst\$y$currentYear", indices)
         checkIndicesCreatedForTable("${collection.id}\$hst\$y${currentYear + 1}", indices)
         checkIndicesCreatedForTable("${collection.id}\$meta", indices)

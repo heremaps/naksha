@@ -141,20 +141,25 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
             // HEAD has no `next_version` column — substitute with NULL so predicates referencing
             // it evaluate to NULL (no HEAD rows match), matching the "no successor yet" semantics.
-            val whereForHead = if (whereQuery.isEmpty()) "" else
-                "WHERE ${whereQuery.replace(Regex("\\b${next_version.name}\\b"), "NULL::int8")}"
+            val whereForHeadBase = whereQuery.replace(Regex("\\b${next_version.name}\\b"), "NULL::int8")
+            // Filter tombstones from HEAD by default: only live rows ((version & 3) < 2).
+            // queryDeleted=true is the sole gate that lifts this filter and exposes tombstones.
+            // queryHistory=true is fully orthogonal — it adds past states from the history table
+            // but does NOT change tombstone visibility in HEAD.
+            val deletedFilter = if (!req.queryDeleted) "(version & 3) < 2" else null
+            val whereForHead = when {
+                whereForHeadBase.isEmpty() && deletedFilter != null -> "WHERE $deletedFilter"
+                whereForHeadBase.isEmpty() -> ""
+                deletedFilter != null -> "WHERE $whereForHeadBase AND $deletedFilter"
+                else -> "WHERE $whereForHeadBase"
+            }
             for (head in read.headTables) {
                 if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
                 selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $whereForHead)\n")
             }
 
-            val deletedTables = read.shadowTables
-            if (!req.queryHistory && req.queryDeleted && deletedTables != null) {
-                for (deleted in deletedTables) {
-                    if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                    selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
-                }
-            }
+            // The shadow/deleted table has been removed. Deleted rows now live in HEAD with (version & 3) == 2.
+            // queryDeleted=true is handled above by omitting the tombstone filter on HEAD.
 
             val historyTables = read.historyTables
             if (req.queryHistory && historyTables != null) {

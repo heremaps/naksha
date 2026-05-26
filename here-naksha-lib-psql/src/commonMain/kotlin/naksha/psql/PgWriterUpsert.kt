@@ -47,13 +47,6 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
   WHERE id IN (SELECT id FROM new_row)
 )"""
 
-        // If the shadow table exists, delete old states.
-        val clear_shadow = if (shadowTable != null) """, clear_shadow AS (
-  DELETE FROM ${shadowTable.quotedName}
-  WHERE id IN (SELECT id FROM head_row)
-  RETURNING id, fn, version
-)""" else ""
-
         // Insert the current `head_row` into history. next_version is the new tuple's version with action set to UPDATE.
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
   INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
@@ -108,7 +101,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
   RETURNING id, fn, version, cc, attachment
 )"""
 
-        val SQL = """$new_row$head_row$clear_shadow$head_deleted$head_to_history$head_inserted$head_updated
+        val SQL = """$new_row$head_row$head_deleted$head_to_history$head_inserted$head_updated
 SELECT
     new_row.id AS id,
     new_row.fn AS fn,
@@ -120,14 +113,13 @@ SELECT
     head_row.version AS head_row_version,
     head_deleted.version AS head_deleted_version,
     head_inserted.version AS head_inserted_version,
-    ${if (clear_shadow.isNotEmpty()) "clear_shadow.version AS clear_shadow_version," else "null AS clear_shadow_version,"}
+    null AS clear_shadow_version,
     ${if (head_to_history.isNotEmpty()) "head_to_history.version AS head_to_history_version" else "null AS head_to_history_version"}
 FROM new_row
 LEFT JOIN head_updated ON head_updated.id = new_row.id
 LEFT JOIN head_row ON head_row.id = new_row.id
 LEFT JOIN head_deleted ON head_deleted.id = new_row.id
 LEFT JOIN head_inserted ON head_inserted.id = new_row.id
-${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = new_row.id" else ""}
 ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.id = new_row.id" else ""}
 ;"""
         val typeNames = inRows.typeNames();

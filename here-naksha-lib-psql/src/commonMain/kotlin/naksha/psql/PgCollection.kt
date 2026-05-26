@@ -106,14 +106,6 @@ open class PgCollection internal constructor(
         internal set
 
     /**
-     * The deletion table can be disabled fully or temporary. When disabled fully, no deletion tables are created, in that case this property will be _null_.
-     *
-     * If the deletion tables are created, deleted features (not being purged) will be copied into this shadow deletion table. The deletion table is partitioned again the same way that [HEAD][headTable] is partitioned, not doing this would create a bottleneck when modifying features in parallel, because then the parallel connections would have a congestion in the deletion table. The deletion therefore managed the same way as [HEAD][headTable], so using the [PgPlatform.partitionNumber] above the `feature.id`.
-     */
-    var deletedTable: PgDeleted?
-        internal set
-
-    /**
      * An optional metadata table, never partitioned. This table is used to as internal storage for metadata, like statistics, calculated by background jobs and other information like this. It can be used as well by applications, and is accessible from outside, but does not have any history or track changes.
      */
     var metaTable: PgTable?
@@ -132,7 +124,6 @@ open class PgCollection internal constructor(
         storageClass = PgStorageClass.of(nakshaCollection.storageClass)
         @Suppress("LeakingThis")
         headTable = if (this is PgNakshaTransactions) PgTransactions(this) else PgHead(this, storageClass, partitions)
-        deletedTable = if (nakshaCollection.storeDeleted == StoreMode.OFF) null else PgDeleted(headTable)
         historyTable = if (nakshaCollection.storeHistory == StoreMode.OFF) null else PgHistory(headTable)
         metaTable = if (nakshaCollection.storeMeta == StoreMode.OFF) null else PgMeta(headTable)
     }
@@ -290,7 +281,6 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
     private fun mutableRootTables(): List<PgTable> {
         val result = mutableListOf<PgTable>()
         result.add(headTable)
-        deletedTable?.let { result.add(it) }
         historyTable?.let { result.add(it) }
         metaTable?.let { result.add(it) }
         return result

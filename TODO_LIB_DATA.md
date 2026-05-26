@@ -6,8 +6,8 @@ Delete this file before merging to v3.
 - [ ] ~~Custom members, indicies support~~
 - [ ] ~~Split tn to (fn, version), renaming next_tn -> next_version~~
 - [ ] ~~Removing of prev_tn~~
-- [ ] Remove `Operation` - Alex
-- [ ] Remove of deletion table - Alex 
+- [ ] ~~Remove `Operation`~~
+- [ ] ~~Remove of deletion table~~ 
 - [ ] [**nice to have**] `PgIndex.kt` -clean up tuple-number leftovers. - Kacper 
 - [ ] [**nice to have**] `PgIndex.kt` - replace the regex-based `next_version` stripping. - Kacper 
 - [ ] [**nice to have**]` PgQueryWhereBuilder.kt` - `whereGuids()` iterates `tupleNumbers` twice; we can optimize it. - Kacper 

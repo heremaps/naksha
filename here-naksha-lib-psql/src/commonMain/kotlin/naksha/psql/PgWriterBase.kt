@@ -151,16 +151,6 @@ internal abstract class PgWriterBase protected constructor(
      */
     val headTable: PgTable = initHeadTable()
 
-    private fun initShadowTable(): PgTable? {
-        val deletedTable = collection.deletedTable ?: return null
-        return if (writeIntoPartition) deletedTable.partitions[partition] else deletedTable
-    }
-
-    /**
-     * The shadow table to write into.
-     */
-    val shadowTable: PgTable? = initShadowTable()
-
     private fun initHistoryTable(): PgTable? {
         val hst = collection.historyTable ?: return null
         var yearTable: PgHistoryYear? = hst.years[year]

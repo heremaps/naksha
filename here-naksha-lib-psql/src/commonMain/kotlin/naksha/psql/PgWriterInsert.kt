@@ -3,11 +3,18 @@ package naksha.psql
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
+import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
  * Execute an **INSERT** _(aka [CREATE][naksha.model.request.WriteOp.CREATE])_ into a collection.
+ *
+ * **Auto-purge on re-create**: if a tombstone (deleted state, `(version & 3) >= 2`) already exists
+ * in HEAD for the same `id`, it is automatically archived into history before the new feature is
+ * written into HEAD. This makes re-create-after-delete transparent: the caller just issues a
+ * normal CREATE and the full history is preserved correctly.
+ *
  * @since 3.0
  * @see [PgWriter]
  */
@@ -32,29 +39,58 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {
+        val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
+
         val new_row = """WITH new_row AS (
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
 )"""
 
-        // If the shadow table exists, delete old states
-        val clear_shadow = if (shadowTable != null) """, clear_shadow AS (
-  DELETE FROM ${shadowTable.quotedName}
-  WHERE id IN (SELECT id FROM new_row)
+        // Detect any existing tombstone in HEAD for the same id (auto-purge target).
+        val head_tombstone = """, head_tombstone AS (
+  SELECT ${headColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
+  FROM ${headTable.quotedName} AS head
+  JOIN new_row ON head.id = new_row.id
+  WHERE (head.version & 3) >= 2
+)"""
+
+        // Archive the tombstone into history so the deletion is preserved in the audit trail.
+        // next_version = new feature's version (the tombstone is succeeded by the new creation).
+        val tombstone_to_history = if (insert_into_history != null) """, tombstone_to_history AS (
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
+  SELECT new_row.version AS ${PgColumn.next_version},
+         ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_tombstone.${it.name} AS ${it.name}" }}
+  FROM head_tombstone
+  JOIN new_row ON new_row.id = head_tombstone.id
   RETURNING id, fn, version
 )""" else ""
 
-        // Insert the features
-        val inserted = """, inserted AS (
-INSERT INTO ${headTable.quotedName} (${inRows.names()})
-SELECT * FROM new_row
-RETURNING id, fn, version
+        // Overwrite the tombstone in HEAD with the new feature (UPDATE in-place, keeps the same fn).
+        // All columns are replaced; cc resets to 1 for the new lifecycle.
+        val head_overwrite = """, head_overwrite AS (
+  UPDATE ${headTable.quotedName}
+  SET ${headColumns.filter { it !== PgColumn.fn }.joinToString(", ") { "${it.name} = new_row.${it.name}" }}
+  FROM new_row
+  JOIN head_tombstone ON head_tombstone.id = new_row.id
+  WHERE ${headTable.quotedName}.fn = head_tombstone.fn
+  RETURNING ${headTable.quotedName}.id, ${headTable.quotedName}.fn, ${headTable.quotedName}.version
 )"""
 
-        // Actually perform the insert.
-        val SQL = """$new_row$clear_shadow$inserted
-SELECT inserted.id AS id, inserted.fn AS fn, inserted.version AS version${if (clear_shadow.isNotEmpty()) ", clear_shadow.fn AS clear_fn, clear_shadow.version AS clear_version" else ""}
-FROM inserted
-${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = inserted.id" else ""}
+        // Plain INSERT for features that have no tombstone in HEAD (the normal case).
+        val head_inserted = """, head_inserted AS (
+  INSERT INTO ${headTable.quotedName} (${inRows.names()})
+  SELECT * FROM new_row
+  WHERE new_row.id NOT IN (SELECT id FROM head_tombstone)
+  RETURNING id, fn, version
+)"""
+
+        val SQL = """$new_row$head_tombstone${tombstone_to_history}$head_overwrite$head_inserted
+SELECT
+    COALESCE(head_overwrite.id, head_inserted.id) AS id,
+    COALESCE(head_overwrite.fn, head_inserted.fn) AS fn,
+    COALESCE(head_overwrite.version, head_inserted.version) AS version
+FROM new_row
+LEFT JOIN head_overwrite ON head_overwrite.id = new_row.id
+LEFT JOIN head_inserted ON head_inserted.id = new_row.id
 """
         val typeNames = inRows.typeNames()
         val pgPlan = conn.prepare(SQL, typeNames)

@@ -65,13 +65,6 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
   FOR UPDATE NOWAIT
 )"""
 
-        // If the shadow table exists, delete old states
-        val clear_shadow = if (shadowTable != null) """, clear_shadow AS (
-  DELETE FROM ${shadowTable.quotedName}
-  WHERE id IN (SELECT id FROM head_row)
-  RETURNING id, fn, version
-)""" else ""
-
         // Insert the current `head_row` into history. The new tuple's version becomes the demoted row's next_version.
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
   INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
@@ -101,7 +94,7 @@ LEFT JOIN head_row ON head_row.id = new_row.id
 RETURNING id, fn, version, attachment
 )"""
 
-        val SQL = """$query$head_select$head_row$head_to_history$clear_shadow$head_deleted$inserted
+        val SQL = """$query$head_select$head_row$head_to_history$head_deleted$inserted
 SELECT
     new_row.id AS id,
     new_row.fn AS fn,
@@ -110,7 +103,6 @@ SELECT
     head_select.version AS existing_version,
     head_row.id AS head_id,
     ${if (head_to_history.isNotEmpty()) "head_to_history.id AS history_id," else ""}
-    ${if (clear_shadow.isNotEmpty()) "clear_shadow.id AS clear_shadow_id," else ""}
     head_deleted.id AS head_deleted_id,
     inserted.id AS inserted_id,
     inserted.attachment AS attachment
@@ -118,7 +110,6 @@ FROM new_row
 LEFT JOIN head_select ON head_select.id = new_row.id
 LEFT JOIN head_row ON head_row.id = new_row.id
 ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.id = new_row.id" else ""}
-${if (clear_shadow.isNotEmpty()) "LEFT JOIN clear_shadow ON clear_shadow.id = new_row.id" else ""}
 LEFT JOIN head_deleted ON head_deleted.id = new_row.id
 LEFT JOIN inserted ON inserted.id = new_row.id
 ;"""
