@@ -74,16 +74,16 @@ All units start with a **lead-in** byte, which describes the type of the unit. T
   - `11ss_vvtt` = Struct (ss: 0=empty, 1=uint8, 2=uint16, 3=uint32)
     - If not empty, followed by one byte, two byte or four byte unsigned integer storing the content size, big-endian encoded.
     - If structure without variant (vv=0, variant=null)
-      - `0`: Array
-      - `1`: Map
-      - `2`: Dictionary
-      - `3`: Reserved
+      - `0`: Array _(`11ss_0000`)_
+      - `1`: Map _(`11ss_0001`)_
+      - `2`: Dictionary _(`11ss_0010`)_
+      - `3`: Reserved _(`11ss_0011`)_
     - If structure with variant (vv: 1=byte, 2=short, 3=int)
       - Followed by one byte, two byte or four byte unsigned integer storing the variant, big-endian encoded.
-      - `0`: Feature
-      - `1`: Naksha
-      - `2`: Custom
-      - `3`: Reserved
+      - `0`: Feature _(`11ss_xx00`)_
+      - `1`: Naksha _(`11ss_xx01`)_
+      - `2`: Custom _(`11ss_xx10`)_
+      - `3`: Reserved _(`11ss_xx11`)_
 
 JBON values are always copy-on-write, that means, every modification requires to copy the object. Therefore, all JBONs are immutable. Reading in a JBON requires a cursor that can be used to move through JBON tree. As every unit stores it outer size, every unit (including all subunits) can be skipped over or entered, by moving the cursor behind the header. Note that only **strings** or **structs** can be entered, all other values are scalars.
 
