@@ -298,7 +298,7 @@ open class PgTable(
                 }
                 // HISTORY year + perf-partition leaf: PK includes (fn, version, next_version) because next_version is the year-partition key.
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
-  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
+  CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
   CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=${superPartValue}),
   CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue),
   CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
@@ -330,7 +330,7 @@ $TABLESPACE"""
 
                 // HISTORY/TX yearly leaf (no further partitioning). PK includes (fn, version, next_version).
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
-  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
+  CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
   CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
@@ -352,7 +352,7 @@ $TABLESPACE"""
                     "  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version = version),\n"
                 else ""
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
-  CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version}),
+  CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version}),
 $nextVersionConstraint  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue),
   CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
@@ -386,7 +386,7 @@ $TABLESPACE"""
             val columns = if (isAnyHead(name) || isMeta(name)) PgColumn.headColumns else PgColumn.allColumns
             val SQL = """$CREATE_TABLE $quotedName (
 ${columns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
-CONSTRAINT ${quoteIdent(PgIndex.tn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version})
+CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version})
 )
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""

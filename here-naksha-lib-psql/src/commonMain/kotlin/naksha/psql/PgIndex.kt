@@ -62,17 +62,14 @@ open class PgIndex : JsEnum() {
     //         then after importing, it should switch tables to logged, then add indices, which should be
     //         done concurrently or the client needs to wait until the index is build, but then we need
     //         to add an very large timeout.
-    protected fun sql(using: String, table: PgTable, unique: Boolean, addFillFactor: Boolean, where: String?): String {
-        // HEAD and META tables have no `next_version` column, so any reference must be stripped.
-        val finalUsing = if (PgTable.isAnyHead(table.name) || PgTable.isMeta(table.name)) {
-            using
-                .replace("INCLUDE (${c_next_version.name})", "") // standalone INCLUDE clause
-                .replace(", ${c_next_version.name}", "")          // suffix in column list
-                .replace("${c_next_version.name}, ", "")          // prefix in column list
-        } else using
+    protected fun sql(using: String, table: PgTable, unique: Boolean, addFillFactor: Boolean, where: String?, includes: List<PgColumn> = emptyList()): String {
+        val filteredIncludes = if (PgTable.isAnyHead(table.name) || PgTable.isMeta(table.name))
+            includes.filter { it !== c_next_version }
+        else includes
+        val includeClause = if (filteredIncludes.isEmpty()) "" else " INCLUDE (${filteredIncludes.joinToString(", ")})"
         return """
 CREATE ${if (unique) "UNIQUE INDEX" else "INDEX "} IF NOT EXISTS ${quoteIdent(id(table))} ON ${table.quotedName}
-USING $finalUsing
+USING $using$includeClause
 ${if (addFillFactor) "WITH (fillfactor="+if (table.isVolatile) "80)" else "100)" else ""} ${table.TABLESPACE}
 ${if (where==null) "" else "WHERE $where"};"""
     }
@@ -88,8 +85,8 @@ ${if (where==null) "" else "WHERE $where"};"""
          */
         @JvmField
         @JsStatic
-        val tn_pkey = def(PgIndex::class, "tnu") { self ->
-            self.name = "tn_unique"
+        val fn_pkey = def(PgIndex::class, "tnu") { self ->
+            self.name = "fn_unique"
             self.internal = true
             self.columns = listOf(c_fn)
             self.naturalOrder = listOf(DESCENDING)
@@ -122,8 +119,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC) INCLUDE ($c_fn, $c_version, $c_next_version)""",
-                        table, unique = true, addFillFactor = true, where = null
+                        """btree ($c_id text_pattern_ops DESC)""",
+                        table, unique = true, addFillFactor = true, where = null,
+                        includes = listOf(c_fn, c_version, c_next_version)
                     )
                 ).close()
             }
@@ -147,8 +145,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_id text_pattern_ops DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_next_version)""",
-                        table, unique = false, addFillFactor = true, where = null
+                        """btree ($c_id text_pattern_ops DESC, $c_fn DESC, $c_version DESC)""",
+                        table, unique = false, addFillFactor = true, where = null,
+                        includes = listOf(c_next_version)
                     )
                 ).close()
             }
@@ -171,8 +170,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_version DESC) INCLUDE ($c_fn, $c_id, $c_next_version)""",
-                        table, unique = false, addFillFactor = true, where = null
+                        """btree ($c_version DESC)""",
+                        table, unique = false, addFillFactor = true, where = null,
+                        includes = listOf(c_fn, c_id, c_next_version)
                     )
                 ).close()
             }
@@ -196,8 +196,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree (($c_version & -4) DESC) INCLUDE ($c_fn, $c_version, $c_id, $c_next_version)""",
-                        table, unique = true, addFillFactor = true, where = null
+                        """btree (($c_version & -4) DESC)""",
+                        table, unique = true, addFillFactor = true, where = null,
+                        includes = listOf(c_fn, c_version, c_id, c_next_version)
                     )
                 ).close()
             }
@@ -222,8 +223,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_here_tile DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_here_tile IS NOT NULL"
+                        "btree ($c_here_tile DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_here_tile IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -249,8 +251,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)""",
-                        table, unique = false, addFillFactor = true, where = "$c_app_id IS NOT NULL"
+                        """btree ($c_app_id text_pattern_ops DESC, $c_updated_at DESC, $c_fn DESC, $c_version DESC)""",
+                        table, unique = false, addFillFactor = true, where = "$c_app_id IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -276,8 +279,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """btree (naksha_author($c_author, $c_app_id) text_pattern_ops DESC, naksha_author_ts($c_author_ts, $c_updated_at) DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)""",
-                        table, unique = false, addFillFactor = true, where = "naksha_author($c_author, $c_app_id) IS NOT NULL"
+                        """btree (naksha_author($c_author, $c_app_id) text_pattern_ops DESC, naksha_author_ts($c_author_ts, $c_updated_at) DESC, $c_fn DESC, $c_version DESC)""",
+                        table, unique = false, addFillFactor = true, where = "naksha_author($c_author, $c_app_id) IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -293,9 +297,10 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "tags"
             self.columns = listOf(c_tags, c_fn, c_version, c_next_version)
             self.createFn = Fx2 { conn, table ->
+                val nv = if (PgTable.isAnyHead(table.name) || PgTable.isMeta(table.name)) "" else ", $c_next_version"
                 conn.execute(
                     self.sql(
-                        """gin (naksha_tags($c_tags, $c_flags), $c_fn, $c_version, $c_next_version)""",
+                        """gin (naksha_tags($c_tags, $c_flags), $c_fn, $c_version$nv)""",
                         table, unique = false, addFillFactor = false, where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
                     )
                 ).close()
@@ -331,9 +336,10 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.name = "gist_geo"
             self.columns = listOf(c_geo, c_fn, c_version, c_next_version)
             self.createFn = Fx2 { conn, table ->
+                val nv = if (PgTable.isAnyHead(table.name) || PgTable.isMeta(table.name)) "" else ", $c_next_version"
                 conn.execute(
                     self.sql(
-                        """gist (naksha_2d($c_geo, $c_flags), $c_fn, $c_version, $c_next_version)""",
+                        """gist (naksha_2d($c_geo, $c_flags), $c_fn, $c_version$nv)""",
                         table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
                     )
                 ).close()
@@ -373,8 +379,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_ft text_pattern_ops DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_ft IS NOT NULL"
+                        "btree ($c_ft text_pattern_ops DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_ft IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -394,8 +401,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv0 DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_cv0 IS NOT NULL"
+                        "btree ($c_cv0 DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv0 IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -415,8 +423,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv1 DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_cv1 IS NOT NULL"
+                        "btree ($c_cv1 DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv1 IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -436,8 +445,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv2 DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_cv2 IS NOT NULL"
+                        "btree ($c_cv2 DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv2 IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -457,8 +467,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cv3 DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_cv3 IS NOT NULL"
+                        "btree ($c_cv3 DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_cv3 IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -478,8 +489,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs0 DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_cs0 IS NOT NULL"
+                        "btree ($c_cs0 DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs0 IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -499,8 +511,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs1 DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_cs1 IS NOT NULL"
+                        "btree ($c_cs1 DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs1 IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -520,8 +533,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs2 DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_cs2 IS NOT NULL"
+                        "btree ($c_cs2 DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs2 IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
@@ -541,8 +555,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        "btree ($c_cs3 DESC, $c_fn DESC, $c_version DESC) INCLUDE ($c_id, $c_next_version)",
-                        table, unique = false, addFillFactor = true, where = "$c_cs3 IS NOT NULL"
+                        "btree ($c_cs3 DESC, $c_fn DESC, $c_version DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_cs3 IS NOT NULL",
+                        includes = listOf(c_id, c_next_version)
                     )
                 ).close()
             }
