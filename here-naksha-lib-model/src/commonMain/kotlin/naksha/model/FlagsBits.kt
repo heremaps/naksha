@@ -5,22 +5,15 @@ package naksha.model
 import kotlin.js.JsExport
 
 /**
- * Collection of bit definitions for the `flags`. The flags store how the binaries are encoded:
+ * Collection of bit definitions for the `flags`. The flags only encode the feature serialization format now:
  * ```
- *    RSV    PBAC   AC    CV     OP    FE
- * [0000-00][00-00][00]-[0000]-[0000][0000]-[0000]
+ *      RESERVED            FE
+ * [0000-0000-0000-0000-0000-0000][0000]-[0000]
  * ```
  * - FE: feature encoding - bits: 4-7 (4-bit)
- * - OP: operation - bits: 12-15 (4-bit)
- * - CV: custom-value - bits: 16-19 (4-bit)
- * - AC: action - bits: 20-21 (2-bit)
- * - P: has-previous-tuple-number - bit 22 _(1-bit, 1048576)_
- * - B: has-base-tuple-number - bit 23 _(1-bit, 2097152)_
- * - A: has-author-ts - bit 24 _(1-bit, 4194304)_
- * - C: has-created-at - bit 25 _(1-bit, 8388608)_
- * - RSV: reserved - bit: 26-31 (6-bit)
+ * - RESERVED: all other bits
  *
- * Geometries are always stored as raw `TWKB` and tags as `JBON_GZIP`; only the feature encoding is configurable here.
+ * Geometries are always stored as raw `TWKB`, tags as `JBON_GZIP`, and the [action][Action] lives in the lower two bits of the [Version.txn]. Only the feature encoding is configurable here.
  * @since 3.0.0
  */
 @JsExport
@@ -52,49 +45,5 @@ open class FlagsBits {
          * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
          */
         const val FEATURE_CLEAR = FEATURE_MASK.inv()
-
-        // --------------------------------------< OPERATION >------------------------------------
-
-        /**
-         * The bits to shift the value in the [Flags].
-         */
-        const val OP_SHIFT = 12
-
-        /**
-         * The bits used to encode the value in [Flags].
-         */
-        const val OP_BITS = 4
-
-        /**
-         * The bitmask to AND combine with [Flags] to read the value from [Flags].
-         */
-        const val OP_MASK = ((1 shl OP_BITS) - 1) shl OP_SHIFT
-
-        /**
-         * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
-         */
-        const val OP_CLEAR = OP_MASK.inv()
-
-        // --------------------------------------< ACTION >---------------------------------------
-
-        /**
-         * The bits to shift the value in the [Flags].
-         */
-        const val ACTION_SHIFT = 16
-
-        /**
-         * The bits used to encode the value in [Flags].
-         */
-        const val ACTION_BITS = 2
-
-        /**
-         * The bitmask to AND combine with [Flags] to read the value from [Flags].
-         */
-        const val ACTION_MASK = ((1 shl ACTION_BITS) - 1) shl ACTION_SHIFT
-
-        /**
-         * The bitmask to AND combine with [Flags] to clear the value from the [Flags].
-         */
-        const val ACTION_CLEAR = ACTION_MASK.inv()
     }
 }

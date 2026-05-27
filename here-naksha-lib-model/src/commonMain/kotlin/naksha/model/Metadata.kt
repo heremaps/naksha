@@ -23,7 +23,7 @@ import kotlin.jvm.JvmStatic
 @JsExport
 data class Metadata(
     override val tupleNumber: TupleNumber = TupleNumber.HEAD,
-    override val flags: Flags = Flags().withAction(Action.CREATED),
+    override val flags: Flags = Flags(),
     override val updatedAt: Int64 = Platform.currentMillis(),
     override val createdAt: Int64? = null,
     override val authorTs: Int64? = null,
@@ -122,10 +122,9 @@ data class Metadata(
         }
 
     /**
-     * Extracts the action from [flags] and return the enumeration value.
-     * @return the enumeration value of action, extracted from [flags].
+     * Returns the action encoded in the lower two bits of [Version.txn].
      */
-    fun action() : Action = flags.actionEnum()
+    fun action() : Action = Action.fromValue((version.txn.toInt()) and 3)
 
     override fun hashCode(): Int = tupleNumber.hashCode()
     override fun equals(other: Any?): Boolean {
@@ -188,7 +187,7 @@ data class Metadata(
                 tupleNumber = guid.tupleNumber,
                 nextVersion = xyz.nguid?.tupleNumber?.version?.txn,
                 baseTupleNumber = xyz.mguid?.tupleNumber,
-                flags = xyz.flags ?: Flags().withAction(xyz.action),
+                flags = xyz.flags ?: Flags(),
                 updatedAt = xyz.updatedAt,
                 createdAt = if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt,
                 authorTs = if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs,

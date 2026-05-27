@@ -7,7 +7,6 @@ import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
@@ -90,7 +89,7 @@ data class TupleNumber(
      * @since 3.0
      */
     val action: Action
-        get() = Action.fromValue((version.txn.toInt() and 3) shl ACTION_SHIFT)
+        get() = Action.fromValue(version.txn.toInt() and 3)
 
     /**
      * Calculates the partition-index where this [Tuple] will be located.

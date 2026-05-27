@@ -3,7 +3,6 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
 import naksha.jbon.IDictReader
 import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.Metadata.Metadata_C.calculateHereTile
@@ -118,9 +117,8 @@ open class StorageTx private constructor(
         atomic: Boolean = false
     ): Metadata {
         val flags = getEncodingFlags(feature, collection)
-            .withAction(action)
         val xyz = feature.properties.xyz
-        val actionBits = Int64((action.intValue shr ACTION_SHIFT).toLong())
+        val actionBits = Int64(action.intValue.toLong())
         val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, Version(version.txn and Int64(-4L) or actionBits))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null

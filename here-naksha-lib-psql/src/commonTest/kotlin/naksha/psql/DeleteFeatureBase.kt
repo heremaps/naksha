@@ -67,7 +67,7 @@ abstract class DeleteFeatureBase(
             versions = 10
         }).apply { // this = SuccessResponse
             assertEquals(1, features.size)
-            assertSame(Action.CREATED, featureTupleList[0]?.tuple?.meta?.flags?.actionEnum())
+            assertSame(Action.CREATED, featureTupleList[0]?.tuple?.meta?.action())
         }
 
         // verify if delete table contains element

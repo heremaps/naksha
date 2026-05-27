@@ -1,9 +1,7 @@
 package naksha.model
 
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
 import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_CLEAR
 import naksha.model.FlagsBits.FlagsBitsCompanion.FEATURE_SHIFT
-import naksha.model.FlagsBits.FlagsBitsCompanion.OP_SHIFT
 import kotlin.test.*
 
 class FlagsTest {
@@ -11,7 +9,6 @@ class FlagsTest {
     fun shouldProperlySetDefaultValues() {
         val flags = Flags()
         assertEquals(FeatureEncoding.JBON, flags.featureEncoding())
-        assertEquals(Action.CREATED.intValue, flags.action())
     }
 
     @Test
@@ -24,18 +21,12 @@ class FlagsTest {
     }
 
     @Test
-    fun testMaxFlagValues() {
+    fun testMaxFeatureEncoding() {
         var flags = 0
-
         flags = flags.withFeatureEncoding(15 shl FEATURE_SHIFT)
-        flags = flags.withAction(3 shl ACTION_SHIFT)
-        flags = flags.withOperation(15 shl OP_SHIFT)
 
-        val expectation = (15 shl FEATURE_SHIFT) or (3 shl ACTION_SHIFT) or (15 shl OP_SHIFT)
-        assertEquals(expectation, flags)
+        assertEquals(15 shl FEATURE_SHIFT, flags)
         assertEquals(15, flags.featureEncoding() shr FEATURE_SHIFT)
-        assertEquals(3, flags.action() shr ACTION_SHIFT)
-        assertEquals(15, flags.operation() shr OP_SHIFT)
     }
 
     @Test
