@@ -147,7 +147,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.id = query.id" else ""}
             .withStorageNumber(storageNumber)
             .withMapNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
-            .withDefaultFlags(collection.head.defaultFlags ?: Naksha.DEFAULT_FLAGS)
+            .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(allColumns)
             .addColumn("head_history_version", PgType.INT64)
             .addColumn("history_version", PgType.INT64)

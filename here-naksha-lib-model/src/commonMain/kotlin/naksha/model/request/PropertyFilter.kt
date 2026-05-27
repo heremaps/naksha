@@ -9,7 +9,6 @@ import naksha.base.Proxy
 import naksha.jbon.JbFeatureDecoder
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
-import naksha.model.featureGzip
 import naksha.model.request.query.*
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
@@ -33,12 +32,9 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
     private fun resolveFeatureAndDecoder(featureTuple: FeatureTuple): JbFeatureDecoder? {
         val tuple = featureTuple.tuple ?: return null
         val feature = featureTuple.tuple?.feature ?: return null
-        val flags = tuple.meta.flags
+        val encoding = tuple.meta.dataEncoding
 
-        var raw = feature
-        if (flags.featureGzip()) {
-            raw = gzipInflate(feature)
-        }
+        val raw = if (encoding.gzip) gzipInflate(feature) else feature
 
         val sn = tuple.storageNumber
         val dictReader = getStorageByNumber(sn) ?: cache.getDictReader(sn)

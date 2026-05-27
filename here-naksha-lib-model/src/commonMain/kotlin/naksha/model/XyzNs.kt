@@ -97,10 +97,10 @@ class XyzNs : AnyObject() {
         const val AUTHOR_TS = "authorTs"
 
         /**
-         * The key of the [flags] property.
+         * The key of the [dataEncoding] property.
          * @since 3.0
          */
-        const val FLAGS = "flags"
+        const val DATA_ENCODING = "dataEncoding"
 
         /**
          * The key of the [hash] property.
@@ -175,6 +175,7 @@ class XyzNs : AnyObject() {
         const val CS3 = "cs3"
 
         private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
+        private val _DATA_ENCODING_NULL = NullableEnum<XyzNs, DataEncoding>(DataEncoding::class)
         private val _APP_ID = NotNullProperty<XyzNs, String>(String::class) { _, _ -> NakshaContext.appId() }
         private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
         private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
@@ -211,7 +212,7 @@ class XyzNs : AnyObject() {
                 setRaw(CHANGE_COUNT, meta.changeCount)
                 setRaw(APP_ID, meta.appId)
                 if (meta.author != null) setRaw(AUTHOR, meta.author)
-                setRaw(FLAGS, meta.flags)
+                setRaw(DATA_ENCODING, meta.dataEncoding.toString())
                 setRaw(ACTION, meta.action().toString())
                 setRaw(HASH, meta.hash)
                 setRaw(HERE_TILE, meta.hereTile)
@@ -558,12 +559,12 @@ class XyzNs : AnyObject() {
         }
 
     /**
-     * The flags, calculated server side, a bitmask with encoding information about the [Tuple]. It encodes the [action] in binary form, but as well if the payload is GZIP compressed, which encoding is used for the geometry, and information like this. The operation bits are reserved.
+     * The serialization format of the feature payload, calculated server-side from the collection's [naksha.model.objects.NakshaCollection.dataEncoding].
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 3.0
      */
-    val flags by _INT_NULL
+    val dataEncoding by _DATA_ENCODING_NULL
 
     /**
      * The hash above the feature, calculated server side.

@@ -38,7 +38,7 @@ open class NakshaMap() : NakshaFeature() {
         const val FEATURE_TYPE = "naksha.Map"
 
         private val STORAGE_ID = NullableProperty<NakshaMap, String>(String::class)
-        private val DEFAULT_FLAGS = NullableProperty<NakshaMap, Flags>(Flags::class)
+        private val DATA_ENCODING = NullableEnum<NakshaMap, DataEncoding>(DataEncoding::class)
     }
 
     override fun featureTypeDefaultValue(): String = FEATURE_TYPE
@@ -53,12 +53,12 @@ open class NakshaMap() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaMap = super.withMomType(value) as NakshaMap
 
     /**
-     * The encoding flags to be used for new rows of all collections of this map, that do not have an own [defaultFlags][NakshaCollection.defaultFlags].
+     * The feature encoding to use for new rows of all collections of this map that do not have an own [dataEncoding][NakshaCollection.dataEncoding].
      *
-     * - If _null_, the storage will use whatever is best for the storage.
+     * - If _null_, the storage will use [Naksha.DEFAULT_DATA_ENCODING].
      * @since 3.0
      */
-    var defaultFlags by DEFAULT_FLAGS
+    var dataEncoding by DATA_ENCODING
 
     override fun featureNumberOfId(id: String): Int64 = Naksha.mapNumber(id).toInt64()
 

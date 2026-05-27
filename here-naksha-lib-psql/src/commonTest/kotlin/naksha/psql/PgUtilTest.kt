@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.Flags
+import naksha.model.DataEncoding
 import naksha.model.XyzNs
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaProperties
@@ -26,11 +26,11 @@ class PgUtilTest {
         }
 
         // When:
-        val noSpecialEncoding = Flags(0)
-        val encoded = PgUtil.encodeFeature(beforeEncoding, noSpecialEncoding)
+        val encoding = DataEncoding.JBON
+        val encoded = PgUtil.encodeFeature(beforeEncoding, encoding)
 
         // And:
-        val decoded = PgUtil.decodeFeature(encoded, noSpecialEncoding)
+        val decoded = PgUtil.decodeFeature(encoded, encoding)
 
         // Then: features are equal but decoded one is missing Xyz
         // note: Xyz  should be populated after decoding (it's not stored in `feature` column, it's scattered in other columns)

@@ -66,15 +66,15 @@ val LATENCY_REDIS_LOCAL = Int64(1) * MILLISECOND * MILLIS_TO_MICROS
 val LATENCY_MEMORY = Int64(0)
 
 /**
- * The default flags to be used by all storages — see [Naksha.DEFAULT_FLAGS].
+ * The default feature encoding to be used by all storages — see [Naksha.DEFAULT_DATA_ENCODING].
  * @since 3.0.0
  */
-@Deprecated("Replaced with official DEFAULT_FLAGS in Naksha",
-    replaceWith = ReplaceWith("Naksha.DEFAULT_FLAGS"),
+@Deprecated("Replaced with official DEFAULT_DATA_ENCODING in Naksha",
+    replaceWith = ReplaceWith("Naksha.DEFAULT_DATA_ENCODING"),
     level = DeprecationLevel.WARNING)
 @JvmField
 @JsStatic
-val DEFAULT_FLAGS = Naksha.DEFAULT_FLAGS
+val DEFAULT_DATA_ENCODING = Naksha.DEFAULT_DATA_ENCODING
 
 /**
  * The [meta][Tuple.meta] bit.

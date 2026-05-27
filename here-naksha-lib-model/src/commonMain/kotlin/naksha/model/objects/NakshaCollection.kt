@@ -6,7 +6,7 @@ import naksha.base.*
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.Flags
+import naksha.model.DataEncoding
 import naksha.model.Naksha
 import naksha.model.NakshaError
 import naksha.model.NakshaException
@@ -183,18 +183,18 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * The encoding flags to be used for new rows.
+     * The feature encoding to use for new rows in this collection.
      *
-     * - If _null_, the [defaultFlags][NakshaMap.defaultFlags] of the [map][NakshaMap] will be used.
+     * - If _null_, the [dataEncoding][NakshaMap.dataEncoding] of the containing [map][NakshaMap] is used; if that is also _null_, [Naksha.DEFAULT_DATA_ENCODING] is used.
      * @since 3.0
      */
-    var defaultFlags by DEFAULT_FLAGS
+    var dataEncoding by DATA_ENCODING
 
     /**
-     * @see [defaultFlags]
+     * @see [dataEncoding]
      */
-    open fun withDefaultFlags(value: Flags): NakshaCollection {
-        this.defaultFlags = value
+    open fun withDataEncoding(value: DataEncoding): NakshaCollection {
+        this.dataEncoding = value
         return this
     }
 
@@ -535,7 +535,7 @@ open class NakshaCollection() : NakshaFeature() {
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
-        private val DEFAULT_FLAGS = NullableProperty<NakshaCollection, Flags>(Flags::class)
+        private val DATA_ENCODING = NullableEnum<NakshaCollection, DataEncoding>(DataEncoding::class)
         private val MAP_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> TYPE }

@@ -23,7 +23,7 @@ import kotlin.jvm.JvmStatic
 @JsExport
 data class Metadata(
     override val tupleNumber: TupleNumber = TupleNumber.HEAD,
-    override val flags: Flags = Flags(),
+    override val dataEncoding: DataEncoding = DataEncoding.DEFAULT,
     override val updatedAt: Int64 = Platform.currentMillis(),
     override val createdAt: Int64? = null,
     override val authorTs: Int64? = null,
@@ -148,7 +148,7 @@ data class Metadata(
             if (other is Metadata) return other
             return Metadata(
                 other.tupleNumber,
-                other.flags,
+                other.dataEncoding,
                 other.updatedAt,
                 other.createdAt,
                 other.authorTs,
@@ -187,7 +187,7 @@ data class Metadata(
                 tupleNumber = guid.tupleNumber,
                 nextVersion = xyz.nguid?.tupleNumber?.version?.txn,
                 baseTupleNumber = xyz.mguid?.tupleNumber,
-                flags = xyz.flags ?: Flags(),
+                dataEncoding = xyz.dataEncoding ?: DataEncoding.DEFAULT,
                 updatedAt = xyz.updatedAt,
                 createdAt = if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt,
                 authorTs = if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs,
@@ -213,7 +213,7 @@ data class Metadata(
         @JsStatic
         val UNDEFINED = Metadata(
             tupleNumber = TupleNumber.HEAD,
-            flags = 0,
+            dataEncoding = DataEncoding.DEFAULT,
             updatedAt = Int64(0),
             hash = 0,
             changeCount = 0,

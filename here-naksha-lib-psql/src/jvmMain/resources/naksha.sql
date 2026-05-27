@@ -408,26 +408,27 @@ AS $$
   SELECT naksha_jbon_map_to_jsonb(gunzip(tags))
 $$;
 
--- Decodes the binary `feature` payload to JSONB. The encoding (JBON vs JSON, with or without
--- GZIP) is a per-collection setting; pass the collection's encoding `flags` (4-bit `FE` field).
--- Callers will typically pass a hard-coded constant matching `NakshaCollection.defaultFlags`.
-CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS jsonb
+-- Decodes the binary `feature` payload to JSONB.
+-- `encoding` is the raw `naksha.model.DataEncoding.intValue`:
+--   0 = JBON, 1 = JBON_GZIP, 2 = JSON, 3 = JSON_GZIP.
+-- The encoding is a per-collection setting; callers typically pass a hard-coded constant
+-- matching `NakshaCollection.dataEncoding`.
+CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, encoding int4) RETURNS jsonb
 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
 DECLARE
-  encoding int4;
   gzip boolean;
+  inner_encoding int4;
 BEGIN
-  encoding = (flags >> 4) & 15;
   gzip = (encoding & 1) = 1;
   if (gzip) then
     feature = gunzip(feature);
-    encoding = encoding & 14;
   end if;
-  if (encoding = 0) then -- JBON
+  inner_encoding = encoding & 14;
+  if (inner_encoding = 0) then -- JBON / JBON_GZIP
     return naksha_jbon_feature_to_jsonb(feature);
-  elsif (encoding = 2) then -- JSON
+  elsif (inner_encoding = 2) then -- JSON / JSON_GZIP
     return feature::text::jsonb;
   end if;
   -- Unknown encoding

@@ -171,7 +171,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
   }
 
   @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+  public @NotNull naksha.model.DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 

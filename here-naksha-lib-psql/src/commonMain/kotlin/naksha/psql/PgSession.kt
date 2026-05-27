@@ -409,7 +409,7 @@ open class PgSession(
             .withStorageNumber(map.storage.number)
             .withMapNumber(map.number)
             .withCollectionNumber(collection.number)
-            .withDefaultFlags(collection.head.defaultFlags ?: Naksha.DEFAULT_FLAGS)
+            .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(PgColumn.allColumns)
         map.setSearchPath(conn)
         val headTables = first.headTables

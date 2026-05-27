@@ -88,8 +88,8 @@ public class NHAdminStorage implements IStorage {
   }
 
   @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
-    return psqlStorage.getEncodingFlags(feature, context);
+  public @NotNull naksha.model.DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
+    return psqlStorage.getDataEncoding(feature, context);
   }
 
   @Override

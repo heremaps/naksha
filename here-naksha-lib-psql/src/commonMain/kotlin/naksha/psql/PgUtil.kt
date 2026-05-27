@@ -209,7 +209,7 @@ class PgUtil private constructor() {
         /**
          * Decode the Naksha feature.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
+         * @param encoding the feature encoding the bytes were produced with.
          * @param dictManager the dictionary manager to use for decoding; if any.
          * @return the Naksha feature.
          * @since 3.0.0
@@ -218,15 +218,15 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, flags, dictManager)"),
+            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, encoding, dictManager)"),
             level = DeprecationLevel.WARNING
         )
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, flags, dictManager)
+        fun decodeFeature(bytes: ByteArray?, encoding: DataEncoding, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, encoding, dictManager)
 
         /**
          * Encodes the given [NakshaFeature] into bytes.
          * @param feature the feature to encode.
-         * @param flags the codec flags.
+         * @param encoding the feature encoding to use.
          * @param dict the dictionary to use for encoding; if any.
          * @return the encoded feature.
          * @since 3.0.0
@@ -235,10 +235,10 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeFeature(feature, flags, dict)"),
+            replaceWith = ReplaceWith("Naksha.encodeFeature(feature, encoding, dict)"),
             level = DeprecationLevel.WARNING
         )
-        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, flags, dict)
+        fun encodeFeature(feature: NakshaFeature?, encoding: DataEncoding, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, encoding, dict)
 
         /**
          * Decode the Naksha tags. Tags are always stored as `JBON_GZIP`.
