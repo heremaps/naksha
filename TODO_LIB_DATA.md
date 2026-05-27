@@ -8,8 +8,8 @@ Delete this file before merging to v3.
 - [ ] ~~Removing of prev_tn~~
 - [ ] ~~Remove `Operation`~~
 - [ ] ~~Remove of deletion table~~ 
-- [ ] [**nice to have**] `PgIndex.kt` -clean up tuple-number leftovers. - Kacper 
-- [ ] [**nice to have**] `PgIndex.kt` - replace the regex-based `next_version` stripping. - Kacper 
+- [ ] ~~[**nice to have**] `PgIndex.kt` -clean up tuple-number leftovers. - Kacper~~
+- [ ] ~~[**nice to have**] `PgIndex.kt` - replace the regex-based `next_version` stripping. - Kacper~~
 - [ ] ~~[**nice to have**]` PgQueryWhereBuilder.kt` - `whereGuids()` iterates `tupleNumbers` twice; we can optimize it. - Kacper~~
 - [ ] [**nice to have**] Consider dropping the `flags` column. - Kacper 
 - [ ] [**nice to have**]`nextTn` is still exposed externally. - Kacper 
