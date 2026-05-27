@@ -104,8 +104,8 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // end-of-lifetime. The tombstone's next_version == version (closed interval).
         val history_tombstone = if (purge && insert_into_history != null) """, history_tombstone AS (
   INSERT INTO ${insert_into_history.quotedName}
-  (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
-  SELECT head_row.flags, head_row.cc, head_row.fn, $deleted_version, $deleted_version, null::bytea,
+  (${PgColumn.cc}, ${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+  SELECT head_row.cc, head_row.fn, $deleted_version, $deleted_version, null::bytea,
          ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   RETURNING id, fn, version
@@ -117,9 +117,8 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
 SELECT
     head_row.fn AS fn,
     $deleted_version AS version,
-    head_row.${PgColumn.flags.name} AS ${PgColumn.flags},
     COALESCE(head_updated.${PgColumn.cc.name}, head_row.${PgColumn.cc.name} + 1) AS ${PgColumn.cc},
-    ${headColumns.filter { it !== PgColumn.flags && it !== PgColumn.cc && it !== PgColumn.version && it !== PgColumn.fn }.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }},
+    ${headColumns.filter { it !== PgColumn.cc && it !== PgColumn.version && it !== PgColumn.fn }.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }},
     null::int8 AS ${PgColumn.next_version},
     ${if (head_to_history.isNotEmpty()) "head_to_history.version AS head_history_version," else ""}
     ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else ""}
@@ -148,6 +147,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.id = query.id" else ""}
             .withStorageNumber(storageNumber)
             .withMapNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
+            .withDefaultFlags(collection.head.defaultFlags ?: Naksha.DEFAULT_FLAGS)
             .addColumns(allColumns)
             .addColumn("head_history_version", PgType.INT64)
             .addColumn("history_version", PgType.INT64)

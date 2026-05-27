@@ -35,7 +35,6 @@ external interface Plv8Row {
     var hash: Int?
     var change_count: Int?
     var geo_grid: Int?
-    var flags: Int?
     var id: String?
     var app_id: String?
     var author: String?

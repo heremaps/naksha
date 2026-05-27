@@ -537,6 +537,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_MAP_NUMBER)
             .withCollectionNumber(MAPS_COL_NUMBER)
+            .withDefaultFlags(Naksha.DEFAULT_FLAGS)
             .addColumns(headColumns)
         val SQL = """SELECT ${outRows.names()}
 FROM "naksha~admin".${maps.headTable.quotedName}
@@ -572,6 +573,7 @@ WHERE id = $1"""
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_MAP_NUMBER)
             .withCollectionNumber(MAPS_COL_NUMBER)
+            .withDefaultFlags(Naksha.DEFAULT_FLAGS)
             .addColumns(headColumns)
         val SQL = """
             SELECT ${outRows.names()}

@@ -83,14 +83,12 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
         // The action is encoded in the lower two bits of `version`; we set it to UPDATED (=1).
         val head_updated = """, head_updated AS (
   INSERT INTO ${headTable.quotedName} (
-    ${PgColumn.flags},
     ${PgColumn.cc},
     ${PgColumn.attachment},
     ${PgColumn.fn},
     ${PgColumn.version},
     ${PgColumn.updateColumnsNames})
   SELECT
-    new_row.flags AS ${PgColumn.flags},
     (head_row.cc + 1) AS ${PgColumn.cc},
     CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment,
     new_row.fn AS ${PgColumn.fn},
@@ -134,7 +132,6 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .withMapNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
             .addColumn(PgColumn.id)
-            .addColumn(PgColumn.flags)
             .addColumn(PgColumn.fn)
             .addColumn(PgColumn.version)
             .addColumn(PgColumn.attachment)
