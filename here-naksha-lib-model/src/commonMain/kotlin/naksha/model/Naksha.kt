@@ -8,26 +8,14 @@ import naksha.base.Platform.PlatformCompanion.gzipDeflate
 import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.Platform.PlatformCompanion.md5
 import naksha.base.Platform.PlatformCompanion.toJSON
-import naksha.geo.GeoUtil.GeoUtil_C.fromEWKB
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
-import naksha.geo.GeoUtil.GeoUtil_C.fromWKB
-import naksha.geo.GeoUtil.GeoUtil_C.toEWKB
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
-import naksha.geo.GeoUtil.GeoUtil_C.toWKB
 import naksha.geo.SpGeometry
 import naksha.jbon.*
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
 import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.EWKB
-import naksha.model.GeoEncoding.GeoEncoding_C.EWKB_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON
-import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.WKB
-import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
@@ -139,12 +127,12 @@ class Naksha private constructor() {
 
         /**
          * Default flags recommended for storing data, being:
-         * - Encode [geometry][NakshaFeature.geometry] in `TWKB`, _[Tine-Well-Known-Binary](https://github.com/TWKB/Specification/blob/master/twkb.md)_
-         * - Encode the [tags][XyzNs.tags] as [JSON](https://en.wikipedia.org/wiki/Json), and compress them using [GZIP](https://en.wikipedia.org/wiki/Gzip).
          * - Encode the feature into `JBON` _(Java Binary Object Notation)_, and compress it using [GZIP](https://en.wikipedia.org/wiki/Gzip).
+         *
+         * Geometries are always stored as raw `TWKB` and tags are always stored as `JBON_GZIP`; only the feature encoding is configurable.
          */
         @JvmField
-        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON)
+        var DEFAULT_FLAGS = Flags(0, JBON_GZIP, 0)
 
         /**
          * Decides about the default log-level used when creating new [SessionOptions].
@@ -513,9 +501,9 @@ class Naksha private constructor() {
             feature.properties.xyz = XyzNs.fromMetadata(meta)
             val xyz = feature.properties.xyz
             val tags = tuple.tags
-            if (tags != null) xyz.tags = decodeTags(tuple.tags, meta.flags, dictReader)?.toTagList() ?: TagList()
+            if (tags != null) xyz.tags = decodeTags(tuple.tags, dictReader)?.toTagList() ?: TagList()
             val geo = tuple.geo
-            if (geo != null) feature.geometry = decodeGeometry(geo, meta.flags)
+            if (geo != null) feature.geometry = decodeGeometry(geo)
             return feature
         }
 
@@ -544,9 +532,9 @@ class Naksha private constructor() {
             val flagsOrDefault = flags ?: xyz.flags ?: storage?.getEncodingFlags(feature) ?: DEFAULT_FLAGS
             val dict = dictionary ?: storage?.getDictionary(feature.id)
             val featureBytes = encodeFeature(feature, flagsOrDefault, dict)
-            val geoBytes = encodeGeometry(feature.geometry, flagsOrDefault)
-            val refPoint = encodeGeometry(feature.referencePoint, TWKB)
-            val tagsBytes = encodeTags(xyz.tags.toTagMap(), flagsOrDefault, dict)
+            val geoBytes = encodeGeometry(feature.geometry)
+            val refPoint = encodeGeometry(feature.referencePoint)
+            val tagsBytes = encodeTags(xyz.tags.toTagMap(), dict)
             return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
         }
 
@@ -572,9 +560,9 @@ class Naksha private constructor() {
             val dict = storage.getEncodingDictionary(feature)
             val flags = storage.getEncodingFlags(feature)
             val featureBytes = encodeFeature(feature, flags, dict)
-            val geoBytes = encodeGeometry(feature.geometry, flags)
-            val refPoint = encodeGeometry(feature.referencePoint, TWKB)
-            val tagsBytes = encodeTags(xyz.tags.toTagMap(), flags, dict)
+            val geoBytes = encodeGeometry(feature.geometry)
+            val refPoint = encodeGeometry(feature.referencePoint)
+            val tagsBytes = encodeTags(xyz.tags.toTagMap(), dict)
             return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
         }
 
@@ -637,102 +625,63 @@ class Naksha private constructor() {
         }
 
         /**
-         * Decode the Naksha tags.
+         * Decode Naksha tags. Tags are always stored as `JBON_GZIP`.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
          * @param dictReader the dictionary manager to use for decoding; if any.
          * @return the Naksha tags.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeTags(bytes: ByteArray?, flags: Flags, dictReader: IDictReader?): TagMap? {
+        fun decodeTags(bytes: ByteArray?, dictReader: IDictReader?): TagMap? {
             if (bytes == null || bytes.isEmpty()) return null
-            var raw = bytes
-            if (flags.tagsGzip()) raw = gzipInflate(bytes)
-            val encoding = flags.tagsEncoding()
-            if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictReader)
-                decoder.mapBytes(raw)
-                return decoder.toAnyObject().proxy(TagMap::class)
-            }
-            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val text = raw.decodeToString()
-                val decoded = fromJSON(text)
-                if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
-            }
-            return null
+            val raw = gzipInflate(bytes)
+            val decoder = JbFeatureDecoder(dictReader)
+            decoder.mapBytes(raw)
+            return decoder.toAnyObject().proxy(TagMap::class)
         }
 
         /**
-         * Encodes the given tags into bytes.
+         * Encodes the given tags into bytes. Tags are always stored as `JBON_GZIP`.
          * @param tags the tags to encode.
-         * @param flags the codec flags.
          * @param dict the dictionary to use for encoding; if any.
          * @return the encoded tags.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun encodeTags(tags: TagMap?, flags: Flags, dict: IDict?): ByteArray? {
+        fun encodeTags(tags: TagMap?, dict: IDict?): ByteArray? {
             if (tags.isNullOrEmpty()) return null
-            val encoding = flags.tagsEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val encoded = toJSON(tags)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                encoder.encodeMap(tags)
-                byteArray = encoder.buildFeature(null, FEATURE_VARIANT_TAGS)
-            }
-            if (flags.tagsGzip() && byteArray != null) byteArray = gzipDeflate(byteArray)
-            return byteArray
+            val encoder = JbEncoder(dict)
+            encoder.encodeMap(tags)
+            val byteArray = encoder.buildFeature(null, FEATURE_VARIANT_TAGS)
+            return gzipDeflate(byteArray)
         }
 
         /**
-         * Decode a GeoJSON geometry from encoded bytes.
+         * Decode a GeoJSON geometry from `TWKB` encoded bytes. All Naksha geometries are stored as raw TWKB.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
          * @return the geometry.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? {
+        fun decodeGeometry(bytes: ByteArray?): SpGeometry? {
             if (bytes == null || bytes.isEmpty()) return null
-            val encoding = flags.geoEncoding()
-            val rawBytes = if (encoding.geoGzip()) gzipInflate(bytes) else bytes
-            return when(encoding) {
-                TWKB, TWKB_GZIP -> fromTWKB(rawBytes)
-                WKB, WKB_GZIP -> fromWKB(rawBytes)
-                EWKB, EWKB_GZIP -> fromEWKB(rawBytes)
-                GEO_JSON, GEO_JSON_GZIP -> (fromJSON(rawBytes.decodeToString()) as PlatformMap).proxy(SpGeometry::class)
-                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
-            }
-
+            return fromTWKB(bytes)
         }
 
         /**
-         * Encodes the given GeoJSON geometry into bytes.
+         * Encodes the given GeoJSON geometry into `TWKB` bytes. All Naksha geometries are stored as raw TWKB.
          * @param geometry the geometry to encode.
-         * @param flags the codec flags.
          * @return the encoded GeoJSON geometry.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? {
+        fun encodeGeometry(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
-            val encoding = flags.geoEncoding()
-            val bytes = when(encoding) {
-                TWKB, TWKB_GZIP -> toTWKB(geometry)
-                WKB, WKB_GZIP -> toWKB(geometry)
-                EWKB, EWKB_GZIP -> toEWKB(geometry)
-                GEO_JSON, GEO_JSON_GZIP -> toJSON(geometry).encodeToByteArray()
-                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
-            }
-            return if (encoding.geoGzip() && bytes != null) gzipDeflate(bytes) else bytes
+            return toTWKB(geometry)
         }
 
         /**

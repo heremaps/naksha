@@ -66,15 +66,7 @@ val LATENCY_REDIS_LOCAL = Int64(1) * MILLISECOND * MILLIS_TO_MICROS
 val LATENCY_MEMORY = Int64(0)
 
 /**
- * The default flags to be used by all storages, being:
- * ```kotlin
- * Flags(
- *   GeoEncoding.TWKB,
- *   FeatureEncoding.JBON_GZIP,
- *   TagsEncoding.JSON_GZIP,
- *   ACTION_CREATE
- * )
- * ```
+ * The default flags to be used by all storages — see [Naksha.DEFAULT_FLAGS].
  * @since 3.0.0
  */
 @Deprecated("Replaced with official DEFAULT_FLAGS in Naksha",

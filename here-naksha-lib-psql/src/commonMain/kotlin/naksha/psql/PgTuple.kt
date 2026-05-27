@@ -47,13 +47,13 @@ internal data class PgTuple(
     @JvmField var meta: Metadata? = null,
 
     /**
-     * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
+     * Geometry encoded as raw `TWKB`.
      * Might be _null_, when the feature does not have a geometry.
      */
     @JvmField var geo: ByteArray? = null,
 
     /**
-     * Geometry-Reference-Point, encoded with the [GeoEncoding] algorithm described by [Metadata.flags].
+     * Geometry-Reference-Point, encoded as raw `TWKB`.
      * Might be _null_, when the feature does not have a reference point.
      */
     @JvmField var referencePoint: ByteArray? = null,
@@ -64,7 +64,7 @@ internal data class PgTuple(
     @JvmField var feature: ByteArray? = null,
 
     /**
-     * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
+     * Tags encoded as `JBON_GZIP`.
      * Might be _null_, when the feature does not have any tags.
      */
     @JvmField var tags: ByteArray? = null,
