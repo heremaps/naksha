@@ -12,10 +12,6 @@ import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
 import naksha.jbon.*
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
@@ -126,13 +122,12 @@ class Naksha private constructor() {
         )
 
         /**
-         * Default flags recommended for storing data, being:
-         * - Encode the feature into `JBON` _(Java Binary Object Notation)_, and compress it using [GZIP](https://en.wikipedia.org/wiki/Gzip).
+         * Default feature encoding used by all storages when nothing else is configured.
          *
-         * Geometries are always stored as raw `TWKB` and tags are always stored as `JBON_GZIP`; only the feature encoding is configurable.
+         * Geometries are always stored as raw `TWKB` and tags as `JBON_GZIP`; only the feature encoding is configurable.
          */
         @JvmField
-        var DEFAULT_FLAGS = Flags(0, JBON_GZIP, 0)
+        var DEFAULT_DATA_ENCODING: DataEncoding = DataEncoding.DEFAULT
 
         /**
          * Decides about the default log-level used when creating new [SessionOptions].
@@ -497,7 +492,7 @@ class Naksha private constructor() {
             val sn = tuple.storageNumber
             val meta = tuple.meta
             val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache.getDictReader(sn)
-            val feature = decodeFeature(tuple.feature, meta.flags, dictReader) ?: NakshaFeature()
+            val feature = decodeFeature(tuple.feature, meta.dataEncoding, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromMetadata(meta)
             val xyz = feature.properties.xyz
             val tags = tuple.tags
@@ -512,7 +507,7 @@ class Naksha private constructor() {
          * @param feature the feature to encode.
          * @param attachment the attachment to encode; if any.
          * @param dictionary the [dictionary][IDict] to use to encode the feature; _null_ if encoding should be done storage agnostic.
-         * @param flags the encoding flags or _null_, if [DEFAULT_FLAGS] should be used.
+         * @param dataEncoding the feature encoding to use, or _null_ to fall back to the storage default and finally [DEFAULT_DATA_ENCODING].
          * @return the encoded [Tuple].
          * @since 3.0
          * @see [IStorage.getEncodingDictionary]
@@ -524,14 +519,16 @@ class Naksha private constructor() {
             feature: NakshaFeature,
             attachment: ByteArray? = null,
             dictionary: IDict? = null,
-            flags: Flags? = null
+            dataEncoding: DataEncoding? = null
         ): Tuple {
             val xyz = feature.properties.xyz
-            val meta = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
+            val metaBase = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
             val storage = getStorageByNumber(feature.tupleNumber.storageNumber)
-            val flagsOrDefault = flags ?: xyz.flags ?: storage?.getEncodingFlags(feature) ?: DEFAULT_FLAGS
+            val encoding = dataEncoding ?: storage?.getDataEncoding(feature) ?: DEFAULT_DATA_ENCODING
+            val meta = if (metaBase === Metadata.UNDEFINED || metaBase.dataEncoding == encoding) metaBase
+                else metaBase.copy(dataEncoding = encoding)
             val dict = dictionary ?: storage?.getDictionary(feature.id)
-            val featureBytes = encodeFeature(feature, flagsOrDefault, dict)
+            val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
             val tagsBytes = encodeTags(xyz.tags.toTagMap(), dict)
@@ -556,10 +553,12 @@ class Naksha private constructor() {
             storage: IStorage
         ): Tuple {
             val xyz = feature.properties.xyz
-            val meta = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
+            val metaBase = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
             val dict = storage.getEncodingDictionary(feature)
-            val flags = storage.getEncodingFlags(feature)
-            val featureBytes = encodeFeature(feature, flags, dict)
+            val encoding = storage.getDataEncoding(feature)
+            val meta = if (metaBase === Metadata.UNDEFINED || metaBase.dataEncoding == encoding) metaBase
+                else metaBase.copy(dataEncoding = encoding)
+            val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
             val tagsBytes = encodeTags(xyz.tags.toTagMap(), dict)
@@ -569,59 +568,61 @@ class Naksha private constructor() {
         /**
          * Encodes the given [NakshaFeature] into bytes, skipping over the [geometry][NakshaFeature.geometry], and the [XYZ-namespace][XyzNs].
          * @param feature the feature to encode.
-         * @param flags the codec flags.
+         * @param encoding the feature encoding to use.
          * @param dict the dictionary to use for encoding; if any.
          * @return the encoded feature.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: IDict?): ByteArray? {
+        fun encodeFeature(feature: NakshaFeature?, encoding: DataEncoding, dict: IDict?): ByteArray? {
             if (feature.isNullOrEmpty()) return null
-            val encoding = flags.featureEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                // We do not want to encode geometry.
-                val f = feature.copy<NakshaFeature>(false)
-                f.removeRaw(NakshaFeature.GEOMETRY)
-                // We do not want to encode properties.@ns:com:here:xyz.
-                val p = feature.properties.copy<NakshaProperties>(false)
-                p.removeRaw(NakshaProperties.XYZ_KEY)
-                val encoded = toJSON(f)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == JBON || encoding == JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                byteArray = encoder.buildFeatureFromMap(feature)
+            var byteArray: ByteArray? = when (encoding) {
+                DataEncoding.JSON, DataEncoding.JSON_GZIP -> {
+                    // We do not want to encode geometry.
+                    val f = feature.copy<NakshaFeature>(false)
+                    f.removeRaw(NakshaFeature.GEOMETRY)
+                    // We do not want to encode properties.@ns:com:here:xyz.
+                    val p = feature.properties.copy<NakshaProperties>(false)
+                    p.removeRaw(NakshaProperties.XYZ_KEY)
+                    toJSON(f).encodeToByteArray()
+                }
+                DataEncoding.JBON, DataEncoding.JBON_GZIP -> {
+                    val encoder = JbEncoder(dict)
+                    encoder.buildFeatureFromMap(feature)
+                }
+                else -> null
             }
-            if (flags.featureGzip() && byteArray != null) byteArray = gzipDeflate(byteArray)
+            if (encoding.gzip && byteArray != null) byteArray = gzipDeflate(byteArray)
             return byteArray
         }
 
         /**
          * Decode the Naksha feature.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
+         * @param encoding the feature encoding the bytes were produced with.
          * @param dictReader the dictionary manager to use for decoding; if any.
          * @return the Naksha feature.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictReader: IDictReader?): NakshaFeature? {
+        fun decodeFeature(bytes: ByteArray?, encoding: DataEncoding, dictReader: IDictReader?): NakshaFeature? {
             if (bytes == null || bytes.isEmpty()) return null
-            var raw = bytes
-            if (flags.featureGzip()) raw = gzipInflate(bytes)
-            val encoding = flags.featureEncoding()
-            if (encoding == JBON || encoding == JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictReader)
-                decoder.mapBytes(raw)
-                return decoder.toAnyObject().proxy(NakshaFeature::class)
+            return when (encoding) {
+                DataEncoding.JBON, DataEncoding.JBON_GZIP -> {
+                    val raw = if (encoding.gzip) gzipInflate(bytes) else bytes
+                    val decoder = JbFeatureDecoder(dictReader)
+                    decoder.mapBytes(raw)
+                    decoder.toAnyObject().proxy(NakshaFeature::class)
+                }
+                DataEncoding.JSON, DataEncoding.JSON_GZIP -> {
+                    val raw = if (encoding.gzip) gzipInflate(bytes) else bytes
+                    val decoded = fromJSON(raw.decodeToString())
+                    if (decoded is PlatformMap) decoded.proxy(NakshaFeature::class) else null
+                }
+                else -> null
             }
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                val decoded = fromJSON(bytes.decodeToString())
-                if (decoded is PlatformMap) return decoded.proxy(NakshaFeature::class)
-            }
-            return null
         }
 
         /**

@@ -59,7 +59,7 @@ internal data class PgTuple(
     @JvmField var referencePoint: ByteArray? = null,
 
     /**
-     * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
+     * Feature serialized with the encoding described by [Metadata.dataEncoding].
      */
     @JvmField var feature: ByteArray? = null,
 

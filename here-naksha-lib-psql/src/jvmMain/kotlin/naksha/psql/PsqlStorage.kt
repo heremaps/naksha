@@ -66,7 +66,7 @@ open class PsqlStorage : PgStorage(), IStorage {
         return PgSession(this, options, readOnly)
     }
 
-    override fun getEncodingFlags(feature: Any?, context: Any?): Flags = adminMap.getEncodingFlags(feature, context)
+    override fun getDataEncoding(feature: Any?, context: Any?): DataEncoding = adminMap.getDataEncoding(feature, context)
 
     override fun getDictionary(id: String): JbDictionary? = adminMap.getDictionary(id)
 

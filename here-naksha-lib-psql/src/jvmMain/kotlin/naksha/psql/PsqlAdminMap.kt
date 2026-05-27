@@ -23,26 +23,26 @@ class PsqlAdminMap internal constructor(
     override val storage: PsqlStorage
         get() = super.storage as PsqlStorage
 
-    override fun getEncodingFlags(feature: Any?, context: Any?): Flags {
+    override fun getDataEncoding(feature: Any?, context: Any?): DataEncoding {
         if (context is PgCollection) {
-            var flags = context.head.defaultFlags
-            if (flags == null) flags = context.map.head.defaultFlags
-            return flags ?: Naksha.DEFAULT_FLAGS
+            var encoding = context.head.dataEncoding
+            if (encoding == null) encoding = context.map.head.dataEncoding
+            return encoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
         if (context is PgMap) {
-            return context.head.defaultFlags ?: Naksha.DEFAULT_FLAGS
+            return context.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
         if (context is NakshaCollection) {
-            val collectionFlags = context.defaultFlags
-            if (collectionFlags != null) return collectionFlags
-            val mapId = context.mapId ?: return Naksha.DEFAULT_FLAGS
+            val collectionEncoding = context.dataEncoding
+            if (collectionEncoding != null) return collectionEncoding
+            val mapId = context.mapId ?: return Naksha.DEFAULT_DATA_ENCODING
             val pgMap = getPgMapById(null, mapId)
-            return pgMap?.head?.defaultFlags ?: Naksha.DEFAULT_FLAGS
+            return pgMap?.head?.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
         if (context is NakshaMap) {
-            return context.defaultFlags ?: Naksha.DEFAULT_FLAGS
+            return context.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
-        return Naksha.DEFAULT_FLAGS
+        return Naksha.DEFAULT_DATA_ENCODING
     }
 
     override fun getDictionary(id: String): JbDictionary? {

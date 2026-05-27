@@ -109,9 +109,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)
         assertEquals(createdTuple.meta.nextVersion, updatedTuple.tupleNumber.version.txn)
         assertNull(updatedTuple.meta.nextVersion)
-        // Both tuples share the collection's feature encoding (flags carries encoding only,
-        // action lives in version bits).
-        assertEquals(createdTuple.meta.flags, updatedTuple.meta.flags)
+        // Both tuples share the collection's feature encoding (action lives in version bits).
+        assertEquals(createdTuple.meta.dataEncoding, updatedTuple.meta.dataEncoding)
         assertEquals(1, createdTuple.meta.changeCount)
         assertEquals(2, updatedTuple.meta.changeCount)
         assertEquals(createdTuple.geo, updatedTuple.geo)

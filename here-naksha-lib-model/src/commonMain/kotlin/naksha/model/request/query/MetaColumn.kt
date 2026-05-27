@@ -147,7 +147,7 @@ open class MetaColumn() : AnyObject() {
         fun changeCount(): MetaColumn = MetaColumn(CHANGE_COUNT)
 
         /**
-         * The name of the virtual columns that stores the binary [action][naksha.model.Action], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
+         * The name of the virtual column that exposes the binary [action][naksha.model.Action], stored in the lower two bits of [naksha.model.Metadata.tupleNumber]'s version.
          *
          * This value is exposed through [naksha.model.XyzNs.action].
          *

@@ -22,7 +22,7 @@ data class Tuple(
     @JvmField val meta: Metadata,
 
     /**
-     * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
+     * Feature serialized with the encoding described by [Metadata.dataEncoding].
      * @since 3.0
      */
     @JvmField val feature: ByteArray? = null,

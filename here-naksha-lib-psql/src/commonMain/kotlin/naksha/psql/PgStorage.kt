@@ -93,12 +93,10 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
     }
 
     /**
-     * The default flags to use for the storage.
-     * @return default flags to use for the storage.
+     * The default feature encoding to use for the storage.
      * @since 3.0
      */
-    internal val defaultFlags: Flags = Flags()
-        .withFeatureEncoding(FeatureEncoding.JBON_GZIP)
+    internal val defaultDataEncoding: DataEncoding = DataEncoding.DEFAULT
 
     override fun newWriteSession(options: SessionOptions?): IWriteSession =
         newSession(options ?: SessionOptions.from(null), false)

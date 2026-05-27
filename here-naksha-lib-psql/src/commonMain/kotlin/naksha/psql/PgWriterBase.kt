@@ -76,7 +76,7 @@ internal abstract class PgWriterBase protected constructor(
         .withStorageNumber(storageNumber)
         .withMapNumber(mapNumber)
         .withCollectionNumber(collectionNumber)
-        .withDefaultFlags(collection.head.defaultFlags ?: naksha.model.Naksha.DEFAULT_FLAGS)
+        .withDefaultDataEncoding(collection.head.dataEncoding ?: naksha.model.Naksha.DEFAULT_DATA_ENCODING)
         .withMinSize(writes.size)
 
     /**

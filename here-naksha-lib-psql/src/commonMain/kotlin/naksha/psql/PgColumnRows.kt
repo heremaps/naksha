@@ -85,24 +85,24 @@ internal class PgColumnRows {
     var collectionNumber: Int? = null
 
     /**
-     * The encoding flags that apply to every tuple in this result set.
+     * The feature encoding that applies to every tuple in this result set.
      *
-     * `flags` is no longer persisted as a per-row column; the encoding is a per-collection setting
-     * looked up by callers (e.g. from [PgCollection.head.defaultFlags]) and passed here so the
-     * synthesized [Metadata.flags] tells decoders which feature encoding to use.
+     * The encoding is no longer persisted as a per-row column; it is a per-collection setting
+     * looked up by callers (e.g. from [PgCollection.head.dataEncoding]) and passed here so the
+     * synthesized [Metadata.dataEncoding] tells decoders how to unpack the feature bytes.
      *
-     * **MUST be set via [withDefaultFlags] before any call to [getTuple] / [get]** — leaving it
-     * unset and then materializing a tuple would silently decode features under the wrong
-     * encoding (default 0 = JBON-no-gzip), so [getTuple] throws instead of guessing.
+     * **MUST be set via [withDefaultDataEncoding] before any call to [getTuple] / [get]** —
+     * leaving it unset and then materializing a tuple would silently decode features under the
+     * wrong encoding, so [getTuple] throws instead of guessing.
      * @since 3.0
      */
-    var defaultFlags: Flags? = null
+    var defaultDataEncoding: DataEncoding? = null
 
     /**
-     * @see [defaultFlags]
+     * @see [defaultDataEncoding]
      */
-    fun withDefaultFlags(value: Flags): PgColumnRows {
-        defaultFlags = value
+    fun withDefaultDataEncoding(value: DataEncoding): PgColumnRows {
+        defaultDataEncoding = value
         return this
     }
 
@@ -226,15 +226,16 @@ internal class PgColumnRows {
         val base_tn = getByteArray(row, PgColumn.base_tn)
         val baseTupleNumber = if (base_tn != null) TupleNumber.fromByteArray(base_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val nextVersion = getInt64(row, PgColumn.next_version)
-        val flags = defaultFlags ?: throw illegalState(
-            "PgColumnRows.defaultFlags was not set before calling getTuple(); " +
-                    "synthesized Metadata.flags would be 0 and decoders would silently mis-handle the " +
-                    "collection's feature encoding. Set defaultFlags from the collection's defaultFlags " +
-                    "(or Naksha.DEFAULT_FLAGS for admin reads) via withDefaultFlags(...)."
+        val encoding = defaultDataEncoding ?: throw illegalState(
+            "PgColumnRows.defaultDataEncoding was not set before calling getTuple(); " +
+                    "synthesized Metadata.dataEncoding would be unknown and decoders would silently " +
+                    "mis-handle the collection's feature encoding. Set it from the collection's " +
+                    "dataEncoding (or Naksha.DEFAULT_DATA_ENCODING for admin reads) via " +
+                    "withDefaultDataEncoding(...)."
         )
         val meta = Metadata(
             tupleNumber = tupleNumber,
-            flags = flags,
+            dataEncoding = encoding,
             changeCount = getInt(row, PgColumn.cc) ?: 1,
             updatedAt = getInt64(row, PgColumn.updated_at) ?: return null,
             createdAt = getInt64(row, PgColumn.created_at),

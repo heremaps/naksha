@@ -35,6 +35,7 @@ import naksha.base.Platform;
 import naksha.base.PlatformLock;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
+import naksha.model.DataEncoding;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
@@ -171,7 +172,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
   }
 
   @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+  public @NotNull DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
