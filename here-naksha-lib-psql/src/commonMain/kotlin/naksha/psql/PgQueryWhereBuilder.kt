@@ -257,33 +257,36 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             )
 
             is MetaQuery -> {
+                val isActionQuery = metaQuery.column == MetaColumn.action()
                 val pgColumn =
-                    if (metaQuery.column == MetaColumn.action()) {
-                        PgColumn.flags
+                    if (isActionQuery) {
+                        PgColumn.version
                     } else {
                         PgColumn.ofRowColumn(metaQuery.column) ?: throw NakshaException(
                             NakshaError.ILLEGAL_STATE,
                             "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
                         )
                     }
-                val leftOperand = if (metaQuery.column == MetaColumn.action()) {
-                    "${PgColumn.flags.name} & ${FlagsBits.ACTION_MASK}"
+                val leftOperand = if (isActionQuery) {
+                    "(${PgColumn.version.name} & 3)::int4"
                 } else if (pgColumn == PgColumn.created_at || pgColumn == PgColumn.author_ts) {
                     "COALESCE(${pgColumn.name}, ${PgColumn.updated_at.name})"
                 } else {
                     pgColumn.name
                 }
+                // Action lives in the lower 2 bits of `version`; the comparison value is a small int.
+                val placeholderType = if (isActionQuery) PgType.INT else pgColumn.type
                 val resolvedQuery = when (val op = metaQuery.op) {
                     is StringOp -> {
-                        val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
+                        val placeholder = placeholderForArg(metaQuery.value, placeholderType)
                         resolveStringOp(op, leftOperand, placeholder)
                     }
                     is DoubleOp -> {
-                        val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
+                        val placeholder = placeholderForArg(metaQuery.value, placeholderType)
                         resolveDoubleOp(op, leftOperand, placeholder)
                     }
                     AnyOp.IS_ANY_OF -> {
-                        val placeholder = placeholderForArg(metaQuery.value, arrayTypeFor(pgColumn.type))
+                        val placeholder = placeholderForArg(metaQuery.value, arrayTypeFor(placeholderType))
                         "$leftOperand = ANY($placeholder)"
                     }
                     else -> throw illegalArg("Unknown op type: ${op::class.simpleName}")

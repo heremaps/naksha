@@ -467,17 +467,18 @@ AS $$
   SELECT ST_SetSRID(ST_Force2D(ST_GeomFromTWKB(ref_point)), 4326)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_flags_action(flags int4) RETURNS int2
+-- The action is encoded in the lower two bits of the `version` (txn).
+CREATE OR REPLACE FUNCTION naksha_version_action(version int8) RETURNS int2
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   -- 0=CREATED; 1=UPDATED; 2=DELETED; 3=UNKNOWN
-  SELECT (flags >> 16) & 3
+  SELECT (version & 3)::int2
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_flags_action_text(flags int4) RETURNS text
+CREATE OR REPLACE FUNCTION naksha_version_action_text(version int8) RETURNS text
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT CASE ((flags >> 16) & 3)
+  SELECT CASE (version & 3)::int2
     WHEN 0 THEN 'CREATED'
     WHEN 1 THEN 'UPDATED'
     WHEN 2 THEN 'DELETED'

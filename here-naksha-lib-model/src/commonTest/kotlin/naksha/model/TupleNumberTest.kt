@@ -19,10 +19,9 @@ class TupleNumberTest {
     private val txnBase = Int64(0x0102_0304_0506_0708L and -4L)
 
     /** Build a TupleNumber with the given action encoded in the lower 2 bits of txn.
-     *  action.intValue is already shifted left by 16 (ACTION_SHIFT), so the raw 2-bit value is intValue shr 16. */
+     *  action.intValue is the raw 2-bit value (0=CREATED, 1=UPDATED, 2=DELETED). */
     private fun tn(action: Action): TupleNumber {
-        val actionBits = (action.intValue ushr 16).toLong()
-        val txn = txnBase or Int64(actionBits)
+        val txn = txnBase or Int64(action.intValue.toLong())
         return TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, Version(txn))
     }
 

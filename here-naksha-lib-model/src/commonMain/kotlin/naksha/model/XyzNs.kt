@@ -212,7 +212,7 @@ class XyzNs : AnyObject() {
                 setRaw(APP_ID, meta.appId)
                 if (meta.author != null) setRaw(AUTHOR, meta.author)
                 setRaw(FLAGS, meta.flags)
-                setRaw(ACTION, meta.flags.actionEnum().toString())
+                setRaw(ACTION, meta.action().toString())
                 setRaw(HASH, meta.hash)
                 setRaw(HERE_TILE, meta.hereTile)
                 if (meta.origin != null) setRaw(ORIGIN, meta.origin)
