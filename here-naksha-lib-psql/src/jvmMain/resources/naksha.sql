@@ -408,6 +408,9 @@ AS $$
   SELECT naksha_jbon_map_to_jsonb(gunzip(tags))
 $$;
 
+-- Decodes the binary `feature` payload to JSONB. The encoding (JBON vs JSON, with or without
+-- GZIP) is a per-collection setting; pass the collection's encoding `flags` (4-bit `FE` field).
+-- Callers will typically pass a hard-coded constant matching `NakshaCollection.defaultFlags`.
 CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS jsonb
 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT

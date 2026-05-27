@@ -379,6 +379,7 @@ open class PgMap internal constructor(
             .withStorageNumber(storage.number)
             .withMapNumber(this.number)
             .withCollectionNumber(COLLECTIONS_COL_NUMBER)
+            .withDefaultFlags(Naksha.DEFAULT_FLAGS)
             .addColumns(headColumns)
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
@@ -423,6 +424,7 @@ WHERE id = $1"""
             .withStorageNumber(storage.number)
             .withMapNumber(this.number)
             .withCollectionNumber(COLLECTIONS_COL_NUMBER)
+            .withDefaultFlags(Naksha.DEFAULT_FLAGS)
             .addColumns(headColumns)
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}

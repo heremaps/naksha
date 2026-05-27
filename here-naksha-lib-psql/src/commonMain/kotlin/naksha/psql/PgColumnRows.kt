@@ -85,6 +85,24 @@ internal class PgColumnRows {
     var collectionNumber: Int? = null
 
     /**
+     * The encoding flags that apply to every tuple in this result set.
+     *
+     * `flags` is no longer persisted as a per-row column; the encoding is a per-collection setting
+     * looked up by callers (e.g. from [PgCollection.head.defaultFlags]) and passed here so the
+     * synthesized [Metadata.flags] tells decoders which feature encoding to use.
+     * @since 3.0
+     */
+    var defaultFlags: Flags = 0
+
+    /**
+     * @see [defaultFlags]
+     */
+    fun withDefaultFlags(value: Flags): PgColumnRows {
+        defaultFlags = value
+        return this
+    }
+
+    /**
      * @see [collectionNumber]
      */
     fun withCollectionNumber(value: Int): PgColumnRows {
@@ -206,7 +224,7 @@ internal class PgColumnRows {
         val nextVersion = getInt64(row, PgColumn.next_version)
         val meta = Metadata(
             tupleNumber = tupleNumber,
-            flags = getInt(row, PgColumn.flags) ?: return null,
+            flags = defaultFlags,
             changeCount = getInt(row, PgColumn.cc) ?: 1,
             updatedAt = getInt64(row, PgColumn.updated_at) ?: return null,
             createdAt = getInt64(row, PgColumn.created_at),
@@ -299,7 +317,6 @@ internal class PgColumnRows {
         set(row, PgColumn.cv3, meta.cv3)
         set(row, PgColumn.hash, meta.hash)
         set(row, PgColumn.here_tile, meta.hereTile)
-        set(row, PgColumn.flags, meta.flags)
         set(row, PgColumn.cc, meta.changeCount)
         set(row, PgColumn.fn, meta.tupleNumber.featureNumber)
         set(row, PgColumn.version, meta.tupleNumber.version.txn)
