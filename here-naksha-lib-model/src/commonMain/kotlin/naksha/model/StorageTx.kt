@@ -3,7 +3,6 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
 import naksha.jbon.IDictReader
 import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.Metadata.Metadata_C.calculateHereTile
@@ -117,10 +116,9 @@ open class StorageTx private constructor(
         action: Action,
         atomic: Boolean = false
     ): Metadata {
-        val flags = getEncodingFlags(feature, collection)
-            .withAction(action)
+        val dataEncoding = getDataEncoding(feature, collection)
         val xyz = feature.properties.xyz
-        val actionBits = Int64((action.intValue shr ACTION_SHIFT).toLong())
+        val actionBits = Int64(action.intValue.toLong())
         val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, Version(version.txn and Int64(-4L) or actionBits))
         // TODO: Handle other operations like rebase!
         val base_tn: TupleNumber? = null
@@ -151,7 +149,7 @@ open class StorageTx private constructor(
         val featureType = if (collection.defaultFeatureType == feature.featureType) null else feature.featureType
         return Metadata(
             tupleNumber = tn,
-            flags = flags,
+            dataEncoding = dataEncoding,
             updatedAt = updatedAt,
             createdAt = createdAt,
             authorTs = authorTs,
@@ -209,10 +207,10 @@ open class StorageTx private constructor(
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,
-            feature = Naksha.encodeFeature(feature, metadata.flags, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
-            geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
+            feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
+            geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,
             complete = true
         )
@@ -237,10 +235,10 @@ open class StorageTx private constructor(
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,
-            feature = Naksha.encodeFeature(feature, metadata.flags, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
-            geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
+            feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
+            geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,
             complete = true
         )
@@ -267,15 +265,15 @@ open class StorageTx private constructor(
         val dictionary = dictReader?.getEncodingDictionary(feature)
         return Tuple(
             meta = metadata,
-            feature = Naksha.encodeFeature(feature, metadata.flags, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
-            geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
+            feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
+            geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,
             complete = true
         )
     }
 
-    private fun getEncodingFlags(feature: NakshaFeature, collection: NakshaCollection): Flags =
-        storage?.getEncodingFlags(feature, collection) ?: Naksha.DEFAULT_FLAGS
+    private fun getDataEncoding(feature: NakshaFeature, collection: NakshaCollection): DataEncoding =
+        storage?.getDataEncoding(feature, collection) ?: Naksha.DEFAULT_DATA_ENCODING
 }

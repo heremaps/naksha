@@ -68,8 +68,8 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
     }
 
     @Override
-    public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
-        return Naksha.DEFAULT_FLAGS;
+    public @NotNull DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
+        return Naksha.DEFAULT_DATA_ENCODING;
     }
 
     @Nullable

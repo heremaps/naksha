@@ -462,7 +462,6 @@ class PropertyFilterTest {
             val mapNumber = 0
             val collectionNumber = 0
             val version = Version(0)
-            val flags = Flags()
             val tupleNumber = TupleNumber(
                 storageNumber,
                 mapNumber,
@@ -477,7 +476,7 @@ class PropertyFilterTest {
                     id = feature.id,
                     appId = "",
                     author = null,
-                    flags = flags,
+                    dataEncoding = DataEncoding.JBON,
                 ),
                 feature = featureBytes
             )

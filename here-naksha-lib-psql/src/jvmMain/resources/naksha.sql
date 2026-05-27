@@ -400,103 +400,68 @@ AS $$
   SELECT naksha_jbon_map_to_json(jbon)::jsonb
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tags(tags bytea, flags int4) RETURNS jsonb
-LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
+-- Tags are always stored as `JBON_GZIP`.
+CREATE OR REPLACE FUNCTION naksha_tags(tags bytea) RETURNS jsonb
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-DECLARE
-  encoding int4;
-  gzip boolean;
-BEGIN
-  -- Because the function is strict, the null check is a duplicate, still
-  if (tags is null OR length(tags) = 0) then
-     return null;
-  end if;
-  encoding = (flags >> 8) & 15;
-  gzip = (encoding & 1) = 1;
-  if (gzip) then
-    tags = gunzip(tags);
-    encoding = encoding & 14;
-  end if;
-  if (encoding = 0) then -- JBON
-    return naksha_jbon_map_to_jsonb(tags);
-  elsif (encoding = 2) then -- JSON
-    return convert_from(tags, 'utf-8')::jsonb;
-  end if;
-  -- Unknown encoding
-  return null;
-END $$;
+  SELECT naksha_jbon_map_to_jsonb(gunzip(tags))
+$$;
 
-CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS jsonb
+-- Decodes the binary `feature` payload to JSONB.
+-- `encoding` is the raw `naksha.model.DataEncoding.intValue`:
+--   0 = JBON, 1 = JBON_GZIP, 2 = JSON, 3 = JSON_GZIP.
+-- The encoding is a per-collection setting; callers typically pass a hard-coded constant
+-- matching `NakshaCollection.dataEncoding`.
+CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, encoding int4) RETURNS jsonb
 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
 DECLARE
-  encoding int4;
   gzip boolean;
+  inner_encoding int4;
 BEGIN
-  encoding = (flags >> 4) & 15;
   gzip = (encoding & 1) = 1;
   if (gzip) then
     feature = gunzip(feature);
-    encoding = encoding & 14;
   end if;
-  if (encoding = 0) then -- JBON
+  inner_encoding = encoding & 14;
+  if (inner_encoding = 0) then -- JBON / JBON_GZIP
     return naksha_jbon_feature_to_jsonb(feature);
-  elsif (encoding = 2) then -- JSON
+  elsif (inner_encoding = 2) then -- JSON / JSON_GZIP
     return feature::text::jsonb;
   end if;
   -- Unknown encoding
   return null;
 END $$;
 
-CREATE OR REPLACE FUNCTION naksha_geometry(geo bytea, flags int4) RETURNS geometry
-LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
-AS $$
-DECLARE
-  encoding int4;
-  gzip boolean;
-BEGIN
-  encoding = flags & 15;
-  gzip = (encoding & 1) = 1;
-  if (gzip) then
-    geo = gunzip(geo);
-    encoding = encoding & 14;
-  end if;
-  if (encoding = 0) then
-    RETURN ST_SetSRID(ST_GeomFromTWKB(geo), 4326);
-  elsif (encoding = 2) then
-    RETURN ST_GeomFromWKB(geo, 4326);
-  elsif (encoding = 4) then
-    RETURN ST_GeomFromEWKB(geo);
-  elsif (encoding = 6) then
-    RETURN ST_SetSRID(ST_GeomFromGeoJSON(convert_from(geo, 'UTF8')), 4326);
-  end if;
-  -- Unknown encoding
-  return null;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION naksha_2d(geo bytea, flags int4) RETURNS geometry
+-- Geometries are always stored as raw `TWKB`.
+CREATE OR REPLACE FUNCTION naksha_geometry(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force2D(naksha_geometry(geo,flags))
+  SELECT ST_SetSRID(ST_GeomFromTWKB(geo), 4326)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_3d(geo bytea, flags int4) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_2d(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force3D(naksha_geometry(geo,flags), 0)
+  SELECT ST_Force2D(naksha_geometry(geo))
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_4d(geo bytea, flags int4) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_3d(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force4D(naksha_geometry(geo,flags), 0, 0)
+  SELECT ST_Force3D(naksha_geometry(geo), 0)
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_4d(geo bytea) RETURNS geometry
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT ST_Force4D(naksha_geometry(geo), 0, 0)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_ref_point(ref_point bytea) RETURNS geometry
@@ -506,17 +471,18 @@ AS $$
   SELECT ST_SetSRID(ST_Force2D(ST_GeomFromTWKB(ref_point)), 4326)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_flags_action(flags int4) RETURNS int2
+-- The action is encoded in the lower two bits of the `version` (txn).
+CREATE OR REPLACE FUNCTION naksha_version_action(version int8) RETURNS int2
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   -- 0=CREATED; 1=UPDATED; 2=DELETED; 3=UNKNOWN
-  SELECT (flags >> 16) & 3
+  SELECT (version & 3)::int2
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_flags_action_text(flags int4) RETURNS text
+CREATE OR REPLACE FUNCTION naksha_version_action_text(version int8) RETURNS text
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT CASE ((flags >> 16) & 3)
+  SELECT CASE (version & 3)::int2
     WHEN 0 THEN 'CREATED'
     WHEN 1 THEN 'UPDATED'
     WHEN 2 THEN 'DELETED'

@@ -1,7 +1,6 @@
 package naksha.model
 
 import naksha.base.JsEnum
-import naksha.model.FlagsBits.FlagsBitsCompanion.ACTION_SHIFT
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -10,6 +9,8 @@ import kotlin.reflect.KClass
 
 /**
  * An enumeration about the action that actually was performed for a feature in a storage, being [CREATED], [UPDATED], or [DELETED].
+ *
+ * The numeric [intValue] corresponds to the lower two bits of a [Version.txn].
  *
  * @since 1.0.0
  */
@@ -23,19 +24,19 @@ class Action : JsEnum() {
 
     @Suppress("MemberVisibilityCanBePrivate")
     companion object Action_C {
-        internal const val CREATED_VALUE = 0 shl ACTION_SHIFT
+        internal const val CREATED_VALUE = 0
         internal const val CREATED_STRING = "CREATE"
         internal const val CREATED_SHORT = "c"
 
-        internal const val UPDATED_VALUE = 1 shl ACTION_SHIFT
+        internal const val UPDATED_VALUE = 1
         internal const val UPDATED_STRING = "UPDATE"
         internal const val UPDATED_SHORT = "u"
 
-        internal const val DELETED_VALUE = 2 shl ACTION_SHIFT
+        internal const val DELETED_VALUE = 2
         internal const val DELETED_STRING = "DELETE"
         internal const val DELETED_SHORT = "d"
 
-        internal const val UNDEFINED_VALUE = 3 shl ACTION_SHIFT
+        internal const val UNDEFINED_VALUE = 3
         internal const val UNDEFINED_STRING = "UNDEFINED"
         internal const val UNDEFINED_SHORT = "x"
 

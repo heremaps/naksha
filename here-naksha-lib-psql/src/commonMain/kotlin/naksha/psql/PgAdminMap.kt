@@ -537,6 +537,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_MAP_NUMBER)
             .withCollectionNumber(MAPS_COL_NUMBER)
+            .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(headColumns)
         val SQL = """SELECT ${outRows.names()}
 FROM "naksha~admin".${maps.headTable.quotedName}
@@ -572,6 +573,7 @@ WHERE id = $1"""
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_MAP_NUMBER)
             .withCollectionNumber(MAPS_COL_NUMBER)
+            .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(headColumns)
         val SQL = """
             SELECT ${outRows.names()}
@@ -602,7 +604,7 @@ WHERE id = $1"""
         = PgMapList().withAll(mapCache.mapNotNull { it.value })
     // TODO: This only reads the cache, but we need to load from database!
 
-    abstract fun getEncodingFlags(feature: Any?, context: Any?): Flags
+    abstract fun getDataEncoding(feature: Any?, context: Any?): DataEncoding
 
     abstract override fun getDictionary(id: String): JbDictionary?
 

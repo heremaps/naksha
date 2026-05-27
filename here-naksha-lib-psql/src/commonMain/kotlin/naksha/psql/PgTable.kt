@@ -570,13 +570,12 @@ $fillFactor ${TABLESPACE};""".trim()
                 if (firstCol != "geo") {
                     throw naksha.model.illegalArg("SPATIAL custom index '${index.name}' only supports the built-in 'geo' column in v3.0")
                 }
-                val cFlags = PgColumn.flags.ident
                 val cGeo = PgColumn.geo.ident
                 """
 CREATE INDEX  IF NOT EXISTS $id ON ${quotedName}
-USING gist (naksha_2d($cGeo, $cFlags))
+USING gist (naksha_2d($cGeo))
 WITH (fillfactor=${if (isVolatile) 80 else 100}) ${TABLESPACE}
-WHERE naksha_2d($cGeo, $cFlags) IS NOT NULL;""".trim()
+WHERE naksha_2d($cGeo) IS NOT NULL;""".trim()
             }
             naksha.model.objects.CustomIndexType.FLAT_MAP -> {
                 if (!isFlatMapColumn(firstCol, members)) {

@@ -137,13 +137,13 @@ interface IStorage : IDictReader {
     }
 
     /**
-     * The best flags to encode the given feature.
+     * The best feature encoding for the given feature.
      *
      * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @param feature the feature to encode; _null_ if no specific one is available.
      * @param context the context in which the encoding happens (for example the [map][naksha.model.objects.NakshaMap] or [collection][naksha.model.objects.NakshaCollection]); _null_ if none is available.
-     * @return best flags to use for encoding.
+     * @return best [DataEncoding] to use.
      * @since 3.0
      */
-    fun getEncodingFlags(feature: Any?, context: Any? = null): Flags
+    fun getDataEncoding(feature: Any?, context: Any? = null): DataEncoding
 }

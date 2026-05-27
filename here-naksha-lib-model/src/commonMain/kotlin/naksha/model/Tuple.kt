@@ -22,13 +22,13 @@ data class Tuple(
     @JvmField val meta: Metadata,
 
     /**
-     * Feature encoded with [FeatureEncoding] algorithm described by [Metadata.flags].
+     * Feature serialized with the encoding described by [Metadata.dataEncoding].
      * @since 3.0
      */
     @JvmField val feature: ByteArray? = null,
 
     /**
-     * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
+     * Geometry encoded as raw `TWKB`.
      *
      * Might be _null_, when the feature does not have a geometry.
      * @since 3.0
@@ -44,7 +44,7 @@ data class Tuple(
     @JvmField val referencePoint: ByteArray? = null,
 
     /**
-     * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
+     * Tags encoded as `JBON_GZIP`.
      *
      * Might be _null_, when the feature does not have any tags.
      * @since 3.0
@@ -142,13 +142,6 @@ data class Tuple(
      */
     val version: Version
         get() = meta.version
-
-    /**
-     * The action performed on this [Tuple].
-     * @since 3.0
-     */
-    val uid: Int
-        get() = tupleNumber.action.intValue
 
     /**
      * Convert the tuple into a [Naksha feature][NakshaFeature], using the [Naksha.cache] to query for the [dictionary-manager][naksha.jbon.IDictManager].

@@ -209,7 +209,7 @@ class PgUtil private constructor() {
         /**
          * Decode the Naksha feature.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
+         * @param encoding the feature encoding the bytes were produced with.
          * @param dictManager the dictionary manager to use for decoding; if any.
          * @return the Naksha feature.
          * @since 3.0.0
@@ -218,15 +218,15 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, flags, dictManager)"),
+            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, encoding, dictManager)"),
             level = DeprecationLevel.WARNING
         )
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, flags, dictManager)
+        fun decodeFeature(bytes: ByteArray?, encoding: DataEncoding, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, encoding, dictManager)
 
         /**
          * Encodes the given [NakshaFeature] into bytes.
          * @param feature the feature to encode.
-         * @param flags the codec flags.
+         * @param encoding the feature encoding to use.
          * @param dict the dictionary to use for encoding; if any.
          * @return the encoded feature.
          * @since 3.0.0
@@ -235,15 +235,14 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeFeature(feature, flags, dict)"),
+            replaceWith = ReplaceWith("Naksha.encodeFeature(feature, encoding, dict)"),
             level = DeprecationLevel.WARNING
         )
-        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, flags, dict)
+        fun encodeFeature(feature: NakshaFeature?, encoding: DataEncoding, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, encoding, dict)
 
         /**
-         * Decode the Naksha tags.
+         * Decode the Naksha tags. Tags are always stored as `JBON_GZIP`.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
          * @param dictManager the dictionary manager to use for decoding; if any.
          * @return the Naksha tags.
          * @since 3.0.0
@@ -252,15 +251,14 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeTags(raw, bytes, flags, dictManager)"),
+            replaceWith = ReplaceWith("Naksha.decodeTags(bytes, dictManager)"),
             level = DeprecationLevel.WARNING
         )
-        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? = Naksha.decodeTags(bytes, flags, dictManager)
+        fun decodeTags(bytes: ByteArray?, dictManager: IDictManager? = null): TagMap? = Naksha.decodeTags(bytes, dictManager)
 
         /**
-         * Encodes the given tags into bytes.
+         * Encodes the given tags into bytes. Tags are always stored as `JBON_GZIP`.
          * @param tags the tags to encode.
-         * @param flags the codec flags.
          * @param dict the dictionary to use for encoding; if any.
          * @return the encoded tags.
          * @since 3.0.0
@@ -269,15 +267,14 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeTags(tags, flags, dict)"),
+            replaceWith = ReplaceWith("Naksha.encodeTags(tags, dict)"),
             level = DeprecationLevel.WARNING
         )
-        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeTags(tags, flags, dict)
+        fun encodeTags(tags: TagMap?, dict: JbDictionary? = null): ByteArray? = Naksha.encodeTags(tags, dict)
 
         /**
-         * Decode a GeoJSON geometry from encoded bytes.
+         * Decode a GeoJSON geometry from `TWKB` encoded bytes. All Naksha geometries are stored as raw TWKB.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
          * @return the geometry.
          * @since 3.0.0
          */
@@ -285,15 +282,14 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeGeometry(bytes, flags)"),
+            replaceWith = ReplaceWith("Naksha.decodeGeometry(bytes)"),
             level = DeprecationLevel.WARNING
         )
-        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? = Naksha.decodeGeometry(bytes, flags)
+        fun decodeGeometry(bytes: ByteArray?): SpGeometry? = Naksha.decodeGeometry(bytes)
 
         /**
-         * Encodes the given GeoJSON geometry into bytes.
+         * Encodes the given GeoJSON geometry into `TWKB` bytes. All Naksha geometries are stored as raw TWKB.
          * @param geometry the geometry to encode.
-         * @param flags the codec flags.
          * @return the encoded GeoJSON geometry.
          * @since 3.0.0
          */
@@ -301,9 +297,9 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeGeometry(geometry, flags)"),
+            replaceWith = ReplaceWith("Naksha.encodeGeometry(geometry)"),
             level = DeprecationLevel.WARNING
         )
-        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? = Naksha.encodeGeometry(geometry, flags)
+        fun encodeGeometry(geometry: SpGeometry?): ByteArray? = Naksha.encodeGeometry(geometry)
     }
 }

@@ -128,25 +128,6 @@ open class MetaColumn() : AnyObject() {
         fun updatedAt(): MetaColumn = MetaColumn(UPDATED_AT)
 
         /**
-         * The name of the virtual columns that stores the [encoding flags and actions][naksha.model.Metadata.flags].
-         *
-         * This value is exposed through [naksha.model.XyzNs.flags].
-         *
-         * Supported [query operations][AnyOp] are:
-         * - [DoubleOp]
-         * - [AnyOp.IS_ANY_OF]
-         */
-        const val FLAGS = "flags"
-
-        /**
-         * Returns a new meta-column for [FLAGS].
-         * @return a new meta-column.
-         */
-        @JvmStatic
-        @JsStatic
-        fun flags(): MetaColumn = MetaColumn(FLAGS)
-
-        /**
          * The amount of changes that have been applied to a feature, a value between `1` and `2,147,483,647`.
          *
          * This value is exposed through [naksha.model.XyzNs.changeCount].
@@ -166,7 +147,7 @@ open class MetaColumn() : AnyObject() {
         fun changeCount(): MetaColumn = MetaColumn(CHANGE_COUNT)
 
         /**
-         * The name of the virtual columns that stores the binary [action][naksha.model.Action], which actually is a subset of bits from the [flags][naksha.model.Metadata.flags].
+         * The name of the virtual column that exposes the binary [action][naksha.model.Action], stored in the lower two bits of [naksha.model.Metadata.tupleNumber]'s version.
          *
          * This value is exposed through [naksha.model.XyzNs.action].
          *

@@ -85,6 +85,28 @@ internal class PgColumnRows {
     var collectionNumber: Int? = null
 
     /**
+     * The feature encoding that applies to every tuple in this result set.
+     *
+     * The encoding is no longer persisted as a per-row column; it is a per-collection setting
+     * looked up by callers (e.g. from [PgCollection.head.dataEncoding]) and passed here so the
+     * synthesized [Metadata.dataEncoding] tells decoders how to unpack the feature bytes.
+     *
+     * **MUST be set via [withDefaultDataEncoding] before any call to [getTuple] / [get]** —
+     * leaving it unset and then materializing a tuple would silently decode features under the
+     * wrong encoding, so [getTuple] throws instead of guessing.
+     * @since 3.0
+     */
+    var defaultDataEncoding: DataEncoding? = null
+
+    /**
+     * @see [defaultDataEncoding]
+     */
+    fun withDefaultDataEncoding(value: DataEncoding): PgColumnRows {
+        defaultDataEncoding = value
+        return this
+    }
+
+    /**
      * @see [collectionNumber]
      */
     fun withCollectionNumber(value: Int): PgColumnRows {
@@ -204,9 +226,16 @@ internal class PgColumnRows {
         val base_tn = getByteArray(row, PgColumn.base_tn)
         val baseTupleNumber = if (base_tn != null) TupleNumber.fromByteArray(base_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val nextVersion = getInt64(row, PgColumn.next_version)
+        val encoding = defaultDataEncoding ?: throw illegalState(
+            "PgColumnRows.defaultDataEncoding was not set before calling getTuple(); " +
+                    "synthesized Metadata.dataEncoding would be unknown and decoders would silently " +
+                    "mis-handle the collection's feature encoding. Set it from the collection's " +
+                    "dataEncoding (or Naksha.DEFAULT_DATA_ENCODING for admin reads) via " +
+                    "withDefaultDataEncoding(...)."
+        )
         val meta = Metadata(
             tupleNumber = tupleNumber,
-            flags = getInt(row, PgColumn.flags) ?: return null,
+            dataEncoding = encoding,
             changeCount = getInt(row, PgColumn.cc) ?: 1,
             updatedAt = getInt64(row, PgColumn.updated_at) ?: return null,
             createdAt = getInt64(row, PgColumn.created_at),
@@ -299,7 +328,6 @@ internal class PgColumnRows {
         set(row, PgColumn.cv3, meta.cv3)
         set(row, PgColumn.hash, meta.hash)
         set(row, PgColumn.here_tile, meta.hereTile)
-        set(row, PgColumn.flags, meta.flags)
         set(row, PgColumn.cc, meta.changeCount)
         set(row, PgColumn.fn, meta.tupleNumber.featureNumber)
         set(row, PgColumn.version, meta.tupleNumber.version.txn)

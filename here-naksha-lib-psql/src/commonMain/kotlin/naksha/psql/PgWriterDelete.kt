@@ -80,20 +80,17 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
   RETURNING id, fn, version
 )""" else ""
 
-        // For DELETE: UPDATE version, flags (action bits), and cc in HEAD.
-        // Only these three control-columns change; all data columns remain identical.
-        // ACTION_MASK = 3 << 16 = 0x30000 = 196608; ACTION_CLEAR = ~196608 = -196609
-        // DELETED action value = 2 << 16 = 131072
+        // For DELETE: UPDATE version (action bits = DELETED) and cc in HEAD.
+        // Only these two control-columns change; all data columns remain identical.
         val head_updated = if (!purge) """, head_updated AS (
   UPDATE ${headTable.quotedName}
   SET
     ${PgColumn.version.name} = $deleted_version,
-    ${PgColumn.flags.name} = (${headTable.quotedName}.${PgColumn.flags.name} & -196609) | 131072,
     ${PgColumn.cc.name} = ${headTable.quotedName}.${PgColumn.cc.name} + 1
   FROM head_row
   WHERE ${headTable.quotedName}.fn = head_row.fn
   RETURNING ${headTable.quotedName}.id, ${headTable.quotedName}.fn, ${headTable.quotedName}.version,
-            ${headTable.quotedName}.${PgColumn.flags.name}, ${headTable.quotedName}.${PgColumn.cc.name}
+            ${headTable.quotedName}.${PgColumn.cc.name}
 )""" else ""
 
         // For PURGE: DELETE the HEAD row entirely.
@@ -107,22 +104,21 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // end-of-lifetime. The tombstone's next_version == version (closed interval).
         val history_tombstone = if (purge && insert_into_history != null) """, history_tombstone AS (
   INSERT INTO ${insert_into_history.quotedName}
-  (${PgColumn.flags}, ${PgColumn.cc}, ${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
-  SELECT head_row.flags, head_row.cc, head_row.fn, $deleted_version, $deleted_version, null::bytea,
+  (${PgColumn.cc}, ${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+  SELECT head_row.cc, head_row.fn, $deleted_version, $deleted_version, null::bytea,
          ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   RETURNING id, fn, version
 )""" else ""
 
-        // The returned row for DELETE is the updated HEAD row (same data, new version/flags/cc).
-        // We reconstruct it from head_row overriding the three changed columns.
+        // The returned row for DELETE is the updated HEAD row (same data, new version/cc).
+        // We reconstruct it from head_row overriding the two changed columns.
         val SQL = """$query$head_select$head_row$head_to_history$head_updated$head_deleted$history_tombstone
 SELECT
     head_row.fn AS fn,
     $deleted_version AS version,
-    COALESCE(head_updated.${PgColumn.flags.name}, (head_row.${PgColumn.flags.name} & -196609) | 131072) AS ${PgColumn.flags},
     COALESCE(head_updated.${PgColumn.cc.name}, head_row.${PgColumn.cc.name} + 1) AS ${PgColumn.cc},
-    ${headColumns.filter { it !== PgColumn.flags && it !== PgColumn.cc && it !== PgColumn.version && it !== PgColumn.fn }.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }},
+    ${headColumns.filter { it !== PgColumn.cc && it !== PgColumn.version && it !== PgColumn.fn }.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }},
     null::int8 AS ${PgColumn.next_version},
     ${if (head_to_history.isNotEmpty()) "head_to_history.version AS head_history_version," else ""}
     ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else ""}
@@ -151,6 +147,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.id = query.id" else ""}
             .withStorageNumber(storageNumber)
             .withMapNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
+            .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(allColumns)
             .addColumn("head_history_version", PgType.INT64)
             .addColumn("history_version", PgType.INT64)

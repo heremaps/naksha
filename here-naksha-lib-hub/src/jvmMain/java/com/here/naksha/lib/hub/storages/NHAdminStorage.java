@@ -23,6 +23,7 @@ import naksha.base.PlatformLock;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
 import naksha.jbon.JbDictionary;
+import naksha.model.DataEncoding;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -88,8 +89,8 @@ public class NHAdminStorage implements IStorage {
   }
 
   @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
-    return psqlStorage.getEncodingFlags(feature, context);
+  public @NotNull DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
+    return psqlStorage.getDataEncoding(feature, context);
   }
 
   @Override

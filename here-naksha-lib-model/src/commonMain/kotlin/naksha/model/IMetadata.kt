@@ -87,10 +87,10 @@ interface IMetadata {
     val baseTupleNumber: TupleNumber?
 
     /**
-     * The flags.
+     * The serialization format of the [feature][Tuple.feature] payload.
      * @since 3.0
      */
-    val flags: Flags
+    val dataEncoding: DataEncoding
 
     /**
      * The epoch milliseconds, when the feature was created, _null_, when this is the same as [updatedAt], which means, this is the first version of the feature.

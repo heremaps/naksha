@@ -4,7 +4,6 @@ import naksha.base.ListProxy
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
 import naksha.model.*
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 
@@ -108,12 +107,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             )
 
             is SpIntersects -> {
-                val queryGeometry = nakshaGeometry(spatial.geometry, TWKB)
+                val queryGeometry = nakshaGeometry(spatial.geometry)
                 val geometryToCompare = when (val transformation = spatial.transformation) {
                     null -> queryGeometry
                     else -> resolveTransformation(transformation, queryGeometry)
                 }
-                where.append("ST_Intersects(naksha_2d(${PgColumn.geo}, ${PgColumn.flags}), $geometryToCompare)")
+                where.append("ST_Intersects(naksha_2d(${PgColumn.geo}), $geometryToCompare)")
             }
 
             is SpRefInHereTile -> {
@@ -127,11 +126,10 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private fun nakshaGeometry(geometry: SpGeometry, geoEncoding: Int): String {
-        val flags = Flags().geoGzipOff().withGeoEncoding(geoEncoding)
-        val geoBytes = Naksha.encodeGeometry(geometry, flags)
+    private fun nakshaGeometry(geometry: SpGeometry): String {
+        val geoBytes = Naksha.encodeGeometry(geometry)
         val geoBytesPlaceholder = placeholderForArg(geoBytes, PgType.BYTE_ARRAY)
-        return "naksha_2d($geoBytesPlaceholder, $flags)"
+        return "naksha_2d($geoBytesPlaceholder)"
     }
 
     private fun resolveTransformation(
@@ -259,33 +257,36 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             )
 
             is MetaQuery -> {
+                val isActionQuery = metaQuery.column == MetaColumn.action()
                 val pgColumn =
-                    if (metaQuery.column == MetaColumn.action()) {
-                        PgColumn.flags
+                    if (isActionQuery) {
+                        PgColumn.version
                     } else {
                         PgColumn.ofRowColumn(metaQuery.column) ?: throw NakshaException(
                             NakshaError.ILLEGAL_STATE,
                             "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
                         )
                     }
-                val leftOperand = if (metaQuery.column == MetaColumn.action()) {
-                    "${PgColumn.flags.name} & ${FlagsBits.ACTION_MASK}"
+                val leftOperand = if (isActionQuery) {
+                    "(${PgColumn.version.name} & 3)::int4"
                 } else if (pgColumn == PgColumn.created_at || pgColumn == PgColumn.author_ts) {
                     "COALESCE(${pgColumn.name}, ${PgColumn.updated_at.name})"
                 } else {
                     pgColumn.name
                 }
+                // Action lives in the lower 2 bits of `version`; the comparison value is a small int.
+                val placeholderType = if (isActionQuery) PgType.INT else pgColumn.type
                 val resolvedQuery = when (val op = metaQuery.op) {
                     is StringOp -> {
-                        val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
+                        val placeholder = placeholderForArg(metaQuery.value, placeholderType)
                         resolveStringOp(op, leftOperand, placeholder)
                     }
                     is DoubleOp -> {
-                        val placeholder = placeholderForArg(metaQuery.value, pgColumn.type)
+                        val placeholder = placeholderForArg(metaQuery.value, placeholderType)
                         resolveDoubleOp(op, leftOperand, placeholder)
                     }
                     AnyOp.IS_ANY_OF -> {
-                        val placeholder = placeholderForArg(metaQuery.value, arrayTypeFor(pgColumn.type))
+                        val placeholder = placeholderForArg(metaQuery.value, arrayTypeFor(placeholderType))
                         "$leftOperand = ANY($placeholder)"
                     }
                     else -> throw illegalArg("Unknown op type: ${op::class.simpleName}")
@@ -497,6 +498,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     companion object {
-        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags}, ${PgColumn.flags})"
+        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags})"
     }
 }
