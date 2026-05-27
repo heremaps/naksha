@@ -144,13 +144,6 @@ data class Tuple(
         get() = meta.version
 
     /**
-     * The action performed on this [Tuple].
-     * @since 3.0
-     */
-    val uid: Int
-        get() = tupleNumber.action.intValue
-
-    /**
      * Convert the tuple into a [Naksha feature][NakshaFeature], using the [Naksha.cache] to query for the [dictionary-manager][naksha.jbon.IDictManager].
      *
      * There is no caching involved, every call of this method will perform another conversion.
