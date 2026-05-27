@@ -10,7 +10,6 @@ import naksha.psql.PgColumn.PgColumnCompanion.id as c_id
 import naksha.psql.PgColumn.PgColumnCompanion.fn as c_fn
 import naksha.psql.PgColumn.PgColumnCompanion.version as c_version
 import naksha.psql.PgColumn.PgColumnCompanion.next_version as c_next_version
-import naksha.psql.PgColumn.PgColumnCompanion.flags as c_flags
 import naksha.psql.PgColumn.PgColumnCompanion.app_id as c_app_id
 import naksha.psql.PgColumn.PgColumnCompanion.author as c_author
 import naksha.psql.PgColumn.PgColumnCompanion.author_ts as c_author_ts
@@ -284,7 +283,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above `naksha_tags(`[tags][PgColumn.tags], [flags][PgColumn.flags]`)`, [fn][PgColumn.fn], [version][PgColumn.version], and [next_version][PgColumn.next_version].
+         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above `naksha_tags(`[tags][PgColumn.tags]`)`, [fn][PgColumn.fn], [version][PgColumn.version], and [next_version][PgColumn.next_version].
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -295,8 +294,8 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gin (naksha_tags($c_tags, $c_flags), $c_fn, $c_version, $c_next_version)""",
-                        table, unique = false, addFillFactor = false, where = "naksha_tags($c_tags, $c_flags) IS NOT NULL"
+                        """gin (naksha_tags($c_tags), $c_fn, $c_version, $c_next_version)""",
+                        table, unique = false, addFillFactor = false, where = "naksha_tags($c_tags) IS NOT NULL"
                     )
                 ).close()
             }
@@ -322,7 +321,7 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_2d(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_2d(`[PgColumn.geo]`)`.
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -333,15 +332,15 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """gist (naksha_2d($c_geo, $c_flags), $c_fn, $c_version, $c_next_version)""",
-                        table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
+                        """gist (naksha_2d($c_geo), $c_fn, $c_version, $c_next_version)""",
+                        table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo) IS NOT NULL"
                     )
                 ).close()
             }
         }
 
         /**
-         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_2d(`[PgColumn.geo], [PgColumn.flags]`)`.
+         * A two-dimensional [GIST](https://www.postgresql.org/docs/current/gist.html) index above `naksha_2d(`[PgColumn.geo]`)`.
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -352,8 +351,8 @@ ${if (where==null) "" else "WHERE $where"};"""
             self.createFn = Fx2 { conn, table ->
                 conn.execute(
                     self.sql(
-                        """spgist (naksha_2d($c_geo, $c_flags))""",
-                        table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo, $c_flags) IS NOT NULL"
+                        """spgist (naksha_2d($c_geo))""",
+                        table, unique = false, addFillFactor = true, where = "naksha_2d($c_geo) IS NOT NULL"
                     )
                 ).close()
             }

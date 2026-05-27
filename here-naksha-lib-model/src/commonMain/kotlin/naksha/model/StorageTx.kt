@@ -210,9 +210,9 @@ open class StorageTx private constructor(
         return Tuple(
             meta = metadata,
             feature = Naksha.encodeFeature(feature, metadata.flags, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
-            geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
+            geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,
             complete = true
         )
@@ -238,9 +238,9 @@ open class StorageTx private constructor(
         return Tuple(
             meta = metadata,
             feature = Naksha.encodeFeature(feature, metadata.flags, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
-            geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
+            geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,
             complete = true
         )
@@ -268,9 +268,9 @@ open class StorageTx private constructor(
         return Tuple(
             meta = metadata,
             feature = Naksha.encodeFeature(feature, metadata.flags, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), metadata.flags, dictionary),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint, metadata.flags),
-            geo = Naksha.encodeGeometry(feature.geometry, metadata.flags),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
+            geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,
             complete = true
         )

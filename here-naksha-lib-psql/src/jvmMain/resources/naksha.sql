@@ -400,32 +400,13 @@ AS $$
   SELECT naksha_jbon_map_to_json(jbon)::jsonb
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tags(tags bytea, flags int4) RETURNS jsonb
-LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
+-- Tags are always stored as `JBON_GZIP`.
+CREATE OR REPLACE FUNCTION naksha_tags(tags bytea) RETURNS jsonb
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-DECLARE
-  encoding int4;
-  gzip boolean;
-BEGIN
-  -- Because the function is strict, the null check is a duplicate, still
-  if (tags is null OR length(tags) = 0) then
-     return null;
-  end if;
-  encoding = (flags >> 8) & 15;
-  gzip = (encoding & 1) = 1;
-  if (gzip) then
-    tags = gunzip(tags);
-    encoding = encoding & 14;
-  end if;
-  if (encoding = 0) then -- JBON
-    return naksha_jbon_map_to_jsonb(tags);
-  elsif (encoding = 2) then -- JSON
-    return convert_from(tags, 'utf-8')::jsonb;
-  end if;
-  -- Unknown encoding
-  return null;
-END $$;
+  SELECT naksha_jbon_map_to_jsonb(gunzip(tags))
+$$;
 
 CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS jsonb
 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
@@ -450,53 +431,33 @@ BEGIN
   return null;
 END $$;
 
-CREATE OR REPLACE FUNCTION naksha_geometry(geo bytea, flags int4) RETURNS geometry
-LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
-AS $$
-DECLARE
-  encoding int4;
-  gzip boolean;
-BEGIN
-  encoding = flags & 15;
-  gzip = (encoding & 1) = 1;
-  if (gzip) then
-    geo = gunzip(geo);
-    encoding = encoding & 14;
-  end if;
-  if (encoding = 0) then
-    RETURN ST_SetSRID(ST_GeomFromTWKB(geo), 4326);
-  elsif (encoding = 2) then
-    RETURN ST_GeomFromWKB(geo, 4326);
-  elsif (encoding = 4) then
-    RETURN ST_GeomFromEWKB(geo);
-  elsif (encoding = 6) then
-    RETURN ST_SetSRID(ST_GeomFromGeoJSON(convert_from(geo, 'UTF8')), 4326);
-  end if;
-  -- Unknown encoding
-  return null;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION naksha_2d(geo bytea, flags int4) RETURNS geometry
+-- Geometries are always stored as raw `TWKB`.
+CREATE OR REPLACE FUNCTION naksha_geometry(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force2D(naksha_geometry(geo,flags))
+  SELECT ST_SetSRID(ST_GeomFromTWKB(geo), 4326)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_3d(geo bytea, flags int4) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_2d(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force3D(naksha_geometry(geo,flags), 0)
+  SELECT ST_Force2D(naksha_geometry(geo))
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_4d(geo bytea, flags int4) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_3d(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force4D(naksha_geometry(geo,flags), 0, 0)
+  SELECT ST_Force3D(naksha_geometry(geo), 0)
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_4d(geo bytea) RETURNS geometry
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT ST_Force4D(naksha_geometry(geo), 0, 0)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_ref_point(ref_point bytea) RETURNS geometry

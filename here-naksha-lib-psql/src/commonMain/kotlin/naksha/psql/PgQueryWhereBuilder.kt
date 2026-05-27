@@ -4,7 +4,6 @@ import naksha.base.ListProxy
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
 import naksha.model.*
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 
@@ -108,12 +107,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             )
 
             is SpIntersects -> {
-                val queryGeometry = nakshaGeometry(spatial.geometry, TWKB)
+                val queryGeometry = nakshaGeometry(spatial.geometry)
                 val geometryToCompare = when (val transformation = spatial.transformation) {
                     null -> queryGeometry
                     else -> resolveTransformation(transformation, queryGeometry)
                 }
-                where.append("ST_Intersects(naksha_2d(${PgColumn.geo}, ${PgColumn.flags}), $geometryToCompare)")
+                where.append("ST_Intersects(naksha_2d(${PgColumn.geo}), $geometryToCompare)")
             }
 
             is SpRefInHereTile -> {
@@ -127,11 +126,10 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private fun nakshaGeometry(geometry: SpGeometry, geoEncoding: Int): String {
-        val flags = Flags().geoGzipOff().withGeoEncoding(geoEncoding)
-        val geoBytes = Naksha.encodeGeometry(geometry, flags)
+    private fun nakshaGeometry(geometry: SpGeometry): String {
+        val geoBytes = Naksha.encodeGeometry(geometry)
         val geoBytesPlaceholder = placeholderForArg(geoBytes, PgType.BYTE_ARRAY)
-        return "naksha_2d($geoBytesPlaceholder, $flags)"
+        return "naksha_2d($geoBytesPlaceholder)"
     }
 
     private fun resolveTransformation(
@@ -497,6 +495,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     companion object {
-        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags}, ${PgColumn.flags})"
+        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags})"
     }
 }

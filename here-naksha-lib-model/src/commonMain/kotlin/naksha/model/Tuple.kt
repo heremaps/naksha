@@ -28,7 +28,7 @@ data class Tuple(
     @JvmField val feature: ByteArray? = null,
 
     /**
-     * Geometry encoded with [GeoEncoding] algorithm described by [Metadata.flags].
+     * Geometry encoded as raw `TWKB`.
      *
      * Might be _null_, when the feature does not have a geometry.
      * @since 3.0
@@ -44,7 +44,7 @@ data class Tuple(
     @JvmField val referencePoint: ByteArray? = null,
 
     /**
-     * Tags encoded with [TagsEncoding] algorithm described by [Metadata.flags].
+     * Tags encoded as `JBON_GZIP`.
      *
      * Might be _null_, when the feature does not have any tags.
      * @since 3.0

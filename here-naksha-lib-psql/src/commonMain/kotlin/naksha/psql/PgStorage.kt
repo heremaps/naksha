@@ -99,8 +99,6 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      */
     internal val defaultFlags: Flags = Flags()
         .withFeatureEncoding(FeatureEncoding.JBON_GZIP)
-        .withGeoEncoding(GeoEncoding.TWKB_GZIP)
-        .withTagsEncoding(TagsEncoding.JBON_GZIP)
 
     override fun newWriteSession(options: SessionOptions?): IWriteSession =
         newSession(options ?: SessionOptions.from(null), false)
