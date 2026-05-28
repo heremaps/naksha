@@ -75,7 +75,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
                 if (s.indexOf(':') >= 0) {
                     val parts = s.split(':')
                     if (parts.size != 4) throw Exception("Too many parts")
-                    return of(parts[0].toInt(), parts[1].toInt(), parts[0].toInt(), Int64(parts[0].toLong()))
+                    return of(parts[0].toInt(), parts[1].toInt(), parts[2].toInt(), Int64(parts[3].toLong()))
                 } else {
                     return Version(Int64(s.toLong()))
                 }
@@ -95,7 +95,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         @JvmStatic
         @JsStatic
         fun of(year: Int, month: Int, day: Int, seq: Int64): Version =
-            Version((Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) + seq)
+            Version((Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) or seq)
 
         /**
          * Create a version from its parts.
