@@ -111,25 +111,25 @@ data class TupleNumber(
     override fun compareTo(other: TupleNumber): Int {
         var i64_diff = storageNumber - other.storageNumber
         if (i64_diff < 0) return -1
-        if (i64_diff > 1) return 1
+        if (i64_diff > 0) return 1
         var i32_diff = mapNumber - other.mapNumber
         if (i32_diff < 0) return -1
-        if (i32_diff > 1) return 1
+        if (i32_diff > 0) return 1
         i32_diff = collectionNumber - other.collectionNumber
         if (i32_diff < 0) return -1
-        if (i32_diff > 1) return 1
+        if (i32_diff > 0) return 1
         i32_diff = partitionNumber - other.partitionNumber
         if (i32_diff < 0) return -1
-        if (i32_diff > 1) return 1
+        if (i32_diff > 0) return 1
         i64_diff = featureNumber - other.featureNumber
         if (i64_diff < 0) return -1
-        if (i64_diff > 1) return 1
+        if (i64_diff > 0) return 1
         i32_diff = version.compareTo(other.version)
         if (i32_diff < 0) return -1
-        if (i32_diff > 1) return 1
+        if (i32_diff > 0) return 1
         i32_diff = uid - other.uid
         if (i32_diff < 0) return -1
-        if (i32_diff > 1) return 1
+        if (i32_diff > 0) return 1
         return 0
     }
 
