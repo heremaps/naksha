@@ -54,11 +54,14 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber }
         if (tupleNumbers.isNotEmpty()) {
             if (where.isNotEmpty()) where.append(" AND ")
-            val fns: Array<Any?> = tupleNumbers.map { it.featureNumber }.toTypedArray()
-            val versions: Array<Any?> = tupleNumbers.map { it.version.txn }.toTypedArray()
+            val fns = arrayOfNulls<Any>(tupleNumbers.size)
+            val versions = arrayOfNulls<Any>(tupleNumbers.size)
+            for (i in tupleNumbers.indices) {
+                fns[i] = tupleNumbers[i].featureNumber
+                versions[i] = tupleNumbers[i].version.txn
+            }
             val fnPlaceholder = placeholderForArg(fns, PgType.INT64_ARRAY)
             val versionPlaceholder = placeholderForArg(versions, PgType.INT64_ARRAY)
-            // Tuple-IN against two parallel int8 arrays.
             where.append("(${PgColumn.fn}, ${PgColumn.version}) IN (SELECT * FROM unnest($fnPlaceholder::int8[], $versionPlaceholder::int8[]))")
         }
     }
