@@ -245,7 +245,8 @@ internal class PgColumnRows {
             baseTupleNumber = baseTupleNumber,
             hash = getInt(row, PgColumn.hash) ?: -1,
             hereTile = getInt(row, PgColumn.here_tile) ?: -1,
-            id = getString(row, PgColumn.id) ?: return null,
+            // Numeric features (fn >= 0) store id as NULL; synthesize the logical id from fn.
+            id = getString(row, PgColumn.id) ?: if (fn >= Int64(0)) fn.toString() else return null,
             appId = getString(row, PgColumn.app_id) ?: return null,
             author = getString(row, PgColumn.author),
             origin = getString(row, PgColumn.origin),
@@ -346,11 +347,14 @@ internal class PgColumnRows {
         set(row, PgColumn.hash, meta.hash)
         set(row, PgColumn.here_tile, meta.hereTile)
         set(row, PgColumn.cc, meta.changeCount)
-        set(row, PgColumn.fn, meta.tupleNumber.featureNumber)
+        val fn = meta.tupleNumber.featureNumber
+        set(row, PgColumn.fn, fn)
         set(row, PgColumn.version, meta.tupleNumber.version.txn)
         set(row, PgColumn.next_version, meta.nextVersion)
         set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB128())
-        set(row, PgColumn.id, meta.id)
+        // Numeric features (fn >= 0): id is redundant (logical id = fn.toString(10)), store NULL.
+        // Named features (fn < 0): id is the authoritative string identifier, must not be NULL.
+        set(row, PgColumn.id, if (fn >= Int64(0)) null else meta.id)
         set(row, PgColumn.app_id, meta.appId)
         set(row, PgColumn.author, meta.author)
         set(row, PgColumn.origin, meta.origin)
@@ -439,7 +443,7 @@ internal class PgColumnRows {
     fun names(): String {
         val cached = this.names
         if (cached != null) return cached
-        val names = columns.joinToString(", ") { it.name }
+        val names = columns.joinToString(", ") { PgUtil.quoteIdent(it.name) }
         this.names = names
         return names
     }
@@ -462,7 +466,10 @@ internal class PgColumnRows {
     fun namesAggregate(): String {
         val cached = this.namesAggregate
         if (cached != null) return cached
-        val names = columns.joinToString(", ") { "ARRAY_AGG(${it.name}) AS ${it.name}" }
+        val names = columns.joinToString(", ") {
+            val q = PgUtil.quoteIdent(it.name)
+            "ARRAY_AGG($q) AS $q"
+        }
         this.namesAggregate = names
         return names
     }

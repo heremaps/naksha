@@ -44,7 +44,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
         // Select existing.
         val head_row = """, head_row AS (
   SELECT * FROM ${headTable.quotedName}
-  WHERE id IN (SELECT id FROM new_row)
+  WHERE fn IN (SELECT fn FROM new_row)
 )"""
 
         // Insert the current `head_row` into history. next_version is the new tuple's version with action set to UPDATE.
@@ -53,14 +53,14 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
   SELECT ((new_row.version & -4) | 1) AS ${PgColumn.next_version},
          ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
-  LEFT JOIN new_row ON new_row.id = head_row.id
+  LEFT JOIN new_row ON new_row.fn = head_row.fn
   RETURNING id, fn, version
 )""" else ""
 
         // Delete `head_row` from HEAD.
         val head_deleted = """, head_deleted AS (
   DELETE FROM ${headTable.quotedName}
-  WHERE id IN (SELECT id FROM head_row)
+  WHERE fn IN (SELECT fn FROM head_row)
   RETURNING id, fn, version
 )"""
 
@@ -69,12 +69,13 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
         val head_inserted = """, head_inserted AS (
   INSERT INTO ${headTable.quotedName} (${inRows.names()})
   SELECT ${inRows.columns.joinToString(", ") {
+  val q = PgUtil.quoteIdent(it.name)
   if (PgColumn.attachment.name == it.name)
       "CASE WHEN attachment = convert_to('undefined', 'UTF8') THEN null ELSE attachment END AS attachment"
   else
-      it.name
+      q
   }} FROM new_row
-  WHERE new_row.id NOT IN (SELECT id FROM head_deleted)
+  WHERE new_row.fn NOT IN (SELECT fn FROM head_deleted)
   RETURNING id, fn, version
 )"""
 
@@ -95,8 +96,8 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
     ((new_row.version & -4) | 1) AS ${PgColumn.version},
     ${PgColumn.updateColumns.joinToString(", ") { "new_row.${it.name} AS ${it.name}" }}
   FROM new_row
-  LEFT JOIN head_row ON head_row.id = new_row.id
-  WHERE new_row.id IN (SELECT id FROM head_deleted)
+  LEFT JOIN head_row ON head_row.fn = new_row.fn
+  WHERE new_row.fn IN (SELECT fn FROM head_deleted)
   RETURNING id, fn, version, cc, attachment
 )"""
 
@@ -115,11 +116,11 @@ SELECT
     null AS clear_shadow_version,
     ${if (head_to_history.isNotEmpty()) "head_to_history.version AS head_to_history_version" else "null AS head_to_history_version"}
 FROM new_row
-LEFT JOIN head_updated ON head_updated.id = new_row.id
-LEFT JOIN head_row ON head_row.id = new_row.id
-LEFT JOIN head_deleted ON head_deleted.id = new_row.id
-LEFT JOIN head_inserted ON head_inserted.id = new_row.id
-${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.id = new_row.id" else ""}
+LEFT JOIN head_updated ON head_updated.fn = new_row.fn
+LEFT JOIN head_row ON head_row.fn = new_row.fn
+LEFT JOIN head_deleted ON head_deleted.fn = new_row.fn
+LEFT JOIN head_inserted ON head_inserted.fn = new_row.fn
+${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.fn = new_row.fn" else ""}
 ;"""
         val typeNames = inRows.typeNames();
         val pgPlan = conn.prepare(SQL, typeNames);
@@ -167,8 +168,8 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
         cursor.fetch().use {
             outRows.addAll(cursor)
             for (row in 0 until outRows.size) {
-                val id = outRows.getString(row, "id") ?: throw generalException("Missing 'id' in SQL result")
                 val fn = outRows.getInt64(row, "fn") ?: throw generalException("Missing 'fn' in SQL result")
+                val id = outRows.getString(row, "id") ?: fn.toString()
                 val versionTxn = outRows.getInt64(row, "version") ?: throw generalException("Missing 'version' in SQL result")
                 val tn = TupleNumber(storageNumber, mapNumber, collectionNumber, fn, Version(versionTxn))
 

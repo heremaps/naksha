@@ -591,6 +591,10 @@ class Naksha private constructor() {
                     val encoder = JbEncoder(dict)
                     encoder.buildFeatureFromMap(feature)
                 }
+                DataEncoding.JBON2, DataEncoding.JBON2_GZIP -> {
+                    val encoder = JbEncoder2(dict)
+                    encoder.buildTupleFromMap(feature)
+                }
                 else -> null
             }
             if (encoding.gzip && byteArray != null) byteArray = gzipDeflate(byteArray)
@@ -613,6 +617,14 @@ class Naksha private constructor() {
                 DataEncoding.JBON, DataEncoding.JBON_GZIP -> {
                     val raw = if (encoding.gzip) gzipInflate(bytes) else bytes
                     val decoder = JbFeatureDecoder(dictReader)
+                    decoder.mapBytes(raw)
+                    decoder.toAnyObject().proxy(NakshaFeature::class)
+                }
+                DataEncoding.JBON2, DataEncoding.JBON2_GZIP -> {
+                    val raw = if (encoding.gzip) gzipInflate(bytes) else bytes
+                    // The current JBON2 encoder embeds a local book and uses no global string-refs,
+                    // so a global dictionary is not required to decode the feature object.
+                    val decoder = JbDecoder2(null)
                     decoder.mapBytes(raw)
                     decoder.toAnyObject().proxy(NakshaFeature::class)
                 }

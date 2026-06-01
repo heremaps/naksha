@@ -75,11 +75,6 @@ internal const val PG_CONSTRAINT = "${PG_S}c_"
 internal const val PG_TN_NEXT_CONSTRAINT = "${PG_CONSTRAINT}nt"
 
 /**
- * The name of the constraint above [tn][PgColumn.tn] (performance partition).
- */
-internal const val PG_PART_CONSTRAINT = "${PG_CONSTRAINT}tn"
-
-/**
  * The name of the partition-constraint above [id][PgColumn.id].
  */
 internal const val PG_ID_CONSTRAINT = "${PG_CONSTRAINT}id"

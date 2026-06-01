@@ -103,6 +103,8 @@ ${if (where==null) "" else "WHERE $where"};"""
         /**
          * A unique index above the [id][PgColumn.id], including [fn][PgColumn.fn], [version][PgColumn.version] and [next_version][PgColumn.next_version] column.
          *
+         * Conditional: `WHERE id IS NOT NULL` — rows where `fn >= 0` have `id = NULL` (numeric features) and are excluded.
+         *
          * - Automatically added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta].
          * - Must not be added to [HISTORY][PgHistory].
          * @see [PgAdminMap.createPgCollection]
@@ -119,7 +121,7 @@ ${if (where==null) "" else "WHERE $where"};"""
                 conn.execute(
                     self.sql(
                         """btree ($c_id text_pattern_ops DESC)""",
-                        table, unique = true, addFillFactor = true, where = null,
+                        table, unique = true, addFillFactor = true, where = "$c_id IS NOT NULL",
                         includes = listOf(c_fn, c_version, c_next_version)
                     )
                 ).close()
@@ -128,6 +130,8 @@ ${if (where==null) "" else "WHERE $where"};"""
 
         /**
          * A non-unique index above the [id][PgColumn.id], [fn][PgColumn.fn] and [version][PgColumn.version], including [next_version][PgColumn.next_version] column.
+         *
+         * Conditional: `WHERE id IS NOT NULL` — rows where `fn >= 0` have `id = NULL` (numeric features) and are excluded.
          *
          * - Automatically added to [HISTORY][PgHistory].
          * - Must not be added to [HEAD][PgHead], [DELETED][PgDeleted], and [META][PgMeta].
@@ -145,7 +149,7 @@ ${if (where==null) "" else "WHERE $where"};"""
                 conn.execute(
                     self.sql(
                         """btree ($c_id text_pattern_ops DESC, $c_fn DESC, $c_version DESC)""",
-                        table, unique = false, addFillFactor = true, where = null,
+                        table, unique = false, addFillFactor = true, where = "$c_id IS NOT NULL",
                         includes = listOf(c_next_version)
                     )
                 ).close()

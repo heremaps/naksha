@@ -7,8 +7,11 @@ import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.PlatformUtil
 import naksha.base.Proxy
 import naksha.jbon.JbFeatureDecoder
+import naksha.model.DataEncoding
+import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
+import naksha.model.objects.NakshaFeature
 import naksha.model.request.query.*
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
@@ -20,6 +23,14 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
      */
     override fun filter(featureTuple: FeatureTuple): FeatureTuple? {
         val pSearch = req.query.properties ?: return featureTuple
+
+        // For JBON2/JBON2_GZIP, decode to NakshaFeature and navigate properties directly.
+        val tuple = featureTuple.tuple ?: return null
+        val encoding = tuple.meta.dataEncoding
+        if (encoding == DataEncoding.JBON2 || encoding == DataEncoding.JBON2_GZIP) {
+            val feature = Naksha.decodeFeature(tuple.feature, encoding, null) ?: return null
+            return if (resolvePropsQueryOnFeature(pSearch, feature)) featureTuple else null
+        }
 
         val decoder = resolveFeatureAndDecoder(featureTuple) ?: return null
 
@@ -42,6 +53,42 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         val decoder = JbFeatureDecoder(dictReader)
         decoder.mapBytes(raw)
         return decoder
+    }
+
+    /**
+     * Resolve a property query on a decoded [NakshaFeature] by walking the property path directly.
+     */
+    private fun resolvePropsQueryOnFeature(pQuery: IPropertyQuery?, feature: NakshaFeature): Boolean {
+        when (pQuery) {
+            null -> return true
+            is PAnd -> return pQuery.all { resolvePropsQueryOnFeature(it, feature) }
+            is POr -> return pQuery.any { resolvePropsQueryOnFeature(it, feature) }
+            is PNot -> return !resolvePropsQueryOnFeature(pQuery.query, feature)
+            is PQuery -> {
+                val path = pQuery.property.path.filterNotNull()
+                val propValue = walkPath(feature, path)
+                return resolveEachOp(pQuery.op, propValue, pQuery.value)
+            }
+        }
+        throw IllegalArgumentException("Unknown query type for: $pQuery")
+    }
+
+    /**
+     * Walk a property path on an object. Returns [Platform.UNDEFINED] if the path does not exist.
+     */
+    private fun walkPath(root: Any?, path: List<String>): Any? {
+        var current: Any? = root
+        for (key in path) {
+            current = when (current) {
+                is AnyObject -> if (current.containsKey(key)) current[key] else return Platform.UNDEFINED
+                is NakshaFeature -> {
+                    val raw = current.getRaw(key)
+                    if (raw === Platform.UNDEFINED) return Platform.UNDEFINED else raw
+                }
+                else -> return Platform.UNDEFINED
+            }
+        }
+        return current
     }
 
     private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder): Boolean {

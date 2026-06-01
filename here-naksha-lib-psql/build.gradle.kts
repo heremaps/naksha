@@ -149,6 +149,8 @@ tasks {
     getByName<Test>("jvmTest") {
         useJUnitPlatform()
         maxHeapSize = "8g"
+        val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+        if (dbUrl != null) environment("NAKSHA_TEST_PSQL_DB_URL", dbUrl)
     }
 }
 setOverallCoverage(0.0) // only increasing allowed!
