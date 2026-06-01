@@ -214,6 +214,7 @@ abstract class PgTestBase(
     protected fun assertSuccess(response: Response): SuccessResponse {
         if (response is ErrorResponse) {
             response.error.print(logger)
+            fail("Expected SuccessResponse but got ErrorResponse: code=${response.error.code}, msg=${response.error.msg}")
         }
         assertIs<SuccessResponse>(response, "Response should be 'SuccessResponse', but is '${response::class.simpleName}'")
         return response
@@ -265,10 +266,13 @@ abstract class PgTestBase(
         request.add(Write().deleteMapById(mapId))
         storage.newWriteSession(options).use { session ->
             val response = session.execute(request)
-            assertTrue(response is SuccessResponse, "Failed to drop map with id '$mapId'")
+            if (response is ErrorResponse) {
+                response.error.print(logger)
+                fail("dropMap('$mapId') failed: ${response.error.code}: ${response.error.msg}")
+            }
             session.commit()
-            initializedMaps.remove(mapId)
         }
+        initializedMaps.remove(mapId)
     }
 
     protected fun dropCollection(mapId: String, collectionId: String, options: SessionOptions = newSessionOptions()) {

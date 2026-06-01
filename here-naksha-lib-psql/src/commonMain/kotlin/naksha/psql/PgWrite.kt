@@ -59,14 +59,31 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.id
 
     /**
-     * The partition-number in which the feature is located, this is a value between `0` and `65535`.
+     * The feature-number (`fn`) derived from [id].
+     *
+     * - Named features (`id` is a non-numeric string): `fn < 0` — lower 16 bits of the MD5 hash with the sign bit set.
+     * - Numeric features (`id` is a valid 63-bit unsigned decimal): `fn >= 0` — `Long.parseLong(id)`.
+     *
+     * This is the authoritative routing key for physical partition assignment.
+     * @since 3.0
+     */
+    val featureNumber: naksha.base.Int64 = Naksha.featureNumber(id)
+
+    /**
+     * The partition-number for this feature, derived from the lower 16 bits of [featureNumber].
+     *
+     * Always computed from [featureNumber] (i.e. from `fn`), never directly from the [id] string.
+     * Value is between `0` and `65535` (inclusive).
      * @since 3.0
      * @see [partition]
      */
-    val partitionNumber: Int = Naksha.partitionNumber(id)
+    val partitionNumber: Int = Naksha.partitionNumber(featureNumber)
 
     /**
      * The partition-index, being `-1` if the collection does not have any performance-partitions, otherwise a value between `0` and `collection.partitions` _(exclusive)_. Must not be called unless [collection] has been initialized _(as it is a `lateinit` variable)_.
+     *
+     * Routing is always by [featureNumber] (`fn`). Both named and numeric features are routed identically
+     * via the lower 16 bits of `fn`.
      * @since 3.0
      * @see [partitionNumber]
      */

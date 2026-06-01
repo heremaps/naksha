@@ -41,12 +41,28 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private fun whereFeatureId() {
         val featureIds = request.featureIds.filterNotNull()
-        if (featureIds.isNotEmpty()) {
-            if (where.isNotEmpty()) {
-                where.append(" AND ")
-            }
-            val placeholder = placeholderForArg(featureIds.toTypedArray(), PgType.STRING_ARRAY)
-            where.append("${PgColumn.id} = ANY($placeholder)")
+        if (featureIds.isEmpty()) return
+
+        // Partition into numeric IDs (fn >= 0, id stored as NULL in DB) and named IDs (fn < 0, id NOT NULL).
+        val numericFns = featureIds.mapNotNull { id ->
+            val fn = Naksha.featureNumber(id)
+            if (fn >= naksha.base.Int64(0)) fn else null
+        }
+        val namedIds = featureIds.filter { id -> Naksha.featureNumber(id) < naksha.base.Int64(0) }
+
+        val conditions = mutableListOf<String>()
+        if (namedIds.isNotEmpty()) {
+            val placeholder = placeholderForArg(namedIds.toTypedArray(), PgType.STRING_ARRAY)
+            conditions += "${PgColumn.id} = ANY($placeholder)"
+        }
+        if (numericFns.isNotEmpty()) {
+            val placeholder = placeholderForArg(numericFns.toTypedArray<Any?>(), PgType.INT64_ARRAY)
+            conditions += "${PgColumn.fn} = ANY($placeholder)"
+        }
+        if (conditions.isNotEmpty()) {
+            if (where.isNotEmpty()) where.append(" AND ")
+            if (conditions.size == 1) where.append(conditions[0])
+            else where.append("(${conditions.joinToString(" OR ")})")
         }
     }
 

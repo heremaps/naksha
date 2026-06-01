@@ -514,7 +514,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      */
     fun deletePgMap(conn: PgConnection, map: PgMap) {
         if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't delete internal maps: ${map.id}")
-        conn.execute("DROP SCHEMA ${map.quotedId} CASCADE").close()
+        conn.execute("DROP SCHEMA IF EXISTS ${map.quotedId} CASCADE").close()
         invalidateMap(map)
     }
 
@@ -541,7 +541,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             .addColumns(headColumns)
         val SQL = """SELECT ${outRows.names()}
 FROM "naksha~admin".${maps.headTable.quotedName}
-WHERE id = $1"""
+WHERE id = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         plan.execute(arrayOf(id)).fetch().use {
             outRows.addAll(cursor = it)
@@ -578,7 +578,7 @@ WHERE id = $1"""
         val SQL = """
             SELECT ${outRows.names()}
             FROM "naksha~admin".${maps.headTable.quotedName}
-            WHERE fn = $1
+            WHERE fn = $1 AND (version & 3) < 2
             """.trimIndent()
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         conn.execute(getSearchPath())

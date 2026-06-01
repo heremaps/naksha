@@ -268,6 +268,36 @@ class InsertFeatureTest : PgTestBase() {
     }
 
     @Test
+    fun readByMixedNumericAndNamedIds() {
+        // Given: one numeric-ID feature and one named-ID feature
+        val numericId = "99887766"
+        val numericJson = """{"type":"Feature","id":"$numericId","geometry":null,"properties":{}}"""
+        val numericFeature = NakshaFeature.fromJson(numericJson)
+
+        val namedFeature = randomFeature() // has a UUID-style named id (fn < 0)
+
+        val writeReq = WriteRequest().apply {
+            add(Write().createFeature(collection.mapId, collection.id, numericFeature))
+            add(Write().createFeature(collection.mapId, collection.id, namedFeature))
+        }
+        executeWrite(writeReq)
+
+        // When: reading both features in a single request with mixed IDs
+        val readResponse = executeRead(ReadFeatures().apply {
+            mapId = collection.mapId
+            collectionIds += collection.id
+            featureIds += numericId
+            featureIds += namedFeature.id
+        })
+        val retrieved = readResponse.features
+
+        // Then: both features are returned
+        assertEquals(2, retrieved.size)
+        assertNotNull(retrieved.find { it?.id == numericId }, "Missing numeric-ID feature '$numericId'")
+        assertNotNull(retrieved.find { it?.id == namedFeature.id }, "Missing named-ID feature '${namedFeature.id}'")
+    }
+
+    @Test
     fun shouldNotAllowDuplicatedId() {
         // Given
         val originalFeature = randomFeature()

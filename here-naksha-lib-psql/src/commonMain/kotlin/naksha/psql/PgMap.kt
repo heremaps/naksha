@@ -384,7 +384,7 @@ open class PgMap internal constructor(
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
 FROM ${collections.headTable.quotedName}
-WHERE id = $1"""
+WHERE id = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         plan.execute(arrayOf(id)).fetch().use {
             outRows.addAll(cursor = it)
@@ -429,7 +429,7 @@ WHERE id = $1"""
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
 FROM ${collections.headTable.quotedName}
-WHERE fn = $1"""
+WHERE fn = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         plan.execute(arrayOf(number)).fetch().use {
             outRows.addAll(cursor = it)

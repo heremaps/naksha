@@ -148,6 +148,8 @@ class PgColumn : JsEnum() {
 
         /**
          * The epoch timestamp in millisecond when the [tuple][naksha.model.Tuple] was produced, which is the last time the feature was modified.
+         *
+         * **Optional** — `NULL` is allowed; NULL means the timestamp was not recorded.
          * @since 3.0
          */
         @JvmField
@@ -155,7 +157,6 @@ class PgColumn : JsEnum() {
         val updated_at = def(PgColumn::class, "updated_at") { self ->
             self._i = 0
             self._type = PgType.INT64
-            self._extra = "NOT NULL"
         }
 
         /**
@@ -229,6 +230,8 @@ class PgColumn : JsEnum() {
 
         /**
          * The unique hash of this [tuple][naksha.model.Tuple] (state), calculated by the storage using the static [Metadata.hash][naksha.model.Metadata.calculateHash] method.
+         *
+         * **Optional** — `NULL` is allowed.
          * @since 3.0
          */
         @JvmField
@@ -236,11 +239,12 @@ class PgColumn : JsEnum() {
         val hash = def(PgColumn::class, "hash") { self ->
             self._i = 7
             self._type = PgType.INT
-            self._extra = "NOT NULL"
         }
 
         /**
          * The binary [HERE tile-key][naksha.geo.HereTile.intKey] of the [reference-point][naksha.model.Tuple.referencePoint] of the [tuple][naksha.model.Tuple] (state). This is calculated using the static [Metadata.calculateHereTile][naksha.model.Metadata.calculateHereTile] method.
+         *
+         * **Optional** — `NULL` is allowed; NULL means no reference point / tile is known.
          * @since 3.0
          */
         @JvmField
@@ -248,11 +252,12 @@ class PgColumn : JsEnum() {
         val here_tile = def(PgColumn::class, "here_tile") { self ->
             self._i = 8
             self._type = PgType.INT
-            self._extra = "NOT NULL"
         }
 
         /**
          * The `change-count`.
+         *
+         * **Optional** — `NULL` is allowed.
          * @since 3.0
          */
         @JvmField
@@ -260,7 +265,6 @@ class PgColumn : JsEnum() {
         val cc = def(PgColumn::class, "cc") { self ->
             self._i = 9
             self._type = PgType.INT
-            self._extra = "NOT NULL"
         }
 
         //min: 24 byte ; 8 + 4 * 4
@@ -337,6 +341,10 @@ class PgColumn : JsEnum() {
 
         /**
          * The feature-id.
+         *
+         * **Conditionally mandatory**:
+         * - When `fn < 0` (named feature, MSB set): `id` MUST NOT be `NULL` — it carries the user-supplied string identifier.
+         * - When `fn >= 0` (anonymous / numeric feature): `id` MUST be `NULL` — the logical id is `fn` decimally encoded.
          * @since 3.0
          */
         @JvmField
@@ -344,7 +352,7 @@ class PgColumn : JsEnum() {
         val id = def(PgColumn::class, "id") { self ->
             self._i = 14
             self._type = PgType.STRING
-            self._extra = "STORAGE $PLAIN NOT NULL COLLATE \"C\"" // prevents either compression or out-of-line storage
+            self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage; NOT NULL enforced via CHECK constraint
         }
 
         /**
@@ -519,6 +527,9 @@ class PgColumn : JsEnum() {
 
         /**
          * The serialized [feature][naksha.model.objects.NakshaFeature].
+         *
+         * **Mandatory** — MUST NOT be `NULL`. Every tuple must carry a serialized feature blob.
+         * Not indexable; encoding is configurable (default: JBON2_GZIP).
          * @since 3.0
          */
         @JvmField
@@ -526,7 +537,7 @@ class PgColumn : JsEnum() {
         val feature = def(PgColumn::class, "feature") { self ->
             self._i = 27
             self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $EXTERNAL"
+            self._extra = "STORAGE $EXTERNAL NOT NULL"
         }
 
         /**

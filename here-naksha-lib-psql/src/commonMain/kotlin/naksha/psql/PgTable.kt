@@ -300,8 +300,7 @@ open class PgTable(
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
   CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
   CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=${superPartValue}),
-  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue),
-  CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
+  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
@@ -353,8 +352,7 @@ $TABLESPACE"""
                 else ""
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
   CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version}),
-$nextVersionConstraint  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue),
-  CONSTRAINT ${quoteIdent(name + PG_PART_CONSTRAINT)} CHECK (naksha_partition_index(id, $parentPartCount)=$partitionValue)
+$nextVersionConstraint  CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
@@ -373,7 +371,8 @@ $TABLESPACE"""
             // HISTORY (this) -> YEARLY -> PARTITION
             val SQL = """$CREATE_TABLE $quotedName (
 ${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
-CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL)
+CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL),
+CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK ((fn < 0 AND id IS NOT NULL) OR (fn >= 0 AND id IS NULL))
 ) PARTITION BY RANGE (((next_version >> 41)::int4))
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)
@@ -386,7 +385,8 @@ $TABLESPACE"""
             val columns = if (isAnyHead(name) || isMeta(name)) PgColumn.headColumns else PgColumn.allColumns
             val SQL = """$CREATE_TABLE $quotedName (
 ${columns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
-CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version})
+CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version}),
+CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK ((fn < 0 AND id IS NOT NULL) OR (fn >= 0 AND id IS NULL))
 )
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
@@ -402,7 +402,8 @@ $TABLESPACE"""
                 "CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version = version)"
             else ""
             val SQL = """$CREATE_TABLE $quotedName (
-${columns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()}${if (nextVersionConstraint.isNotEmpty()) ",\n$nextVersionConstraint" else ""}
+${columns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()}${if (nextVersionConstraint.isNotEmpty()) ",\n$nextVersionConstraint" else ""},
+CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK ((fn < 0 AND id IS NOT NULL) OR (fn >= 0 AND id IS NULL))
 ) PARTITION BY RANGE (((fn & 65535)::int4 % $partitionCount))
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)
