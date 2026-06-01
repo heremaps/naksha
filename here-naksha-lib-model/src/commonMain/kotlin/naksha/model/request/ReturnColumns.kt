@@ -95,7 +95,7 @@ open class ReturnColumns() : AnyObject() {
     }
 
     /**
-     * If explicitly _true_, the feature tags will be returned in the response, not as [ByteArray], nor in the XYZ namespace (`feature.properties.@ns:com:here:xyz.tags` attribute).
+     * If explicitly _true_, the feature tags will be returned in the response as raw `jsonb` text, not in the XYZ namespace (`feature.properties.@ns:com:here:xyz.tags` attribute).
      */
     var tags by BOOLEAN
 

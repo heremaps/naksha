@@ -501,6 +501,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     companion object {
-        private val tagsAsJsonb = "naksha_tags(${PgColumn.tags})"
+        private val tagsAsJsonb = PgColumn.tags.name
     }
 }

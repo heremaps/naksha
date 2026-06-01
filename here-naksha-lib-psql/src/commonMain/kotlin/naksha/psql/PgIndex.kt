@@ -287,7 +287,8 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above `naksha_tags(`[tags][PgColumn.tags]`)`, [fn][PgColumn.fn], [version][PgColumn.version], and [next_version][PgColumn.next_version].
+         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above the raw `jsonb` [tags][PgColumn.tags] column, plus [fn][PgColumn.fn], [version][PgColumn.version], and [next_version][PgColumn.next_version].
+         *
          * @see [PgAdminMap.createPgCollection]
          */
         @JvmField
@@ -299,8 +300,8 @@ ${if (where==null) "" else "WHERE $where"};"""
                 val nv = if (PgTable.isAnyHead(table.name) || PgTable.isMeta(table.name)) "" else ", $c_next_version"
                 conn.execute(
                     self.sql(
-                        """gin (naksha_tags($c_tags), $c_fn, $c_version$nv)""",
-                        table, unique = false, addFillFactor = false, where = "naksha_tags($c_tags) IS NOT NULL"
+                        """gin ($c_tags, $c_fn, $c_version$nv)""",
+                        table, unique = false, addFillFactor = false, where = "$c_tags IS NOT NULL"
                     )
                 ).close()
             }

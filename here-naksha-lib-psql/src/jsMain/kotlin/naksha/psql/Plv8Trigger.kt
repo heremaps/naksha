@@ -39,7 +39,7 @@ external interface Plv8Row {
     var app_id: String?
     var author: String?
     var type: String?
-    var tags: ByteArray?
+    var tags: String?
     var geo_ref: ByteArray?
     var geo: ByteArray?
     var feature: ByteArray?

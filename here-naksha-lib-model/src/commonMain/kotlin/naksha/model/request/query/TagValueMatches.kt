@@ -46,4 +46,4 @@ class TagValueMatches() : TagQuery() {
      */
     var regex by REGEX
 
-} // -> naksha_tags(tags) @? $[?(@.key=~/regex/)]
+} // -> tags @? $[?(@.key=~/regex/)]

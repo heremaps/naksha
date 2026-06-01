@@ -16,6 +16,8 @@ import naksha.psql.PgType.Companion.INT
 import naksha.psql.PgType.Companion.INT64
 import naksha.psql.PgType.Companion.INT64_ARRAY
 import naksha.psql.PgType.Companion.INT_ARRAY
+import naksha.psql.PgType.Companion.JSONB
+import naksha.psql.PgType.Companion.JSONB_ARRAY
 import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.SHORT_ARRAY
 import naksha.psql.PgType.Companion.STRING
@@ -111,7 +113,8 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         INT64_ARRAY,
                         FLOAT_ARRAY,
                         DOUBLE_ARRAY,
-                        STRING_ARRAY -> {
+                        STRING_ARRAY,
+                        JSONB_ARRAY -> {
                             stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arg))
                         }
                         BYTE_ARRAY_ARRAY -> {
@@ -130,7 +133,8 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         FLOAT,
                         DOUBLE,
                         STRING,
-                        BYTE_ARRAY -> throw illegalArg("The argument is $type, but an array was provided as value")
+                        BYTE_ARRAY,
+                        JSONB -> throw illegalArg("The argument is $type, but an array was provided as value")
                         null -> throw illegalArg("Failed to detect array type, no type-name was provided (null)")
                         else -> throw illegalArg("Failed to detect array type, and invalid type-name was provided: $typeName")
                     }

@@ -21,7 +21,7 @@ Delete this file before merging to v3.
     - Ensure that when `fn` is negative, `id` must be set
     - Ensure that when `fn` is positive, `id` must NOT be set
     - Ensure that the index above `id` is _(in HEAD)_ unique, but conditional, so only `WHERE id IS NOT NULL`
-- [ ] [**required to merge**]  Ensure that `tags` are always stored as raw `jsonb` _(indexable)_ - Kacper
+- [ ] ~~[**required to merge**]  Ensure that `tags` are always stored as raw `jsonb` _(indexable)_ - Kacper~~
 - [ ] [**required to merge**] Upgrade JBON1 to JBON2 - Alex
 - [ ] [**required to merge**]  Improve `naksha_feature` to autodetect:
     - is gzipped, then unpack
