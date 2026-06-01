@@ -118,10 +118,12 @@ class DataEncoding : JsEnum() {
 
         /**
          * Default encoding for new collections and admin reads when nothing else is configured.
+         *
+         * Changed to [JBON2_GZIP]: the JBON2 codec produces smaller, faster payloads than legacy JBON.
          */
         @JsStatic
         @JvmField
-        val DEFAULT = JBON_GZIP
+        val DEFAULT = JBON2_GZIP
 
         /**
          * Look up a [DataEncoding] by its [intValue]. Returns [DEFAULT] for any unknown value.
