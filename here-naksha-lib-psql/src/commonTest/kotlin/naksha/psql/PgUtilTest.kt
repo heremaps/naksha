@@ -43,4 +43,36 @@ class PgUtilTest {
                     .hasXyzThat { it.isEmpty() }
             }
     }
+
+    @Test
+    fun shouldDecodeJbon2EncodedFeature() {
+        for (encoding in listOf(DataEncoding.JBON2, DataEncoding.JBON2_GZIP)) {
+            // Given
+            val beforeEncoding = NakshaFeature().apply {
+                id = "feature_1"
+                properties = NakshaProperties().apply {
+                    setRaw("featureType", "some_feature_type")
+                    setRaw("name", "hello world")
+                    xyz = make<XyzNs>(
+                        "appId" to "someAppId",
+                        "author" to "someAuthor"
+                    )
+                }
+            }
+
+            // When:
+            val encoded = PgUtil.encodeFeature(beforeEncoding, encoding)
+            val decoded = PgUtil.decodeFeature(encoded, encoding)
+
+            // Then: same parity contract as JBON1 (Xyz lives in separate columns, not the feature blob).
+            assertNotNull(decoded, "decoded should not be null for $encoding")
+            assertThatFeature(beforeEncoding)
+                .isIdenticalTo(decoded, ignoreProps = true)
+                .hasPropertiesThat { decodedProperties ->
+                    decodedProperties
+                        .hasFeatureType(beforeEncoding.properties.featureType)
+                        .hasXyzThat { it.isEmpty() }
+                }
+        }
+    }
 }

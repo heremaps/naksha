@@ -44,6 +44,8 @@ class DataEncoding : JsEnum() {
         internal const val JBON_GZIP_VALUE = 1
         internal const val JSON_VALUE = 2
         internal const val JSON_GZIP_VALUE = 3
+        internal const val JBON2_VALUE = 4
+        internal const val JBON2_GZIP_VALUE = 5
 
         /**
          * [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md), uncompressed.
@@ -85,11 +87,33 @@ class DataEncoding : JsEnum() {
             self.gzip = true
         }
 
+        /**
+         * [JBON2](https://github.com/heremaps/naksha/blob/v3/docs/latest/JBON2.md), uncompressed.
+         */
+        @JsStatic
+        @JvmField
+        val JBON2 = defIgnoreCase(DataEncoding::class, "JBON2") { self ->
+            self.intValue = JBON2_VALUE
+            self.gzip = false
+        }
+
+        /**
+         * [JBON2](https://github.com/heremaps/naksha/blob/v3/docs/latest/JBON2.md), GZIP-compressed.
+         */
+        @JsStatic
+        @JvmField
+        val JBON2_GZIP = defIgnoreCase(DataEncoding::class, "JBON2_GZIP") { self ->
+            self.intValue = JBON2_GZIP_VALUE
+            self.gzip = true
+        }
+
         private val FROM_VALUE = mapOf(
             JBON_VALUE to JBON,
             JBON_GZIP_VALUE to JBON_GZIP,
             JSON_VALUE to JSON,
             JSON_GZIP_VALUE to JSON_GZIP,
+            JBON2_VALUE to JBON2,
+            JBON2_GZIP_VALUE to JBON2_GZIP,
         )
 
         /**
