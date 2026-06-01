@@ -124,7 +124,7 @@ class Naksha private constructor() {
         /**
          * Default feature encoding used by all storages when nothing else is configured.
          *
-         * Geometries are always stored as raw `TWKB` and tags as `JBON_GZIP`; only the feature encoding is configurable.
+         * Geometries are always stored as raw `TWKB` and tags as raw `jsonb`; only the feature encoding is configurable.
          */
         @JvmField
         var DEFAULT_DATA_ENCODING: DataEncoding = DataEncoding.DEFAULT
@@ -496,7 +496,7 @@ class Naksha private constructor() {
             feature.properties.xyz = XyzNs.fromMetadata(meta)
             val xyz = feature.properties.xyz
             val tags = tuple.tags
-            if (tags != null) xyz.tags = decodeTags(tuple.tags, dictReader)?.toTagList() ?: TagList()
+            if (tags != null) xyz.tags = decodeTags(tags)?.toTagList() ?: TagList()
             val geo = tuple.geo
             if (geo != null) feature.geometry = decodeGeometry(geo)
             return feature
@@ -531,8 +531,8 @@ class Naksha private constructor() {
             val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
-            val tagsBytes = encodeTags(xyz.tags.toTagMap(), dict)
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
+            val tagsJson = encodeTags(xyz.tags.toTagMap())
+            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsJson, attachment, true)
         }
 
         /**
@@ -561,8 +561,8 @@ class Naksha private constructor() {
             val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
-            val tagsBytes = encodeTags(xyz.tags.toTagMap(), dict)
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
+            val tagsJson = encodeTags(xyz.tags.toTagMap())
+            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsJson, attachment, true)
         }
 
         /**
@@ -626,37 +626,30 @@ class Naksha private constructor() {
         }
 
         /**
-         * Decode Naksha tags. Tags are always stored as `JBON_GZIP`.
-         * @param bytes the bytes to decode.
-         * @param dictReader the dictionary manager to use for decoding; if any.
-         * @return the Naksha tags.
+         * Decode Naksha tags from their raw `jsonb` text form.
+         * @param json the JSON text to decode (the value of the `tags` `jsonb` column).
+         * @return the Naksha tags, or _null_ if [json] is _null_ / blank / not a JSON object.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeTags(bytes: ByteArray?, dictReader: IDictReader?): TagMap? {
-            if (bytes == null || bytes.isEmpty()) return null
-            val raw = gzipInflate(bytes)
-            val decoder = JbFeatureDecoder(dictReader)
-            decoder.mapBytes(raw)
-            return decoder.toAnyObject().proxy(TagMap::class)
+        fun decodeTags(json: String?): TagMap? {
+            if (json.isNullOrBlank()) return null
+            val decoded = fromJSON(json)
+            return if (decoded is PlatformMap) decoded.proxy(TagMap::class) else null
         }
 
         /**
-         * Encodes the given tags into bytes. Tags are always stored as `JBON_GZIP`.
+         * Encodes the given tags into raw `jsonb` text.
          * @param tags the tags to encode.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded tags.
+         * @return the JSON text representation, or _null_ if [tags] is _null_ / empty.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun encodeTags(tags: TagMap?, dict: IDict?): ByteArray? {
+        fun encodeTags(tags: TagMap?): String? {
             if (tags.isNullOrEmpty()) return null
-            val encoder = JbEncoder(dict)
-            encoder.encodeMap(tags)
-            val byteArray = encoder.buildFeature(null, FEATURE_VARIANT_TAGS)
-            return gzipDeflate(byteArray)
+            return toJSON(tags)
         }
 
         /**

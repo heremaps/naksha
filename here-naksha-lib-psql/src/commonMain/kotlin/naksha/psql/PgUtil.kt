@@ -241,9 +241,8 @@ class PgUtil private constructor() {
         fun encodeFeature(feature: NakshaFeature?, encoding: DataEncoding, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, encoding, dict)
 
         /**
-         * Decode the Naksha tags. Tags are always stored as `JBON_GZIP`.
-         * @param bytes the bytes to decode.
-         * @param dictManager the dictionary manager to use for decoding; if any.
+         * Decode the Naksha tags from their raw `jsonb` text form.
+         * @param json the JSON text to decode (value of the `tags` `jsonb` column).
          * @return the Naksha tags.
          * @since 3.0.0
          */
@@ -251,26 +250,25 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeTags(bytes, dictManager)"),
+            replaceWith = ReplaceWith("Naksha.decodeTags(json)"),
             level = DeprecationLevel.WARNING
         )
-        fun decodeTags(bytes: ByteArray?, dictManager: IDictManager? = null): TagMap? = Naksha.decodeTags(bytes, dictManager)
+        fun decodeTags(json: String?): TagMap? = Naksha.decodeTags(json)
 
         /**
-         * Encodes the given tags into bytes. Tags are always stored as `JBON_GZIP`.
+         * Encodes the given tags into raw `jsonb` text.
          * @param tags the tags to encode.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded tags.
+         * @return the JSON text representation.
          * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeTags(tags, dict)"),
+            replaceWith = ReplaceWith("Naksha.encodeTags(tags)"),
             level = DeprecationLevel.WARNING
         )
-        fun encodeTags(tags: TagMap?, dict: JbDictionary? = null): ByteArray? = Naksha.encodeTags(tags, dict)
+        fun encodeTags(tags: TagMap?): String? = Naksha.encodeTags(tags)
 
         /**
          * Decode a GeoJSON geometry from `TWKB` encoded bytes. All Naksha geometries are stored as raw TWKB.

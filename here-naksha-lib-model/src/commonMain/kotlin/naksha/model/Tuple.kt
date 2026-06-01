@@ -44,12 +44,12 @@ data class Tuple(
     @JvmField val referencePoint: ByteArray? = null,
 
     /**
-     * Tags encoded as `JBON_GZIP`.
+     * Tags as raw `jsonb` text.
      *
      * Might be _null_, when the feature does not have any tags.
      * @since 3.0
      */
-    @JvmField val tags: ByteArray? = null,
+    @JvmField val tags: String? = null,
 
     /**
      * An arbitrary binary attachment.

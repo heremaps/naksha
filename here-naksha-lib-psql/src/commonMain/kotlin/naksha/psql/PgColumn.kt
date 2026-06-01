@@ -25,7 +25,7 @@ import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
  *
  * The TOAST code will compress and/or move field values out-of-line until the row value is shorter than TOAST_TUPLE_TARGET bytes.
  *
- * **Note**: We order the columns by intention, to minimize the storage size. The _bytea_ columns will be GZIP compressed on demand by the client storing the data (see [DataEncoding]). Note that in some cases this is not useful, for example, when a `TWKB` geometry or reference-point is given, it is often so small, that compression would increase the size. The general rule is, that anything being smaller than 100 byte, should not be compressed, which only leaves [tags], [feature], and [attachment] as candidates. However, we know that [tags] and [feature] are stored GZIP compressed, therefore the only candidate left is [attachment]. So, we store [tags], and [feature] _EXTERNAL_, and [attachment] _EXTENDED_, everything else as _PLAIN_ to keep it available for fast access.
+ * **Note**: We order the columns by intention, to minimize the storage size. The _bytea_ columns will be GZIP compressed on demand by the client storing the data (see [DataEncoding]). Note that in some cases this is not useful, for example, when a `TWKB` geometry or reference-point is given, it is often so small, that compression would increase the size. The general rule is, that anything being smaller than 100 byte, should not be compressed, which only leaves [feature] and [attachment] as compression candidates. We know that [feature] is stored GZIP compressed, therefore the only candidate left is [attachment]. So, we store [feature] _EXTERNAL_, [attachment] _EXTENDED_, and everything else as _PLAIN_ to keep it available for fast access. [tags] is stored as raw `jsonb` so the column itself is directly indexable (GIN); Postgres will TOAST/compress it automatically.
  *
  * See [storage-toast.html](https://www.postgresql.org/docs/current/storage-toast.html).
  */
@@ -482,15 +482,15 @@ class PgColumn : JsEnum() {
         //max: 400 byte ; 80 + 60 (id) + 30 (app_id) + 30 (author) + 60 (origin) + 60 (target) + 80 (cs?)
 
         /**
-         * The [tags][naksha.model.TagMap] of the [tuple][naksha.model.Tuple], stored as map.
+         * The [tags][naksha.model.TagMap] of the [tuple][naksha.model.Tuple], stored as raw `jsonb`.
+         *
          * @since 3.0
          */
         @JvmField
         @JsStatic
         val tags = def(PgColumn::class, "tags") { self ->
             self._i = 24
-            self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $EXTERNAL"
+            self._type = PgType.JSONB
         }
 
         /**

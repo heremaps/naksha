@@ -208,7 +208,7 @@ open class StorageTx private constructor(
         return Tuple(
             meta = metadata,
             feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap()),
             referencePoint = Naksha.encodeGeometry(feature.referencePoint),
             geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,
@@ -236,7 +236,7 @@ open class StorageTx private constructor(
         return Tuple(
             meta = metadata,
             feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap()),
             referencePoint = Naksha.encodeGeometry(feature.referencePoint),
             geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,
@@ -266,7 +266,7 @@ open class StorageTx private constructor(
         return Tuple(
             meta = metadata,
             feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap(), dictionary),
+            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap()),
             referencePoint = Naksha.encodeGeometry(feature.referencePoint),
             geo = Naksha.encodeGeometry(feature.geometry),
             attachment = attachment,

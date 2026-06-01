@@ -127,12 +127,24 @@ class PgType : JsEnum() {
         /**
          * JSONB column type, bound as text (JSON).
          *
-         * Used by storages to materialize [naksha.model.objects.CustomMemberType.FLAT_MAP] and [naksha.model.objects.CustomMemberType.TAGS] members.
+         * Used by storages to materialize [naksha.model.objects.CustomMemberType.FLAT_MAP] and [naksha.model.objects.CustomMemberType.TAGS] members, and the built-in `tags` column.
          * @since 3.0
          */
         @JvmField
         @JsStatic
         val JSONB = defIgnoreCase(PgType::class, "jsonb")
+
+        /**
+         * `jsonb[]` array type. Element values are JSON text strings (the on-wire form Postgres accepts for `jsonb`).
+         *
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val JSONB_ARRAY = defIgnoreCase(PgType::class, "jsonb[]") {
+            it.isArray = true
+            it.childType = JSONB
+        }
 
         /**
          * Returns the [PgType] from the given string.

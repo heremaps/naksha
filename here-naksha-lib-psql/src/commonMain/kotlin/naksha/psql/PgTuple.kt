@@ -64,10 +64,10 @@ internal data class PgTuple(
     @JvmField var feature: ByteArray? = null,
 
     /**
-     * Tags encoded as `JBON_GZIP`.
+     * Tags as raw `jsonb` text (the value bound to / read from the `jsonb` `tags` column).
      * Might be _null_, when the feature does not have any tags.
      */
-    @JvmField var tags: ByteArray? = null,
+    @JvmField var tags: String? = null,
 
     /**
      * An arbitrary binary attachment.

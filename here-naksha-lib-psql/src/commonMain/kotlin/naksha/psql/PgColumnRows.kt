@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.model.*
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
@@ -264,10 +265,26 @@ internal class PgColumnRows {
             feature = getByteArray(row, PgColumn.feature),
             geo = getByteArray(row, PgColumn.geo),
             referencePoint = getByteArray(row, PgColumn.ref_point),
-            tags = getByteArray(row, PgColumn.tags),
+            tags = getJsonText(row, PgColumn.tags),
             attachment = getByteArray(row, PgColumn.attachment),
             complete = complete
         )
+    }
+
+    /**
+     * Returns the value of a `jsonb` column as raw JSON text.
+     *
+     * `jsonb` columns come back from the cursor pre-parsed (a [naksha.base.PlatformMap] /
+     * [naksha.base.PlatformList]) since most callers want a typed object. For carriers that hold
+     * the raw JSON text (like [Tuple.tags]) we round-trip through [toJSON] to recover it.
+     */
+    private fun getJsonText(row: Int, column: PgColumn): String? {
+        val value = getAny(row, column)
+        return when (value) {
+            null -> null
+            is String -> value
+            else -> toJSON(value)
+        }
     }
 
     operator fun get(row: Int): Tuple? {

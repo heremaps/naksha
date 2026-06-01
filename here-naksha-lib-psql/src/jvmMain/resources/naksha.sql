@@ -400,14 +400,6 @@ AS $$
   SELECT naksha_jbon_map_to_json(jbon)::jsonb
 $$;
 
--- Tags are always stored as `JBON_GZIP`.
-CREATE OR REPLACE FUNCTION naksha_tags(tags bytea) RETURNS jsonb
-LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
-AS $$
-  SELECT naksha_jbon_map_to_jsonb(gunzip(tags))
-$$;
-
 -- Decodes the binary `feature` payload to JSONB.
 -- `encoding` is the raw `naksha.model.DataEncoding.intValue`:
 --   0 = JBON, 1 = JBON_GZIP, 2 = JSON, 3 = JSON_GZIP.
