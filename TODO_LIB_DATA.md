@@ -16,19 +16,19 @@ Delete this file before merging to v3.
 - [ ] [**nice to have**] `MetaColumn.TUPLE_NUMBER -> PgColumn.fn` only orders by `fn`; extend to `(fn, version)` tuple. - Kacper 
 - [ ] [**nice to have**] Generate change log of lib-psql (difference `lib_data` -> `v3`) - Kacper 
 - [ ] ~~[**required to merge**] Remove `flags`: column name `data_json` / `data_jbon` / `data_jbon_gzip` / `data_jsonb` (etc.)  - based on column name we can determine the type (we have already info about it in collection) - Kacper~~
-- [ ] [**required to merge**] Review:
+- [ ] [**required to merge**] Review: - Alex
     - The minimal columns should be: (`fn`, `version`), `next_version` _(HISTORY only)_, `feature`, `global_book_fn` _(bigint)_, `id` _(potentially `null`)_, … configurable
     - Ensure that when `fn` is negative, `id` must be set
     - Ensure that when `fn` is positive, `id` must NOT be set
     - Ensure that the index above `id` is _(in HEAD)_ unique, but conditional, so only `WHERE id IS NOT NULL`
 - [ ] ~~[**required to merge**]  Ensure that `tags` are always stored as raw `jsonb` _(indexable)_ - Kacper~~
-- [ ] [**required to merge**] Upgrade JBON1 to JBON2 - Alex
-- [ ] [**required to merge**]  Improve `naksha_feature` to autodetect:
+- [ ] ~~[**required to merge**] Upgrade JBON1 to JBON2 - Alex~~
+- [ ] [**required to merge**]  Improve `naksha_feature` to autodetect: - Kacper
     - is gzipped, then unpack
     - is jbon2, then decode
     - is json, then cast
 - [ ] [**required to merge**] We allow in collection to configure:
-    - a) If the feature is compressed, and which compression method to use _(`gzip`, `lz4`)
-        - This requires to add a header detection, and this requires JBON2
-    - b) The feature can be stored as JSON or JBON
-    - c) Default is `gzip,jsonb`  
+    - a) If the feature is compressed, and which compression method to use _(`gzip`, `lz4`) - Alex
+        - This requires to add a header detection, and this requires JBON2 - Alex
+    - b) The feature can be stored as JSON or JBON - Kacper
+    - c) Default is `gzip,jsonb`  - Kacper
