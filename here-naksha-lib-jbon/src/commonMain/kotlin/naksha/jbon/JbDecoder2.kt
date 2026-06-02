@@ -18,10 +18,16 @@ import kotlin.jvm.JvmStatic
  * skip the file header (if present), descend into the [Tuple], and expose the feature [Object].
  *
  * @property globalDict The global book used to resolve global references; if any.
+ * @property membersDict The members book used to resolve member references ([JB2_REF_BOOK_MEMBERS]);
+ *   if any. Entries are arbitrary `Any?` values assembled by the caller (e.g. from database columns).
+ *   If an entry is a [ByteArray] it is interpreted as raw TWKB bytes and converted to [SpGeometry]
+ *   via [GeoUtil.fromTWKB] before being returned to the caller.
+ *   Embedded members books inside a [Tuple] are **not** loaded automatically; the caller must
+ *   supply [membersDict] explicitly before decoding.
  */
 @Suppress("MemberVisibilityCanBePrivate", "OPT_IN_USAGE", "DuplicatedCode")
 @JsExport
-open class JbDecoder2(var globalDict: IDict? = null) {
+open class JbDecoder2(var globalDict: IDict? = null, var membersDict: IDict? = null) {
 
     /** The underlying binary view. */
     var view: BinaryView = Binary()
@@ -96,7 +102,8 @@ open class JbDecoder2(var globalDict: IDict? = null) {
             end: Int,
             sb: StringBuilder,
             globalStrings: List<String>? = null,
-            localStrings: List<String>? = null
+            localStrings: List<String>? = null,
+            memberStrings: List<String>? = null
         ) {
             var i = offset
             while (i < end) {
@@ -117,7 +124,7 @@ open class JbDecoder2(var globalDict: IDict? = null) {
                     val strings = when (bb) {
                         JB2_BOOK_GLOBAL -> globalStrings
                         JB2_BOOK_LOCAL -> localStrings
-                        JB2_BOOK_MEMBERS -> localStrings // members not yet supported separately
+                        JB2_BOOK_MEMBERS -> memberStrings
                         else -> null // const book holds no addressable strings here
                     }
                     val s = strings?.getOrNull(index)
@@ -288,7 +295,8 @@ open class JbDecoder2(var globalDict: IDict? = null) {
         }
         return when (lead and JB2_REF_BOOK_MASK) {
             JB2_REF_BOOK_GLOBAL -> globalDict?.get(index)
-            JB2_REF_BOOK_LOCAL, JB2_REF_BOOK_MEMBERS -> localStrings?.getOrNull(index)
+            JB2_REF_BOOK_LOCAL -> localStrings?.getOrNull(index)
+            JB2_REF_BOOK_MEMBERS -> resolveMembersRef(index)
             else -> null // const
         }
     }
@@ -297,15 +305,39 @@ open class JbDecoder2(var globalDict: IDict? = null) {
         val hs = stringHeaderSize(at)
         val total = stringUnitSize(at)
         val sb = StringBuilder()
-        readSubstring(view, at + hs, at + total, sb, globalStringsList(), localStrings)
+        readSubstring(view, at + hs, at + total, sb, globalStringsList(), localStrings, memberStringsList())
         return sb.toString()
     }
 
     private fun globalStringsList(): List<String>? {
         val g = globalDict ?: return null
-        // Materialize lazily via IDict.get is expensive; only used for sref resolution. Build once.
+        // Materialise lazily via IDict.get is expensive; only used for sref resolution. Build once.
         val len = g.length
         return List(len) { g.get(it)?.toString() ?: "" }
+    }
+
+    /**
+     * Materialise the members book as a flat string list for use inside string-reference resolution.
+     * Members are plain values stored in PostgreSQL columns (text, int, etc.) — no nested references.
+     * Non-string entries are converted via [toString]; null entries become empty strings.
+     */
+    private fun memberStringsList(): List<String>? {
+        val m = membersDict ?: return null
+        val len = m.length
+        return List(len) { m.get(it)?.toString() ?: "" }
+    }
+
+    /**
+     * Resolve a [JB2_REF_BOOK_MEMBERS] reference at the given [index].
+     *
+     * The entry is retrieved from [membersDict]. If the returned value is a [ByteArray] it is
+     * treated as raw TWKB bytes and converted to [SpGeometry] via [GeoUtil.fromTWKB]. All other
+     * types are returned as-is.
+     */
+    private fun resolveMembersRef(index: Int): Any? {
+        val value = membersDict?.get(index) ?: return null
+        if (value is ByteArray) return GeoUtil.fromTWKB(value)
+        return value
     }
 
     private fun decodeStructAt(at: Int): Any? {
