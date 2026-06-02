@@ -200,11 +200,11 @@ There is additionally to these **JBON** encoded values a way to define raw data,
 ## Primitives
 As indicated in the **lead-in** section, scalars and fixed size encodings are primitives. The size of their encoding is implied by the **lead-in** byte, and sometimes even the value. If not, the value follows directly after the **lead-in** byte, and is always encoded in big-endian encoding.
 
-All **lead-in** bytes between `0` and `191` represent [primitives]. Therefore, formally this includes [strings], even while they have some special handling.
+All **lead-in** bytes between `1` _(inclusive)_ and `191` (inclusive)_ represent [primitives]. Therefore, formally this includes [strings], even while they have some special handling.
 
 The [logical bytes] of a primitive are generated directly from the binary representation of the value like:
 
-- `null`, `undefined`, `false` and `true` are encoded as their **lead-in** byte.
+- `null`, `false` and `true` are encoded as their **lead-in** byte.
 - All floating point numbers are encoded with the **lead-in** byte `0000_1011`, followed by the big-endian encoded 8-byte of the [IEEE-754] binary value.
 - All integers are encoded with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value.
 - The [uint56] is encoded with the **lead-in** byte `0000_0111`, followed by the big-endian encoded 8-byte of the integer value.
@@ -249,6 +249,7 @@ The following types are indexable:
 - boolean
 - integer
 - float
+- timestamp
 - string
 - byte[]
 - tuple-number
@@ -588,7 +589,7 @@ For the keys, the [primitive-stringification] is used, if needed.
 ---
 
 ### Set (2)
-A set is a special [map] that does not store any values, therefore it is a key-only map. The **lead-in** byte is `11ss_0010`; with `ss` encoding the size of the size, as usual.
+A set is a special [map] that does not store values, therefore it is a key-only map. The **lead-in** byte is `11ss_0010`; with `ss` encoding the size of the size, as usual.
 
 | Name      | Type             | Description                                                           |
 |-----------|------------------|-----------------------------------------------------------------------|
@@ -599,7 +600,7 @@ A set is a special [map] that does not store any values, therefore it is a key-o
 
 If `ss=00` _(**lead-in** is `1100_0010`)_, this implies an empty set _(`{"@type":"naksha:set"}`)_.
 
-The entries in a set are [sorted] ascending. The entries must not be `null`, `undefined` or duplicates.
+The entries in a set are not sorted, the order is significant. The entries must not be `null`, `undefined` or duplicates.
 
 #### Logical Bytes
 The [logical bytes] of the set are calculated by adding the **lead-in** `1111_0010`, followed by the byte-size as 32-bit BE integer, followed by all `entries` [sorted] in ascending order. The same rules apply while generating the [logical bytes] that apply generally when encoding [logical bytes]. So, `entries` being [references] have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are.
@@ -610,11 +611,11 @@ The [JSON] serialization is done as object with values being `null`, and with a 
 ```javascript
 var set = {
   "@type": "naksha:set",
-  "key": null
+  "entries": []
 }
 ```
 
-In [JSON] we have no better alternative to encode a set, therefore we fake it using `null` values. For the entries, the [primitive-stringification] is used, if needed.
+In [JSON] we have no better alternative to encode a set. For the entries, the [primitive-stringification] is used, if needed.
 
 ### Object (3)
 An object is a special [map] that only allows strings as keys. The **lead-in** byte is `11ss_0011`; with `ss` encoding the size of the size, as usual. All keys must be [strings].
