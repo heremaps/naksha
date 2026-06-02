@@ -485,8 +485,7 @@ class PgColumn : JsEnum() {
         @JsStatic
         val tags = def(PgColumn::class, "tags") { self ->
             self._i = 25
-            self._type = PgType.BYTE_ARRAY
-            self._extra = "STORAGE $EXTERNAL"
+            self._type = PgType.JSONB
         }
 
         /**

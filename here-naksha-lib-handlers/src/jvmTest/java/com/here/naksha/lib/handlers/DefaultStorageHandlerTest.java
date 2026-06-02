@@ -322,7 +322,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     Write mapWrite = secondRequestWrites.get(0);
     assertEquals(WriteOp.CREATE, mapWrite.getOp());
     assertEquals(Naksha.ADMIN_MAP, mapWrite.getMapId());
-    assertEquals(Naksha.MAPS_COL, mapWrite.getCollectionId());
+    assertEquals(Naksha.CATALOGS_COL, mapWrite.getCollectionId());
     assertEquals(mapId, mapWrite.getId());
   }
 
@@ -404,7 +404,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     Write mapCreate = calls.get(1).getWrites().get(0);
     assertEquals(WriteOp.CREATE, mapCreate.getOp());
     assertEquals(Naksha.ADMIN_MAP, mapCreate.getMapId());
-    assertEquals(Naksha.MAPS_COL, mapCreate.getCollectionId());
+    assertEquals(Naksha.CATALOGS_COL, mapCreate.getCollectionId());
     assertEquals(mapIdFromStorageProps, mapCreate.getId());
   }
 
@@ -754,7 +754,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
       Write w = writes.get(0);
       return WriteOp.CREATE.equals(w.getOp())
              && Naksha.ADMIN_MAP.equals(w.getMapId())
-             && Naksha.MAPS_COL.equals(w.getCollectionId())
+             && Naksha.CATALOGS_COL.equals(w.getCollectionId())
              && mapId.equals(w.getId());
     };
   }

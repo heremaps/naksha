@@ -183,11 +183,10 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 // (sentinel "undefined" causes the DB to retain the existing value).
                 val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.geo
                 val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.referencePoint
-                val tags = if (PgColumn.tags in keepableByteCols) rows.getByteArray(rowNum, PgColumn.tags.name) else tuple.tags
+                val tags = tuple.tags
                 val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.attachment
                 val needsPatch = !tuple.geo.contentEquals(geo)
                     || !tuple.referencePoint.contentEquals(referencePoint)
-                    || !tuple.tags.contentEquals(tags)
                     || !tuple.attachment.contentEquals(attachment)
                 if (needsPatch) {
                     write.tuple = tuple.copy(
