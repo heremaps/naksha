@@ -76,6 +76,13 @@ class Jbon2Test {
      */
     private fun toJson(json: String): String = Platform.toJSON(roundTrip(json))
 
+    private fun structHeaderSize(lead: Int): Int = when (lead and JB2_STRUCT_SIZE_MASK) {
+        JB2_STRUCT_SIZE0 -> 1
+        JB2_STRUCT_SIZE8 -> 2
+        JB2_STRUCT_SIZE16 -> 3
+        else -> 5
+    }
+
     // -----------------------------------------------------------------------
     // Tiny integer  (class 01, type-bit 0) — exactly 1 byte
     // -----------------------------------------------------------------------
@@ -869,5 +876,96 @@ class Jbon2Test {
         val json = Platform.toJSON(f)
         assertNotNull(json)
         assertTrue(json.isNotEmpty())
+    }
+
+    // -----------------------------------------------------------------------
+    // Member encoder + path tracking
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun testMemberEncoderPathTrackingNested() {
+        val root = AnyObject()
+        val a = AnyObject()
+        val b = AnyList()
+        val cObj = AnyObject()
+        cObj["c"] = 1
+        b.add(cObj)
+        b.add(2)
+        a["b"] = b
+        root["a"] = a
+
+        var cPath: Array<Any?>? = null
+        var cValue: Any? = null
+
+        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, value ->
+            if (pathEnd > 0 && path[pathEnd - 1] == "c" && value == 1) {
+                cPath = path.copyOf(pathEnd)
+                cValue = value
+            }
+            -1
+        })
+
+        enc.encodeValue(root)
+
+        assertNotNull(cPath)
+        assertEquals(4, cPath!!.size)
+        assertEquals("a", cPath!![0])
+        assertEquals("b", cPath!![1])
+        assertEquals(0, cPath!![2])
+        assertEquals("c", cPath!![3])
+        assertEquals(1, cValue)
+        assertEquals(0, enc.pathEnd)
+    }
+
+    @Test
+    fun testMemberEncoderPathResize() {
+        var value: Any? = AnyObject().also { (it as AnyObject)["leaf"] = 1 }
+        for (i in 19 downTo 0) {
+            val obj = AnyObject()
+            obj["k$i"] = value
+            value = obj
+        }
+
+        var leafPath: Array<Any?>? = null
+        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, v ->
+            if (pathEnd > 0 && path[pathEnd - 1] == "leaf" && v == 1) leafPath = path.copyOf(pathEnd)
+            -1
+        })
+
+        enc.encodeValue(value)
+
+        assertNotNull(leafPath)
+        assertEquals(21, leafPath!!.size)
+        assertEquals("k0", leafPath!![0])
+        assertEquals("k19", leafPath!![19])
+        assertEquals("leaf", leafPath!![20])
+        assertEquals(0, enc.pathEnd)
+    }
+
+    @Test
+    fun testMemberEncoderShortCircuitToMembersRef() {
+        val obj = AnyObject()
+        obj["x"] = 123
+
+        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
+            if (pathEnd > 0 && path[pathEnd - 1] == "x") 7 else -1
+        })
+        enc.encodeValue(obj)
+
+        val lead0 = enc.getInt8(0).toInt() and 0xff
+        val headerSize = structHeaderSize(lead0)
+        val keyOffset = headerSize
+        val keyLead = enc.getInt8(keyOffset).toInt() and 0xff
+        val keySize = when (keyLead and JB2_REF_SIZE_MASK) {
+            JB2_REF_SIZE8 -> 2
+            JB2_REF_SIZE16 -> 3
+            JB2_REF_SIZE24 -> 4
+            else -> 5
+        }
+
+        val valueOffset = keyOffset + keySize
+        val expectedLead = JB2_REF or JB2_REF_BOOK_MEMBERS or JB2_REF_SIZE8
+        assertEquals(expectedLead.toByte(), enc.getInt8(valueOffset))
+        assertEquals(7, enc.getInt8(valueOffset + 1).toInt() and 0xff)
     }
 }

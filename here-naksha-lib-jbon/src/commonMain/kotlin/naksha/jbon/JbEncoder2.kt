@@ -1,7 +1,6 @@
 package naksha.jbon
 
 import naksha.base.*
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_size
 import kotlin.js.*
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -43,6 +42,10 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     }
 
     companion object JbEncoder2Companion {
+        @JvmField
+        @JsStatic
+        val EMPTY_PATH: Array<Any?> = emptyArray()
+
         /**
          * Characters that belong to a **word** when auto-splitting strings for the local book.
          * Identical to the JBON1 behaviour: letters and the colon.
@@ -77,6 +80,48 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     private var localDictByIndex: ArrayList<String>? = null
     private var localDictNextIndex: Int = 0
 
+    /** Current container path, root is empty. */
+    var path: Array<Any?> = EMPTY_PATH
+        internal set
+
+    /** End pointer into [path]. */
+    var pathEnd: Int = 0
+        internal set
+
+    /** Optional hook to replace encoded values by members-book references. */
+    var memberEncoder: IMemberEncoder? = null
+        internal set
+
+    fun withMemberEncoder(memberEncoder: IMemberEncoder?): JbEncoder2 {
+        this.memberEncoder = memberEncoder
+        return this
+    }
+
+    internal fun ensurePathSpace(amount: Int) {
+        require(amount >= 0) { "amount must be >= 0: $amount" }
+        val required = pathEnd + amount
+        if (required <= path.size) return
+        // We divide by 8, add one, then multiply by 16.
+        // For example when 15 are needed, we add 32. When 1 is needed, we add 16.
+        val newSize = path.size + (((amount shr 3) + 1) shl 4)
+        path = path.copyOf(newSize)
+    }
+
+    internal fun pushPath(index: Int) {
+        ensurePathSpace(1)
+        path[pathEnd++] = index
+    }
+
+    internal fun pushPath(key: String) {
+        ensurePathSpace(1)
+        path[pathEnd++] = key
+    }
+
+    internal fun popPath() {
+        require(pathEnd > 0) { "pop, but path is empty: $pathEnd" }
+        path[--pathEnd] = null
+    }
+
     internal fun getLocalDictByString(): HashMap<String, Int> {
         var m = localDictByName
         if (m == null) {
@@ -96,14 +141,15 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     }
 
     /**
-     * Clear the encoder, reset [pos]/[end] to `0`, and clear the local book. Leaves the
-     * global book intact.
+     * Clear the encoder, reset [pos]/[end] to `0`, and clear the local book. Leaves the global book intact.
      * @return The old [end].
      */
     open fun clear(): Int {
         localDictByName = null
         localDictByIndex = null
         localDictNextIndex = 0
+        if (path.size <= 256) path.fill(null) else path = EMPTY_PATH
+        pathEnd = 0
         return reset()
     }
 
@@ -638,21 +684,20 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     /**
      * Write an object recursively (string keys).
      * @param map The map to write.
-     * @param ignoreXyzNs If the `@ns:com:here:xyz` key should be captured into [xyz] instead of encoded.
      * @return The offset of the value written.
      */
-    fun encodeObject(map: MapProxy<String, *>, ignoreXyzNs: Boolean = false): Int {
+    fun encodeObject(map: MapProxy<String, *>): Int {
         val start = startObject()
         for (entry in map) {
             val key = entry.key
             val value = entry.value
-            if (ignoreXyzNs && "@ns:com:here:xyz" == key) {
-                @Suppress("UNCHECKED_CAST")
-                if (value is MapProxy<*, *>) xyz = value as MapProxy<String, *>
-                continue
-            }
             writeKey(key)
-            encodeValue(value)
+            pushPath(key)
+            try {
+                encodeValue(value)
+            } finally {
+                popPath()
+            }
         }
         endObject(start)
         return start
@@ -666,7 +711,16 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     /** Write an array recursively. */
     fun encodeArray(array: Array<Any?>): Int {
         val start = startArray()
-        for (value in array) encodeValue(value)
+        var i = 0
+        while (i < array.size) {
+            pushPath(i)
+            try {
+                encodeValue(array[i])
+            } finally {
+                popPath()
+            }
+            i++
+        }
         endArray(start)
         return start
     }
@@ -674,7 +728,16 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     /** Write an array (list proxy) recursively. */
     fun encodeList(array: ListProxy<*>): Int {
         val start = startArray()
-        for (value in array) encodeValue(value)
+        var i = 0
+        while (i < array.size) {
+            pushPath(i)
+            try {
+                encodeValue(array[i])
+            } finally {
+                popPath()
+            }
+            i++
+        }
         endArray(start)
         return start
     }
@@ -687,6 +750,14 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     @Suppress("UNCHECKED_CAST")
     fun encodeValue(value: Any?): Int {
         val start = end
+        val m = memberEncoder
+        if (m != null) {
+            val memberIndex = m.encode(path, pathEnd, value)
+            if (memberIndex >= 0) {
+                encodeRef(memberIndex, JB2_REF_BOOK_MEMBERS)
+                return start
+            }
+        }
         when (value) {
             is Char -> if (global != null) encodeText(value.toString()) else encodeString(value.toString())
             is String -> if (global != null) encodeText(value) else encodeString(value)
@@ -769,7 +840,7 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
             writeKey(key)
             if ("properties" == key && value is MapProxy<*, *>) {
                 @Suppress("UNCHECKED_CAST")
-                encodeObject(value as MapProxy<String, *>, true)
+                encodeObject(value as MapProxy<String, *>)
             } else {
                 encodeValue(value)
             }
