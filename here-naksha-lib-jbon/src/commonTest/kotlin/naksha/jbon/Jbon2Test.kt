@@ -788,12 +788,13 @@ class Jbon2Test {
     }
 
     @Test
-    fun testGeometryIsSkipped() {
-        // The geometry key must be excluded from the encoded feature.
+    fun testGeometryIsIncluded() {
+        // Geometry encoded as a plain AnyObject (from JSON) is included in the feature object
+        // as a regular JBON2 Object structure (not TWKB, because the value is not an SpGeometry).
         val json = """{"id":"x","geometry":{"type":"Point","coordinates":[0.0,0.0]},"properties":{"name":"test"}}"""
         val f = roundTrip(json)
-        // geometry must NOT appear in the decoded feature object
-        assertNull(f["geometry"], "geometry must be excluded from the JBON2 feature object")
+        // geometry must appear in the decoded feature object
+        assertNotNull(f["geometry"], "geometry must be included in the JBON2 feature object")
         assertEquals("test", (f["properties"] as AnyObject)["name"])
     }
 

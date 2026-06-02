@@ -80,6 +80,11 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         var current: Any? = root
         for (key in path) {
             current = when (current) {
+                is AnyList -> {
+                    val index = key.toIntOrNull() ?: return Platform.UNDEFINED
+                    if (index < 0 || index >= current.size) return Platform.UNDEFINED
+                    current[index]
+                }
                 is AnyObject -> if (current.containsKey(key)) current[key] else return Platform.UNDEFINED
                 is NakshaFeature -> {
                     val raw = current.getRaw(key)

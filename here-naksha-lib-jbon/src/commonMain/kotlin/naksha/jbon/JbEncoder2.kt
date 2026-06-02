@@ -1,6 +1,8 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.geo.GeoUtil
+import naksha.geo.SpGeometry
 import kotlin.js.*
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -743,6 +745,37 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     }
 
     /**
+     * Write a [JB2_STRUCT_TWKB] structure from raw TWKB bytes.
+     *
+     * The spec requires `ss != 00` (empty TWKB is invalid), so [bytes] must be non-empty.
+     * @param bytes The raw TWKB bytes to embed.
+     * @return The start offset of the written structure.
+     * @throws IllegalArgumentException if [bytes] is empty.
+     */
+    fun encodeTwkb(bytes: ByteArray): Int {
+        require(bytes.isNotEmpty()) { "TWKB bytes must not be empty" }
+        val start = end
+        writeStructHeader(JB2_STRUCT_TWKB, bytes.size)
+        var i = 0
+        while (i < bytes.size) setInt8(end++, bytes[i++])
+        return start
+    }
+
+    /**
+     * Encode an [SpGeometry] as a [JB2_STRUCT_TWKB] structure.
+     *
+     * Calls [GeoUtil.toTWKB] to obtain the TWKB byte representation of the geometry and then
+     * delegates to [encodeTwkb]. On the JS platform [GeoUtil.toTWKB] is a stub that returns
+     * `null`; in that case [encodeNull] is emitted instead.
+     * @param geometry The geometry to encode.
+     * @return The start offset of the written value.
+     */
+    fun encodeGeometry(geometry: SpGeometry): Int {
+        val bytes = GeoUtil.toTWKB(geometry)
+        return if (bytes != null && bytes.isNotEmpty()) encodeTwkb(bytes) else encodeNull()
+    }
+
+    /**
      * Write an arbitrary value, recursing into maps and arrays.
      * @param value The value to write.
      * @return The offset of the value written.
@@ -769,6 +802,7 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
             is Int64 -> encodeInt64(value)
             is Float -> encodeFloat32(value)
             is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
+            is SpGeometry -> encodeGeometry(value)
             is MapProxy<*, *> -> encodeObject(value as MapProxy<String, *>)
             is ListProxy<*> -> encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)
@@ -832,20 +866,7 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
         clear()
         xyz = null
         // Encode the feature object into a temporary region first.
-        val featureStart = startObject()
-        for (entry in map) {
-            val key = entry.key
-            val value = entry.value
-            if ("geometry" == key) continue
-            writeKey(key)
-            if ("properties" == key && value is MapProxy<*, *>) {
-                @Suppress("UNCHECKED_CAST")
-                encodeObject(value as MapProxy<String, *>)
-            } else {
-                encodeValue(value)
-            }
-        }
-        endObject(featureStart)
+        val featureStart = encodeObject(map)
         return assembleTuple(featureStart, withHeader)
     }
 

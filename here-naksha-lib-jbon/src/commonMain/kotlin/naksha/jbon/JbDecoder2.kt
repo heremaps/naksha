@@ -1,6 +1,7 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.geo.GeoUtil
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
@@ -339,6 +340,11 @@ open class JbDecoder2(var globalDict: IDict? = null) {
                 // First child is the feature object, then the local book (dictionary).
                 resolveLocalBook(contentStart, contentEnd)
                 decodeValueAt(contentStart)
+            }
+            JB2_STRUCT_TWKB -> {
+                // Content bytes are raw TWKB; convert to SpGeometry via GeoUtil.
+                val bytes = ByteArray(contentSize) { view.getInt8(contentStart + it) }
+                GeoUtil.fromTWKB(bytes)
             }
             JB2_STRUCT_DICTIONARY -> {
                 readDictionaryStrings(at)
