@@ -306,11 +306,11 @@ internal class PgColumnRows {
     }
     fun set(row: Int, column: PgColumn, value: Any?): Boolean = set(row, column.name, value)
     /**
-     * Adds one [PgColumnEntry] per declared [naksha.model.objects.CustomMember].
+     * Adds one [PgColumnEntry] per declared [naksha.model.objects.Member].
      *
      * Idempotent — built-in names are never re-added by addColumns(allColumns), and members are checked individually.
      */
-    fun addCustomMembers(members: naksha.model.objects.CustomMemberList?): PgColumnRows {
+    fun addCustomMembers(members: naksha.model.objects.MemberList?): PgColumnRows {
         if (members == null) return this
         for (m in members) {
             if (m == null) continue
@@ -320,11 +320,11 @@ internal class PgColumnRows {
     }
 
     /**
-     * Populates the [CustomMember][naksha.model.objects.CustomMember] columns for the given row by walking the [feature] using each member's [path][naksha.model.objects.CustomMember.effectivePath] and coercing the value to the SQL type.
+     * Populates the [Member][naksha.model.objects.Member] columns for the given row by walking the [feature] using each member's [path][naksha.model.objects.Member.effectivePath] and coercing the value to the SQL type.
      *
      * Missing keys and mismatched types both produce a NULL column value. Mismatches additionally emit a warning via [naksha.base.Platform.PlatformCompanion.logger].
      */
-    fun setCustomMembers(row: Int, feature: naksha.model.objects.NakshaFeature?, members: naksha.model.objects.CustomMemberList?) {
+    fun setCustomMembers(row: Int, feature: naksha.model.objects.NakshaFeature?, members: naksha.model.objects.MemberList?) {
         if (feature == null || members == null) return
         for (m in members) {
             if (m == null) continue

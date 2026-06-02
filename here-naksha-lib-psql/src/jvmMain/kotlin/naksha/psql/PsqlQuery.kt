@@ -45,20 +45,39 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
         val sb = StringBuilder()
         var targetIndex = 1
         var charIndex = 0
+        var inDoubleQuote = false
+        var inSingleQuote = false
         while (charIndex < query.length) {
-            if (query[charIndex] == '$' && charIndex < query.length - 1 && query[charIndex + 1] in positiveNums) {
-                charIndex++
-                var gatheredNum = "${query[charIndex++]}"
-                while (charIndex < query.length && query[charIndex] in nums) {
-                    gatheredNum += query[charIndex++]
+            val c = query[charIndex]
+            when {
+                c == '"' && !inSingleQuote -> {
+                    inDoubleQuote = !inDoubleQuote
+                    sb.append(c)
+                    charIndex++
                 }
-                sb.append("?")
-                val dollar = gatheredNum.toInt()
-                dollarToIndices
-                    .computeIfAbsent(dollar) { ArrayList() }
-                    .add(targetIndex++)
-            } else {
-                sb.append(query[charIndex++])
+                c == '\'' && !inDoubleQuote -> {
+                    inSingleQuote = !inSingleQuote
+                    sb.append(c)
+                    charIndex++
+                }
+                c == '$' && !inDoubleQuote && !inSingleQuote
+                        && charIndex < query.length - 1
+                        && query[charIndex + 1] in positiveNums -> {
+                    charIndex++
+                    var gatheredNum = "${query[charIndex++]}"
+                    while (charIndex < query.length && query[charIndex] in nums) {
+                        gatheredNum += query[charIndex++]
+                    }
+                    sb.append("?")
+                    val dollar = gatheredNum.toInt()
+                    dollarToIndices
+                        .computeIfAbsent(dollar) { ArrayList() }
+                        .add(targetIndex++)
+                }
+                else -> {
+                    sb.append(c)
+                    charIndex++
+                }
             }
         }
         sql = sb.toString()

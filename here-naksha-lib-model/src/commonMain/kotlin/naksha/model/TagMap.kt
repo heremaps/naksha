@@ -10,11 +10,10 @@ import kotlin.js.JsName
 /**
  * Map of tags persisted as (key, value) pairs where values are nullable.
  * This class represents the persisted form of [TagList].
- * It is stored as raw `jsonb` in the database (the `tags` column), so the column itself is directly indexable.
  *
  * It is advised to only construct it in one of two ways:
  * 1) Via [TagList]-based constructor
- * 2) By deserializing the JSON text fetched from DB
+ * 2) By deserializing bytes fetched from a storage
  *
  * If for some reason, one would like to use it otherwise, it is advised to properly prepare tags upfront
  * with use of [TagNormalizer] (that is used for example by [TagList])

@@ -5,7 +5,6 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
-import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
  * Execute [UPSERT][naksha.model.request.WriteOp.UPSERT] into a collection.
@@ -18,7 +17,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
     private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
     init {
-        inRows.addColumns(headColumns)
+        inRows.addColumns(collection.effectiveHeadColumns)
         val members = collection.head.members
         inRows.addCustomMembers(members)
         var i = 0
@@ -48,10 +47,12 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
 )"""
 
         // Insert the current `head_row` into history. next_version is the new tuple's version with action set to UPDATE.
+        val effCopyHistory = collection.effectiveCopyIntoHistoryColumns
+        val effUpdate = collection.effectiveUpdateColumns
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${effCopyHistory.joinToString(",") { it.name }})
   SELECT ((new_row.version & -4) | 1) AS ${PgColumn.next_version},
-         ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
+         ${effCopyHistory.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.fn = head_row.fn
   RETURNING id, fn, version
@@ -64,14 +65,18 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
   RETURNING id, fn, version
 )"""
 
-        // Insert new_row's, so for which there was no existing HEAD version deleted.
-        // Note, when the client selected UNDEFINED for attachment, we need to turn this value into `null`!
+        // All nullable BYTE_ARRAY columns support the "keep if undefined" sentinel.
+        // `feature` is mandatory (NOT NULL) and never carries the sentinel.
+        val keepableByteCols = collection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
+
+        // Insert new rows for which there was no existing HEAD version.
+        // Sentinel "undefined" on any BYTE_ARRAY column is treated as NULL on insert (no prior value to retain).
         val head_inserted = """, head_inserted AS (
   INSERT INTO ${headTable.quotedName} (${inRows.names()})
-  SELECT ${inRows.columns.joinToString(", ") {
-  val q = PgUtil.quoteIdent(it.name)
-  if (PgColumn.attachment.name == it.name)
-      "CASE WHEN attachment = convert_to('undefined', 'UTF8') THEN null ELSE attachment END AS attachment"
+  SELECT ${inRows.columns.joinToString(", ") { col ->
+  val q = PgUtil.quoteIdent(col.name)
+  if (keepableByteCols.any { it.name == col.name })
+      "CASE WHEN ${col.name} = convert_to('undefined', 'UTF8') THEN null ELSE ${col.name} END AS ${col.name}"
   else
       q
   }} FROM new_row
@@ -80,25 +85,36 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
 )"""
 
         // Update means insert new_rows, but with patched values.
-        // We may need to read the attachment from the HEAD version, if the client used UNDEFINED.
+        // For any BYTE_ARRAY column that carries the sentinel, keep the value from the existing HEAD row.
         // The action is encoded in the lower two bits of `version`; we set it to UPDATED (=1).
+        // Only include columns that exist in the table (effectiveUpdateColumns).
+        val hasCc = PgColumn.cc in collection.effectiveHeadColumns
+        val updColNames = effUpdate.joinToString(",") { it.name }
+        // keepable cols that are NOT in effUpdate need their own INSERT slot (currently: attachment)
+        val keepableExtraCols = keepableByteCols.filter { it !in effUpdate }
+        val keepableExtraColNames = keepableExtraCols.joinToString(",") { it.name }
         val head_updated = """, head_updated AS (
   INSERT INTO ${headTable.quotedName} (
-    ${PgColumn.cc},
-    ${PgColumn.attachment},
+    ${if (hasCc) "${PgColumn.cc}," else ""}
+    ${if (keepableExtraCols.isNotEmpty()) "$keepableExtraColNames," else ""}
     ${PgColumn.fn},
-    ${PgColumn.version},
-    ${PgColumn.updateColumnsNames})
+    ${PgColumn.version}${if (updColNames.isNotEmpty()) ",\n    $updColNames" else ""})
   SELECT
-    (head_row.cc + 1) AS ${PgColumn.cc},
-    CASE WHEN new_row.attachment = convert_to('undefined', 'UTF8') THEN head_row.attachment ELSE new_row.attachment END AS attachment,
+    ${if (hasCc) "(head_row.cc + 1) AS ${PgColumn.cc}," else ""}
+    ${if (keepableExtraCols.isNotEmpty()) keepableExtraCols.joinToString(", ") { col ->
+        "CASE WHEN new_row.${col.name} = convert_to('undefined', 'UTF8') THEN head_row.${col.name} ELSE new_row.${col.name} END AS ${col.name}"
+    } + "," else ""}
     new_row.fn AS ${PgColumn.fn},
-    ((new_row.version & -4) | 1) AS ${PgColumn.version},
-    ${PgColumn.updateColumns.joinToString(", ") { "new_row.${it.name} AS ${it.name}" }}
+    ((new_row.version & -4) | 1) AS ${PgColumn.version}${if (effUpdate.isNotEmpty()) ",\n    ${effUpdate.joinToString(", ") { col ->
+        if (col in keepableByteCols)
+            "CASE WHEN new_row.${col.name} = convert_to('undefined', 'UTF8') THEN head_row.${col.name} ELSE new_row.${col.name} END AS ${col.name}"
+        else
+            "new_row.${col.name} AS ${col.name}"
+    }}" else ""}
   FROM new_row
   LEFT JOIN head_row ON head_row.fn = new_row.fn
   WHERE new_row.fn IN (SELECT fn FROM head_deleted)
-  RETURNING id, fn, version, cc, attachment
+  RETURNING id, fn, version${if (hasCc) ", cc" else ""}${keepableByteCols.joinToString("") { ", ${it.name}" }}
 )"""
 
         val SQL = """$new_row$head_row$head_deleted$head_to_history$head_inserted$head_updated
@@ -108,8 +124,8 @@ SELECT
     new_row.version AS version,
     head_updated.fn AS updated_fn,
     head_updated.version AS updated_version,
-    head_updated.cc AS cc,
-    head_updated.attachment AS attachment,
+    ${if (hasCc) "head_updated.cc AS cc," else "null::int4 AS cc,"}
+    ${if (keepableByteCols.isNotEmpty()) keepableByteCols.joinToString(",\n    ") { "head_updated.${it.name} AS ${it.name}" } + "," else "null::bytea AS attachment,"}
     head_row.version AS head_row_version,
     head_deleted.version AS head_deleted_version,
     head_inserted.version AS head_inserted_version,
@@ -128,6 +144,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
     }
 
     override fun doExecute(conn: PgConnection) {
+        val keepableByteCols = collection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
         val outRows = PgColumnRows()
             .withStorageNumber(storageNumber)
             .withMapNumber(mapNumber)
@@ -135,7 +152,6 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .addColumn(PgColumn.id)
             .addColumn(PgColumn.fn)
             .addColumn(PgColumn.version)
-            .addColumn(PgColumn.attachment)
             .addColumn(PgColumn.cc)
             .addColumn("updated_fn", PgType.INT64)
             .addColumn("updated_version", PgType.INT64)
@@ -144,6 +160,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .addColumn("head_deleted_version", PgType.INT64)
             .addColumn("head_inserted_version", PgType.INT64)
             .addColumn("head_to_history_version", PgType.INT64)
+        for (col in keepableByteCols) outRows.addColumn(col.name, PgType.BYTE_ARRAY)
         if (writes.isEmpty()) return
         val plan = plan(conn, collection)
         // TupleNumber.fromB128(inRows.columns[11].values_field[0] as ByteArray, naksha.base.Int64(0), 0, 0).partitionNumber % 16
@@ -180,17 +197,28 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 if (updatedFn != null && updatedVersionTxn != null) {
                     val updated_tn = TupleNumber(storageNumber, mapNumber, collectionNumber, updatedFn, Version(updatedVersionTxn))
                     // If an update was done, we need the following values to be available:
-                    val changeCount: Int = outRows.getInt(row, "cc") ?:
-                        throw generalException("Missing 'cc' in update result for feature '$id'")
-                    val attachment: ByteArray? = outRows.getByteArray(row, "attachment")
+                    val hasCc = PgColumn.cc in collection.effectiveHeadColumns
+                    val changeCount: Int = if (hasCc) {
+                        outRows.getInt(row, "cc") ?:
+                            throw generalException("Missing 'cc' in update result for feature '$id'")
+                    } else 1
                     val write = writeByTn[tn] ?: throw generalException("Missing write state for feature '$id'")
                     val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
+                    // Read back all keepable BYTE_ARRAY columns — the DB may have substituted the sentinel
+                    // with the existing value, so the in-memory tuple must reflect the final stored state.
+                    val geo = if (PgColumn.geo in keepableByteCols) outRows.getByteArray(row, PgColumn.geo.name) else tuple.geo
+                    val referencePoint = if (PgColumn.ref_point in keepableByteCols) outRows.getByteArray(row, PgColumn.ref_point.name) else tuple.referencePoint
+                    val tags = if (PgColumn.tags in keepableByteCols) outRows.getByteArray(row, PgColumn.tags.name) else tuple.tags
+                    val attachment = if (PgColumn.attachment in keepableByteCols) outRows.getByteArray(row, PgColumn.attachment.name) else tuple.attachment
                     write.tupleNumber = updated_tn
                     write.tuple = tuple.copy(
                         meta = tuple.meta.copy(
                             tupleNumber = updated_tn,
                             changeCount = changeCount,
                         ),
+                        geo = geo,
+                        referencePoint = referencePoint,
+                        tags = tags,
                         attachment = attachment,
                     )
                     write.action = Action.UPDATED

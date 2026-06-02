@@ -88,23 +88,41 @@ data class PgRelation(
     private var _year: Int? = null
 
     /**
-     * Returns the year, when this is a year-partition.
-     * @return the year or -1, when this is no year-partition.
+     * Returns the history partition key (`next_version >> shift`) when this is a history year-partition,
+     * or `-1` when this is not a year-partition.
+     *
+     * For the default [shift][naksha.model.objects.NakshaCollection.shift] of 41 this equals the calendar year.
+     *
+     * New naming: `{collection}$hst$<key>` (e.g. `mycol$hst$2026`).
+     * Legacy naming (TRANSACTIONS table): `{table}$y<key>` (e.g. `naksha~transactions$y2026`).
      */
     fun year(): Int {
         var n = _year
         if (n != null) return n
         n = -1
-        var i = name.indexOf(PG_YEAR)
-        if (i > 0) {
-            i += PG_YEAR.length
-            if (i + 4 <= name.length) try {
-                n = name.substring(i, i + 4).toInt(10)
-            } catch (_: Exception) {}
+        // New history partition naming: $hst$<digits>
+        val hstIdx = name.indexOf(PG_HST)
+        if (hstIdx > 0) {
+            val after = hstIdx + PG_HST.length  // points at '$' before the key
+            if (after < name.length && name[after] == '$') {
+                val keyStart = after + 1
+                val keyEnd = name.indexOf('$', keyStart).let { if (it < 0) name.length else it }
+                if (keyEnd > keyStart) try {
+                    n = name.substring(keyStart, keyEnd).toInt(10)
+                } catch (_: Exception) {}
+            }
+        }
+        // Legacy TRANSACTIONS-table naming: $y<4-digit-year>
+        if (n < 0) {
+            var i = name.indexOf(PG_YEAR)
+            if (i > 0) {
+                i += PG_YEAR.length
+                if (i + 4 <= name.length) try {
+                    n = name.substring(i, i + 4).toInt(10)
+                } catch (_: Exception) {}
+            }
         }
         this._year = n
-        // TODO: KotlinCompilerBug - It should know that "n" is never null
-        //                           Either name.substring().toInt() returns or not, either way, n is a number!
         return n!!
     }
 
@@ -120,12 +138,22 @@ data class PgRelation(
     // ---
 
     fun isAnyHistoryRelation() = name.indexOf(PG_HST) > 0
-    fun isHistoryRootRelation() = isAnyHistoryRelation() && (isTable() || isPartition())
-            && name.indexOf(PG_YEAR) < 0
-    fun isHistoryYearRelation() = isAnyHistoryRelation() && (isTable() || isPartition())
-            && name.indexOf(PG_YEAR) > 0 && name.indexOf(PG_PART) < 0
-    fun isHistoryPartition() = isAnyHistoryRelation() && isTable()
-            && name.indexOf(PG_YEAR) > 0 && name.indexOf(PG_PART) > 0
+    /** History root: ends with `$hst` and has no further `$` segments after it. */
+    fun isHistoryRootRelation(): Boolean {
+        if (!isAnyHistoryRelation() || (!isTable() && !isPartition())) return false
+        val hstIdx = name.indexOf(PG_HST)
+        return hstIdx + PG_HST.length == name.length  // nothing after $hst
+    }
+    /** History year-partition: `$hst$<digits>` at end, no `$p` suffix. */
+    fun isHistoryYearRelation(): Boolean {
+        if (!isAnyHistoryRelation() || (!isTable() && !isPartition())) return false
+        return year() > 0 && name.indexOf(PG_PART, name.indexOf(PG_HST)) < 0
+    }
+    /** History perf-partition: `$hst$<digits>$p<digits>`. */
+    fun isHistoryPartition(): Boolean {
+        if (!isAnyHistoryRelation() || !isTable()) return false
+        return year() > 0 && name.indexOf(PG_PART, name.indexOf(PG_HST)) >= 0
+    }
 
     // ---
 

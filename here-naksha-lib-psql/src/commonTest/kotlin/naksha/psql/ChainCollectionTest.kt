@@ -2,10 +2,10 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.model.Naksha
-import naksha.model.objects.CustomIndex
-import naksha.model.objects.CustomIndexType
-import naksha.model.objects.CustomMember
-import naksha.model.objects.CustomMemberType
+import naksha.model.objects.Index
+import naksha.model.objects.IndexType
+import naksha.model.objects.Member
+import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
@@ -36,11 +36,11 @@ import kotlin.test.assertNull
 class ChainCollectionTest : PgTestBase(
     collection = NakshaCollection("").apply {
         // Two custom INT64 columns that hold left / right neighbour feature-numbers.
-        addMember(CustomMember("left_fn",  CustomMemberType.INT64))
-        addMember(CustomMember("right_fn", CustomMemberType.INT64))
+        addMember(Member("left_fn",  MemberType.INT64))
+        addMember(Member("right_fn", MemberType.INT64))
         // BTREE indices on each custom column for efficient neighbour lookups.
-        addCustomIndex(CustomIndex("idx_left_fn",  CustomIndexType.BTREE, "left_fn"))
-        addCustomIndex(CustomIndex("idx_right_fn", CustomIndexType.BTREE, "right_fn"))
+        addIndex(Index("idx_left_fn",  IndexType.BTREE, "left_fn"))
+        addIndex(Index("idx_right_fn", IndexType.BTREE, "right_fn"))
     }
 ) {
     // Numeric feature-numbers for the three chain nodes.

@@ -12,7 +12,6 @@ import kotlin.jvm.JvmField
  * @since 3.0
  * @see [PgTable]
  * @see [PgHeadPartition]
- * @see [PgTransactions]
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport

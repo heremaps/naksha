@@ -8,8 +8,8 @@ import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import kotlin.js.JsExport
 
 // TODO: Create "naksha~admin" map with map-number 0
-//       Create the "naksha~transactions", "naksha~dictionaries" collections in it
-//       Additionally create a new "naksha~maps" collection, in which we store maps the way we store collections in "naksha~collections"
+//       Create the "naksha~transactions", "naksha~books" collections in it
+//       Additionally create a new "naksha~catalogs" collection, in which we store maps the way we store collections in "naksha~collections"
 //       We keep all maps all the time in memory (using refreshMaps).
 //       Always keep it in the path, install scripts into it
 //       Create the map-number-seq in it

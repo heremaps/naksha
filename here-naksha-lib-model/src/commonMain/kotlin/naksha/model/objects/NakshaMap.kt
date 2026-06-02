@@ -70,13 +70,13 @@ open class NakshaMap() : NakshaFeature() {
         get() = featureNumber.toInt()
 
     /**
-     * Always return `2`, because all collections are always stored in `naksha~maps` collection.
+     * Always return `2`, because all catalogs (maps) are always stored in `naksha~catalogs` collection.
      * @since 3.0
-     * @see [Naksha.MAPS_COL]
-     * @see [Naksha.MAPS_COL_NUMBER]
+     * @see [Naksha.CATALOGS_COL]
+     * @see [Naksha.CATALOGS_COL_NUMBER]
      */
     override val collectionNumber: Int
-        get() = Naksha.MAPS_COL_NUMBER
+        get() = Naksha.CATALOGS_COL_NUMBER
 
     /**
      * Always return `0`, because all maps are always stored in `naksha~admin` map.

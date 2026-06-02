@@ -22,8 +22,8 @@ class PgRelationTest {
         assertEquals(1, pgRelation("topology\$p001").partitionNumber())
         assertEquals(0, pgRelation("topology\$p000").partitionNumber())
         assertEquals(256, pgRelation("topology\$del\$p256").partitionNumber())
-        assertEquals(7, pgRelation("topology\$hst\$y2024\$p007").partitionNumber())
-        assertEquals(2024, pgRelation("topology\$hst\$y2024\$p001").year())
-        assertEquals(2024, pgRelation("topology\$hst\$y2024").year())
+        assertEquals(7, pgRelation("topology\$hst\$2024\$p007").partitionNumber())
+        assertEquals(2024, pgRelation("topology\$hst\$2024\$p001").year())
+        assertEquals(2024, pgRelation("topology\$hst\$2024").year())
     }
 }

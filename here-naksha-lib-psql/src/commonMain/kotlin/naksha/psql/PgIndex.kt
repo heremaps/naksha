@@ -3,6 +3,8 @@ package naksha.psql
 import naksha.base.AtomicMap
 import naksha.base.JsEnum
 import naksha.base.fn.Fx2
+import naksha.model.objects.Index
+import naksha.model.objects.IndexType
 import naksha.model.request.query.SortOrder
 import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -27,6 +29,7 @@ import naksha.psql.PgColumn.PgColumnCompanion.cs0 as c_cs0
 import naksha.psql.PgColumn.PgColumnCompanion.cs1 as c_cs1
 import naksha.psql.PgColumn.PgColumnCompanion.cs2 as c_cs2
 import naksha.psql.PgColumn.PgColumnCompanion.cs3 as c_cs3
+import naksha.psql.PgColumn.PgColumnCompanion.gbn as c_gbn
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -40,11 +43,10 @@ import kotlin.reflect.KClass
  * ## Warning
  * Identifiers in Postgres are limited to 63 byte (and otherwise will be truncated)!
  *
- * The index-name will look like `{collection-name:42}{postfix:15}$i_{index-name}`, this means
- * - The collection-names is up to 42 byte.
- * - The `postfix` is in the worst case `$hst$y????$p???`, so 15 byte.
- * - The index itself always starts with `$i_` which are 3 more byte.
- * - This means, we are left with only `63 - 42 - 15 - 3 = 3` byte for the index identifier.
+ * For HEAD tables the index-name is `{collection-name}{$head$}{index-name}`, e.g.
+ * `mycol$head$tnu`. For history leaf partitions it is `{leaf-table-name}${index-name}`, e.g.
+ * `mycol$hst$2026$tnu`. The postfix `$hst$????` is at most 10 byte (year up to 4 digits), so the
+ * collection name can be up to `63 - 10 - 1 - 3 = 49` byte to fit a 3-character index id.
  *
  * **This is why we use only three digit identifiers for the indices!**
  *
@@ -568,6 +570,33 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
+         * Conditional non-unique index above the [gbn][PgColumn.gbn], including [fn][PgColumn.fn] and [version][PgColumn.version].
+         *
+         * Conditional: `WHERE gbn IS NOT NULL` — rows that do not reference a global book are excluded.
+         *
+         * - Automatically added to all tables as a mandatory index.
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val gbn_idx = def(PgIndex::class, "gbn") { self ->
+            self.name = "gbn"
+            self.internal = true
+            self.columns = listOf(c_gbn)
+            self.naturalOrder = listOf(DESCENDING)
+            self.includes = listOf(c_fn, c_version)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        "btree ($c_gbn DESC)",
+                        table, unique = false, addFillFactor = true, where = "$c_gbn IS NOT NULL",
+                        includes = listOf(c_fn, c_version)
+                    )
+                ).close()
+            }
+        }
+
+        /**
          * Truncates the identifier to the minimal size that is guaranteed.
          * @param id the index identifier.
          * @return the identifier truncated to the minimal guaranteed length.
@@ -586,13 +615,32 @@ ${if (where==null) "" else "WHERE $where"};"""
         fun of(name: String): PgIndex? {
             val existing = getDefined(name, PgIndex::class) ?: indexByName[name]
             if (existing != null) return existing
-            val start = name.lastIndexOf(PG_IDX)
-            if (start < 0) return null
+            // Try new HEAD-index naming: {tableName}$head${indexText}
+            val headSepStart = name.lastIndexOf(PG_HEAD_IDX)
+            val start: Int
+            val sepLen: Int
+            if (headSepStart >= 0) {
+                start = headSepStart
+                sepLen = PG_HEAD_IDX.length
+            } else {
+                // Fall back to legacy $i_ prefix (custom indices and TXN-era names)
+                val legacyStart = name.lastIndexOf(PG_IDX)
+                if (legacyStart >= 0) {
+                    start = legacyStart
+                    sepLen = PG_IDX.length
+                } else {
+                    // History/partition leaf naming: last $ segment
+                    val lastDollar = name.lastIndexOf(PG_S)
+                    if (lastDollar < 0) return null
+                    start = lastDollar
+                    sepLen = PG_S.length
+                }
+            }
             // This is a hack for PostgresQL, which will truncate identifiers to 63 byte.
             // Therefore, we know that name is limited to 63 characters, which may have truncated the index identifier.
             // So we extract what is left from the index identifier and the compare it against all enumeration values.
             // Note: It could only have truncated the last byte or many more, dependent on how long the collection id is!
-            val pg_truncated_id = name.substring(start + PG_IDX.length)
+            val pg_truncated_id = name.substring(start + sepLen)
             for (e in iterate(PgIndex::class)) if (e.text.startsWith(pg_truncated_id)) return e
             return null
         }
@@ -636,6 +684,51 @@ ${if (where==null) "" else "WHERE $where"};"""
             ref_point,
             gist_geo,
         )
+
+        /**
+         * Converts a [PgIndex] to an [Index] model object, preserving [PgIndex.internal].
+         */
+        internal fun pgIndexToIndex(pgIdx: PgIndex): Index {
+            val idx = Index()
+            idx.name = pgIdx.name
+            idx.internal = pgIdx.internal
+            // Determine index type from the PgIndex columns (heuristic: geo columns → SPATIAL, no columns or btree → BTREE)
+            idx.type = when {
+                pgIdx === gist_geo || pgIdx === spgist_geo || pgIdx === ref_point -> IndexType.SPATIAL
+                pgIdx === tags -> IndexType.TAGS
+                else -> IndexType.BTREE
+            }
+            val cols = naksha.base.StringList()
+            for (c in pgIdx.columns) cols.add(c.name)
+            idx.on = cols
+            return idx
+        }
+
+        /**
+         * The mandatory [Index]es that the storage always injects into every collection.
+         * These are storage-managed (`internal = true`) and must not be declared by clients.
+         *
+         * - `fn_pkey`: PRIMARY KEY on `fn`
+         * - `id_unique`: UNIQUE on `id` (HEAD/DELETED/META tables only)
+         * - `id`: non-unique index on `id` (HISTORY tables only)
+         * - `version`: index on `version`
+         * - `gbn`: conditional index on `gbn` WHERE `gbn IS NOT NULL`
+         * @since 3.0
+         */
+        @JsStatic
+        val mandatoryIndices: List<Index> by lazy {
+            listOf(fn_pkey, id_unique, id, version, gbn_idx).map { pgIndexToIndex(it) }
+        }
+
+        /**
+         * The default [Index]es injected when the client does **not** provide an [indices][naksha.model.objects.NakshaCollection.indices]
+         * list (backward-compatible full schema). These correspond to all non-internal entries in [DEFAULT_INDICES].
+         * @since 3.0
+         */
+        @JsStatic
+        val defaultIndices: List<Index> by lazy {
+            DEFAULT_INDICES.filter { !it.internal }.map { pgIndexToIndex(it) }
+        }
     }
 
     /**
@@ -659,22 +752,39 @@ ${if (where==null) "" else "WHERE $where"};"""
 
     /**
      * Returns the unique identifier of this index in the given table.
+     *
+     * - HEAD / META / DELETED root tables → `{tableName}$head${indexName}`
+     * - History / performance-partition leaf tables → `{tableName}${PG_S}${indexName}`
+     *   (the leaf table name already carries the `$hst$<key>` context)
+     *
      * @param table the table for which to generate the unique index name.
      * @return the unique identifier of this index in the given table.
      */
     fun id(table: PgTable): String {
-        val id = "${table.name}${PG_IDX}${text}"
+        val sep = if (PgTable.isAnyHistory(table.name) || PgTable.isAnyDeleted(table.name))
+            PG_S
+        else
+            PG_HEAD_IDX
+        val id = "${table.name}${sep}${text}"
         return if (id.length > 63) id.substring(0, 63) else id
     }
 
     /**
      * Returns the unique identifier of this index in the table with the given name.
+     *
+     * - HEAD / META / DELETED root tables → `{tableName}$head${indexName}`
+     * - History / performance-partition leaf tables → `{tableName}${PG_S}${indexName}`
+     *
      * @param tableName the name of the table for which to generate the unique index name.
      * @return the unique identifier of this index in the given table.
      */
     @JsName("idByTableName")
     fun id(tableName: String): String {
-        val id = "${tableName}${PG_IDX}${text}"
+        val sep = if (PgTable.isAnyHistory(tableName) || PgTable.isAnyDeleted(tableName))
+            PG_S
+        else
+            PG_HEAD_IDX
+        val id = "${tableName}${sep}${text}"
         return if (id.length > 63) id.substring(0, 63) else id
     }
 

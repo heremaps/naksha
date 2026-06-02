@@ -78,6 +78,70 @@ open class PgCollection internal constructor(
         internal set
 
     /**
+     * The columns present in the HEAD (and META/DELETED) tables of this collection.
+     *
+     * Always includes the full set of default head columns. If the collection declares additional
+     * members that map to known [PgColumn] entries (e.g. `pn`, `pt`, `gv`) those columns are
+     * appended so that every physically-present column is covered in a single list.
+     * @since 3.0
+     */
+    val effectiveHeadColumns: List<PgColumn>
+        get() {
+            val members = head.members ?: return PgColumn.headColumns
+            val byName = PgColumn.allColumnsByName
+            val base = PgColumn.headColumns
+            val extras = mutableListOf<PgColumn>()
+            for (m in members) {
+                if (m == null) continue
+                val col = byName[m.name]
+                if (col != null && col !in base && col !in extras) extras.add(col)
+            }
+            return if (extras.isEmpty()) base else base + extras
+        }
+
+    /**
+     * The columns present in the HISTORY tables of this collection.
+     *
+     * Mirrors [effectiveHeadColumns] but includes [PgColumn.next_version] for HISTORY.
+     * @since 3.0
+     */
+    val effectiveHistoryColumns: List<PgColumn>
+        get() {
+            val members = head.members ?: return PgColumn.allColumns
+            val byName = PgColumn.allColumnsByName
+            val base = PgColumn.allColumns
+            val extras = mutableListOf<PgColumn>()
+            for (m in members) {
+                if (m == null) continue
+                val col = byName[m.name]
+                if (col != null && col !in base && col !in extras) extras.add(col)
+            }
+            return if (extras.isEmpty()) base else base + extras
+        }
+
+    /**
+     * The subset of [PgColumn.copyIntoHistoryColumns] that actually exist in this collection's tables.
+     * Used when copying HEAD rows into HISTORY to avoid referencing absent optional columns.
+     * @since 3.0
+     */
+    val effectiveCopyIntoHistoryColumns: List<PgColumn>
+        get() {
+            val effective = effectiveHeadColumns.toSet()
+            return PgColumn.copyIntoHistoryColumns.filter { it in effective }
+        }
+
+    /**
+     * The subset of [PgColumn.updateColumns] that actually exist in this collection's tables.
+     * Used in UPDATE CTEs to avoid referencing absent optional columns.
+     * @since 3.0
+     */
+    val effectiveUpdateColumns: List<PgColumn>
+        get() {
+            val effective = effectiveHeadColumns.toSet()
+            return PgColumn.updateColumns.filter { it in effective }
+        }
+
+    /**
      * The amount of performance partitions.
      */
     val partitions: Int
@@ -123,7 +187,7 @@ open class PgCollection internal constructor(
         val partitions = if (nakshaCollection.partitions == 1) 0 else nakshaCollection.partitions
         storageClass = PgStorageClass.of(nakshaCollection.storageClass)
         @Suppress("LeakingThis")
-        headTable = if (this is PgNakshaTransactions) PgTransactions(this) else PgHead(this, storageClass, partitions)
+        headTable = PgHead(this, storageClass, partitions)
         historyTable = if (nakshaCollection.storeHistory == StoreMode.OFF) null else PgHistory(headTable)
         metaTable = if (nakshaCollection.storeMeta == StoreMode.OFF) null else PgMeta(headTable)
     }
@@ -191,10 +255,13 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
     private fun diffMembers(conn: PgConnection, prev: NakshaCollection, next: NakshaCollection, force: Boolean) {
         val prevMembers = prev.members
         val nextMembers = next.members
-        val prevByName = mutableMapOf<String, naksha.model.objects.CustomMember>()
-        val nextByName = mutableMapOf<String, naksha.model.objects.CustomMember>()
-        if (prevMembers != null) for (m in prevMembers) if (m != null) prevByName[m.name] = m
-        if (nextMembers != null) for (m in nextMembers) if (m != null) nextByName[m.name] = m
+        val prevByName = mutableMapOf<String, naksha.model.objects.Member>()
+        val nextByName = mutableMapOf<String, naksha.model.objects.Member>()
+        // Mandatory columns are always present in the DB and never appear in members lists,
+        // so we skip them here entirely.
+        val mandatoryNames = PgColumn.mandatoryMembers.map { it.name }.toSet()
+        if (prevMembers != null) for (m in prevMembers) if (m != null && m.name !in mandatoryNames) prevByName[m.name] = m
+        if (nextMembers != null) for (m in nextMembers) if (m != null && m.name !in mandatoryNames) nextByName[m.name] = m
 
         // Type-change check.
         for ((name, nm) in nextByName) {
@@ -237,10 +304,11 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
     private fun diffIndexes(conn: PgConnection, prev: NakshaCollection, next: NakshaCollection) {
         val prevIdx = prev.indices
         val nextIdx = next.indices
-        val prevByName = mutableMapOf<String, naksha.model.objects.CustomIndex>()
-        val nextByName = mutableMapOf<String, naksha.model.objects.CustomIndex>()
-        if (prevIdx != null) for (ci in prevIdx) if (ci != null) prevByName[ci.name] = ci
-        if (nextIdx != null) for (ci in nextIdx) if (ci != null) nextByName[ci.name] = ci
+        val prevByName = mutableMapOf<String, naksha.model.objects.Index>()
+        val nextByName = mutableMapOf<String, naksha.model.objects.Index>()
+        // Internal (mandatory) indices are always managed by the storage; skip them in the diff.
+        if (prevIdx != null) for (ci in prevIdx) if (ci != null && !ci.internal) prevByName[ci.name] = ci
+        if (nextIdx != null) for (ci in nextIdx) if (ci != null && !ci.internal) nextByName[ci.name] = ci
 
         // Removed (or changed): drop on every root.
         for ((name, pi) in prevByName) {
@@ -259,7 +327,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
         }
     }
 
-    private fun customIndexEquals(a: naksha.model.objects.CustomIndex, b: naksha.model.objects.CustomIndex): Boolean {
+    private fun customIndexEquals(a: naksha.model.objects.Index, b: naksha.model.objects.Index): Boolean {
         if (a.name != b.name) return false
         if (a.type != b.type) return false
         if (a.unique != b.unique) return false

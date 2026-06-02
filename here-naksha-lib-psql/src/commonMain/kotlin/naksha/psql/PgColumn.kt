@@ -5,6 +5,8 @@ package naksha.psql
 import naksha.base.Int64
 import naksha.base.JsEnum
 import naksha.model.DataEncoding
+import naksha.model.objects.Member
+import naksha.model.objects.MemberType
 import naksha.model.request.query.MetaColumn
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -155,7 +157,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val updated_at = def(PgColumn::class, "updated_at") { self ->
-            self._i = 0
+            self._i = 3
             self._type = PgType.INT64
         }
 
@@ -166,7 +168,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val created_at = def(PgColumn::class, "created_at") { self ->
-            self._i = 1
+            self._i = 4
             self._type = PgType.INT64
         }
 
@@ -177,7 +179,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val author_ts = def(PgColumn::class, "author_ts") { self ->
-            self._i = 2
+            self._i = 5
             self._type = PgType.INT64
         }
 
@@ -188,7 +190,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv0 = def(PgColumn::class, "cv0") { self ->
-            self._i = 3
+            self._i = 7
             self._type = PgType.DOUBLE
         }
 
@@ -199,7 +201,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv1 = def(PgColumn::class, "cv1") { self ->
-            self._i = 4
+            self._i = 8
             self._type = PgType.DOUBLE
         }
 
@@ -210,7 +212,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv2 = def(PgColumn::class, "cv2") { self ->
-            self._i = 5
+            self._i = 9
             self._type = PgType.DOUBLE
         }
 
@@ -221,12 +223,9 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cv3 = def(PgColumn::class, "cv3") { self ->
-            self._i = 6
+            self._i = 10
             self._type = PgType.DOUBLE
         }
-
-        //min: 8 byte ; only updated_at is mandatory
-        //max: 56 byte ; 7 * 8
 
         /**
          * The unique hash of this [tuple][naksha.model.Tuple] (state), calculated by the storage using the static [Metadata.hash][naksha.model.Metadata.calculateHash] method.
@@ -237,7 +236,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val hash = def(PgColumn::class, "hash") { self ->
-            self._i = 7
+            self._i = 11
             self._type = PgType.INT
         }
 
@@ -250,7 +249,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val here_tile = def(PgColumn::class, "here_tile") { self ->
-            self._i = 8
+            self._i = 12
             self._type = PgType.INT
         }
 
@@ -263,12 +262,9 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val cc = def(PgColumn::class, "cc") { self ->
-            self._i = 9
+            self._i = 13
             self._type = PgType.INT
         }
-
-        //min: 24 byte ; 8 + 4 * 4
-        //max: 72 byte ; 56 + 4 * 4
 
         /**
          * The feature-number — the per-collection identifier of the feature this tuple belongs to.
@@ -279,7 +275,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val fn = def(PgColumn::class, "fn") { self ->
-            self._i = 10
+            self._i = 0
             self._type = PgType.INT64
             self._extra = "STORAGE $PLAIN NOT NULL"
         }
@@ -293,7 +289,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val version = def(PgColumn::class, "version") { self ->
-            self._i = 11
+            self._i = 1
             self._type = PgType.INT64
             self._extra = "STORAGE $PLAIN NOT NULL"
         }
@@ -309,7 +305,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val next_version = def(PgColumn::class, "next_version") { self ->
-            self._i = 12
+            self._i = 2
             self._type = PgType.INT64
             self._extra = "STORAGE $PLAIN" // prevents out-of-line storage
         }
@@ -334,7 +330,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val base_tn = def(PgColumn::class, "base_tn") { self ->
-            self._i = 13
+            self._i = 24
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $PLAIN" // prevents either compression or out-of-line storage
         }
@@ -480,15 +476,6 @@ class PgColumn : JsEnum() {
             self._extra = "STORAGE $PLAIN COLLATE \"C\"" // prevents either compression or out-of-line storage
         }
 
-        // Assuming:
-        // - id is not more than 60 byte
-        // - app_id and author are not more than 30 byte
-        // - origin and target are not more 60 byte
-        // - some byte reserved for cs0, cs1, cs2, cs3 (60 byte total)
-        //=
-        //min: 144 byte ; 24 + 60 (id) + 30 (app_id) + 30 (author)
-        //max: 400 byte ; 80 + 60 (id) + 30 (app_id) + 30 (author) + 60 (origin) + 60 (target) + 80 (cs?)
-
         /**
          * The [tags][naksha.model.TagMap] of the [tuple][naksha.model.Tuple], stored as raw `jsonb`.
          *
@@ -497,8 +484,9 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val tags = def(PgColumn::class, "tags") { self ->
-            self._i = 24
-            self._type = PgType.JSONB
+            self._i = 25
+            self._type = PgType.BYTE_ARRAY
+            self._extra = "STORAGE $EXTERNAL"
         }
 
         /**
@@ -508,7 +496,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val ref_point = def(PgColumn::class, "ref_point") { self ->
-            self._i = 25
+            self._i = 26
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -520,7 +508,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val geo = def(PgColumn::class, "geo") { self ->
-            self._i = 26
+            self._i = 27
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
@@ -535,7 +523,7 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val feature = def(PgColumn::class, "feature") { self ->
-            self._i = 27
+            self._i = 28
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL NOT NULL"
         }
@@ -547,25 +535,95 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val attachment = def(PgColumn::class, "attachment") { self ->
-            self._i = 28
+            self._i = 29
             self._type = PgType.BYTE_ARRAY
             self._extra = "STORAGE $EXTERNAL"
         }
 
         /**
-         * All columns being used with Naksha.
+         * The global-book-number that references the JBON2 global dictionary entry needed to decode
+         * the [feature] blob when global-book encoding is used. Assigned by the sequencer.
+         *
+         * **Optional** — `NULL` when no global book is in use for this tuple.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val gbn = def(PgColumn::class, "gbn") { self ->
+            self._i = 6
+            self._type = PgType.INT64
+            self._extra = "STORAGE $PLAIN"
+        }
+
+        /**
+         * Publisher-assigned gap-free sequential number ordered by **visibility** (not execution order).
+         * After publish-number `N` comes `N+1` without holes, regardless of transaction commit order.
+         * Assigned by an external publisher component. `NULL` until published.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val pn = def(PgColumn::class, "pn") { self ->
+            self._i = 30
+            self._type = PgType.INT64
+            self._extra = "STORAGE $PLAIN"
+        }
+
+        /**
+         * Millisecond epoch timestamp at which the publisher recognised and sequenced this transaction,
+         * assigning it its [pn]. `NULL` until published.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val pt = def(PgColumn::class, "pt") { self ->
+            self._i = 31
+            self._type = PgType.INT64
+            self._extra = "STORAGE $PLAIN"
+        }
+
+        /**
+         * HERE-internal global version number assigned by HERE's global sequencing infrastructure.
+         * `NULL` until the global sequencer has processed the transaction.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val gv = def(PgColumn::class, "gv") { self ->
+            self._i = 32
+            self._type = PgType.INT64
+            self._extra = "STORAGE $PLAIN"
+        }
+
+        /**
+         * All columns being used with Naksha, ordered by type alignment group for minimal PostgreSQL
+         * tuple padding:
+         * 1. INT64 (8-byte): fn, version, next_version, updated_at, created_at, author_ts, gbn
+         * 2. FLOAT64 (8-byte): cv0, cv1, cv2, cv3
+         * 3. INT32 (4-byte): hash, here_tile, cc
+         * 4. STRING (var): id, app_id, author, origin, target, ft, cs0, cs1, cs2, cs3
+         * 5. BYTE_ARRAY (var): base_tn, tags, ref_point, geo, feature, attachment
+         *
+         * The SPECIAL columns ([pn], [pt], [gv]) follow the same INT64 slot rule but are
+         * only physically present when explicitly declared; they live in [allColumnsByName] only.
          * @since 3.0
          */
         @JvmField
         @JsStatic
         val allColumns = listOf(
+            // INT64 group
+            fn, version, next_version,
             updated_at, created_at, author_ts,
+            gbn,
+            // FLOAT64 group
             cv0, cv1, cv2, cv3,
+            // INT32 group
             hash, here_tile, cc,
-            fn, version, next_version, base_tn,
+            // STRING group
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
-            tags, ref_point, geo, feature, attachment
+            // BYTE_ARRAY group
+            base_tn, tags, ref_point, geo, feature, attachment,
         )
 
         /**
@@ -575,6 +633,37 @@ class PgColumn : JsEnum() {
         @JvmField
         @JsStatic
         val headColumns = allColumns.filter { it !== next_version }
+
+        /**
+         * All columns indexed by name, for fast lookup.
+         * Includes [allColumns] plus the optional SPECIAL columns ([pn], [pt], [gv]) that are
+         * only physically present when a collection explicitly declares them as members.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val allColumnsByName: Map<String, PgColumn> = (allColumns + listOf(pn, pt, gv)).associateBy { it.name }
+
+        /**
+         * The minimal mandatory columns for a HEAD / META / DELETED table:
+         * `fn`, `version`, `id`, `feature`, and `gbn`.
+         *
+         * Used when [naksha.model.objects.NakshaCollection.members] is an **empty list** (explicitly set to `[]`)
+         * to create a lean table with no optional built-in columns.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val mandatoryColumns: List<PgColumn> = listOf(fn, version, id, feature, gbn)
+
+        /**
+         * The minimal mandatory columns for a HISTORY table:
+         * [mandatoryColumns] plus [next_version] (which is the HISTORY partition key).
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val mandatoryHistoryColumns: List<PgColumn> = listOf(fn, version, next_version, id, feature, gbn)
 
         /**
          * The names of all HEAD database columns, as comma-separated list.
@@ -641,7 +730,9 @@ class PgColumn : JsEnum() {
             fn, version, base_tn, // removed: next_version, prev_tn
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
-            tags, ref_point, geo, feature, attachment
+            tags, ref_point, geo, feature, attachment,
+            gbn,
+            pn, pt, gv,
         )
 
         /**
@@ -661,14 +752,15 @@ class PgColumn : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val updateColumns = listOf(
+         val updateColumns = listOf(
             updated_at, created_at, author_ts,
             cv0, cv1, cv2, cv3,
             hash, here_tile, // removed: cc
             base_tn, // removed: fn, version (PK columns; not set via updates), next_version (HEAD has none)
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
-            tags, ref_point, geo, feature // removed: attachment (needs special handling)
+            tags, ref_point, geo, feature, // removed: attachment (needs special handling)
+            gbn,
         )
 
         /**
@@ -698,13 +790,70 @@ class PgColumn : JsEnum() {
             // removed: fn, version, next_version, and base_tn,
             id, app_id, author, origin, target, ft,
             cs0, cs1, cs2, cs3,
-            tags, ref_point, geo, feature, attachment
+            tags, ref_point, geo, feature, attachment,
+            gbn,
         )
 
         init {
             // This is only self-check code.
             for ((i, col) in allColumns.withIndex()) {
                 check(i == col.i) { "Invalid columns, column '${col.name}' should be at index ${col.i}, but found at $i" }
+            }
+        }
+
+        /**
+         * Maps a [PgColumn] to its equivalent [MemberType], used when generating [Member] objects
+         * for mandatory and default member lists.
+         */
+        internal fun pgTypeToMemberType(col: PgColumn): MemberType = when {
+            col === geo || col === ref_point -> MemberType.SPATIAL
+            else -> when (col.type) {
+                PgType.INT64   -> MemberType.INT64
+                PgType.DOUBLE  -> MemberType.FLOAT64
+                PgType.INT     -> MemberType.INT32
+                PgType.SHORT   -> MemberType.INT16
+                PgType.FLOAT   -> MemberType.FLOAT32
+                PgType.BOOLEAN -> MemberType.BOOLEAN
+                PgType.STRING  -> MemberType.STRING
+                PgType.BYTE_ARRAY -> MemberType.BYTE_ARRAY
+                else           -> MemberType.STRING
+            }
+        }
+
+        /**
+         * The mandatory [Member]s that the storage always injects into every collection, regardless of
+         * what the client provides: `fn` (INT64), `version` (INT64), `id` (STRING), `feature` (BYTE_ARRAY).
+         *
+         * These are derived from [mandatoryColumns]. Clients must not declare them with a different type.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val mandatoryMembers: List<Member> = mandatoryColumns.map { col ->
+            Member(col.name, pgTypeToMemberType(col))
+        }
+
+        /**
+         * The mandatory [Member]s for a HISTORY table: [mandatoryMembers] plus `next_version` (INT64).
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val mandatoryHistoryMembers: List<Member> = mandatoryHistoryColumns.map { col ->
+            Member(col.name, pgTypeToMemberType(col))
+        }
+
+        /**
+         * The default [Member]s injected when the client does **not** provide a [members][naksha.model.objects.NakshaCollection.members]
+         * list (backward-compatible full schema). These correspond to all optional built-in columns
+         * (i.e. [headColumns] minus [mandatoryColumns]).
+         * @since 3.0
+         */
+        @JsStatic
+        val defaultMembers: List<Member> by lazy {
+            val mandatory = mandatoryColumns.map { it.name }.toSet()
+            headColumns.filter { it.name !in mandatory }.map { col ->
+                Member(col.name, pgTypeToMemberType(col))
             }
         }
 

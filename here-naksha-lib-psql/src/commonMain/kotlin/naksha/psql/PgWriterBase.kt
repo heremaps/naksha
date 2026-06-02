@@ -132,18 +132,6 @@ internal abstract class PgWriterBase protected constructor(
         if (writeIntoPartition) {
             return collection.headTable.partitions[partition]
         }
-        if (collection.headTable is PgTransactions) {
-            val transactions = collection.headTable as PgTransactions
-            var table = transactions.years[year]
-            if (table == null) {
-                transactions.addYear(year)
-                table = transactions.years[year]
-                if (table == null) {
-                    throw illegalState("Internal error, failed to add transaction year $year")
-                }
-            }
-            return table
-        }
         return collection.headTable
     }
 

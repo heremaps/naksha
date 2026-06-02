@@ -85,7 +85,12 @@ internal const val PG_ID_CONSTRAINT = "${PG_CONSTRAINT}id"
 internal const val PG_PART = "${PG_S}p"
 
 /**
- * `$y_`: The prefix used for yearly partitions, the final value is `$y????` with `?` being `[0-9]`.
+ * `$head`: The separator used for HEAD-table index names: `{tableName}$head${indexName}`.
+ */
+internal const val PG_HEAD_IDX = "${PG_S}head${PG_S}"
+
+/**
+ * `$y_`: The prefix used for yearly partitions of the TRANSACTIONS table, the final value is `$y????` with `?` being `[0-9]`.
  */
 internal const val PG_YEAR = "${PG_S}y"
 

@@ -6,9 +6,12 @@ import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.model.NakshaError
+import naksha.model.NakshaException
 import naksha.model.TagList
-import naksha.model.objects.CustomMember
-import naksha.model.objects.CustomMemberType
+import naksha.model.objects.Member
+import naksha.model.objects.MemberList
+import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaFeature
 
 /**
@@ -18,52 +21,83 @@ import naksha.model.objects.NakshaFeature
  * - [coerce]: coerce a raw value to the type of the member; returns _null_ and logs a warning on mismatch.
  * - [pgTypeFor]: maps a [CustomMemberType] to the [PgType] used for prepared-statement binding.
  * - [pgSqlTypeFor]: returns the PostgreSQL DDL type for `CREATE TABLE` / `ALTER TABLE ADD COLUMN`.
- * - [pgColumnName]: returns the physical column name (`$<member.name>`) used in Postgres.
+ * - [pgColumnName]: returns the physical column name (same as [CustomMember.name]) used in Postgres.
  */
 internal object PgCustomMemberValues {
 
     /**
-     * Returns the physical Postgres column name for the given member name. Custom columns are namespaced with `$` so they cannot collide with built-in columns (whose names contain no `$`).
+     * The set of all reserved column names — any name that belongs to a built-in [PgColumn].
+     * Custom members must not use any of these names; [validateMemberNames] enforces this.
      */
-    fun pgColumnName(memberName: String): String = "\$$memberName"
+    private val reservedColumnNames: Set<String> by lazy {
+        PgColumn.allColumns.map { it.name }.toSet()
+    }
 
-    fun pgTypeFor(type: CustomMemberType): PgType = when (type) {
-        CustomMemberType.BOOLEAN -> PgType.BOOLEAN
-        CustomMemberType.INT8 -> PgType.SHORT
-        CustomMemberType.INT16 -> PgType.SHORT
-        CustomMemberType.INT32 -> PgType.INT
-        CustomMemberType.INT64 -> PgType.INT64
-        CustomMemberType.FLOAT32 -> PgType.FLOAT
-        CustomMemberType.FLOAT64 -> PgType.DOUBLE
-        CustomMemberType.STRING -> PgType.STRING
-        CustomMemberType.BYTE_ARRAY -> PgType.BYTE_ARRAY
-        CustomMemberType.FLAT_MAP -> PgType.JSONB
-        CustomMemberType.TAGS -> PgType.JSONB
+    /**
+     * Returns the physical Postgres column name for the given member name.
+     * The name is used as-is; collision with built-in columns is prevented by [validateMemberNames].
+     */
+    fun pgColumnName(memberName: String): String = memberName
+
+    /**
+     * Validates that none of the members in [members] use a reserved built-in column name.
+     * Throws [NakshaException] with [NakshaError.ILLEGAL_ARGUMENT] on the first conflict found.
+     * Must be called before creating a new collection.
+     */
+    fun validateMemberNames(members: MemberList) {
+        for (member in members) {
+            if (member != null && member.name in reservedColumnNames) {
+                throw NakshaException(
+                    NakshaError.ILLEGAL_ARGUMENT,
+                    "Custom member name '${member.name}' conflicts with a built-in column name"
+                )
+            }
+        }
+    }
+
+    fun pgTypeFor(type: MemberType): PgType = when (type) {
+        MemberType.BOOLEAN -> PgType.BOOLEAN
+        MemberType.INT8 -> PgType.SHORT
+        MemberType.INT16 -> PgType.SHORT
+        MemberType.INT32 -> PgType.INT
+        MemberType.INT64 -> PgType.INT64
+        MemberType.FLOAT32 -> PgType.FLOAT
+        MemberType.FLOAT64 -> PgType.DOUBLE
+        MemberType.STRING -> PgType.STRING
+        MemberType.BYTE_ARRAY -> PgType.BYTE_ARRAY
+        MemberType.SPATIAL -> PgType.BYTE_ARRAY
+        MemberType.TAGS -> PgType.JSONB
+        MemberType.TAGS_FROM_ARRAY -> PgType.JSONB
         else -> PgType.STRING
     }
 
     /**
-     * Returns the PostgreSQL DDL type string for the given member type, used inside `CREATE TABLE` / `ALTER TABLE ADD COLUMN`. Note: there is no 1-byte signed integer type in PostgreSQL, so [CustomMemberType.INT8] is materialized as `smallint`; the storage enforces the 8-bit range on coercion.
+     * Returns the PostgreSQL DDL type string for the given member type, used inside `CREATE TABLE` / `ALTER TABLE ADD COLUMN`.
+     * Note: there is no 1-byte signed integer type in PostgreSQL, so [MemberType.INT8] is materialized as `smallint`;
+     * the storage enforces the 8-bit range on coercion.
+     * Both [MemberType.TAGS] and [MemberType.TAGS_FROM_ARRAY] use `jsonb STORAGE MAIN` — compressed inline,
+     * only TOASTed as a last resort.
      */
-    fun pgSqlTypeFor(type: CustomMemberType): String = when (type) {
-        CustomMemberType.BOOLEAN -> "boolean"
-        CustomMemberType.INT8 -> "smallint"
-        CustomMemberType.INT16 -> "smallint"
-        CustomMemberType.INT32 -> "integer"
-        CustomMemberType.INT64 -> "bigint"
-        CustomMemberType.FLOAT32 -> "real"
-        CustomMemberType.FLOAT64 -> "double precision"
-        CustomMemberType.STRING -> "text COLLATE \"C\""
-        CustomMemberType.BYTE_ARRAY -> "bytea"
-        CustomMemberType.FLAT_MAP -> "jsonb"
-        CustomMemberType.TAGS -> "jsonb"
+    fun pgSqlTypeFor(type: MemberType): String = when (type) {
+        MemberType.BOOLEAN -> "boolean"
+        MemberType.INT8 -> "smallint"
+        MemberType.INT16 -> "smallint"
+        MemberType.INT32 -> "integer"
+        MemberType.INT64 -> "bigint"
+        MemberType.FLOAT32 -> "real"
+        MemberType.FLOAT64 -> "double precision"
+        MemberType.STRING -> "text COLLATE \"C\""
+        MemberType.BYTE_ARRAY -> "bytea"
+        MemberType.SPATIAL -> "bytea STORAGE EXTERNAL"
+        MemberType.TAGS -> "jsonb STORAGE MAIN"
+        MemberType.TAGS_FROM_ARRAY -> "jsonb STORAGE MAIN"
         else -> "text"
     }
 
     /**
-     * Returns the comma-prefixed SQL fragment for the [CustomMember.name] / [CustomMember.dataType] used in `CREATE TABLE`. Example: `"$age" smallint`.
+     * Returns the SQL fragment for the [Member.name] / [Member.dataType] used in `CREATE TABLE`. Example: `"age" smallint`.
      */
-    fun sqlDefinitionFor(member: CustomMember): String =
+    fun sqlDefinitionFor(member: Member): String =
         "\"${pgColumnName(member.name)}\" ${pgSqlTypeFor(member.dataType)}"
 
     fun walkFeature(feature: NakshaFeature, path: List<String>): Any? {
@@ -78,20 +112,21 @@ internal object PgCustomMemberValues {
         return current
     }
 
-    fun coerce(value: Any?, type: CustomMemberType, featureId: String, memberName: String): Any? {
+    fun coerce(value: Any?, type: MemberType, featureId: String, memberName: String): Any? {
         if (value == null) return null
         return when (type) {
-            CustomMemberType.BOOLEAN -> coerceBoolean(value, featureId, memberName)
-            CustomMemberType.INT8 -> coerceInt8(value, featureId, memberName)
-            CustomMemberType.INT16 -> coerceInt16(value, featureId, memberName)
-            CustomMemberType.INT32 -> coerceInt32(value, featureId, memberName)
-            CustomMemberType.INT64 -> coerceInt64(value, featureId, memberName)
-            CustomMemberType.FLOAT32 -> coerceFloat32(value, featureId, memberName)
-            CustomMemberType.FLOAT64 -> coerceFloat64(value, featureId, memberName)
-            CustomMemberType.STRING -> coerceString(value, featureId, memberName)
-            CustomMemberType.BYTE_ARRAY -> coerceByteArray(value, featureId, memberName)
-            CustomMemberType.FLAT_MAP -> coerceFlatMap(value, featureId, memberName)
-            CustomMemberType.TAGS -> coerceTags(value, featureId, memberName)
+            MemberType.BOOLEAN -> coerceBoolean(value, featureId, memberName)
+            MemberType.INT8 -> coerceInt8(value, featureId, memberName)
+            MemberType.INT16 -> coerceInt16(value, featureId, memberName)
+            MemberType.INT32 -> coerceInt32(value, featureId, memberName)
+            MemberType.INT64 -> coerceInt64(value, featureId, memberName)
+            MemberType.FLOAT32 -> coerceFloat32(value, featureId, memberName)
+            MemberType.FLOAT64 -> coerceFloat64(value, featureId, memberName)
+            MemberType.STRING -> coerceString(value, featureId, memberName)
+            MemberType.BYTE_ARRAY -> coerceByteArray(value, featureId, memberName)
+            MemberType.SPATIAL -> coerceByteArray(value, featureId, memberName)
+            MemberType.TAGS -> coerceTags(value, featureId, memberName)
+            MemberType.TAGS_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
             else -> {
                 warnMismatch(featureId, memberName, type.toString(), value)
                 null
@@ -174,22 +209,22 @@ internal object PgCustomMemberValues {
         else -> { warnMismatch(featureId, memberName, "byte_array", value); null }
     }
 
-    private fun coerceFlatMap(value: Any, featureId: String, memberName: String): String? {
+    private fun coerceTags(value: Any, featureId: String, memberName: String): String? {
         if (value !is AnyObject) {
-            warnMismatch(featureId, memberName, "flat_map", value)
+            warnMismatch(featureId, memberName, "tags", value)
             return null
         }
-        return try { toJSON(value) } catch (_: Exception) { warnMismatch(featureId, memberName, "flat_map", value); null }
+        return try { toJSON(value) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags", value); null }
     }
 
-    private fun coerceTags(value: Any, featureId: String, memberName: String): String? {
+    private fun coerceTagsFromArray(value: Any, featureId: String, memberName: String): String? {
         val tagList = when (value) {
             is TagList -> value
             is AnyObject -> value.proxy(TagList::class)
-            else -> { warnMismatch(featureId, memberName, "tags", value); return null }
+            else -> { warnMismatch(featureId, memberName, "tags_from_array", value); return null }
         }
         val tagMap = tagList.toTagMap()
-        return try { toJSON(tagMap) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags", value); null }
+        return try { toJSON(tagMap) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags_from_array", value); null }
     }
 
     private fun numberToLongOrNull(value: Any): Long? = when (value) {
@@ -201,6 +236,62 @@ internal object PgCustomMemberValues {
         is Float -> if (value.isFinite() && value == value.toLong().toFloat()) value.toLong() else null
         is Double -> if (value.isFinite() && value == value.toLong().toDouble()) value.toLong() else null
         else -> null
+    }
+
+    /**
+     * Returns the sort priority for a [MemberType] based on PostgreSQL alignment size, to minimise
+     * tuple padding when columns are laid out in declaration order:
+     * 1. 8-byte types ([INT64], [FLOAT64]) — first, to get 8-byte alignment right away
+     * 2. 4-byte types ([INT32], [FLOAT32]) — next, still fixed-width
+     * 3. 1/2-byte types ([INT16], [INT8], [BOOLEAN]) — small fixed-width
+     * 4. Variable-length text ([STRING]) — variable but human-readable
+     * 5. Opaque variable-length ([BYTE_ARRAY], [SPATIAL], [TAGS], [TAGS_FROM_ARRAY]) — last
+     */
+    fun columnSortOrder(type: MemberType): Int = when (type) {
+        MemberType.INT64   -> 0
+        MemberType.FLOAT64 -> 1
+        MemberType.INT32   -> 2
+        MemberType.FLOAT32 -> 3
+        MemberType.INT16   -> 4
+        MemberType.INT8    -> 5
+        MemberType.BOOLEAN -> 6
+        MemberType.STRING  -> 7
+        MemberType.BYTE_ARRAY      -> 8
+        MemberType.SPATIAL         -> 8
+        MemberType.TAGS            -> 9
+        MemberType.TAGS_FROM_ARRAY -> 10
+        else -> 11
+    }
+
+    /**
+     * The set of member names that correspond to pre-defined optional [PgColumn]s (e.g. `geo`, `tags`, `cc`).
+     * When two members have the same type sort-order, pre-defined members are placed before user-invented ones.
+     */
+    private val predefinedMemberNames: Set<String> by lazy {
+        val mandatory = PgColumn.mandatoryColumns.map { it.name }.toSet()
+        PgColumn.headColumns.map { it.name }.filter { it !in mandatory }.toSet()
+    }
+
+    /**
+     * Sorts [members] in-place for optimal PostgreSQL column layout.
+     *
+     * Ordering rules (applied only at **collection-creation** time; never on updates):
+     * 1. Primary: type alignment group ([columnSortOrder])
+     * 2. Secondary: pre-defined members (matching a built-in optional column name) before user-invented ones
+     * 3. Tertiary: member name lexicographically ascending
+     *
+     * The sort is stable within each group so that the caller's intent is preserved as a tie-breaker.
+     */
+    fun sortMembersForStorage(members: MemberList) {
+        if (members.size <= 1) return
+        val snapshot = (0 until members.size).map { members[it]!! }
+        val sorted = snapshot.sortedWith(compareBy(
+            { columnSortOrder(it.dataType) },
+            { if (it.name in predefinedMemberNames) 0 else 1 },
+            { it.name }
+        ))
+        members.clear()
+        members.addAll(sorted)
     }
 
     private fun warnMismatch(featureId: String, memberName: String, expected: String, value: Any) {

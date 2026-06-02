@@ -6,8 +6,8 @@ import naksha.base.*
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL
+import naksha.model.Naksha.NakshaCompanion.BOOKS_COL
+import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.isInternalId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
@@ -69,8 +69,8 @@ open class Write : AnyObject() {
         private fun compareCollectionIds(a: String, b: String): Int {
             if (a == b) return 0
             // We order all modifications done in map's collection first (create maps first).
-            if (MAPS_COL == a) return -1
-            if (MAPS_COL == b) return 1
+            if (CATALOGS_COL == a) return -1
+            if (CATALOGS_COL == b) return 1
             // We order all modifications done in internal collection's-collection second.
             if (COLLECTIONS_COL == a) return -1
             if (COLLECTIONS_COL == b) return 1
@@ -94,7 +94,7 @@ open class Write : AnyObject() {
          * ```
          * It is very important that all code that modifies features, use the same ordering.
          *
-         * **If writes are not ordered like this, this will lead to row-level locking in wrong order, causing deadlocks in the database!**
+         * **If writes are not ordered like this, this may lead to concurrent write conflicts and deadlocks in the storage!**
          * @since 3.0
          */
         @JvmStatic
@@ -165,8 +165,8 @@ open class Write : AnyObject() {
     /**
      * The identifier of the collection to modify; must not be `null` then the map-id is read from the [NakshaContext].
      *
-     * - If a [map][NakshaMap] should be modified, then [Naksha.MAPS_COL] should be used, within [Naksha.ADMIN_MAP].
-     * - If a [dictionary][NakshaDictionary] should be modified, the [Naksha.DICTIONARIES_COL] should be used, within [Naksha.ADMIN_MAP].
+     * - If a [map][NakshaMap] should be modified, then [Naksha.CATALOGS_COL] should be used, within [Naksha.ADMIN_MAP].
+     * - If a [dictionary][NakshaDictionary] should be modified, the [Naksha.BOOKS_COL] should be used, within [Naksha.ADMIN_MAP].
      * - If a [collection][NakshaCollection] should be modified, then [Naksha.COLLECTIONS_COL] should be used, must not be used together with [Naksha.ADMIN_MAP], because the admin-map does not allow collection modification, it is internally managed.
      * - If a [feature][NakshaFeature] should be created, then the [NakshaCollection] in which the feature should be stored is required.
      * - Throws [ILLEGAL_STATE], if the collection-id is read, before being set.
@@ -447,9 +447,9 @@ open class Write : AnyObject() {
     }
 
     /**
-     * If `true`, destructive collection-schema changes (currently: dropping a [naksha.model.objects.CustomMember]) are allowed during UPSERT/UPDATE.
+     * If `true`, destructive collection-schema changes (currently: dropping a [naksha.model.objects.Member]) are allowed during UPSERT/UPDATE.
      *
-     * Without `force`, removing a [CustomMember][naksha.model.objects.CustomMember] from [NakshaCollection.members][naksha.model.objects.NakshaCollection.members] throws [NakshaError.ILLEGAL_ARGUMENT].
+     * Without `force`, removing a [Member][naksha.model.objects.Member] from [NakshaCollection.members][naksha.model.objects.NakshaCollection.members] throws [NakshaError.ILLEGAL_ARGUMENT].
      *
      * Default `false`.
      * @since 3.0
@@ -472,7 +472,7 @@ open class Write : AnyObject() {
      */
     fun createDictionary(dict: NakshaDictionary): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = DICTIONARIES_COL
+        this.collectionId = BOOKS_COL
         this.op = WriteOp.CREATE
         this.feature = dict
         return this
@@ -487,7 +487,7 @@ open class Write : AnyObject() {
      */
     fun updateDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = DICTIONARIES_COL
+        this.collectionId = BOOKS_COL
         this.op = WriteOp.UPDATE
         this.feature = dict
         this.atomic = atomic
@@ -502,7 +502,7 @@ open class Write : AnyObject() {
      */
     fun upsertDictionary(dict: NakshaDictionary): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = DICTIONARIES_COL
+        this.collectionId = BOOKS_COL
         this.op = WriteOp.UPSERT
         this.feature = dict
         return this
@@ -517,7 +517,7 @@ open class Write : AnyObject() {
      */
     fun deleteDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = DICTIONARIES_COL
+        this.collectionId = BOOKS_COL
         this.op = WriteOp.DELETE
         this.feature = dict
         this.atomic = atomic
@@ -534,7 +534,7 @@ open class Write : AnyObject() {
     @JvmOverloads
     fun deleteDictionaryById(dictId: String, version: Version? = null): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = DICTIONARIES_COL
+        this.collectionId = BOOKS_COL
         this.op = WriteOp.DELETE
         this.id = dictId
         this.version = version
@@ -550,7 +550,7 @@ open class Write : AnyObject() {
      */
     fun createMap(map: NakshaMap): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = MAPS_COL
+        this.collectionId = CATALOGS_COL
         this.op = WriteOp.CREATE
         this.feature = map
         return this
@@ -565,7 +565,7 @@ open class Write : AnyObject() {
      */
     fun updateMap(map: NakshaMap, atomic: Boolean): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = MAPS_COL
+        this.collectionId = CATALOGS_COL
         this.op = WriteOp.UPDATE
         this.feature = map
         this.atomic = atomic
@@ -581,7 +581,7 @@ open class Write : AnyObject() {
      */
     fun upsertMap(map: NakshaMap, atomic: Boolean): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = MAPS_COL
+        this.collectionId = CATALOGS_COL
         this.op = WriteOp.UPSERT
         this.feature = map
         this.atomic = atomic
@@ -597,7 +597,7 @@ open class Write : AnyObject() {
      */
     fun deleteMap(map: NakshaMap, atomic: Boolean): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = MAPS_COL
+        this.collectionId = CATALOGS_COL
         this.op = WriteOp.DELETE
         this.feature = map
         this.atomic = atomic
@@ -614,7 +614,7 @@ open class Write : AnyObject() {
     @JvmOverloads
     fun deleteMapById(id: String, version: Version? = null): Write {
         this.mapId = ADMIN_MAP
-        this.collectionId = MAPS_COL
+        this.collectionId = CATALOGS_COL
         this.op = WriteOp.DELETE
         this.id = id
         this.version = version
@@ -914,7 +914,7 @@ open class Write : AnyObject() {
      * @return `true` if this write modifies a dictionary; `false` otherwise.
      * @since 3.0
      */
-    fun isDictionaryModification(): Boolean = mapId == ADMIN_MAP && collectionId == DICTIONARIES_COL
+    fun isDictionaryModification(): Boolean = mapId == ADMIN_MAP && collectionId == BOOKS_COL
 
     /**
      * Tests if this write modifies a map.
@@ -922,7 +922,7 @@ open class Write : AnyObject() {
      * @return `true` if this write modifies a map; `false` otherwise.
      * @since 3.0
      */
-    fun isMapModification(): Boolean = mapId == ADMIN_MAP && collectionId == MAPS_COL
+    fun isMapModification(): Boolean = mapId == ADMIN_MAP && collectionId == CATALOGS_COL
 
     /**
      * Tests if this write modifies a collection.

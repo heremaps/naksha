@@ -4,8 +4,6 @@ import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.model.objects.StoreMode
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
-import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
  * Execute an **INSERT** _(aka [CREATE][naksha.model.request.WriteOp.CREATE])_ into a collection.
@@ -23,7 +21,8 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
 {
     init {
         // Transactions HEAD is the one HEAD partitioned by `next_version` and must include the column.
-        val targetColumns = if (collection.headTable.partitionByColumn == PgColumn.next_version) allColumns else headColumns
+        val targetColumns = if (collection.headTable.partitionByColumn == PgColumn.next_version)
+            collection.effectiveHistoryColumns else collection.effectiveHeadColumns
         inRows.addColumns(targetColumns)
         val members = collection.head.members
         inRows.addCustomMembers(members)
@@ -46,8 +45,9 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
 )"""
 
         // Detect any existing tombstone in HEAD for the same id (auto-purge target).
+        val effectiveHead = collection.effectiveHeadColumns
         val head_tombstone = """, head_tombstone AS (
-  SELECT ${headColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
+  SELECT ${effectiveHead.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head
   JOIN new_row ON head.id = new_row.id
   WHERE (head.version & 3) >= 2
@@ -55,10 +55,11 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
 
         // Archive the tombstone into history so the deletion is preserved in the audit trail.
         // next_version = new feature's version (the tombstone is succeeded by the new creation).
+        val effCopyHistory = collection.effectiveCopyIntoHistoryColumns
         val tombstone_to_history = if (insert_into_history != null) """, tombstone_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${effCopyHistory.joinToString(",") { it.name }})
   SELECT new_row.version AS ${PgColumn.next_version},
-         ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_tombstone.${it.name} AS ${it.name}" }}
+         ${effCopyHistory.joinToString(", ") { "head_tombstone.${it.name} AS ${it.name}" }}
   FROM head_tombstone
   JOIN new_row ON new_row.id = head_tombstone.id
   RETURNING id, fn, version
@@ -68,7 +69,7 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
         // All columns are replaced; cc resets to 1 for the new lifecycle.
         val head_overwrite = """, head_overwrite AS (
   UPDATE ${headTable.quotedName}
-  SET ${headColumns.filter { it !== PgColumn.fn }.joinToString(", ") { "${it.name} = new_row.${it.name}" }}
+  SET ${effectiveHead.filter { it !== PgColumn.fn }.joinToString(", ") { "${it.name} = new_row.${it.name}" }}
   FROM new_row
   JOIN head_tombstone ON head_tombstone.id = new_row.id
   WHERE ${headTable.quotedName}.fn = head_tombstone.fn

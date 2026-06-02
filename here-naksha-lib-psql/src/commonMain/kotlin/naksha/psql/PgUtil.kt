@@ -8,8 +8,8 @@ import naksha.jbon.*
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL
+import naksha.model.Naksha.NakshaCompanion.BOOKS_COL
+import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
@@ -43,20 +43,20 @@ class PgUtil private constructor() {
         val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(TRANSACTIONS_COL)
 
         /**
-         * The quoted identifier of the virtual maps collection to be used in queries.
+         * The quoted identifier of the virtual catalogs collection to be used in queries.
          * @since 3.0.0
          */
         @JvmField
         @JsStatic
-        val ADMIN_MAPS_COL_QUOTED = quoteIdent(MAPS_COL)
+        val ADMIN_CATALOGS_COL_QUOTED = quoteIdent(CATALOGS_COL)
 
         /**
-         * The quoted identifier of the virtual collection in which the dictionaries are stored.
+         * The quoted identifier of the virtual collection in which the books (global JBON2 dictionaries) are stored.
          * @since 3.0.0
          */
         @JvmField
         @JsStatic
-        val ADMIN_DICT_COL_QUOTED = quoteIdent(DICTIONARIES_COL)
+        val ADMIN_BOOKS_COL_QUOTED = quoteIdent(BOOKS_COL)
 
         /**
          * The quoted identifier of the virtual collections collection to be used in queries.

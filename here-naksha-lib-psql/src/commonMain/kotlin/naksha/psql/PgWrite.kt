@@ -27,7 +27,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
     /**
      * The collection into which to write.
      *
-     * - If a map is modified, this is [Naksha.MAPS_COL][naksha.model.Naksha.MAPS_COL], [asPgMap] and [asNakshaMap] will be set.
+     * - If a map is modified, this is [Naksha.CATALOGS_COL][naksha.model.Naksha.CATALOGS_COL], [asPgMap] and [asNakshaMap] will be set.
      * - If a collection is modified, this is [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL], [asPgCollection] and [asNakshaCollection] will be set.
      * @since 3.0
      */

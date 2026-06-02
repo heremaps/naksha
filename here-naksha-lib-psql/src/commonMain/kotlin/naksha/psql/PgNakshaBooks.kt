@@ -9,12 +9,12 @@ import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 
 /**
- * The internal collection in the admin-map, that keeps track of the dictionaries of the storage.
+ * The internal collection in the admin-map, that keeps track of the books (global JBON2 dictionaries) of the storage.
  */
 @JsExport
-class PgNakshaDictionaries internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
+class PgNakshaBooks internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
     .withMapId(Naksha.ADMIN_MAP)
-    .withId(Naksha.DICTIONARIES_COL)
+    .withId(Naksha.BOOKS_COL)
 ), PgInternalCollection, IDictManager {
 
     override fun putDictionary(dict: JbDictionary) {

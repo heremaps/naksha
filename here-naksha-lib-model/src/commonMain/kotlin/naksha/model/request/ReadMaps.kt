@@ -64,7 +64,7 @@ open class ReadMaps() : ReadRequest() {
     /**
      * Convert this request into a [ReadFeatures] request.
      *
-     * Actually, reading maps is not different from reading features, because the storages will have a collection called `naksha~maps` in the admin-map in which the [map features][naksha.model.objects.NakshaMap] are stored, or at least the storage will simulate this virtual collection.
+     * Actually, reading maps is not different from reading features, because the storages will have a collection called `naksha~catalogs` in the admin-map in which the [map features][naksha.model.objects.NakshaMap] are stored, or at least the storage will simulate this virtual collection.
      *
      * This is necessary, if you want a more fine-grained query, like filter maps or request past states of the map feature.
      * @return this request as [ReadFeatures] request.
@@ -72,7 +72,7 @@ open class ReadMaps() : ReadRequest() {
     fun toReadFeatures(): ReadFeatures {
         val req = ReadFeatures()
         req.mapId = Naksha.ADMIN_MAP
-        req.collectionIds.add(Naksha.MAPS_COL)
+        req.collectionIds.add(Naksha.CATALOGS_COL)
         req.featureIds.addAll(mapIds)
         return req
     }

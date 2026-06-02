@@ -77,29 +77,29 @@ class Naksha private constructor() {
         const val TRANSACTIONS_COL_NUMBER = 1
 
         /**
-         * The identifier of the collection in which maps are stored, located only within the [admin-map][ADMIN_MAP] _(`naksha~maps`)_.
+         * The identifier of the collection in which catalogs (maps) are stored, located only within the [admin-map][ADMIN_MAP] _(`naksha~catalogs`)_.
          * @see [naksha.model.objects.NakshaMap]
          * @since 3.0
          */
-        const val MAPS_COL = "naksha~maps"
+        const val CATALOGS_COL = "naksha~catalogs"
 
         /**
-         * The collection-number of the collection in which maps are stored, located in the [admin-map][ADMIN_MAP] _(`2`)_.
+         * The collection-number of the collection in which catalogs (maps) are stored, located in the [admin-map][ADMIN_MAP] _(`2`)_.
          * @since 3.0
          */
-        const val MAPS_COL_NUMBER = 2
+        const val CATALOGS_COL_NUMBER = 2
 
         /**
-         * The identifier of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~dictionaries`)_.
+         * The identifier of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~books`)_.
          * @since 3.0
          */
-        const val DICTIONARIES_COL = "naksha~dictionaries"
+        const val BOOKS_COL = "naksha~books"
 
         /**
-         * The collection-number of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP] _(`3`)_.
+         * The collection-number of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_MAP] _(`3`)_.
          * @since 3.0
          */
-        const val DICTIONARIES_COL_NUMBER = 3
+        const val BOOKS_COL_NUMBER = 3
 
         /**
          * The maximum length of identifiers _(`42`)_ .
@@ -117,14 +117,13 @@ class Naksha private constructor() {
             Pair(ADMIN_MAP, ADMIN_MAP_NUMBER),
             Pair(COLLECTIONS_COL, COLLECTIONS_COL_NUMBER),
             Pair(TRANSACTIONS_COL, TRANSACTIONS_COL_NUMBER),
-            Pair(MAPS_COL, MAPS_COL_NUMBER),
-            Pair(DICTIONARIES_COL, DICTIONARIES_COL_NUMBER),
+            Pair(CATALOGS_COL, CATALOGS_COL_NUMBER),
+            Pair(BOOKS_COL, BOOKS_COL_NUMBER),
         )
 
         /**
          * Default feature encoding used by all storages when nothing else is configured.
-         *
-         * Geometries are always stored as raw `TWKB` and tags as raw `jsonb`; only the feature encoding is configurable.
+
          */
         @JvmField
         var DEFAULT_DATA_ENCODING: DataEncoding = DataEncoding.DEFAULT
@@ -312,26 +311,12 @@ class Naksha private constructor() {
          * Otherwise, it uses the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being cleared, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
          *
          * ### Collision handling
-         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the lower 16-bit, which we use as [partition-number][partitionNumber]. The generally programming way is
+         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the lower 16-bit, which we use as [partition-number][partitionNumber]. The general approach is:
          * ```
          * new_fn = ((fn + 65536) & 0xffff_ffff_ffff_0000)
          *        | (fn & 0xffff) | 0x8000_0000_0000_0000
          * ```
-         * Within SQL, this looks generally like:
-         * ```
-         * WITH t AS (SELECT -1::bigint as fn)
-         * SELECT ((t.fn + 65536::bigint) & (-65536)::bigint)
-         *      | (t.fn & 65536::bigint)
-         *      | (-9223372036854775808)::bigint
-         * AS new_fn, t.fn as old_fn FROM t;
-         * ```
-         * Naksha adds a SQL function to simplify the increase, named `naksha_alt64`, which returns the incremented feature-number. Eventually, to find the next not colliding number, the following query can be used:
-         *
-         * ```sql
-         * SELECT naksha_alt64(t1.fn) AS fn FROM "table" t1
-         * LEFT JOIN "table" t2 ON naksha_alt64(t1.fn) = t2.fn
-         *   WHERE t2.fn IS NULL ORDER BY t1.fn LIMIT 1;
-         * ```
+         * A storage may provide a helper (e.g. `naksha_alt64`) that encapsulates this increment.
          *
          * ### Note
          * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^63)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^64) )`, which results in around 6 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^64) )` to around 63.2 percent, reaching 99.99% for around 147 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
@@ -638,9 +623,10 @@ class Naksha private constructor() {
         }
 
         /**
-         * Decode Naksha tags from their raw `jsonb` text form.
-         * @param json the JSON text to decode (the value of the `tags` `jsonb` column).
-         * @return the Naksha tags, or _null_ if [json] is _null_ / blank / not a JSON object.
+         * Decode Naksha tags from their binary representation.
+         * @param bytes the bytes to decode.
+         * @param dictReader the dictionary manager to use for decoding; if any.
+         * @return the Naksha tags.
          * @since 3.0
          */
         @JsStatic
@@ -652,7 +638,7 @@ class Naksha private constructor() {
         }
 
         /**
-         * Encodes the given tags into raw `jsonb` text.
+         * Encodes the given tags into their binary representation.
          * @param tags the tags to encode.
          * @return the JSON text representation, or _null_ if [tags] is _null_ / empty.
          * @since 3.0
@@ -665,7 +651,7 @@ class Naksha private constructor() {
         }
 
         /**
-         * Decode a GeoJSON geometry from `TWKB` encoded bytes. All Naksha geometries are stored as raw TWKB.
+         * Decode a GeoJSON geometry from its binary representation.
          * @param bytes the bytes to decode.
          * @return the geometry.
          * @since 3.0
@@ -678,7 +664,7 @@ class Naksha private constructor() {
         }
 
         /**
-         * Encodes the given GeoJSON geometry into `TWKB` bytes. All Naksha geometries are stored as raw TWKB.
+         * Encodes the given GeoJSON geometry into its binary representation.
          * @param geometry the geometry to encode.
          * @return the encoded GeoJSON geometry.
          * @since 3.0
@@ -925,7 +911,7 @@ class Naksha private constructor() {
                 var options = _adminOptions.get()
                 while (options == null) {
                     options = SessionOptions(
-                        appName = "lib-psql/$CURRENT",
+                        appName = "naksha/$CURRENT",
                         appId = NakshaContext.appId(),
                         author = NakshaContext.author(),
                         parallel = false,

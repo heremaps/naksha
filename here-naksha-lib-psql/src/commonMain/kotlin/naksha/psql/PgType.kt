@@ -127,7 +127,7 @@ class PgType : JsEnum() {
         /**
          * JSONB column type, bound as text (JSON).
          *
-         * Used by storages to materialize [naksha.model.objects.CustomMemberType.FLAT_MAP] and [naksha.model.objects.CustomMemberType.TAGS] members, and the built-in `tags` column.
+         * Used by storages to materialize [naksha.model.objects.MemberType.TAGS] and [naksha.model.objects.MemberType.TAGS_FROM_ARRAY] members.
          * @since 3.0
          */
         @JvmField

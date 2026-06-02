@@ -5,8 +5,6 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
 import naksha.model.objects.StoreMode
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
-import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE] or PURGE.
@@ -59,11 +57,15 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
   WHERE head.id = query.id
 )"""
 
+        val effHead = collection.effectiveHeadColumns
+        val effCopyHistory = collection.effectiveCopyIntoHistoryColumns
+        val hasCc = PgColumn.cc in effHead
+
         // Select the HEAD rows to act on:
         // - Optional atomic version check (expected_version).
         // - Skip rows already deleted ((version & 3) >= 2) — idempotent.
         val head_row = """, head_row AS (
-  SELECT ${headColumns.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
+  SELECT ${effHead.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
   FROM ${headTable.quotedName} AS head, query
   WHERE head.id = query.id
     AND (query.expected_version IS NULL OR (query.expected_version & -4) = (head.version & -4))
@@ -73,9 +75,9 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // Archive the current HEAD row into history (identical to how UPDATE does it).
         // next_version = the new deleted version, signalling "succeeded by a deletion".
         val head_to_history = if (insert_into_history != null) """, head_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${PgColumn.copyIntoHistoryColumnNames})
+  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${effCopyHistory.joinToString(",") { it.name }})
   SELECT $deleted_version AS ${PgColumn.next_version},
-         ${PgColumn.copyIntoHistoryColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
+         ${effCopyHistory.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   RETURNING id, fn, version
 )""" else ""
@@ -85,12 +87,10 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         val head_updated = if (!purge) """, head_updated AS (
   UPDATE ${headTable.quotedName}
   SET
-    ${PgColumn.version.name} = $deleted_version,
-    ${PgColumn.cc.name} = ${headTable.quotedName}.${PgColumn.cc.name} + 1
+    ${PgColumn.version.name} = $deleted_version${if (hasCc) ",\n    ${PgColumn.cc.name} = ${headTable.quotedName}.${PgColumn.cc.name} + 1" else ""}
   FROM head_row
   WHERE ${headTable.quotedName}.fn = head_row.fn
-  RETURNING ${headTable.quotedName}.id, ${headTable.quotedName}.fn, ${headTable.quotedName}.version,
-            ${headTable.quotedName}.${PgColumn.cc.name}
+  RETURNING ${headTable.quotedName}.id, ${headTable.quotedName}.fn, ${headTable.quotedName}.version${if (hasCc) ",\n            ${headTable.quotedName}.${PgColumn.cc.name}" else ""}
 )""" else ""
 
         // For PURGE: DELETE the HEAD row entirely.
@@ -104,8 +104,8 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         // end-of-lifetime. The tombstone's next_version == version (closed interval).
         val history_tombstone = if (purge && insert_into_history != null) """, history_tombstone AS (
   INSERT INTO ${insert_into_history.quotedName}
-  (${PgColumn.cc}, ${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
-  SELECT head_row.cc, head_row.fn, $deleted_version, $deleted_version, null::bytea,
+  (${if (hasCc) "${PgColumn.cc}, " else ""}${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}, ${PgColumn.base_tn}, ${PgColumn.tombstoneColumns.joinToString(", ")})
+  SELECT ${if (hasCc) "head_row.cc, " else ""}head_row.fn, $deleted_version, $deleted_version, null::bytea,
          ${PgColumn.tombstoneColumns.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
   FROM head_row
   RETURNING id, fn, version
@@ -113,12 +113,13 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
 
         // The returned row for DELETE is the updated HEAD row (same data, new version/cc).
         // We reconstruct it from head_row overriding the two changed columns.
+        val effHeadNoCcVersionFn = effHead.filter { it !== PgColumn.cc && it !== PgColumn.version && it !== PgColumn.fn }
         val SQL = """$query$head_select$head_row$head_to_history$head_updated$head_deleted$history_tombstone
 SELECT
     head_row.fn AS fn,
     $deleted_version AS version,
-    COALESCE(head_updated.${PgColumn.cc.name}, head_row.${PgColumn.cc.name} + 1) AS ${PgColumn.cc},
-    ${headColumns.filter { it !== PgColumn.cc && it !== PgColumn.version && it !== PgColumn.fn }.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }},
+    ${if (hasCc) "COALESCE(head_updated.${PgColumn.cc.name}, head_row.${PgColumn.cc.name} + 1) AS ${PgColumn.cc}," else ""}
+    ${effHeadNoCcVersionFn.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}${if (effHeadNoCcVersionFn.isNotEmpty()) "," else ""}
     null::int8 AS ${PgColumn.next_version},
     ${if (head_to_history.isNotEmpty()) "head_to_history.version AS head_history_version," else ""}
     ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else ""}
@@ -148,7 +149,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.id = query.id" else ""}
             .withMapNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
             .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
-            .addColumns(allColumns)
+            .addColumns(collection.effectiveHistoryColumns)
             .addColumn("head_history_version", PgType.INT64)
             .addColumn("history_version", PgType.INT64)
             .addColumn("select_fn", PgType.INT64)
