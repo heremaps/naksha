@@ -48,7 +48,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
         WriteOp.CREATE, WriteOp.UPSERT -> Action.CREATED
         WriteOp.UPDATE -> Action.UPDATED
         WriteOp.DELETE, WriteOp.PURGE -> Action.DELETED
-        else -> Action.UNDEFINED
+        else -> Action.VERSION
     }
 
     /**

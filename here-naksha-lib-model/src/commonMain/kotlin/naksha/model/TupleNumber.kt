@@ -479,8 +479,10 @@ data class TupleNumber(
             val year = parts[offset + YEAR].toInt(10)
             val month = parts[offset + MONTH].toInt(10)
             val day = parts[offset + DAY].toInt(10)
-            val seq = Int64(parts[offset + SEQ].toLong())
-            val version = Version.of(year, month, day, seq)
+            // The seq field in the string carries the raw lower 32 bits (action in bits 1-0).
+            val seqRaw = Int64(parts[offset + SEQ].toLong())
+            val versionTxn = (Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) or seqRaw
+            val version = Version(versionTxn)
             return TupleNumber(storageNumber, mapNumber, colNumber, featureNumber, version)
         }
     }

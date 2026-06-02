@@ -8,41 +8,49 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * Wrapper for a version.
+ * Wrapper for a version (transaction number), encoded as an unsigned 56-bit integer (the upper 8 bits are always zero).
  *
- * The version is a transaction-number, being a 56-bit integer, split into four parts:
- * - Year: The year in which the transactions started (e.g. 2024).
- * - Month: The month of the year in which the transaction started (1 to 12, e.g. 9 for September).
- * - Day: The day of the month in which the transaction started (1 to 31).
- * - Seq: The local sequence-number in this day.
+ * There are two kinds of versions:
  *
- * Every day starts with the sequence-number reset to zero. The final 64-bit encoding of a version is done as:
- * - 8-bit reserved, always 0 {shift-by 56}.
- * - 15-bit year, between 0 and 32767 {shift-by 41}.
- * - 4-bit month, between 1 (January) and 12 (December) {shift-by 37}.
- * - 5-bit day, between 1 and 31 {shift-by 32}.
- * - 32-bit unsigned sequence number.
+ * ### Dated version (`isDated() == true`, year ≥ 16)
  *
- * This concept allows up to 4 billion transactions per day (between 0 and 4,294,967,295, 2^32-1). It will overflow in browsers in the year 4096, because in that year the transaction number needs 53-bit to be encoded, which is beyond the precision of a double floating point number. Should there be more than 4 billion transaction in a single day, this will overflow into the next day and potentially into an invalid day, should it happen at the last day of a given month. We ignore this situation, it seems currently impossible. Check in the browser:
- *
+ * Bits are laid out as follows (MSB → LSB):
  * ```
- * ((4095n << 41n)+(12n << 37n)+(31n << 32n)+4294967295n) <= BigInt(Number.MAX_SAFE_INTEGER) : true
- * (4096n << 41n) <= BigInt(Number.MAX_SAFE_INTEGER): false
+ * | 63–56        | 55–41       | 40–37       | 36–32     | 31–2          | 1–0          |
+ * | 8-bit (zero) | 15-bit year | 4-bit month | 5-bit day | 30-bit seq    | 2-bit action |
  * ```
+ * - **year** (`txn ushr 41`): calendar year, must be ≥ 16 and ≤ 32767. JavaScript-safe up to year 4095
+ *   (53-bit precision limit: `(4095 shl 41) + ...` still fits in a JS double).
+ * - **month** (`(txn ushr 37) and 0xF`): 1–12.
+ * - **day** (`(txn ushr 32) and 0x1F`): 1–31.
+ * - **seq** (`(txn ushr 2) and 0x3FFF_FFFF`): 30-bit sequence number within the day, 0–1073741823.
+ * - **action** (`txn and 3`): lower 2 bits, see [Action].
  *
- * The human-readable representation as a string ([toString]) is: `{year}:{month}:{day}:{seq}`
+ * Use [auto] to construct a dated version.
  *
- * @property txn the transaction number as 64-bit integer.
+ * ### Manual version (`isManualVersion() == true`, year < 16)
+ *
+ * The upper 21 bits (63–43) are always zero. The lower 43 bits hold an arbitrary value, with bits 1–0
+ * still encoding the [Action]. Manual versions are hand-assigned and not timestamp-derived.
+ *
+ * Use [manual] to construct a manual version.
+ *
+ * ### String representation
+ *
+ * [toString] returns `{year}:{month}:{day}:{seq}` for dated versions.
+ *
+ * @property txn the raw 64-bit transaction number (upper 8 bits always zero).
  * @since 3.0
  */
 @JsExport
 open class Version(@JvmField val txn: Int64) : Comparable<Version> {
 
     /**
-     * Convert a transaction number, given as long, into a version.
+     * Convert a transaction number given as [Long] into a version.
      * @param txn the transaction number.
      * @since 3.0
      */
@@ -51,31 +59,52 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     constructor(txn: Long) : this(Int64(txn))
 
     companion object VersionCompanion {
-        /**
-         * Create the version number from a double (in JavaScript, number).
-         * @param v the version number encoded in a double.
-         * @return the version wrapper.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun fromDouble(v: Double) : Version = Version(Int64(v))
+
+        /** Maximum year value (15-bit, JS-safe upper bound). */
+        private const val YEAR_MAX = 32767
+        /** Minimum year for a dated version. */
+        private const val YEAR_DATED_MIN = 16
+
+        /** Mask for the 30-bit sequence field. */
+        private val SEQ_30_MASK = Int64(0x3FFF_FFFF)
+
+        /** Mask for the 41-bit manual-version seq field (upper 21 bits of the 64-bit value must be 0). */
+        private val MANUAL_SEQ_MASK = Int64(0x1FF_FFFF_FFFF) // 41 bits
 
         /**
-         * Creates the version number from a string representation, being either a pure decimal number of the transaction-number (so a 64-bit unsigned integer) or the stringified human-readable variant.
-         * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given string is of an invalid format.
-         * @param s the string representation.
-         * @return the version.
+         * Create a version from a double (JavaScript number).
+         * @param v the version number encoded as a double.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun fromString(s: String) : Version {
+        fun fromDouble(v: Double): Version = Version(Int64(v))
+
+        /**
+         * Creates a version from its string representation.
+         *
+         * Accepts either:
+         * - A pure decimal encoding of the 64-bit [txn] value.
+         * - The human-readable form `{year}:{month}:{day}:{seq}` (seq is the 30-bit sequence, no action bits).
+         *
+         * Throws [NakshaError.ILLEGAL_ARGUMENT] if the string is invalid.
+         * @param s the string representation.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun fromString(s: String): Version {
             try {
                 if (s.indexOf(':') >= 0) {
                     val parts = s.split(':')
-                    if (parts.size != 4) throw Exception("Too many parts")
-                    return of(parts[0].toInt(), parts[1].toInt(), parts[0].toInt(), Int64(parts[0].toLong()))
+                    if (parts.size != 4) throw Exception("Expected 4 colon-separated parts")
+                    // The 4th field carries the raw lower 32 bits of the txn (including action bits in 1-0).
+                    val year  = parts[0].toInt()
+                    val month = parts[1].toInt()
+                    val day   = parts[2].toInt()
+                    val seqRaw = Int64(parts[3].toLong()) // raw lower 32 bits, includes action in bits 1-0
+                    val txn = (Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) or seqRaw
+                    return Version(txn)
                 } else {
                     return Version(Int64(s.toLong()))
                 }
@@ -85,38 +114,81 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         }
 
         /**
-         * Create a version from its parts.
-         * @param year the year to encode, between 0 and 8388608 (23-bit).
-         * @param month the month to encode, between 1 and 12 (4-bit).
-         * @param day the day to encode, between 1 and 31 (5-bit).
-         * @param seq the sequence number with in the day, between 0 and 4294967295 (32-bit).
+         * Constructs a **dated** version from its components.
+         *
+         * Validates all arguments against their allowed ranges and throws [IllegalArgumentException] if any
+         * value is out of range.
+         *
+         * @param year  calendar year; must be in 16..32767.
+         * @param month month of the year; must be in 1..12.
+         * @param day   day of the month; must be in 1..31.
+         * @param seq   30-bit sequence number within the day; must be in 0..1073741823 (0x3FFF_FFFF).
+         * @param action the [Action] to encode in the lower 2 bits; defaults to [Action.CREATED].
          * @since 3.0
          */
         @JvmStatic
         @JsStatic
-        fun of(year: Int, month: Int, day: Int, seq: Int64): Version =
-            Version((Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) + seq)
-
-        /**
-         * Create a version from its parts.
-         * @param seq the sequence number with in the day, between 0 and 4294967295 (32-bit).
-         * @since 3.0
-         */
-        @JvmStatic
-        @JsStatic
-        fun now(seq: Int64): Version {
-            val now = Timestamp.now()
-            val txn = (Int64(now.year) shl 41) or
-                      (Int64(now.month) shl 37) or 
-                      (Int64(now.day) shl 32) or
-                      seq
+        @JvmOverloads
+        fun auto(year: Int, month: Int, day: Int, seq: Int64, action: Action = Action.CREATED): Version {
+            require(year in YEAR_DATED_MIN..YEAR_MAX) {
+                "year must be in $YEAR_DATED_MIN..$YEAR_MAX, got $year"
+            }
+            require(month in 1..12) { "month must be in 1..12, got $month" }
+            require(day in 1..31)   { "day must be in 1..31, got $day" }
+            require(seq >= Int64(0) && seq <= SEQ_30_MASK) {
+                "seq must be in 0..${SEQ_30_MASK.toLong()} (30-bit), got $seq"
+            }
+            val txn = (Int64(year) shl 41) or
+                      (Int64(month) shl 37) or
+                      (Int64(day) shl 32) or
+                      (seq shl 2) or
+                      Int64(action.intValue)
             return Version(txn)
         }
 
         /**
-         * The _HEAD_ version, being used when new [Tuple]'s are created.
+         * Constructs a **manual** version.
          *
-         * If a [Tuple] is current _HEAD_, its [Metadata.nextVersion] will be this version's [txn] (in HEAD tables the column is not stored, this value is synthesized on read).
+         * The resulting [txn] must have its upper 21 bits (63–43) all zero, which means the effective
+         * value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since
+         * the lower 2 bits are reserved for [action].
+         *
+         * Throws [IllegalArgumentException] if [seq] is out of range.
+         *
+         * @param seq    41-bit sequence value; must be in 0..0x1FF_FFFF_FFFF.
+         * @param action the [Action] to encode in the lower 2 bits; defaults to [Action.CREATED].
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        @JvmOverloads
+        fun manual(seq: Int64, action: Action = Action.CREATED): Version {
+            require(seq >= Int64(0) && seq <= MANUAL_SEQ_MASK) {
+                "seq for a manual version must be in 0..${MANUAL_SEQ_MASK.toLong()} (41-bit), got $seq"
+            }
+            return Version((seq shl 2) or Int64(action.intValue))
+        }
+
+        /**
+         * Creates a dated version for the current wall-clock time.
+         *
+         * @param seq    30-bit sequence number within the current day; must be in 0..1073741823.
+         * @param action the [Action] to encode; defaults to [Action.CREATED].
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        @JvmOverloads
+        fun now(seq: Int64, action: Action = Action.CREATED): Version {
+            val now = Timestamp.now()
+            return auto(now.year, now.month, now.day, seq, action)
+        }
+
+        /**
+         * The _HEAD_ sentinel version (`txn == 0`).
+         *
+         * When a [Tuple] is the current HEAD state its `nextVersion` is synthesised as this value
+         * (the column is not physically stored in HEAD tables).
          * @since 3.0
          */
         @JvmField
@@ -124,42 +196,46 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         val HEAD = Version(0L)
 
         /**
-         * The minimal version, all versions below this one are invalid.
+         * The minimum valid dated version (year=16, month=1, day=1, seq=0, action=CREATED).
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val MIN = of(0, 1, 1, Int64(0))
+        val MIN = auto(16, 1, 1, Int64(0))
 
         /**
-         * The minimum value of the sequence, so just zero.
+         * The minimum value of the 30-bit sequence field (zero).
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val SEQ_MIN = Int64(0)
+        val SEQ_MIN: Int64 = Int64(0)
 
         /**
-         * The maximum value for the sequence, can be used as well as bitmask.
+         * The maximum value of the 30-bit sequence field (`0x3FFF_FFFF` = 1073741823).
+         * Also usable as a bitmask to extract the sequence from a shifted value.
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val SEQ_MAX = Int64(0x0000_0000_ffff_ffff)
+        val SEQ_MAX: Int64 = SEQ_30_MASK
 
         /**
-         * The value to be added to calculate the end of a day.
+         * The raw increment to add to [txn] to advance the sequence counter by one while keeping the
+         * action bits unchanged. Equal to `1 shl 2` = `4`.
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val SEQ_END = Int64(0x0000_0001_0000_0000)
-     }
+        val SEQ_END: Int64 = Int64(1) shl 2
+    }
 
     private var _year = -1
 
     /**
-     * The year when the version started, a value between 0 and 8388608 (23-bit).
+     * The year component of a dated version (`txn ushr 41`).
+     * For manual versions (year < 16) this value has no calendar meaning.
+     * @since 3.0
      */
     val year: Int
         get() {
@@ -170,44 +246,66 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     private var _month = -1
 
     /**
-     * The month when the version started, a value between 1 and 12 (4-bit).
+     * The month component of a dated version (`(txn ushr 37) and 0xF`), 1–12.
      * @since 3.0
      */
     val month: Int
         get() {
-            if (_month < 0) _month = (txn ushr 37).toInt() and 15
+            if (_month < 0) _month = (txn ushr 37).toInt() and 0xF
             return _month
         }
 
     private var _day = -1
 
     /**
-     * The day when the version started, a value between 1 and 12 (4-bit).
+     * The day component of a dated version (`(txn ushr 32) and 0x1F`), 1–31.
      * @since 3.0
      */
-    val day
-        get(): Int {
-            if (_day < 0) _day = (txn ushr 32).toInt() and 31
+    val day: Int
+        get() {
+            if (_day < 0) _day = (txn ushr 32).toInt() and 0x1F
             return _day
         }
 
     private var _seq: Int64? = null
 
     /**
-     * The sequence number within the day, a value between 0 and 4294967295 (32-bit).
+     * The 30-bit sequence number (`(txn ushr 2) and 0x3FFF_FFFF`).
+     *
+     * For dated versions this is the sequence within the day (0–1073741823).
+     * For manual versions this is the upper 30 bits of the 41-bit seq value passed to [manual].
      * @since 3.0
      */
     val seq: Int64
         get() {
-        var seq = _seq
-        if (seq == null) {
-           seq = txn and SEQ_MAX
-           _seq = seq
+            var s = _seq
+            if (s == null) {
+                s = (txn ushr 2) and SEQ_MAX
+                _seq = s
+            }
+            return s
         }
-        return seq
-    }
 
-    private lateinit var _string: String
+    /**
+     * Returns `true` if this is a **dated** version, i.e. the year field (`txn ushr 41`) is ≥ 16.
+     * @since 3.0
+     */
+    fun isDated(): Boolean = (txn ushr 41).toInt() >= 16
+
+    /**
+     * Returns `true` if this is a **manual** version, i.e. the year field is < 16 and the upper 21 bits are zero.
+     * This is the logical inverse of [isDated].
+     * @since 3.0
+     */
+    fun isManualVersion(): Boolean = !isDated()
+
+    /**
+     * Returns the [Action] encoded in the lower 2 bits of [txn].
+     * @since 3.0
+     */
+    fun action(): Action = Action.fromValue(txn.toInt() and 3)
+
+    private var _string: String? = null
 
     override fun equals(other: Any?): Boolean {
         if (other is Int64) return txn eq other
@@ -223,12 +321,20 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     override fun hashCode(): Int = txn.hashCode()
 
     /**
-     * Returns version number as string.
-     * @return `{year}:{month}:{day}:{seq}`
+     * Returns the version as a human-readable string: `{year}:{month}:{day}:{seqWithAction}`.
+     *
+     * The 4th field is the raw lower 32 bits of [txn], which includes the 30-bit sequence in bits
+     * 31–2 and the [Action] in bits 1–0. Use [seq] to obtain the pure 30-bit sequence value.
      * @since 3.0
      */
     override fun toString(): String {
-        if (!this::_string.isInitialized) _string = "$year:$month:$day:$seq"
-        return _string
+        var s = _string
+        if (s == null) {
+            // Output the raw lower 32 bits so that the action bits survive a round-trip.
+            val seqWithAction = txn and Int64(0xFFFFFFFFL)
+            s = "$year:$month:$day:$seqWithAction"
+            _string = s
+        }
+        return s
     }
 }

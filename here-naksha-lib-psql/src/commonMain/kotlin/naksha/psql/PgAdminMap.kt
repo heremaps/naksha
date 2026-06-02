@@ -421,8 +421,8 @@ SELECT basics.*, procs.* FROM basics, procs;
                     }
                     if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
                         logger.info("Transaction counter is still at wrong day, rollover to next day")
-                        // Rollover, we update sequence of the day. Start at seq=4 to keep bits 0-1 clean for action encoding.
-                        version = Version.of(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(4))
+                        // Rollover, we update sequence of the day. Start at seq=1 (auto() encodes action in bits 1-0).
+                        version = Version.auto(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(1))
                         txn = version.txn
                         conn.execute("SELECT setval($1, $2)", arrayOf(txnSequenceOid, txn + 4)).close()
                     }
