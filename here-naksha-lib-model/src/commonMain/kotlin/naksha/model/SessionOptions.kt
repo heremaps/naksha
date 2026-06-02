@@ -21,7 +21,7 @@ import kotlin.jvm.JvmStatic
 @JsExport
 data class SessionOptions @JvmOverloads constructor(
     /**
-     * An arbitrary name for debug logs, in `lib-psql` this will be used in the database connection as name and shown in `pg_stat_activity`.
+     * An arbitrary name used to identify this session in debug logs and monitoring tools.
      * @since 3.0
      */
     @JvmField

@@ -8,22 +8,22 @@ import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
 
 /**
- * An ordered list of user-defined SQL columns on a [NakshaCollection].
+ * An ordered list of [Member]s on a [NakshaCollection].
  * @since 3.0
  */
 @JsExport
-open class CustomMemberList() : ListProxy<CustomMember>(CustomMember::class) {
+open class MemberList() : ListProxy<Member>(Member::class) {
 
     /**
      * Construct a list from a vararg of members.
      * @since 3.0
      */
     @JsName("fromMembers")
-    constructor(vararg members: CustomMember) : this() {
+    constructor(vararg members: Member) : this() {
         addAll(members.toList())
     }
 
-    companion object CustomMemberList_C {
+    companion object MemberList_C {
         /**
          * The maximum number of members allowed in a single collection.
          * @since 3.0
@@ -31,7 +31,7 @@ open class CustomMemberList() : ListProxy<CustomMember>(CustomMember::class) {
         const val MAX_MEMBERS = 64
 
         @JvmStatic
-        fun of(vararg members: CustomMember): CustomMemberList =
-            CustomMemberList().apply { addAll(members.toList()) }
+        fun of(vararg members: Member): MemberList =
+            MemberList().apply { addAll(members.toList()) }
     }
 }

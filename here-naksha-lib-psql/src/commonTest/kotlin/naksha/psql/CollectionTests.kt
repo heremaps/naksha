@@ -25,11 +25,17 @@ import naksha.model.objects.NakshaCollection.NakshaCollection_C.REF_POINT_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
+import naksha.model.objects.Index
+import naksha.model.objects.IndexType
+import naksha.model.objects.Member
+import naksha.model.objects.MemberList
+import naksha.model.objects.MemberType
 import naksha.model.request.ErrorResponse
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.*
+import naksha.psql.PgType
 
 class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
@@ -132,8 +138,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         checkIndicesCreatedForTable(collection.id, indices)
         checkIndicesCreatedForTable("${collection.id}\$meta", indices)
         // Note: $del table no longer exists; deleted rows are kept in HEAD with (version & 3) == 2.
-        checkIndicesCreatedForTable("${collection.id}\$hst\$y$currentYear", indices)
-        checkIndicesCreatedForTable("${collection.id}\$hst\$y${currentYear + 1}", indices)
+        checkIndicesCreatedForTable("${collection.id}\$hst\$$currentYear", indices)
+        checkIndicesCreatedForTable("${collection.id}\$hst\$${currentYear + 1}", indices)
         checkIndicesCreatedForTable("${collection.id}\$meta", indices)
     }
 
@@ -411,5 +417,249 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // Then
         assertIs<ErrorResponse>(response)
         assertTrue(response.error.isConflict())
+    }
+
+    // -------------------------------------------------------------------------
+    // Members-mode DDL tests
+    // -------------------------------------------------------------------------
+
+    /**
+     * When [NakshaCollection.members] is **null** (the default / undefined), the collection must be
+     * created with all default columns and all default optional indices — backward-compatible behaviour.
+     */
+    @Test
+    fun membersUndefined_shouldCreateAllColumnsAndDefaultIndices() {
+        val collection = NakshaCollection("members_null_test", map.id)
+        // members is null by default — do NOT set it
+        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+
+        storage.adminConnection().use { conn ->
+            // Columns: must include all headColumns (28 columns, no next_version).
+            val columns = mutableListOf<String>()
+            conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
+                arrayOf(map.id, collection.id)
+            ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
+            assertEquals(
+                PgColumn.headColumns.size, columns.size,
+                "Expected all ${PgColumn.headColumns.size} head columns, got: $columns"
+            )
+            assertTrue(PgColumn.headColumns.all { it.name in columns })
+
+            // Indices: must include all default optional indices on the HEAD table.
+            val indexNames = mutableListOf<String>()
+            conn.execute(
+                "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
+                arrayOf(map.id, collection.id)
+            ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
+            val defaultIndices = PgIndex.DEFAULT_INDICES.filter { !it.internal }
+            for (pgIdx in defaultIndices) {
+                val expectedId = pgIdx.id(collection.id)
+                assertTrue(expectedId in indexNames || PgIndex.id_unique.id(collection.id) in indexNames,
+                    "Expected default index '${pgIdx.name}' (id='$expectedId') to be present, found: $indexNames")
+            }
+        }
+    }
+
+    /**
+     * When [NakshaCollection.members] is explicitly an **empty list**, the collection must be
+     * created with all standard head columns (full schema) and no default optional indices —
+     * only the internal indices (`id_unique`, `version`).
+     */
+    @Test
+    fun membersEmpty_shouldCreateOnlyMandatoryColumnsAndNoDefaultIndices() {
+        val collection = NakshaCollection("members_empty_test", map.id).apply {
+            members = MemberList() // explicitly empty
+        }
+        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+
+        storage.adminConnection().use { conn ->
+            // Columns: must be exactly the full head column set (same as members=null).
+            val columns = mutableListOf<String>()
+            conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
+                arrayOf(map.id, collection.id)
+            ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
+            assertEquals(
+                PgColumn.headColumns.size, columns.size,
+                "Expected all ${PgColumn.headColumns.size} head columns, got: $columns"
+            )
+            assertTrue(PgColumn.headColumns.all { it.name in columns })
+
+            // Indices: no default optional indices must be present.
+            val indexNames = mutableListOf<String>()
+            conn.execute(
+                "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
+                arrayOf(map.id, collection.id)
+            ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
+            val defaultIndices = PgIndex.DEFAULT_INDICES.filter { !it.internal }
+            for (pgIdx in defaultIndices) {
+                val expectedId = pgIdx.id(collection.id)
+                assertFalse(expectedId in indexNames,
+                    "Default index '${pgIdx.name}' (id='$expectedId') should NOT be present, found: $indexNames")
+            }
+        }
+    }
+
+    /**
+     * When [NakshaCollection.members] is a **non-empty list**, the collection must be created with
+     * all standard head columns plus the declared custom member columns, and only the custom indices
+     * declared via [NakshaCollection.indices] — no other default optional indices.
+     */
+    @Test
+    fun membersNonEmpty_shouldCreateMandatoryPlusCustomColumnsAndCustomIndicesOnly() {
+        val collection = NakshaCollection("members_custom_test", map.id).apply {
+            addMember(Member("score", MemberType.INT64))
+            addIndex(Index("idx_score", IndexType.BTREE, "score"))
+        }
+        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+
+        storage.adminConnection().use { conn ->
+            // Columns: full head columns + 1 custom column (score).
+            val columns = mutableListOf<String>()
+            conn.execute(
+                "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
+                arrayOf(map.id, collection.id)
+            ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
+            val expectedCount = PgColumn.headColumns.size + 1 // +1 for score
+            assertEquals(expectedCount, columns.size,
+                "Expected ${PgColumn.headColumns.size} head columns + 1 custom column, got: $columns")
+            assertTrue(PgColumn.headColumns.all { it.name in columns })
+            val customColName = PgCustomMemberValues.pgColumnName("score")
+            assertTrue(customColName in columns, "Custom column '$customColName' not found in: $columns")
+
+            // Indices: no default optional indices; only the declared custom index must be present.
+            val indexNames = mutableListOf<String>()
+            conn.execute(
+                "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
+                arrayOf(map.id, collection.id)
+            ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
+            val defaultIndices = PgIndex.DEFAULT_INDICES.filter { !it.internal }
+            for (pgIdx in defaultIndices) {
+                val expectedId = pgIdx.id(collection.id)
+                assertFalse(expectedId in indexNames,
+                    "Default index '${pgIdx.name}' (id='$expectedId') should NOT be present, found: $indexNames")
+            }
+            // Custom index must be present.
+            val customIndexId = "${collection.id}\$ci_idx_score"
+            assertTrue(customIndexId in indexNames,
+                "Custom index '$customIndexId' not found in: $indexNames")
+        }
+    }
+
+    /**
+     * Verifies that when a collection with custom members of every type is created, the physical
+     * column order in both the HEAD table and the HISTORY table follows the standard pattern:
+     *
+     * HEAD:    [standard head columns], <custom members sorted by type>
+     * HISTORY: [all standard columns including next_version], <custom members sorted by type>
+     *
+     * Custom members are sorted: INT64, FLOAT64, INT32, FLOAT32, INT16, INT8, BOOLEAN, STRING, BYTE_ARRAY, FLAT_MAP/TAGS.
+     */
+    @Test
+    fun membersCustom_shouldOrderColumnsForMinimalPadding() {
+        val collection = NakshaCollection("members_order_test", map.id).apply {
+            // Add one member of every type (deliberately in wrong order to prove sorting works).
+            addMember(Member("z_str",   MemberType.STRING))
+            addMember(Member("a_i32",   MemberType.INT32))
+            addMember(Member("b_i64",   MemberType.INT64))
+            addMember(Member("c_f64",   MemberType.FLOAT64))
+            addMember(Member("d_bytes", MemberType.BYTE_ARRAY))
+            addMember(Member("e_bool",  MemberType.BOOLEAN))
+            addMember(Member("f_i8",    MemberType.INT8))
+            addMember(Member("g_i16",   MemberType.INT16))
+            addMember(Member("h_f32",   MemberType.FLOAT32))
+            addMember(Member("i_json",  MemberType.TAGS))
+        }
+        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+
+        // Expected custom column order after sorting (type bucket, then name):
+        // INT64: b_i64 | FLOAT64: c_f64 | INT32: a_i32 | FLOAT32: h_f32 | INT16: g_i16 | INT8: f_i8 | BOOLEAN: e_bool | STRING: z_str | BYTE_ARRAY: d_bytes | FLAT_MAP: i_json
+        // Custom columns are slotted into their type bucket after the last standard column of the same group.
+        // Buckets with no matching standard column are flushed immediately after the preceding bucket.
+        // Bucket mapping: INT64=0, FLOAT64=1, INT32=2, FLOAT32=3, INT16=4, INT8=5, BOOLEAN=6, STRING=7, BYTE_ARRAY=8, TAGS=9
+        val customByBucket = mapOf(
+            0 to listOf("b_i64"),        // INT64 → after gbn
+            1 to listOf("c_f64"),        // FLOAT64 → after cv3
+            2 to listOf("a_i32"),        // INT32 → after cc
+            3 to listOf("h_f32"),        // FLOAT32 → no std col, flush after INT32 group
+            4 to listOf("g_i16"),        // INT16 → no std col
+            5 to listOf("f_i8"),         // INT8 → no std col
+            6 to listOf("e_bool"),       // BOOLEAN → no std col, all four flush after cc
+            7 to listOf("z_str"),        // STRING → after cs3
+            8 to listOf("d_bytes"),      // BYTE_ARRAY → after attachment
+            9 to listOf("i_json"),       // TAGS → after BYTE_ARRAY group
+        )
+
+        fun assertColumnOrder(tableName: String, expectNextVersion: Boolean) {
+            val columns = mutableListOf<String>()
+            storage.adminConnection().use { conn ->
+                conn.execute(
+                    "SELECT column_name FROM information_schema.columns WHERE table_schema = \$1 AND table_name = \$2 ORDER BY ordinal_position",
+                    arrayOf(map.id, tableName)
+                ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
+            }
+            assertTrue(columns.isNotEmpty(), "No columns found for table '$tableName'")
+
+            // Build expected full order: standard columns interleaved with custom members in their type bucket.
+            // PgType → bucket mapping (matches pgTypeSortOrder in PgTable).
+            val pgTypeBucket = mapOf(
+                PgType.INT64 to 0, PgType.DOUBLE to 1, PgType.INT to 2,
+                PgType.FLOAT to 3, PgType.SHORT to 4, PgType.BOOLEAN to 6,
+                PgType.STRING to 7, PgType.BYTE_ARRAY to 8,
+            )
+            val baseStdCols = if (expectNextVersion) PgColumn.allColumns else PgColumn.headColumns
+            // Determine last standard column index per bucket.
+            val lastIdxForBucket = mutableMapOf<Int, Int>()
+            for ((idx, col) in baseStdCols.withIndex()) {
+                lastIdxForBucket[pgTypeBucket[col.type] ?: 11] = idx
+            }
+            val standardBuckets = lastIdxForBucket.keys.sorted()
+            val remaining = customByBucket.toMutableMap()
+            val expected = mutableListOf<String>()
+            for ((idx, col) in baseStdCols.withIndex()) {
+                expected.add(col.name)
+                val bucket = pgTypeBucket[col.type] ?: 11
+                if (lastIdxForBucket[bucket] == idx) {
+                    // Flush this bucket.
+                    remaining.remove(bucket)?.let { expected.addAll(it) }
+                    // Flush intermediate gap buckets before next standard bucket.
+                    val nextStd = standardBuckets.firstOrNull { it > bucket }
+                    for (b in remaining.keys.sorted()) {
+                        if (nextStd != null && b >= nextStd) break
+                        remaining.remove(b)?.let { expected.addAll(it) }
+                    }
+                }
+            }
+            // Flush any remaining (beyond last standard bucket, e.g. TAGS).
+            for (b in remaining.keys.sorted()) remaining[b]?.let { expected.addAll(it) }
+
+            // Filter actual to only the columns we care about (skip any extras not in expected).
+            val expectedSet = expected.toSet()
+            val actual = columns.filter { it in expectedSet }
+            assertEquals(expected, actual,
+                "Column order mismatch in '$tableName'.\nExpected: $expected\nActual  : $actual\nFull list: $columns")
+        }
+
+        val headTable    = collection.id
+        val historyTable = "${collection.id}\$hst"
+        assertColumnOrder(headTable,    expectNextVersion = false)
+        assertColumnOrder(historyTable, expectNextVersion = true)
+    }
+
+    /**
+     * When a collection is created with an explicit [NakshaCollection.members] list and an
+     * [NakshaCollection.indices] list that references a member name that was not declared, the
+     * storage must reject the request with an error — the collection must NOT be created.
+     */
+    @Test
+    fun createCollection_shouldFailWhenIndexReferencesUnknownMember() {
+        val collection = NakshaCollection("members_bad_index_test", map.id).apply {
+            // Declare one real custom member ...
+            addMember(Member("score", MemberType.INT64))
+            // ... but index a name that does not exist as a member.
+            addIndex(Index("idx_ghost", IndexType.BTREE, "ghost_column"))
+        }
+        executeWriteErrorResponse(WriteRequest().add(Write().createCollection(collection)))
     }
 }

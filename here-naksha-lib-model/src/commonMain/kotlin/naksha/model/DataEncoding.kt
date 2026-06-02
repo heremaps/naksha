@@ -26,8 +26,8 @@ class DataEncoding : JsEnum() {
     override fun initClass() {}
 
     /**
-     * The numeric tag for this encoding (0..3). Persisted by some SQL helpers (e.g.
-     * `naksha_feature(bytea, encoding int4)`) that need to dispatch on it at query time.
+     * The numeric tag for this encoding (0..3). May be used by storage implementations that
+     * need to persist and dispatch on the encoding at runtime.
      */
     var intValue: Int = 0
         private set

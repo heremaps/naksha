@@ -19,7 +19,7 @@ class PgHistory(val head: PgHead) : PgTable(
     partitionByColumn = PgColumn.next_version
 ) {
     /**
-     * All partitions, with key being the year (`txn >> 41`).
+     * All partitions, with key being the partition key (`next_version >> shift`).
      */
     @JvmField
     val years: MutableMap<Int, PgHistoryYear> = mutableMapOf()
@@ -35,11 +35,11 @@ class PgHistory(val head: PgHead) : PgTable(
         for (entry in years) entry.value.create(conn)
     }
 
-    fun createYear(conn: PgConnection, year: Int) {
-        var yearTable = years[year]
+    fun createYear(conn: PgConnection, partitionKey: Int) {
+        var yearTable = years[partitionKey]
         if (yearTable == null) {
-            yearTable = PgHistoryYear(this, year)
-            years[year] = yearTable
+            yearTable = PgHistoryYear(this, partitionKey)
+            years[partitionKey] = yearTable
         }
         yearTable.create(conn)
         for (index in indices) {
@@ -47,10 +47,10 @@ class PgHistory(val head: PgHead) : PgTable(
         }
     }
 
-    fun addYear(year: Int) {
-        if (year !in years) {
-            val yearTable = PgHistoryYear(this, year)
-            years[year] = yearTable
+    fun addYear(partitionKey: Int) {
+        if (partitionKey !in years) {
+            val yearTable = PgHistoryYear(this, partitionKey)
+            years[partitionKey] = yearTable
             for (index in indices) yearTable.addIndex(index)
         }
     }

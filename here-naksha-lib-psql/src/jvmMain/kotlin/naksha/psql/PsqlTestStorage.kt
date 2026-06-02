@@ -3,8 +3,10 @@ package naksha.psql
 import naksha.base.Platform.PlatformCompanion.logger
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
+import java.sql.DriverManager
 import java.time.Duration
 import java.time.temporal.ChronoUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -20,6 +22,13 @@ import java.util.concurrent.atomic.AtomicReference
 @Suppress("unused")
 class PsqlTestStorage : PsqlStorage() {
     companion object TestStorage_C {
+
+        /**
+         * Tracks whether the one-time schema drop has already been performed in this JVM.
+         * Subsequent calls to [initStorage] (e.g. from [Naksha.setupStorage] in upgrade tests)
+         * skip the destructive drop so they don't wipe schemas used by other tests.
+         */
+        private val schemaDropDone = AtomicBoolean(false)
 
         private fun architecture(): String {
             val os = System.getProperty("os.name")
@@ -99,6 +108,64 @@ class PsqlTestStorage : PsqlStorage() {
             config.master = master
         }
         config.withCreate(true).withUpgrade(true)
+        // For test environments, always recreate naksha~admin from scratch so that any
+        // renamed tables (e.g. history partition naming) are recreated with the new naming.
+        // Use the original URI string (from env var or docker) to avoid ssl=true being appended by masterUri.
+        try {
+            val jdbcUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+                ?: System.getProperty("naksha.test.psql.db.url")
+                ?: config.masterUri
+            // Only perform the destructive schema drop once per JVM lifetime.
+            // Subsequent calls (e.g. from UpgradeStorageTest.setupStorage) skip the drop
+            // so they don't destroy schemas that other tests are actively using.
+            if (schemaDropDone.compareAndSet(false, true)) {
+                DriverManager.getConnection(jdbcUrl).use { conn ->
+                    // Use an advisory lock (key=12345678) to serialize schema drops across
+                    // parallel JVM instances that may run concurrently in Gradle.
+                    conn.createStatement().use { stmt ->
+                        stmt.execute("SET lock_timeout = '120s'")
+                        stmt.execute("SELECT pg_advisory_lock(12345678)")
+                    }
+                    try {
+                    // Find and drop ALL user-created schemas so that stale table naming
+                    // (e.g. old history partition names from prior code versions) is fully removed.
+                    // Keep only PostgreSQL/PostGIS/extension system schemas.
+                    val systemSchemas = setOf(
+                        "public", "pg_catalog", "information_schema",
+                        "topology", "hint_plan", "tiger", "tiger_data", "cron"
+                    )
+                    val schemas = mutableListOf<String>()
+                    conn.createStatement().use { stmt ->
+                        val rs = stmt.executeQuery(
+                            "SELECT nspname FROM pg_namespace WHERE nspname NOT LIKE 'pg_%' ORDER BY nspname"
+                        )
+                        while (rs.next()) {
+                            val name = rs.getString(1)
+                            if (name !in systemSchemas) schemas.add(name)
+                        }
+                    }
+                for (schema in schemas) {
+                    try {
+                        conn.createStatement().use { stmt ->
+                            stmt.execute("""DROP SCHEMA IF EXISTS "$schema" CASCADE""")
+                        }
+                    } catch (e: Exception) {
+                        logger.info("Test setup: skipping schema '{}' ({})", schema, e.message)
+                    }
+                }
+                        logger.info("Test setup: dropped Naksha schemas for clean recreation: $schemas")
+                    } finally {
+                        conn.createStatement().use { stmt ->
+                            stmt.execute("SELECT pg_advisory_unlock(12345678)")
+                        }
+                    }
+                }
+            } else {
+                logger.info("Test setup: schema drop already done for this JVM, skipping")
+            }
+        } catch (e: Exception) {
+            logger.warn("Test setup: could not drop Naksha schemas: {}", e.message)
+        }
         super.initStorage(config, create, upgrade)
     }
 

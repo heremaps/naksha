@@ -95,16 +95,6 @@ internal data class PgRead(
 
     private fun initHeadTables(): List<PgTable> {
         val headTable = collection.headTable
-        if (headTable is PgTransactions) {
-            val tables = ArrayList<PgTable>(headTable.years.size)
-            for (entry in headTable.years) {
-                val year = entry.key
-                val transactionTable = headTable.years[year]
-                    ?: throw illegalState("Internal error, failed to add transaction year $year")
-                tables.add(transactionTable)
-            }
-            return tables
-        }
         if (readPartition) {
             val headPartitions = headTable.partitions
             // If it is enough to read a single partition, because we know where the feature is

@@ -8,24 +8,24 @@ import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
 
 /**
- * An ordered list of user-defined indexes on a [NakshaCollection].
+ * An ordered list of [Index]es on a [NakshaCollection].
  * @since 3.0
  */
 @JsExport
-open class CustomIndexList() : ListProxy<CustomIndex>(CustomIndex::class) {
+open class IndexList() : ListProxy<Index>(Index::class) {
 
     /**
      * Construct a list from a vararg of indexes.
      * @since 3.0
      */
     @JsName("fromIndexes")
-    constructor(vararg indexes: CustomIndex) : this() {
+    constructor(vararg indexes: Index) : this() {
         addAll(indexes.toList())
     }
 
-    companion object CustomIndexList_C {
+    companion object IndexList_C {
         @JvmStatic
-        fun of(vararg indexes: CustomIndex): CustomIndexList =
-            CustomIndexList().apply { addAll(indexes.toList()) }
+        fun of(vararg indexes: Index): IndexList =
+            IndexList().apply { addAll(indexes.toList()) }
     }
 }

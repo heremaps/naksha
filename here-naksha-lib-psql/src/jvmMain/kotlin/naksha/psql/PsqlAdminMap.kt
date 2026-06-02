@@ -185,8 +185,8 @@ class PsqlAdminMap internal constructor(
         logger.info("Create internal collections: transactions, collections, and dictionaries")
         createPgCollection(conn, collections) // 0
         createPgCollection(conn, transactions) // 1
-        createPgCollection(conn, maps) // 2
-        createPgCollection(conn, dictionaries) //3
+        createPgCollection(conn, catalogs) // 2
+        createPgCollection(conn, books) //3
 
         logger.info("Done creating transactions, collections, and dictionaries")
         return adminMapOid

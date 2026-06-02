@@ -25,7 +25,7 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
         val feature = RandomFeatures.randomFeature()
 
         // And:
-        val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
 
         // When
         val writeOp = Write().createFeature(collection, feature)

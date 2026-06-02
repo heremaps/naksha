@@ -42,10 +42,10 @@ class PartitioningTest : PgTestBase() {
         // also: check history partitioning
         val hstTable = "${partitionedCollection.id}${PG_HST}"
         val createdHstPartitions = queryForTablePartitions(hstTable)
-        // first current year partition: like "feature_partitioned$hst$y2025"
-        assertEquals("\"feature_partitioned\$hst\$y${Epoch().year}\"", createdHstPartitions[0])
+        // first current year partition: like "feature_partitioned$hst$2025"
+        assertEquals("\"feature_partitioned\$hst\$${Epoch().year}\"", createdHstPartitions[0])
         // next year
-        assertEquals("\"feature_partitioned\$hst\$y${Epoch().year+1}\"", createdHstPartitions[1])
+        assertEquals("\"feature_partitioned\$hst\$${Epoch().year+1}\"", createdHstPartitions[1])
         for (hstPartition in createdHstPartitions) {
             val rawHstName = hstPartition.replace("\"", "")
             val createdHstSubPartitions = queryForTablePartitions(rawHstName)

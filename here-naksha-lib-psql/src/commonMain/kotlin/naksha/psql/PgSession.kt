@@ -390,6 +390,15 @@ open class PgSession(
     }
 
     /**
+     * Returns the effective HEAD-table column list for the given collection.
+     *
+     * For backward-compatible collections ([NakshaCollection.members] is `null`) this is the full
+     * Delegates to [PgCollection.effectiveHeadColumns].
+     */
+    private fun effectiveHeadColumns(collection: PgCollection): List<PgColumn> =
+        collection.effectiveHeadColumns
+
+    /**
      * Load [Tuple] from a specific collection, can be executed in parallel, when multiple collections are needed. We should make parallel reading optional, we experienced that when used for example in EMR, too many connections can harm. However, the cache could keep objects in Redis or alike, and then read perfectly fine in parallel!
      *
      * @param conn the connection to use for this read.
@@ -405,15 +414,23 @@ open class PgSession(
         val first = reads.first()
         val map = first.map
         val collection = first.collection
+        val historyTables = first.historyTables
+        // When history tables are included in the read, we need `next_version` in the result set
+        // (for the UNION ALL to have matching columns and so history tuples carry their next_version).
+        // For HEAD-only reads it is absent from the physical table, so we skip it and getTuple
+        // reads it as null (correct for live HEAD rows).
+        val effectiveCols = if (historyTables != null)
+            collection.effectiveHistoryColumns
+        else
+            collection.effectiveHeadColumns
         val rows = PgColumnRows()
             .withStorageNumber(map.storage.number)
             .withMapNumber(map.number)
             .withCollectionNumber(collection.number)
             .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
-            .addColumns(PgColumn.allColumns)
+            .addColumns(effectiveCols)
         map.setSearchPath(conn)
         val headTables = first.headTables
-        val historyTables = first.historyTables
         val sql = StringBuilder()
         // Prefix selected columns with `t.` so they don't collide with `fn` / `version` from the lookup CTE.
         val prefixedRowNames = rows.columns.joinToString(", ") { "t.${it.name}" }

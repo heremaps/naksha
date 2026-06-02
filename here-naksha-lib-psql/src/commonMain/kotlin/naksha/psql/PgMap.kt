@@ -7,10 +7,10 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_NUMBER
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL_NUMBER
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.BOOKS_COL
+import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL
+import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_NUMBER
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_NUMBER
 import naksha.model.NakshaError
@@ -148,60 +148,42 @@ open class PgMap internal constructor(
     open fun createPgCollection(conn: PgConnection, collection: PgCollection) {
         // Ensure that all tables and indices are created in the correct map!
         setSearchPath(conn)
-        // Default built-in optional indexes are always applied; user-defined indices come from collection.head.indices.
-        val indices: List<PgIndex> = PgIndex.DEFAULT_INDICES.filter { !it.internal }
         val NOW = Epoch()
 
-        val customIndexes = collection.head.indices
+        // The indices list drives which optional indices are created:
+        //   - null  → backward-compatible: all DEFAULT_INDICES (non-internal), but only when members is also null
+        //             (when members is explicitly set, only custom indices from the indices list are created)
+        //   - non-null → only the client-declared (already stripped of internal entries by normalizeCollection)
+        // Mandatory/internal indices (id_unique, txn_unique, id, version, gbn) are always created below
+        // and are not present in either list.
+        val optionalIndices = collection.head.indices
+        val membersExplicit = collection.head.members != null
+        val defaultPgIndices: List<PgIndex> = if (optionalIndices == null && !membersExplicit) PgIndex.DEFAULT_INDICES.filter { !it.internal } else emptyList()
 
-        if (collection is PgNakshaTransactions) {
-            val txn = PgTransactions(collection)
-            txn.create(conn)
-            txn.createYear(conn, NOW.year)
-            txn.createYear(conn, NOW.year + 1)
-            //txn.createIndex(conn, PgIndex.fn_pkey) // PRIMARY KEY
-            txn.createIndex(conn, PgIndex.id_unique)
-            txn.createIndex(conn, PgIndex.txn_unique)
-            for (index in indices) {
-                txn.createIndex(conn, index)
-            }
-            if (customIndexes != null) for (ci in customIndexes) if (ci != null) txn.createCustomIndex(conn, ci)
-
-            // We can have a meta table for transactions, but no history or deleted!
-            if (collection.metaTable != null) {
-                val meta = PgMeta(txn)
-                meta.create(conn)
-                //meta.createIndex(conn, PgIndex.fn_pkey) // PRIMARY KEY
-                meta.createIndex(conn, PgIndex.id_unique)
-                meta.createIndex(conn, PgIndex.version)
-                for (index in indices) {
-                    meta.createIndex(conn, index)
-                }
-                if (customIndexes != null) for (ci in customIndexes) if (ci != null) meta.createCustomIndex(conn, ci)
-            }
-            return
+        /** Creates one optional index on [table]: delegates to createIndex for known PgIndex names,
+         *  or to createCustomIndex for user-defined names. */
+        fun createOptionalIndex(table: PgTable, idx: naksha.model.objects.Index) {
+            val pgIdx = PgIndex.of(idx.name)
+            if (pgIdx != null) table.createIndex(conn, pgIdx)
+            else table.createCustomIndex(conn, idx)
         }
 
         val head = collection.headTable
         head.create(conn)
-        //head.createIndex(conn, PgIndex.fn_pkey) // PRIMARY KEY
         head.createIndex(conn, PgIndex.id_unique)
         head.createIndex(conn, PgIndex.version)
-        for (index in indices) {
-            head.createIndex(conn, index)
-        }
-        if (customIndexes != null) for (ci in customIndexes) if (ci != null) head.createCustomIndex(conn, ci)
+        head.createIndex(conn, PgIndex.gbn_idx)
+        for (index in defaultPgIndices) head.createIndex(conn, index)
+        if (optionalIndices != null) for (idx in optionalIndices) if (idx != null) createOptionalIndex(head, idx)
 
         val meta = collection.metaTable
         if (meta != null) {
             meta.create(conn)
-            //meta.createIndex(conn, PgIndex.fn_pkey) // PRIMARY KEY
             meta.createIndex(conn, PgIndex.id_unique)
             meta.createIndex(conn, PgIndex.version)
-            for (index in indices) {
-                meta.createIndex(conn, index)
-            }
-            if (customIndexes != null) for (ci in customIndexes) if (ci != null) meta.createCustomIndex(conn, ci)
+            meta.createIndex(conn, PgIndex.gbn_idx)
+            for (index in defaultPgIndices) meta.createIndex(conn, index)
+            if (optionalIndices != null) for (idx in optionalIndices) if (idx != null) createOptionalIndex(meta, idx)
         }
 
         val history = collection.historyTable
@@ -209,13 +191,11 @@ open class PgMap internal constructor(
             history.create(conn)
             history.createYear(conn, NOW.year)
             history.createYear(conn, NOW.year + 1)
-            //history.createIndex(conn, PgIndex.fn_pkey) // PRIMARY KEY
             history.createIndex(conn, PgIndex.id)
             history.createIndex(conn, PgIndex.version)
-            for (index in indices) {
-                history.createIndex(conn, index)
-            }
-            if (customIndexes != null) for (ci in customIndexes) if (ci != null) history.createCustomIndex(conn, ci)
+            history.createIndex(conn, PgIndex.gbn_idx)
+            for (index in defaultPgIndices) history.createIndex(conn, index)
+            if (optionalIndices != null) for (idx in optionalIndices) if (idx != null) createOptionalIndex(history, idx)
         }
         invalidateCollection(collection)
     }
@@ -245,21 +225,6 @@ open class PgMap internal constructor(
             val metaIndices: MutableList<PgIndex> = mutableListOf()
             while (cursor.next()) {
                 val rel = PgRelation(cursor)
-                if (id == TRANSACTIONS_COL) {
-                    // We know that the transaction table does only have a HEAD.
-                    // We further know, that head is split yearly!
-                    if (rel.isAnyHeadRelation()) {
-                        if (rel.isHeadRootRelation()) {
-                            headRelation = rel
-                        } else if (rel.isTxnYearRelation()) {
-                            val year = rel.year()
-                            if (year > 0) headYears[year] = rel
-                        } else if (rel.isIndex()) {
-                            val index = PgIndex.of(rel.name)
-                            if (index != null && index !in headIndices) headIndices.add(index)
-                        }
-                    }
-                } else {
                     if (rel.isAnyHeadRelation()) {
                         if (rel.isHeadRootRelation()) {
                             headRelation = rel
@@ -285,7 +250,6 @@ open class PgMap internal constructor(
                             if (index != null && index !in historyIndices) historyIndices.add(index)
                         }
                     }
-                }
                 if (rel.isAnyMetaRelation()) {
                     if (rel.isMetaRootRelation()) {
                         metaRelation = rel
@@ -299,19 +263,13 @@ open class PgMap internal constructor(
             if (headRelation != null) {
                 if (headRelation.isPartition()) {
                     val parts = headPartitions.size
-                    if (parts == 0 && headYears.isNotEmpty()) {
-                        val txn = PgTransactions(this as PgNakshaTransactions)
-                        for (entry in historyYears) txn.years[entry.key] = PgTransactionsYear(txn, entry.key)
-                        headTable = txn
-                    } else {
-                        if (parts < 2 || parts > 256) {
-                            throw NakshaException(
-                                ILLEGAL_STATE,
-                                "Invalid amount of HEAD partitions found, must be 2..256, but is ${headPartitions.size}"
-                            )
-                        }
-                        collection.headTable = PgHead(collection, headRelation.storageClass, parts)
+                    if (parts < 2 || parts > 256) {
+                        throw NakshaException(
+                            ILLEGAL_STATE,
+                            "Invalid amount of HEAD partitions found, must be 2..256, but is ${headPartitions.size}"
+                        )
                     }
+                    collection.headTable = PgHead(collection, headRelation.storageClass, parts)
                 } else {
                     collection.headTable = PgHead(collection, headRelation.storageClass, 0)
                 }
@@ -364,8 +322,8 @@ open class PgMap internal constructor(
             return when (id) {
                 COLLECTIONS_COL -> collections
                 TRANSACTIONS_COL -> transactions
-                MAPS_COL -> maps
-                DICTIONARIES_COL -> dictionaries
+                CATALOGS_COL -> catalogs
+                BOOKS_COL -> books
                 else -> null
             }
         }
@@ -410,8 +368,8 @@ WHERE id = $1 AND (version & 3) < 2"""
             return when (number) {
                 COLLECTIONS_COL_NUMBER -> collections
                 TRANSACTIONS_COL_NUMBER -> transactions
-                MAPS_COL_NUMBER -> maps
-                DICTIONARIES_COL_NUMBER -> dictionaries
+                CATALOGS_COL_NUMBER -> catalogs
+                BOOKS_COL_NUMBER -> books
                 else -> null
             }
         }

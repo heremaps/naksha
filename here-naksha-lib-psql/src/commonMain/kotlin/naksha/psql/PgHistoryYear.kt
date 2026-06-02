@@ -8,23 +8,29 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * A history partition for a specific year of the history. There should always be a partition for the current year and the next year.
+ * A history partition for a specific partition-key of the history. There should always be a partition for the current
+ * key value and the next one. With the default [shift][naksha.model.objects.NakshaCollection.shift] of 41 the key
+ * value equals the calendar year, so typically the current year and the next year.
  *
- * Beware that the history is not partitioned by the year when the transaction happened, but by the moment the transaction was updated, and moved into the history. This is done, because we have the yearly partitions for garbage collection, and if the state of a row is moved into history, from this moment on we want to keep it for some time (e.g. one year), otherwise a feature that was updated 3 years ago the last time, and then moved into history, would be removed from history instantly.
+ * Beware that the history is not partitioned by the year when the transaction happened, but by the moment the
+ * transaction was updated, and moved into the history. This is done, because we have the yearly partitions for
+ * garbage collection, and if the state of a row is moved into history, from this moment on we want to keep it
+ * for some time (e.g. one year), otherwise a feature that was updated 3 years ago the last time, and then moved
+ * into history, would be removed from history instantly.
  * @property history the history table.
- * @param year the year of this history table.
+ * @param partitionKey the value of `(next_version >> shift)` that identifies this partition.
  * @since 3.0
  * @see [PgHistory]
  * @see [PgHistoryPartition]
  */
 @JsExport
-class PgHistoryYear(val history: PgHistory, year: Int) : PgTable(
+class PgHistoryYear(val history: PgHistory, val partitionKey: Int) : PgTable(
     history.collection,
-    "${history.name}${PG_YEAR}$year",
+    "${history.name}${PG_S}${partitionKey}",
     history.storageClass,
     false,
     partitionOfTable = history,
-    partitionOfValue = year,
+    partitionOfValue = partitionKey,
     partitionByColumn = history.head.partitionByColumn,
     partitionCount = history.head.partitionCount
 ) {

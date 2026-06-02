@@ -37,7 +37,7 @@ open class StorageTx private constructor(
     val storageNumber: Int64,
 
     /**
-     * The unique version of the transaction, potentially read from a daily sequence of the database. This value **should be** unique to this transaction!
+     * The unique version of the transaction. This value **should be** unique to this transaction.
      * @since 3.0
      * @see [Version.of]
      * @see [Version.now]
@@ -126,15 +126,14 @@ open class StorageTx private constructor(
         if (isExistingFeature && xyz.guid == null) {
             throw illegalArg("$action with atomic=$atomic requires that the feature has a UUID!")
         }
-        // Transactions are special: they are partitioned over `next_version` in the HEAD, before being partitioned over `tn` in the year!
+        // Transactions need next_version set to their own version value for correct routing.
         val next_version: Int64? = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) tn.version.txn else null
         val updatedAt: Int64 = this.updatedAt
         val createdAt: Int64? = if (isExistingFeature) xyz.createdAt else null
         val author: String?
         val authorTs: Int64?
         if (xyz.author == null || xyz.author != this.author) {
-            // Simulate SQL behavior:
-            // If the previous author is null, then it differs from the current author, even when both are null!
+            // If either author is null or they differ, the author has changed.
             author = this.author
             authorTs = null // authorTs == updatedAt
         } else {
@@ -179,14 +178,12 @@ open class StorageTx private constructor(
      * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was created.
      *
      * ### Note
-     * This method can be used for `upsert` as well, just that on-conflict the following values have to be updated form the already existing feature:
+     * This method can be used for `upsert` as well, just that on-conflict the following values have to be updated from the already existing feature:
      * - `created_at` - should be `created_at` of the existing version.
      * - `cc` - _(change-count)_ should be set to the existing value + 1
-     * - `author` - if the previous `author` is not the same as the current, then set to the current author _(author changed)_, otherwise set it to the previous one _(unchanged)_.
-     * - `author_ts` - if the previous `author` is not the same as the current, set to `null` _(same as `updatedAt`)_, otherwise set to the previous value.
-     * - `flags` - if the previous `author` is not the same as the current, set `authorTs` flag, otherwise clear it. Always set the `createdAt` flag _(basically these are only two binary AND/OR's)_, change the `action` to `UPDATED`.
-     *
-     * About author, beware that comparing `NULL` via `=` to any other value, is by definition always `false` in SQL, so if the previous author, the current author, or both are `null`, we treat this as a changed author!
+     * - `author` - if the previous `author` is not the same as the current, then set to the current author _(author changed)_, otherwise set it to the previous one _(unchanged)_. Note: if either author is `null`, they are considered different.
+     * - `author_ts` - if the author changed, set to `null` _(same as `updatedAt`)_, otherwise set to the previous value.
+     * - `flags` - update `authorTs` flag accordingly; always set the `createdAt` flag; change the `action` to `UPDATED`.
      *
      * We need to beware, that in an `UPSERT` operation the [Tuple] changes, when we eventually perform the `UPDATE`, rather than the planned `INSERT`. So, we need to return the modified values in this case, therefore an `UPSERT` is a bit more complicated than an `INSERT` or `UPDATED`, but still we do not need to transfer all data forth and back, we can just create a new updated [Tuple].
      *

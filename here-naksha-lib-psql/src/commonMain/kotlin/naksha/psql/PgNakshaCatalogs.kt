@@ -8,10 +8,10 @@ import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 /**
- * The internal collection in the admin-map, that keeps track of the maps of the storage.
+ * The internal collection in the admin-map, that keeps track of the catalogs (maps) of the storage.
  */
 @JsExport
-class PgNakshaMaps internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
+class PgNakshaCatalogs internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
     .withMapId(Naksha.ADMIN_MAP)
-    .withId(Naksha.MAPS_COL)
+    .withId(Naksha.CATALOGS_COL)
 ), PgInternalCollection

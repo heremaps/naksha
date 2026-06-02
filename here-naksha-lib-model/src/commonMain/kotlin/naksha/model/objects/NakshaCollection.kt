@@ -97,11 +97,9 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * If partitions is given, then collection is internally partitioned in the storage, and optimised for large quantities of features. The default is no partitions, for around every 10 to 20 million features expected to be stored in a collection, one more partition should be requested.
+     * If partitions is given, then the collection is internally partitioned in the storage, optimised for large quantities of features. The default is no partitions; as a rule of thumb, add one more partition for every 10 to 20 million features expected.
      *
      * Valid values are between `1` and `65536` _(exclusive)_, the values `undefined`, `null` and `0` are interpreted as one partition (`1`), all other values will be rejected.
-     *
-     * Beware that in AWS ever point-to-point connection is generally limited to 5 Gbps. To reach the full throughput when reading features from a database with a 200 Gbps bandwidth, at least 40 partitions are needed, so 40 * 5 Gbps = 200 Gbps throughput.
      *
      * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
      * @since 3.0
@@ -113,6 +111,30 @@ open class NakshaCollection() : NakshaFeature() {
      */
     open fun withPartitions(value: Int): NakshaCollection {
         this.partitions = value
+        return this
+    }
+
+    /**
+     * The bit-shift applied to a transaction number to derive the history partition key.
+     *
+     * History is partitioned by range over `(txn >> shift)`. Each partition covers one contiguous
+     * range of the shifted value. With the default `shift = 41` the shifted value equals the
+     * calendar year (e.g. 2026), because the upper bits of a Naksha transaction number encode
+     * the year.
+     *
+     * Valid values: `1..62` (inclusive). Any other value is rejected.
+     *
+     * **{Create-Only}** — changing this after collection creation has no effect.
+     * @since 3.0
+     */
+    var shift: Int by SHIFT
+
+    /**
+     * @see [shift]
+     */
+    open fun withShift(value: Int): NakshaCollection {
+        require(value in 1..62) { "shift must be in 1..62, got $value" }
+        this.shift = value
         return this
     }
 
@@ -145,14 +167,13 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * The protectionClass defines how collections should be protected.
+     * The protectionClass defines how collections should be protected against uncoordinated external modification.
      *
-     * Values supported by `lib-psql` are:
-     * - `FULL`: Install triggers to prevent any manual change in collections, so that changed are only allowed using `lib-psql`, reading the data is possible.
-     * - `SAVE`: Installs triggers that automatically apply fixes, so write the history and transaction logs. The disadvantage is that the triggers will slow down the processing, but they allow to actually execute any kind of SQL query without breaking the internal structures.
-     * - `NONE`: Removes all protecting triggers and allow any kind of manual change, but this can easily break the history and/or transaction logs, as well allows the creation of invalid table entries that can break `lib-psql`.
-     *
-     * If _null_, the storage will use whatever is best for the storage.
+     * The possible values are implementation-specific. A storage may use this hint to install
+     * protective guards (e.g. triggers, constraints, or access controls) that prevent direct
+     * modifications that would bypass the Naksha write path and could corrupt history or
+     * transaction logs. If _null_, the storage will use whatever protection level is best for
+     * the storage.
      * @since 3.0
      */
     var protectionClass by PROTECTION_CLASS
@@ -215,7 +236,7 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * If [StoreMode.OFF] there will be no history table in the database for features in this collection, which boosts performance in certain operations.
+     * If [StoreMode.OFF] the storage will not retain historic states of features in this collection, which boosts performance in certain operations.
      */
     var storeHistory by STORE_HISTORY
 
@@ -228,7 +249,7 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * If [StoreMode.OFF] there will be no table in the database for deleted features from this collection, which boosts performance in certain operations, but impact views as provided by `lib-view`.
+     * If [StoreMode.OFF] the storage will not retain deleted states of features from this collection, which boosts performance in certain operations, but impacts views as provided by `lib-view`.
      */
     var storeDeleted by STORE_DELETED
 
@@ -241,7 +262,7 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * If [StoreMode.OFF] there will be no meta table in the database for statistics of features in this collection, this can save money and storage cost, by not generating statistical data, but may avoid certain use cases, like optimal tile distribution queries.
+     * If [StoreMode.OFF] the storage will not maintain statistical metadata for features in this collection. This can reduce storage cost, but may prevent certain use cases like optimal tile distribution queries.
      */
     var storeMeta by STORE_META
 
@@ -254,24 +275,24 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * The user-defined columns to materialize on this collection.
+     * The columns to materialize on this collection.
      *
-     * Each [CustomMember] declares a name, a [CustomMemberType] (defaults to [CustomMemberType.STRING]), and an optional [JsonPath] to extract the value from the feature. At write time, the storage walks the feature using the path, coerces the value to the declared type, and stores it as a real column on the underlying table. The value also remains in the encoded feature blob.
+     * Each [Member] declares a name, a [MemberType] (defaults to [MemberType.STRING]), and an optional [JsonPath] to extract the value from the feature. At write time, the storage walks the feature using the path, coerces the value to the declared type, and stores it as a dedicated member alongside the encoded feature blob. The value also remains in the encoded feature blob.
      *
-     * Members are immutable in shape: changing a member's [CustomMember.dataType] after creation is not supported. To remove a member, the upsert must explicitly opt in to dropping the column (storage-specific `force` flag).
+     * When `null` (key absent), the storage uses the full default schema (all built-in optional members + indices) — backward-compatible mode. When explicitly set (even to an empty list), the storage uses only the mandatory members plus the declared members.
      *
-     * The [name] of a member must be a valid Naksha identifier (see [Naksha.verifyId]); storages reserve a separate namespace for user columns to avoid collisions with built-ins.
+     * Mandatory members (e.g. `fn`, `version`, `id`, `feature`) are injected by the storage and must not be redeclared with a different type.
      *
      * @since 3.0
      */
-    var members: CustomMemberList? by MEMBERS
+    var members: MemberList? by MEMBERS
 
     /**
      * @see [members]
      */
     @JsName("withMemberList")
-    open fun withMembers(values: CustomMemberList): NakshaCollection {
-        val list = CustomMemberList()
+    open fun withMembers(values: MemberList): NakshaCollection {
+        val list = MemberList()
         list.setCapacity(values.size)
         list.addAll(values.toList())
         this.members = list
@@ -281,8 +302,8 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [members]
      */
-    open fun withMembers(vararg values: CustomMember): NakshaCollection {
-        val list = CustomMemberList()
+    open fun withMembers(vararg values: Member): NakshaCollection {
+        val list = MemberList()
         list.setCapacity(values.size)
         for (v in values) list.add(v)
         this.members = list
@@ -290,18 +311,18 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * Adds the given [CustomMember] to [members].
+     * Adds the given [Member] to [members].
      *
-     * Validates that the [CustomMember.name] is a valid Naksha identifier (see [Naksha.verifyId]) and does not already exist on this collection. Caps the list at [CustomMemberList.MAX_MEMBERS] entries.
+     * Validates that the [Member.name] is a valid Naksha identifier (see [Naksha.verifyId]) and does not already exist on this collection. Caps the list at [MemberList.MAX_MEMBERS] entries.
      * @param value the member to add.
      * @return this.
      * @since 3.0
      */
-    open fun addMember(value: CustomMember): NakshaCollection {
+    open fun addMember(value: Member): NakshaCollection {
         Naksha.verifyId(value.name)
         var list = this.members
         if (list == null) {
-            list = CustomMemberList()
+            list = MemberList()
             this.members = list
         }
         for (existing in list) {
@@ -309,29 +330,29 @@ open class NakshaCollection() : NakshaFeature() {
                 throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Duplicate member name: '${value.name}'")
             }
         }
-        if (list.size >= CustomMemberList.MAX_MEMBERS) {
-            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Cannot add more than ${CustomMemberList.MAX_MEMBERS} members to a collection")
+        if (list.size >= MemberList.MAX_MEMBERS) {
+            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
         }
         list.add(value)
         return this
     }
 
     /**
-     * The user-defined indices to maintain on this collection.
+     * The indices to maintain on this collection.
      *
-     * Each [CustomIndex] declares a name, a [CustomIndexType] ([CustomIndexType.BTREE] / [CustomIndexType.SPATIAL] / [CustomIndexType.FLAT_MAP]), the column(s) to index, an optional include-list (for [CustomIndexType.BTREE]), and a `unique` flag.
+     * Each [Index] declares a name, an [IndexType] ([IndexType.BTREE] / [IndexType.SPATIAL] / [IndexType.TAGS]), the column(s) to index, an optional include-list (for [IndexType.BTREE]), and a `unique` flag.
      *
-     * Indices are applied to every variant of the collection (HEAD, HISTORY, DELETED, META) by the storage.
+     * Indices are applied to every variant of the collection (head, history, deleted, meta) by the storage. Mandatory and default indices are injected by the storage; clients only need to declare additional custom indices here.
      * @since 3.0
      */
-    var indices: CustomIndexList? by INDICES
+    var indices: IndexList? by INDICES
 
     /**
      * @see [indices]
      */
     @JsName("withIndexList")
-    open fun withIndices(values: CustomIndexList): NakshaCollection {
-        val list = CustomIndexList()
+    open fun withIndices(values: IndexList): NakshaCollection {
+        val list = IndexList()
         list.setCapacity(values.size)
         list.addAll(values.toList())
         this.indices = list
@@ -341,8 +362,8 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [indices]
      */
-    open fun withIndices(vararg values: CustomIndex): NakshaCollection {
-        val list = CustomIndexList()
+    open fun withIndices(vararg values: Index): NakshaCollection {
+        val list = IndexList()
         list.setCapacity(values.size)
         for (v in values) list.add(v)
         this.indices = list
@@ -350,18 +371,18 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * Adds the given [CustomIndex] to [indices].
+     * Adds the given [Index] to [indices].
      *
-     * Validates that the index [CustomIndex.name] is a valid Naksha identifier (see [Naksha.verifyId]) and is unique within this collection.
+     * Validates that the index [Index.name] is a valid Naksha identifier (see [Naksha.verifyId]) and is unique within this collection.
      * @param value the index to add.
      * @return this.
      * @since 3.0
      */
-    open fun addCustomIndex(value: CustomIndex): NakshaCollection {
+    open fun addIndex(value: Index): NakshaCollection {
         Naksha.verifyId(value.name)
         var list = this.indices
         if (list == null) {
-            list = CustomIndexList()
+            list = IndexList()
             this.indices = list
         }
         for (existing in list) {
@@ -533,14 +554,15 @@ open class NakshaCollection() : NakshaFeature() {
         val UNKNOWN = Int64(-1)
 
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
+        private val SHIFT = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 41 }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val DATA_ENCODING = NullableEnum<NakshaCollection, DataEncoding>(DataEncoding::class)
         private val MAP_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
         private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> TYPE }
-        private val MEMBERS = NullableProperty<NakshaCollection, CustomMemberList>(CustomMemberList::class)
-        private val INDICES = NullableProperty<NakshaCollection, CustomIndexList>(CustomIndexList::class)
+        private val MEMBERS = NullableProperty<NakshaCollection, MemberList>(MemberList::class)
+        private val INDICES = NullableProperty<NakshaCollection, IndexList>(IndexList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }

@@ -3,6 +3,10 @@
 package naksha.psql
 
 import naksha.model.illegalState
+import naksha.model.objects.Index
+import naksha.model.objects.IndexType
+import naksha.model.objects.MemberList
+import naksha.model.objects.MemberType
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -148,24 +152,44 @@ open class PgTable(
 
         /**
          * Tests if this is a year-partition of HISTORY, but not a performance-partition.
+         * New naming: `{collection}$hst$<digits>` at end (no `$p` after).
          * @param name the table name.
          * @return _true_ if this is a year-partition of HISTORY.
          */
         @JvmStatic
         @JsStatic
-        fun isHistoryYear(name: String): Boolean = // {name}$hst$y????
-            name.lastIndexOf(PG_YEAR) == (name.length - "${PG_YEAR}????".length) // end with $y????
+        fun isHistoryYear(name: String): Boolean {
+            val hstIdx = name.indexOf(PG_HST)
+            if (hstIdx < 0) return false
+            val after = hstIdx + PG_HST.length
+            if (after >= name.length || name[after] != '$') return false
+            val keyStart = after + 1
+            val partIdx = name.indexOf(PG_PART, keyStart)
+            val keyEnd = if (partIdx < 0) name.length else partIdx
+            if (keyEnd <= keyStart) return false
+            return name.substring(keyStart, keyEnd).all { it.isDigit() } && partIdx < 0
+        }
 
         /**
          * Tests if this is a performance-partition of a HISTORY year-partition.
+         * New naming: `{collection}$hst$<digits>$p<digits>`.
          * @param name the table name.
-         * @return _true_ if this is a performance-partition of a monthly HISTORY year-partition.
+         * @return _true_ if this is a performance-partition of a HISTORY year-partition.
          */
         @JvmStatic
         @JsStatic
-        fun isHistoryPartition(name: String): Boolean = // {name}$hst$y????$a???
-            name.indexOf("${PG_HST}${PG_YEAR}") >= 0
-                    && name.lastIndexOf(PG_PART) == (name.length - "${PG_PART}???".length) // ends with $a???
+        fun isHistoryPartition(name: String): Boolean {
+            val hstIdx = name.indexOf(PG_HST)
+            if (hstIdx < 0) return false
+            val after = hstIdx + PG_HST.length
+            if (after >= name.length || name[after] != '$') return false
+            val keyStart = after + 1
+            val partIdx = name.indexOf(PG_PART, keyStart)
+            if (partIdx < 0) return false
+            val keyEnd = partIdx
+            if (keyEnd <= keyStart) return false
+            return name.substring(keyStart, keyEnd).all { it.isDigit() }
+        }
 
         /**
          * An indicator if this is an internal Naksha collection. Very special rules apply to these tables.
@@ -205,6 +229,7 @@ open class PgTable(
         val toast_tuple_target = if (map is PgAdminMap) map.maxTupleSize else map.storage.adminMap.maxTupleSize;
 
         // Copy to stack, makes possible for the compiler to remember when values are not null!
+        val shift = collection.head.shift
         val partitionCount = this.partitionCount
         val partitionColumn = this.partitionByColumn
         val partitionValue = partitionOfValue
@@ -224,8 +249,8 @@ open class PgTable(
                 }
 
                 PgColumn.next_version -> {
-                    require(partitionValue in 2000..2200) {
-                        """The table '$name' is a partition of '${parentTable.name}', but does not declare a valid 'partitionOfValue' (expect a year): $partitionValue"""
+                    require(partitionValue > 0) {
+                        """The table '$name' is a partition of '${parentTable.name}', but does not declare a valid 'partitionOfValue' (expect a positive integer from next_version >> $shift): $partitionValue"""
                     }
                 }
 
@@ -289,8 +314,8 @@ open class PgTable(
             // HISTORY -> YEARLY -> PARTITION (this)
             if (superTable != null) {
                 val superPartValue = parentTable.partitionOfValue
-                if (superPartValue !in 2000..2200) {
-                    throw illegalState("The table '${parentTable.name}' is a yearly partition with an illegal value for year: $superPartValue")
+                if (superPartValue <= 0) {
+                    throw illegalState("The table '${parentTable.name}' is a yearly partition with an illegal partition key: $superPartValue")
                 }
                 val parentPartCount = parentTable.partitionCount
                 if (partitionValue !in 0 ..< parentPartCount) {
@@ -299,7 +324,7 @@ open class PgTable(
                 // HISTORY year + perf-partition leaf: PK includes (fn, version, next_version) because next_version is the year-partition key.
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
   CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
-  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=${superPartValue}),
+  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> $shift)::int4)=${superPartValue}),
   CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK (((fn & 65535)::int4 % $parentPartCount)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
@@ -309,8 +334,8 @@ $TABLESPACE"""
 
             // If the parent table is partitioned by year, but there is no super table, this is a yearly table.
             if (parentTable.partitionByColumn == PgColumn.next_version) {
-                if (partitionValue !in 2000..2200) {
-                    throw illegalState("The table '$name' is a yearly partition with an illegal value for year: $partitionValue")
+                if (partitionValue <= 0) {
+                    throw illegalState("The table '$name' is a yearly partition with an illegal partition key: $partitionValue")
                 }
 
                 // If this table is further partitioned, this must be part of history.
@@ -320,7 +345,7 @@ $TABLESPACE"""
                         throw illegalState("The history table '$name' must be partitioned only by `fn`, but ${partitionColumn.name} was used!")
                     }
                     val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
-  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=$partitionValue)
+  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> $shift)::int4)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 PARTITION BY RANGE (((fn & 65535)::int4 % $partitionCount))
 $TABLESPACE"""
@@ -330,7 +355,7 @@ $TABLESPACE"""
                 // HISTORY/TX yearly leaf (no further partitioning). PK includes (fn, version, next_version).
                 val SQL = """$CREATE_TABLE $quotedName PARTITION OF ${parentTable.quotedName} (
   CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}, ${PgColumn.version}, ${PgColumn.next_version}),
-  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> 41)::int4)=$partitionValue)
+  CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL AND ((next_version >> $shift)::int4)=$partitionValue)
 ) FOR VALUES FROM ($partitionValue) TO (${partitionValue+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)
 $TABLESPACE"""
@@ -369,11 +394,12 @@ $TABLESPACE"""
             // TX (this) -> YEARLY
             // HISTORY (this) -> YEARLY
             // HISTORY (this) -> YEARLY -> PARTITION
+            val columns = PgColumn.allColumns
             val SQL = """$CREATE_TABLE $quotedName (
-${PgColumn.allColumns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
+${columnDefinitions(columns)},
 CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version IS NOT NULL),
 CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK ((fn < 0 AND id IS NOT NULL) OR (fn >= 0 AND id IS NULL))
-) PARTITION BY RANGE (((next_version >> 41)::int4))
+) PARTITION BY RANGE (((next_version >> $shift)::int4))
 $TABLESPACE"""
             return Pair(SQL, TABLESPACE)
         }
@@ -381,10 +407,11 @@ $TABLESPACE"""
         // If the root table is not partitioned.
         if (partitionColumn == null) {
             // HEAD, META, or DELETED. One row per feature; PK = (fn) INCLUDE (version).
-            // HEAD has no next_version column (intrinsically HEAD); META and DELETED keep all columns.
+            // All tables always use the full head column set; custom members are appended via
+            // columnDefinitions().
             val columns = if (isAnyHead(name) || isMeta(name)) PgColumn.headColumns else PgColumn.allColumns
             val SQL = """$CREATE_TABLE $quotedName (
-${columns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()},
+${columnDefinitions(columns)},
 CONSTRAINT ${quoteIdent(PgIndex.fn_pkey.id(this))} PRIMARY KEY (${PgColumn.fn}) INCLUDE (${PgColumn.version}),
 CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK ((fn < 0 AND id IS NOT NULL) OR (fn >= 0 AND id IS NULL))
 )
@@ -402,7 +429,7 @@ $TABLESPACE"""
                 "CONSTRAINT ${quoteIdent(name + PG_TN_NEXT_CONSTRAINT)} CHECK (next_version = version)"
             else ""
             val SQL = """$CREATE_TABLE $quotedName (
-${columns.joinToString(",\n") { it.sqlDefinition }}${extraColumnDefinitions()}${if (nextVersionConstraint.isNotEmpty()) ",\n$nextVersionConstraint" else ""},
+${columnDefinitions(columns)}${if (nextVersionConstraint.isNotEmpty()) ",\n$nextVersionConstraint" else ""},
 CONSTRAINT ${quoteIdent(name + PG_ID_CONSTRAINT)} CHECK ((fn < 0 AND id IS NOT NULL) OR (fn >= 0 AND id IS NULL))
 ) PARTITION BY RANGE (((fn & 65535)::int4 % $partitionCount))
 $TABLESPACE"""
@@ -452,6 +479,42 @@ $TABLESPACE"""
      */
     internal open fun create(conn: PgConnection) {
         if (CREATE_SQL != null) conn.execute(CREATE_SQL).close()
+    }
+
+    /**
+     * Add any custom member columns that are declared in [NakshaCollection.members] but do not yet
+     * exist in the physical table. This is the migration path for collections that have gained new
+     * members after their initial creation.
+     *
+     * For each declared member whose name is not already a known [PgColumn], issues:
+     * ```sql
+     * ALTER TABLE <table> ADD COLUMN IF NOT EXISTS <col> <type>
+     * ```
+     * For known built-in [PgColumn] names the same statement is issued so that existing tables
+     * gain optional columns added in later releases (e.g. `pn`, `pt`, `gv`).
+     */
+    internal open fun addMissingCustomColumns(conn: PgConnection) {
+        // Always ensure all standard head columns are present (covers tables created with the old
+        // lean schema that predates the full-schema approach).
+        for (col in PgColumn.headColumns) {
+            conn.execute("ALTER TABLE $quotedName ADD COLUMN IF NOT EXISTS ${col.sqlDefinition}").close()
+        }
+        // Also add any explicitly declared members that go beyond the standard set.
+        val members = collection.head.members ?: return
+        val knownCols = PgColumn.allColumnsByName
+        val standardSet = PgColumn.headColumns.toSet()
+        for (m in members) {
+            if (m == null) continue
+            val knownPgCol = knownCols[m.name]
+            // For known PgColumn entries not in the standard headColumns (e.g. pn, pt, gv),
+            // use the PgColumn sql definition; for truly custom members use the member type mapping.
+            val colDef = when {
+                knownPgCol != null && knownPgCol !in standardSet -> knownPgCol.sqlDefinition
+                knownPgCol != null -> continue // already in headColumns loop above
+                else -> PgCustomMemberValues.sqlDefinitionFor(m)
+            }
+            conn.execute("ALTER TABLE $quotedName ADD COLUMN IF NOT EXISTS $colDef").close()
+        }
     }
 
     /**
@@ -506,10 +569,118 @@ $TABLESPACE"""
     internal fun extraColumnDefinitions(): String {
         val members = collection.head.members ?: return ""
         if (members.isEmpty()) return ""
+        val knownCols = PgColumn.allColumnsByName
+        val standardSet = PgColumn.headColumns.toSet()
         val sb = StringBuilder()
         for (member in members) {
             if (member == null) continue
-            sb.append(",\n").append(PgCustomMemberValues.sqlDefinitionFor(member))
+            val knownPgCol = knownCols[member.name]
+            val colDef = when {
+                // Known PgColumn not in the standard head set (e.g. pn, pt, gv): use the canonical definition.
+                knownPgCol != null && knownPgCol !in standardSet -> knownPgCol.sqlDefinition
+                // Standard head columns are already in baseColumns; skip to avoid duplicates.
+                knownPgCol != null -> continue
+                // Truly custom member: generate from type mapping.
+                else -> PgCustomMemberValues.sqlDefinitionFor(member)
+            }
+            sb.append(",\n").append(colDef)
+        }
+        return sb.toString()
+    }
+
+    /**
+     * Maps a [PgType] to the same sort-order bucket used by [PgCustomMemberValues.columnSortOrder],
+     * so that standard and custom columns can be interleaved into the correct type-alignment group.
+     */
+    private fun pgTypeSortOrder(type: PgType): Int = when (type) {
+        PgType.INT64   -> 0  // INT64
+        PgType.DOUBLE  -> 1  // FLOAT64
+        PgType.INT     -> 2  // INT32
+        PgType.FLOAT   -> 3  // FLOAT32
+        PgType.SHORT   -> 4  // INT16
+        PgType.BOOLEAN -> 6  // BOOLEAN
+        PgType.STRING  -> 7  // STRING
+        PgType.BYTE_ARRAY -> 8  // BYTE_ARRAY / SPATIAL
+        else -> 11
+    }
+
+    /**
+     * Builds the full comma-separated column-definition block for a `CREATE TABLE` statement, merging
+     * [baseColumns] with any custom/SPECIAL members declared on the collection.
+     *
+     * Extra members (SPECIAL like `pn`/`pt`/`gv`, plus truly custom ones) are inserted **within
+     * their correct type-alignment bucket** — immediately after the last standard column of the same
+     * type group. The result follows the canonical layout:
+     *
+     * ```
+     * [INT64 std cols] [INT64 extras] [FLOAT64 std] [FLOAT64 extras] ... [BYTE_ARRAY std] [BYTE_ARRAY extras] [TAGS extras]
+     * ```
+     *
+     * When [NakshaCollection.members] is `null` (backward-compatible mode) no custom columns exist and
+     * [baseColumns] are emitted as-is.
+     */
+    internal fun columnDefinitions(baseColumns: List<PgColumn>): String {
+        val members = collection.head.members
+        if (members.isNullOrEmpty()) {
+            return baseColumns.joinToString(",\n") { it.sqlDefinition }
+        }
+        val knownCols = PgColumn.allColumnsByName
+        val standardSet = baseColumns.toSet()
+
+        // Collect extra (SPECIAL + custom) column definitions, grouped by sort-order bucket.
+        // Bucket → ordered list of SQL column definition strings.
+        val extrasByBucket = mutableMapOf<Int, MutableList<String>>()
+        for (m in members) {
+            if (m == null) continue
+            val knownPgCol = knownCols[m.name]
+            val colDef = when {
+                knownPgCol != null && knownPgCol !in standardSet -> knownPgCol.sqlDefinition
+                knownPgCol != null -> continue // already in baseColumns — skip
+                else -> PgCustomMemberValues.sqlDefinitionFor(m)
+            }
+            val bucket = PgCustomMemberValues.columnSortOrder(m.dataType)
+            extrasByBucket.getOrPut(bucket) { mutableListOf() }.add(colDef)
+        }
+
+        if (extrasByBucket.isEmpty()) {
+            return baseColumns.joinToString(",\n") { it.sqlDefinition }
+        }
+
+        // Determine the index of the last standard column in each bucket.
+        val lastIndexForBucket = mutableMapOf<Int, Int>()
+        for ((idx, col) in baseColumns.withIndex()) {
+            val bucket = pgTypeSortOrder(col.type)
+            lastIndexForBucket[bucket] = idx
+        }
+        // Also build a sorted list of standard bucket values for gap detection.
+        val standardBuckets = lastIndexForBucket.keys.sorted()
+
+        val sb = StringBuilder()
+        for ((idx, col) in baseColumns.withIndex()) {
+            if (sb.isNotEmpty()) sb.append(",\n")
+            sb.append(col.sqlDefinition)
+            // After the last standard column of this bucket, flush:
+            // 1. Extras for this exact bucket.
+            // 2. Extras for any intermediate buckets that have no standard columns and fall
+            //    between this bucket and the next standard bucket (or end-of-list).
+            val bucket = pgTypeSortOrder(col.type)
+            if (lastIndexForBucket[bucket] == idx) {
+                // Flush this bucket's extras.
+                val extras = extrasByBucket.remove(bucket)
+                if (extras != null) for (def in extras) sb.append(",\n").append(def)
+                // Determine the next standard bucket (if any).
+                val nextStdBucket = standardBuckets.firstOrNull { it > bucket }
+                // Flush all intermediate extra-only buckets that belong before the next standard bucket.
+                for (extraBucket in extrasByBucket.keys.sorted()) {
+                    if (nextStdBucket != null && extraBucket >= nextStdBucket) break
+                    val gapExtras = extrasByBucket.remove(extraBucket) ?: continue
+                    for (def in gapExtras) sb.append(",\n").append(def)
+                }
+            }
+        }
+        // Flush any remaining extras (buckets beyond the last standard bucket, e.g. TAGS).
+        for (bucket in extrasByBucket.keys.sorted()) {
+            for (def in extrasByBucket[bucket]!!) sb.append(",\n").append(def)
         }
         return sb.toString()
     }
@@ -531,20 +702,20 @@ $TABLESPACE"""
      * @param conn the connection to use to execute the creation.
      * @param index the index to create.
      */
-    open fun createCustomIndex(conn: PgConnection, index: naksha.model.objects.CustomIndex) {
+    open fun createCustomIndex(conn: PgConnection, index: Index) {
         val sql = buildCustomIndexSql(index) ?: return
         conn.execute(sql).close()
     }
 
     /**
-     * Drops a [CustomIndex][naksha.model.objects.CustomIndex] from this table.
+     * Drops a custom [Index] from this table.
      */
     open fun dropCustomIndex(conn: PgConnection, indexName: String) {
         val id = customIndexId(indexName)
         conn.execute("DROP INDEX IF EXISTS ${quoteIdent(id)} CASCADE").close()
     }
 
-    private fun buildCustomIndexSql(index: naksha.model.objects.CustomIndex): String? {
+    private fun buildCustomIndexSql(index: Index): String? {
         val on = index.on
         if (on.isEmpty()) return null
         val id = quoteIdent(customIndexId(index.name))
@@ -553,7 +724,7 @@ $TABLESPACE"""
         val members = collection.head.members
         val firstCol = on[0] ?: return null
         return when (index.type) {
-            naksha.model.objects.CustomIndexType.BTREE -> {
+            IndexType.BTREE -> {
                 val cols = on.filterNotNull().joinToString(", ") { col ->
                     val pgIdent = quoteIdent(physicalColumnName(col, members))
                     val opclass = if (isTextColumn(col, members)) " text_pattern_ops" else ""
@@ -567,20 +738,20 @@ CREATE $unique IF NOT EXISTS $id ON ${quotedName}
 USING btree ($cols)$include
 $fillFactor ${TABLESPACE};""".trim()
             }
-            naksha.model.objects.CustomIndexType.SPATIAL -> {
-                if (firstCol != "geo") {
-                    throw naksha.model.illegalArg("SPATIAL custom index '${index.name}' only supports the built-in 'geo' column in v3.0")
+            IndexType.SPATIAL -> {
+                if (!isSpatialColumn(firstCol, members)) {
+                    throw naksha.model.illegalArg("SPATIAL index '${index.name}' must target a member of dataType SPATIAL (column '$firstCol' is not)")
                 }
-                val cGeo = PgColumn.geo.ident
+                val cCol = quoteIdent(physicalColumnName(firstCol, members))
                 """
 CREATE INDEX  IF NOT EXISTS $id ON ${quotedName}
-USING gist (naksha_2d($cGeo))
+USING gist (naksha_2d($cCol))
 WITH (fillfactor=${if (isVolatile) 80 else 100}) ${TABLESPACE}
-WHERE naksha_2d($cGeo) IS NOT NULL;""".trim()
+WHERE naksha_2d($cCol) IS NOT NULL;""".trim()
             }
-            naksha.model.objects.CustomIndexType.FLAT_MAP -> {
+            IndexType.TAGS -> {
                 if (!isFlatMapColumn(firstCol, members)) {
-                    throw naksha.model.illegalArg("FLAT_MAP custom index '${index.name}' must target a member of dataType FLAT_MAP or TAGS")
+                    throw naksha.model.illegalArg("TAGS custom index '${index.name}' must target a member of dataType TAGS or TAGS_FROM_ARRAY")
                 }
                 val pgIdent = quoteIdent(physicalColumnName(firstCol, members))
                 """
@@ -592,7 +763,7 @@ $fillFactor ${TABLESPACE};""".trim()
         }
     }
 
-    private fun physicalColumnName(name: String, members: naksha.model.objects.CustomMemberList?): String {
+    private fun physicalColumnName(name: String, members: MemberList?): String {
         if (members != null) {
             for (m in members) {
                 if (m != null && m.name == name) return PgCustomMemberValues.pgColumnName(name)
@@ -601,11 +772,11 @@ $fillFactor ${TABLESPACE};""".trim()
         return name
     }
 
-    private fun isTextColumn(name: String, members: naksha.model.objects.CustomMemberList?): Boolean {
+    private fun isTextColumn(name: String, members: MemberList?): Boolean {
         if (members != null) {
             for (m in members) {
                 if (m != null && m.name == name) {
-                    return m.dataType == naksha.model.objects.CustomMemberType.STRING
+                    return m.dataType == MemberType.STRING
                 }
             }
         }
@@ -613,12 +784,24 @@ $fillFactor ${TABLESPACE};""".trim()
         return false
     }
 
-    private fun isFlatMapColumn(name: String, members: naksha.model.objects.CustomMemberList?): Boolean {
+    private fun isFlatMapColumn(name: String, members: MemberList?): Boolean {
         if (members == null) return false
         for (m in members) {
             if (m != null && m.name == name) {
-                return m.dataType == naksha.model.objects.CustomMemberType.FLAT_MAP
-                    || m.dataType == naksha.model.objects.CustomMemberType.TAGS
+                return m.dataType == MemberType.TAGS
+                    || m.dataType == MemberType.TAGS_FROM_ARRAY
+            }
+        }
+        return false
+    }
+
+    private fun isSpatialColumn(name: String, members: MemberList?): Boolean {
+        // Built-in spatial columns are always valid targets.
+        if (name == PgColumn.geo.name || name == PgColumn.ref_point.name) return true
+        // Custom members declared as SPATIAL are valid.
+        if (members != null) {
+            for (m in members) {
+                if (m != null && m.name == name) return m.dataType == MemberType.SPATIAL
             }
         }
         return false

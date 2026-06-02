@@ -15,7 +15,7 @@ import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
 import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP_NUMBER
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_NUMBER
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
@@ -142,16 +142,16 @@ abstract class PgAdminMap internal constructor(
     val transactions: PgNakshaTransactions
 
     /**
-     * The maps' collection _(`naksha~maps` aka `2`)_.
+     * The catalogs' collection _(`naksha~catalogs` aka `2`)_.
      * @since 3.0.0
      */
-    val maps: PgNakshaMaps
+    val catalogs: PgNakshaCatalogs
 
     /**
-     * The dictionaries' collection _(`naksha~dictionaries` aka `3`)_.
+     * The books' collection _(`naksha~books` aka `3`)_.
      * @since 3.0.0
      */
-    val dictionaries: PgNakshaDictionaries
+    val books: PgNakshaBooks
 
     // Called from invokeInitStorage->initStorage, so within a lock!
     init {
@@ -244,8 +244,8 @@ SELECT basics.*, procs.* FROM basics, procs;
             // This only creates the logical structure, no database access is yet done!
             // Beware: We need to do this here, because `PgCollection` back-refers to `maxTupleSize` !
             transactions = PgNakshaTransactions(this)
-            dictionaries = PgNakshaDictionaries(this)
-            maps = PgNakshaMaps(this)
+            books = PgNakshaBooks(this)
+            catalogs = PgNakshaCatalogs(this)
 
             if (admin_schema_oid == null) {
                 if (!doCreate) throw forbidden("Creation of admin-map needed, but forbidden by config")
@@ -312,6 +312,15 @@ SELECT basics.*, procs.* FROM basics, procs;
                 } else {
                     logger.info("The admin-map of '$id' is up-to-date: $psql_version")
                 }
+            }
+            // Always ensure internal collections have all currently-required columns on every startup.
+            // This is a lightweight migration: ALTER TABLE … ADD COLUMN IF NOT EXISTS is a no-op when
+            // the column already exists, and propagates automatically to all partitions in PostgreSQL.
+            setSearchPath(conn)
+            for (c in listOf(transactions, books, catalogs)) {
+                c.headTable.addMissingCustomColumns(conn)
+                c.historyTable?.addMissingCustomColumns(conn)
+                c.metaTable?.addMissingCustomColumns(conn)
             }
             logger.info("Load OID of '$NAKSHA_TXN_SEQ' from admin schema (schema-oid=$schemaOid)")
             val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_TXN_SEQ'"
@@ -536,11 +545,11 @@ SELECT basics.*, procs.* FROM basics, procs;
         val outRows = PgColumnRows()
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_MAP_NUMBER)
-            .withCollectionNumber(MAPS_COL_NUMBER)
+            .withCollectionNumber(CATALOGS_COL_NUMBER)
             .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(headColumns)
         val SQL = """SELECT ${outRows.names()}
-FROM "naksha~admin".${maps.headTable.quotedName}
+FROM "naksha~admin".${catalogs.headTable.quotedName}
 WHERE id = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         plan.execute(arrayOf(id)).fetch().use {
@@ -572,12 +581,12 @@ WHERE id = $1 AND (version & 3) < 2"""
         val outRows = PgColumnRows()
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_MAP_NUMBER)
-            .withCollectionNumber(MAPS_COL_NUMBER)
+            .withCollectionNumber(CATALOGS_COL_NUMBER)
             .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(headColumns)
         val SQL = """
             SELECT ${outRows.names()}
-            FROM "naksha~admin".${maps.headTable.quotedName}
+            FROM "naksha~admin".${catalogs.headTable.quotedName}
             WHERE fn = $1 AND (version & 3) < 2
             """.trimIndent()
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))

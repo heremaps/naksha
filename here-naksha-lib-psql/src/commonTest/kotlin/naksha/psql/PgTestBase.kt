@@ -97,7 +97,9 @@ abstract class PgTestBase(
             lock.acquire().use {
                 mapRef = initializedMaps[map_id]
                 if (mapRef == null) {
-                    // Delete the map, should it be still there from previous test runs.
+                    // Remove any stale registry entry left over from a previous run.
+                    // The schema itself was already dropped by cleanDatabase() at start-up, but
+                    // the naksha~admin catalogue may still hold a row for this map.
                     dropMap(map_id)
 
                     // Create the map.
@@ -310,6 +312,48 @@ abstract class PgTestBase(
             NakshaContext.defaultAppId.set(PgTest.TEST_APP_ID)
         }
 
+        /**
+         * The storage configuration used by default.
+         */
+        @JvmStatic
+        @JsStatic
+        val storageConfig = NakshaStorage.fromJSON("""{
+  "id": "${CommonTestConstants.getTestStorageId()}",
+  "className": "naksha.psql.PsqlTestStorage"
+}""").proxy(PgConfig::class)
+
+        /**
+         * The test storage.
+         *
+         * **Note**: You can override the docker-config via environment variable `NAKSHA_TEST_PSQL_DB_URL`.
+         */
+        @JvmField
+        val storage = Naksha.useStorage(storageConfig) as PgStorage
+
+        init {
+            cleanDatabase()
+        }
+
+        /**
+         * Drop all test map schemas so each test run starts from a blank slate.
+         *
+         * Only schemas that are known test artefacts ([TestMap]) are removed — nothing else is
+         * touched.  `naksha~admin` is intentionally left alone so that the Naksha storage stays
+         * fully operational; stale map entries in its registry are cleaned up per-map via the
+         * normal [dropMap] call inside [initMap].
+         *
+         * The function is idempotent: `DROP SCHEMA IF EXISTS … CASCADE` is safe when the schemas
+         * do not exist (first ever run).
+         */
+        private fun cleanDatabase() {
+            storage.adminConnection().use { conn ->
+                for (tm in TestMap.entries) {
+                    conn.execute("""DROP SCHEMA IF EXISTS "${tm.id}" CASCADE""").close()
+                }
+                logger.info("Test database cleaned: dropped ${TestMap.entries.size} test schema(s)")
+            }
+        }
+
         fun camelCase(simpleName: String): String {
             val colName = StringBuilder()
             for (c in simpleName) {
@@ -337,16 +381,6 @@ abstract class PgTestBase(
         private val initializedMaps = AtomicMap<String, MapAndCollections>()
 
         /**
-         * The storage configuration used by default.
-         */
-        @JvmStatic
-        @JsStatic
-        val storageConfig = NakshaStorage.fromJSON("""{
-  "id": "${CommonTestConstants.getTestStorageId()}",
-  "className": "naksha.psql.PsqlTestStorage"
-}""").proxy(PgConfig::class)
-
-        /**
          * Create [SessionOptions] and mutate the current [NakshaContext] to actually use the [PgTest] constants for `appName`, `appId`, and `author`, to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or [PgStorage.newReadSession].
          * @param appId the `appId`, if modified, otherwise [PgTest.TEST_APP_ID]
          * @param author the `author`, if modified, otherwise [PgTest.TEST_APP_AUTHOR]
@@ -372,14 +406,6 @@ abstract class PgTestBase(
                 logLevel = logLevel,
             )
         }
-
-        /**
-         * The test storage.
-         *
-         * **Note**: You can override the docker-config via environment variable `NAKSHA_TEST_PSQL_DB_URL`.
-         */
-        @JvmField
-        val storage = Naksha.useStorage(storageConfig) as PgStorage
 
         @JvmStatic
         @JsStatic

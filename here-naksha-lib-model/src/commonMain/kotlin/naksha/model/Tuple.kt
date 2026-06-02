@@ -28,7 +28,7 @@ data class Tuple(
     @JvmField val feature: ByteArray? = null,
 
     /**
-     * Geometry encoded as raw `TWKB`.
+     * Geometry in its binary representation.
      *
      * Might be _null_, when the feature does not have a geometry.
      * @since 3.0
@@ -36,7 +36,7 @@ data class Tuple(
     @JvmField val geo: ByteArray? = null,
 
     /**
-     * Geometry-Reference-Point, always a single [point][naksha.geo.SpPoint], [TWKB](https://github.com/TWKB/Specification) encoded (no compression, we never get any advantage of compression).
+     * Geometry-Reference-Point, always a single [point][naksha.geo.SpPoint] in binary representation.
      *
      * Might be _null_, when the feature does not have a reference point, in that the [geo-grid HERE tile-id][Metadata.calculateHereTile] is calculated from the gravitational center of the [geometry][geo], or, if the feature does not have a geometry either, then it is calculated from the [id][Metadata.id] of the feature.
      * @since 3.0
@@ -44,7 +44,7 @@ data class Tuple(
     @JvmField val referencePoint: ByteArray? = null,
 
     /**
-     * Tags as raw `jsonb` text.
+     * Tags in their binary representation.
      *
      * Might be _null_, when the feature does not have any tags.
      * @since 3.0
