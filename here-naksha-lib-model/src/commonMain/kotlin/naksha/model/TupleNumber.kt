@@ -28,7 +28,7 @@ import kotlin.jvm.JvmStatic
  *
  * The tuple-number is stringified into:
  * ```
- * {storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}
+ * {storage-number}:{map-number}:{collection-number}:{feature-number}:{version}
  * ```
  *
  * - There are no two [tuples][Tuple] with the same [tuple-number][TupleNumber]; world-wide.
@@ -139,7 +139,7 @@ data class TupleNumber(
 
     /**
      * Return the [TupleNumber] as string.
-     * @return `{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}`
+     * @return `{storage-number}:{map-number}:{collection-number}:{feature-number}:{version}`
      * @since 3.0.0
      * @see [fromString]
      * @see [toUrn]
@@ -183,7 +183,7 @@ data class TupleNumber(
     /**
      * Convert this [TupleNumber] into a [URN](https://datatracker.ietf.org/doc/html/rfc8141), the exact format will be:
      * ```
-     * urn:naksha:tn:{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}
+     * urn:naksha:tn:{storage-number}:{map-number}:{collection-number}:{feature-number}:{version}
      * ```
      * @return the [URN](https://datatracker.ietf.org/doc/html/rfc8141) that describes this state world-wide uniquely.
      * @since 3.0
@@ -282,11 +282,8 @@ data class TupleNumber(
         internal const val MAP_NUMBER = 1
         internal const val COLLECTION_NUMBER = 2
         internal const val FEATURE_NUMBER = 3
-        internal const val YEAR = 4
-        internal const val MONTH = 5
-        internal const val DAY = 6
-        internal const val SEQ = 7
-        internal const val ALL_PARTS = 8
+        internal const val VERSION = 4
+        internal const val ALL_PARTS = 5
 
         internal const val URN = 0
         internal const val NAKSHA = 1
@@ -457,10 +454,7 @@ data class TupleNumber(
          * - `map-number` _(32-bit integer)_
          * - `collection-number` _(32-bit integer)_
          * - `feature-number` _(64-bit integer)_
-         * - `year` _(15-bit integer)_
-         * - `month` _(4-bit integer)_
-         * - `day` _(5-bit integer)_
-         * - `sequence` _(32-bit integer, lower 2 bits encode action)_
+         * - `version` _(64-bit integer, the raw [Version.txn] value)_
          * @param parts the string parts of the tuple-number.
          * @param offset the index in the given list where the `storage-number` is located, defaults to `0`.
          * @return the deserialized [TupleNumber].
@@ -476,13 +470,7 @@ data class TupleNumber(
             val mapNumber = parts[offset + MAP_NUMBER].toInt(10)
             val colNumber = parts[offset + COLLECTION_NUMBER].toInt(10)
             val featureNumber = Int64(parts[offset + FEATURE_NUMBER].toLong(10))
-            val year = parts[offset + YEAR].toInt(10)
-            val month = parts[offset + MONTH].toInt(10)
-            val day = parts[offset + DAY].toInt(10)
-            // The seq field in the string carries the raw lower 32 bits (action in bits 1-0).
-            val seqRaw = Int64(parts[offset + SEQ].toLong())
-            val versionTxn = (Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) or seqRaw
-            val version = Version(versionTxn)
+            val version = Version.fromString(parts[offset + VERSION])
             return TupleNumber(storageNumber, mapNumber, colNumber, featureNumber, version)
         }
     }

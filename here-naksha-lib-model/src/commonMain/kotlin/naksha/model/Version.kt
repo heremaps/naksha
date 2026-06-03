@@ -41,7 +41,9 @@ import kotlin.jvm.JvmStatic
  *
  * ### String representation
  *
- * [toString] returns `{year}:{month}:{day}:{seq}` for dated versions.
+ * [toString] returns the raw [txn] value as a plain decimal number, regardless of whether the
+ * version is dated or manual. [fromString] accepts both the decimal form and the legacy
+ * `{year}:{month}:{day}:{seqWithAction}` form for backward-compatibility.
  *
  * @property txn the raw 64-bit transaction number (upper 8 bits always zero).
  * @since 3.0
@@ -321,18 +323,17 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     override fun hashCode(): Int = txn.hashCode()
 
     /**
-     * Returns the version as a human-readable string: `{year}:{month}:{day}:{seqWithAction}`.
+     * Returns the version as a plain decimal string of the raw [txn] value.
      *
-     * The 4th field is the raw lower 32 bits of [txn], which includes the 30-bit sequence in bits
-     * 31–2 and the [Action] in bits 1–0. Use [seq] to obtain the pure 30-bit sequence value.
+     * This representation is lossless for all version types (dated and manual) and survives
+     * a round-trip through [fromString].  The legacy `{year}:{month}:{day}:{seqWithAction}`
+     * format is no longer emitted; [fromString] still accepts it for backward-compatibility.
      * @since 3.0
      */
     override fun toString(): String {
         var s = _string
         if (s == null) {
-            // Output the raw lower 32 bits so that the action bits survive a round-trip.
-            val seqWithAction = txn and Int64(0xFFFFFFFFL)
-            s = "$year:$month:$day:$seqWithAction"
+            s = txn.toLong().toString()
             _string = s
         }
         return s

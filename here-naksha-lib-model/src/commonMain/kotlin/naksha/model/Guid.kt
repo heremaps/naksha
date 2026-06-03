@@ -17,7 +17,7 @@ import kotlin.jvm.JvmStatic
  *
  * When [toString] is invoked, it is serialized into a [URN](https://datatracker.ietf.org/doc/html/rfc8141). It can be restored from a [URN](https://datatracker.ietf.org/doc/html/rfc8141) using the static helper [fromString]. The format of the URN is:
  *
- * `urn:naksha:guid:{feature-id}:{storage-number}:{map-number}:{collection-number}:{feature-number}:{year}:{month}:{day}:{seq}`
+ * `urn:naksha:guid:{feature-id}:{storage-number}:{map-number}:{collection-number}:{feature-number}:{version}`
  *
  * The [Guid] is exposed through the [XYZ namespace][XyzNs] in the [uuid][XyzNs.uuid] property.
  * @since 3.0.0
@@ -67,14 +67,7 @@ data class Guid(
         internal const val FEATURE_ID = 3
         internal const val ID_ONLY_PARTS = 4
         internal const val STORAGE_NUMBER = 4
-        internal const val MAP_NUMBER = 5
-        internal const val COLLECTION_NUMBER = 6
-        internal const val FEATURE_NUMBER = 7
-        internal const val YEAR = 8
-        internal const val MONTH = 9
-        internal const val DAY = 10
-        internal const val SEQ = 11
-        internal const val ALL_PARTS = 12
+        internal const val ALL_PARTS = 9  // urn + naksha + guid + featureId + 5 TupleNumber parts
 
         /**
          * Create a _HEAD_ [Guid] for the given feature-id.

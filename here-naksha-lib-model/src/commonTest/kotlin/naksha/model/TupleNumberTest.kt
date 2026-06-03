@@ -106,7 +106,7 @@ class TupleNumberTest {
         val t = tn(Action.CREATED)
         val s = t.toString()
         val parts = s.split(":")
-        // 8 parts: storageNumber, mapNumber, collectionNumber, featureNumber, year, month, day, seq
-        assertEquals(8, parts.size)
+        // 5 parts: storageNumber, mapNumber, collectionNumber, featureNumber, version
+        assertEquals(5, parts.size)
     }
 }
