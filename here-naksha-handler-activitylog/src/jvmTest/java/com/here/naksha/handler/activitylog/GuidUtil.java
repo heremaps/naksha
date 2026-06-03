@@ -12,7 +12,9 @@ public final class GuidUtil {
   private GuidUtil(){}
 
   public static Version randomVersion() {
-    return new Version(random.nextLong());
+    // Version uses only the lower 56 bits; the upper 8 bits must be 0 so that
+    // the value survives the toString()/fromString() round-trip intact.
+    return new Version(random.nextLong() & 0x00FF_FFFF_FFFF_FFFFL);
   }
 
   public static Guid guid(String featureId, Version version) {
