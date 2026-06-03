@@ -57,6 +57,38 @@ interface IDict {
     fun stringAt(index: Int): String?
 
     /**
+     * Returns `true` if this dictionary contains a `memberNames` section — a parallel array
+     * of string names that give each slot a symbolic name used for member-reference resolution.
+     * @since 3.0.0
+     */
+    fun hasNames(): Boolean = false
+
+    /**
+     * Returns the index of the given name in the `memberNames` section, or `-1` if not found
+     * or if [hasNames] returns `false`.
+     * @param name the name to look up.
+     * @return the index, or `-1`.
+     * @since 3.0.0
+     */
+    fun getIndexOf(name: String): Int = -1
+
+    /**
+     * Returns the name at the given index from the `memberNames` section, or `null` if no
+     * such index exists or if [hasNames] returns `false`.
+     * @param index the index to query.
+     * @return the name string, or `null`.
+     * @since 3.0.0
+     */
+    fun getNameAt(index: Int): String? = null
+
+    /**
+     * Returns the number of entries in the `memberNames` section. Returns `0` if
+     * [hasNames] returns `false`.
+     * @since 3.0.0
+     */
+    fun namesLength(): Int = 0
+
+    /**
      * Find all entries in the dictionary that have the given hash.
      * @param hash the hash to find.
      * @return a list of all entries that match the given hash.
