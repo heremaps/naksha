@@ -18,8 +18,8 @@
           "uuid": "${uuid}",
           "puuid": "${puuid}",
           "tags": [
-            "tc1307",
-            "two"
+            "two",
+            "tc1307"
           ]
         },
         "@ns:com:here:xyz:log": {
@@ -31,7 +31,7 @@
             "ops": [
               {
                 "op": "replace",
-                "path": "/properties/@ns:com:here:xyz/tags/1",
+                "path": "/properties/@ns:com:here:xyz/tags/0",
                 "value": "one"
               },
               {

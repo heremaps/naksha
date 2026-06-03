@@ -7,12 +7,18 @@
       "properties": {
         "speedLimit": "10",
         "@ns:com:here:xyz": {
-          "tags": [ "one" ]
+          "tags": [
+            "one"
+          ]
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -21,12 +27,19 @@
       "properties": {
         "speedLimit": "20",
         "@ns:com:here:xyz": {
-          "tags": [ "one", "two" ]
+          "tags": [
+            "one",
+            "two"
+          ]
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -35,12 +48,20 @@
       "properties": {
         "speedLimit": "30",
         "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three" ]
+          "tags": [
+            "one",
+            "two",
+            "three"
+          ]
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -66,15 +87,18 @@
           "tid": "urn:here::here:Topology-Transaction:1866780",
           "owner": "topology_adapter_service",
           "sourceId": "Task_1",
-          "operation": "CREATED",
           "modelVersion": "2.121.0",
           "lastUpdatedBy": "topology_adapter_service",
           "updatedByUser": "topology_adapter_service"
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6578, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6578,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -101,15 +125,18 @@
           "tid": "urn:here::here:Topology-Transaction:1866780",
           "owner": "topology_adapter_service",
           "sourceId": "Task_2",
-          "operation": "CREATED",
           "modelVersion": "2.121.0",
           "lastUpdatedBy": "topology_adapter_service",
           "updatedByUser": "topology_adapter_service"
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6578, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6578,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -136,15 +163,18 @@
           "tid": "urn:here::here:Topology-Transaction:1866780",
           "owner": "topology_adapter_service",
           "sourceId": "Task_3",
-          "operation": "CREATED",
           "modelVersion": "2.121.0",
           "lastUpdatedBy": "topology_adapter_service",
           "updatedByUser": "topology_adapter_service"
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6578, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6578,
+          50.1234,
+          0.0
+        ]
       }
     }
   ]

@@ -56,6 +56,7 @@ class ActivityLogRequestTranslationUtil {
    */
   static void transformOriginalRequest(ReadFeatures readFeatures, String spaceId) {
     readFeatures.setQueryHistory(true);
+    readFeatures.setQueryDeleted(true);
     readFeatures.setVersions(Integer.MAX_VALUE);
     readFeatures.setCollectionIds(StringList.of(spaceId));
 

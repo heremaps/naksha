@@ -29,6 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import naksha.base.AnyList;
 import naksha.base.Int64;
 import naksha.base.JvmInt64;
 import naksha.model.Action;
@@ -469,13 +470,26 @@ class ActivityLogHandlerTest {
                          && mq.getOp().equals(AnyOp.IS_ANY_OF);
     if (!basicCheck) return false;
     if (expectedTns.length == 0) return mq.getValue() != null;
-    // next_version is an int8 column — the query value is an Int64[] of version values
+    // next_version is an int8 column — the query value is an Int64[] or AnyList of version values
+    // (NullableProperty may convert a Java array to an AnyList when storing)
     Object value = mq.getValue();
-    if (!(value instanceof Int64[] versions)) return false;
-    if (versions.length != expectedTns.length) return false;
+    List<Int64> versions;
+    if (value instanceof Int64[] arr) {
+      versions = Arrays.asList(arr);
+    } else if (value instanceof AnyList list) {
+      versions = new java.util.ArrayList<>();
+      for (int i = 0; i < list.size(); i++) {
+        Object item = list.get(i);
+        if (item instanceof Int64 v) versions.add(v);
+        else return false;
+      }
+    } else {
+      return false;
+    }
+    if (versions.size() != expectedTns.length) return false;
     return Arrays.stream(expectedTns)
         .map(tn -> tn.version.txn)
-        .allMatch(expected -> Arrays.stream(versions).anyMatch(expected::equals));
+        .allMatch(expected -> versions.stream().anyMatch(expected::equals));
   }
 
   private IReadSession mockReadSession(ReadBehavior... readBehavior) {

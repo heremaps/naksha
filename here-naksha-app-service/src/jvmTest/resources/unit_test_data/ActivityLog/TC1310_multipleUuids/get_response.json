@@ -7,7 +7,6 @@
         "@ns:com:here:xyz": {
           "uuid": "${feature_2_updated_uuid}",
           "updatedAt": "${feature_2_updated_updated_at}",
-          "operation": "UPDATED",
           "action": "UPDATE",
           "puuid": "${feature_2_created_uuid}"
         },
@@ -53,7 +52,6 @@
           "nuuid": "${feature_1_deleted_uuid}",
           "puuid": "${feature_1_created_uuid}",
           "updatedAt": "${feature_1_deleted_updated_at}",
-          "operation": "DELETED",
           "action": "DELETE"
         },
         "@ns:com:here:xyz:log": {

@@ -143,7 +143,17 @@ public class ActivityLogHandler extends AbstractEventHandler {
             feature,
             collectedFeatures.getPredecessorOf(feature)
         ))
+        .filter(fwp -> !isOrphanTombstone(fwp))
         .toList();
+  }
+
+  /**
+   * Returns true for a DELETED feature that has no predecessor (history was disabled at delete time).
+   * Such tombstones represent features that never participated in activity logging and should be excluded.
+   */
+  private static boolean isOrphanTombstone(FeatureWithPredecessor fwp) {
+    return Action.DELETED.equals(fwp.feature().getProperties().getXyz().getAction())
+        && fwp.oldFeature() == null;
   }
 
   private void collectMissingPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {

@@ -19,8 +19,7 @@
           "lastUpdatedBy": "topology_adapter_service",
           "owner": "topology_adapter_service",
           "sourceId": "Task_1",
-          "tid": "urn:here::here:Topology-Transaction:1866780",
-          "operation": "CREATED"
+          "tid": "urn:here::here:Topology-Transaction:1866780"
         },
         "speedLimit": "20",
         "testSpace": "base"

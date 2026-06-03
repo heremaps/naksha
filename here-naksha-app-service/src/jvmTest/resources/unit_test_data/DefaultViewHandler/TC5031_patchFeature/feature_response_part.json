@@ -19,8 +19,7 @@
           "lastUpdatedBy": "topology_adapter_service",
           "owner": "topology_adapter_service",
           "sourceId": "COM_1000001_20240214",
-          "tid": "urn:here::here:Topology-Transaction:1866780",
-          "operation": "CREATED"
+          "tid": "urn:here::here:Topology-Transaction:1866780"
         },
         "@ns:com:here:xyz": {
           "tags": [
