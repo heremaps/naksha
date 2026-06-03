@@ -89,6 +89,19 @@ interface IDict {
     fun namesLength(): Int = 0
 
     /**
+     * Returns the value associated with the given name by looking up the index via [getIndexOf]
+     * and then reading the value via [get]. Returns _null_ when the name is not found or the
+     * index maps to a _null_ slot.
+     * @param name the member name to look up.
+     * @return the value, or _null_ if the name is not present.
+     * @since 3.0.0
+     */
+    fun getByName(name: String): Any? {
+        val i = getIndexOf(name)
+        return if (i < 0) null else get(i)
+    }
+
+    /**
      * Find all entries in the dictionary that have the given hash.
      * @param hash the hash to find.
      * @return a list of all entries that match the given hash.
