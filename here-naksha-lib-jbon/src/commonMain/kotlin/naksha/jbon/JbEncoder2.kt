@@ -635,6 +635,10 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
             var e = this.end
             while (source < contentEnd) setInt8(e++, getInt8(source++))
             this.end = e
+        } else {
+            // Header exactly consumed the 5 reserved bytes (contentSize >= 65536);
+            // content is already in place — just advance end past it.
+            this.end = contentEnd
         }
         return start
     }
