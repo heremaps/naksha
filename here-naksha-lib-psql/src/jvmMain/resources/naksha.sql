@@ -400,31 +400,66 @@ AS $$
   SELECT naksha_jbon_map_to_json(jbon)::jsonb
 $$;
 
--- Decodes the binary `feature` payload to JSONB.
--- `encoding` is the raw `naksha.model.DataEncoding.intValue`:
---   0 = JBON, 1 = JBON_GZIP, 2 = JSON, 3 = JSON_GZIP.
--- The encoding is a per-collection setting; callers typically pass a hard-coded constant
--- matching `NakshaCollection.dataEncoding`.
-CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, encoding int4) RETURNS jsonb
+-- TODO: pass a members book once member-ref encoding done
+CREATE OR REPLACE FUNCTION naksha_jbon2_feature_to_json(jbon bytea) RETURNS json
+LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  if (typeof require !== "function") {
+    plv8.find_function("es_modules_init")();
+    if (typeof require !== "function") {
+      plv8.elog(ERROR, "Failed to initialize module system");
+    }
+  }
+  const { Platform } = require("naksha_base");
+  const { JbDecoder2 } = require("naksha_jbon");
+  let decoder = new JbDecoder2();
+  decoder.mapBytes(jbon);
+  return Platform.toJson(decoder.toAnyObject());
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_jbon2_feature_to_jsonb(jbon bytea) RETURNS jsonb
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT naksha_jbon2_feature_to_json(jbon)::jsonb
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_feature(feature bytea) RETURNS jsonb
 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
 DECLARE
-  gzip boolean;
-  inner_encoding int4;
+  first_byte int4;
 BEGIN
-  gzip = (encoding & 1) = 1;
-  if (gzip) then
+  -- gzip magic 1F 8B
+  IF length(feature) >= 2
+     AND get_byte(feature, 0) = 31
+     AND get_byte(feature, 1) = 139 THEN
     feature = gunzip(feature);
-  end if;
-  inner_encoding = encoding & 14;
-  if (inner_encoding = 0) then -- JBON / JBON_GZIP
-    return naksha_jbon_feature_to_jsonb(feature);
-  elsif (inner_encoding = 2) then -- JSON / JSON_GZIP
-    return feature::text::jsonb;
-  end if;
-  -- Unknown encoding
-  return null;
+  END IF;
+
+  IF length(feature) < 1 THEN
+    RETURN NULL;
+  END IF;
+
+  first_byte = get_byte(feature, 0);
+
+  -- JBON2 magic '@JB\x02'
+  IF length(feature) >= 4
+     AND first_byte = 64
+     AND get_byte(feature, 1) = 74
+     AND get_byte(feature, 2) = 66
+     AND get_byte(feature, 3) = 2 THEN
+    RETURN naksha_jbon2_feature_to_jsonb(feature);
+  END IF;
+
+  -- JSON: '{', '[', or whitespace (space/tab/LF/CR)
+  IF first_byte IN (123, 91, 32, 9, 10, 13) THEN
+    RETURN convert_from(feature, 'UTF8')::jsonb;
+  END IF;
+
+  RETURN naksha_jbon_feature_to_jsonb(feature);
 END $$;
 
 -- Geometries are always stored as raw `TWKB`.
