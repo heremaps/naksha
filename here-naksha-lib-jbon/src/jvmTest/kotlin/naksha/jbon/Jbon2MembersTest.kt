@@ -25,11 +25,10 @@ import kotlin.test.assertTrue
 class Jbon2MembersTest {
 
     // -----------------------------------------------------------------------
-    // Minimal IDict implementation backed by a plain list — test helper only
-    // -----------------------------------------------------------------------
+  // Minimal IBook implementation backed by a plain list — test helper only
 
-    /** A minimal read-only [IDict] backed by a [List] of arbitrary values. */
-    private class ListDict(private val entries: List<Any?>) : IDict {
+     /** A minimal read-only [IBook] backed by a [List] of arbitrary values. */
+    private class ListDict(private val entries: List<Any?>) : IBook {
         override val id: String? = null
         override val length: Int get() = entries.size
         override fun get(index: Int): Any? = entries.getOrNull(index)
@@ -43,7 +42,7 @@ class Jbon2MembersTest {
     // -----------------------------------------------------------------------
 
     /** Decode the first unit at offset 0 from raw bytes (no file header), using [membersDict]. */
-    private fun decodeFirst(bytes: ByteArray, membersDict: IDict? = null): Any? {
+    private fun decodeFirst(bytes: ByteArray, membersDict: IBook? = null): Any? {
         val bin = Binary()
         bin.view = Platform.newDataView(bytes)
         bin.end = bytes.size
@@ -54,7 +53,7 @@ class Jbon2MembersTest {
     }
 
     /** Encode a feature [AnyObject] through the tuple path and decode it back with [membersDict]. */
-    private fun tupleRoundTrip(feature: AnyObject, membersDict: IDict? = null): AnyObject {
+    private fun tupleRoundTrip(feature: AnyObject, membersDict: IBook? = null): AnyObject {
         val enc = JbEncoder2()
         @Suppress("UNCHECKED_CAST")
         val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)

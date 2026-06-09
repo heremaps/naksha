@@ -13,7 +13,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
-open class JbEncoder(var global: IDict? = null) : Binary() {
+open class JbEncoder(var global: IBook? = null) : Binary() {
 
     /**
      * Create a new resizable editor with a new byte-array of the given size backing it.
@@ -22,7 +22,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forSize")
-    constructor(size: Int, global: IDict? = null) : this(global) {
+    constructor(size: Int, global: IBook? = null) : this(global) {
         view = Platform.newDataView(ByteArray(size))
         this.readOnly = false
         this.resize = true
@@ -37,7 +37,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forBinary")
-    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: IDict? = null) : this(global) {
+    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: IBook? = null) : this(global) {
         this.view = binaryView.view
         this.pos = pos
         this.end = end

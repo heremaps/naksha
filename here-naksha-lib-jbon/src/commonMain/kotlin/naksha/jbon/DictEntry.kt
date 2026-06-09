@@ -14,10 +14,10 @@ data class DictEntry(
      * The dictionary to which the entry belongs.
      * @since 3.0.0
      */
-    val dict: IDict,
+   val dict: IBook,
 
     /**
-     * The index of the entry in the [dictionary][IDict].
+     * The index of the entry in the [book][IBook].
      * @since 3.0.0
      */
     val index: Int,

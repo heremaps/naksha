@@ -5,7 +5,7 @@ package naksha.jbon
 import kotlin.js.JsExport
 
 /**
- * An interface to be implemented by all dictionaries. Dictionaries can contain a combination of the following types, and only of these:
+ * An interface to be implemented by all books. Books can contain a combination of the following types, and only of these:
  * - `null`
  * - `Boolean`
  * - `Int`
@@ -18,7 +18,7 @@ import kotlin.js.JsExport
  * @see JbDictionary
  */
 @JsExport
-interface IDict {
+interface IBook {
     /**
      * The identifier of the dictionary; if any.
      * @since 3.0.0

@@ -27,7 +27,7 @@ import kotlin.jvm.JvmStatic
  */
 @Suppress("MemberVisibilityCanBePrivate", "OPT_IN_USAGE", "DuplicatedCode")
 @JsExport
-open class JbDecoder2(var globalDict: IDict? = null, var membersDict: IDict? = null) {
+open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = null) {
 
     /** The underlying binary view. */
     var view: BinaryView = Binary()
@@ -311,7 +311,7 @@ open class JbDecoder2(var globalDict: IDict? = null, var membersDict: IDict? = n
 
     private fun globalStringsList(): List<String>? {
         val g = globalDict ?: return null
-        // Materialise lazily via IDict.get is expensive; only used for sref resolution. Build once.
+        // Materialise lazily via IBook.get is expensive; only used for sref resolution. Build once.
         val len = g.length
         return List(len) { g.get(it)?.toString() ?: "" }
     }

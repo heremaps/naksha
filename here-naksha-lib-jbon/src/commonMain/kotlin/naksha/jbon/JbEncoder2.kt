@@ -28,7 +28,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
-open class JbEncoder2(var global: IDict? = null) : Binary() {
+open class JbEncoder2(var global: IBook? = null) : Binary() {
 
     /**
      * Create a new resizable encoder with a new byte-array of the given size backing it.
@@ -37,7 +37,7 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forSize")
-    constructor(size: Int, global: IDict? = null) : this(global) {
+    constructor(size: Int, global: IBook? = null) : this(global) {
         view = Platform.newDataView(ByteArray(size))
         this.readOnly = false
         this.resize = true
