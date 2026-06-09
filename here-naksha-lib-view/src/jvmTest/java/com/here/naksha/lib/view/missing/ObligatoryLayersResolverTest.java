@@ -1,6 +1,7 @@
 package com.here.naksha.lib.view.missing;
 
 import naksha.base.Int64;
+import naksha.base.JvmInt64;
 import naksha.base.Platform;
 import naksha.model.*;
 import com.here.naksha.lib.view.MissingIdResolver;
@@ -17,7 +18,6 @@ import java.util.List;
 import java.util.Set;
 
 import static naksha.base.Platform.intToInt64;
-import static naksha.model.FlagsKt.withAction;
 import static naksha.psql.PgTest.TEST_MAP_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -35,12 +35,12 @@ public class ObligatoryLayersResolverTest {
         0,
         0,
         Naksha.featureNumber(id),
-        Version.of(2024,1,1, intToInt64(0))
+        Version.auto(2024,1,1, intToInt64(0))
     );
     final Int64 updatedAt = Platform.currentMillis();
     return new Metadata(
         tupleNumber,
-        withAction(0, Action.CREATED),
+        DataEncoding.DEFAULT,
         updatedAt,    // updatedAt
         null,         // createdAt
         null,         // authorTs
@@ -58,14 +58,6 @@ public class ObligatoryLayersResolverTest {
         null, null, null, null,  // cv0..cv3
         null, null, null, null   // cs0..cs3
     );
-  }
-
-  private @NotNull FeatureTuple mockFeatureTuple(@NotNull NakshaFeature feature) {
-    final Metadata metadata = mockMetadata(feature.getId());
-    final byte[] bytesFeature = Naksha.encodeFeature(feature, metadata.getFlags(), null);
-    final Tuple tuple = new Tuple(metadata, bytesFeature, null, null, null, null, false);
-    final FeatureTuple featureTuple = new FeatureTuple(metadata.getTupleNumber(), tuple);
-    return featureTuple;
   }
 
   @Test
