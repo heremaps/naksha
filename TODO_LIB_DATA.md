@@ -23,10 +23,10 @@ Delete this file before merging to v3.
     - Ensure that the index above `id` is _(in HEAD)_ unique, but conditional, so only `WHERE id IS NOT NULL`
 - [ ] ~~[**required to merge**]  Ensure that `tags` are always stored as raw `jsonb` _(indexable)_ - Kacper~~
 - [ ] ~~[**required to merge**] Upgrade JBON1 to JBON2 - Alex~~
-- [ ] [**required to merge**]  Improve `naksha_feature` to autodetect: - Kacper
-    - is gzipped, then unpack
-    - is jbon2, then decode
-    - is json, then cast
+- [ ] ~~[**required to merge**]  Improve `naksha_feature` to autodetect: - Kacper~~
+    - ~~is gzipped, then unpack~~
+    - ~~is jbon2, then decode~~
+    - ~~is json, then cast~~
 - [ ] [**required to merge**] We allow in collection to configure:
     - a) If the feature is compressed, and which compression method to use _(`gzip`, `lz4`) - Alex
         - This requires to add a header detection, and this requires JBON2 - Alex
