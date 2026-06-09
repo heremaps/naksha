@@ -4,7 +4,7 @@
   "properties": {
     "new": 123,
     "@ns:com:here:xyz": {
-      "uuid": "urn:naksha:guid:wrong_uuid:4711:0815:1213:-5386453534:2025:03:20:12"
+      "uuid": "urn:naksha:guid:feature-123:1:10:5:987654321:42"
     }
   }
 }
