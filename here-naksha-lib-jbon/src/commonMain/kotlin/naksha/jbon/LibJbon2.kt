@@ -187,7 +187,8 @@ internal const val JB2_STRUCT_BOOK = 6 // 0110
 internal const val JB2_STRUCT_TUPLE_NUMBER_ARRAY = 7 // 0111
 internal const val JB2_STRUCT_TUPLE = 8 // 1000
 internal const val JB2_STRUCT_TWKB = 9 // 1001
-internal const val JB2_STRUCT_BINARY = 10 // 1010
+internal const val JB2_STRUCT_BYTE_ARRAY = 10 // 1010
+internal const val JB2_STRUCT_BINARY = 11 // 1011
 // 11..14 reserved
 internal const val JB2_STRUCT_UTF16 = 15 // 1111
 

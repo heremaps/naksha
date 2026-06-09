@@ -184,8 +184,8 @@ All _**units**_ start with a **lead-in** byte, which describes the actual type o
     - tttt= 7 / `11ss_0111`: [TupleNumberArray]
     - tttt= 8 / `11ss_1000`: [Tuple]
     - tttt= 9 / `11ss_1001`: [TWKB]
-    - tttt=10 / `11ss_1010`: [Binary]
-    - tttt=11 / `11ss_1011`: _reserved_
+    - tttt=10 / `11ss_1010`: [ByteArray]
+    - tttt=11 / `11ss_1011`: [Binary]
     - tttt=12 / `11ss_1100`: _reserved_
     - tttt=13 / `11ss_1101`: _reserved_
     - tttt=14 / `11ss_1110`: _reserved_
@@ -957,12 +957,36 @@ In [JSON] the [TWKB] is stringified using the types specified in [GeoJSON] speci
 
 ---
 
-### Binary (10)
+### ByteArray (10)
 The binary structure is used to store binary content, actually byte-arrays of custom data. The **lead-in** of a binary is `11ss_1010`; with `ss` encoding the size of the size, as usual. The binary format is like:
+
+| Name        | Type         | Description                                                           |
+|-------------|--------------|-----------------------------------------------------------------------|
+| lead_in     | `byte`       | The **lead-in** byte, `11ss_1010`.                                    |
+| byte_size   | `int32`      | The total size of the structure, including the **lead-in**, in bytes. |
+|             |              |                                                                       |
+| data        | `byte[]`     | The bytes.                                                            |
+
+The size of the `data` matches the remaining bytes implied by `byte_size` minus the header size.
+
+#### Logical Bytes
+The [logical bytes] of a byte-array are calculated by adding the **lead-in** `1111_1010`, then the byte-size as 32-bit BE integer, followed by the `data`.
+
+#### JSON
+In [JSON] and [XML] the binary is encoded as a string using the [data URL scheme] with mime-type being `naksha/int8a`. The actual payload is [base64] encoded:
+
+`data:naksha/int8a;base64,<data>`
+
+---
+
+---
+
+### Binary (11)
+The binary structure is used to store binary content, actually byte-arrays of custom data. The **lead-in** of a binary is `11ss_1011`; with `ss` encoding the size of the size, as usual. The binary format is like:
 
 | Name        | Type         | Description                                                                                                       |
 |-------------|--------------|-------------------------------------------------------------------------------------------------------------------|
-| lead_in     | `byte`       | The **lead-in** byte, `11ss_1010`.                                                                                |
+| lead_in     | `byte`       | The **lead-in** byte, `11ss_1011`.                                                                                |
 | byte_size   | `int32`      | The total size of the structure, including the **lead-in**, in bytes.                                             |
 | mime_type   | [string]?    | The MIME-Type of the binary, if `null`, defaults to `application/octet-stream` from the `const` book.             |
 | compression | [string]?    | The compression algorithm used; `null` if not compressed.                                                         |
@@ -978,7 +1002,7 @@ The size of the `data` matches the remaining bytes implied by `byte_size` minus 
 The dedicated [MIME type] parameter is used to identify the type of the binary, normally values from the [IANA media types] are used. If no official MIME type is available, an own one should be used. For example HERE will use `application/twkb` for TWKB binaries, and `application/jbon` for **JBON** binaries. If no MIME type is available, `application/octet-stream` should be expected, resulting in a simple `byte[]`.
 
 #### Logical Bytes
-The [logical bytes] of a binary are calculated by adding the **lead-in** `1111_1010`, then the byte-size as 32-bit BE integer, followed by the `mime_type`, followed by the [logical bytes] of all `parameters`, and finally by the inflated `data`. Therefore, in the [logical bytes] the `compression`, and `target_size` are ignored.
+The [logical bytes] of a binary are calculated by adding the **lead-in** `1111_1011`, then the byte-size as 32-bit BE integer, followed by the `mime_type`, followed by the [logical bytes] of all `parameters`, and finally by the inflated `data`. Therefore, in the [logical bytes] the `compression`, and `target_size` are ignored.
 
 If the `mime_type` is `null` or `undefined`, then the [logical bytes] must encode the UTF16-string `application/octet-stream`.
 

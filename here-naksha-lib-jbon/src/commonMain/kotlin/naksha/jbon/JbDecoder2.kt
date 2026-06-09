@@ -378,6 +378,10 @@ open class JbDecoder2(var globalDict: IDict? = null, var membersDict: IDict? = n
                 val bytes = ByteArray(contentSize) { view.getInt8(contentStart + it) }
                 GeoUtil.fromTWKB(bytes)
             }
+            JB2_STRUCT_BYTE_ARRAY -> {
+                // Content bytes are raw ByteArray.
+                ByteArray(contentSize) { view.getInt8(contentStart + it) }
+            }
             JB2_STRUCT_DICTIONARY -> {
                 readDictionaryStrings(at)
                 null

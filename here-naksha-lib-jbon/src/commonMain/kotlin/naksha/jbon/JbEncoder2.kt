@@ -766,6 +766,23 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
     }
 
     /**
+     * Write a [JB2_STRUCT_BYTE_ARRAY] structure from raw bytes.
+     *
+     * The spec requires `ss != 00` (empty ByteArray is invalid), so [bytes] must be non-empty.
+     * @param bytes The raw bytes to embed.
+     * @return The start offset of the written structure.
+     * @throws IllegalArgumentException if [bytes] is empty.
+     */
+    fun encodeByteArray(bytes: ByteArray): Int {
+        require(bytes.isNotEmpty()) { "ByteArray must not be empty" }
+        val start = end
+        writeStructHeader(JB2_STRUCT_BYTE_ARRAY, bytes.size)
+        var i = 0
+        while (i < bytes.size) setInt8(end++, bytes[i++])
+        return start
+    }
+
+    /**
      * Encode an [SpGeometry] as a [JB2_STRUCT_TWKB] structure.
      *
      * Calls [GeoUtil.toTWKB] to obtain the TWKB byte representation of the geometry and then
@@ -807,6 +824,7 @@ open class JbEncoder2(var global: IDict? = null) : Binary() {
             is Float -> encodeFloat32(value)
             is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
             is SpGeometry -> encodeGeometry(value)
+            is ByteArray -> if (value.isNotEmpty()) encodeByteArray(value) else encodeNull()
             is MapProxy<*, *> -> encodeObject(value as MapProxy<String, *>)
             is ListProxy<*> -> encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)
