@@ -4,7 +4,7 @@ description: Use ONLY when asked to run tests for the Naksha project. Do NOT use
 ---
 
 # General
-Most tests require a database. If the tests are executed without environment variables, they will start docker containers. When unclear, ask the user if he wants to run the tests using automatically created docker containers, or if he prefers to run the tests against his own, possible local, PostgresQL test database.
+Most tests require a database. If the tests are executed without environment variables, they will start docker containers. When unclear, ask the user if they want to run the tests using automatically created Docker containers, or if they prefer to run the tests against their own, possibly local, PostgresQL test database.
 
 # Environment Variables
 All environment variables contain some placeholders that need to be replaced:
@@ -14,7 +14,7 @@ All environment variables contain some placeholders that need to be replaced:
 - `{user}`: Needs to be replaced by you with the user. If not given any other instructions, assume `postgres`.
 - `{password}`: Needs to be replaced by you with the password. If not given any other instructions, assume `password`.
 
-You can test the connection to the database. If you detect that the connection to the database fails due to wrong credentials or hostname, ask the user for host, port, user, and password _(whatever needed)_. What he does not provide, use defaults. Tell the user the defaults.
+You can test the connection to the database. If you detect that the connection to the database fails due to wrong credentials or hostname, ask the user for host, port, user, and password _(whatever is needed)_. Use defaults for any value not provided. Tell the user the defaults.
 
 ## Library tests (here-naksha-lib-psql)
 Only needs one variable. If not set, Docker auto-starts:
@@ -44,8 +44,8 @@ Docker auto-starts if no env vars are set:
 ./gradlew :here-naksha-lib-model:jvmTest :here-naksha-lib-psql:jvmTest :here-naksha-lib-jbon:jvmTest :here-naksha-lib-geo:jvmTest
 ```
 
-## All JVM tests:
-Docker auto-starts if no env vars are set:
+## All JVM tests (includes server tests that will fail without a running server):
+Docker auto-starts if no env vars are set. This includes `here-naksha-app-service:jvmTest` which requires a running Naksha server and will fail with `ConnectException` if no server is available:
 
 ```bash
 ./gradlew jvmTest
@@ -67,4 +67,4 @@ Only run if user explicitly asks. Requires a running Naksha server:
 - Kotlintest discovery errors: If `here-naksha-lib-psql:jvmTest` fails with test discovery errors, try `./gradlew clean` first
 - Docker not available: The psql tests require Docker. If Docker isn't running, set `NAKSHA_TEST_PSQL_DB_URL` to an external Postgres instance
 - Port conflicts: The Docker container uses host port 15432. If this port is in use, the container will fail to start
-- Server tests fail with ConnectException: This is expected when no Naksha server is running. Skip these tests unless the server is available.
+- Server tests fail with ConnectException: This is expected when no Naksha server is running. Skip these tests unless the server is available
