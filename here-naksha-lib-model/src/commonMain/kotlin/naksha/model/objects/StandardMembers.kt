@@ -218,7 +218,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val UpdatedAt = Member("updated_at", MemberType.INT64)
+        val UpdatedAt = Member("updated_at", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "updatedAt"))
 
         /**
          * `created_at` — millisecond epoch timestamp of the initial creation. `null` means the
@@ -226,7 +226,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CreatedAt = Member("created_at", MemberType.INT64)
+        val CreatedAt = Member("created_at", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "createdAt"))
 
         /**
          * `author_ts` — millisecond epoch timestamp of the last author change. `null` means the
@@ -234,35 +234,35 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val AuthorTimestamp = Member("author_ts", MemberType.INT64)
+        val AuthorTimestamp = Member("author_ts", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "authorTs"))
 
         /**
          * `cv0` — custom numeric value 0 (`FLOAT64`). `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CustomValue0 = Member("cv0", MemberType.FLOAT64)
+        val CustomValue0 = Member("cv0", MemberType.FLOAT64, JsonPath("properties", "@ns:com:here:xyz", "cv0"))
 
         /**
          * `cv1` — custom numeric value 1 (`FLOAT64`). `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CustomValue1 = Member("cv1", MemberType.FLOAT64)
+        val CustomValue1 = Member("cv1", MemberType.FLOAT64, JsonPath("properties", "@ns:com:here:xyz", "cv1"))
 
         /**
          * `cv2` — custom numeric value 2 (`FLOAT64`). `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CustomValue2 = Member("cv2", MemberType.FLOAT64)
+        val CustomValue2 = Member("cv2", MemberType.FLOAT64, JsonPath("properties", "@ns:com:here:xyz", "cv2"))
 
         /**
          * `cv3` — custom numeric value 3 (`FLOAT64`). `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CustomValue3 = Member("cv3", MemberType.FLOAT64)
+        val CustomValue3 = Member("cv3", MemberType.FLOAT64, JsonPath("properties", "@ns:com:here:xyz", "cv3"))
 
         /**
          * `hash` — content hash of the tuple, computed by the storage. `null` if not recorded.
@@ -270,7 +270,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Hash = Member("hash", MemberType.INT32)
+        val Hash = Member("hash", MemberType.INT32, JsonPath("properties", "@ns:com:here:xyz", "hash"))
 
         /**
          * `here_tile` — HERE tile key (binary) of the reference point. `null` if not known.
@@ -278,14 +278,14 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val HereTile = Member("here_tile", MemberType.INT32)
+        val HereTile = Member("here_tile", MemberType.INT32, JsonPath("properties", "@ns:com:here:xyz", "hereTile"))
 
         /**
          * `cc` — change-count: how many times this feature has been modified. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val ChangeCount = Member("cc", MemberType.INT32)
+        val ChangeCount = Member("cc", MemberType.INT32, JsonPath("properties", "@ns:com:here:xyz", "changeCount"))
 
         /**
          * `base_tn` — base tuple-number (`BYTE_ARRAY`), set when a three-way merge was performed.
@@ -293,21 +293,21 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val BaseTupleNumber = Member("base_tn", MemberType.BYTE_ARRAY)
+        val BaseTupleNumber = Member("base_tn", MemberType.BYTE_ARRAY, JsonPath("properties", "@ns:com:here:xyz", "base"))
 
         /**
          * `app_id` — identifier of the application that wrote this tuple. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val AppId = Member("app_id", MemberType.STRING)
+        val AppId = Member("app_id", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "appId"))
 
         /**
          * `author` — identifier of the human author that takes ownership for this tuple. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Author = Member("author", MemberType.STRING)
+        val Author = Member("author", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "author"))
 
         /**
          * `origin` — stringified reference to the originating feature when this feature was forked or
@@ -315,7 +315,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Origin = Member("origin", MemberType.STRING)
+        val Origin = Member("origin", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "origin"))
 
         /**
          * `target` — stringified reference to the feature into which this feature was joined.
@@ -323,7 +323,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Target = Member("target", MemberType.STRING)
+        val Target = Member("target", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "target"))
 
         /**
          * `ft` — feature-type string. `null` when it matches the collection's
@@ -332,35 +332,35 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val FeatureType = Member("ft", MemberType.STRING)
+        val FeatureType = Member("ft", MemberType.STRING, JsonPath("properties", "featureType"))
 
         /**
          * `cs0` — custom string value 0. `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CustomString0 = Member("cs0", MemberType.STRING)
+        val CustomString0 = Member("cs0", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "cs0"))
 
         /**
          * `cs1` — custom string value 1. `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CustomString1 = Member("cs1", MemberType.STRING)
+        val CustomString1 = Member("cs1", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "cs1"))
 
         /**
          * `cs2` — custom string value 2. `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CustomString2 = Member("cs2", MemberType.STRING)
+        val CustomString2 = Member("cs2", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "cs2"))
 
         /**
          * `cs3` — custom string value 3. `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val CustomString3 = Member("cs3", MemberType.STRING)
+        val CustomString3 = Member("cs3", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "cs3"))
 
         /**
          * `tags` — feature tags, the classic XYZ tags array located at
@@ -371,7 +371,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Tags = Member("tags", MemberType.SET)
+        val Tags = Member("tags", MemberType.SET, JsonPath("properties", "@ns:com:here:xyz", "tags"))
 
         /**
          * `ref_point` — geometry reference point (always a single point), stored as TWKB. Used to
@@ -380,7 +380,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val ReferencePoint = Member("ref_point", MemberType.SPATIAL)
+        val ReferencePoint = Member("ref_point", MemberType.SPATIAL, JsonPath("referencePoint"))
 
         /**
          * `geo` — feature geometry stored as TWKB. `null` if the feature has no geometry.
@@ -388,21 +388,14 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Geometry = Member("geo", MemberType.SPATIAL)
+        val Geometry = Member("geo", MemberType.SPATIAL, JsonPath("geometry"))
 
         /**
          * `attachment` — arbitrary binary attachment. `null` if unused. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Attachment = Member("attachment", MemberType.BYTE_ARRAY)
-
-        /**
-         * `data_encoding` — feature data encoding string. `null` if using default. Default member.
-         * @since 3.0
-         */
-        @JvmField @JsStatic
-        val DataEncoding = Member("data_encoding", MemberType.STRING)
+        val Attachment = Member("attachment", MemberType.BYTE_ARRAY, JsonPath("attachment"))
 
         /**
          * The names of all [MANDATORY] members, for fast lookup.
@@ -425,7 +418,7 @@ class StandardMembers private constructor() {
             BaseTupleNumber,
             AppId, Author, Origin, Target, FeatureType,
             CustomString0, CustomString1, CustomString2, CustomString3,
-            Tags, ReferencePoint, Geometry, Attachment, DataEncoding
+            Tags, ReferencePoint, Geometry, Attachment
         )
 
         /**
