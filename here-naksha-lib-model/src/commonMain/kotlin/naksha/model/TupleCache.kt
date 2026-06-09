@@ -218,7 +218,7 @@ class TupleCache internal constructor() {
      * @since 3.0
      */
     fun store(tuple: Tuple) {
-        forEachCache { if (it.latencyInMicros eq 0 && tuple.complete) it.put(tuple) }
+        forEachCache { if (it.latencyInMicros eq 0) it.put(tuple) }
     }
 
     /**
@@ -232,7 +232,7 @@ class TupleCache internal constructor() {
         forEachCache {
             if (it.latencyInMicros eq 0) {
                 for (tuple in tuples) {
-                    if (tuple.complete) it.put(tuple)
+                    it.put(tuple)
                 }
             }
         }
@@ -252,7 +252,7 @@ class TupleCache internal constructor() {
         forEachCache {
             if (it.latencyInMicros eq 0) {
                 for (tuple in tuples) {
-                    if (tuple != null && tuple.complete) {
+                    if (tuple != null) {
                         it.put(tuple)
                     }
                 }
@@ -272,7 +272,7 @@ class TupleCache internal constructor() {
             if (it.latencyInMicros eq 0) {
                 for (f in featureTuples) {
                     val tuple = f?.tuple ?: continue
-                    if (tuple.complete) it.put(tuple)
+                    it.put(tuple)
                 }
             }
         }

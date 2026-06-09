@@ -20,73 +20,73 @@ inline fun FetchMode(vararg modes: Int): FetchMode {
 }
 
 /**
- * Set the [meta][Tuple.meta] bit.
+ * Set the [members][Tuple.members] bit.
  * @since 3.0.0
  */
 inline fun FetchMode.withMeta(): Int = this or META_BIT
 
 /**
- * Clear the [meta][Tuple.meta] bit.
+ * Clear the [members][Tuple.members] bit.
  * @since 3.0.0
  */
 inline fun FetchMode.noMeta(): Int = this and META_CLEAR
 
 /**
- * Test if the [meta][Tuple.meta] bit is set.
+ * Test if the [members][Tuple.members] bit is set.
  * @since 3.0.0
  */
 inline fun FetchMode.fetchMeta(): Boolean = (this and META_BIT) == META_BIT
 
 /**
- * Set the _feature_ bit (covers [feature][Tuple.feature] and [tags][Tuple.tags]).
+ * Set the _feature_ bit (covers [feature][Tuple.feature] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.withFeature(): Int = this or FEATURE_BIT
 
 /**
- * Clear the _feature_ bit (covers [feature][Tuple.feature] and [tags][Tuple.tags]).
+ * Clear the _feature_ bit (covers [feature][Tuple.feature] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.noFeature(): Int = this and FEATURE_CLEAR
 
 /**
- * Test if the _feature_ bit is set (which covers [feature][Tuple.feature] and [tags][Tuple.tags]).
+ * Test if the _feature_ bit is set (which covers [feature][Tuple.feature] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.fetchFeature(): Boolean = (this and FEATURE_BIT) == FEATURE_BIT
 
 /**
- * Set the _geometry_ bit (covers [geometry][Tuple.geo] and [reference-point][Tuple.referencePoint]).
+ * Set the _geometry_ bit (covers geometry and reference-point).
  * @since 3.0.0
  */
 inline fun FetchMode.withGeometry(): Int = this or GEOMETRY_BIT
 
 /**
- * Clear the _geometry_ bit ([geometry][Tuple.geo] and [reference-point][Tuple.referencePoint]).
+ * Clear the _geometry_ bit (geometry and reference-point).
  * @since 3.0.0
  */
 inline fun FetchMode.noGeometry(): Int = this and GEOMETRY_CLEAR
 
 /**
- * Test if the _geometry_ bit is set (covers [geometry][Tuple.geo] and [reference-point][Tuple.referencePoint]).
+ * Test if the _geometry_ bit is set (covers geometry and reference-point).
  * @since 3.0.0
  */
 inline fun FetchMode.fetchGeometry(): Boolean = (this and GEOMETRY_BIT) == GEOMETRY_BIT
 
 /**
- * Set the [attachment][Tuple.attachment] bit.
+ * Set the attachment bit.
  * @since 3.0.0
  */
 inline fun FetchMode.withAttachment(): Int = this or ATTACHMENT_BIT
 
 /**
- * Clear the [attachment][Tuple.attachment] bit.
+ * Clear the attachment bit.
  * @since 3.0.0
  */
 inline fun FetchMode.noAttachment(): Int = this and ATTACHMENT_CLEAR
 
 /**
- * Test if the [attachment][Tuple.attachment] bit is set.
+ * Test if the attachment bit is set.
  * @since 3.0.0
  */
 inline fun FetchMode.fetchAttachment(): Boolean = (this and ATTACHMENT_BIT) == ATTACHMENT_BIT

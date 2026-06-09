@@ -8,6 +8,7 @@ import naksha.base.Platform
 import naksha.base.fn.Fn3
 import naksha.geo.HereTile
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
 import kotlin.concurrent.Volatile
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -22,44 +23,44 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 data class Metadata(
-    override val tupleNumber: TupleNumber = TupleNumber.HEAD,
-    override val dataEncoding: DataEncoding = DataEncoding.DEFAULT,
-    override val updatedAt: Int64 = Platform.currentMillis(),
-    override val createdAt: Int64? = null,
-    override val authorTs: Int64? = null,
-    override val nextVersion: Int64? = null,
-    override val baseTupleNumber: TupleNumber? = null,
-    override val changeCount: Int = 1,
-    override val hash: Int = 0,
-    override val hereTile: Int = 0,
-    override val id: String,
-    override val appId: String = NakshaContext.appId(),
-    override val author: String? = NakshaContext.author(),
-    override val origin: String? = null,
-    override val target: String? = null,
-    override val ft: String? = null,
-    override val cv0: Double? = null,
-    override val cv1: Double? = null,
-    override val cv2: Double? = null,
-    override val cv3: Double? = null,
-    override val cs0: String? = null,
-    override val cs1: String? = null,
-    override val cs2: String? = null,
-    override val cs3: String? = null,
-) : IMetadata {
-    override val storageNumber: Int64
+    val tupleNumber: TupleNumber = TupleNumber.HEAD,
+    val dataEncoding: DataEncoding = DataEncoding.DEFAULT,
+    val updatedAt: Int64 = Platform.currentMillis(),
+    val createdAt: Int64? = null,
+    val authorTs: Int64? = null,
+    val nextVersion: Int64? = null,
+    val baseTupleNumber: TupleNumber? = null,
+    val changeCount: Int = 1,
+    val hash: Int = 0,
+    val hereTile: Int = 0,
+    val id: String,
+    val appId: String = NakshaContext.appId(),
+    val author: String? = NakshaContext.author(),
+    val origin: String? = null,
+    val target: String? = null,
+    val ft: String? = null,
+    val cv0: Double? = null,
+    val cv1: Double? = null,
+    val cv2: Double? = null,
+    val cv3: Double? = null,
+    val cs0: String? = null,
+    val cs1: String? = null,
+    val cs2: String? = null,
+    val cs3: String? = null,
+) {
+    val storageNumber: Int64
         get() = tupleNumber.storageNumber
-    override val mapNumber: Int
+    val mapNumber: Int
         get() = tupleNumber.mapNumber
-    override val collectionNumber: Int
+    val collectionNumber: Int
         get() = tupleNumber.collectionNumber
-    override val featureNumber: Int64
+    val featureNumber: Int64
         get() = tupleNumber.featureNumber
-    override val partitionNumber: Int
+    val partitionNumber: Int
         get() = tupleNumber.partitionNumber
-    override val version: Version
+    val version: Version
         get() = tupleNumber.version
-    override val txn: Int64
+    val txn: Int64
         get() = version.txn
 
     /**
@@ -75,7 +76,7 @@ data class Metadata(
      * Returns the [Guid].
      * @return the [Guid].
      */
-    override val guid: Guid
+    val guid: Guid
         get() {
             var guid = _guid
             if (guid == null) {
@@ -88,7 +89,7 @@ data class Metadata(
     @Volatile
     private var _originGuid: Guid? = null
 
-    override val originGuid: Guid?
+    val originGuid: Guid?
         get() {
             var guid = _originGuid
             if (guid == null) {
@@ -106,7 +107,7 @@ data class Metadata(
     @Volatile
     private var _targetGuid: Guid? = null
 
-    override val targetGuid: Guid?
+    val targetGuid: Guid?
         get() {
             var guid = _targetGuid
             if (guid == null) {
@@ -129,7 +130,7 @@ data class Metadata(
     override fun hashCode(): Int = tupleNumber.hashCode()
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is IMetadata) return false
+        if (other !is Metadata) return false
         return guid == other.guid
     }
     override fun toString(): String = "$id:$tupleNumber"
@@ -144,28 +145,37 @@ data class Metadata(
          */
         @JvmStatic
         @JsStatic
-        fun fromOther(other: IMetadata): Metadata {
+        fun fromOther(other: Any?): Metadata? {
             if (other is Metadata) return other
-            return Metadata(
-                other.tupleNumber,
-                other.dataEncoding,
-                other.updatedAt,
-                other.createdAt,
-                other.authorTs,
-                other.nextVersion,
-                other.baseTupleNumber,
-                other.changeCount,
-                other.hash,
-                other.hereTile,
-                other.id,
-                other.appId,
-                other.author,
-                other.origin,
-                other.target,
-                other.ft,
-                other.cv0, other.cv1, other.cv2, other.cv3,
-                other.cs0, other.cs1, other.cs2, other.cs3
-            )
+            if (other is Tuple) {
+                return Metadata(
+                    tupleNumber = other.tupleNumber,
+                    dataEncoding = other.dataEncoding,
+                    updatedAt = other.getLongMember(StandardMembers.UpdatedAt),
+                    createdAt = other.getLongMember(StandardMembers.CreatedAt),
+                    authorTs = other.getLongMember(StandardMembers.AuthorTimestamp),
+                    nextVersion = if (other.nextVersion == Int64(-1L)) null else other.nextVersion,
+                    baseTupleNumber = null,
+                    changeCount = other.getIntMember(StandardMembers.ChangeCount),
+                    hash = other.getIntMember(StandardMembers.Hash),
+                    hereTile = other.getIntMember(StandardMembers.HereTile),
+                    id = other.getStringMember(StandardMembers.Id) ?: "undefined",
+                    appId = other.getStringMember(StandardMembers.AppId) ?: NakshaContext.appId(),
+                    author = other.getStringMember(StandardMembers.Author),
+                    origin = other.getStringMember(StandardMembers.Origin),
+                    target = other.getStringMember(StandardMembers.Target),
+                    ft = other.getStringMember(StandardMembers.FeatureType),
+                    cv0 = other.getDoubleMember(StandardMembers.CustomValue0),
+                    cv1 = other.getDoubleMember(StandardMembers.CustomValue1),
+                    cv2 = other.getDoubleMember(StandardMembers.CustomValue2),
+                    cv3 = other.getDoubleMember(StandardMembers.CustomValue3),
+                    cs0 = other.getStringMember(StandardMembers.CustomString0),
+                    cs1 = other.getStringMember(StandardMembers.CustomString1),
+                    cs2 = other.getStringMember(StandardMembers.CustomString2),
+                    cs3 = other.getStringMember(StandardMembers.CustomString3),
+                )
+            }
+            return null
         }
 
         /**

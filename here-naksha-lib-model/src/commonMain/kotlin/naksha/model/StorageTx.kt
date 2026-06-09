@@ -3,7 +3,9 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.jbon.IBook
 import naksha.jbon.IDictReader
+import naksha.jbon.HeapBook
 import naksha.model.Metadata.Metadata_C.calculateHash
 import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.objects.*
@@ -53,7 +55,7 @@ open class StorageTx private constructor(
     /**
      * The author _(user)_ that performs the modifications; if any.
      *
-     * If `null`, then the change is done by an application and the [author][Metadata.author] and [authorTs][Metadata.authorTs] are not modified _(they stay what they are right now)_.
+     * If `null`, then the change is done by an application and the author and authorTs fields in [Tuple.members] are not modified _(they stay what they are right now)_.
      * @since 3.0
      */
     val author: String?,
@@ -97,7 +99,7 @@ open class StorageTx private constructor(
         get() = transaction.time
 
     /**
-     * Method to create the new metadata for the given write action on a feature.
+     * Method to create the new members dict for the given write action on a feature.
      *
      * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given arguments are not sufficient to generate the new metadata.
      * @param map the map into which to persist the feature.
@@ -105,72 +107,105 @@ open class StorageTx private constructor(
      * @param feature the new _(modified)_ state of the feature, for which the metadata should be created.
      * @param action the [action][Action] being performed.
      * @param atomic whether the write should be performed atomically.
-     * @return the new metadata that is correct for the new state, based upon the given data.
+     * @return the new [IBook] with metadata members that is correct for the new state, based upon the given data.
      * @since 3.0.0
      * @see [StorageTx]
      */
-    protected open fun metadataOf(
+    protected open fun buildMembers(
         map: NakshaMap,
         collection: NakshaCollection,
         feature: NakshaFeature,
         action: Action,
         atomic: Boolean = false
-    ): Metadata {
+    ): IBook {
         val dataEncoding = getDataEncoding(feature, collection)
         val xyz = feature.properties.xyz
-        val actionBits = Int64(action.intValue.toLong())
-        val tn = TupleNumber(storageNumber, map.number, collection.number, feature.featureNumber, Version(version.txn and Int64(-4L) or actionBits))
-        // TODO: Handle other operations like rebase!
-        val base_tn: TupleNumber? = null
         val isExistingFeature = !(action == Action.CREATED || (action == Action.UPDATED && !atomic))
         if (isExistingFeature && xyz.guid == null) {
             throw illegalArg("$action with atomic=$atomic requires that the feature has a UUID!")
         }
-        // Transactions need next_version set to their own version value for correct routing.
-        val next_version: Int64? = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) tn.version.txn else null
         val updatedAt: Int64 = this.updatedAt
         val createdAt: Int64? = if (isExistingFeature) xyz.createdAt else null
         val author: String?
         val authorTs: Int64?
         if (xyz.author == null || xyz.author != this.author) {
-            // If either author is null or they differ, the author has changed.
             author = this.author
-            authorTs = null // authorTs == updatedAt
+            authorTs = null
         } else {
-            // If the author stays the same as before, we need to remember the author and timestamp!
             author = xyz.author
             authorTs = xyz.authorTs
         }
-        val cv0 = feature.properties.xyz.cv0
-        val cv1 = feature.properties.xyz.cv1
-        val cv2 = feature.properties.xyz.cv2
-        val cv3 = feature.properties.xyz.cv3
         val featureType = if (collection.defaultFeatureType == feature.featureType) null else feature.featureType
-        return Metadata(
-            tupleNumber = tn,
-            dataEncoding = dataEncoding,
-            updatedAt = updatedAt,
-            createdAt = createdAt,
-            authorTs = authorTs,
-            nextVersion = next_version,
-            baseTupleNumber = base_tn,
-            changeCount = xyz.changeCount + 1,
-            hash = calculateHash(feature),
-            hereTile = calculateHereTile(feature),
-            id = feature.id,
-            appId = appId,
-            author = author,
-            origin = null, // TODO: Fix this, we need to detect foreign features!
-            target = null, // TODO: Fix this, we need to detect join operations!
-            ft = featureType,
-            cv0 = cv0,
-            cv1 = cv1,
-            cv2 = cv2,
-            cv3 = cv3,
-            cs0 = feature.properties.xyz.cs0,
-            cs1 = feature.properties.xyz.cs1,
-            cs2 = feature.properties.xyz.cs2,
-            cs3 = feature.properties.xyz.cs3,
+        val members = HeapBook()
+        members.put("updated_at", updatedAt)
+        members.put("created_at", createdAt)
+        members.put("author_ts", authorTs)
+        members.put("author", author)
+        members.put("app_id", appId)
+        members.put("data_encoding", dataEncoding.toString())
+        members.put("cc", xyz.changeCount + 1)
+        members.put("hash", calculateHash(feature))
+        members.put("here_tile", calculateHereTile(feature))
+        members.put("id", feature.id)
+        members.put("origin", null)
+        members.put("target", null)
+        members.put("ft", featureType)
+        members.put("cv0", xyz.cv0)
+        members.put("cv1", xyz.cv1)
+        members.put("cv2", xyz.cv2)
+        members.put("cv3", xyz.cv3)
+        members.put("cs0", xyz.cs0)
+        members.put("cs1", xyz.cs1)
+        members.put("cs2", xyz.cs2)
+        members.put("cs3", xyz.cs3)
+        return members
+    }
+
+    /**
+     * Builds the [Tuple] for the given write action.
+     * @param map the map in which the feature is being persisted.
+     * @param collection the collection in which the feature is being persisted.
+     * @param feature the feature.
+     * @param action the [action][Action] being performed.
+     * @param attachment the attachment.
+     * @param atomic whether the write should be performed atomically.
+     * @return the encoded [Tuple].
+     */
+    private fun buildTuple(
+        map: NakshaMap,
+        collection: NakshaCollection,
+        feature: NakshaFeature,
+        action: Action,
+        attachment: ByteArray?,
+        atomic: Boolean = false
+    ): Tuple {
+        val members = buildMembers(map, collection, feature, action, atomic)
+        val dataEncoding = getDataEncoding(feature, collection)
+        val xyz = feature.properties.xyz
+        val actionBits = Int64(action.intValue.toLong())
+        val featureNumber = feature.featureNumber
+        val versionVal = version.txn and Int64(-4L) or actionBits
+        val nextVersion: Int64 = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) versionVal else Int64(-1L)
+        val dict = dictReader?.getEncodingDictionary(feature)
+        val featureBytes = Naksha.encodeFeature(feature, dataEncoding, dict)
+        val geoBytes = Naksha.encodeGeometry(feature.geometry)
+        val refPoint = Naksha.encodeGeometry(feature.referencePoint)
+        val tagsJson = Naksha.encodeTags(xyz.tags.toTagMap())
+        if (members is naksha.jbon.HeapBook) {
+            members.put("geo", geoBytes)
+            members.put("ref_point", refPoint)
+            members.put("tags", tagsJson)
+            members.put("attachment", attachment)
+        }
+        return Tuple(
+            storageNumber = storageNumber,
+            mapNumber = map.number,
+            collectionNumber = collection.number,
+            featureNumber = featureNumber,
+            version = Version(versionVal),
+            nextVersion = nextVersion,
+            members = members,
+            feature = featureBytes
         )
     }
 
@@ -199,19 +234,7 @@ open class StorageTx private constructor(
         collection: NakshaCollection,
         feature: NakshaFeature,
         attachment: ByteArray?
-    ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Action.CREATED)
-        val dictionary = dictReader?.getEncodingDictionary(feature)
-        return Tuple(
-            meta = metadata,
-            feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap()),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
-            geo = Naksha.encodeGeometry(feature.geometry),
-            attachment = attachment,
-            complete = true
-        )
-    }
+    ): Tuple = buildTuple(map, collection, feature, Action.CREATED, attachment)
 
     /**
      * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was updated.
@@ -219,6 +242,7 @@ open class StorageTx private constructor(
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
      * @param attachment the attachment.
+     * @param atomic whether the write should be performed atomically.
      * @return the binary encoding of the [NakshaFeature] as [Tuple].
      */
     open fun updated(
@@ -227,19 +251,7 @@ open class StorageTx private constructor(
         feature: NakshaFeature,
         attachment: ByteArray?,
         atomic: Boolean = false,
-    ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Action.UPDATED, atomic)
-        val dictionary = dictReader?.getEncodingDictionary(feature)
-        return Tuple(
-            meta = metadata,
-            feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap()),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
-            geo = Naksha.encodeGeometry(feature.geometry),
-            attachment = attachment,
-            complete = true
-        )
-    }
+    ): Tuple = buildTuple(map, collection, feature, Action.UPDATED, attachment, atomic)
 
     /**
      * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was deleted.
@@ -257,19 +269,7 @@ open class StorageTx private constructor(
         collection: NakshaCollection,
         feature: NakshaFeature,
         attachment: ByteArray?
-    ): Tuple {
-        val metadata = metadataOf(map, collection, feature, Action.DELETED)
-        val dictionary = dictReader?.getEncodingDictionary(feature)
-        return Tuple(
-            meta = metadata,
-            feature = Naksha.encodeFeature(feature, metadata.dataEncoding, dictionary),
-            tags = Naksha.encodeTags(feature.properties.xyz.tags.toTagMap()),
-            referencePoint = Naksha.encodeGeometry(feature.referencePoint),
-            geo = Naksha.encodeGeometry(feature.geometry),
-            attachment = attachment,
-            complete = true
-        )
-    }
+    ): Tuple = buildTuple(map, collection, feature, Action.DELETED, attachment)
 
     private fun getDataEncoding(feature: NakshaFeature, collection: NakshaCollection): DataEncoding =
         storage?.getDataEncoding(feature, collection) ?: Naksha.DEFAULT_DATA_ENCODING

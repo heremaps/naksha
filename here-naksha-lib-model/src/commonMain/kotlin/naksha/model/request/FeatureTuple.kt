@@ -54,7 +54,11 @@ open class FeatureTuple(
      * @since 3.0
      */
     val id: String?
-        get() = tuple?.meta?.id ?: feature?.id
+        get() {
+            val member = tuple?.getStringMember(naksha.model.objects.StandardMembers.Id)
+            if (member != null) return member
+            return feature?.id
+        }
 
     private var doNotAutoUpdate: Boolean = false
     private var cachedTuple: Tuple? = null
@@ -69,7 +73,6 @@ open class FeatureTuple(
      * - **Beware**: If the returned feature is modified, this will as well modify the cached version.
      * @since 3.0
      * @see [Tuple.toNakshaFeature]
-     * @see [Tuple.attachment]
      */
     open var feature: NakshaFeature?
         get() {

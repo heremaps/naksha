@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.decodeURIComponent
 import naksha.base.Platform.PlatformCompanion.encodeURIComponent
 import naksha.model.objects.NakshaFeature
@@ -112,13 +111,16 @@ data class Guid(
         }
 
         /**
-         * Turn the given [IMetadata] into a [Guid].
-         * @param metadata the [IMetadata] for which to generate a [Guid].
+         * Create a [Guid] from the given [Tuple].
+         * @param tuple the [Tuple] for which to generate a [Guid].
          * @return the created [Guid].
          * @since 3.0.0
          */
         @JsStatic
         @JvmStatic
-        fun fromMetadata(metadata: IMetadata): Guid = metadata.guid
+        fun fromTuple(tuple: Tuple): Guid {
+            val id = tuple.getStringMember(naksha.model.objects.StandardMembers.Id) ?: tuple.featureNumber.toString()
+            return Guid(id, tuple.tupleNumber)
+        }
     }
 }

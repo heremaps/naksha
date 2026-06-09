@@ -102,31 +102,31 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertNotNull(retrievedTuples)
         assertEquals(2, retrievedTuples.size)
 
-        val createdTuple = retrievedTuples.first { it.meta.action() == Action.CREATED }
-        val updatedTuple = retrievedTuples.first { it.meta.action() == Action.UPDATED }
+        val createdTuple = retrievedTuples.first { Action.fromValue((it.tuple?.getLongMember(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1) == Action.CREATED }
+        val updatedTuple = retrievedTuples.first { Action.fromValue((it.tuple?.getLongMember(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1) == Action.UPDATED }
 
         // Then
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)
-        assertEquals(createdTuple.meta.nextVersion, updatedTuple.tupleNumber.version.txn)
-        assertNull(updatedTuple.meta.nextVersion)
+        assertEquals(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.NextVersion), updatedTuple.tupleNumber.version.txn)
+        assertNull(updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.NextVersion, Int64(-1L)).let { if (it == Int64(-1L)) null else it })
         // Both tuples share the collection's feature encoding (action lives in version bits).
-        assertEquals(createdTuple.meta.dataEncoding, updatedTuple.meta.dataEncoding)
-        assertEquals(1, createdTuple.meta.changeCount)
-        assertEquals(2, updatedTuple.meta.changeCount)
-        assertEquals(createdTuple.geo, updatedTuple.geo)
-        assertEquals(createdTuple.tags, updatedTuple.tags)
+        assertEquals(createdTuple.tuple?.dataEncoding, updatedTuple.tuple?.dataEncoding)
+        assertEquals(1, createdTuple.tuple?.getIntMember(naksha.model.objects.StandardMembers.ChangeCount))
+        assertEquals(2, updatedTuple.tuple?.getIntMember(naksha.model.objects.StandardMembers.ChangeCount))
+        assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry))
+        assertEquals(createdTuple.getStringMember(naksha.model.objects.StandardMembers.Tags), updatedTuple.getStringMember(naksha.model.objects.StandardMembers.Tags))
         assertNotEquals(createdTuple.feature, updatedTuple.feature)
-        assertEquals(createdTuple.referencePoint, updatedTuple.referencePoint)
-        assertNull(createdTuple.toNakshaFeature().properties["new_attr"])
-        assertEquals("some_value", updatedTuple.toNakshaFeature().properties["new_attr"])
-        assertEquals(createdTuple.meta.createdAt ?: createdTuple.meta.updatedAt, updatedTuple.meta.createdAt)
-        assertNotEquals(updatedTuple.meta.createdAt, updatedTuple.meta.updatedAt)
-        assertNull(createdTuple.meta.createdAt)
-        assertNotNull(createdTuple.meta.updatedAt)
-        assertEquals(createdTuple.meta.hereTile, updatedTuple.meta.hereTile)
+        assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint))
+        assertNull(createdTuple.toNakshaFeature()?.properties["new_attr"])
+        assertEquals("some_value", updatedTuple.toNakshaFeature()?.properties["new_attr"])
+        assertEquals(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it } ?: createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt), updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it })
+        assertNotEquals(updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.CreatedAt), updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt))
+        assertNull(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it })
+        assertNotNull(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt))
+        assertEquals(createdTuple.tuple?.getIntMember(naksha.model.objects.StandardMembers.HereTile), updatedTuple.tuple?.getIntMember(naksha.model.objects.StandardMembers.HereTile))
         assertEquals(Action.UPDATED, updatedTuple.tupleNumber.action)
         assertEquals(Action.CREATED, createdTuple.tupleNumber.action)
-        assertNotEquals(createdTuple.meta.authorTs, updatedTuple.meta.authorTs)
+        assertNotEquals(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.AuthorTimestamp), updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.AuthorTimestamp))
     }
 
     @Test

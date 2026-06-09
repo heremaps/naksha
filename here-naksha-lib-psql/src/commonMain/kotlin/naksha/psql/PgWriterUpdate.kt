@@ -181,20 +181,27 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 }
                 // Patch back all BYTE_ARRAY columns whose stored value may differ from what the client sent
                 // (sentinel "undefined" causes the DB to retain the existing value).
-                val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.geo
-                val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.referencePoint
-                val tags = tuple.tags
-                val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.attachment
-                val needsPatch = !tuple.geo.contentEquals(geo)
-                    || !tuple.referencePoint.contentEquals(referencePoint)
-                    || !tuple.attachment.contentEquals(attachment)
+                val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
+                val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint)
+                val tags = tuple.getStringMember(naksha.model.objects.StandardMembers.Tags)
+                val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment)
+                val oldGeo = tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
+                val oldRefPoint = tuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint)
+                val oldAttachment = tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment)
+                val needsPatch = (oldGeo == null || !oldGeo.contentEquals(geo ?: ByteArray(0)))
+                    || (oldRefPoint == null || !oldRefPoint.contentEquals(referencePoint ?: ByteArray(0)))
+                    || (oldAttachment == null || !oldAttachment.contentEquals(attachment ?: ByteArray(0)))
                 if (needsPatch) {
-                    write.tuple = tuple.copy(
-                        geo = geo,
-                        referencePoint = referencePoint,
-                        tags = tags,
-                        attachment = attachment,
-                    )
+                    val m = tuple.members
+                    val newMembers = if (m is naksha.jbon.HeapBook) {
+                        val dict = m.copy()
+                        dict.put("geo", geo)
+                        dict.put("ref_point", referencePoint)
+                        dict.put("tags", tags)
+                        dict.put("attachment", attachment)
+                        dict
+                    } else m
+                    write.tuple = tuple.copy(members = newMembers)
                 }
             }
         }

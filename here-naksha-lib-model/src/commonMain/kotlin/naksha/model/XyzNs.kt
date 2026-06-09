@@ -3,15 +3,16 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.model.objects.StandardMembers
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * The XYZ namespace stored in [properties.@ns:com:here:xyz][naksha.model.object.NakshaProperties.XYZ] of the [NakshaFeature][naksha.model.object.NakshaFeature].
+ * The XYZ namespace stored in [properties.@ns:com:here:xyz][naksha.model.object.NakshaProperties.XYZ] of the [NakshaFeature][naksha.model.objects.NakshaFeature].
  *
- * This represents the external Naksha view of the low-level [metadata][IMetadata]. When a [Tuple] is returned by a storage, and then converted for example by Naksha-Hub into a [NakshaFeature][naksha.model.objects.NakshaFeature], the [uuid] is set to the stringified [Guid] of the [Tuple], so to the [tuple-number][Metadata.tupleNumber] combined with the [feature id][Metadata.id].
+ * This represents the external Naksha view of tuple metadata. When a [Tuple] is returned by a storage, and then converted for example by Naksha-Hub into a [NakshaFeature][naksha.model.objects.NakshaFeature], the [uuid] is set to the stringified [Guid] of the [Tuple], so to the [tuple-number][TupleNumber] combined with the [feature id][naksha.model.objects.StandardMembers.Id].
  *
  * If a client wants to change a feature, the following concepts should be followed:
  *
@@ -187,11 +188,79 @@ class XyzNs : AnyObject() {
         private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
 
         /**
-         * Create the XZY-namespace from the given [Metadata].
+         * Create the XYZ-namespace from the given [Tuple].
+         * @param tuple the [Tuple]
+         * @return the [XYZ namespace][XyzNs].
+         */
+        @JvmStatic
+        @JsStatic
+        fun fromTuple(tuple: Tuple): XyzNs {
+            val tn = tuple.tupleNumber
+            val members = tuple.members
+            val id = members?.getByName("id") as? String ?: tuple.featureNumber.toString()
+            val guid = Guid(id, tn)
+            val updatedAt = tuple.getLongMember(StandardMembers.UpdatedAt)
+            val createdAt = tuple.getLongMember(StandardMembers.CreatedAt).let {
+                if (it == Int64(0L)) updatedAt else it
+            }
+            val authorTs = tuple.getLongMember(StandardMembers.AuthorTimestamp)?.let {
+                if (it == Int64(0)) updatedAt else it
+            } ?: updatedAt
+            val nextVersion = tuple.nextVersion
+            val nextTn = if (nextVersion != Int64(-1L)) TupleNumber(
+                tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber, Version(nextVersion)
+            ) else null
+            val base_tn = members?.getByName("base_tn")?.let {
+                if (it is ByteArray) TupleNumber.fromByteArray(it, 0, TupleNumberVariant.TupleNumberVariant_C.B128,
+                    tn.storageNumber, tn.mapNumber, tn.collectionNumber)
+                else null
+            }
+            return AnyObject().apply {
+                setRaw(UUID, guid.toString())
+                if (nextTn != null) setRaw(NUUID, Guid(id, nextTn).toString())
+                if (base_tn != null) setRaw(MUUID, Guid(id, base_tn).toString())
+                if (createdAt != updatedAt) setRaw(CREATED_AT, createdAt)
+                if (authorTs != updatedAt) setRaw(AUTHOR_TS, authorTs)
+                setRaw(UPDATED_AT, updatedAt)
+                setRaw(CHANGE_COUNT, tuple.getIntMember(StandardMembers.ChangeCount))
+                setRaw(APP_ID, tuple.getStringMember(StandardMembers.AppId))
+                val author = tuple.getStringMember(StandardMembers.Author)
+                if (author != null) setRaw(AUTHOR, author)
+                setRaw(DATA_ENCODING, tuple.getStringMember(StandardMembers.DataEncoding))
+                setRaw(ACTION, tn.action.toString())
+                setRaw(HASH, tuple.getIntMember(StandardMembers.Hash))
+                setRaw(HERE_TILE, tuple.getIntMember(StandardMembers.HereTile))
+                val origin = tuple.getStringMember(StandardMembers.Origin)
+                if (origin != null) setRaw(ORIGIN, origin)
+                val target = tuple.getStringMember(StandardMembers.Target)
+                if (target != null) setRaw(TARGET, target)
+                val cv0 = members?.getByName("cv0")
+                if (cv0 != null) setRaw(CV0, cv0 as? Double)
+                val cv1 = members?.getByName("cv1")
+                if (cv1 != null) setRaw(CV1, cv1 as? Double)
+                val cv2 = members?.getByName("cv2")
+                if (cv2 != null) setRaw(CV2, cv2 as? Double)
+                val cv3 = members?.getByName("cv3")
+                if (cv3 != null) setRaw(CV3, cv3 as? Double)
+                val cs0 = tuple.getStringMember(StandardMembers.CustomString0)
+                if (cs0 != null) setRaw(CS0, cs0)
+                val cs1 = tuple.getStringMember(StandardMembers.CustomString1)
+                if (cs1 != null) setRaw(CS1, cs1)
+                val cs2 = tuple.getStringMember(StandardMembers.CustomString2)
+                if (cs2 != null) setRaw(CS2, cs2)
+                val cs3 = tuple.getStringMember(StandardMembers.CustomString3)
+                if (cs3 != null) setRaw(CS3, cs3)
+            }.proxy(XyzNs::class)
+        }
+
+        /**
+         * Create the XYZ-namespace from the given [Metadata].
          * @param meta the [Metadata]
          * @return the [XYZ namespace][XyzNs].
          * @see [Metadata.fromXyzNs]
+         * @deprecated Use [fromTuple] instead.
          */
+        @Deprecated("Use fromTuple instead", ReplaceWith("fromTuple(tuple)"))
         @JvmStatic
         @JsStatic
         fun fromMetadata(meta: Metadata): XyzNs {

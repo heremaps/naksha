@@ -29,7 +29,7 @@ open class WriteRequest : Request() {
         private val BOOLEAN = NotNullProperty<WriteRequest, Boolean>(Boolean::class) { _, _ -> false }
     }
 
-    override fun defaultRowOptions() : ReturnColumns = ReturnColumns.none().withMeta(true)
+    override fun defaultRowOptions() : ReturnColumns = ReturnColumns.none().withMembers(true)
 
     /**
      * All writes to perform.

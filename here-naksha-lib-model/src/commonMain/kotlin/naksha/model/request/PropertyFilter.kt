@@ -11,6 +11,7 @@ import naksha.model.DataEncoding
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
+
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.query.*
 
@@ -26,7 +27,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
         // For JBON2/JBON2_GZIP, decode to NakshaFeature and navigate properties directly.
         val tuple = featureTuple.tuple ?: return null
-        val encoding = tuple.meta.dataEncoding
+        val encoding = tuple.dataEncoding
         if (encoding == DataEncoding.JBON2 || encoding == DataEncoding.JBON2_GZIP) {
             val feature = Naksha.decodeFeature(tuple.feature, encoding, null) ?: return null
             return if (resolvePropsQueryOnFeature(pSearch, feature)) featureTuple else null
@@ -43,7 +44,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
     private fun resolveFeatureAndDecoder(featureTuple: FeatureTuple): JbFeatureDecoder? {
         val tuple = featureTuple.tuple ?: return null
         val feature = featureTuple.tuple?.feature ?: return null
-        val encoding = tuple.meta.dataEncoding
+        val encoding = tuple.dataEncoding
 
         val raw = if (encoding.gzip) gzipInflate(feature) else feature
 

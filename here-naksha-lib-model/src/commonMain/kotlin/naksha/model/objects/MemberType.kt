@@ -41,21 +41,21 @@ class MemberType : JsEnum() {
         val BOOLEAN = defIgnoreCase(MemberType::class, "boolean")
 
         /**
-         * 8-bit signed integer.
+         * 8-bit signed integer in storage, but when reading from book, decode as long.
          * @since 3.0
          */
         @JvmField
         val INT8 = defIgnoreCase(MemberType::class, "int8")
 
         /**
-         * 16-bit signed integer.
+         * 16-bit signed integer in storage, but when reading from book, decode as long.
          * @since 3.0
          */
         @JvmField
         val INT16 = defIgnoreCase(MemberType::class, "int16")
 
         /**
-         * 32-bit signed integer.
+         * 32-bit signed integer in storage, but when reading from book, decode as long.
          * @since 3.0
          */
         @JvmField
@@ -69,7 +69,7 @@ class MemberType : JsEnum() {
         val INT64 = defIgnoreCase(MemberType::class, "int64")
 
         /**
-         * 32-bit IEEE-754 floating point.
+         * 32-bit IEEE-754 floating point in storage, but when reading from book, decode as double.
          * @since 3.0
          */
         @JvmField
@@ -83,7 +83,7 @@ class MemberType : JsEnum() {
         val FLOAT64 = defIgnoreCase(MemberType::class, "float64")
 
         /**
-         * Variable-length UTF-8 text.
+         * Variable-length string.
          * @since 3.0
          */
         @JvmField

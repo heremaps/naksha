@@ -125,11 +125,29 @@ class DataEncoding : JsEnum() {
         @JvmField
         val DEFAULT = JBON2_GZIP
 
-        /**
+          /**
          * Look up a [DataEncoding] by its [intValue]. Returns [DEFAULT] for any unknown value.
          */
         @JsStatic
         @JvmStatic
         fun fromValue(value: Int): DataEncoding = FROM_VALUE[value] ?: DEFAULT
+
+        /**
+         * Look up a [DataEncoding] by its string name. Returns [DEFAULT] for any unknown value.
+         */
+        @JsStatic
+        @JvmStatic
+        fun fromString(name: String): DataEncoding {
+            val upper = name.uppercase()
+            return when (upper) {
+                "JBON" -> JBON
+                "JBON_GZIP" -> JBON_GZIP
+                "JSON" -> JSON
+                "JSON_GZIP" -> JSON_GZIP
+                "JBON2" -> JBON2
+                "JBON2_GZIP" -> JBON2_GZIP
+                else -> DEFAULT
+            }
+        }
     }
 }

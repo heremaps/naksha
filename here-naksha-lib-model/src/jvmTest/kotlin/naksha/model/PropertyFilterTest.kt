@@ -3,6 +3,7 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Proxy
+import naksha.jbon.HeapBook
 import naksha.jbon.JbEncoder
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.objects.NakshaFeature
@@ -469,15 +470,19 @@ class PropertyFilterTest {
                 featureNumber(feature.id),
                 version
             )
+            val members = HeapBook()
+            members.put("updated_at", Int64(0))
+            members.put("id", feature.id)
+            members.put("app_id", "")
+            members.put("author", null)
+            members.put("data_encoding", DataEncoding.JBON.toString())
             val tuple = Tuple(
-                meta = Metadata(
-                    tupleNumber = tupleNumber,
-                    updatedAt = Int64(0),
-                    id = feature.id,
-                    appId = "",
-                    author = null,
-                    dataEncoding = DataEncoding.JBON,
-                ),
+                storageNumber = storageNumber,
+                mapNumber = mapNumber,
+                collectionNumber = collectionNumber,
+                featureNumber = featureNumber(feature.id),
+                version = version,
+                members = members,
                 feature = featureBytes
             )
             return FeatureTuple(tupleNumber, tuple)

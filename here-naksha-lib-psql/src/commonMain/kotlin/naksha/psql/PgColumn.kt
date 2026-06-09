@@ -228,7 +228,7 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The unique hash of this [tuple][naksha.model.Tuple] (state), calculated by the storage using the static [Metadata.hash][naksha.model.Metadata.calculateHash] method.
+         * The unique hash of this [tuple][naksha.model.Tuple] (state), calculated by the storage using the static [Metadata.calculateHash] method.
          *
          * **Optional** — `NULL` is allowed.
          * @since 3.0
@@ -241,7 +241,7 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The binary [HERE tile-key][naksha.geo.HereTile.intKey] of the [reference-point][naksha.model.Tuple.referencePoint] of the [tuple][naksha.model.Tuple] (state). This is calculated using the static [Metadata.calculateHereTile][naksha.model.Metadata.calculateHereTile] method.
+         * The binary [HERE tile-key][naksha.geo.HereTile.intKey] of the reference-point of the [tuple][naksha.model.Tuple] (state). This is calculated using the static [Metadata.calculateHereTile] method.
          *
          * **Optional** — `NULL` is allowed; NULL means no reference point / tile is known.
          * @since 3.0

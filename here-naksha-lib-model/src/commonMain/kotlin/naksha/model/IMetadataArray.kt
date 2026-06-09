@@ -5,7 +5,7 @@ package naksha.model
 import kotlin.js.JsExport
 
 /**
- * An interface to an array of binary encoded metadata.
+ * An interface to an array of [Metadata].
  */
 @JsExport
 interface IMetadataArray {
@@ -15,7 +15,7 @@ interface IMetadataArray {
     val size: Int
 
     /**
-     * Returns the metadata at the given index.
+     * Returns the [Metadata] at the given index.
      */
     operator fun get(index: Int): Metadata
 }

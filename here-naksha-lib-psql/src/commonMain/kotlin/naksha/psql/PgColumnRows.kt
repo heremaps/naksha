@@ -2,10 +2,83 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.jbon.DictEntry
+import naksha.jbon.IBook
+import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
+import naksha.model.objects.StandardMembers
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
+
+/**
+* Thin [IBook] wrapper that maps column names to row values from [PgColumnRows].
+     *
+     * This implements [IBook] by delegating index/name lookups to the underlying [rows]
+ * instance so that [Tuple] getters can resolve members at read time.
+ * @since 3.0
+ */
+internal class PgRowDict(
+    val row: Int,
+    private val rows: PgColumnRows,
+    val fn: Int64,
+    val dataEncoding: DataEncoding,
+) : IBook {
+
+    override val id: String?
+        get() {
+            if (fn >= Int64(0)) {
+                return rows.getString(row, PgColumn.id)
+            }
+            return rows.getString(row, PgColumn.id)
+        }
+
+    override val length: Int
+        get() = rows.columns.size
+
+    override fun get(index: Int): Any? {
+        val col = rows.columns.getOrNull(index) ?: return null
+        return col.values.getOrNull(row)
+    }
+
+    override fun indexOf(string: String): Int {
+        val col = rows.columnByName[string]
+        return col?.index ?: -1
+    }
+
+    override fun stringAt(index: Int): String? {
+        val col = rows.columns.getOrNull(index) ?: return null
+        val v = col.values.getOrNull(row)
+        return if (v is String) v else null
+    }
+
+    override fun hasNames(): Boolean = true
+
+    override fun getIndexOf(name: String): Int = indexOf(name)
+
+    override fun getNameAt(index: Int): String? = rows.columns.getOrNull(index)?.name
+
+    override fun namesLength(): Int = rows.columns.size
+
+    override fun getByName(name: String): Any? {
+        val col = rows.columnByName[name] ?: return null
+        return col.values.getOrNull(row)
+    }
+
+    /**
+     * Returns the value of a `jsonb` column as raw JSON text.
+     */
+    private fun getJsonText(column: PgColumn): String? {
+        val value = rows.getAny(row, column)
+        return when (value) {
+            null -> null
+            is String -> value
+            else -> toJSON(value)
+        }
+    }
+
+    override fun find(hash: Int): List<naksha.jbon.DictEntry> = emptyList()
+}
 
 /**
  * Helper class to convert rows into arrays of column and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
@@ -17,7 +90,7 @@ internal class PgColumnRows {
      * @since 3.0
      */
     val columns = mutableListOf<PgColumnEntry>()
-    private val columnByName = mutableMapOf<String, PgColumnEntry>()
+    internal val columnByName = mutableMapOf<String, PgColumnEntry>()
     private var isComplete: Boolean? = null
     private var names: String? = null
     private var namesAggregate: String? = null
@@ -90,7 +163,7 @@ internal class PgColumnRows {
      *
      * The encoding is no longer persisted as a per-row column; it is a per-collection setting
      * looked up by callers (e.g. from [PgCollection.head.dataEncoding]) and passed here so the
-     * synthesized [Metadata.dataEncoding] tells decoders how to unpack the feature bytes.
+     * synthesized [Tuple.dataEncoding] tells decoders how to unpack the feature bytes.
      *
      * **MUST be set via [withDefaultDataEncoding] before any call to [getTuple] / [get]** —
      * leaving it unset and then materializing a tuple would silently decode features under the
@@ -223,52 +296,26 @@ internal class PgColumnRows {
         if (row < 0 || row >= size) return null
         val fn = getInt64(row, PgColumn.fn) ?: return null
         val version = getInt64(row, PgColumn.version) ?: return null
-        val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, fn, naksha.model.Version(version))
-        val base_tn = getByteArray(row, PgColumn.base_tn)
-        val baseTupleNumber = if (base_tn != null) TupleNumber.fromByteArray(base_tn, 0, B128, storageNumber, mapNumber, collectionNumber) else null
         val nextVersion = getInt64(row, PgColumn.next_version)
         val encoding = defaultDataEncoding ?: throw illegalState(
             "PgColumnRows.defaultDataEncoding was not set before calling getTuple(); " +
-                    "synthesized Metadata.dataEncoding would be unknown and decoders would silently " +
-                    "mis-handle the collection's feature encoding. Set it from the collection's " +
-                    "dataEncoding (or Naksha.DEFAULT_DATA_ENCODING for admin reads) via " +
-                    "withDefaultDataEncoding(...)."
+                    "set it from the collection's dataEncoding via withDefaultDataEncoding(...)."
         )
-        val meta = Metadata(
-            tupleNumber = tupleNumber,
-            dataEncoding = encoding,
-            changeCount = getInt(row, PgColumn.cc) ?: 1,
-            updatedAt = getInt64(row, PgColumn.updated_at) ?: return null,
-            createdAt = getInt64(row, PgColumn.created_at),
-            authorTs = getInt64(row, PgColumn.author_ts),
-            nextVersion = nextVersion,
-            baseTupleNumber = baseTupleNumber,
-            hash = getInt(row, PgColumn.hash) ?: -1,
-            hereTile = getInt(row, PgColumn.here_tile) ?: -1,
-            // Numeric features (fn >= 0) store id as NULL; synthesize the logical id from fn.
-            id = getString(row, PgColumn.id) ?: if (fn >= Int64(0)) fn.toString() else return null,
-            appId = getString(row, PgColumn.app_id) ?: return null,
-            author = getString(row, PgColumn.author),
-            origin = getString(row, PgColumn.origin),
-            target = getString(row, PgColumn.target),
-            ft = getString(row, PgColumn.ft),
-            cs0 = getString(row, PgColumn.cs0),
-            cs1 = getString(row, PgColumn.cs1),
-            cs2 = getString(row, PgColumn.cs2),
-            cs3 = getString(row, PgColumn.cs3),
-            cv0 = getDouble(row, PgColumn.cv0),
-            cv1 = getDouble(row, PgColumn.cv1),
-            cv2 = getDouble(row, PgColumn.cv2),
-            cv3 = getDouble(row, PgColumn.cv3),
+        val members = PgRowDict(
+            row = row,
+            rows = this,
+            fn = fn,
+            dataEncoding = encoding
         )
         return Tuple(
-            meta = meta,
-            feature = getByteArray(row, PgColumn.feature),
-            geo = getByteArray(row, PgColumn.geo),
-            referencePoint = getByteArray(row, PgColumn.ref_point),
-            tags = getJsonText(row, PgColumn.tags),
-            attachment = getByteArray(row, PgColumn.attachment),
-            complete = complete
+            storageNumber = storageNumber,
+            mapNumber = mapNumber,
+            collectionNumber = collectionNumber,
+            featureNumber = fn,
+            version = naksha.model.Version(version),
+            nextVersion = nextVersion ?: Int64(-1L),
+            members = members,
+            feature = getByteArray(row, PgColumn.feature)
         )
     }
 
@@ -277,7 +324,7 @@ internal class PgColumnRows {
      *
      * `jsonb` columns come back from the cursor pre-parsed (a [naksha.base.PlatformMap] /
      * [naksha.base.PlatformList]) since most callers want a typed object. For carriers that hold
-     * the raw JSON text (like [Tuple.tags]) we round-trip through [toJSON] to recover it.
+     * the raw JSON text (like tags) we round-trip through [toJSON] to recover it.
      */
     private fun getJsonText(row: Int, column: PgColumn): String? {
         val value = getAny(row, column)
@@ -336,39 +383,37 @@ internal class PgColumnRows {
 
     operator fun set(row: Int, tuple: Tuple) {
         withMinSize(row)
-        val meta = tuple.meta
-        set(row, PgColumn.updated_at, meta.updatedAt)
-        set(row, PgColumn.created_at, meta.createdAt)
-        set(row, PgColumn.author_ts, meta.authorTs)
-        set(row, PgColumn.cv0, meta.cv0)
-        set(row, PgColumn.cv1, meta.cv1)
-        set(row, PgColumn.cv2, meta.cv2)
-        set(row, PgColumn.cv3, meta.cv3)
-        set(row, PgColumn.hash, meta.hash)
-        set(row, PgColumn.here_tile, meta.hereTile)
-        set(row, PgColumn.cc, meta.changeCount)
-        val fn = meta.tupleNumber.featureNumber
+        val members = tuple.members ?: return
+        set(row, PgColumn.updated_at, members.getByName("updated_at") as? Int64)
+        set(row, PgColumn.created_at, members.getByName("created_at") as? Int64)
+        set(row, PgColumn.author_ts, members.getByName("author_ts") as? Int64)
+        set(row, PgColumn.cv0, members.getByName("cv0") as? Double)
+        set(row, PgColumn.cv1, members.getByName("cv1") as? Double)
+        set(row, PgColumn.cv2, members.getByName("cv2") as? Double)
+        set(row, PgColumn.cv3, members.getByName("cv3") as? Double)
+        set(row, PgColumn.hash, members.getByName("hash") as? Int)
+        set(row, PgColumn.here_tile, members.getByName("here_tile") as? Int)
+        set(row, PgColumn.cc, members.getByName("cc") as? Int)
+        val fn = tuple.featureNumber
         set(row, PgColumn.fn, fn)
-        set(row, PgColumn.version, meta.tupleNumber.version.txn)
-        set(row, PgColumn.next_version, meta.nextVersion)
-        set(row, PgColumn.base_tn, meta.baseTupleNumber?.toB128())
-        // Numeric features (fn >= 0): id is redundant (logical id = fn.toString(10)), store NULL.
-        // Named features (fn < 0): id is the authoritative string identifier, must not be NULL.
-        set(row, PgColumn.id, if (fn >= Int64(0)) null else meta.id)
-        set(row, PgColumn.app_id, meta.appId)
-        set(row, PgColumn.author, meta.author)
-        set(row, PgColumn.origin, meta.origin)
-        set(row, PgColumn.target, meta.target)
-        set(row, PgColumn.ft, meta.ft)
-        set(row, PgColumn.cs0, meta.cs0)
-        set(row, PgColumn.cs1, meta.cs1)
-        set(row, PgColumn.cs2, meta.cs2)
-        set(row, PgColumn.cs3, meta.cs3)
-        set(row, PgColumn.tags, tuple.tags)
-        set(row, PgColumn.ref_point, tuple.referencePoint)
+        set(row, PgColumn.version, tuple.version.txn)
+        set(row, PgColumn.next_version, tuple.nextVersion)
+        set(row, PgColumn.base_tn, members.getByName("base_tn") as? ByteArray)
+        set(row, PgColumn.id, if (fn >= Int64(0)) null else members.getByName("id") as? String)
+        set(row, PgColumn.app_id, members.getByName("app_id") as? String)
+        set(row, PgColumn.author, members.getByName("author") as? String)
+        set(row, PgColumn.origin, members.getByName("origin") as? String)
+        set(row, PgColumn.target, members.getByName("target") as? String)
+        set(row, PgColumn.ft, members.getByName("ft") as? String)
+        set(row, PgColumn.cs0, members.getByName("cs0") as? String)
+        set(row, PgColumn.cs1, members.getByName("cs1") as? String)
+        set(row, PgColumn.cs2, members.getByName("cs2") as? String)
+        set(row, PgColumn.cs3, members.getByName("cs3") as? String)
+        set(row, PgColumn.tags, members.getByName("tags") as? String)
+        set(row, PgColumn.ref_point, members.getByName("ref_point") as? ByteArray)
         set(row, PgColumn.feature, tuple.feature)
-        set(row, PgColumn.geo, tuple.geo)
-        set(row, PgColumn.attachment, tuple.attachment)
+        set(row, PgColumn.geo, members.getByName("geo") as? ByteArray)
+        set(row, PgColumn.attachment, members.getByName("attachment") as? ByteArray)
     }
 
     operator fun set(row: Int, cursor: PgCursor) {

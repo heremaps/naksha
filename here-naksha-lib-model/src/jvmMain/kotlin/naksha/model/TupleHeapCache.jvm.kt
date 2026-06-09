@@ -46,17 +46,15 @@ actual class TupleHeapCache : ITupleCache {
     }
 
     actual override fun put(tuple: Tuple) {
-        if (tuple.isComplete()) {
-            val tupleNumber = tuple.tupleNumber
-            val storageNumber = tupleNumber.storageNumber
-            var storageTuples = tuplesByStorage[storageNumber]
-            if (storageTuples == null) {
-                storageTuples = AtomicMap()
-                val existing = tuplesByStorage.putIfAbsent(storageNumber, storageTuples)
-                if (existing != null) storageTuples = existing
-            }
-            storageTuples[tupleNumber] = tuple.weakRef
+        val tupleNumber = tuple.tupleNumber
+        val storageNumber = tupleNumber.storageNumber
+        var storageTuples = tuplesByStorage[storageNumber]
+        if (storageTuples == null) {
+            storageTuples = AtomicMap()
+            val existing = tuplesByStorage.putIfAbsent(storageNumber, storageTuples)
+            if (existing != null) storageTuples = existing
         }
+        storageTuples[tupleNumber] = tuple.weakRef
     }
 
     actual override fun store(tuples: List<Tuple>) {

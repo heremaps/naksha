@@ -77,7 +77,7 @@ val LATENCY_MEMORY = Int64(0)
 val DEFAULT_DATA_ENCODING = Naksha.DEFAULT_DATA_ENCODING
 
 /**
- * The [meta][Tuple.meta] bit.
+ * The [members][Tuple.members] bit.
  * @since 3.0.0
  */
 const val META_BIT: FetchMode = 1
@@ -89,7 +89,7 @@ const val META_BIT: FetchMode = 1
 const val META_CLEAR: FetchMode = META_BIT.inv()
 
 /**
- * The _geometry_ bit, covering [geometry][Tuple.geo] and the [reference-point][Tuple.referencePoint].
+ * The _geometry_ bit, covering geometry and the reference-point.
  * @since 3.0.0
  */
 const val GEOMETRY_BIT: FetchMode = 2
@@ -101,7 +101,7 @@ const val GEOMETRY_BIT: FetchMode = 2
 const val GEOMETRY_CLEAR: FetchMode = GEOMETRY_BIT.inv()
 
 /**
- * The _feature_ bit, covers [feature][Tuple.feature] and [tags][Tuple.tags].
+ * The _feature_ bit, covers [feature][Tuple.feature] and tags.
  * @since 3.0.0
  */
 const val FEATURE_BIT: FetchMode = 4
@@ -113,7 +113,7 @@ const val FEATURE_BIT: FetchMode = 4
 const val FEATURE_CLEAR: FetchMode = FEATURE_BIT.inv()
 
 /**
- * The [attachment][Tuple.attachment] bit.
+ * The attachment bit.
  * @since 3.0.0
  */
 const val ATTACHMENT_BIT: FetchMode = 8

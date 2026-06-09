@@ -475,14 +475,15 @@ class Naksha private constructor() {
         @JvmOverloads
         fun decodeTuple(tuple: Tuple, dictionaryReader: IDictReader? = null): NakshaFeature {
             val sn = tuple.storageNumber
-            val meta = tuple.meta
+            val dataEncodingStr = tuple.getStringMember(naksha.model.objects.StandardMembers.DataEncoding)
+            val dataEncoding = if (dataEncodingStr.isNullOrEmpty()) DEFAULT_DATA_ENCODING else DataEncoding.fromString(dataEncodingStr)
             val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache.getDictReader(sn)
-            val feature = decodeFeature(tuple.feature, meta.dataEncoding, dictReader) ?: NakshaFeature()
-            feature.properties.xyz = XyzNs.fromMetadata(meta)
+            val feature = decodeFeature(tuple.feature, dataEncoding, dictReader) ?: NakshaFeature()
+            feature.properties.xyz = XyzNs.fromTuple(tuple)
             val xyz = feature.properties.xyz
-            val tags = tuple.tags
-            if (tags != null) xyz.tags = decodeTags(tags)?.toTagList() ?: TagList()
-            val geo = tuple.geo
+            val tags = tuple.getTags(naksha.model.objects.StandardMembers.Tags)
+            if (tags != null) xyz.tags = tags.toTagList()
+            val geo = tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
             if (geo != null) feature.geometry = decodeGeometry(geo)
             return feature
         }
@@ -491,7 +492,7 @@ class Naksha private constructor() {
          * Encode the given [NakshaFeature] into a [Tuple].
          * @param feature the feature to encode.
          * @param attachment the attachment to encode; if any.
-         * @param dictionary the [dictionary][IDict] to use to encode the feature; _null_ if encoding should be done storage agnostic.
+         * @param dictionary the [book][IBook] to use to encode the feature; _null_ if encoding should be done storage agnostic.
          * @param dataEncoding the feature encoding to use, or _null_ to fall back to the storage default and finally [DEFAULT_DATA_ENCODING].
          * @return the encoded [Tuple].
          * @since 3.0
@@ -503,21 +504,52 @@ class Naksha private constructor() {
         fun encodeTuple(
             feature: NakshaFeature,
             attachment: ByteArray? = null,
-            dictionary: IDict? = null,
+            dictionary: IBook? = null,
             dataEncoding: DataEncoding? = null
         ): Tuple {
             val xyz = feature.properties.xyz
-            val metaBase = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
-            val storage = getStorageByNumber(feature.tupleNumber.storageNumber)
+            val tn = feature.tupleNumber
+            val storage = getStorageByNumber(tn.storageNumber)
             val encoding = dataEncoding ?: storage?.getDataEncoding(feature) ?: DEFAULT_DATA_ENCODING
-            val meta = if (metaBase === Metadata.UNDEFINED || metaBase.dataEncoding == encoding) metaBase
-                else metaBase.copy(dataEncoding = encoding)
+            val members = HeapBook()
+            members.put("id", feature.id)
+            members.put("app_id", xyz.appId)
+            members.put("updated_at", xyz.updatedAt)
+            members.put("created_at", if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt)
+            members.put("author_ts", if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs)
+            members.put("author", xyz.author)
+            members.put("data_encoding", encoding.toString())
+            members.put("cc", xyz.changeCount)
+            members.put("hash", xyz.hash ?: 0)
+            members.put("here_tile", xyz.hereTile ?: 0)
+            members.put("ft", xyz.featureType)
+            members.put("cv0", xyz.cv0)
+            members.put("cv1", xyz.cv1)
+            members.put("cv2", xyz.cv2)
+            members.put("cv3", xyz.cv3)
+            members.put("cs0", xyz.cs0)
+            members.put("cs1", xyz.cs1)
+            members.put("cs2", xyz.cs2)
+            members.put("cs3", xyz.cs3)
             val dict = dictionary ?: storage?.getDictionary(feature.id)
             val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
             val tagsJson = encodeTags(xyz.tags.toTagMap())
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsJson, attachment, true)
+            members.put("geo", geoBytes)
+            members.put("ref_point", refPoint)
+            members.put("tags", tagsJson)
+            members.put("attachment", attachment)
+            return Tuple(
+                storageNumber = tn.storageNumber,
+                mapNumber = tn.mapNumber,
+                collectionNumber = tn.collectionNumber,
+                featureNumber = tn.featureNumber,
+                version = tn.version,
+                nextVersion = Int64(-1L),
+                members = members,
+                feature = featureBytes
+            )
         }
 
         /**
@@ -538,16 +570,47 @@ class Naksha private constructor() {
             storage: IStorage
         ): Tuple {
             val xyz = feature.properties.xyz
-            val metaBase = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
+            val tn = feature.tupleNumber
             val dict = storage.getEncodingDictionary(feature)
             val encoding = storage.getDataEncoding(feature)
-            val meta = if (metaBase === Metadata.UNDEFINED || metaBase.dataEncoding == encoding) metaBase
-                else metaBase.copy(dataEncoding = encoding)
+            val members = HeapBook()
+            members.put("id", feature.id)
+            members.put("app_id", xyz.appId)
+            members.put("updated_at", xyz.updatedAt)
+            members.put("created_at", if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt)
+            members.put("author_ts", if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs)
+            members.put("author", xyz.author)
+            members.put("data_encoding", encoding.toString())
+            members.put("cc", xyz.changeCount)
+            members.put("hash", xyz.hash ?: 0)
+            members.put("here_tile", xyz.hereTile ?: 0)
+            members.put("ft", xyz.featureType)
+            members.put("cv0", xyz.cv0)
+            members.put("cv1", xyz.cv1)
+            members.put("cv2", xyz.cv2)
+            members.put("cv3", xyz.cv3)
+            members.put("cs0", xyz.cs0)
+            members.put("cs1", xyz.cs1)
+            members.put("cs2", xyz.cs2)
+            members.put("cs3", xyz.cs3)
             val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
             val tagsJson = encodeTags(xyz.tags.toTagMap())
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsJson, attachment, true)
+            members.put("geo", geoBytes)
+            members.put("ref_point", refPoint)
+            members.put("tags", tagsJson)
+            members.put("attachment", attachment)
+            return Tuple(
+                storageNumber = tn.storageNumber,
+                mapNumber = tn.mapNumber,
+                collectionNumber = tn.collectionNumber,
+                featureNumber = tn.featureNumber,
+                version = tn.version,
+                nextVersion = Int64(-1L),
+                members = members,
+                feature = featureBytes
+            )
         }
 
         /**
@@ -560,7 +623,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun encodeFeature(feature: NakshaFeature?, encoding: DataEncoding, dict: IDict?): ByteArray? {
+        fun encodeFeature(feature: NakshaFeature?, encoding: DataEncoding, dict: IBook?): ByteArray? {
             if (feature.isNullOrEmpty()) return null
             var byteArray: ByteArray? = when (encoding) {
                 DataEncoding.JSON, DataEncoding.JSON_GZIP -> {

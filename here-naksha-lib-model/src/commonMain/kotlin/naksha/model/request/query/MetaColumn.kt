@@ -600,7 +600,7 @@ open class MetaColumn() : AnyObject() {
         fun feature(): MetaColumn = MetaColumn(FEATURE)
 
         /**
-         * The name of the virtual columns that stores the [geometry][naksha.model.Tuple.geo].
+         * The name of the virtual columns that stores the geometry.
          *
          * This can only be queried using a special [spatial query][ISpatialQuery].
          */
@@ -615,7 +615,7 @@ open class MetaColumn() : AnyObject() {
         fun geometry(): MetaColumn = MetaColumn(GEOMETRY)
 
         /**
-         * The name of the virtual columns that stores the [reference point][naksha.model.Tuple.referencePoint].
+         * The name of the virtual columns that stores the reference point.
          *
          * This can only be queried using a special [spatial query][ISpatialQuery].
          */
@@ -630,7 +630,7 @@ open class MetaColumn() : AnyObject() {
         fun referencePoint(): MetaColumn = MetaColumn(REF_POINT)
 
         /**
-         * The name of the virtual columns that stores the [tags][naksha.model.Tuple.tags].
+         * The name of the virtual columns that stores the tags.
          *
          * This can only be queried using a special [tag query][ITagQuery].
          */
@@ -645,7 +645,7 @@ open class MetaColumn() : AnyObject() {
         fun tags(): MetaColumn = MetaColumn(TAGS)
 
         /**
-         * The name of the virtual columns that stores the [attachment][naksha.model.Tuple.attachment].
+         * The name of the virtual columns that stores the attachment.
          *
          * Attachments can't be queried!
          */
