@@ -475,10 +475,8 @@ class Naksha private constructor() {
         @JvmOverloads
         fun decodeTuple(tuple: Tuple, dictionaryReader: IDictReader? = null): NakshaFeature {
             val sn = tuple.storageNumber
-            val dataEncodingStr = tuple.getStringMember(naksha.model.objects.StandardMembers.DataEncoding)
-            val dataEncoding = if (dataEncodingStr.isNullOrEmpty()) DEFAULT_DATA_ENCODING else DataEncoding.fromString(dataEncodingStr)
             val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache.getDictReader(sn)
-            val feature = decodeFeature(tuple.feature, dataEncoding, dictReader) ?: NakshaFeature()
+            val feature = decodeFeature(tuple.feature, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromTuple(tuple)
             val xyz = feature.properties.xyz
             val tags = tuple.getTags(naksha.model.objects.StandardMembers.Tags)
@@ -650,39 +648,57 @@ class Naksha private constructor() {
         }
 
         /**
-         * Decode the Naksha feature.
+         * Decode a Naksha feature, auto-detecting the encoding from header bytes.
+         *
+         * 1. gzip magic (`1F 8B`) → gunzip, then re-inspect.
+         * 2. JBON2 magic (`@JB\x02`) → JBON2 decoder.
+         * 3. First byte in `{`, `[`, ` `, `\t`, `\n`, `\r` → parse as JSON.
+         * 4. Otherwise → legacy JBON1 decoder.
+         *
          * @param bytes the bytes to decode.
-         * @param encoding the feature encoding the bytes were produced with.
-         * @param dictReader the dictionary manager to use for decoding; if any.
-         * @return the Naksha feature.
+         * @param dictReader the dictionary manager to use for legacy JBON1 decoding; if any.
+         * @return the Naksha feature, or _null_ if the bytes are empty / undecodable.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeFeature(bytes: ByteArray?, encoding: DataEncoding, dictReader: IDictReader?): NakshaFeature? {
+        fun decodeFeature(bytes: ByteArray?, dictReader: IDictReader?): NakshaFeature? {
             if (bytes == null || bytes.isEmpty()) return null
-            return when (encoding) {
-                DataEncoding.JBON, DataEncoding.JBON_GZIP -> {
-                    val raw = if (encoding.gzip) gzipInflate(bytes) else bytes
-                    val decoder = JbFeatureDecoder(dictReader)
-                    decoder.mapBytes(raw)
-                    decoder.toAnyObject().proxy(NakshaFeature::class)
-                }
-                DataEncoding.JBON2, DataEncoding.JBON2_GZIP -> {
-                    val raw = if (encoding.gzip) gzipInflate(bytes) else bytes
+            val raw = if (isGzipped(bytes)) gzipInflate(bytes) else bytes
+            if (raw.isEmpty()) return null
+            return when {
+                isJbon2(raw) -> {
                     // The current JBON2 encoder embeds a local book and uses no global string-refs,
                     // so a global dictionary is not required to decode the feature object.
                     val decoder = JbDecoder2(null)
                     decoder.mapBytes(raw)
                     decoder.toAnyObject().proxy(NakshaFeature::class)
                 }
-                DataEncoding.JSON, DataEncoding.JSON_GZIP -> {
-                    val raw = if (encoding.gzip) gzipInflate(bytes) else bytes
+                isJson(raw) -> {
                     val decoded = fromJSON(raw.decodeToString())
                     if (decoded is PlatformMap) decoded.proxy(NakshaFeature::class) else null
                 }
-                else -> null
+                else -> {
+                    val decoder = JbFeatureDecoder(dictReader)
+                    decoder.mapBytes(raw)
+                    decoder.toAnyObject().proxy(NakshaFeature::class)
+                }
             }
+        }
+
+        private fun isGzipped(bytes: ByteArray): Boolean =
+            bytes.size >= 2 && bytes[0] == 0x1F.toByte() && bytes[1] == 0x8B.toByte()
+
+        private fun isJbon2(bytes: ByteArray): Boolean =
+            bytes.size >= 4 &&
+                bytes[0] == JB2_MAGIC[0] && bytes[1] == JB2_MAGIC[1] &&
+                bytes[2] == JB2_MAGIC[2] && bytes[3] == JB2_MAGIC[3]
+
+        private fun isJson(bytes: ByteArray): Boolean {
+            val b = bytes[0]
+            return b == 0x7B.toByte() || b == 0x5B.toByte() ||
+                b == 0x20.toByte() || b == 0x09.toByte() ||
+                b == 0x0A.toByte() || b == 0x0D.toByte()
         }
 
         /**

@@ -3,11 +3,8 @@ package naksha.model.request
 import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.PlatformUtil
 import naksha.base.Proxy
-import naksha.jbon.JbFeatureDecoder
-import naksha.model.DataEncoding
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.cache
 import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
@@ -24,36 +21,11 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
      */
     override fun filter(featureTuple: FeatureTuple): FeatureTuple? {
         val pSearch = req.query.properties ?: return featureTuple
-
-        // For JBON2/JBON2_GZIP, decode to NakshaFeature and navigate properties directly.
         val tuple = featureTuple.tuple ?: return null
-        val encoding = tuple.dataEncoding
-        if (encoding == DataEncoding.JBON2 || encoding == DataEncoding.JBON2_GZIP) {
-            val feature = Naksha.decodeFeature(tuple.feature, encoding, null) ?: return null
-            return if (resolvePropsQueryOnFeature(pSearch, feature)) featureTuple else null
-        }
-
-        val decoder = resolveFeatureAndDecoder(featureTuple) ?: return null
-
-        if (resolvePropsQuery(pSearch, decoder)) {
-            return featureTuple
-        }
-        return null
-    }
-
-    private fun resolveFeatureAndDecoder(featureTuple: FeatureTuple): JbFeatureDecoder? {
-        val tuple = featureTuple.tuple ?: return null
-        val feature = featureTuple.tuple?.feature ?: return null
-        val encoding = tuple.dataEncoding
-
-        val raw = if (encoding.gzip) gzipInflate(feature) else feature
-
         val sn = tuple.storageNumber
         val dictReader = getStorageByNumber(sn) ?: cache.getDictReader(sn)
-
-        val decoder = JbFeatureDecoder(dictReader)
-        decoder.mapBytes(raw)
-        return decoder
+        val feature = Naksha.decodeFeature(tuple.feature, dictReader) ?: return null
+        return if (resolvePropsQueryOnFeature(pSearch, feature)) featureTuple else null
     }
 
     /**
@@ -95,25 +67,6 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             }
         }
         return current
-    }
-
-    private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder): Boolean {
-        when (pQuery) {
-            null -> return true
-            is PAnd -> return pQuery.all { resolvePropsQuery(it, decoder) }
-            is POr -> return pQuery.any { resolvePropsQuery(it, decoder) }
-            is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
-            is PQuery -> {
-                val propertyArray = pQuery.property.path.filterNotNull().toTypedArray()
-                val propFromFeature = decoder.get(*propertyArray)
-                val op = pQuery.op
-                return resolveEachOp(op,propFromFeature,pQuery.value)
-            }
-        }
-        throw IllegalArgumentException("Unknown query type for: $pQuery")
-        //TODO instead of throwing exceptions, implement a call-back handler customizable
-        //TODO to, for example, log the instance where an unknown query is used, so as not
-        //TODO to disrupt the flow of the request
     }
 
     private fun resolveEachOp(op: AnyOp, featureProperty: Any?, queryProperty: Any?) : Boolean {

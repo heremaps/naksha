@@ -207,10 +207,9 @@ class PgUtil private constructor() {
         fun lockId(name: String): Int64 = Fnv1a64.string(Fnv1a64.start(), name)
 
         /**
-         * Decode the Naksha feature.
+         * Decode the Naksha feature, auto-detecting the encoding from header bytes.
          * @param bytes the bytes to decode.
-         * @param encoding the feature encoding the bytes were produced with.
-         * @param dictManager the dictionary manager to use for decoding; if any.
+         * @param dictManager the dictionary manager to use for legacy JBON1 decoding; if any.
          * @return the Naksha feature.
          * @since 3.0.0
          */
@@ -218,10 +217,10 @@ class PgUtil private constructor() {
         @JvmStatic
         @Deprecated(
             message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, encoding, dictManager)"),
+            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, dictManager)"),
             level = DeprecationLevel.WARNING
         )
-        fun decodeFeature(bytes: ByteArray?, encoding: DataEncoding, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, encoding, dictManager)
+        fun decodeFeature(bytes: ByteArray?, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, dictManager)
 
         /**
          * Encodes the given [NakshaFeature] into bytes.
