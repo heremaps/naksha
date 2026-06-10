@@ -695,7 +695,9 @@ ${if (where==null) "" else "WHERE $where"};"""
             // Determine index type from the PgIndex columns (heuristic: geo columns → SPATIAL, no columns or btree → BTREE)
             idx.type = when {
                 pgIdx === gist_geo || pgIdx === spgist_geo || pgIdx === ref_point -> IndexType.SPATIAL
-                pgIdx === tags -> IndexType.TAGS
+                // The built-in tags index is a GIN index over the `tags` member, which is a SET
+                // (JSON array of unique strings) by default — matches StandardIndices.Tags.
+                pgIdx === tags -> IndexType.SET
                 else -> IndexType.BTREE
             }
             val cols = naksha.base.StringList()

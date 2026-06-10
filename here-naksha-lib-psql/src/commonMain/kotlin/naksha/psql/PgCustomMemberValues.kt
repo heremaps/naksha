@@ -2,8 +2,11 @@
 
 package naksha.psql
 
+import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Int64
+import naksha.base.ListProxy
+import naksha.base.PlatformList
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.model.NakshaError
@@ -68,6 +71,7 @@ internal object PgCustomMemberValues {
         MemberType.SPATIAL -> PgType.BYTE_ARRAY
         MemberType.TAGS -> PgType.JSONB
         MemberType.TAGS_FROM_ARRAY -> PgType.JSONB
+        MemberType.SET -> PgType.JSONB
         else -> PgType.STRING
     }
 
@@ -75,8 +79,9 @@ internal object PgCustomMemberValues {
      * Returns the PostgreSQL DDL type string for the given member type, used inside `CREATE TABLE` / `ALTER TABLE ADD COLUMN`.
      * Note: there is no 1-byte signed integer type in PostgreSQL, so [MemberType.INT8] is materialized as `smallint`;
      * the storage enforces the 8-bit range on coercion.
-     * Both [MemberType.TAGS] and [MemberType.TAGS_FROM_ARRAY] use `jsonb STORAGE MAIN` — compressed inline,
-     * only TOASTed as a last resort.
+     * [MemberType.TAGS], [MemberType.TAGS_FROM_ARRAY], and [MemberType.SET] all use `jsonb STORAGE MAIN` —
+     * compressed inline, only TOASTed as a last resort. The only difference is the JSON shape:
+     * TAGS and TAGS_FROM_ARRAY persist a JSON object, SET persists a JSON array.
      */
     fun pgSqlTypeFor(type: MemberType): String = when (type) {
         MemberType.BOOLEAN -> "boolean"
@@ -91,6 +96,7 @@ internal object PgCustomMemberValues {
         MemberType.SPATIAL -> "bytea STORAGE EXTERNAL"
         MemberType.TAGS -> "jsonb STORAGE MAIN"
         MemberType.TAGS_FROM_ARRAY -> "jsonb STORAGE MAIN"
+        MemberType.SET -> "jsonb STORAGE MAIN"
         else -> "text"
     }
 
@@ -127,6 +133,7 @@ internal object PgCustomMemberValues {
             MemberType.SPATIAL -> coerceByteArray(value, featureId, memberName)
             MemberType.TAGS -> coerceTags(value, featureId, memberName)
             MemberType.TAGS_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
+            MemberType.SET -> coerceSet(value, featureId, memberName)
             else -> {
                 warnMismatch(featureId, memberName, type.toString(), value)
                 null
@@ -227,6 +234,40 @@ internal object PgCustomMemberValues {
         return try { toJSON(tagMap) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags_from_array", value); null }
     }
 
+    /**
+     * Coerces a [MemberType.SET] value: a JSON array of unique primitives (booleans, numbers, strings).
+     * The array is persisted unmodified (element order preserved). Entries that are `null`, non-primitive,
+     * or duplicates violate the set contract; the value is then not materialized (warning + NULL column).
+     */
+    private fun coerceSet(value: Any, featureId: String, memberName: String): String? {
+        val list: ListProxy<*> = when (value) {
+            is ListProxy<*> -> value
+            is PlatformList -> value.proxy(AnyList::class)
+            else -> { warnMismatch(featureId, memberName, "set", value); return null }
+        }
+        val seen = HashSet<Any>()
+        for (e in list) {
+            if (e == null) {
+                warnMismatch(featureId, memberName, "set (entries must not be null)", "null")
+                return null
+            }
+            if (!isPrimitive(e)) {
+                warnMismatch(featureId, memberName, "set (entries must be primitives)", e)
+                return null
+            }
+            if (!seen.add(e)) {
+                warnMismatch(featureId, memberName, "set (entries must be unique)", e)
+                return null
+            }
+        }
+        return try { toJSON(list) } catch (_: Exception) { warnMismatch(featureId, memberName, "set", list); null }
+    }
+
+    private fun isPrimitive(value: Any): Boolean = when (value) {
+        is String, is Boolean, is Byte, is Short, is Int, is Long, is Int64, is Float, is Double -> true
+        else -> false
+    }
+
     private fun numberToLongOrNull(value: Any): Long? = when (value) {
         is Byte -> value.toLong()
         is Short -> value.toLong()
@@ -245,7 +286,7 @@ internal object PgCustomMemberValues {
      * 2. 4-byte types ([INT32], [FLOAT32]) — next, still fixed-width
      * 3. 1/2-byte types ([INT16], [INT8], [BOOLEAN]) — small fixed-width
      * 4. Variable-length text ([STRING]) — variable but human-readable
-     * 5. Opaque variable-length ([BYTE_ARRAY], [SPATIAL], [TAGS], [TAGS_FROM_ARRAY]) — last
+     * 5. Opaque variable-length ([BYTE_ARRAY], [SPATIAL], [TAGS], [TAGS_FROM_ARRAY], [SET]) — last
      */
     fun columnSortOrder(type: MemberType): Int = when (type) {
         MemberType.INT64   -> 0
@@ -260,7 +301,8 @@ internal object PgCustomMemberValues {
         MemberType.SPATIAL         -> 8
         MemberType.TAGS            -> 9
         MemberType.TAGS_FROM_ARRAY -> 10
-        else -> 11
+        MemberType.SET             -> 11
+        else -> 12
     }
 
     /**

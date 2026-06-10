@@ -20,6 +20,7 @@ import kotlin.js.JsName
  * - [IndexType.BTREE]: ordered index for equality and range queries on scalar and text columns.
  * - [IndexType.SPATIAL]: spatial index covering a 2D-encoded geometry column. [on] must contain exactly one geometry member.
  * - [IndexType.TAGS]: inverted index over a tags member ([MemberType.TAGS] or [MemberType.TAGS_FROM_ARRAY]) supporting key/value containment queries. [on] must contain exactly one member.
+ * - [IndexType.SET]: inverted index over a set member ([MemberType.SET]) supporting element containment queries. [on] must contain exactly one member.
  *
  * When [internal] is `true` the index is storage-managed (e.g. primary key, id_unique). The storage
  * injects these into the [NakshaCollection.indices] list; clients must not declare them manually.

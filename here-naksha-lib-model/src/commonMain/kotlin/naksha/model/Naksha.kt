@@ -481,8 +481,8 @@ class Naksha private constructor() {
             val feature = decodeFeature(tuple.feature, dataEncoding, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromTuple(tuple)
             val xyz = feature.properties.xyz
-            val tags = tuple.getTags(naksha.model.objects.StandardMembers.Tags)
-            if (tags != null) xyz.tags = tags.toTagList()
+            val tags = tuple.getTagList(naksha.model.objects.StandardMembers.Tags)
+            if (tags != null) xyz.tags = tags
             val geo = tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
             if (geo != null) feature.geometry = decodeGeometry(geo)
             return feature
@@ -535,7 +535,7 @@ class Naksha private constructor() {
             val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
-            val tagsJson = encodeTags(xyz.tags.toTagMap())
+            val tagsJson = encodeTagList(xyz.tags)
             members.put("geo", geoBytes)
             members.put("ref_point", refPoint)
             members.put("tags", tagsJson)
@@ -596,7 +596,7 @@ class Naksha private constructor() {
             val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
-            val tagsJson = encodeTags(xyz.tags.toTagMap())
+            val tagsJson = encodeTagList(xyz.tags)
             members.put("geo", geoBytes)
             members.put("ref_point", refPoint)
             members.put("tags", tagsJson)
@@ -711,6 +711,43 @@ class Naksha private constructor() {
         fun encodeTags(tags: TagMap?): String? {
             if (tags.isNullOrEmpty()) return null
             return toJSON(tags)
+        }
+
+        /**
+         * Encodes the given tag-list into the [set][naksha.model.objects.MemberType.SET]
+         * representation: a JSON array, with the element order preserved.
+         * @param tags the tags to encode.
+         * @return the JSON array text representation, or _null_ if [tags] is _null_ / empty.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeTagList(tags: TagList?): String? {
+            if (tags.isNullOrEmpty()) return null
+            return toJSON(tags)
+        }
+
+        /**
+         * Decodes Naksha tags from their JSON text representation into a [TagList].
+         *
+         * Supports both persisted forms:
+         * - a JSON array ([set][naksha.model.objects.MemberType.SET], the default) is returned
+         *   unmodified, preserving the element order;
+         * - a JSON object ([naksha.model.objects.MemberType.TAGS_FROM_ARRAY]) is re-flattened via
+         *   [TagMap.toTagList], in which case the original order is not guaranteed.
+         * @param json the JSON text to decode (value of the `tags` member).
+         * @return the decoded tag-list, or _null_ if [json] is _null_, blank, or neither an array nor an object.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun decodeTagList(json: String?): TagList? {
+            if (json.isNullOrBlank()) return null
+            return when (val decoded = fromJSON(json)) {
+                is PlatformList -> decoded.proxy(TagList::class)
+                is PlatformMap -> decoded.proxy(TagMap::class).toTagList()
+                else -> null
+            }
         }
 
         /**

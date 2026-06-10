@@ -757,7 +757,17 @@ WHERE naksha_2d($cCol) IS NOT NULL;""".trim()
                 """
 CREATE INDEX  IF NOT EXISTS $id ON ${quotedName}
 USING gin ($pgIdent)
-$fillFactor ${TABLESPACE};""".trim()
+${TABLESPACE};""".trim()
+            }
+            IndexType.SET -> {
+                if (!isSetColumn(firstCol, members)) {
+                    throw naksha.model.illegalArg("SET custom index '${index.name}' must target a member of dataType SET")
+                }
+                val pgIdent = quoteIdent(physicalColumnName(firstCol, members))
+                """
+CREATE INDEX  IF NOT EXISTS $id ON ${quotedName}
+USING gin ($pgIdent)
+${TABLESPACE};""".trim()
             }
             else -> null
         }
@@ -785,14 +795,28 @@ $fillFactor ${TABLESPACE};""".trim()
     }
 
     private fun isFlatMapColumn(name: String, members: MemberList?): Boolean {
-        if (members == null) return false
-        for (m in members) {
-            if (m != null && m.name == name) {
-                return m.dataType == MemberType.TAGS
-                    || m.dataType == MemberType.TAGS_FROM_ARRAY
+        val type = memberTypeOf(name, members) ?: return false
+        return type == MemberType.TAGS || type == MemberType.TAGS_FROM_ARRAY
+    }
+
+    private fun isSetColumn(name: String, members: MemberList?): Boolean =
+        memberTypeOf(name, members) == MemberType.SET
+
+    /**
+     * Resolves the [MemberType] of a member by name: explicitly declared members take precedence,
+     * otherwise the standard member contract ([StandardMembers.ALL]) is consulted (e.g. the built-in
+     * `tags` member, which is a [MemberType.SET]).
+     */
+    private fun memberTypeOf(name: String, members: MemberList?): MemberType? {
+        if (members != null) {
+            for (m in members) {
+                if (m != null && m.name == name) return m.dataType
             }
         }
-        return false
+        for (sm in naksha.model.objects.StandardMembers.ALL) {
+            if (sm.name == name) return sm.dataType
+        }
+        return null
     }
 
     private fun isSpatialColumn(name: String, members: MemberList?): Boolean {

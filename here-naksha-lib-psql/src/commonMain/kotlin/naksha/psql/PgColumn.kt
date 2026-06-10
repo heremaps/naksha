@@ -477,8 +477,13 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The [tags][naksha.model.TagMap] of the [tuple][naksha.model.Tuple], stored as raw `jsonb`.
+         * The tags of the [tuple][naksha.model.Tuple], stored as raw `jsonb`.
          *
+         * By default ([naksha.model.objects.MemberType.SET]) this is a JSON array of unique strings
+         * ([naksha.model.TagList]), persisted unmodified so the element order is preserved. When the
+         * tags member is declared as [naksha.model.objects.MemberType.TAGS] or
+         * [naksha.model.objects.MemberType.TAGS_FROM_ARRAY], it is a JSON object
+         * ([naksha.model.TagMap]) instead.
          * @since 3.0
          */
         @JvmField

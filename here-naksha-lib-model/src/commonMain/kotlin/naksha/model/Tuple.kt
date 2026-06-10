@@ -257,6 +257,19 @@ data class Tuple(
     }
 
     /**
+     * Get a tags member by name as a [TagList].
+     * Decodes the JSON text, supporting both persisted forms: a JSON array
+     * ([set][naksha.model.objects.MemberType.SET], the default — order preserved) and a JSON object
+     * ([naksha.model.objects.MemberType.TAGS_FROM_ARRAY] — re-flattened, order not guaranteed).
+     * Returns `null` if the member is missing, the value is `null`, or not a String.
+     * @since 3.0
+     */
+    fun getTagList(member: Member): TagList? {
+        val json = members?.getByName(member.name) as? String ?: return null
+        return try { Naksha.decodeTagList(json) } catch (_: Exception) { null }
+    }
+
+    /**
      * The [DataEncoding] of this tuple, read from [members].
      * Returns [Naksha.DEFAULT_DATA_ENCODING] if not set.
      * @since 3.0
@@ -275,9 +288,9 @@ data class Tuple(
     fun toNakshaFeature(): NakshaFeature? {
         val feature = Naksha.decodeFeature(this.feature, dataEncoding, null) ?: return null
         feature.properties.xyz = XyzNs.fromTuple(this)
-        val tags = getTags(StandardMembers.Tags)
+        val tags = getTagList(StandardMembers.Tags)
         if (tags != null) {
-            feature.properties.xyz.tags = tags.toTagList()
+            feature.properties.xyz.tags = tags
         }
         val geoBytes = getByteArray(StandardMembers.Geometry)
         if (geoBytes != null) {
