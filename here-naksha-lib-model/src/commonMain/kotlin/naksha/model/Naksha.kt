@@ -476,13 +476,15 @@ class Naksha private constructor() {
         @JvmOverloads
         fun decodeTuple(tuple: Tuple, dictionaryReader: IDictReader? = null): NakshaFeature {
             val sn = tuple.storageNumber
+            val dataEncodingStr = tuple.getStringMember(StandardMembers.DataEncoding)
+            val dataEncoding = if (dataEncodingStr.isNullOrEmpty()) DEFAULT_DATA_ENCODING else DataEncoding.fromString(dataEncodingStr)
             val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache.getDictReader(sn)
-            val feature = decodeFeature(tuple.feature, dictReader) ?: NakshaFeature()
+            val feature = decodeFeature(tuple.feature, dataEncoding, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromTuple(tuple)
             val xyz = feature.properties.xyz
-            val tags = tuple.getTagList(naksha.model.objects.StandardMembers.Tags)
+            val tags = tuple.getTagList(StandardMembers.Tags)
             if (tags != null) xyz.tags = tags
-            val geo = tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
+            val geo = tuple.getByteArray(StandardMembers.Geometry)
             if (geo != null) feature.geometry = decodeGeometry(geo)
             return feature
         }
