@@ -12,6 +12,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.model.NakshaError
 import naksha.model.NakshaException
+import naksha.model.TagList
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType

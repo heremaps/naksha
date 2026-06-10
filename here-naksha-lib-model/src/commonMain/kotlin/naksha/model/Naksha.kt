@@ -479,7 +479,7 @@ class Naksha private constructor() {
             val dataEncodingStr = tuple.getStringMember(StandardMembers.DataEncoding)
             val dataEncoding = if (dataEncodingStr.isNullOrEmpty()) DEFAULT_DATA_ENCODING else DataEncoding.fromString(dataEncodingStr)
             val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache.getDictReader(sn)
-            val feature = decodeFeature(tuple.feature, dataEncoding, dictReader) ?: NakshaFeature()
+            val feature = decodeFeature(tuple.feature, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromTuple(tuple)
             val xyz = feature.properties.xyz
             val tags = tuple.getTagList(StandardMembers.Tags)
