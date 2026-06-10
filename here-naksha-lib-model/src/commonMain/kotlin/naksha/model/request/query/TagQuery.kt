@@ -8,8 +8,15 @@ import kotlin.js.JsExport
 
 /**
  * A general form of a tag query without any operation.
+ *
+ * Note: the `TagValueIs*` and [TagValueMatches] queries operate on keys/values and therefore only
+ * match map-form tags ([naksha.model.objects.MemberType.TAGS] /
+ * [naksha.model.objects.MemberType.TAGS_FROM_ARRAY]). Against the default set-form tags
+ * ([naksha.model.objects.MemberType.SET]) the values are never split into key/value pairs; use
+ * [TagExists] or [TagSetContains] to match full elements instead.
  * @since 3.0.0
  * @see TagExists
+ * @see TagSetContains
  * @see TagValueIsBool
  * @see TagValueIsDouble
  * @see TagValueIsNull

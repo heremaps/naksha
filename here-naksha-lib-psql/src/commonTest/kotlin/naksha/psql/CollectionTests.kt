@@ -548,6 +548,52 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     }
 
     /**
+     * When a custom [MemberType.SET] member is declared with a [IndexType.SET] index, the collection
+     * must materialize the member as a `jsonb` column and create a GIN index over it.
+     */
+    @Test
+    fun membersSet_shouldCreateJsonbColumnAndGinIndex() {
+        val collection = NakshaCollection("members_set_test", map.id).apply {
+            addMember(Member("labels", MemberType.SET))
+            addIndex(Index("idx_labels", IndexType.SET, "labels"))
+        }
+        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+
+        storage.adminConnection().use { conn ->
+            // Column: materialized as jsonb.
+            var dataType: String? = null
+            conn.execute(
+                "SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
+                arrayOf(map.id, collection.id, PgCustomMemberValues.pgColumnName("labels"))
+            ).use { cursor -> if (cursor.next()) dataType = cursor["data_type"] }
+            assertEquals("jsonb", dataType, "SET member 'labels' must be materialized as jsonb")
+
+            // Index: GIN index over the jsonb column.
+            val customIndexId = "${collection.id}\$ci_idx_labels"
+            var indexDef: String? = null
+            conn.execute(
+                "SELECT indexdef FROM pg_indexes WHERE schemaname = $1 AND tablename = $2 AND indexname = $3",
+                arrayOf(map.id, collection.id, customIndexId)
+            ).use { cursor -> if (cursor.next()) indexDef = cursor["indexdef"] }
+            assertNotNull(indexDef, "SET index '$customIndexId' not found")
+            assertTrue(indexDef!!.contains("USING gin", ignoreCase = true),
+                "SET index must be a GIN index, got: $indexDef")
+        }
+    }
+
+    /**
+     * A [IndexType.SET] index must be rejected when it targets a member that is not a [MemberType.SET].
+     */
+    @Test
+    fun membersSet_indexOnNonSetMemberShouldFail() {
+        val collection = NakshaCollection("members_set_invalid_test", map.id).apply {
+            addMember(Member("score", MemberType.INT64))
+            addIndex(Index("idx_set_score", IndexType.SET, "score"))
+        }
+        executeWriteErrorResponse(WriteRequest().add(Write().createCollection(collection)))
+    }
+
+    /**
      * Verifies that when a collection with custom members of every type is created, the physical
      * column order in both the HEAD table and the HISTORY table follows the standard pattern:
      *
@@ -570,6 +616,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             addMember(Member("g_i16",   MemberType.INT16))
             addMember(Member("h_f32",   MemberType.FLOAT32))
             addMember(Member("i_json",  MemberType.TAGS))
+            addMember(Member("j_set",   MemberType.SET))
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -577,7 +624,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // INT64: b_i64 | FLOAT64: c_f64 | INT32: a_i32 | FLOAT32: h_f32 | INT16: g_i16 | INT8: f_i8 | BOOLEAN: e_bool | STRING: z_str | BYTE_ARRAY: d_bytes | FLAT_MAP: i_json
         // Custom columns are slotted into their type bucket after the last standard column of the same group.
         // Buckets with no matching standard column are flushed immediately after the preceding bucket.
-        // Bucket mapping: INT64=0, FLOAT64=1, INT32=2, FLOAT32=3, INT16=4, INT8=5, BOOLEAN=6, STRING=7, BYTE_ARRAY=8, TAGS=9
+        // Bucket mapping: INT64=0, FLOAT64=1, INT32=2, FLOAT32=3, INT16=4, INT8=5, BOOLEAN=6, STRING=7, BYTE_ARRAY=8, TAGS=9, SET=11
         val customByBucket = mapOf(
             0 to listOf("b_i64"),        // INT64 → after gbn
             1 to listOf("c_f64"),        // FLOAT64 → after cv3
@@ -589,6 +636,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             7 to listOf("z_str"),        // STRING → after cs3
             8 to listOf("d_bytes"),      // BYTE_ARRAY → after attachment
             9 to listOf("i_json"),       // TAGS → after BYTE_ARRAY group
+            11 to listOf("j_set"),       // SET → after the standard tags column (jsonb bucket)
         )
 
         fun assertColumnOrder(tableName: String, expectNextVersion: Boolean) {

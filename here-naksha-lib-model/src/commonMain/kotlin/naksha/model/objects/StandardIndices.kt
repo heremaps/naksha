@@ -39,7 +39,7 @@ import kotlin.jvm.JvmStatic
  * - [StandardIndices_C.HereTile] — `here_tile`, `fn`, `version`
  * - [StandardIndices_C.AppId] — `app_id`, `updated_at`, `fn`, `version`
  * - [StandardIndices_C.Author] — `author`, `author_ts`, `fn`, `version`
- * - [StandardIndices_C.Tags] — GIN tags index
+ * - [StandardIndices_C.Tags] — GIN set index over the tags
  * - [StandardIndices_C.FeatureType] — `ft`, `fn`, `version`
  * - [StandardIndices_C.CustomValue0] .. [StandardIndices_C.CustomValue3] — custom numeric values
  * - [StandardIndices_C.CustomString0] .. [StandardIndices_C.CustomString3] — custom string values
@@ -168,11 +168,12 @@ class StandardIndices private constructor() {
         val Author = Index("author", IndexType.BTREE, "author", "author_ts", "fn", "version")
 
         /**
-         * `tags` — inverted ([IndexType.TAGS]) index over the `tags` member. Default index.
+         * `tags` — inverted ([IndexType.SET]) index over the `tags` member, supporting element
+         * containment queries. Default index.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Tags = Index("tags", IndexType.TAGS, "tags")
+        val Tags = Index("tags", IndexType.SET, "tags")
 
         /**
          * `feature_type` — index on `ft`, `fn`, `version` (WHERE `ft IS NOT NULL`). Default index.

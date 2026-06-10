@@ -49,26 +49,30 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         assertEquals(0, featuresWithFooTag.size)
     }
 
+    /**
+     * The default tags member is a [naksha.model.objects.MemberType.SET]: the tags array is stored
+     * unmodified, the values are never split into key/value pairs. Therefore only full elements can
+     * be matched — `TagExists("fullelem")` does not find a feature tagged `["fullelem=bar"]`.
+     */
     @Test
-    fun shouldReturnFeaturesWithStringValue() {
+    fun shouldMatchOnlyFullElements() {
         // Given:
-        val inputFeature = randomFeatureWithTags("foo=bar")
+        val inputFeature = randomFeatureWithTags("fullelem=bar")
 
         // When:
         insertFeature(feature = inputFeature)
 
-        // And:
-        val featuresWithFooTag = executeTagsQuery(
-            TagValueIsString(name = "foo", value = "bar")
-        ).features
+        // Then: the full element matches.
+        val byFullElement = executeTagsQuery(TagExists("fullelem=bar")).features
+        assertEquals(1, byFullElement.size)
+        assertEquals(inputFeature.id, byFullElement[0]!!.id)
 
-        // Then:
-        assertEquals(1, featuresWithFooTag.size)
-        assertEquals(inputFeature.id, featuresWithFooTag[0]!!.id)
+        // And: the key alone does not (the tag is not split).
+        assertTrue(executeTagsQuery(TagExists("fullelem")).features.isEmpty())
     }
 
     @Test
-    fun shouldReturnFeaturesByBoolean(){
+    fun shouldReturnFeaturesBySetContainment() {
         // Given:
         val enabledFeatureA = randomFeatureWithTags("flag:=true")
         val enabledFeatureB = randomFeatureWithTags("flag:=true")
@@ -79,7 +83,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
 
         // And:
         val enabledFeatures = executeTagsQuery(
-            TagValueIsBool(name = "flag", value = true)
+            TagSetContains("flag:=true")
         ).features
 
         // Then:
@@ -89,61 +93,20 @@ class ReadFeaturesByTagsTest : PgTestBase() {
     }
 
     @Test
-    fun shouldReturnFeaturesByTagRegex() {
-        // Given:
-        val featureFrom2024 = randomFeatureWithTags("year=2024")
-        val featureFrom2030 = randomFeatureWithTags("year=2030")
+    fun shouldPreserveTagOrderOnReadBack() {
+        // Given: tags in an order that map-based storage would not preserve.
+        val inputFeature = randomFeatureWithTags("zulu", "alpha", "mike", "bravo")
 
         // When:
-        insertFeatures(featureFrom2024, featureFrom2030)
+        insertFeature(feature = inputFeature)
 
         // And:
-        val featuresFromThisDecade = executeTagsQuery(
-            TagValueMatches(name = "year", regex = "202[0-9]")
-        ).features
+        val readFeatures = executeTagsQuery(TagExists("zulu")).features
 
-        // Then:
-        assertEquals(1, featuresFromThisDecade.size)
-        assertEquals(featureFrom2024.id, featuresFromThisDecade[0]!!.id)
-    }
-
-    @Test
-    fun shouldReturnFeaturesWithDoubleValue() {
-        // Given:
-        val inputFeatures = listOf(
-            randomFeatureWithTags("some_number:=1").apply { id = "one" },
-            randomFeatureWithTags("some_number:=5").apply { id = "five" },
-        )
-
-        // When:
-        insertFeatures(inputFeatures)
-
-        // And:
-        val featuresGt2 = executeTagsQuery(
-            TagValueIsDouble("some_number", DoubleOp.GT, 1.0)
-        ).features
-
-        // Then:
-        assertEquals(1, featuresGt2.size)
-        assertEquals("five", featuresGt2[0]!!.id)
-
-        // When
-        val featuresLte5 = executeTagsQuery(
-            TagValueIsDouble("some_number", DoubleOp.LTE, 5.0)
-        ).features
-
-        // Then:
-        assertEquals(2, featuresLte5.size)
-        val lte5ids = featuresLte5.map { it!!.id }
-        assertTrue(lte5ids.containsAll(listOf("one", "five")))
-
-        // When:
-        val featuresEq6 = executeTagsQuery(
-            TagValueIsDouble("some_number", DoubleOp.EQ, 6.0)
-        ).features
-
-        // Then:
-        assertTrue(featuresEq6.isEmpty())
+        // Then: the set guarantees the exact element order given at write time.
+        assertEquals(1, readFeatures.size)
+        val readTags = readFeatures[0]!!.properties.xyz.tags
+        assertEquals(listOf("zulu", "alpha", "mike", "bravo"), readTags.filterNotNull())
     }
 
     @Test
@@ -158,7 +121,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
             "is_active:=true",
         )
         val inactiveJohn = randomFeatureWithTags(
-            "username=john_bar",
+            "username=john_doe",
             "is_active:=false",
         )
         val oldAdmin = randomFeatureWithTags(
@@ -171,24 +134,47 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         insertFeatures(activeJohn, activeNick, inactiveJohn, oldAdmin, invalidUserWithoutId)
 
         // When:
-        val activeJohnsOrAdmin = TagOr(
+        val activeJohnOrAdmin = TagOr(
             TagAnd(
-                TagValueMatches(name = "username", regex = "john.+"),
-                TagValueIsBool(name = "is_active", value = true)
+                TagExists("username=john_doe"),
+                TagSetContains("is_active:=true")
             ),
-            TagValueIsString(name = "role", value = "admin")
+            TagSetContains("role=admin")
         )
-        val features = executeTagsQuery(activeJohnsOrAdmin).features
+        val features = executeTagsQuery(activeJohnOrAdmin).features
 
         // Then:
         assertEquals(2, features.size)
         val featureIds = features.map { it!!.id }
-        featureIds.containsAll(
-            listOf(
-                activeJohn.id,
-                oldAdmin.id
-            )
-        )
+        assertTrue(featureIds.containsAll(listOf(activeJohn.id, oldAdmin.id)))
+    }
+
+    @Test
+    fun shouldReturnFeaturesForAllOfTagSet() {
+        // Given:
+        val taggedBoth = randomFeatureWithTags("seta", "setb")
+        val taggedFoo = randomFeatureWithTags("seta")
+        val taggedBar = randomFeatureWithTags("setb")
+
+        // When:
+        insertFeatures(taggedBoth, taggedFoo, taggedBar)
+
+        // And: TagAnd of pure TagExists uses the `?&` (jsonb_exists_all) operator.
+        val withBoth = executeTagsQuery(
+            TagAnd(TagExists("seta"), TagExists("setb"))
+        ).features
+
+        // Then:
+        assertEquals(1, withBoth.size)
+        assertEquals(taggedBoth.id, withBoth[0]!!.id)
+
+        // And: TagOr of pure TagExists uses the `?|` (jsonb_exists_any) operator.
+        val withAny = executeTagsQuery(
+            TagOr(TagExists("seta"), TagExists("setb"))
+        ).features
+
+        // Then:
+        assertEquals(3, withAny.size)
     }
 
     @Test

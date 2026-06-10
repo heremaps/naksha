@@ -190,7 +190,7 @@ open class StorageTx private constructor(
         val featureBytes = Naksha.encodeFeature(feature, dataEncoding, dict)
         val geoBytes = Naksha.encodeGeometry(feature.geometry)
         val refPoint = Naksha.encodeGeometry(feature.referencePoint)
-        val tagsJson = Naksha.encodeTags(xyz.tags.toTagMap())
+        val tagsJson = Naksha.encodeTagList(xyz.tags)
         if (members is naksha.jbon.HeapBook) {
             members.put("geo", geoBytes)
             members.put("ref_point", refPoint)

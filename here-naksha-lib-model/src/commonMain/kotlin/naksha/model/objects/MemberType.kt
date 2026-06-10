@@ -17,11 +17,16 @@ import kotlin.reflect.KClass
  *   The storage persists this as a flat key/value map that supports containment queries.
  * - [TAGS_FROM_ARRAY]: like [TAGS] but the input is a `TagList` (Naksha tag-array syntax, e.g.
  *   `["key=value", "name:=42"]`). The list is converted to a tag-map at write time and stored in the
- *   same flat key/value representation as [TAGS].
- *   This exists for downward compatibility with XYZ Hub and previous Naksha v2 clients that send
- *   tags as arrays rather than maps.
+ *   same flat key/value representation as [TAGS]. Beware that the conversion has a side effect:
+ *   reading the feature back returns the tags re-flattened from the map, so the original array
+ *   order is **not** preserved.
  *   Only valid as a [Member] type; not a valid [IndexType].
  *   To index a [TAGS_FROM_ARRAY] column use [IndexType.TAGS].
+ * - [SET]: a JSON array of unique primitive values (booleans, numbers, strings). The array is stored
+ *   unmodified, so the element order is preserved when reading the feature back. Supports
+ *   element-containment queries via [IndexType.SET]. This is the default type of the standard
+ *   `tags` member, which keeps 100% downward compatibility with the classic XYZ tags array at
+ *   `properties -> @ns:com:here:xyz -> tags`.
  * @since 3.0
  */
 @JsExport
@@ -132,5 +137,22 @@ class MemberType : JsEnum() {
          */
         @JvmField
         val TAGS_FROM_ARRAY = defIgnoreCase(MemberType::class, "tags_from_array")
+
+        /**
+         * A JSON array of unique primitive values (booleans, numbers, strings), following the JBON2
+         * set specification: entries must not be `null` or duplicates, and the order is significant.
+         * The storage persists the array unmodified (as a JSON array in `jsonb`), so the element
+         * order is guaranteed to be preserved when reading the feature back.
+         *
+         * This is the default type of the standard `tags` member (the classic XYZ tags array at
+         * `properties -> @ns:com:here:xyz -> tags`, e.g. `["foo", "bar"]`). In contrast to
+         * [TAGS_FROM_ARRAY] the values are not split into key/value pairs, therefore only full
+         * elements can be searched, not keys or values.
+         *
+         * Indexed via [IndexType.SET].
+         * @since 3.0
+         */
+        @JvmField
+        val SET = defIgnoreCase(MemberType::class, "set")
     }
 }

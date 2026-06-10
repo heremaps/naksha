@@ -53,7 +53,7 @@ import kotlin.jvm.JvmStatic
  * - [StandardMembers_C.Target] — join target reference
  * - [StandardMembers_C.FeatureType] — feature-type (only stored when it differs from the collection default)
  * - [StandardMembers_C.CustomString0], [StandardMembers_C.CustomString1], [StandardMembers_C.CustomString2], [StandardMembers_C.CustomString3] — custom string values
- * - [StandardMembers_C.Tags] — feature tags (flat key/value map)
+ * - [StandardMembers_C.Tags] — feature tags (set of unique strings, order preserved)
  * - [StandardMembers_C.ReferencePoint] — geometry reference point (TWKB, [MemberType.SPATIAL])
  * - [StandardMembers_C.Geometry] — feature geometry (TWKB, [MemberType.SPATIAL])
  * - [StandardMembers_C.Attachment] — arbitrary binary attachment
@@ -363,12 +363,15 @@ class StandardMembers private constructor() {
         val CustomString3 = Member("cs3", MemberType.STRING)
 
         /**
-         * `tags` — feature tags stored as a flat key/value map. `null` if the feature has no tags.
-         * Supports containment queries via [IndexType.TAGS]. Default member.
+         * `tags` — feature tags, the classic XYZ tags array located at
+         * `properties -> @ns:com:here:xyz -> tags` (e.g. `["foo", "bar"]`), stored as a
+         * [set][MemberType.SET] of unique strings. The array is persisted unmodified, so the
+         * element order is preserved when reading the feature back. `null` if the feature has no
+         * tags. Supports element containment queries via [IndexType.SET]. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Tags = Member("tags", MemberType.TAGS)
+        val Tags = Member("tags", MemberType.SET)
 
         /**
          * `ref_point` — geometry reference point (always a single point), stored as TWKB. Used to

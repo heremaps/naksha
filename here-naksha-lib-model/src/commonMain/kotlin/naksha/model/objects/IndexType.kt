@@ -14,6 +14,7 @@ import kotlin.reflect.KClass
  * - [SPATIAL] — spatial index over a geometry column (e.g. the built-in `geo`).
  * - [TAGS] — inverted index over a tags column ([MemberType.TAGS] or [MemberType.TAGS_FROM_ARRAY]);
  *   supports key/value containment lookups.
+ * - [SET] — inverted index over a set column ([MemberType.SET]); supports element containment lookups.
  * @since 3.0
  */
 @JsExport
@@ -46,5 +47,14 @@ class IndexType : JsEnum() {
          */
         @JvmField
         val TAGS = defIgnoreCase(IndexType::class, "tags")
+
+        /**
+         * Inverted index over a [MemberType.SET] column. Supports element containment lookups,
+         * e.g. find all features whose tags set contains the element `"foo"`. This is the default
+         * index for the standard `tags` member.
+         * @since 3.0
+         */
+        @JvmField
+        val SET = defIgnoreCase(IndexType::class, "set")
     }
 }

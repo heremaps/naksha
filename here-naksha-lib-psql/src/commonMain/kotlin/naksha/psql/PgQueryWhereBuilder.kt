@@ -1,6 +1,8 @@
 package naksha.psql
 
+import naksha.base.AnyList
 import naksha.base.ListProxy
+import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
 import naksha.model.*
@@ -349,6 +351,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private fun whereNestedTags(tagQuery: ITagQuery) {
         when (tagQuery) {
+            is TagSetContains -> resolveTagSetContains(tagQuery)
             is TagNot -> not(tagQuery.query, this::whereNestedTags)
             is TagOr -> {
                 if(containsOnlyTagExists(tagQuery)){
@@ -382,6 +385,18 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
 
     private fun containsOnlyTagExists(container: ListProxy<ITagQuery>): Boolean =
         container.all { it == null || it is TagExists }
+
+    /**
+     * Element containment on a set-form tags column (jsonb array): `tags @> '[<element>]'::jsonb`.
+     * The `@>` operator matches the element in its type (string, boolean, number) and is supported
+     * by the GIN index over the column.
+     */
+    private fun resolveTagSetContains(tagQuery: TagSetContains) {
+        val element = AnyList()
+        element.add(tagQuery.element)
+        val placeholder = placeholderForArg(toJSON(element), PgType.STRING)
+        where.append("$tagsAsJsonb @> $placeholder::jsonb")
+    }
 
     private fun resolveTagNamesArrayOperation(jsonbOperator: String, tagNames: List<String>) {
         val tagKeysArray = tagNames.toTypedArray()

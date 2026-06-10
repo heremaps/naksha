@@ -7,6 +7,11 @@ import kotlin.js.JsName
 
 /**
  * Tests if the tag with given name exists, ignoring the value.
+ *
+ * For map-form tags ([naksha.model.objects.MemberType.TAGS] / [naksha.model.objects.MemberType.TAGS_FROM_ARRAY])
+ * this tests if the key exists. For set-form tags ([naksha.model.objects.MemberType.SET], the default)
+ * this tests if the full string element exists, e.g. `TagExists("foo")` matches a feature tagged
+ * `["foo", "bar"]`.
  * @since 3.0.0
  */
 @JsExport
