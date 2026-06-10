@@ -30,7 +30,7 @@ class PgUtilTest {
         val encoded = PgUtil.encodeFeature(beforeEncoding, encoding)
 
         // And:
-        val decoded = PgUtil.decodeFeature(encoded, encoding)
+        val decoded = PgUtil.decodeFeature(encoded)
 
         // Then: features are equal but decoded one is missing Xyz
         // note: Xyz  should be populated after decoding (it's not stored in `feature` column, it's scattered in other columns)
@@ -62,7 +62,7 @@ class PgUtilTest {
 
             // When:
             val encoded = PgUtil.encodeFeature(beforeEncoding, encoding)
-            val decoded = PgUtil.decodeFeature(encoded, encoding)
+            val decoded = PgUtil.decodeFeature(encoded)
 
             // Then: same parity contract as JBON1 (Xyz lives in separate columns, not the feature blob).
             assertNotNull(decoded, "decoded should not be null for $encoding")

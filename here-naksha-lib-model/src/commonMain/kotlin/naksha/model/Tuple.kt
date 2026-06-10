@@ -273,7 +273,7 @@ data class Tuple(
      * @since 3.0
      */
     fun toNakshaFeature(): NakshaFeature? {
-        val feature = Naksha.decodeFeature(this.feature, dataEncoding, null) ?: return null
+        val feature = Naksha.decodeFeature(this.feature, null) ?: return null
         feature.properties.xyz = XyzNs.fromTuple(this)
         val tags = getTags(StandardMembers.Tags)
         if (tags != null) {
