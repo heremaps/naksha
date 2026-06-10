@@ -101,6 +101,11 @@ open class StorageTx private constructor(
     /**
      * Method to create the new members dict for the given write action on a feature.
      *
+     * Members are extracted from the feature using the [effective path][naksha.model.objects.Member.effectivePath]
+     * of each member declared in [collection.members]. When [collection.members] is `null`, all
+     * [StandardMembers.DEFAULT] are extracted. Session-derived and computed values (e.g. [updatedAt], [hash])
+     * are written after the feature walk to override any values from the feature.
+     *
      * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given arguments are not sufficient to generate the new metadata.
      * @param map the map into which to persist the feature.
      * @param collection the collection into which to persist the feature.
@@ -124,6 +129,23 @@ open class StorageTx private constructor(
         if (isExistingFeature && xyz.guid == null) {
             throw illegalArg("$action with atomic=$atomic requires that the feature has a UUID!")
         }
+
+        // Determine the list of members to extract from the feature.
+        val membersToExtract = collection.members?.toList() ?: StandardMembers.DEFAULT
+
+        // Walk the feature using each member's effective path and coerce to the expected type.
+        val members = HeapBook()
+        for (member in membersToExtract) {
+            if (member == null) continue
+            // Skip mandatory members that are managed by the storage and have no JSON path.
+            if (StandardMembers.MANDATORY_NAMES.contains(member.name)) continue
+            val path = member.effectivePath()
+            val raw = FeatureMemberValues.walkFeature(feature, path)
+            val coerced = FeatureMemberValues.coerce(raw, member.dataType, feature.id, member.name)
+            members.put(member.name, coerced)
+        }
+
+        // Override with session-derived and computed values.
         val updatedAt: Int64 = this.updatedAt
         val createdAt: Int64? = if (isExistingFeature) xyz.createdAt else null
         val author: String?
@@ -136,7 +158,7 @@ open class StorageTx private constructor(
             authorTs = xyz.authorTs
         }
         val featureType = if (collection.defaultFeatureType == feature.featureType) null else feature.featureType
-        val members = HeapBook()
+
         members.put(StandardMembers.UpdatedAt.name, updatedAt)
         members.put(StandardMembers.CreatedAt.name, createdAt)
         members.put(StandardMembers.AuthorTimestamp.name, authorTs)
@@ -147,17 +169,8 @@ open class StorageTx private constructor(
         members.put(StandardMembers.Hash.name, calculateHash(feature))
         members.put(StandardMembers.HereTile.name, calculateHereTile(feature))
         members.put(StandardMembers.Id.name, feature.id)
-        members.put(StandardMembers.Origin.name, null)
-        members.put(StandardMembers.Target.name, null)
         members.put(StandardMembers.FeatureType.name, featureType)
-        members.put(StandardMembers.CustomValue0.name, xyz.cv0)
-        members.put(StandardMembers.CustomValue1.name, xyz.cv1)
-        members.put(StandardMembers.CustomValue2.name, xyz.cv2)
-        members.put(StandardMembers.CustomValue3.name, xyz.cv3)
-        members.put(StandardMembers.CustomString0.name, xyz.cs0)
-        members.put(StandardMembers.CustomString1.name, xyz.cs1)
-        members.put(StandardMembers.CustomString2.name, xyz.cs2)
-        members.put(StandardMembers.CustomString3.name, xyz.cs3)
+
         return members
     }
 
@@ -180,23 +193,26 @@ open class StorageTx private constructor(
         atomic: Boolean = false
     ): Tuple {
         val members = buildMembers(map, collection, feature, action, atomic)
-        val dataEncoding = getDataEncoding(feature, collection)
+        // Override geometry, referencePoint, tags, and attachment with encoded values from the feature.
+        // These are the canonical values at tuple time (the feature walk may have extracted them from
+        // stale JSON paths, but the direct feature properties are authoritative).
         val xyz = feature.properties.xyz
+        val geoBytes = Naksha.encodeGeometry(feature.geometry)
+        val refPointBytes = Naksha.encodeGeometry(feature.referencePoint)
+        val tagsJson = Naksha.encodeTagList(xyz.tags)
+        if (members is HeapBook) {
+            members.put(StandardMembers.Geometry.name, geoBytes)
+            members.put(StandardMembers.ReferencePoint.name, refPointBytes)
+            members.put(StandardMembers.Tags.name, tagsJson)
+            members.put(StandardMembers.Attachment.name, attachment)
+        }
+        val dataEncoding = getDataEncoding(feature, collection)
         val actionBits = Int64(action.intValue.toLong())
         val featureNumber = feature.featureNumber
         val versionVal = version.txn and Int64(-4L) or actionBits
         val nextVersion: Int64 = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) versionVal else Int64(-1L)
         val dict = dictReader?.getEncodingDictionary(feature)
         val featureBytes = Naksha.encodeFeature(feature, dataEncoding, dict)
-        val geoBytes = Naksha.encodeGeometry(feature.geometry)
-        val refPoint = Naksha.encodeGeometry(feature.referencePoint)
-        val tagsJson = Naksha.encodeTagList(xyz.tags)
-        if (members is HeapBook) {
-            members.put(StandardMembers.Geometry.name, geoBytes)
-            members.put(StandardMembers.ReferencePoint.name, refPoint)
-            members.put(StandardMembers.Tags.name, tagsJson)
-            members.put(StandardMembers.Attachment.name, attachment)
-        }
         return Tuple(
             storageNumber = storageNumber,
             mapNumber = map.number,

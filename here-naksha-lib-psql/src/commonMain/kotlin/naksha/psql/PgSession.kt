@@ -341,6 +341,33 @@ open class PgSession(
 
     private var _closed = false
 
+    /**
+     * Registered member processors, keyed by member name.
+     * Processors are invoked in the order in which they were added.
+     * @since 3.0
+     */
+    private val memberProcessors: MutableMap<String, MutableList<IMemberProcessor>> = mutableMapOf()
+
+    override fun clearMemberProcessors(): ISession {
+        memberProcessors.clear()
+        return this
+    }
+
+    override fun addMemberProcessor(memberName: String, memberProcessor: IMemberProcessor): ISession {
+        var processors = memberProcessors[memberName]
+        if (processors == null) {
+            processors = mutableListOf()
+            memberProcessors[memberName] = processors
+        }
+        processors.add(memberProcessor)
+        return this
+    }
+
+    override fun removeMemberProcessor(memberName: String, memberProcessor: IMemberProcessor): ISession {
+        memberProcessors[memberName]?.remove(memberProcessor)
+        return this
+    }
+
     override fun isClosed(): Boolean = _closed
 
     override fun close() {
