@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 import naksha.base.AnyList;
 import naksha.base.Int64;
 import naksha.base.JvmInt64;
+import naksha.base.Timestamp;
 import naksha.model.Action;
 import naksha.model.Guid;
 import naksha.model.IReadSession;
@@ -161,8 +162,8 @@ class ActivityLogHandlerTest {
   void shouldComposeActivityFeatures() throws Exception {
     // Given: features uuid
     String featureId = "featureId";
-    Guid initialUuid = guid(featureId, new Version(1));
-    Guid newUuid = guid(featureId, new Version(2));
+    Guid initialUuid = guid(featureId, Version.now(new JvmInt64(1),Action.CREATED));
+    Guid newUuid = guid(featureId, Version.now(new JvmInt64(2),Action.UPDATED));
 
     // And: old version of feature
     NakshaFeature oldFeature = nakshaFeature(featureId)
@@ -235,7 +236,7 @@ class ActivityLogHandlerTest {
   void shouldNotCalculateReversePatchAfterCreation() throws Exception {
     // Given
     String featureId = "featureId";
-    Guid createdGuid = guid(featureId, new Version(0));
+    Guid createdGuid = guid(featureId, Version.now(new JvmInt64(0), Action.CREATED));
 
     // And: space storage that returns only some feature with 'CREATE' action
     configureSpaceStorage(
@@ -266,8 +267,12 @@ class ActivityLogHandlerTest {
   void shouldNotCalculateDiffAfterDeletion() throws Exception {
     // Given
     String featureId = "featureId";
-    Guid createdGuid = guid(featureId, new Version(0));
-    Guid deletedGuid = guid(featureId, new Version(1));
+    Timestamp ts0 = Timestamp.fromMillis(T0);
+    Timestamp ts1 = Timestamp.fromMillis(T1);
+    Version createdVersion = Version.auto(ts0.getYear(), ts0.getMonth(), ts0.getDay(), new JvmInt64(0), Action.CREATED);
+    Version deletedVersion = Version.auto(ts1.getYear(), ts1.getMonth(), ts1.getDay(), new JvmInt64(1), Action.DELETED);
+    Guid createdGuid = guid(featureId, createdVersion);
+    Guid deletedGuid = guid(featureId, deletedVersion);
 
     // And: space storage that returns features with 'DELETE' and `CREATE` actions
     configureSpaceStorage(
