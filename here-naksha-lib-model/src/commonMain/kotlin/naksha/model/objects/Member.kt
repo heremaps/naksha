@@ -13,7 +13,7 @@ import kotlin.js.JsName
  * A column materialized on a [NakshaCollection] — either a mandatory/default built-in column or a
  * user-defined one.
  *
- * At write time, the storage walks the feature using [map], extracts the value, coerces it to the
+ * At write time, the storage walks the feature using [path], extracts the value, coerces it to the
  * [dataType], and stores it in a storage-specific column derived from [name]. The value also remains
  * in the encoded feature blob.
  *
@@ -21,7 +21,7 @@ import kotlin.js.JsName
  * Mandatory columns (e.g. `fn`, `version`, `id`, `feature`) are injected by the storage and must
  * not be redeclared by the client with a different type.
  *
- * If [map] is not set, the storage defaults to `["properties", <name>]` at write time.
+ * If [path] is not set, the storage defaults to `["properties", <name>]` at write time.
  * @since 3.0
  */
 @JsExport
@@ -31,14 +31,14 @@ open class Member() : AnyObject() {
      * Construct a member with a name and the given data type.
      * @param name the member name.
      * @param dataType the data type; defaults to [MemberType.STRING].
-     * @param map the JSON path to read the value from; defaults to `["properties", name]` when null.
+     * @param path the JSON path to read the value from; defaults to `["properties", name]` when null.
      * @since 3.0
      */
     @JsName("of")
-    constructor(name: String, dataType: MemberType = MemberType.STRING, map: JsonPath? = null) : this() {
+    constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = dataType
-        if (map != null) this.map = map
+        this.path = path
     }
 
     /**
@@ -90,38 +90,38 @@ open class Member() : AnyObject() {
      * Each segment must match `^[A-Za-z_][A-Za-z0-9_]*$`. There is no array indexing in v3.0.
      * @since 3.0
      */
-    var map: JsonPath? by MAP
+    var path: JsonPath? by PATH
 
-    /** True iff the underlying map has an entry for [map]. */
-    fun hasMap(): Boolean = hasRaw("map")
+    /** True iff the underlying map has an entry for [path]. */
+    fun hasPath(): Boolean = hasRaw("path")
 
-    /** Remove [map] from the underlying map; returns this for chaining. */
-    fun removeMap(): Member {
-        removeRaw("map")
+    /** Remove [path] from the underlying map; returns this for chaining. */
+    fun removePath(): Member {
+        removeRaw("path")
         return this
     }
 
-    /** Fluent setter for [map]; returns this for chaining. */
-    fun withMap(value: JsonPath?): Member {
-        map = value
+    /** Fluent setter for [path]; returns this for chaining. */
+    fun withPath(value: JsonPath?): Member {
+        path = value
         return this
     }
 
     /**
      * Returns the effective JSON path to read this member from a feature.
      *
-     * If [map] is explicitly set, returns its contents; otherwise returns `["properties", name]`.
+     * If [path] is explicitly set, returns its contents; otherwise returns `["properties", name]`.
      * @since 3.0
      */
     fun effectivePath(): List<String> {
-        val m = map
-        return if (m != null && m.isNotEmpty()) m.filterNotNull().toList()
+        val path: JsonPath? = this.path
+        return if (!path.isNullOrEmpty()) path.filterNotNull().toList()
         else listOf("properties", name)
     }
 
     companion object Member_C {
         private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
-        private val MAP = NullableProperty<Member, JsonPath>(JsonPath::class)
+        private val PATH = NullableProperty<Member, JsonPath>(JsonPath::class)
     }
 }
