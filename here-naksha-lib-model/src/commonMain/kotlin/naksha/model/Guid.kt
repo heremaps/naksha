@@ -5,6 +5,7 @@ package naksha.model
 import naksha.base.Platform.PlatformCompanion.decodeURIComponent
 import naksha.base.Platform.PlatformCompanion.encodeURIComponent
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -119,7 +120,7 @@ data class Guid(
         @JsStatic
         @JvmStatic
         fun fromTuple(tuple: Tuple): Guid {
-            val id = tuple.getStringMember(naksha.model.objects.StandardMembers.Id) ?: tuple.featureNumber.toString()
+            val id = tuple.getStringMember(StandardMembers.Id) ?: tuple.featureNumber.toString()
             return Guid(id, tuple.tupleNumber)
         }
     }

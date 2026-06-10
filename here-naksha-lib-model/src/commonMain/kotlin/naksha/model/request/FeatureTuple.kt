@@ -5,6 +5,7 @@ package naksha.model.request
 import naksha.base.Platform
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmField
@@ -55,7 +56,7 @@ open class FeatureTuple(
      */
     val id: String?
         get() {
-            val member = tuple?.getStringMember(naksha.model.objects.StandardMembers.Id)
+            val member = tuple?.getStringMember(StandardMembers.Id)
             if (member != null) return member
             return feature?.id
         }
