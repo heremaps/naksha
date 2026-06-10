@@ -279,7 +279,7 @@ class ActivityLogHandlerTest {
         initialHistoryAwareRequestReturns(List.of(
             nakshaFeature(featureId)
                 .withUuid(deletedGuid.toString())
-                .withPuuid(createdGuid.toString())
+                .withNuuid(null)
                 .withAction(Action.DELETED)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T1)
@@ -288,7 +288,7 @@ class ActivityLogHandlerTest {
         requestForMissingPredecessorsReturns(List.of(
             nakshaFeature("featureId")
                 .withUuid(createdGuid.toString())
-                .withPuuid(null)
+                .withNuuid(deletedGuid.toString())
                 .withAction(Action.CREATED)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T0)
