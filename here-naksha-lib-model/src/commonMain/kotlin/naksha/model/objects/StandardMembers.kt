@@ -5,7 +5,6 @@ package naksha.model.objects
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmStatic
 
 /**
  * The canonical set of standard members that every Naksha storage understands.
@@ -15,7 +14,7 @@ import kotlin.jvm.JvmStatic
  * ### Mandatory members
  * These are always managed and persisted by the storage, regardless of whether they appear in
  * [NakshaCollection.members]. Clients must not declare them with a different [MemberType].
- * Their [Member.map] is always `null` — the storage resolves their values internally.
+ * Their [Member.path] is always `null` — the storage resolves their values internally.
  *
  * - [StandardMembers_C.DatabaseNumber] — database-number (storage-level identifier)
  * - [StandardMembers_C.CatalogNumber] — catalog-number (map-level identifier)
