@@ -13,14 +13,18 @@ import kotlin.reflect.KClass
  * - Primitives: [BOOLEAN], [INT8], [INT16], [INT32], [INT64], [FLOAT32], [FLOAT64], [STRING], [BYTE_ARRAY].
  * - [SPATIAL]: a geometry stored as raw TWKB bytes. The storage persists this as a binary column and
  *   supports spatial queries. Only a [IndexType.SPATIAL] index may be placed on a [SPATIAL] member.
- * - [TAGS]: a map whose keys are strings and values are primitives (matches JBON2 tag-map specification).
- *   The storage persists this as a flat key/value map that supports containment queries.
+ * - [SET]: an ordered list of unique primitives (matches the JBON2 set specification). The storage
+ *   persists this as a `jsonb` **array** and supports element-containment queries via [IndexType.SET].
+ *   Insertion order is preserved; duplicate entries are dropped at write time. The standard `tags`
+ *   member uses [SET] by default with the XYZ tag-array format `["foo","bar"]`.
+ * - [TAGS]: a map whose keys are strings and values are primitives (matches the JBON2 tag-map
+ *   specification). The storage persists this as a `jsonb` **object** and supports key/value
+ *   containment queries via [IndexType.TAGS].
  * - [TAGS_FROM_ARRAY]: like [TAGS] but the input is a `TagList` (Naksha tag-array syntax, e.g.
- *   `["key=value", "name:=42"]`). The list is converted to a tag-map at write time and stored in the
- *   same flat key/value representation as [TAGS].
- *   This exists for downward compatibility with XYZ Hub and previous Naksha v2 clients that send
- *   tags as arrays rather than maps.
- *   Only valid as a [Member] type; not a valid [IndexType].
+ *   `["key=value", "name:=42"]`). The list is converted to a tag-map at write time and stored in
+ *   the same `jsonb` object representation as [TAGS].
+ *   Provided for downward compatibility with XYZ Hub and previous Naksha v2 clients that send
+ *   tags as arrays. Only valid as a [Member] type; not a valid [IndexType].
  *   To index a [TAGS_FROM_ARRAY] column use [IndexType.TAGS].
  * @since 3.0
  */
@@ -109,9 +113,22 @@ class MemberType : JsEnum() {
         val SPATIAL = defIgnoreCase(MemberType::class, "spatial")
 
         /**
+         * An ordered set of unique primitives, following the JBON2 set specification.
+         *
+         * The storage persists this as a `jsonb` **array**. Insertion order is preserved;
+         * duplicate entries are dropped at write time. Entries must be primitives
+         * (string, number, boolean); `null`/`undefined` entries are rejected.
+         *
+         * Indexed via [IndexType.SET] (GIN, element-exists / element-containment).
+         * @since 3.0
+         */
+        @JvmField
+        val SET = defIgnoreCase(MemberType::class, "set")
+
+        /**
          * A map whose keys are strings and values are primitives, following the JBON2 tag-map
-         * specification. The storage persists this as a flat key/value map that supports
-         * containment queries.
+         * specification. The storage persists this as a `jsonb` **object** that supports
+         * key/value containment queries.
          *
          * Indexed via [IndexType.TAGS].
          * @since 3.0

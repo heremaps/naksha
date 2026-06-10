@@ -363,12 +363,15 @@ class StandardMembers private constructor() {
         val CustomString3 = Member("cs3", MemberType.STRING)
 
         /**
-         * `tags` — feature tags stored as a flat key/value map. `null` if the feature has no tags.
-         * Supports containment queries via [IndexType.TAGS]. Default member.
+         * `tags` — feature tags stored as an ordered set of unique strings (XYZ tag-array form,
+         * e.g. `["foo","bar=baz"]`). `null` if the feature has no tags. The default JSON path is
+         * `properties.@ns:com:here:xyz.tags`, matching the classic XYZ Hub layout.
+         *
+         * Supports element-containment queries via [IndexType.SET]. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Tags = Member("tags", MemberType.TAGS)
+        val Tags = Member("tags", MemberType.SET, JsonPath("properties", "@ns:com:here:xyz", "tags"))
 
         /**
          * `ref_point` — geometry reference point (always a single point), stored as TWKB. Used to

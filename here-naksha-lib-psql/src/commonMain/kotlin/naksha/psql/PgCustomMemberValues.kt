@@ -4,11 +4,16 @@ package naksha.psql
 
 import naksha.base.AnyObject
 import naksha.base.Int64
+import naksha.base.ListProxy
+import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.PlatformList
+import naksha.base.PlatformListApi
 import naksha.model.NakshaError
 import naksha.model.NakshaException
 import naksha.model.TagList
+import naksha.model.TupleNumber
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
@@ -66,6 +71,7 @@ internal object PgCustomMemberValues {
         MemberType.STRING -> PgType.STRING
         MemberType.BYTE_ARRAY -> PgType.BYTE_ARRAY
         MemberType.SPATIAL -> PgType.BYTE_ARRAY
+        MemberType.SET -> PgType.JSONB
         MemberType.TAGS -> PgType.JSONB
         MemberType.TAGS_FROM_ARRAY -> PgType.JSONB
         else -> PgType.STRING
@@ -75,8 +81,9 @@ internal object PgCustomMemberValues {
      * Returns the PostgreSQL DDL type string for the given member type, used inside `CREATE TABLE` / `ALTER TABLE ADD COLUMN`.
      * Note: there is no 1-byte signed integer type in PostgreSQL, so [MemberType.INT8] is materialized as `smallint`;
      * the storage enforces the 8-bit range on coercion.
-     * Both [MemberType.TAGS] and [MemberType.TAGS_FROM_ARRAY] use `jsonb STORAGE MAIN` — compressed inline,
-     * only TOASTed as a last resort.
+     * [MemberType.SET], [MemberType.TAGS], and [MemberType.TAGS_FROM_ARRAY] all use `jsonb STORAGE MAIN`
+     * — compressed inline, only TOASTed as a last resort. SET is stored as a `jsonb` array;
+     * TAGS / TAGS_FROM_ARRAY as a `jsonb` object.
      */
     fun pgSqlTypeFor(type: MemberType): String = when (type) {
         MemberType.BOOLEAN -> "boolean"
@@ -89,6 +96,7 @@ internal object PgCustomMemberValues {
         MemberType.STRING -> "text COLLATE \"C\""
         MemberType.BYTE_ARRAY -> "bytea"
         MemberType.SPATIAL -> "bytea STORAGE EXTERNAL"
+        MemberType.SET -> "jsonb STORAGE MAIN"
         MemberType.TAGS -> "jsonb STORAGE MAIN"
         MemberType.TAGS_FROM_ARRAY -> "jsonb STORAGE MAIN"
         else -> "text"
@@ -125,6 +133,7 @@ internal object PgCustomMemberValues {
             MemberType.STRING -> coerceString(value, featureId, memberName)
             MemberType.BYTE_ARRAY -> coerceByteArray(value, featureId, memberName)
             MemberType.SPATIAL -> coerceByteArray(value, featureId, memberName)
+            MemberType.SET -> coerceSet(value, featureId, memberName)
             MemberType.TAGS -> coerceTags(value, featureId, memberName)
             MemberType.TAGS_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
             else -> {
@@ -217,6 +226,42 @@ internal object PgCustomMemberValues {
         return try { toJSON(value) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags", value); null }
     }
 
+    /**
+     * Coerces a raw value into the JSON-array wire form of a [MemberType.SET] column.
+     *
+     * Accepts any iterable / list-shaped input ([naksha.model.TagList], [naksha.base.AnyList],
+     * `List<*>`, `Array<*>`). Each entry must be a primitive — `String`, `Boolean`, `Number`,
+     * [naksha.base.Int64], or [naksha.model.TupleNumber] (serialised via its canonical
+     * `{sn}:{mn}:{cn}:{fn}:{v}` stringification). `null` entries are dropped. Duplicates are
+     * dropped while preserving insertion order. Returns `null` if the input cannot be interpreted
+     * as a list, contains a non-primitive entry, or the resulting set is empty.
+     */
+    private fun coerceSet(value: Any, featureId: String, memberName: String): String? {
+        val rawEntries: List<Any?> = when (value) {
+            is ListProxy<*> -> (0 until value.size).map { value[it] }
+            is PlatformList -> {
+                val size = PlatformListApi.array_get_length(value)
+                (0 until size).map { PlatformListApi.array_get(value, it) }
+            }
+            is List<*> -> value
+            is Array<*> -> value.toList()
+            else -> { warnMismatch(featureId, memberName, "set", value); return null }
+        }
+        val seen = HashSet<Any>(rawEntries.size)
+        val unique = Platform.newList()
+        for (e in rawEntries) {
+            val normalized: Any = when (e) {
+                null -> continue
+                is TupleNumber -> e.toString()
+                is String, is Boolean, is Number, is Int64 -> e
+                else -> { warnMismatch(featureId, memberName, "set (non-primitive entry)", e); return null }
+            }
+            if (seen.add(normalized)) PlatformListApi.array_push(unique, normalized)
+        }
+        if (PlatformListApi.array_get_length(unique) == 0) return null
+        return try { toJSON(unique) } catch (_: Exception) { warnMismatch(featureId, memberName, "set", value); null }
+    }
+
     private fun coerceTagsFromArray(value: Any, featureId: String, memberName: String): String? {
         val tagList = when (value) {
             is TagList -> value
@@ -245,7 +290,7 @@ internal object PgCustomMemberValues {
      * 2. 4-byte types ([INT32], [FLOAT32]) — next, still fixed-width
      * 3. 1/2-byte types ([INT16], [INT8], [BOOLEAN]) — small fixed-width
      * 4. Variable-length text ([STRING]) — variable but human-readable
-     * 5. Opaque variable-length ([BYTE_ARRAY], [SPATIAL], [TAGS], [TAGS_FROM_ARRAY]) — last
+     * 5. Opaque variable-length ([BYTE_ARRAY], [SPATIAL], [SET], [TAGS], [TAGS_FROM_ARRAY]) — last
      */
     fun columnSortOrder(type: MemberType): Int = when (type) {
         MemberType.INT64   -> 0
@@ -258,6 +303,7 @@ internal object PgCustomMemberValues {
         MemberType.STRING  -> 7
         MemberType.BYTE_ARRAY      -> 8
         MemberType.SPATIAL         -> 8
+        MemberType.SET             -> 9
         MemberType.TAGS            -> 9
         MemberType.TAGS_FROM_ARRAY -> 10
         else -> 11

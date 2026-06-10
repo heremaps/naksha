@@ -293,7 +293,10 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
-         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above the raw `jsonb` [tags][PgColumn.tags] column, plus [fn][PgColumn.fn], [version][PgColumn.version], and [next_version][PgColumn.next_version].
+         * A [GIN](https://www.postgresql.org/docs/current/gin.html) index above the raw `jsonb` [tags][PgColumn.tags]
+         * column (a `naksha:set` JSON array of unique strings), plus [fn][PgColumn.fn], [version][PgColumn.version],
+         * and [next_version][PgColumn.next_version]. Supports element-exists / element-containment lookups
+         * (`?`, `?|`, `?&`).
          *
          * @see [PgAdminMap.createPgCollection]
          */
@@ -695,7 +698,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             // Determine index type from the PgIndex columns (heuristic: geo columns → SPATIAL, no columns or btree → BTREE)
             idx.type = when {
                 pgIdx === gist_geo || pgIdx === spgist_geo || pgIdx === ref_point -> IndexType.SPATIAL
-                pgIdx === tags -> IndexType.TAGS
+                pgIdx === tags -> IndexType.SET
                 else -> IndexType.BTREE
             }
             val cols = naksha.base.StringList()

@@ -759,6 +759,16 @@ CREATE INDEX  IF NOT EXISTS $id ON ${quotedName}
 USING gin ($pgIdent)
 $fillFactor ${TABLESPACE};""".trim()
             }
+            IndexType.SET -> {
+                if (!isSetColumn(firstCol, members)) {
+                    throw naksha.model.illegalArg("SET custom index '${index.name}' must target a member of dataType SET")
+                }
+                val pgIdent = quoteIdent(physicalColumnName(firstCol, members))
+                """
+CREATE INDEX  IF NOT EXISTS $id ON ${quotedName}
+USING gin ($pgIdent)
+$fillFactor ${TABLESPACE};""".trim()
+            }
             else -> null
         }
     }
@@ -791,6 +801,16 @@ $fillFactor ${TABLESPACE};""".trim()
                 return m.dataType == MemberType.TAGS
                     || m.dataType == MemberType.TAGS_FROM_ARRAY
             }
+        }
+        return false
+    }
+
+    private fun isSetColumn(name: String, members: MemberList?): Boolean {
+        // The built-in `tags` column is a SET (jsonb array) by default.
+        if (name == PgColumn.tags.name) return true
+        if (members == null) return false
+        for (m in members) {
+            if (m != null && m.name == name) return m.dataType == MemberType.SET
         }
         return false
     }

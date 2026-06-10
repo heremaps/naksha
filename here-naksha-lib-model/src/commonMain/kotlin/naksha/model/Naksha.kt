@@ -481,8 +481,8 @@ class Naksha private constructor() {
             val feature = decodeFeature(tuple.feature, dataEncoding, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromTuple(tuple)
             val xyz = feature.properties.xyz
-            val tags = tuple.getTags(naksha.model.objects.StandardMembers.Tags)
-            if (tags != null) xyz.tags = tags.toTagList()
+            val tags = tuple.getSet(naksha.model.objects.StandardMembers.Tags)
+            if (tags != null) xyz.tags = tags
             val geo = tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
             if (geo != null) feature.geometry = decodeGeometry(geo)
             return feature
@@ -535,7 +535,7 @@ class Naksha private constructor() {
             val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
-            val tagsJson = encodeTags(xyz.tags.toTagMap())
+            val tagsJson = encodeSet(xyz.tags)
             members.put("geo", geoBytes)
             members.put("ref_point", refPoint)
             members.put("tags", tagsJson)
@@ -596,7 +596,7 @@ class Naksha private constructor() {
             val featureBytes = encodeFeature(feature, encoding, dict)
             val geoBytes = encodeGeometry(feature.geometry)
             val refPoint = encodeGeometry(feature.referencePoint)
-            val tagsJson = encodeTags(xyz.tags.toTagMap())
+            val tagsJson = encodeSet(xyz.tags)
             members.put("geo", geoBytes)
             members.put("ref_point", refPoint)
             members.put("tags", tagsJson)
@@ -686,10 +686,9 @@ class Naksha private constructor() {
         }
 
         /**
-         * Decode Naksha tags from their binary representation.
-         * @param bytes the bytes to decode.
-         * @param dictReader the dictionary manager to use for decoding; if any.
-         * @return the Naksha tags.
+         * Decode Naksha tags (jsonb **object** form) from their JSON text representation.
+         * @param json the JSON text to decode.
+         * @return the [TagMap], or _null_ if [json] is _null_/blank or does not decode to an object.
          * @since 3.0
          */
         @JsStatic
@@ -701,7 +700,7 @@ class Naksha private constructor() {
         }
 
         /**
-         * Encodes the given tags into their binary representation.
+         * Encodes the given [TagMap] into its JSON text representation (jsonb **object** form).
          * @param tags the tags to encode.
          * @return the JSON text representation, or _null_ if [tags] is _null_ / empty.
          * @since 3.0
@@ -711,6 +710,46 @@ class Naksha private constructor() {
         fun encodeTags(tags: TagMap?): String? {
             if (tags.isNullOrEmpty()) return null
             return toJSON(tags)
+        }
+
+        /**
+         * Decode a [naksha.model.objects.MemberType.SET] column value (jsonb **array** form) into a [TagList].
+         *
+         * @param json the JSON array text to decode.
+         * @return the [TagList], or _null_ if [json] is _null_/blank or does not decode to an array of strings.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun decodeSet(json: String?): TagList? {
+            if (json.isNullOrBlank()) return null
+            val decoded = fromJSON(json) as? PlatformList ?: return null
+            return decoded.proxy(TagList::class)
+        }
+
+        /**
+         * Encode the given [TagList] into its JSON array text representation
+         * ([naksha.model.objects.MemberType.SET] wire form).
+         *
+         * Insertion order is preserved; duplicate entries are dropped; `null` entries are
+         * skipped. Returns _null_ if the resulting set is empty.
+         *
+         * @param entries the set entries to encode.
+         * @return the JSON array text, or _null_ if [entries] is _null_ / empty.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeSet(entries: TagList?): String? {
+            if (entries.isNullOrEmpty()) return null
+            val seen = HashSet<String>(entries.size)
+            val unique = TagList()
+            for (e in entries) {
+                if (e == null) continue
+                if (seen.add(e)) unique.add(e)
+            }
+            if (unique.isEmpty()) return null
+            return toJSON(unique)
         }
 
         /**

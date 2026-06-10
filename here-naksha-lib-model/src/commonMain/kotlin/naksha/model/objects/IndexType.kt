@@ -12,8 +12,10 @@ import kotlin.reflect.KClass
  *
  * - [BTREE] — ordered index for equality and range queries on primitive columns (numbers, booleans, strings, byte-arrays).
  * - [SPATIAL] — spatial index over a geometry column (e.g. the built-in `geo`).
- * - [TAGS] — inverted index over a tags column ([MemberType.TAGS] or [MemberType.TAGS_FROM_ARRAY]);
- *   supports key/value containment lookups.
+ * - [SET] — inverted index over a [MemberType.SET] column (a `jsonb` **array** of primitives);
+ *   supports element-exists / element-containment lookups (`?`, `?|`, `?&`).
+ * - [TAGS] — inverted index over a tags column (a `jsonb` **object**; [MemberType.TAGS] or
+ *   [MemberType.TAGS_FROM_ARRAY]); supports key/value containment lookups.
  * @since 3.0
  */
 @JsExport
@@ -40,8 +42,16 @@ class IndexType : JsEnum() {
         val SPATIAL = defIgnoreCase(IndexType::class, "spatial")
 
         /**
-         * Inverted index over a [MemberType.TAGS] or [MemberType.TAGS_FROM_ARRAY] column.
-         * Supports key/value containment lookups.
+         * Inverted index over a [MemberType.SET] column (`jsonb` array of primitives).
+         * Supports element-exists / element-containment lookups (`?`, `?|`, `?&`).
+         * @since 3.0
+         */
+        @JvmField
+        val SET = defIgnoreCase(IndexType::class, "set")
+
+        /**
+         * Inverted index over a [MemberType.TAGS] or [MemberType.TAGS_FROM_ARRAY] column
+         * (`jsonb` object of primitives). Supports key/value containment lookups.
          * @since 3.0
          */
         @JvmField

@@ -500,7 +500,7 @@ open class PgWriter internal constructor(
                         }
                     }
                     // Type-compatibility: SPATIAL index requires a SPATIAL member as its first column;
-                    // BTREE/other index must not target a SPATIAL member (no ordering defined for TWKB).
+                    // BTREE/other index must not target a SPATIAL/SET member (no ordering defined for them).
                     if (firstColName != null) {
                         val firstColType = memberTypeByName[firstColName]
                         when (idx.type) {
@@ -510,17 +510,28 @@ open class PgWriter internal constructor(
                                         "but '$firstColName' has type $firstColType."
                                 )
                             }
+                            IndexType.SET -> if (firstColType != MemberType.SET) {
+                                throw illegalArg(
+                                    "SET index '${idx.name}' must target a member of type SET, " +
+                                        "but '$firstColName' has type $firstColType."
+                                )
+                            }
                             IndexType.TAGS -> if (firstColType != MemberType.TAGS && firstColType != MemberType.TAGS_FROM_ARRAY) {
                                 throw illegalArg(
                                     "TAGS index '${idx.name}' must target a member of type TAGS or TAGS_FROM_ARRAY, " +
                                         "but '$firstColName' has type $firstColType."
                                 )
                             }
-                            else -> if (firstColType == MemberType.SPATIAL) {
-                                throw illegalArg(
+                            else -> when (firstColType) {
+                                MemberType.SPATIAL -> throw illegalArg(
                                     "Index '${idx.name}' of type ${idx.type} cannot target SPATIAL member '$firstColName'. " +
                                         "Use IndexType.SPATIAL for geometry columns."
                                 )
+                                MemberType.SET -> throw illegalArg(
+                                    "Index '${idx.name}' of type ${idx.type} cannot target SET member '$firstColName'. " +
+                                        "Use IndexType.SET for set columns."
+                                )
+                                else -> {}
                             }
                         }
                     }

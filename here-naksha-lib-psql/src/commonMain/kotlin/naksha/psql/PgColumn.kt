@@ -477,7 +477,8 @@ class PgColumn : JsEnum() {
         }
 
         /**
-         * The [tags][naksha.model.TagMap] of the [tuple][naksha.model.Tuple], stored as raw `jsonb`.
+         * The [tags][naksha.model.TagList] of the [tuple][naksha.model.Tuple], stored as raw `jsonb`
+         * (a `naksha:set` JSON **array** of unique strings — see [naksha.model.objects.MemberType.SET]).
          *
          * @since 3.0
          */
@@ -806,6 +807,7 @@ class PgColumn : JsEnum() {
          */
         internal fun pgTypeToMemberType(col: PgColumn): MemberType = when {
             col === geo || col === ref_point -> MemberType.SPATIAL
+            col === tags -> MemberType.SET
             else -> when (col.type) {
                 PgType.INT64   -> MemberType.INT64
                 PgType.DOUBLE  -> MemberType.FLOAT64

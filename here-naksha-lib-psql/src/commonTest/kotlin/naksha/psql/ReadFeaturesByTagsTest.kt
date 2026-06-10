@@ -1,232 +1,113 @@
 package naksha.psql
 
 import naksha.model.TagList
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.query.*
 import naksha.model.RandomFeatures
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+/**
+ * Query semantics for the standard `tags` member, which is now a [naksha.model.objects.MemberType.SET]
+ * (a `jsonb` array of unique strings). Element-exists queries (`?`, `?|`, `?&`) work natively.
+ *
+ * Value-shaped queries (`TagValueIs*`, `TagValueMatches`) still emit their original `tags->>'k' = …`
+ * SQL — that SQL is valid against a `jsonb` object (TAGS / TAGS_FROM_ARRAY) but evaluates to NULL/false
+ * on a `jsonb` array (SET), so it simply matches no rows on a SET-stored standard tags column. That's
+ * intentional: a custom collection that declares its `tags` member as TAGS or TAGS_FROM_ARRAY keeps the
+ * full key/value query surface.
+ */
 class ReadFeaturesByTagsTest : PgTestBase() {
 
     @Test
     fun shouldReturnFeaturesWithExistingTag() {
-        // Given:
         val inputFeature = randomFeatureWithTags("sample")
-
-        // When:
         insertFeature(feature = inputFeature)
 
-        // And:
-        val featuresWithFooTag = executeTagsQuery(
-            TagExists("sample")
-        ).features
+        val featuresWithFooTag = executeTagsQuery(TagExists("sample")).features
 
-        // Then:
         assertEquals(1, featuresWithFooTag.size)
         assertEquals(inputFeature.id, featuresWithFooTag[0]!!.id)
     }
 
     @Test
     fun shouldNotReturnFeaturesWithMissingTag() {
-        // Given:
         val inputFeature = randomFeatureWithTags("existing")
-
-        // When:
         insertFeature(feature = inputFeature)
 
-        // And:
-        val featuresWithFooTag = executeTagsQuery(
-            TagExists("non-existing")
-        ).features
+        val featuresWithFooTag = executeTagsQuery(TagExists("non-existing")).features
 
-        // Then:
         assertEquals(0, featuresWithFooTag.size)
     }
 
     @Test
-    fun shouldReturnFeaturesWithStringValue() {
-        // Given:
+    fun shouldMatchFullTagStringEntries() {
+        // SET treats each entry as an opaque string — "foo=bar" matches as a single set element.
         val inputFeature = randomFeatureWithTags("foo=bar")
-
-        // When:
         insertFeature(feature = inputFeature)
 
-        // And:
-        val featuresWithFooTag = executeTagsQuery(
-            TagValueIsString(name = "foo", value = "bar")
-        ).features
+        val matched = executeTagsQuery(TagExists("foo=bar")).features
 
-        // Then:
-        assertEquals(1, featuresWithFooTag.size)
-        assertEquals(inputFeature.id, featuresWithFooTag[0]!!.id)
+        assertEquals(1, matched.size)
+        assertEquals(inputFeature.id, matched[0]!!.id)
     }
 
     @Test
-    fun shouldReturnFeaturesByBoolean(){
-        // Given:
-        val enabledFeatureA = randomFeatureWithTags("flag:=true")
-        val enabledFeatureB = randomFeatureWithTags("flag:=true")
-        val disabledFeature = randomFeatureWithTags("flag:=false")
+    fun shouldReturnNoRowsForMapShapedQueriesAgainstSetTags() {
+        // The standard `tags` column is now SET-shaped (jsonb array). Value-shaped queries still
+        // emit valid SQL (`tags->>'k' = 'v'`, etc.), but on a jsonb array those expressions
+        // evaluate to NULL, so no rows match. The queries do not error.
+        val feature = randomFeatureWithTags("flag:=true", "foo=bar")
+        insertFeature(feature = feature)
 
-        // When:
-        insertFeatures(enabledFeatureA, enabledFeatureB, disabledFeature)
-
-        // And:
-        val enabledFeatures = executeTagsQuery(
-            TagValueIsBool(name = "flag", value = true)
-        ).features
-
-        // Then:
-        assertEquals(2, enabledFeatures.size)
-        val fetchedIds = enabledFeatures.map { it!!.id }
-        assertTrue(fetchedIds.containsAll(listOf(enabledFeatureA.id, enabledFeatureB.id)))
+        assertTrue(executeTagsQuery(TagValueIsBool(name = "flag", value = true)).features.isEmpty())
+        assertTrue(executeTagsQuery(TagValueIsString(name = "foo", value = "bar")).features.isEmpty())
+        assertTrue(executeTagsQuery(TagValueIsDouble("flag", DoubleOp.GT, 0.0)).features.isEmpty())
+        assertTrue(executeTagsQuery(TagValueMatches(name = "foo", regex = "ba.+")).features.isEmpty())
     }
 
     @Test
-    fun shouldReturnFeaturesByTagRegex() {
-        // Given:
-        val featureFrom2024 = randomFeatureWithTags("year=2024")
-        val featureFrom2030 = randomFeatureWithTags("year=2030")
+    fun shouldComposeWithAndOr() {
+        // AND-of-TagExists / OR-of-TagExists collapse to the optimised `?&` / `?|` operators.
+        val activeJohn = randomFeatureWithTags("username=john_doe", "is_active:=true")
+        val activeNick = randomFeatureWithTags("username=nick_foo", "is_active:=true")
+        val inactiveJohn = randomFeatureWithTags("username=john_bar", "is_active:=false")
+        insertFeatures(activeJohn, activeNick, inactiveJohn)
 
-        // When:
-        insertFeatures(featureFrom2024, featureFrom2030)
+        val both = executeTagsQuery(TagAnd(TagExists("username=john_doe"), TagExists("is_active:=true"))).features
+        assertEquals(1, both.size)
+        assertEquals(activeJohn.id, both[0]!!.id)
 
-        // And:
-        val featuresFromThisDecade = executeTagsQuery(
-            TagValueMatches(name = "year", regex = "202[0-9]")
-        ).features
-
-        // Then:
-        assertEquals(1, featuresFromThisDecade.size)
-        assertEquals(featureFrom2024.id, featuresFromThisDecade[0]!!.id)
-    }
-
-    @Test
-    fun shouldReturnFeaturesWithDoubleValue() {
-        // Given:
-        val inputFeatures = listOf(
-            randomFeatureWithTags("some_number:=1").apply { id = "one" },
-            randomFeatureWithTags("some_number:=5").apply { id = "five" },
-        )
-
-        // When:
-        insertFeatures(inputFeatures)
-
-        // And:
-        val featuresGt2 = executeTagsQuery(
-            TagValueIsDouble("some_number", DoubleOp.GT, 1.0)
-        ).features
-
-        // Then:
-        assertEquals(1, featuresGt2.size)
-        assertEquals("five", featuresGt2[0]!!.id)
-
-        // When
-        val featuresLte5 = executeTagsQuery(
-            TagValueIsDouble("some_number", DoubleOp.LTE, 5.0)
-        ).features
-
-        // Then:
-        assertEquals(2, featuresLte5.size)
-        val lte5ids = featuresLte5.map { it!!.id }
-        assertTrue(lte5ids.containsAll(listOf("one", "five")))
-
-        // When:
-        val featuresEq6 = executeTagsQuery(
-            TagValueIsDouble("some_number", DoubleOp.EQ, 6.0)
-        ).features
-
-        // Then:
-        assertTrue(featuresEq6.isEmpty())
-    }
-
-    @Test
-    fun shouldReturnFeaturesForComposedTagQuery() {
-        // Given:
-        val activeJohn = randomFeatureWithTags(
-            "username=john_doe",
-            "is_active:=true",
-        )
-        val activeNick = randomFeatureWithTags(
-            "username=nick_foo",
-            "is_active:=true",
-        )
-        val inactiveJohn = randomFeatureWithTags(
-            "username=john_bar",
-            "is_active:=false",
-        )
-        val oldAdmin = randomFeatureWithTags(
-            "username=some_admin",
-            "role=admin"
-        )
-        val invalidUserWithoutId = randomFeatureWithTags("is_active:=true")
-
-        // And:
-        insertFeatures(activeJohn, activeNick, inactiveJohn, oldAdmin, invalidUserWithoutId)
-
-        // When:
-        val activeJohnsOrAdmin = TagOr(
-            TagAnd(
-                TagValueMatches(name = "username", regex = "john.+"),
-                TagValueIsBool(name = "is_active", value = true)
-            ),
-            TagValueIsString(name = "role", value = "admin")
-        )
-        val features = executeTagsQuery(activeJohnsOrAdmin).features
-
-        // Then:
-        assertEquals(2, features.size)
-        val featureIds = features.map { it!!.id }
-        featureIds.containsAll(
-            listOf(
-                activeJohn.id,
-                oldAdmin.id
-            )
-        )
+        val either = executeTagsQuery(TagOr(TagExists("username=john_doe"), TagExists("username=nick_foo"))).features
+        assertEquals(2, either.size)
+        val ids = either.map { it!!.id }
+        assertTrue(ids.containsAll(listOf(activeJohn.id, activeNick.id)))
     }
 
     @Test
     fun shouldTreatRefAsValueless() {
-        // Given:
         val feature = randomFeatureWithTags("ref_lorem=ipsum")
         insertFeatures(feature)
 
-        // When
-        val byTagName = executeTagsQuery(TagExists("ref_lorem")).features
+        // The set is the opaque entry "ref_lorem=ipsum" — partial name lookup misses, full match hits.
+        assertTrue(executeTagsQuery(TagExists("ref_lorem")).features.isEmpty())
 
-        // Then
-        assertTrue(byTagName.isEmpty())
-
-        // When
         val byFullTag = executeTagsQuery(TagExists("ref_lorem=ipsum")).features
-
-        // Then
         assertEquals(1, byFullTag.size)
         assertEquals(feature.id, byFullTag[0]!!.id)
     }
 
     @Test
     fun shouldTreatSourceIDAsValueless() {
-        // Given:
         val feature = randomFeatureWithTags("sourceID:=123")
         insertFeatures(feature)
 
-        // When
-        val byTagName = executeTagsQuery(TagExists("sourceID")).features
+        assertTrue(executeTagsQuery(TagExists("sourceID")).features.isEmpty())
 
-        // Then
-        assertTrue(byTagName.isEmpty())
-
-        // When
         val byFullTag = executeTagsQuery(TagExists("sourceID:=123")).features
-
-        // Then
         assertEquals(1, byFullTag.size)
         assertEquals(feature.id, byFullTag[0]!!.id)
     }

@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Int64
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
@@ -102,31 +103,31 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertNotNull(retrievedTuples)
         assertEquals(2, retrievedTuples.size)
 
-        val createdTuple = retrievedTuples.first { Action.fromValue((it.tuple?.getLongMember(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1) == Action.CREATED }
-        val updatedTuple = retrievedTuples.first { Action.fromValue((it.tuple?.getLongMember(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1) == Action.UPDATED }
+        val createdTuple = retrievedTuples.first { Action.fromValue((it.getLongMember(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1) == Action.CREATED }
+        val updatedTuple = retrievedTuples.first { Action.fromValue((it.getLongMember(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1) == Action.UPDATED }
 
         // Then
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)
-        assertEquals(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.NextVersion), updatedTuple.tupleNumber.version.txn)
-        assertNull(updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.NextVersion, Int64(-1L)).let { if (it == Int64(-1L)) null else it })
+        assertEquals(createdTuple.getLongMember(naksha.model.objects.StandardMembers.NextVersion), updatedTuple.tupleNumber.version.txn)
+        assertNull(updatedTuple.getLongMember(naksha.model.objects.StandardMembers.NextVersion, Int64(-1L)).let { if (it == Int64(-1L)) null else it })
         // Both tuples share the collection's feature encoding (action lives in version bits).
-        assertEquals(createdTuple.tuple?.dataEncoding, updatedTuple.tuple?.dataEncoding)
-        assertEquals(1, createdTuple.tuple?.getIntMember(naksha.model.objects.StandardMembers.ChangeCount))
-        assertEquals(2, updatedTuple.tuple?.getIntMember(naksha.model.objects.StandardMembers.ChangeCount))
+        assertEquals(createdTuple.dataEncoding, updatedTuple.dataEncoding)
+        assertEquals(1, createdTuple.getIntMember(naksha.model.objects.StandardMembers.ChangeCount))
+        assertEquals(2, updatedTuple.getIntMember(naksha.model.objects.StandardMembers.ChangeCount))
         assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry))
         assertEquals(createdTuple.getStringMember(naksha.model.objects.StandardMembers.Tags), updatedTuple.getStringMember(naksha.model.objects.StandardMembers.Tags))
         assertNotEquals(createdTuple.feature, updatedTuple.feature)
         assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint))
         assertNull(createdTuple.toNakshaFeature()?.properties["new_attr"])
         assertEquals("some_value", updatedTuple.toNakshaFeature()?.properties["new_attr"])
-        assertEquals(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it } ?: createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt), updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it })
-        assertNotEquals(updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.CreatedAt), updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt))
-        assertNull(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it })
-        assertNotNull(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt))
-        assertEquals(createdTuple.tuple?.getIntMember(naksha.model.objects.StandardMembers.HereTile), updatedTuple.tuple?.getIntMember(naksha.model.objects.StandardMembers.HereTile))
+        assertEquals(createdTuple.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it } ?: createdTuple.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt), updatedTuple.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it })
+        assertNotEquals(updatedTuple.getLongMember(naksha.model.objects.StandardMembers.CreatedAt), updatedTuple.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt))
+        assertNull(createdTuple.getLongMember(naksha.model.objects.StandardMembers.CreatedAt)?.let { if (it == Int64(0L)) null else it })
+        assertNotNull(createdTuple.getLongMember(naksha.model.objects.StandardMembers.UpdatedAt))
+        assertEquals(createdTuple.getIntMember(naksha.model.objects.StandardMembers.HereTile), updatedTuple.getIntMember(naksha.model.objects.StandardMembers.HereTile))
         assertEquals(Action.UPDATED, updatedTuple.tupleNumber.action)
         assertEquals(Action.CREATED, createdTuple.tupleNumber.action)
-        assertNotEquals(createdTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.AuthorTimestamp), updatedTuple.tuple?.getLongMember(naksha.model.objects.StandardMembers.AuthorTimestamp))
+        assertNotEquals(createdTuple.getLongMember(naksha.model.objects.StandardMembers.AuthorTimestamp), updatedTuple.getLongMember(naksha.model.objects.StandardMembers.AuthorTimestamp))
     }
 
     @Test

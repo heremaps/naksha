@@ -82,6 +82,7 @@ class MemberTest {
     fun indexTypesExist() {
         assertNotNull(IndexType.BTREE)
         assertNotNull(IndexType.SPATIAL)
+        assertNotNull(IndexType.SET)
         assertNotNull(IndexType.TAGS)
     }
 
@@ -98,7 +99,23 @@ class MemberTest {
         assertNotNull(MemberType.STRING)
         assertNotNull(MemberType.BYTE_ARRAY)
         // Virtual / jsonb.
+        assertNotNull(MemberType.SET)
         assertNotNull(MemberType.TAGS)
         assertNotNull(MemberType.TAGS_FROM_ARRAY)
+    }
+
+    @Test
+    fun standardTagsMemberIsSetWithXyzPath() {
+        val tags = naksha.model.objects.StandardMembers.Tags
+        assertEquals("tags", tags.name)
+        assertEquals(MemberType.SET, tags.dataType)
+        assertEquals(listOf("properties", "@ns:com:here:xyz", "tags"), tags.effectivePath())
+    }
+
+    @Test
+    fun standardTagsIndexIsSetType() {
+        val idx = naksha.model.objects.StandardIndices.Tags
+        assertEquals("tags", idx.name)
+        assertEquals(IndexType.SET, idx.type)
     }
 }

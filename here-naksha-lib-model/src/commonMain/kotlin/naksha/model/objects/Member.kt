@@ -87,7 +87,8 @@ open class Member() : AnyObject() {
     /**
      * The JSON path to read the value from at write time. If `null`, the storage defaults to `["properties", name]`.
      *
-     * Each segment must match `^[A-Za-z_][A-Za-z0-9_]*$`. There is no array indexing in v3.0.
+     * Segments are arbitrary object keys — any valid JSON object key is accepted, including the
+     * XYZ namespace identifier `@ns:com:here:xyz`. There is no array indexing in v3.0.
      * @since 3.0
      */
     var map: JsonPath? by MAP

@@ -67,7 +67,7 @@ abstract class DeleteFeatureBase(
             versions = 10
         }).apply { // this = SuccessResponse
             assertEquals(1, features.size)
-            assertSame(Action.CREATED, Action.fromValue((featureTupleList[0]?.tuple?.getLongMember(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1))
+            assertSame(Action.CREATED, Action.fromValue(((featureTupleList[0]?.tuple?.getLongMember(naksha.model.objects.StandardMembers.Version)?.toInt() ?: 0) and 3)))
         }
 
         // verify if delete table contains element

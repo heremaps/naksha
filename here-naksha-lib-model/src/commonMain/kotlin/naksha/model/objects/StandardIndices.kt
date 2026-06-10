@@ -168,11 +168,12 @@ class StandardIndices private constructor() {
         val Author = Index("author", IndexType.BTREE, "author", "author_ts", "fn", "version")
 
         /**
-         * `tags` — inverted ([IndexType.TAGS]) index over the `tags` member. Default index.
+         * `tags` — inverted ([IndexType.SET]) index over the `tags` member (a `jsonb` array
+         * of unique strings). Default index.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Tags = Index("tags", IndexType.TAGS, "tags")
+        val Tags = Index("tags", IndexType.SET, "tags")
 
         /**
          * `feature_type` — index on `ft`, `fn`, `version` (WHERE `ft IS NOT NULL`). Default index.

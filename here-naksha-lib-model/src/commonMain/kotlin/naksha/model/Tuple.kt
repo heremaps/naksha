@@ -247,13 +247,25 @@ data class Tuple(
 
     /**
      * Get a tags member by name.
-     * Decodes the JSON text into a [TagMap].
+     * Decodes the JSON text into a [TagMap] (jsonb **object** form, used by
+     * [naksha.model.objects.MemberType.TAGS] / [naksha.model.objects.MemberType.TAGS_FROM_ARRAY]).
      * Returns `null` if the member is missing, the value is `null`, or not a String.
      * @since 3.0
      */
     fun getTags(member: Member): TagMap? {
         val json = members?.getByName(member.name) as? String ?: return null
         return try { Naksha.decodeTags(json) } catch (_: Exception) { null }
+    }
+
+    /**
+     * Get a [naksha.model.objects.MemberType.SET] member by name.
+     * Decodes the JSON array text into a [TagList].
+     * Returns `null` if the member is missing, the value is `null`, or not a String.
+     * @since 3.0
+     */
+    fun getSet(member: Member): TagList? {
+        val json = members?.getByName(member.name) as? String ?: return null
+        return try { Naksha.decodeSet(json) } catch (_: Exception) { null }
     }
 
     /**
@@ -275,9 +287,9 @@ data class Tuple(
     fun toNakshaFeature(): NakshaFeature? {
         val feature = Naksha.decodeFeature(this.feature, dataEncoding, null) ?: return null
         feature.properties.xyz = XyzNs.fromTuple(this)
-        val tags = getTags(StandardMembers.Tags)
+        val tags = getSet(StandardMembers.Tags)
         if (tags != null) {
-            feature.properties.xyz.tags = tags.toTagList()
+            feature.properties.xyz.tags = tags
         }
         val geoBytes = getByteArray(StandardMembers.Geometry)
         if (geoBytes != null) {

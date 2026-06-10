@@ -11,7 +11,9 @@ import kotlin.js.JsName
  *
  * For example, `JsonPath("properties", "age")` resolves the value at `feature.properties.age`.
  *
- * Each segment must match `^[A-Za-z_][A-Za-z0-9_]*$`. There is no array indexing in v3.0 — paths can only descend into object keys.
+ * Segments are arbitrary object keys — JSON allows any string as a key, including the XYZ
+ * namespace identifier `@ns:com:here:xyz`. There is no array indexing in v3.0; paths can only
+ * descend into object keys.
  * @since 3.0
  */
 @JsExport
