@@ -4,6 +4,7 @@ import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
+import naksha.model.objects.StandardMembers
 import naksha.model.objects.StoreMode
 
 /**
@@ -181,13 +182,13 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 }
                 // Patch back all BYTE_ARRAY columns whose stored value may differ from what the client sent
                 // (sentinel "undefined" causes the DB to retain the existing value).
-                val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
-                val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint)
-                val tags = tuple.getStringMember(naksha.model.objects.StandardMembers.Tags)
-                val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment)
-                val oldGeo = tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
-                val oldRefPoint = tuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint)
-                val oldAttachment = tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment)
+                val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.getByteArray(StandardMembers.Geometry)
+                val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.getByteArray(StandardMembers.ReferencePoint)
+                val tags = tuple.getStringMember(StandardMembers.Tags)
+                val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.getByteArray(StandardMembers.Attachment)
+                val oldGeo = tuple.getByteArray(StandardMembers.Geometry)
+                val oldRefPoint = tuple.getByteArray(StandardMembers.ReferencePoint)
+                val oldAttachment = tuple.getByteArray(StandardMembers.Attachment)
                 val needsPatch = (oldGeo == null || !oldGeo.contentEquals(geo ?: ByteArray(0)))
                     || (oldRefPoint == null || !oldRefPoint.contentEquals(referencePoint ?: ByteArray(0)))
                     || (oldAttachment == null || !oldAttachment.contentEquals(attachment ?: ByteArray(0)))
@@ -195,10 +196,10 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                     val m = tuple.members
                     val newMembers = if (m is naksha.jbon.HeapBook) {
                         val dict = m.copy()
-                        dict.put("geo", geo)
-                        dict.put("ref_point", referencePoint)
-                        dict.put("tags", tags)
-                        dict.put("attachment", attachment)
+                        dict.put(StandardMembers.Geometry.name, geo)
+                        dict.put(StandardMembers.ReferencePoint.name, referencePoint)
+                        dict.put(StandardMembers.Tags.name, tags)
+                        dict.put(StandardMembers.Attachment.name, attachment)
                         dict
                     } else m
                     write.tuple = tuple.copy(members = newMembers)

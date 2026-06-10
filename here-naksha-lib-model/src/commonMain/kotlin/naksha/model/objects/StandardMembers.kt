@@ -398,6 +398,14 @@ class StandardMembers private constructor() {
         val Attachment = Member("attachment", MemberType.BYTE_ARRAY, JsonPath("attachment"))
 
         /**
+         * `data_encoding` — the encoding used for the serialised feature blob (e.g. `JBON2`, `JSON_GZIP`).
+         * `null` if not specified, in which case the storage default applies. Default member.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val DataEncoding = Member("data_encoding", MemberType.STRING)
+
+        /**
          * The names of all [MANDATORY] members, for fast lookup.
          * @since 3.0
          */
@@ -418,7 +426,7 @@ class StandardMembers private constructor() {
             BaseTupleNumber,
             AppId, Author, Origin, Target, FeatureType,
             CustomString0, CustomString1, CustomString2, CustomString3,
-            Tags, ReferencePoint, Geometry, Attachment
+            Tags, ReferencePoint, Geometry, Attachment, DataEncoding
         )
 
         /**
