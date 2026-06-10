@@ -4,6 +4,7 @@ import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
+import naksha.model.objects.StandardMembers
 import naksha.model.objects.StoreMode
 
 /**
@@ -206,18 +207,18 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
                     // Read back all keepable BYTE_ARRAY columns — the DB may have substituted the sentinel
                     // with the existing value, so the in-memory tuple must reflect the final stored state.
-                    val geo = if (PgColumn.geo in keepableByteCols) outRows.getByteArray(row, PgColumn.geo.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.Geometry)
-                    val referencePoint = if (PgColumn.ref_point in keepableByteCols) outRows.getByteArray(row, PgColumn.ref_point.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint)
-                    val tags = tuple.getStringMember(naksha.model.objects.StandardMembers.Tags)
-                    val attachment = if (PgColumn.attachment in keepableByteCols) outRows.getByteArray(row, PgColumn.attachment.name) else tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment)
+                    val geo = if (PgColumn.geo in keepableByteCols) outRows.getByteArray(row, PgColumn.geo.name) else tuple.getByteArray(StandardMembers.Geometry)
+                    val referencePoint = if (PgColumn.ref_point in keepableByteCols) outRows.getByteArray(row, PgColumn.ref_point.name) else tuple.getByteArray(StandardMembers.ReferencePoint)
+                    val tags = tuple.getStringMember(StandardMembers.Tags)
+                    val attachment = if (PgColumn.attachment in keepableByteCols) outRows.getByteArray(row, PgColumn.attachment.name) else tuple.getByteArray(StandardMembers.Attachment)
                     write.tupleNumber = updated_tn
                     val m = tuple.members
                     val newMembers = if (m is naksha.jbon.HeapBook) {
                         val dict = m.copy()
-                        dict.put("geo", geo)
-                        dict.put("ref_point", referencePoint)
-                        dict.put("tags", tags)
-                        dict.put("attachment", attachment)
+                        dict.put(StandardMembers.Geometry.name, geo)
+                        dict.put(StandardMembers.ReferencePoint.name, referencePoint)
+                        dict.put(StandardMembers.Tags.name, tags)
+                        dict.put(StandardMembers.Attachment.name, attachment)
                         dict
                     } else m
                     write.tuple = tuple.copy(

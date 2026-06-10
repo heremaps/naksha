@@ -276,7 +276,7 @@ data class Tuple(
      */
     val dataEncoding: DataEncoding
         get() {
-            val str = members?.getByName("data_encoding") as? String ?: return Naksha.DEFAULT_DATA_ENCODING
+            val str = getStringMember(StandardMembers.DataEncoding) ?: return Naksha.DEFAULT_DATA_ENCODING
             return try { DataEncoding.fromString(str) } catch (_: Exception) { Naksha.DEFAULT_DATA_ENCODING }
         }
 
