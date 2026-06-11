@@ -199,11 +199,11 @@ class XyzNs : AnyObject() {
             val members = tuple.members
             val id = members?.getByName("id") as? String ?: tuple.featureNumber.toString()
             val guid = Guid(id, tn)
-            val updatedAt = tuple.getLongMember(StandardMembers.UpdatedAt)
-            val createdAt = tuple.getLongMember(StandardMembers.CreatedAt).let {
+            val updatedAt = tuple.getLongMember(StandardMembers.XyzUpdatedAt)
+            val createdAt = tuple.getLongMember(StandardMembers.CreatedAtXyz).let {
                 if (it == Int64(0L)) updatedAt else it
             }
-            val authorTs = tuple.getLongMember(StandardMembers.AuthorTimestamp)?.let {
+            val authorTs = tuple.getLongMember(StandardMembers.XyzAuthorTimestamp)?.let {
                 if (it == Int64(0)) updatedAt else it
             } ?: updatedAt
             val nextVersion = tuple.nextVersion
@@ -222,17 +222,17 @@ class XyzNs : AnyObject() {
                 if (createdAt != updatedAt) setRaw(CREATED_AT, createdAt)
                 if (authorTs != updatedAt) setRaw(AUTHOR_TS, authorTs)
                 setRaw(UPDATED_AT, updatedAt)
-                setRaw(CHANGE_COUNT, tuple.getIntMember(StandardMembers.ChangeCount))
-                setRaw(APP_ID, tuple.getStringMember(StandardMembers.AppId))
-                val author = tuple.getStringMember(StandardMembers.Author)
+                setRaw(CHANGE_COUNT, tuple.getIntMember(StandardMembers.ChangeCountXyz))
+                setRaw(APP_ID, tuple.getStringMember(StandardMembers.AppIdXyz))
+                val author = tuple.getStringMember(StandardMembers.AuthorXyz)
                 if (author != null) setRaw(AUTHOR, author)
                 setRaw(DATA_ENCODING, tuple.getStringMember(StandardMembers.DataEncoding))
                 setRaw(ACTION, tn.action.toString())
                 setRaw(HASH, tuple.getIntMember(StandardMembers.Hash))
-                setRaw(HERE_TILE, tuple.getIntMember(StandardMembers.HereTile))
-                val origin = tuple.getStringMember(StandardMembers.Origin)
+                setRaw(HERE_TILE, tuple.getIntMember(StandardMembers.HereTileXyz))
+                val origin = tuple.getStringMember(StandardMembers.OriginXyz)
                 if (origin != null) setRaw(ORIGIN, origin)
-                val target = tuple.getStringMember(StandardMembers.Target)
+                val target = tuple.getStringMember(StandardMembers.TargetXyz)
                 if (target != null) setRaw(TARGET, target)
                 val cv0 = members?.getByName("cv0")
                 if (cv0 != null) setRaw(CV0, cv0 as? Double)
@@ -242,13 +242,13 @@ class XyzNs : AnyObject() {
                 if (cv2 != null) setRaw(CV2, cv2 as? Double)
                 val cv3 = members?.getByName("cv3")
                 if (cv3 != null) setRaw(CV3, cv3 as? Double)
-                val cs0 = tuple.getStringMember(StandardMembers.CustomString0)
+                val cs0 = tuple.getStringMember(StandardMembers.XyzCustomString0)
                 if (cs0 != null) setRaw(CS0, cs0)
-                val cs1 = tuple.getStringMember(StandardMembers.CustomString1)
+                val cs1 = tuple.getStringMember(StandardMembers.XyzCustomString1)
                 if (cs1 != null) setRaw(CS1, cs1)
                 val cs2 = tuple.getStringMember(StandardMembers.CustomString2)
                 if (cs2 != null) setRaw(CS2, cs2)
-                val cs3 = tuple.getStringMember(StandardMembers.CustomString3)
+                val cs3 = tuple.getStringMember(StandardMembers.XyzCustomString3)
                 if (cs3 != null) setRaw(CS3, cs3)
             }.proxy(XyzNs::class)
         }

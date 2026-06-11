@@ -116,7 +116,7 @@ public class HttpStorageProperties extends NakshaProperties {
    * By default: 'Content-Type: application/json' and 'Accept-Encoding: gzip'
    */
   public @NotNull Map<String, String> getHeaders() {
-    final Object raw = get(HEADERS);
+    final Object raw = getPath(HEADERS);
     if (raw instanceof HeaderMap) {
       return (HeaderMap) raw;
     }

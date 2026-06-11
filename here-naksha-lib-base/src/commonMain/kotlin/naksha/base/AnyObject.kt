@@ -12,4 +12,3 @@ import kotlin.js.JsExport
 @JsExport
 open class AnyObject : MapProxy<String, Any>(String::class, Any::class)
 
-

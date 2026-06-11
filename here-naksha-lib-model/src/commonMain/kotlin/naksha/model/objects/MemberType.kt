@@ -102,6 +102,13 @@ class MemberType : JsEnum() {
         val BYTE_ARRAY = defIgnoreCase(MemberType::class, "byte_array")
 
         /**
+         * A tuple-number, can be encoded as string or byte-array _(storage decides)_. To be used with [IndexType.BTREE].
+         * @since 3.0
+         */
+        @JvmField
+        val TUPLE_NUMBER = defIgnoreCase(MemberType::class, "tuple_number")
+
+        /**
          * A geometry stored as raw [TWKB](https://github.com/nicowillis/twkb) bytes.
          *
          * The storage layer (`lib-psql`) persists this as a `bytea` column with `STORAGE EXTERNAL`

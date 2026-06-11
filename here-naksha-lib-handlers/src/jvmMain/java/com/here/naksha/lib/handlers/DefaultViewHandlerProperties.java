@@ -51,7 +51,7 @@ public class DefaultViewHandlerProperties extends NakshaProperties {
   }
 
   public @Nullable List<String> getSpaceIds() {
-    return JvmBoxingUtil.box(get(SPACE_IDS), StringList.class);
+    return JvmBoxingUtil.box(getPath(SPACE_IDS), StringList.class);
   }
 
   public void setSpaceIds(@Nullable List<String> spaceIds) {

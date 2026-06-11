@@ -288,7 +288,7 @@ data class Tuple(
     fun toNakshaFeature(): NakshaFeature? {
         val feature = Naksha.decodeFeature(this.feature, null) ?: return null
         feature.properties.xyz = XyzNs.fromTuple(this)
-        val tags = getTagList(StandardMembers.Tags)
+        val tags = getTagList(StandardMembers.XyzTags)
         if (tags != null) {
             feature.properties.xyz.tags = tags
         }

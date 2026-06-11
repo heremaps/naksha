@@ -135,19 +135,19 @@ open class Index() : AnyObject() {
      * Whether the index enforces uniqueness across the [on] columns. Defaults to `false`.
      * @since 3.0
      */
-    var unique: Boolean by UNIQUE
+    private var unique: Boolean by UNIQUE
 
     /** True iff the underlying map has an entry for [unique]. */
-    fun hasUnique(): Boolean = hasRaw("unique")
+    fun isUnique(): Boolean = unique
 
     /** Remove [unique] from the underlying map; returns this for chaining. */
-    fun removeUnique(): Index {
+    internal fun removeUnique(): Index {
         removeRaw("unique")
         return this
     }
 
     /** Fluent setter for [unique]; returns this for chaining. */
-    fun withUnique(value: Boolean): Index {
+    internal fun withUnique(value: Boolean): Index {
         unique = value
         return this
     }
@@ -158,19 +158,19 @@ open class Index() : AnyObject() {
      * attempt to recreate or drop it. Defaults to `false`.
      * @since 3.0
      */
-    var internal: Boolean by INTERNAL
+    private var internal: Boolean by INTERNAL
 
     /** True iff the underlying map has an entry for [internal]. */
-    fun hasInternal(): Boolean = hasRaw("internal")
+    fun isInternal(): Boolean = internal
 
     /** Remove [internal] from the underlying map; returns this for chaining. */
-    fun removeInternal(): Index {
+    internal fun removeInternal(): Index {
         removeRaw("internal")
         return this
     }
 
     /** Fluent setter for [internal]; returns this for chaining. */
-    fun withInternal(value: Boolean): Index {
+    internal fun withInternal(value: Boolean): Index {
         internal = value
         return this
     }

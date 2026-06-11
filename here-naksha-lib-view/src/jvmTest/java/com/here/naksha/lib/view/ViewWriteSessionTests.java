@@ -110,7 +110,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     NakshaFeature feature = response1.getFeatures().get(0);
     assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
     assertTrue(feature.getProperties().containsKey("testProperty"));
-    assertEquals("test", feature.getProperties().get("testProperty").toString());
+    assertEquals("test", feature.getProperties().getPath("testProperty").toString());
     assertSame(Action.UPDATED, response1.getFeatureTupleList().get(0).tuple.version.action());
 
     writeSession.commit();
@@ -124,7 +124,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     NakshaFeature updatedFeature = list.get(0);
     assertEquals(1d, ((PointCoord) updatedFeature.getGeometry().getCoordinates()).getLongitude());
     assertTrue(updatedFeature.getProperties().containsKey("testProperty"));
-    assertEquals("test", updatedFeature.getProperties().get("testProperty").toString());
+    assertEquals("test", updatedFeature.getProperties().getPath("testProperty").toString());
   }
 
   @Test

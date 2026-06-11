@@ -116,7 +116,7 @@ public final class Space extends EventTarget<Space> {
    * Copyright information for the data in the space.
    */
   public List<Copyright> getCopyright() {
-    return JvmBoxingUtil.box(get(COPYRIGHT), Copyright.List.class);
+    return JvmBoxingUtil.box(getPath(COPYRIGHT), Copyright.List.class);
   }
 
   public void setCopyright(final List<Copyright> copyright) {
@@ -134,7 +134,7 @@ public final class Space extends EventTarget<Space> {
    * Information about the license bound to the data within the space. For valid keywords see {@link License}.
    */
   public License getLicense() {
-    return JvmBoxingUtil.box(get(LICENSE), License.class);
+    return JvmBoxingUtil.box(getPath(LICENSE), License.class);
   }
 
   public void setLicense(final License license) {
@@ -150,7 +150,7 @@ public final class Space extends EventTarget<Space> {
    * List of packages that this space belongs to.
    */
   public List<@NotNull String> getPackages() {
-    return JvmBoxingUtil.box(get(PACKAGES), StringList.class);
+    return JvmBoxingUtil.box(getPath(PACKAGES), StringList.class);
   }
 
   public void setPackages(final List<@NotNull String> packages) {
@@ -178,7 +178,7 @@ public final class Space extends EventTarget<Space> {
    * but the result can be bad.
    */
   public @Nullable Map<@NotNull String, @NotNull Index> getIndices() {
-    return JvmBoxingUtil.box(get(INDICES), Index.Map.class);
+    return JvmBoxingUtil.box(getPath(INDICES), Index.Map.class);
   }
 
   public void setIndices(@Nullable Map<@NotNull String, @NotNull Index> indices) {
@@ -192,7 +192,7 @@ public final class Space extends EventTarget<Space> {
    * will fail, if the space does not fulfill the constraint.
    */
   public @Nullable Map<@NotNull String, @NotNull Constraint> getConstraints() {
-    return JvmBoxingUtil.box(get(CONSTRAINTS), ConstraintMap.class);
+    return JvmBoxingUtil.box(getPath(CONSTRAINTS), ConstraintMap.class);
   }
 
   public void setConstraints(@Nullable Map<@NotNull String, @NotNull Constraint> constraints) {

@@ -234,7 +234,7 @@ open class PgSession(
         var tx: StorageTx? = this.tx
         if (tx == null) {
             val txn = storage.newConnection(options, false, null).use { conn -> storage.adminMap.newTxn(conn) }
-            tx = StorageTx(storage, txn.version, options.appId, options.author, storage.adminMap)
+            tx = StorageTx(storage, txn.version, options.appId, options.author, storage.adminMap, this)
             this.tx = tx
         }
         return tx
@@ -346,27 +346,9 @@ open class PgSession(
      * Processors are invoked in the order in which they were added.
      * @since 3.0
      */
-    private val memberProcessors: MutableMap<String, MutableList<IMemberProcessor>> = mutableMapOf()
+    private val _processors = MemberProcessorMap()
 
-    override fun clearMemberProcessors(): ISession {
-        memberProcessors.clear()
-        return this
-    }
-
-    override fun addMemberProcessor(memberName: String, memberProcessor: IMemberProcessor): ISession {
-        var processors = memberProcessors[memberName]
-        if (processors == null) {
-            processors = mutableListOf()
-            memberProcessors[memberName] = processors
-        }
-        processors.add(memberProcessor)
-        return this
-    }
-
-    override fun removeMemberProcessor(memberName: String, memberProcessor: IMemberProcessor): ISession {
-        memberProcessors[memberName]?.remove(memberProcessor)
-        return this
-    }
+    override fun processors(): MemberProcessorMap = _processors
 
     override fun isClosed(): Boolean = _closed
 

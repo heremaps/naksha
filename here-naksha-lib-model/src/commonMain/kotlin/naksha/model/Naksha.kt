@@ -16,8 +16,8 @@ import naksha.jbon.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
+import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaProperties
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -482,7 +482,7 @@ class Naksha private constructor() {
             val feature = decodeFeature(tuple.feature, dictReader) ?: NakshaFeature()
             feature.properties.xyz = XyzNs.fromTuple(tuple)
             val xyz = feature.properties.xyz
-            val tags = tuple.getTagList(StandardMembers.Tags)
+            val tags = tuple.getTagList(StandardMembers.XyzTags)
             if (tags != null) xyz.tags = tags
             val geo = tuple.getByteArray(StandardMembers.Geometry)
             if (geo != null) feature.geometry = decodeGeometry(geo)
@@ -490,164 +490,110 @@ class Naksha private constructor() {
         }
 
         /**
-         * Encode the given [NakshaFeature] into a [Tuple].
-         * @param feature the feature to encode.
-         * @param attachment the attachment to encode; if any.
-         * @param dictionary the [book][IBook] to use to encode the feature; _null_ if encoding should be done storage agnostic.
-         * @param dataEncoding the feature encoding to use, or _null_ to fall back to the storage default and finally [DEFAULT_DATA_ENCODING].
-         * @return the encoded [Tuple].
-         * @since 3.0
-         * @see [IStorage.getEncodingDictionary]
-         */
-        @JsStatic
-        @JvmStatic
-        @JvmOverloads
-        fun encodeTuple(
-            feature: NakshaFeature,
-            attachment: ByteArray? = null,
-            dictionary: IBook? = null,
-            dataEncoding: DataEncoding? = null
-        ): Tuple {
-            val xyz = feature.properties.xyz
-            val tn = feature.tupleNumber
-            val storage = getStorageByNumber(tn.storageNumber)
-            val encoding = dataEncoding ?: storage?.getDataEncoding(feature) ?: DEFAULT_DATA_ENCODING
-            val dict = dictionary ?: storage?.getDictionary(feature.id)
-            val featureBytes = encodeFeature(feature, encoding, dict)
-            val geoBytes = encodeGeometry(feature.geometry)
-            val refPoint = encodeGeometry(feature.referencePoint)
-            val tagsJson = encodeTagList(xyz.tags)
-            val members = HeapBook()
-            members.put(StandardMembers.Id.name, feature.id)
-            members.put(StandardMembers.AppId.name, xyz.appId)
-            members.put(StandardMembers.UpdatedAt.name, xyz.updatedAt)
-            members.put(StandardMembers.CreatedAt.name, if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt)
-            members.put(StandardMembers.AuthorTimestamp.name, if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs)
-            members.put(StandardMembers.Author.name, xyz.author)
-            members.put(StandardMembers.DataEncoding.name, encoding.toString())
-            members.put(StandardMembers.ChangeCount.name, xyz.changeCount)
-            members.put(StandardMembers.Hash.name, xyz.hash ?: 0)
-            members.put(StandardMembers.HereTile.name, xyz.hereTile ?: 0)
-            members.put(StandardMembers.FeatureType.name, xyz.featureType)
-            members.put(StandardMembers.CustomValue0.name, xyz.cv0)
-            members.put(StandardMembers.CustomValue1.name, xyz.cv1)
-            members.put(StandardMembers.CustomValue2.name, xyz.cv2)
-            members.put(StandardMembers.CustomValue3.name, xyz.cv3)
-            members.put(StandardMembers.CustomString0.name, xyz.cs0)
-            members.put(StandardMembers.CustomString1.name, xyz.cs1)
-            members.put(StandardMembers.CustomString2.name, xyz.cs2)
-            members.put(StandardMembers.CustomString3.name, xyz.cs3)
-            members.put(StandardMembers.Geometry.name, geoBytes)
-            members.put(StandardMembers.ReferencePoint.name, refPoint)
-            members.put(StandardMembers.Tags.name, tagsJson)
-            members.put(StandardMembers.Attachment.name, attachment)
-            return Tuple(
-                storageNumber = tn.storageNumber,
-                mapNumber = tn.mapNumber,
-                collectionNumber = tn.collectionNumber,
-                featureNumber = tn.featureNumber,
-                version = tn.version,
-                nextVersion = Int64(-1L),
-                members = members,
-                feature = featureBytes
-            )
-        }
-
-        /**
-         * Encode the given [NakshaFeature] into a [Tuple] for the given [storage][IStorage].
+         * Encodes the given [NakshaFeature] into JBON2 bytes, extracting member values into the
+         * provided [membersBook] via a custom [IMemberEncoder].
+         *
+         * The encoder walks the feature using [JbEncoder2]. When a value is encountered at a path
+         * that matches a member's [effectivePath][naksha.model.objects.Member.effectivePath], the
+         * member encoder:
+         * 1. Walks the feature to obtain the raw value (already available from the encoder)
+         * 2. Coerces the value to the expected [MemberType]
+         * 3. Invokes all registered [IMemberProcessor] instances for that member
+         * 4. Stores the final value in [membersBook]
+         * 5. Returns the member's index so the encoder writes a members-book reference
+         *
+         * If [collection.dataEncoding] is [DataEncoding.JBON2_GZIP] and the raw JBON2 bytes are
+         * at least 1000, the result is GZIP-compressed. However, if the compressed bytes are
+         * larger or equal to the source, the raw bytes are returned instead.
          *
          * @param feature the feature to encode.
-         * @param attachment the attachment to encode; if any.
-         * @param storage the [storage][IStorage] for which to encode the feature.
-         * @return the encoded [Tuple].
+         * @param collection the collection that declares the members to extract.
+         * @param session the session for which to encode.
+         * @param membersBook the [HeapBook] to populate with extracted member values.
+         * @param globalBook the global book/dictionary to use for encoding; if any.
+         * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
          * @since 3.0
          */
+        @JsName("encodeFeatureWithMembers")
         @JsStatic
         @JvmStatic
-        @JsName("encodeTupleForStorage")
-        fun encodeTuple(
+        fun encodeFeature(
             feature: NakshaFeature,
-            attachment: ByteArray?,
-            storage: IStorage
-        ): Tuple {
-            val xyz = feature.properties.xyz
-            val tn = feature.tupleNumber
-            val dict = storage.getEncodingDictionary(feature)
-            val encoding = storage.getDataEncoding(feature)
-            val featureBytes = encodeFeature(feature, encoding, dict)
-            val geoBytes = encodeGeometry(feature.geometry)
-            val refPoint = encodeGeometry(feature.referencePoint)
-            val tagsJson = encodeTagList(xyz.tags)
-            val members = HeapBook()
-            members.put(StandardMembers.Id.name, feature.id)
-            members.put(StandardMembers.AppId.name, xyz.appId)
-            members.put(StandardMembers.UpdatedAt.name, xyz.updatedAt)
-            members.put(StandardMembers.CreatedAt.name, if (xyz.updatedAt == xyz.createdAt) null else xyz.createdAt)
-            members.put(StandardMembers.AuthorTimestamp.name, if (xyz.updatedAt == xyz.authorTs) null else xyz.authorTs)
-            members.put(StandardMembers.Author.name, xyz.author)
-            members.put(StandardMembers.DataEncoding.name, encoding.toString())
-            members.put(StandardMembers.ChangeCount.name, xyz.changeCount)
-            members.put(StandardMembers.Hash.name, xyz.hash ?: 0)
-            members.put(StandardMembers.HereTile.name, xyz.hereTile ?: 0)
-            members.put(StandardMembers.FeatureType.name, xyz.featureType)
-            members.put(StandardMembers.CustomValue0.name, xyz.cv0)
-            members.put(StandardMembers.CustomValue1.name, xyz.cv1)
-            members.put(StandardMembers.CustomValue2.name, xyz.cv2)
-            members.put(StandardMembers.CustomValue3.name, xyz.cv3)
-            members.put(StandardMembers.CustomString0.name, xyz.cs0)
-            members.put(StandardMembers.CustomString1.name, xyz.cs1)
-            members.put(StandardMembers.CustomString2.name, xyz.cs2)
-            members.put(StandardMembers.CustomString3.name, xyz.cs3)
-            members.put(StandardMembers.Geometry.name, geoBytes)
-            members.put(StandardMembers.ReferencePoint.name, refPoint)
-            members.put(StandardMembers.Tags.name, tagsJson)
-            members.put(StandardMembers.Attachment.name, attachment)
-            return Tuple(
-                storageNumber = tn.storageNumber,
-                mapNumber = tn.mapNumber,
-                collectionNumber = tn.collectionNumber,
-                featureNumber = tn.featureNumber,
-                version = tn.version,
-                nextVersion = Int64(-1L),
-                members = members,
-                feature = featureBytes
-            )
-        }
-
-        /**
-         * Encodes the given [NakshaFeature] into bytes, skipping over the [geometry][NakshaFeature.geometry], and the [XYZ-namespace][XyzNs].
-         * @param feature the feature to encode.
-         * @param encoding the feature encoding to use.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded feature.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun encodeFeature(feature: NakshaFeature?, encoding: DataEncoding, dict: IBook?): ByteArray? {
-            if (feature.isNullOrEmpty()) return null
-            var byteArray: ByteArray? = when (encoding) {
-                DataEncoding.JSON, DataEncoding.JSON_GZIP -> {
-                    // We do not want to encode geometry.
-                    val f = feature.copy<NakshaFeature>(false)
-                    f.removeRaw(NakshaFeature.GEOMETRY)
-                    // We do not want to encode properties.@ns:com:here:xyz.
-                    val p = feature.properties.copy<NakshaProperties>(false)
-                    p.removeRaw(NakshaProperties.XYZ_KEY)
-                    toJSON(f).encodeToByteArray()
-                }
-                DataEncoding.JBON, DataEncoding.JBON_GZIP -> {
-                    val encoder = JbEncoder(dict)
-                    encoder.buildFeatureFromMap(feature)
-                }
-                DataEncoding.JBON2, DataEncoding.JBON2_GZIP -> {
-                    val encoder = JbEncoder2(dict)
-                    encoder.buildTupleFromMap(feature)
-                }
-                else -> null
+            collection: NakshaCollection,
+            session: IWriteSession,
+            membersBook: HeapBook,
+            globalBook: IBook?
+        ): ByteArray {
+            val members = collection.members?.toList() ?: StandardMembers.XYZ_MEMBERS
+            val processors = session.processors()
+            val rawTn = StandardMembers.Tn.read(collection)
+            val colTn: TupleNumber
+            if (rawTn is TupleNumber) {
+                colTn = rawTn
+            } else if (rawTn is String) {
+                colTn = TupleNumber.fromString(rawTn)
+            } else {
+                throw NakshaException(ILLEGAL_ARGUMENT, "The given collection does not have a valid tuple-number (uuid)")
             }
-            if (encoding.gzip && byteArray != null) byteArray = gzipDeflate(byteArray)
-            return byteArray
+            if (colTn.featureNumber > Int.MAX_VALUE || colTn.featureNumber < Int.MIN_VALUE) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "The given collection does have an invalid feature-number (uuid)")
+            }
+            // The feature is stored in the same database and  catalog
+            val tn = TupleNumber(
+                // The feature is stored in the same database as the collection it is inserted into.
+                colTn.storageNumber,
+                // The feature is stored in the same catalog as the collection it is inserted into.
+                colTn.mapNumber,
+                // The feature-number of the collection is the collection-number of the feature stored in it.
+                colTn.featureNumber.toInt(),
+                // The feature-number of the actual feature.
+                feature.featureNumber,
+                // The version is the one of the transaction.
+                session.useTransaction().version
+            )
+
+            // Create the encoder with a custom member encoder.
+            val encoder = JbEncoder2(globalBook)
+            encoder.withMemberEncoder { path: Array<Any?>, pathEnd: Int, value: Any? ->
+                // Build the current path key from the encoder's path.
+                members@ for (i in 0 until members.size) {
+                    val member = members[i] ?: continue
+                    val memberName = member.name
+                    val memberPath = member.path
+                    if (memberPath.size != pathEnd) continue
+                    for (pi in 0 until pathEnd) {
+                        if (path[pi] != memberPath[pi]) continue@members
+                    }
+                    // Path matches
+                    var v = value
+                    val procs = processors[memberName]
+                    if (procs != null) {
+                        for (proc in procs) {
+                            v = proc.processMember(session, collection, feature, member, v)
+                        }
+                    }
+                    // Coerce the value to the expected type.
+                    v = FeatureMemberValues.coerce(value, member.dataType, feature.id, memberName)
+
+                    // Store in membersBook.
+                    return@withMemberEncoder membersBook.put(memberName, v)
+                }
+                -1
+            }
+
+            // Add mandatory members.
+            membersBook.put("tn", )
+
+            // Encode the feature.
+            val raw = encoder.buildTupleFromMap(feature)
+
+            // Optionally GZIP.
+            val encoding = collection.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
+            if (encoding == DataEncoding.JBON2_GZIP && raw.size >= 1000) {
+                val compressed = gzipDeflate(raw)
+                if (compressed.size < raw.size) return compressed
+            }
+            return raw
         }
 
         /**

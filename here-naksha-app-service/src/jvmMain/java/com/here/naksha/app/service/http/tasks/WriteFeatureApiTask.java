@@ -327,7 +327,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     // Prepare WriteRequest - separating insert from updates and keeping the order of the features from the request
     WriteRequest insertsAndUpdates = new WriteRequest();
     for (NakshaFeature featureFromRequest : featuresFromRequest) {
-      NakshaFeature correspondingExistingFeature = existingFeaturesById.get(featureFromRequest.getId());
+      NakshaFeature correspondingExistingFeature = existingFeaturesById.getPath(featureFromRequest.getId());
       if (correspondingExistingFeature == null) {
         // Feature not yet persisted - just insert
         preProcessor.preProcess(featureFromRequest);

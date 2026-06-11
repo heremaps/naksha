@@ -5,47 +5,9 @@ package naksha.model.objects
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmStatic
 
 /**
  * The canonical set of standard indices that every Naksha storage understands.
- *
- * Indices are divided into two groups:
- *
- * ### Mandatory indices
- * These are always created by the storage regardless of the [NakshaCollection.indices] list.
- * Clients must not declare them manually. They are marked `internal = true` in the storage layer.
- *
- * - [StandardIndices_C.FeatureNumberUnique] — PRIMARY KEY on `fn` (all tables)
- * - [StandardIndices_C.IdUnique] — UNIQUE on `id` WHERE `id IS NOT NULL` (HEAD / DELETED / META tables)
- * - [StandardIndices_C.Id] — non-unique index on `id`, `fn`, `version` WHERE `id IS NOT NULL` (HISTORY tables)
- * - [StandardIndices_C.Version] — non-unique index on `version` (all tables)
- * - [StandardIndices_C.GlobalBookNumber] — conditional non-unique index on `gbn` WHERE `gbn IS NOT NULL` (all tables)
- *
- * ### Special indices
- * These are **not** created by default. They must be explicitly declared in
- * [NakshaCollection.indices] and are defined here so that all storage implementations share
- * a consistent name and type contract.
- *
- * - [StandardIndices_C.PublishNumber] — BTREE on `pn` (WHERE `pn IS NOT NULL`)
- * - [StandardIndices_C.PublishTime]   — BTREE on `pt` (WHERE `pt IS NOT NULL`)
- * - [StandardIndices_C.GlobalVersion] — BTREE on `gv` (WHERE `gv IS NOT NULL`)
- *
- * ### Default indices
- * These are created automatically when [NakshaCollection.indices] is `null` (backward-compatible
- * full schema). When [NakshaCollection.indices] is explicitly set (even to an empty list), only
- * the mandatory indices plus the explicitly declared indices are created.
- *
- * - [StandardIndices_C.HereTile] — `here_tile`, `fn`, `version`
- * - [StandardIndices_C.AppId] — `app_id`, `updated_at`, `fn`, `version`
- * - [StandardIndices_C.Author] — `author`, `author_ts`, `fn`, `version`
- * - [StandardIndices_C.Tags] — GIN set index over the tags
- * - [StandardIndices_C.FeatureType] — `ft`, `fn`, `version`
- * - [StandardIndices_C.CustomValue0] .. [StandardIndices_C.CustomValue3] — custom numeric values
- * - [StandardIndices_C.CustomString0] .. [StandardIndices_C.CustomString3] — custom string values
- * - [StandardIndices_C.ReferencePoint] — SP-GIST reference-point geometry
- * - [StandardIndices_C.GistGeometry] — GIST geometry
- *
  * @since 3.0
  */
 @JsExport
@@ -142,6 +104,14 @@ class StandardIndices private constructor() {
         // -------------------------------------------------------------------------
         // Default indices — created when NakshaCollection.indices is null
         // -------------------------------------------------------------------------
+
+        /**
+         * `gist_geo` — spatial ([IndexType.SPATIAL]) GIST index over the geometry member
+         * (WHERE `geo IS NOT NULL`). Default index. See [StandardMembers.Geometry]
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val GistGeometry = Index("gist_geo", IndexType.SPATIAL, "geo")
 
         /**
          * `here_tile` — index on `here_tile`, `fn`, `version` (WHERE `here_tile IS NOT NULL`).
@@ -247,21 +217,13 @@ class StandardIndices private constructor() {
         val ReferencePoint = Index("ref_point", IndexType.SPATIAL, "ref_point")
 
         /**
-         * `gist_geo` — spatial ([IndexType.SPATIAL]) GIST index over the geometry member
-         * (WHERE `geo IS NOT NULL`). Default index.
-         * @since 3.0
-         */
-        @JvmField @JsStatic
-        val GistGeometry = Index("gist_geo", IndexType.SPATIAL, "geo")
-
-        /**
          * All default indices (created when [NakshaCollection.indices] is `null`), in declaration order.
          *
          * Does **not** include the [MANDATORY] indices — those are always present regardless.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val DEFAULT: List<Index> = listOf(
+        val XYZ_INDICES: List<Index> = listOf(
             HereTile,
             AppId,
             Author,
@@ -274,11 +236,11 @@ class StandardIndices private constructor() {
         )
 
         /**
-         * The names of all [DEFAULT] indices, for fast lookup.
+         * The names of all [XYZ_INDICES] indices, for fast lookup.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val DEFAULT_NAMES: Set<String> = DEFAULT.map { it.name }.toHashSet()
+        val DEFAULT_NAMES: Set<String> = XYZ_INDICES.map { it.name }.toHashSet()
 
         /**
          * All special indices — not added automatically but recognised by all storage implementations.
@@ -295,11 +257,11 @@ class StandardIndices private constructor() {
         val SPECIAL_NAMES: Set<String> = SPECIAL.map { it.name }.toHashSet()
 
         /**
-         * All standard indices: [MANDATORY] followed by [DEFAULT] followed by [SPECIAL].
+         * All standard indices: [MANDATORY] followed by [XYZ_INDICES] followed by [SPECIAL].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val ALL: List<Index> = MANDATORY + DEFAULT + SPECIAL
+        val ALL: List<Index> = MANDATORY + XYZ_INDICES + SPECIAL
 
         /**
          * The names of all standard indices, for fast lookup.

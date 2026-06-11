@@ -235,7 +235,7 @@ class NakshaHubWiringTest extends AbstractTest {
     verify(spyWriter, times(3)).execute(reqCaptor.capture());
     assertTrue(reqCaptor.getValue() instanceof WriteRequest);
     final List<WriteRequest> requests = reqCaptor.getAllValues();
-    final String collectionId = ((Map) space.getProperties().get("collection"))
+    final String collectionId = ((Map) space.getProperties().getPath("collection"))
         .get("id")
         .toString(); // TODO: this is ambiguous (see Space::getCollectionId), discuss
     // Verify: WriteFeature into collection got called

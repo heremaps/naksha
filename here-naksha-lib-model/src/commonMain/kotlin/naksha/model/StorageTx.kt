@@ -3,11 +3,8 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.jbon.IBook
 import naksha.jbon.IDictReader
 import naksha.jbon.HeapBook
-import naksha.model.Metadata.Metadata_C.calculateHash
-import naksha.model.Metadata.Metadata_C.calculateHereTile
 import naksha.model.objects.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -41,7 +38,8 @@ open class StorageTx private constructor(
     /**
      * The unique version of the transaction. This value **should be** unique to this transaction.
      * @since 3.0
-     * @see [Version.of]
+     * @see [Version.auto]
+     * @see [Version.manual]
      * @see [Version.now]
      */
     val version: Version,
@@ -65,6 +63,12 @@ open class StorageTx private constructor(
      * @since 3.0
      */
     val dictReader: IDictReader?,
+
+    /**
+     * The session to which this transaction is attached.
+     * @since 3.0
+     */
+    val session: ISession,
 ) {
 
     @JsName("storageTxWithStorageNumber")
@@ -74,7 +78,8 @@ open class StorageTx private constructor(
         appId: String,
         author: String?,
         dictReader: IDictReader?,
-    ): this(null, storageNumber, version, appId, author, dictReader)
+        session: ISession,
+    ): this(null, storageNumber, version, appId, author, dictReader, session)
 
     @JsName("storageTxWithStorage")
     constructor(
@@ -83,7 +88,8 @@ open class StorageTx private constructor(
         appId: String,
         author: String?,
         dictReader: IDictReader?,
-    ): this(storage, storage.number, version, appId, author, dictReader)
+        session: ISession,
+    ): this(storage, storage.number, version, appId, author, dictReader, session)
 
     /**
      * The statistical transaction information, updated while this class is being used, should eventually be writted into the transaction-log of the storage.
@@ -99,89 +105,11 @@ open class StorageTx private constructor(
         get() = transaction.time
 
     /**
-     * Method to create the new members dict for the given write action on a feature.
-     *
-     * Members are extracted from the feature using the [effective path][naksha.model.objects.Member.effectivePath]
-     * of each member declared in [collection.members]. When [collection.members] is `null`, all
-     * [StandardMembers.DEFAULT] are extracted. Session-derived and computed values (e.g. [updatedAt], [hash])
-     * are written after the feature walk to override any values from the feature.
-     *
-     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if the given arguments are not sufficient to generate the new metadata.
-     * @param map the map into which to persist the feature.
-     * @param collection the collection into which to persist the feature.
-     * @param feature the new _(modified)_ state of the feature, for which the metadata should be created.
-     * @param action the [action][Action] being performed.
-     * @param atomic whether the write should be performed atomically.
-     * @return the new [IBook] with metadata members that is correct for the new state, based upon the given data.
-     * @since 3.0.0
-     * @see [StorageTx]
-     */
-    protected open fun buildMembers(
-        map: NakshaMap,
-        collection: NakshaCollection,
-        feature: NakshaFeature,
-        action: Action,
-        atomic: Boolean = false
-    ): IBook {
-        val dataEncoding = getDataEncoding(feature, collection)
-        val xyz = feature.properties.xyz
-        val isExistingFeature = !(action == Action.CREATED || (action == Action.UPDATED && !atomic))
-        if (isExistingFeature && xyz.guid == null) {
-            throw illegalArg("$action with atomic=$atomic requires that the feature has a UUID!")
-        }
-
-        // Determine the list of members to extract from the feature.
-        val membersToExtract = collection.members?.toList() ?: StandardMembers.DEFAULT
-
-        // Walk the feature using each member's effective path and coerce to the expected type.
-        val members = HeapBook()
-        for (member in membersToExtract) {
-            if (member == null) continue
-            // Skip mandatory members that are managed by the storage and have no JSON path.
-            if (StandardMembers.MANDATORY_NAMES.contains(member.name)) continue
-            val path = member.effectivePath()
-            val raw = FeatureMemberValues.walkFeature(feature, path)
-            val coerced = FeatureMemberValues.coerce(raw, member.dataType, feature.id, member.name)
-            members.put(member.name, coerced)
-        }
-
-        // Override with session-derived and computed values.
-        val updatedAt: Int64 = this.updatedAt
-        val createdAt: Int64? = if (isExistingFeature) xyz.createdAt else null
-        val author: String?
-        val authorTs: Int64?
-        if (xyz.author == null || xyz.author != this.author) {
-            author = this.author
-            authorTs = null
-        } else {
-            author = xyz.author
-            authorTs = xyz.authorTs
-        }
-        val featureType = if (collection.defaultFeatureType == feature.featureType) null else feature.featureType
-
-        members.put(StandardMembers.UpdatedAt.name, updatedAt)
-        members.put(StandardMembers.CreatedAt.name, createdAt)
-        members.put(StandardMembers.AuthorTimestamp.name, authorTs)
-        members.put(StandardMembers.Author.name, author)
-        members.put(StandardMembers.AppId.name, appId)
-        members.put(StandardMembers.DataEncoding.name, dataEncoding.toString())
-        members.put(StandardMembers.ChangeCount.name, xyz.changeCount + 1)
-        members.put(StandardMembers.Hash.name, calculateHash(feature))
-        members.put(StandardMembers.HereTile.name, calculateHereTile(feature))
-        members.put(StandardMembers.Id.name, feature.id)
-        members.put(StandardMembers.FeatureType.name, featureType)
-
-        return members
-    }
-
-    /**
      * Builds the [Tuple] for the given write action.
      * @param map the map in which the feature is being persisted.
      * @param collection the collection in which the feature is being persisted.
      * @param feature the feature.
      * @param action the [action][Action] being performed.
-     * @param attachment the attachment.
-     * @param atomic whether the write should be performed atomically.
      * @return the encoded [Tuple].
      */
     private fun buildTuple(
@@ -189,30 +117,15 @@ open class StorageTx private constructor(
         collection: NakshaCollection,
         feature: NakshaFeature,
         action: Action,
-        attachment: ByteArray?,
-        atomic: Boolean = false
     ): Tuple {
-        val members = buildMembers(map, collection, feature, action, atomic)
-        // Override geometry, referencePoint, tags, and attachment with encoded values from the feature.
-        // These are the canonical values at tuple time (the feature walk may have extracted them from
-        // stale JSON paths, but the direct feature properties are authoritative).
-        val xyz = feature.properties.xyz
-        val geoBytes = Naksha.encodeGeometry(feature.geometry)
-        val refPointBytes = Naksha.encodeGeometry(feature.referencePoint)
-        val tagsJson = Naksha.encodeTagList(xyz.tags)
-        if (members is HeapBook) {
-            members.put(StandardMembers.Geometry.name, geoBytes)
-            members.put(StandardMembers.ReferencePoint.name, refPointBytes)
-            members.put(StandardMembers.Tags.name, tagsJson)
-            members.put(StandardMembers.Attachment.name, attachment)
-        }
-        val dataEncoding = getDataEncoding(feature, collection)
+        val membersBook = HeapBook()
+        val globalBook = dictReader?.getEncodingDictionary(feature)
+        val featureBytes = Naksha.encodeFeature(feature, collection, session, membersBook, globalBook)
+
         val actionBits = Int64(action.intValue.toLong())
         val featureNumber = feature.featureNumber
         val versionVal = version.txn and Int64(-4L) or actionBits
         val nextVersion: Int64 = if (map.id == Naksha.ADMIN_MAP && collection.id == Naksha.TRANSACTIONS_COL) versionVal else Int64(-1L)
-        val dict = dictReader?.getEncodingDictionary(feature)
-        val featureBytes = Naksha.encodeFeature(feature, dataEncoding, dict)
         return Tuple(
             storageNumber = storageNumber,
             mapNumber = map.number,
@@ -220,7 +133,7 @@ open class StorageTx private constructor(
             featureNumber = featureNumber,
             version = Version(versionVal),
             nextVersion = nextVersion,
-            members = members,
+            members = membersBook,
             feature = featureBytes
         )
     }
@@ -242,32 +155,26 @@ open class StorageTx private constructor(
      * @param map the map in which the feature is going to be created.
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
-     * @param attachment the attachment.
      * @return the binary encoding of the [NakshaFeature] as [Tuple].
      */
     open fun created(
         map: NakshaMap,
         collection: NakshaCollection,
         feature: NakshaFeature,
-        attachment: ByteArray?
-    ): Tuple = buildTuple(map, collection, feature, Action.CREATED, attachment)
+    ): Tuple = buildTuple(map, collection, feature, Action.CREATED)
 
     /**
      * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was updated.
      * @param map the map in which the feature is going to be created.
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
-     * @param attachment the attachment.
-     * @param atomic whether the write should be performed atomically.
      * @return the binary encoding of the [NakshaFeature] as [Tuple].
      */
     open fun updated(
         map: NakshaMap,
         collection: NakshaCollection,
         feature: NakshaFeature,
-        attachment: ByteArray?,
-        atomic: Boolean = false,
-    ): Tuple = buildTuple(map, collection, feature, Action.UPDATED, attachment, atomic)
+    ): Tuple = buildTuple(map, collection, feature, Action.UPDATED)
 
     /**
      * Convert the given [feature][NakshaFeature] into a [Tuple], when the feature was deleted.
@@ -277,16 +184,11 @@ open class StorageTx private constructor(
      * @param map the map in which the feature is going to be created.
      * @param collection the collection in which the feature is going to be created.
      * @param feature the feature that was created.
-     * @param attachment the attachment.
      * @return the binary encoding of the [NakshaFeature] as [Tuple].
      */
     open fun deleted(
         map: NakshaMap,
         collection: NakshaCollection,
         feature: NakshaFeature,
-        attachment: ByteArray?
-    ): Tuple = buildTuple(map, collection, feature, Action.DELETED, attachment)
-
-    private fun getDataEncoding(feature: NakshaFeature, collection: NakshaCollection): DataEncoding =
-        storage?.getDataEncoding(feature, collection) ?: Naksha.DEFAULT_DATA_ENCODING
+    ): Tuple = buildTuple(map, collection, feature, Action.DELETED)
 }

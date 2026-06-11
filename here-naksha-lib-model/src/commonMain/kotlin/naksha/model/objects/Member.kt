@@ -5,7 +5,7 @@ package naksha.model.objects
 import naksha.base.AnyObject
 import naksha.base.NotNullEnum
 import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
+import naksha.base.Proxy
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -25,7 +25,7 @@ import kotlin.js.JsName
  * @since 3.0
  */
 @JsExport
-open class Member() : AnyObject() {
+class Member() : AnyObject() {
 
     /**
      * Construct a member with a name and the given data type.
@@ -38,7 +38,24 @@ open class Member() : AnyObject() {
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = dataType
+        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path.validate()
+    }
+
+    /**
+     * Construct a member copy with a different path, used to relocate standard members to different places.
+     *
+     * Specifically, this is used to relocate the Tuple-Number and other mandatory members into the deprecated XYZ namespace.
+     * @param origin The member to create a copy of.
+     * @param path The new path to relocate the member to.
+     * @since 3.0
+     */
+    @JsName("relocate")
+    constructor(origin: Member, path: JsonPath) : this() {
+        this.name = origin.name
+        this.dataType = origin.dataType
         this.path = path
+        this.path.validate()
     }
 
     /**
@@ -90,38 +107,46 @@ open class Member() : AnyObject() {
      * Each segment must match `^[A-Za-z_][A-Za-z0-9_]*$`. There is no array indexing in v3.0.
      * @since 3.0
      */
-    var path: JsonPath? by PATH
-
-    /** True iff the underlying map has an entry for [path]. */
-    fun hasPath(): Boolean = hasRaw("path")
-
-    /** Remove [path] from the underlying map; returns this for chaining. */
-    fun removePath(): Member {
-        removeRaw("path")
-        return this
-    }
+    var path: JsonPath by PATH
 
     /** Fluent setter for [path]; returns this for chaining. */
     fun withPath(value: JsonPath?): Member {
-        path = value
+        path = value ?: JsonPath(listOf("properties", name))
         return this
     }
 
     /**
-     * Returns the effective JSON path to read this member from a feature.
-     *
-     * If [path] is explicitly set, returns its contents; otherwise returns `["properties", name]`.
+     * Read this member from the given proxy using the [path] of this member.
+     * @param proxy The proxy to read.
+     * @return the value of member in that proxy.
+     */
+    fun read(proxy: Proxy): Any? = proxy.getPath(path)
+
+    /**
+     * Whether this member is storage-managed (internal). When `true`, the storage controls the DDL for this member. Defaults to `false`.
      * @since 3.0
      */
-    fun effectivePath(): List<String> {
-        val path: JsonPath? = this.path
-        return if (!path.isNullOrEmpty()) path.filterNotNull().toList()
-        else listOf("properties", name)
+    private var internal: Boolean by INTERNAL
+
+    /** True iff the underlying map has an entry for [internal]. */
+    fun isInternal(): Boolean = internal
+
+    /** Remove [internal] from the underlying map; returns this for chaining. */
+    internal fun removeInternal(): Member {
+        removeRaw("internal")
+        return this
+    }
+
+    /** Fluent setter for [internal]; returns this for chaining. */
+    internal fun withInternal(value: Boolean): Member {
+        internal = value
+        return this
     }
 
     companion object Member_C {
         private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
-        private val PATH = NullableProperty<Member, JsonPath>(JsonPath::class)
+        private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath(listOf("properties", self.name)) }
+        private val INTERNAL = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
     }
 }

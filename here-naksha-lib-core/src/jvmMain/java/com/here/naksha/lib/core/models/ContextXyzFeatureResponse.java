@@ -44,7 +44,7 @@ public class ContextXyzFeatureResponse extends SuccessResponse {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getContext() {
-    return JvmBoxingUtil.box(get(CONTEXT_KEY), NakshaFeatureList.class);
+    return JvmBoxingUtil.box(getPath(CONTEXT_KEY), NakshaFeatureList.class);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
@@ -66,7 +66,7 @@ public class ContextXyzFeatureResponse extends SuccessResponse {
    */
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)
   public @Nullable List<NakshaFeature> getViolations() {
-    return JvmBoxingUtil.box(get(VIOLATIONS_KEY), NakshaFeatureList.class);
+    return JvmBoxingUtil.box(getPath(VIOLATIONS_KEY), NakshaFeatureList.class);
   }
 
   @ApiStatus.AvailableSince(NakshaVersion.v2_0_11)

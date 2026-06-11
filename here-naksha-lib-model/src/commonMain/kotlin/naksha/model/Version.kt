@@ -65,7 +65,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         /** Maximum year value (15-bit, JS-safe upper bound). */
         private const val YEAR_MAX = 32767
         /** Minimum year for a dated version. */
-        private const val YEAR_DATED_MIN = 16
+        private const val YEAR_MIN = 16
 
         /** Mask for the 30-bit sequence field. */
         private val SEQ_30_MASK = Int64(0x3FFF_FFFF)
@@ -110,7 +110,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
                 } else {
                     return Version(Int64(s.toLong()))
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid version string: $s")
             }
         }
@@ -132,8 +132,8 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         @JsStatic
         @JvmOverloads
         fun auto(year: Int, month: Int, day: Int, seq: Int64, action: Action = Action.CREATED): Version {
-            require(year in YEAR_DATED_MIN..YEAR_MAX) {
-                "year must be in $YEAR_DATED_MIN..$YEAR_MAX, got $year"
+            require(year in YEAR_MIN..YEAR_MAX) {
+                "year must be in $YEAR_MIN..$YEAR_MAX, got $year"
             }
             require(month in 1..12) { "month must be in 1..12, got $month" }
             require(day in 1..31)   { "day must be in 1..31, got $day" }
@@ -187,7 +187,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         }
 
         /**
-         * The _HEAD_ sentinel version (`txn == 0`).
+         * The _HEAD_ sentinel version _(9_007_199_254_740_991L aka `2^53-1`)_.
          *
          * When a [Tuple] is the current HEAD state its `nextVersion` is synthesised as this value
          * (the column is not physically stored in HEAD tables).
@@ -195,7 +195,10 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val HEAD = Version(0L)
+        val HEAD = Version(9_007_199_254_740_991L)
+        // = 2^53-1, aka Number.MAX_SAFE_INTEGER
+        // 3n + (1073741823n << 2n) + (31n << 32n) + (15n << (32n+5n)) + (4095n << (32n+5n+4n)) = 9007199254740991n
+        // bitwise: 0x001f_ffff_ffff_ffff
 
         /**
          * The minimum valid dated version (year=16, month=1, day=1, seq=0, action=CREATED).
@@ -203,7 +206,19 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MIN = auto(16, 1, 1, Int64(0))
+        val MIN = auto(16, 1, 1, Int64(0), Action.CREATED)
+        // 0n + (0n << 2n) + (1n << 32n) + (1n << (32n+5n)) + (16n << (32n+5n+4n)) = 35326106009600n
+        // bitwise: 0x0000_2021_0000_0000
+
+        /**
+         * The maximum valid dated version (year=4095, month=12, day=31, seq=1,073,741,823, action=VERSION).
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val MAX = auto(4095, 12, 31, Int64(1_073_741_823), Action.VERSION)
+        // 3n + (1073741823n << 2n) + (31n << 32n) + (12n << (32n+5n)) + (4095n << (32n+5n+4n)) = 9006786937880575n
+        // bitwise: 0x001f_ff9f_ffff_ffff
 
         /**
          * The minimum value of the 30-bit sequence field (zero).
@@ -229,7 +244,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val SEQ_END: Int64 = Int64(1) shl 2
+        val SEQ_INC: Int64 = Int64(1) shl 2
     }
 
     private var _year = -1
