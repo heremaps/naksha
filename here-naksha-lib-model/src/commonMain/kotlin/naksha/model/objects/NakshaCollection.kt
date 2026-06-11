@@ -9,6 +9,8 @@ import naksha.geo.SpPoint
 import naksha.model.DataEncoding
 import naksha.model.Naksha
 import naksha.model.NakshaError
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -335,6 +337,39 @@ open class NakshaCollection() : NakshaFeature() {
         }
         list.add(value)
         return this
+    }
+
+    /**
+     * Returns the members list. If the member list is currently `null`, it creates it from [XyzMembers.ALL]. If the list does not contain the mandatory members, they will be added.
+     * @return the members list of this collection.
+     * @since 3.0
+     */
+    open fun useMembers(): MemberList {
+        var write: Boolean = false
+        var list = this.members
+        if (list == null) {
+            list = MemberList(XyzMembers.ALL)
+            write = true
+        }
+        // Ensure that the list does not contain null or duplicates.
+        list.validate()
+        // Ensure that the mandatory members are in.
+        for (mandatory in StandardMembers.MANDATORY) {
+            val found: Member? = list.get(mandatory.name)
+            if (found != null) {
+                // We require same name and data-type, but not same JSON path.
+                if (mandatory.dataType != found.dataType) {
+                    throw NakshaException(
+                        ILLEGAL_STATE,
+                        "Member '${mandatory.name}' has different wrong data type: '${found.dataType}', expected '${mandatory.name}'"
+                    )
+                }
+            } else {
+                list.add(mandatory)
+            }
+        }
+        if (write) this.members = list
+        return list
     }
 
     /**

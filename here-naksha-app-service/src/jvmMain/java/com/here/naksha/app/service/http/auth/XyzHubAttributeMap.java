@@ -116,8 +116,8 @@ public class XyzHubAttributeMap extends AttributeMap {
     attributeMap.withValue(
         XyzHubAttributeMap.AUTHOR,
         eventHandler.getProperties().getXyz().getAuthor());
-    if (eventHandler.get(XyzHubAttributeMap.PACKAGES) != null) {
-      attributeMap.withValue(XyzHubAttributeMap.PACKAGES, eventHandler.get(XyzHubAttributeMap.PACKAGES)); // oneOf
+    if (eventHandler.getPath(XyzHubAttributeMap.PACKAGES) != null) {
+      attributeMap.withValue(XyzHubAttributeMap.PACKAGES, eventHandler.getPath(XyzHubAttributeMap.PACKAGES)); // oneOf
     }
     return attributeMap;
   }

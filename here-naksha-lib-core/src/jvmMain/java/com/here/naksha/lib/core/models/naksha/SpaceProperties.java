@@ -38,7 +38,7 @@ public class SpaceProperties extends NakshaProperties {
    * The backend storage collection details specified at space level
    */
   public @Nullable NakshaCollection getCollection() {
-    return JvmBoxingUtil.box(get(NAKSHA_COLLECTION), NakshaCollection.class);
+    return JvmBoxingUtil.box(getPath(NAKSHA_COLLECTION), NakshaCollection.class);
   }
 
   public void setCollection(final @Nullable NakshaCollection collection) {

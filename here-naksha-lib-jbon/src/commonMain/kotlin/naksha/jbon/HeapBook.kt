@@ -62,17 +62,19 @@ class HeapBook : IBook {
      * If the name already exists, the value is updated in-place.
      * @param name the member name.
      * @param value the value.
+     * @return The index at which the value was placed.
      * @since 3.0.0
      */
-    fun put(name: String, value: Any?) {
+    fun put(name: String, value: Any?): Int {
         val index = _nameIndex[name]
         if (index != null) {
             _values[index] = value
-        } else {
-            val idx = _names.size
-            _names.add(name)
-            _nameIndex[name] = idx
-            _values.add(value)
+            return index
         }
+        val idx = _names.size
+        _names.add(name)
+        _nameIndex[name] = idx
+        _values.add(value)
+        return idx
     }
 }

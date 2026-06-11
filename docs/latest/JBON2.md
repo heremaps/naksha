@@ -868,15 +868,15 @@ The `database_number` of the `global` [book] **MUST** match the `database_number
 
 The `members` [book] is per-tuple and travels with the tuple. This means, the storage need to keep the content of the `members` [book] next to the `tuple` and always read them together. It can embed the members into the tuple, or do something else. For example, in `lib-psql` _(the PostgreSQL implementation of `lib-data` storage API)_ the members are stored as own dedicated columns. So, `lib-psql` will store `feature` _(the actual tuple)_, `fn`, `version`, `global_book_fn`, `next_version`, and `id` as dedicated database columns. If more members are defined for a collection, then `lib-psql` will generate more columns in the storage. This is as well the reason why the encoder always needs the collection specification, because the members are not arbitrary, they **MUST** match exactly the specified ones in the collection definition. However, for the decoder this is not important, the decoder has references in the _feature_ that refer to the member slots, therefore, it does not need any knowledge about the collection. It is able to decode the tuple with only the members [book] provided by the storage.
 
-Some `elements` of the `members` [book] have a pre-defined meaning _(therefore custom members **MUST** have an `index` starting at 4)_:
+Some `elements` of the `members` [book] have a pre-defined meaning:
 
-| i    | Alias            | Path    | Type          | Description                                                                                                                                           |
-|------|------------------|---------|---------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 0    | `tn`             | `tn`    | [TupleNumber] | The [Tuple-Number] of this tuple.                                                                                                                     |
-| 1    | `global_book_fn` | (none)  | [int]?        | The _optional_ feature-number of the `global` [book] needed to decode; `null` if no global book is needed.                                            |
-| 2    | `next_version`   | `nv`    | [uint56]      | The next version of the tuple; if the tuple is in _HEAD_ state the value will be `9_007_199_254_740_991L` _(JavaScript's `Number.MAX_SAFE_INTEGER`)_. |
-| 3    | `id`             | `id`    | [String]?     | The _optional_ identifier of this tuple; a string when the feature-number is negative; `null` when the feature-number is positive (≥ 0).              |
-| 4... | ...              | ...     | [indexable]?  | All custom members appended starting here, types **MUST** be [indexable].                                                                             |
+| Name             | Path                               | Type          | Description                                                                                                                              |
+|------------------|------------------------------------|---------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| `tn`             | `properties->@ns:com:here:xyz->tn` | [TupleNumber] | The [Tuple-Number] of this tuple.                                                                                                        |
+| `global_book_fn` | `properties->@ns:com:here:xyz->gb` | [int]?        | The _optional_ feature-number of the `global` [book] needed to decode; `null` if no global book is needed.                               |
+| `next_version`   | `properties->@ns:com:here:xyz->nv` | [uint56]      | The next version of the tuple; if the tuple is in _HEAD_ state the value will be `9_007_199_254_740_991L`.                               |
+| `id`             | `id`                               | [String]?     | The _optional_ identifier of this tuple; a string when the feature-number is negative; `null` when the feature-number is positive (≥ 0). |
+| ...              | ...                                | [indexable]?  | All custom members appended starting here, types **MUST** be [indexable].                                                                |
 
 The `next_version` MUST be encoded as [uint56] _(**lead-in** `0000_1101`)_, so it can be patched in place without changing the byte size of the tuple.
 

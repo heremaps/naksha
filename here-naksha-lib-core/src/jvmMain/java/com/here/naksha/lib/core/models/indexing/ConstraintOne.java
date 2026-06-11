@@ -29,7 +29,7 @@ public class ConstraintOne extends Constraint {
    * The constraints of which at least one need to hold true (OR).
    */
   public List<Constraint> getOf() {
-    return JvmBoxingUtil.box(get(OF), ConstraintList.class);
+    return JvmBoxingUtil.box(getPath(OF), ConstraintList.class);
   }
 
   public void setOf(List<Constraint> of) {

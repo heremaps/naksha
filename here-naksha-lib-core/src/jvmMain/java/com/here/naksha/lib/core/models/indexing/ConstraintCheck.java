@@ -66,7 +66,7 @@ public class ConstraintCheck extends Constraint {
 
   /** The check to perform. */
   public Test getTest() {
-    return JvmBoxingUtil.box(get(TEST), Test.class);
+    return JvmBoxingUtil.box(getPath(TEST), Test.class);
   }
 
   public void setTest(Test test) {

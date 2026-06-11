@@ -127,7 +127,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       //    feature #3, will have 3 violations i.e. min(3,3)
       //    feature #4, will have 3 violations i.e. min(4,3)
       int violationsCount = Math.min(featureCnt, totalViolations);
-      final Object momType = feature.get("momType");
+      final Object momType = feature.getPath("momType");
       violations.addAll(getNViolationsWithFeatureReference(
           violationsCount,
           feature,

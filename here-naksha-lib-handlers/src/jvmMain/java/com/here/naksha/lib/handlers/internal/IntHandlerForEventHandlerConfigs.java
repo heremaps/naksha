@@ -215,7 +215,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
 
   private @NotNull Response storageValidation(
       @NotNull EventHandlerConfig eventHandler, @NotNull String storagePropertyName) {
-    Object storageIdProp = eventHandler.getProperties().get(storagePropertyName);
+    Object storageIdProp = eventHandler.getProperties().getPath(storagePropertyName);
     if (storageIdProp == null) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,

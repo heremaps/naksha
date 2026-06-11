@@ -96,7 +96,7 @@ open class NakshaTx : NakshaFeature() {
     override var id: String
         get() = getAs("id", String::class) ?: throw illegalState("The property 'id' must be a valid string")
         set(value) {
-            val txn = Int64(value.toLong())
+            val txn = Int64(value.toLong(10))
             setVersion(Version(txn))
         }
 

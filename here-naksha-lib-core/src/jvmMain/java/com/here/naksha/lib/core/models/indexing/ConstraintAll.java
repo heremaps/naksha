@@ -29,7 +29,7 @@ public class ConstraintAll extends Constraint {
    * The constraints that all need to hold true (AND).
    */
   public List<Constraint> getOf() {
-    return JvmBoxingUtil.box(get(OF), ConstraintList.class);
+    return JvmBoxingUtil.box(getPath(OF), ConstraintList.class);
   }
 
   public void setOf(List<Constraint> of) {

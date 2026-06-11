@@ -50,26 +50,14 @@ interface ISession : AutoCloseable {
     val options: SessionOptions
 
     /**
-     * Removes all registered member processors.
-     * @return this.
+     * Returns the [MemberProcessorMap] for this session.
+     *
+     * Use the map to register, remove, or inspect [IMemberProcessor] instances for individual members.
+     * Processors are invoked in the order in which they were added.
+     * @return the member processor map.
+     * @since 3.0
      */
-    fun clearMemberProcessors(): ISession
-
-    /**
-     * Add the given member processor. If the same processor is already added, the call is a no-op. Processors are invoked in the order in which they were added.
-     * @param memberName The name of the member as specified in the collection.
-     * @param memberProcessor The processor.
-     * @return this.
-     */
-    fun addMemberProcessor(memberName: String, memberProcessor: IMemberProcessor): ISession
-
-    /**
-     * Remove the given member processor.
-     * @param memberName The name of the member as specified in the collection.
-     * @param memberProcessor The processor.
-     * @return this.
-     */
-    fun removeMemberProcessor(memberName: String, memberProcessor: IMemberProcessor): ISession
+    fun processors(): MemberProcessorMap
 
     // TODO: Define a streaming API (full table scan) to consume all features from a collection.
     //       This API is designed to backup data, or to execute a read request with a huge cardinality,

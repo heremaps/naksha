@@ -223,23 +223,6 @@ class PgUtil private constructor() {
         fun decodeFeature(bytes: ByteArray?, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, dictManager)
 
         /**
-         * Encodes the given [NakshaFeature] into bytes.
-         * @param feature the feature to encode.
-         * @param encoding the feature encoding to use.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded feature.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        @Deprecated(
-            message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeFeature(feature, encoding, dict)"),
-            level = DeprecationLevel.WARNING
-        )
-        fun encodeFeature(feature: NakshaFeature?, encoding: DataEncoding, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, encoding, dict)
-
-        /**
          * Decode the Naksha tags from their raw `jsonb` text form.
          * @param json the JSON text to decode (value of the `tags` `jsonb` column).
          * @return the Naksha tags.

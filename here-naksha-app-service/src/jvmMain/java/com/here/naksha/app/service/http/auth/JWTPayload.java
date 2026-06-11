@@ -60,7 +60,7 @@ public class JWTPayload {
     if (urm == null) {
       return null;
     }
-    final ServiceUserRights hereActionMatrix = urm.get(URMServiceId.NAKSHA);
+    final ServiceUserRights hereActionMatrix = urm.getPath(URMServiceId.NAKSHA);
     if (hereActionMatrix == null) {
       return null;
     }

@@ -12,6 +12,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -62,6 +63,19 @@ class ChainCollectionTest : PgTestBase(
         is Long  -> Int64(v)
         is Int   -> Int64(v.toLong())
         else     -> null
+    }
+
+    @Test
+    fun allMembersShouldHaveAnEffectivePath() {
+        val members = assertNotNull(collection.members)
+        assertEquals(2, members.size)
+        assertEquals("left_fn", assertNotNull(members[0]).name)
+        assertContentEquals(listOf("properties", "left_fn"), assertNotNull(members[0]).effectivePath())
+        assertNull(assertNotNull(members[0]).path)
+
+        assertEquals("right_fn", assertNotNull(members[1]).name)
+        assertContentEquals(listOf("properties", "right_fn"), assertNotNull(members[1]).effectivePath())
+        assertNull(assertNotNull(members[1]).path)
     }
 
     @Test

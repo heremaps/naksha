@@ -7,12 +7,10 @@ import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.RandomFeatures
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
 class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {

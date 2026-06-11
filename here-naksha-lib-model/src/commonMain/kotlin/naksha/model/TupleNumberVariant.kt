@@ -188,14 +188,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
         private set
 
     /**
-     * The number of bytes that are shared for tuple-number's of this variant _(optional header size)_.
-     *
-     * The total header size is actually `8` byte, plus this value, meaning:
-     * - variant `0` encodes all values for each tuple-number, therefore no header place needed.
-     * - variant `1` encodes `storage-number` in the header, so `8` byte needed.
-     * - variant `2` encodes `storage-number`, and `map-number` in the header, so `12` byte needed.
-     * - variant `3` encodes `storage-number`, `map-number`, and `collection-number` in the header, so `16` byte needed.
-     * - variant `4` encodes `storage-number`, `map-number`, `collection-number`, and `feature-number` in the header, so `24` byte needed.
+     * The number of bytes that are shared in the header of a tuple-number-array for tuple-number's of this variant.
      * @since 3.0
      * @see [BinaryUtil.writeSimpleHeader]
      * @see [sharedStorageNumber]

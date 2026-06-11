@@ -3,12 +3,16 @@
 package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.isNil
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
-import kotlin.jvm.JvmSuppressWildcards
 import kotlin.reflect.KClass
 
 /**
@@ -228,4 +232,347 @@ abstract class Proxy : PlatformObject {
      */
     fun contentDeepEquals(other: Proxy): Boolean = PlatformUtil.deepEquals(this, other)
 
+    /**
+     * Get the property from the given path.
+     *
+     * @param path the JSON path to query.
+     * @return the value at the path or `null`, if the path does not exist or the value is actually `null`.
+     * @since 3.0
+     */
+    @JsName("getPathByList")
+    fun getPath(path: List<Any?>): Any? {
+        var current: Any? = this.platformObject()
+        for (key in path) {
+            if (key is String) {
+                if (current !is PlatformMap) return null
+                current = map_get(current, key)
+                continue
+            }
+            if (key is Number) {
+                if (current !is PlatformList) return null
+                val index = key.toInt()
+                current = array_get(current, index)
+                continue
+            }
+            return null
+        }
+        if (current is PlatformMap) return Platform.proxy(current, AnyObject::class)
+        if (current is PlatformList) return Platform.proxy(current, AnyList::class)
+        if (current is PlatformDataView) return Platform.proxy(current, DataViewProxy::class)
+        return current
+    }
+
+    /**
+     * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
+     *
+     * @param value the value to set.
+     * @param path the JSON path to mutate.
+     * @return the previous value.
+     * @since 3.0
+     */
+    @JsName("setPathByList")
+    fun setPath(value: Any?, path: List<Any?>): Any? {
+        val pathEnd = path.size
+        val pathLast = pathEnd - 1
+        var current: Any = this.platformObject()
+        for (i in 0 until pathLast) {
+            val key = path[i]
+            if (key is String) {
+                if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+                // --- current is PlatformMap ---
+                val value = map_get(current, key)
+                if (value == null) {
+                    // The key does not exist, check if we should create a map or list.
+                    val next_key = path[i + 1]
+                    if (next_key is String) {
+                        val new_map = Platform.newMap()
+                        map_set(current, key, new_map)
+                        current = new_map
+                        continue
+                    }
+                    if (next_key is Number) {
+                        val new_list = Platform.newList()
+                        map_set(current, key, new_list)
+                        current = new_list
+                        continue
+                    }
+                    // The next key is invalid
+                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                }
+                current = value
+                continue
+            }
+            if (key is Number) {
+                if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+                // --- current is PlatformList ---
+                val index: Int = key.toInt()
+                val value = array_get(current, index)
+                if (value == null) {
+                    // The index does not exist, check if we should create a map or list.
+                    val next_key = path[i + 1]
+                    if (next_key is String) {
+                        val new_map = Platform.newMap()
+                        array_set(current, index, new_map)
+                        current = new_map
+                        continue
+                    }
+                    if (next_key is Number) {
+                        val new_list = Platform.newList()
+                        array_set(current, index, new_list)
+                        current = new_list
+                        continue
+                    }
+                    // The next key is invalid
+                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                }
+                current = value
+                continue
+            }
+            throw RuntimeException("Invalid key in path: '$key' at position $i")
+        }
+        val key = path[pathLast]
+        if (key is String) {
+            if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+            val oldValue = map_get(current, key)
+            map_set(current, key, value)
+            return oldValue
+        }
+        if (key is Number) {
+            if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+            val index = key.toInt()
+            val oldValue = array_get(current, index)
+            array_set(current, index, value)
+            return oldValue
+        }
+        throw RuntimeException("Invalid key in path: '$key' at position $pathLast")
+    }
+
+    /**
+     * Get the property from the given path.
+     *
+     * @param path the JSON path to query.
+     * @return the value at the path or `null`, if the path does not exist or the value is actually `null`.
+     * @since 3.0
+     */
+    @JsName("getPathByArray")
+    fun getPath(path: Array<Any?>, length: Int = path.size): Any? {
+        var current: Any? = this.platformObject()
+        for (i in 0 until length) {
+            if (i >= path.size) return null
+            val key = path[i]
+            if (key is String) {
+                if (current !is PlatformMap) return null
+                current = map_get(current, key)
+                continue
+            }
+            if (key is Number) {
+                if (current !is PlatformList) return null
+                val index = key.toInt()
+                current = array_get(current, index)
+                continue
+            }
+            return null
+        }
+        if (current is PlatformMap) return Platform.proxy(current, AnyObject::class)
+        if (current is PlatformList) return Platform.proxy(current, AnyList::class)
+        if (current is PlatformDataView) return Platform.proxy(current, DataViewProxy::class)
+        return current
+    }
+
+    /**
+     * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
+     *
+     * @param value the value to set.
+     * @param path the JSON path to mutate.
+     * @return the previous value.
+     * @since 3.0
+     */
+    @JsName("setPathByArray")
+    fun setPath(value: Any?, path: Array<Any?>, pathEnd: Int = path.size): Any? {
+        val pathLast = pathEnd - 1
+        var current: Any = this.platformObject()
+        for (i in 0 until pathLast) {
+            val key = path[i]
+            if (key is String) {
+                if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+                // --- current is PlatformMap ---
+                val value = map_get(current, key)
+                if (value == null) {
+                    // The key does not exist, check if we should create a map or list.
+                    val next_key = path[i + 1]
+                    if (next_key is String) {
+                        val new_map = Platform.newMap()
+                        map_set(current, key, new_map)
+                        current = new_map
+                        continue
+                    }
+                    if (next_key is Number) {
+                        val new_list = Platform.newList()
+                        map_set(current, key, new_list)
+                        current = new_list
+                        continue
+                    }
+                    // The next key is invalid
+                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                }
+                current = value
+                continue
+            }
+            if (key is Number) {
+                if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+                // --- current is PlatformList ---
+                val index: Int = key.toInt()
+                val value = array_get(current, index)
+                if (value == null) {
+                    // The index does not exist, check if we should create a map or list.
+                    val next_key = path[i + 1]
+                    if (next_key is String) {
+                        val new_map = Platform.newMap()
+                        array_set(current, index, new_map)
+                        current = new_map
+                        continue
+                    }
+                    if (next_key is Number) {
+                        val new_list = Platform.newList()
+                        array_set(current, index, new_list)
+                        current = new_list
+                        continue
+                    }
+                    // The next key is invalid
+                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                }
+                current = value
+                continue
+            }
+            throw RuntimeException("Invalid key in path: '$key' at position $i")
+        }
+        val key = path[pathLast]
+        if (key is String) {
+            if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+            val oldValue = map_get(current, key)
+            map_set(current, key, value)
+            return oldValue
+        }
+        if (key is Number) {
+            if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+            val index = key.toInt()
+            val oldValue = array_get(current, index)
+            array_set(current, index, value)
+            return oldValue
+        }
+        throw RuntimeException("Invalid key in path: '$key' at position $pathLast")
+    }
+
+    /**
+     * Get the property from the given path.
+     *
+     * @param path the JSON path to query.
+     * @return the value at the path or `null`, if the path does not exist or the value is actually `null`.
+     * @since 3.0
+     */
+    fun getPath(vararg path: Any): Any? {
+        var current: Any? = this.platformObject()
+        for (key in path) {
+            if (key is String) {
+                if (current !is PlatformMap) return null
+                current = map_get(current, key)
+                continue
+            }
+            if (key is Number) {
+                if (current !is PlatformList) return null
+                val index = key.toInt()
+                current = array_get(current, index)
+                continue
+            }
+            return null
+        }
+        if (current is PlatformMap) return Platform.proxy(current, AnyObject::class)
+        if (current is PlatformList) return Platform.proxy(current, AnyList::class)
+        if (current is PlatformDataView) return Platform.proxy(current, DataViewProxy::class)
+        return current
+    }
+
+    /**
+     * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
+     *
+     * @param value the value to set.
+     * @param path the JSON path to mutate.
+     * @return the previous value.
+     * @since 3.0
+     */
+    fun setPath(value: Any?, vararg path: Any): Any? {
+        val pathEnd = path.size
+        val pathLast = pathEnd - 1
+        var current: Any = this.platformObject()
+        for (i in 0 until pathLast) {
+            val key = path[i]
+            if (key is String) {
+                if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+                // --- current is PlatformMap ---
+                val value = map_get(current, key)
+                if (value == null) {
+                    // The key does not exist, check if we should create a map or list.
+                    val next_key = path[i + 1]
+                    if (next_key is String) {
+                        val new_map = Platform.newMap()
+                        map_set(current, key, new_map)
+                        current = new_map
+                        continue
+                    }
+                    if (next_key is Number) {
+                        val new_list = Platform.newList()
+                        map_set(current, key, new_list)
+                        current = new_list
+                        continue
+                    }
+                    // The next key is invalid
+                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                }
+                current = value
+                continue
+            }
+            if (key is Number) {
+                if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+                // --- current is PlatformList ---
+                val index: Int = key.toInt()
+                val value = array_get(current, index)
+                if (value == null) {
+                    // The index does not exist, check if we should create a map or list.
+                    val next_key = path[i + 1]
+                    if (next_key is String) {
+                        val new_map = Platform.newMap()
+                        array_set(current, index, new_map)
+                        current = new_map
+                        continue
+                    }
+                    if (next_key is Number) {
+                        val new_list = Platform.newList()
+                        array_set(current, index, new_list)
+                        current = new_list
+                        continue
+                    }
+                    // The next key is invalid
+                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                }
+                current = value
+                continue
+            }
+            throw RuntimeException("Invalid key in path: '$key' at position $i")
+        }
+        val key = path[pathLast]
+        if (key is String) {
+            if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+            val oldValue = map_get(current, key)
+            map_set(current, key, value)
+            return oldValue
+        }
+        if (key is Number) {
+            if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+            val index = key.toInt()
+            val oldValue = array_get(current, index)
+            array_set(current, index, value)
+            return oldValue
+        }
+        throw RuntimeException("Invalid key in path: '$key' at position $pathLast")
+    }
 }

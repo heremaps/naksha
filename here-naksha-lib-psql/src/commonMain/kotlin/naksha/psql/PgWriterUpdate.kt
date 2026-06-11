@@ -184,11 +184,11 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 // (sentinel "undefined" causes the DB to retain the existing value).
                 val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.getByteArray(StandardMembers.Geometry)
                 val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.getByteArray(StandardMembers.ReferencePoint)
-                val tags = tuple.getStringMember(StandardMembers.Tags)
-                val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.getByteArray(StandardMembers.Attachment)
+                val tags = tuple.getStringMember(StandardMembers.XyzTags)
+                val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.getByteArray(StandardMembers.XyzAttachment)
                 val oldGeo = tuple.getByteArray(StandardMembers.Geometry)
                 val oldRefPoint = tuple.getByteArray(StandardMembers.ReferencePoint)
-                val oldAttachment = tuple.getByteArray(StandardMembers.Attachment)
+                val oldAttachment = tuple.getByteArray(StandardMembers.XyzAttachment)
                 val needsPatch = (oldGeo == null || !oldGeo.contentEquals(geo ?: ByteArray(0)))
                     || (oldRefPoint == null || !oldRefPoint.contentEquals(referencePoint ?: ByteArray(0)))
                     || (oldAttachment == null || !oldAttachment.contentEquals(attachment ?: ByteArray(0)))
@@ -198,8 +198,8 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                         val dict = m.copy()
                         dict.put(StandardMembers.Geometry.name, geo)
                         dict.put(StandardMembers.ReferencePoint.name, referencePoint)
-                        dict.put(StandardMembers.Tags.name, tags)
-                        dict.put(StandardMembers.Attachment.name, attachment)
+                        dict.put(StandardMembers.XyzTags.name, tags)
+                        dict.put(StandardMembers.XyzAttachment.name, attachment)
                         dict
                     } else m
                     write.tuple = tuple.copy(members = newMembers)

@@ -118,7 +118,7 @@ open class NakshaFeature() : AnyObject() {
     /**
      * The feature-number of the feature.
      *
-     * If the feature is in [HEAD][TupleNumber.HEAD] state, so not yet persisted, and no custom feature number was set, then the method will calculate the feature-number from the [id]. A custom feature-number
+     * If the feature is in [HEAD][TupleNumber.HEAD] state, so not yet persisted, and no custom feature number was set, then the method will calculate the feature-number from the [id].
      * @since 3.0
      */
     var featureNumber: Int64

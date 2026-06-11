@@ -2,10 +2,8 @@ package naksha.psql
 
 import naksha.base.PlatformUtil
 import naksha.model.*
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
@@ -36,8 +34,8 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, featureTupleList.size)
             val featureTuple = assertNotNull(featureTupleList[0])
             val tuple = assertNotNull(featureTuple.tuple)
-            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
-            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
+            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
+            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
         }
 
         // Read the feature
@@ -57,8 +55,8 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, featureTupleList.size)
             val featureTuple = assertNotNull(featureTupleList[0])
             val tuple = assertNotNull(featureTuple.tuple)
-            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
-            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
+            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
+            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
         }
     }
 
@@ -90,8 +88,8 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, featureTupleList.size)
             val featureTuple = assertNotNull(featureTupleList[0])
             val tuple = assertNotNull(featureTuple.tuple)
-            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
-            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
+            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
+            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
         }
 
         // Read the feature
@@ -113,8 +111,8 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, featureTupleList.size)
             val featureTuple = assertNotNull(featureTupleList[0])
             val tuple = assertNotNull(featureTuple.tuple)
-            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
-            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
+            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
+            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
 
             readFeature = feature
         }
@@ -146,8 +144,8 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, featureTupleList.size)
             val featureTuple = assertNotNull(featureTupleList[0])
             val tuple = assertNotNull(featureTuple.tuple)
-            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
-            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
+            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
+            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
         }
     }
 
@@ -179,8 +177,8 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, featureTupleList.size)
             val featureTuple = assertNotNull(featureTupleList[0])
             val tuple = assertNotNull(featureTuple.tuple)
-            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
-            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
+            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
+            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
         }
 
         // Read the feature
@@ -202,8 +200,8 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, featureTupleList.size)
             val featureTuple = assertNotNull(featureTupleList[0])
             val tuple = assertNotNull(featureTuple.tuple)
-            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
-            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
+            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
+            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
 
             readFeature = feature
         }
@@ -235,8 +233,8 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, featureTupleList.size)
             val featureTuple = assertNotNull(featureTupleList[0])
             val tuple = assertNotNull(featureTuple.tuple)
-            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
-            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.Attachment))
+            assertNotNull(tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
+            assertContentEquals(attachmentBytes, tuple.getByteArray(naksha.model.objects.StandardMembers.XyzAttachment))
         }
     }
 }

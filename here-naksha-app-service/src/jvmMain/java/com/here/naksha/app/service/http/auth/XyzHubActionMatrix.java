@@ -186,7 +186,7 @@ public class XyzHubActionMatrix extends ActionMatrix {
     addAction(MANAGE_CONNECTORS, XyzHubAttributeMap.ofConnector(eventHandler));
 
     // MANAGE_PACKAGES right is needed to add the connector to a packages.
-    List<String> packages = JvmBoxingUtil.box(eventHandler.get(XyzHubAttributeMap.PACKAGES), StringList.class);
+    List<String> packages = JvmBoxingUtil.box(eventHandler.getPath(XyzHubAttributeMap.PACKAGES), StringList.class);
     for (final @NotNull String packageId : packages) {
       addAction(MANAGE_PACKAGES, XyzHubAttributeMap.ofPackage(packageId));
     }
