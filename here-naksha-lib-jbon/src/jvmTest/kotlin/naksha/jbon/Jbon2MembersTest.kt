@@ -32,9 +32,9 @@ class Jbon2MembersTest {
         override val id: String? = null
         override val length: Int get() = entries.size
         override fun get(index: Int): Any? = entries.getOrNull(index)
-        override fun indexOf(string: String): Int = entries.indexOfFirst { it == string }
-        override fun stringAt(index: Int): String? = entries.getOrNull(index)?.toString()
-        override fun find(hash: Int): List<DictEntry> = emptyList()
+        override fun indexOfString(string: String): Int = entries.indexOfFirst { it == string }
+        override fun getStringAt(index: Int): String? = entries.getOrNull(index)?.toString()
+        override fun getAllWithHash(hash: Int): List<DictEntry> = emptyList()
     }
 
     // -----------------------------------------------------------------------

@@ -3,9 +3,15 @@
 package naksha.model.objects
 
 import naksha.base.AnyObject
+import naksha.base.Int64
+import naksha.base.MapProxy
 import naksha.base.NotNullEnum
 import naksha.base.NotNullProperty
 import naksha.base.Proxy
+import naksha.geo.SpGeometry
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaException
+import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -142,6 +148,134 @@ class Member() : AnyObject() {
         internal = value
         return this
     }
+
+    /**
+     * Ensures that the given `found` member is the same as the `expected` member, allow different path.
+     * @param other The member to compare this member with.
+     * @param comparePath If the path must be the same as well, defaults to _false_.
+     * @return _true_ if the two members are the same; _false_ otherwise.
+     */
+    fun isSameAs(other: Member?, comparePath: Boolean = false): Boolean {
+        if (other == null) return false
+        if (this === other) return true
+        // We require same name and data-type, but not same JSON path.
+        if (name != other.name) return false
+        if (dataType != other.dataType) return false
+        if (comparePath && !path.contentDeepEquals(other.path)) return false
+        return true
+    }
+
+    /**
+     * Ensures that the given `other` member is the same as this.
+     * @param other The member to compare this with.
+     * @param comparePath If the path must be the same as well, defaults to _false_.
+     * @return The `other` member, if it is the same as this.
+     * @throws NakshaException with error [ILLEGAL_STATE], when the given `other` members does not match this member.
+     */
+    fun asSame(other: Member?, comparePath: Boolean = false): Member {
+        if (other == null) throw NakshaException(ILLEGAL_STATE, "The other member is NULL")
+        if (other === this) return other
+        // We require same name and data-type, but not same JSON path.
+        if (name != other.name) {
+            throw NakshaException(ILLEGAL_STATE, "The other member has different name: '${other.name}', expected: '${name}'")
+        }
+        if (dataType != other.dataType) {
+            throw NakshaException(ILLEGAL_STATE, "The other member has wrong data type: '${other.dataType}', expected '${dataType}'")
+        }
+        if (comparePath && !path.contentDeepEquals(other.path)) {
+            throw NakshaException(ILLEGAL_STATE, "The other member has a different path: '${other.path.joinToString("->")}', expected: '${path.joinToString("->")}'")
+        }
+        return other
+    }
+
+    /**
+     * Helper to read a [TupleNumber] form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun readTupleNumber(feature: MapProxy<*,*>): TupleNumber? {
+        val raw = feature.getPath(path)
+        if (raw is TupleNumber) return raw
+        if (raw is String) return TupleNumber.fromString(raw)
+        return null
+    }
+
+    /**
+     * Helper to read a string form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun readBoolean(feature: MapProxy<*,*>): Boolean? {
+        val raw = feature.getPath(path)
+        if (raw is Boolean) return raw
+        return null
+    }
+
+    /**
+     * Helper to read a string form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun readString(feature: MapProxy<*,*>): String? {
+        val raw = feature.getPath(path)
+        if (raw is String) return raw
+        return null
+    }
+
+    /**
+     * Helper to read a 64-bit integer form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun readLong(feature: MapProxy<*,*>): Int64? {
+        val raw = feature.getPath(path)
+        if (raw is Int64) return raw
+        if (raw is Long) return Int64(raw)
+        if (raw is Number) return Int64(raw.toLong())
+        return null
+    }
+
+    /**
+     * Helper to read a 64-bit floating point number form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun readDouble(feature: MapProxy<*,*>): Double? {
+        val raw = feature.getPath(path)
+        if (raw is Double) return raw
+        if (raw is Number) return raw.toDouble()
+        return null
+    }
+
+    /**
+     * Helper to read a 64-bit floating point number form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun readGeometry(feature: MapProxy<*,*>): SpGeometry? {
+        val raw = feature.getPath(path)
+        if (raw is SpGeometry) return raw
+        return null
+    }
+
+    /**
+     * Helper to read a 64-bit floating point number form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun readByteArray(feature: MapProxy<*,*>): ByteArray? {
+        val raw = feature.getPath(path)
+        if (raw is ByteArray) return raw
+        return null
+    }
+
+    /**
+     * Helper to write a member value to the given feature.
+     * @param feature The feature to write to.
+     * @return the previous value.
+     * @throws RuntimeException If the given feature has a broken path, so the path requires an array, but an object exists already.
+     */
+    fun write(feature: MapProxy<*,*>, value: Any?): Any? = feature.setPath(value, path)
 
     companion object Member_C {
         private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }

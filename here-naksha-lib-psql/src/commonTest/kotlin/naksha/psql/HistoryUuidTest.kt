@@ -11,7 +11,6 @@ import naksha.model.request.WriteRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 class HistoryUuidTest: PgTestBase(NakshaCollection(
     id = "history_puuid_test_collection",
@@ -50,9 +49,9 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
 
         // Then:
         assertEquals(3, featureVersions.size)
-        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATED }!!
-        val retrievedUpdatedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATED }!!
-        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETED }!!
+        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATE }!!
+        val retrievedUpdatedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATE }!!
+        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETE }!!
 
         // And:
         assertNotNull(retrievedCreatedFeature.properties.xyz.uuid)
@@ -97,9 +96,9 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
 
         // Then:
         assertEquals(3, featureVersions.size)
-        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATED }!!
-        val retrievedUpsertedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATED }!!
-        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETED }!!
+        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATE }!!
+        val retrievedUpsertedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATE }!!
+        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETE }!!
 
         // And:
         assertNotNull(retrievedCreatedFeature.properties.xyz.uuid)

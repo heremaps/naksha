@@ -104,8 +104,8 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
         featureTuples.filterNotNull().forEach { featureTuple ->
             val tuple = featureTuple.tuple
             assertNotNull(tuple)
-            assertEquals(featuresById[featureTuple.id]?.id, tuple.getStringMember(naksha.model.objects.StandardMembers.Id))
-            assertEquals(Action.CREATED, featureTuple.tupleNumber.action)
+            assertEquals(featuresById[featureTuple.id]?.id, tuple.getString(naksha.model.objects.StandardMembers.Id))
+            assertEquals(Action.CREATE, featureTuple.tupleNumber.action)
         }
     }
 }

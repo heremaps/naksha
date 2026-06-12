@@ -77,7 +77,7 @@ val LATENCY_MEMORY = Int64(0)
 val DEFAULT_DATA_ENCODING = Naksha.DEFAULT_DATA_ENCODING
 
 /**
- * The [members][Tuple.members] bit.
+ * The [members][Tuple.membersBook] bit.
  * @since 3.0.0
  */
 const val META_BIT: FetchMode = 1
@@ -101,7 +101,7 @@ const val GEOMETRY_BIT: FetchMode = 2
 const val GEOMETRY_CLEAR: FetchMode = GEOMETRY_BIT.inv()
 
 /**
- * The _feature_ bit, covers [feature][Tuple.feature] and tags.
+ * The _feature_ bit, covers [feature][Tuple.jbonBytes] and tags.
  * @since 3.0.0
  */
 const val FEATURE_BIT: FetchMode = 4

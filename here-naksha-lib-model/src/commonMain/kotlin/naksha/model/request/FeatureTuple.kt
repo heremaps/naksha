@@ -56,7 +56,7 @@ open class FeatureTuple(
      */
     val id: String?
         get() {
-            val member = tuple?.getStringMember(StandardMembers.Id)
+            val member = tuple?.getString(StandardMembers.Id)
             if (member != null) return member
             return feature?.id
         }
@@ -73,14 +73,14 @@ open class FeatureTuple(
      * - Setting the value to an explicit [NakshaFeature] will disable the automatic cache updates, when the [tuple] is modified.
      * - **Beware**: If the returned feature is modified, this will as well modify the cached version.
      * @since 3.0
-     * @see [Tuple.toNakshaFeature]
+     * @see [Tuple.decodeFeature]
      */
     open var feature: NakshaFeature?
         get() {
             var feature = cachedFeature
             val tuple = this.tuple
             if (tuple != null && tuple !== cachedTuple && !doNotAutoUpdate) {
-                feature = tuple.toNakshaFeature()
+                feature = tuple.decodeFeature()
                 cachedFeature = feature
                 cachedJson = null
             }
@@ -116,5 +116,5 @@ open class FeatureTuple(
      * @return a new copy of the tuple converted into a feature.
      * @since 3.0
      */
-    open fun newFeature(): NakshaFeature? = tuple?.toNakshaFeature()
+    open fun newFeature(): NakshaFeature? = tuple?.decodeFeature()
 }

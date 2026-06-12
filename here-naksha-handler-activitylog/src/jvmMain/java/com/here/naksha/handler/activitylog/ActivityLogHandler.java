@@ -58,7 +58,6 @@ import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.MetaColumn;
 import naksha.model.request.query.MetaQuery;
-import naksha.psql.PgLogLevel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -152,7 +151,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
    * Such tombstones represent features that never participated in activity logging and should be excluded.
    */
   private static boolean isOrphanTombstone(FeatureWithPredecessor fwp) {
-    return Action.DELETED.equals(fwp.feature().getProperties().getXyz().getAction())
+    return Action.DELETE.equals(fwp.feature().getProperties().getXyz().getAction())
         && fwp.oldFeature() == null;
   }
 
@@ -172,7 +171,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     // next_version is a plain int8 column, so we pass an Int64[] of the version values.
     Int64[] versions = new Int64[tupleNumbers.size()];
     for (int i = 0; i < tupleNumbers.size(); i++) {
-      versions[i] = tupleNumbers.get(i).version.txn;
+      versions[i] = tupleNumbers.get(i).version.value;
     }
     MetaQuery nextVersionQuery = new MetaQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, versions);
     ReadFeatures requestPredecessors = new ReadFeatures();
@@ -250,7 +249,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
      * nuuid (ie UPDATE & DELETE)
      */
     private static String nuuidOrNullIfDeleted(XyzNs xyzNs) {
-      if (Action.DELETED.equals(xyzNs.getAction())) {
+      if (Action.DELETE.equals(xyzNs.getAction())) {
         return null;
       } else {
         return xyzNs.getNuuid();

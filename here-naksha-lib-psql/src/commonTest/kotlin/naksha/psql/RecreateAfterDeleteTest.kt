@@ -8,7 +8,6 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
 
 /**
  * Verifies the auto-purge behaviour when a feature is re-created after deletion.
@@ -31,7 +30,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
             WriteRequest().add(Write().createFeature(collection, NakshaFeature(featureId)))
         ).features.first()!!
         assertEquals(featureId, created.id)
-        assertEquals(Action.CREATED, created.properties.xyz.action)
+        assertEquals(Action.CREATE, created.properties.xyz.action)
         assertEquals(1, created.properties.xyz.changeCount)
 
         // Step 2: UPDATE — build on the returned created feature so cc is correct
@@ -46,7 +45,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
             featureIds += featureId
         }).features.first()!!
         assertEquals(featureId, updated.id)
-        assertEquals(Action.UPDATED, updated.properties.xyz.action)
+        assertEquals(Action.UPDATE, updated.properties.xyz.action)
 
         // Step 3: DELETE — tombstone now lives in HEAD
         executeWrite(
@@ -61,7 +60,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
             queryDeleted = true
         }).features.first()!!
         assertEquals(featureId, deleted.id)
-        assertEquals(Action.DELETED, deleted.properties.xyz.action)
+        assertEquals(Action.DELETE, deleted.properties.xyz.action)
 
         // Confirm feature is invisible in a normal read
         Naksha.cache.clear()
@@ -79,7 +78,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
             }))
         ).features.first()!!
         assertEquals(featureId, recreated.id)
-        assertEquals(Action.CREATED, recreated.properties.xyz.action)
+        assertEquals(Action.CREATE, recreated.properties.xyz.action)
         // cc resets to 1 for the new lifecycle
         assertEquals(1, recreated.properties.xyz.changeCount)
 
@@ -91,7 +90,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
             featureIds += featureId
         })
         assertEquals(1, found.features.size)
-        assertEquals(Action.CREATED, found.features[0]!!.properties.xyz.action)
+        assertEquals(Action.CREATE, found.features[0]!!.properties.xyz.action)
 
         // queryHistory=true returns current HEAD (live CREATED) + all history entries.
         // History after auto-purge: DELETED (archived tombstone), UPDATED, CREATED (old lifecycle).
@@ -104,10 +103,10 @@ class RecreateAfterDeleteTest : PgTestBase() {
             versions = 10
         })
         assertEquals(4, historyOnly.features.size)
-        assertEquals(Action.CREATED, historyOnly.features[0]!!.properties.xyz.action)  // new HEAD
-        assertEquals(Action.DELETED, historyOnly.features[1]!!.properties.xyz.action)  // archived tombstone
-        assertEquals(Action.UPDATED, historyOnly.features[2]!!.properties.xyz.action)
-        assertEquals(Action.CREATED, historyOnly.features[3]!!.properties.xyz.action)
+        assertEquals(Action.CREATE, historyOnly.features[0]!!.properties.xyz.action)  // new HEAD
+        assertEquals(Action.DELETE, historyOnly.features[1]!!.properties.xyz.action)  // archived tombstone
+        assertEquals(Action.UPDATE, historyOnly.features[2]!!.properties.xyz.action)
+        assertEquals(Action.CREATE, historyOnly.features[3]!!.properties.xyz.action)
 
         // queryHistory + queryDeleted: same result — no tombstone in HEAD (was auto-purged),
         // so queryDeleted=true adds nothing here.
@@ -120,9 +119,9 @@ class RecreateAfterDeleteTest : PgTestBase() {
             versions = 10
         })
         assertEquals(4, full.features.size)
-        assertEquals(Action.CREATED, full.features[0]!!.properties.xyz.action)
-        assertEquals(Action.DELETED, full.features[1]!!.properties.xyz.action)
-        assertEquals(Action.UPDATED, full.features[2]!!.properties.xyz.action)
-        assertEquals(Action.CREATED, full.features[3]!!.properties.xyz.action)
+        assertEquals(Action.CREATE, full.features[0]!!.properties.xyz.action)
+        assertEquals(Action.DELETE, full.features[1]!!.properties.xyz.action)
+        assertEquals(Action.UPDATE, full.features[2]!!.properties.xyz.action)
+        assertEquals(Action.CREATE, full.features[3]!!.properties.xyz.action)
     }
 }

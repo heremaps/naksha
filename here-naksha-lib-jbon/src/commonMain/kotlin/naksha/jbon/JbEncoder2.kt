@@ -512,7 +512,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
                     var index = -1
                     var book = JB2_REF_BOOK_LOCAL
                     if (global != null) {
-                        index = global.indexOf(subString)
+                        index = global.indexOfString(subString)
                         if (index < 0) {
                             // Try URN-style prefixes ending in a colon.
                             var reversePos = pos - 1
@@ -523,7 +523,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
                                     sb.clear()
                                     JbDecoder2.readSubstring(this, wordStart, reversePos, sb)
                                     val prefix = sb.toString()
-                                    val pidx = global.indexOf(prefix)
+                                    val pidx = global.indexOfString(prefix)
                                     if (pidx >= 0) {
                                         pos = encodeStringRef(wordStart, pidx, JB2_REF_BOOK_GLOBAL, JB2_ADD_COLON)
                                         i = reversePos + 1
@@ -672,7 +672,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         val start = end
         val global = this.global
         if (global != null) {
-            val index = global.indexOf(key)
+            val index = global.indexOfString(key)
             if (index >= 0) {
                 encodeRef(index, JB2_REF_BOOK_GLOBAL)
                 return start

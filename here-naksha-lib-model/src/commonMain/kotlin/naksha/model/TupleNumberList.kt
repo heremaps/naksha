@@ -168,7 +168,7 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
                 dataview_set_int64(view, i, tupleNumber.featureNumber)
                 i += 8
             }
-            dataview_set_int64(view, i, tupleNumber.txn)
+            dataview_set_int64(view, i, tupleNumber.version)
             i += 8
         }
         check(i == SIZE)

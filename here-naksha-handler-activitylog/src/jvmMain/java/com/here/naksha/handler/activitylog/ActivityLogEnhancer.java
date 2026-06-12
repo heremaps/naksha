@@ -85,9 +85,9 @@ public class ActivityLogEnhancer {
 
   private static @Nullable JsonNode calculateDiff(
       @Nullable Action action, @NotNull NakshaFeature newFeature, @Nullable NakshaFeature oldFeature) {
-    if (action == null || Action.CREATED.equals(action) || Action.DELETED.equals(action)) {
+    if (action == null || Action.CREATE.equals(action) || Action.DELETE.equals(action)) {
       return null;
-    } else if (Action.UPDATED.equals(action)) {
+    } else if (Action.UPDATE.equals(action)) {
       if (oldFeature == null) {
         logger.warn(
             "Unable to calculate reversePatch for, missing predecessor for feature with uuid: {}, returning null",

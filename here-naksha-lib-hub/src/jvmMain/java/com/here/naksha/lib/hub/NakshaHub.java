@@ -23,7 +23,7 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static naksha.model.Action.CREATED;
+import static naksha.model.Action.CREATE;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
@@ -235,7 +235,7 @@ public class NakshaHub implements INaksha {
         NakshaFeatureList createdCollections = successResponse.getFeatures();
         for (NakshaFeature createdCollection : createdCollections) {
           if (Objects.equals(
-              CREATED.getValue(),
+              CREATE.getValue(),
               createdCollection.getProperties().getXyz().getAction())) {
             logger.info("Collection {} successfully created.", createdCollection.getId());
           }

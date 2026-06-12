@@ -1,10 +1,16 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package naksha.jbon
 
+import naksha.base.Int64
+import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
-// TODO: Implement IBook
+@JsExport
+class JbDictionary(override val bookType: BookType = BookType.LOCAL_BOOK,) : JbStructDecoder<JbDictionary>(), IBook {
+    override var databaseNumber: Int64? = null
+    override var featureNumber: Int64? = null
 
-class JbDictionary : JbStructDecoder<JbDictionary>(), IBook {
     /**
      * Cached ID of the dictionary, if any.
      */
@@ -110,11 +116,11 @@ class JbDictionary : JbStructDecoder<JbDictionary>(), IBook {
         return content[index]
     }
 
-    override fun stringAt(index: Int): String? {
+    override fun getStringAt(index: Int): String? {
         TODO("Not yet implemented")
     }
 
-    override fun find(hash: Int): List<DictEntry> {
+    override fun getAllWithHash(hash: Int): List<DictEntry> {
         TODO("Not yet implemented")
     }
 
@@ -123,7 +129,7 @@ class JbDictionary : JbStructDecoder<JbDictionary>(), IBook {
      * as a side effect invoke [loadAll].
      * @return The index of the given string or -1.
      */
-    override fun indexOf(string: String): Int {
+    override fun indexOfString(string: String): Int {
         loadAll()
         val content = this.content
         val length = content.size

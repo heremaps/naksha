@@ -30,11 +30,11 @@ class XyzMembers private constructor() {
         val XyzNextVersion = Member("~nv", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "nextVersion"))
 
         /**
-         * The same as [StandardMembers.GlobalBookNumber], but with a Data-Hub compatible path.
+         * The same as [StandardMembers.GlobalBookFeatureNumber], but with a Data-Hub compatible path.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzGlobalBookNumber = Member("~gbn", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "gbn"))
+        val XyzGlobalBookFeatureNumber = Member("~gbfn", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "globalBookFn"))
 
         /**
          * The same as [StandardMembers.Feature].
@@ -237,7 +237,7 @@ class XyzMembers private constructor() {
          */
         @JvmField @JsStatic
         val ALL: List<Member> = listOf(
-            XyzTn, XyzNextVersion, XyzGlobalBookNumber, XyzFeature, XyzId, XyzGeometry,
+            XyzTn, XyzNextVersion, XyzGlobalBookFeatureNumber, XyzFeature, XyzId, XyzGeometry,
             // Optional members
             XyzUpdatedAt, XyzCreatedAt, XyzAuthorTimestamp,
             XyzHash, XyzHereTile, XyzChangeCount, XyzBaseTn,

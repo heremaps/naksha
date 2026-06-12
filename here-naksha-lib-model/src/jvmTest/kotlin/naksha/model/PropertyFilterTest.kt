@@ -482,8 +482,8 @@ class PropertyFilterTest {
                 collectionNumber = collectionNumber,
                 featureNumber = featureNumber(feature.id),
                 version = version,
-                members = members,
-                feature = featureBytes
+                membersBook = members,
+                jbonBytes = featureBytes
             )
             return FeatureTuple(tupleNumber, tuple)
         }

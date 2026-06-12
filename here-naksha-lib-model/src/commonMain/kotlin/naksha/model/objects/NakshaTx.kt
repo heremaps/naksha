@@ -155,7 +155,7 @@ open class NakshaTx : NakshaFeature() {
      * @since 3.0
      */
     val txn: Int64
-        get() = version.txn
+        get() = version.value
 
     /**
      * Number of features modified in the transaction - total number of features from all touched collections.

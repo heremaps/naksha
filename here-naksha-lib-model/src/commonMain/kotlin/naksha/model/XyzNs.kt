@@ -4,6 +4,25 @@ package naksha.model
 
 import naksha.base.*
 import naksha.model.objects.StandardMembers
+import naksha.model.objects.XyzMembers
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthor
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthorTimestamp
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzChangeCount
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCreatedAt
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomString0
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomString1
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomString2
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomString3
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomValue0
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomValue1
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomValue2
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomValue3
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzHash
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzHereTile
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzOrigin
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTarget
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzUpdatedAt
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -19,8 +38,8 @@ import kotlin.jvm.JvmStatic
  * - **Create**: Clients should create features without an XYZ namespace, except for the [tags].
  * - **Delete**: The content of the feature is ignored for deletes.
  * - **Update**: If the client wants to update a feature, it should read the feature, then modify it, and then send the modified feature back, without changing the XYZ namespace, except for the [tags]. When it does operate like this, the change is performed atomically safe, because the [uuid] will hint the server which version was modified by the client, and is expected to be current _HEAD_. If the feature was updated meanwhile by another client, the server can try to perform an auto-merge, otherwise it will respond with a conflict (which is what the low-level storage will do).
- * - **Fork**: If the client reads a feature, and then writes it into another storage, map, or collection, or when the client modifies the ID of the feature, and then sends the feature to a service, without modifying the XYZ namespace, the storage will be able to detect that this is a **fork**. Forking means, that a feature is moved between storages, maps, or collections, or is re-identified. The storage will turn the action into [CREATED][Action.CREATED], and copy the [uuid] (which refers to the modified foreign state) into the [origin]. When the feature, that was forked, is modified later, it is possible to find all forks in all storages, maps, and collections, and to update them doing a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). This process is called rebase.
- * - **Split**: If the client need to split a feature into parts, for example a Topology into two, it is required that it clones the original feature, and then modifies the copies, while deleting the original feature that was split. All features being part of the split will have the same [uuid]. The feature that was split is expected to be deleted with [action] set to [DELETED][Action.DELETED], and the new parts are created with [action] set to [CREATED][Action.CREATED].
+ * - **Fork**: If the client reads a feature, and then writes it into another storage, map, or collection, or when the client modifies the ID of the feature, and then sends the feature to a service, without modifying the XYZ namespace, the storage will be able to detect that this is a **fork**. Forking means, that a feature is moved between storages, maps, or collections, or is re-identified. The storage will turn the action into [CREATED][Action.CREATE], and copy the [uuid] (which refers to the modified foreign state) into the [origin]. When the feature, that was forked, is modified later, it is possible to find all forks in all storages, maps, and collections, and to update them doing a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). This process is called rebase.
+ * - **Split**: If the client need to split a feature into parts, for example a Topology into two, it is required that it clones the original feature, and then modifies the copies, while deleting the original feature that was split. All features being part of the split will have the same [uuid]. The feature that was split is expected to be deleted with [action] set to [DELETED][Action.DELETE], and the new parts are created with [action] set to [CREATED][Action.CREATE].
  * - **Join**: If the client need to join multiple features into a single one, it is required to create a new (_merged_) feature, and to delete all features joined into this new one. It is important that the client set the [target] of all features being part of the join to the [_HEAD_ Guid][Guid.headOf] of the _created_ (_new_) feature. The [_HEAD_ Guid][Guid.headOf] is simply the [Guid] without the [tuple-number][TupleNumber], so basically `urn:here:naksha:guid:{feature-id}`.
  * @since 3.0
  */
@@ -175,7 +194,7 @@ class XyzNs : AnyObject() {
          */
         const val CS3 = "cs3"
 
-        private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
+        private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATE }
         private val _DATA_ENCODING_NULL = NullableEnum<XyzNs, DataEncoding>(DataEncoding::class)
         private val _APP_ID = NotNullProperty<XyzNs, String>(String::class) { _, _ -> NakshaContext.appId() }
         private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
@@ -196,105 +215,45 @@ class XyzNs : AnyObject() {
         @JsStatic
         fun fromTuple(tuple: Tuple): XyzNs {
             val tn = tuple.tupleNumber
-            val members = tuple.members
-            val id = members?.getByName("id") as? String ?: tuple.featureNumber.toString()
-            val guid = Guid(id, tn)
-            val updatedAt = tuple.getLongMember(StandardMembers.XyzUpdatedAt)
-            val createdAt = tuple.getLongMember(StandardMembers.CreatedAtXyz).let {
-                if (it == Int64(0L)) updatedAt else it
-            }
-            val authorTs = tuple.getLongMember(StandardMembers.XyzAuthorTimestamp)?.let {
-                if (it == Int64(0)) updatedAt else it
-            } ?: updatedAt
-            val nextVersion = tuple.nextVersion
-            val nextTn = if (nextVersion != Int64(-1L)) TupleNumber(
-                tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber, Version(nextVersion)
-            ) else null
-            val base_tn = members?.getByName("base_tn")?.let {
-                if (it is ByteArray) TupleNumber.fromByteArray(it, 0, TupleNumberVariant.TupleNumberVariant_C.B128,
-                    tn.storageNumber, tn.mapNumber, tn.collectionNumber)
-                else null
-            }
+            val id = tuple.id
+            val guid = Guid.fromTuple(tuple)
+            val updatedAt = tuple.getLong(XyzUpdatedAt, Platform.currentMillis())
+            val createdAt = tuple.getLong(XyzCreatedAt, updatedAt)
+            val authorTs = tuple.getLong(XyzAuthorTimestamp,updatedAt)
+            val nextTn = tuple.nextTupleNumber
             return AnyObject().apply {
                 setRaw(UUID, guid.toString())
                 if (nextTn != null) setRaw(NUUID, Guid(id, nextTn).toString())
-                if (base_tn != null) setRaw(MUUID, Guid(id, base_tn).toString())
+                setRaw(UPDATED_AT, updatedAt)
                 if (createdAt != updatedAt) setRaw(CREATED_AT, createdAt)
                 if (authorTs != updatedAt) setRaw(AUTHOR_TS, authorTs)
-                setRaw(UPDATED_AT, updatedAt)
-                setRaw(CHANGE_COUNT, tuple.getIntMember(StandardMembers.ChangeCountXyz))
-                setRaw(APP_ID, tuple.getStringMember(StandardMembers.AppIdXyz))
-                val author = tuple.getStringMember(StandardMembers.AuthorXyz)
+                setRaw(CHANGE_COUNT, tuple.getInt(XyzChangeCount, 1))
+                setRaw(APP_ID, tuple.getString(XyzAppId))
+                val author = tuple.getString(XyzAuthor)
                 if (author != null) setRaw(AUTHOR, author)
-                setRaw(DATA_ENCODING, tuple.getStringMember(StandardMembers.DataEncoding))
                 setRaw(ACTION, tn.action.toString())
-                setRaw(HASH, tuple.getIntMember(StandardMembers.Hash))
-                setRaw(HERE_TILE, tuple.getIntMember(StandardMembers.HereTileXyz))
-                val origin = tuple.getStringMember(StandardMembers.OriginXyz)
+                setRaw(HASH, tuple.getInt(XyzHash))
+                setRaw(HERE_TILE, tuple.getInt(XyzHereTile))
+                val origin = tuple.getString(XyzOrigin)
                 if (origin != null) setRaw(ORIGIN, origin)
-                val target = tuple.getStringMember(StandardMembers.TargetXyz)
+                val target = tuple.getString(XyzTarget)
                 if (target != null) setRaw(TARGET, target)
-                val cv0 = members?.getByName("cv0")
-                if (cv0 != null) setRaw(CV0, cv0 as? Double)
-                val cv1 = members?.getByName("cv1")
-                if (cv1 != null) setRaw(CV1, cv1 as? Double)
-                val cv2 = members?.getByName("cv2")
-                if (cv2 != null) setRaw(CV2, cv2 as? Double)
-                val cv3 = members?.getByName("cv3")
-                if (cv3 != null) setRaw(CV3, cv3 as? Double)
-                val cs0 = tuple.getStringMember(StandardMembers.XyzCustomString0)
+                val cv0: Double = tuple.getDouble(XyzCustomValue0)
+                if (cv0 == cv0) setRaw(CV0, cv0)
+                val cv1: Double = tuple.getDouble(XyzCustomValue1)
+                if (cv1 == cv1) setRaw(CV1, cv1)
+                val cv2: Double = tuple.getDouble(XyzCustomValue2)
+                if (cv2 == cv2) setRaw(CV2, cv2)
+                val cv3: Double = tuple.getDouble(XyzCustomValue3)
+                if (cv3 == cv3) setRaw(CV3, cv3)
+                val cs0 = tuple.getString(XyzCustomString0)
                 if (cs0 != null) setRaw(CS0, cs0)
-                val cs1 = tuple.getStringMember(StandardMembers.XyzCustomString1)
+                val cs1 = tuple.getString(XyzCustomString1)
                 if (cs1 != null) setRaw(CS1, cs1)
-                val cs2 = tuple.getStringMember(StandardMembers.CustomString2)
+                val cs2 = tuple.getString(XyzCustomString2)
                 if (cs2 != null) setRaw(CS2, cs2)
-                val cs3 = tuple.getStringMember(StandardMembers.XyzCustomString3)
+                val cs3 = tuple.getString(XyzCustomString3)
                 if (cs3 != null) setRaw(CS3, cs3)
-            }.proxy(XyzNs::class)
-        }
-
-        /**
-         * Create the XYZ-namespace from the given [Metadata].
-         * @param meta the [Metadata]
-         * @return the [XYZ namespace][XyzNs].
-         * @see [Metadata.fromXyzNs]
-         * @deprecated Use [fromTuple] instead.
-         */
-        @Deprecated("Use fromTuple instead", ReplaceWith("fromTuple(tuple)"))
-        @JvmStatic
-        @JsStatic
-        fun fromMetadata(meta: Metadata): XyzNs {
-            val tn = meta.tupleNumber
-            val guid = Guid(meta.id, tn)
-            val nextVersion = meta.nextVersion
-            val nextTn = if (nextVersion != null) TupleNumber(
-                tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber, Version(nextVersion)
-            ) else null
-            val base_tn = meta.baseTupleNumber
-            return AnyObject().apply {
-                setRaw(UUID, guid.toString())
-                if (nextTn != null) setRaw(NUUID, Guid(meta.id, nextTn).toString())
-                if (base_tn != null) setRaw(MUUID, Guid(meta.id, base_tn).toString())
-                if (meta.createdAt != meta.updatedAt) setRaw(CREATED_AT, meta.createdAt)
-                if (meta.authorTs != meta.updatedAt) setRaw(AUTHOR_TS, meta.authorTs)
-                setRaw(UPDATED_AT, meta.updatedAt)
-                setRaw(CHANGE_COUNT, meta.changeCount)
-                setRaw(APP_ID, meta.appId)
-                if (meta.author != null) setRaw(AUTHOR, meta.author)
-                setRaw(DATA_ENCODING, meta.dataEncoding.toString())
-                setRaw(ACTION, meta.action().toString())
-                setRaw(HASH, meta.hash)
-                setRaw(HERE_TILE, meta.hereTile)
-                if (meta.origin != null) setRaw(ORIGIN, meta.origin)
-                if (meta.target != null) setRaw(TARGET, meta.target)
-                if (meta.cv0 != null) setRaw(CV0, meta.cv0)
-                if (meta.cv1 != null) setRaw(CV1, meta.cv1)
-                if (meta.cv2 != null) setRaw(CV2, meta.cv2)
-                if (meta.cv3 != null) setRaw(CV3, meta.cv3)
-                if (meta.cs0 != null) setRaw(CS0, meta.cs0)
-                if (meta.cs1 != null) setRaw(CS1, meta.cs1)
-                if (meta.cs2 != null) setRaw(CS2, meta.cs2)
-                if (meta.cs3 != null) setRaw(CS3, meta.cs3)
             }.proxy(XyzNs::class)
         }
 
@@ -559,7 +518,8 @@ class XyzNs : AnyObject() {
             // Downward compatibility hack.
             val raw = getRaw("version")
             if (raw is Int64 && raw >= Version.MIN) return Version(raw)
-            return guid?.tupleNumber?.version
+            val version = guid?.tupleNumber?.version
+            return if (version != null) Version(version) else null
         }
 
     /**
@@ -567,7 +527,7 @@ class XyzNs : AnyObject() {
      * @since 2.0
      */
     val txn: Int64?
-        get() = guid?.tupleNumber?.txn
+        get() = guid?.tupleNumber?.version
 
     /**
      * The action of the [Tuple], encoded as the lower 2 bits of the transaction number.

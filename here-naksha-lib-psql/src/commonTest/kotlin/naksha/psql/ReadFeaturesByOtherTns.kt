@@ -40,7 +40,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
         val updateResp = executeWrite(update)
 
         // And: the shared `next_version` of all updated features (all 5 updates ran in one transaction).
-        val updatedVersion: Int64 = updateResp.features[0]!!.tupleNumber.version.txn
+        val updatedVersion: Int64 = updateResp.features[0]!!.tupleNumber.version.value
 
         // When: querying for features whose `next_version` matches that version
         val nextVersionQuery = MetaQuery(

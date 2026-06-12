@@ -493,10 +493,10 @@ class JbCoreTest {
         assertEquals(dictId, dict.id)
         assertEquals("foo", dict.get(0))
         assertEquals("bar", dict.get(1))
-        assertEquals(0, dict.indexOf("foo"))
-        assertEquals(1, dict.indexOf("bar"))
-        assertEquals(-1, dict.indexOf(dictId))
-        assertEquals(-1, dict.indexOf("notFound"))
+        assertEquals(0, dict.indexOfString("foo"))
+        assertEquals(1, dict.indexOfString("bar"))
+        assertEquals(-1, dict.indexOfString(dictId))
+        assertEquals(-1, dict.indexOfString("notFound"))
     }
 
     @Test

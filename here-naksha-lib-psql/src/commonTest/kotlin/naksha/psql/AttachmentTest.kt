@@ -28,7 +28,7 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
-            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = this.featureTupleList
             assertEquals(1, featureTupleList.size)
@@ -49,7 +49,7 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
-            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = this.featureTupleList
             assertEquals(1, featureTupleList.size)
@@ -82,7 +82,7 @@ class AttachmentTest : PgTestBase() {
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("start", feature.properties["test"])
-            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = this.featureTupleList
             assertEquals(1, featureTupleList.size)
@@ -105,7 +105,7 @@ class AttachmentTest : PgTestBase() {
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("start", feature.properties["test"])
-            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = this.featureTupleList
             assertEquals(1, featureTupleList.size)
@@ -138,7 +138,7 @@ class AttachmentTest : PgTestBase() {
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("end", feature.properties["test"])
-            assertEquals(Action.UPDATED, feature.properties.xyz.guid?.tupleNumber?.action)
+            assertEquals(Action.UPDATE, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = this.featureTupleList
             assertEquals(1, featureTupleList.size)
@@ -170,7 +170,7 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
-            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.guid?.tupleNumber?.action)
             assertEquals("start", feature.properties["test"])
 
             val featureTupleList = this.featureTupleList
@@ -193,7 +193,7 @@ class AttachmentTest : PgTestBase() {
             assertEquals(1, features.size)
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
-            assertEquals(Action.CREATED, feature.properties.xyz.guid?.tupleNumber?.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.guid?.tupleNumber?.action)
             assertEquals("start", feature.properties["test"])
 
             val featureTupleList = this.featureTupleList
@@ -227,7 +227,7 @@ class AttachmentTest : PgTestBase() {
             val feature = assertNotNull(features.first())
             assertEquals(featureToCreate.id, feature.id)
             assertEquals("end", feature.properties["test"])
-            assertEquals(Action.UPDATED, feature.properties.xyz.guid?.tupleNumber?.action)
+            assertEquals(Action.UPDATE, feature.properties.xyz.guid?.tupleNumber?.action)
 
             val featureTupleList = this.featureTupleList
             assertEquals(1, featureTupleList.size)

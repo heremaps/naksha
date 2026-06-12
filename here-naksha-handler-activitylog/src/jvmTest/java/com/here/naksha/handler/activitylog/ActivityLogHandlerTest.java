@@ -162,15 +162,15 @@ class ActivityLogHandlerTest {
   void shouldComposeActivityFeatures() throws Exception {
     // Given: features uuid
     String featureId = "featureId";
-    Guid initialUuid = guid(featureId, Version.now(new JvmInt64(1),Action.CREATED));
-    Guid newUuid = guid(featureId, Version.now(new JvmInt64(2),Action.UPDATED));
+    Guid initialUuid = guid(featureId, Version.now(new JvmInt64(1),Action.CREATE));
+    Guid newUuid = guid(featureId, Version.now(new JvmInt64(2),Action.UPDATE));
 
     // And: old version of feature
     NakshaFeature oldFeature = nakshaFeature(featureId)
         .withUuid(initialUuid.toString())
         .withPuuid(null)
         .withNuuid(newUuid.toString())
-        .withAction(Action.CREATED)
+        .withAction(Action.CREATE)
         .withCustomProperties(
             Map.of(
                 "op", "old feature",
@@ -183,7 +183,7 @@ class ActivityLogHandlerTest {
         .withUuid(newUuid.toString())
         .withPuuid(initialUuid.toString())
         .withNuuid(null)
-        .withAction(Action.UPDATED)
+        .withAction(Action.UPDATE)
         .withCustomProperties(Map.of(
             "op", "new feature",
             "magicBoolean", true
@@ -205,7 +205,7 @@ class ActivityLogHandlerTest {
             singleFeature -> singleFeature
                 .hasId(uuid(newFeature))
                 .hasActivityLogId(featureId)
-                .hasAction(Action.UPDATED.toString())
+                .hasAction(Action.UPDATE.toString())
                 .hasReversePatch("""
                     {
                       "add": 1,
@@ -236,7 +236,7 @@ class ActivityLogHandlerTest {
   void shouldNotCalculateReversePatchAfterCreation() throws Exception {
     // Given
     String featureId = "featureId";
-    Guid createdGuid = guid(featureId, Version.now(new JvmInt64(0), Action.CREATED));
+    Guid createdGuid = guid(featureId, Version.now(new JvmInt64(0), Action.CREATE));
 
     // And: space storage that returns only some feature with 'CREATE' action
     configureSpaceStorage(
@@ -244,7 +244,7 @@ class ActivityLogHandlerTest {
             nakshaFeature(featureId)
                 .withUuid(createdGuid.toString())
                 .withPuuid(null)
-                .withAction(Action.CREATED)
+                .withAction(Action.CREATE)
                 .build())
         ),
         requestForMissingPredecessorsReturns(emptyList())
@@ -256,7 +256,7 @@ class ActivityLogHandlerTest {
     // Then: result does not bear any reverse patch
     assertThatResult(result)
         .hasActivityFeatures(feature -> feature
-            .hasAction(Action.CREATED.toString())
+            .hasAction(Action.CREATE.toString())
             .hasId(createdGuid.toString())
             .hasActivityLogId(featureId)
             .hasReversePatch(null)
@@ -269,8 +269,8 @@ class ActivityLogHandlerTest {
     String featureId = "featureId";
     Timestamp ts0 = Timestamp.fromMillis(T0);
     Timestamp ts1 = Timestamp.fromMillis(T1);
-    Version createdVersion = Version.auto(ts0.getYear(), ts0.getMonth(), ts0.getDay(), new JvmInt64(0), Action.CREATED);
-    Version deletedVersion = Version.auto(ts1.getYear(), ts1.getMonth(), ts1.getDay(), new JvmInt64(1), Action.DELETED);
+    Version createdVersion = Version.auto(ts0.getYear(), ts0.getMonth(), ts0.getDay(), new JvmInt64(0), Action.CREATE);
+    Version deletedVersion = Version.auto(ts1.getYear(), ts1.getMonth(), ts1.getDay(), new JvmInt64(1), Action.DELETE);
     Guid createdGuid = guid(featureId, createdVersion);
     Guid deletedGuid = guid(featureId, deletedVersion);
 
@@ -279,8 +279,8 @@ class ActivityLogHandlerTest {
         initialHistoryAwareRequestReturns(List.of(
             nakshaFeature(featureId)
                 .withUuid(deletedGuid.toString())
-                .withNuuid(null)
-                .withAction(Action.DELETED)
+                .withPuuid(createdGuid.toString())
+                .withAction(Action.DELETE)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T1)
                 .build()
@@ -288,8 +288,8 @@ class ActivityLogHandlerTest {
         requestForMissingPredecessorsReturns(List.of(
             nakshaFeature("featureId")
                 .withUuid(createdGuid.toString())
-                .withNuuid(deletedGuid.toString())
-                .withAction(Action.CREATED)
+                .withPuuid(null)
+                .withAction(Action.CREATE)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T0)
                 .build()
@@ -303,7 +303,7 @@ class ActivityLogHandlerTest {
     assertThatResult(result)
         .hasActivityFeatures(
             feature -> feature
-                .hasAction(Action.DELETED.toString())
+                .hasAction(Action.DELETE.toString())
                 .hasId(deletedGuid.toString())
                 .hasActivityLogId(featureId)
                 .hasReversePatch(null)
@@ -493,7 +493,7 @@ class ActivityLogHandlerTest {
     }
     if (versions.size() != expectedTns.length) return false;
     return Arrays.stream(expectedTns)
-        .map(tn -> tn.version.txn)
+        .map(tn -> tn.version.value)
         .allMatch(expected -> versions.stream().anyMatch(expected::equals));
   }
 

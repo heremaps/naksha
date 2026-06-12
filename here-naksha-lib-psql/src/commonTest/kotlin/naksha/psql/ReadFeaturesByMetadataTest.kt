@@ -426,7 +426,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
             queryHistory = true
             queryDeleted = true
             query = RequestQuery().apply {
-                metadata = MetaQuery(MetaColumn.action(), DoubleOp.NE, Action.CREATED.intValue)
+                metadata = MetaQuery(MetaColumn.action(), DoubleOp.NE, Action.CREATE.intValue)
             }
         }
         val response = executeRead(getHistoryWithoutUpdates)
@@ -435,7 +435,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // Then: We only got DELETED state
         assertEquals(1, retrievedFeatures.size)
         val singleRetrievedHistoryFeature = retrievedFeatures[0]!!
-        assertEquals(Action.DELETED, singleRetrievedHistoryFeature.properties.xyz.action)
+        assertEquals(Action.DELETE, singleRetrievedHistoryFeature.properties.xyz.action)
     }
 
     private fun insertFeatureAndGetXyz(feature: NakshaFeature): XyzNs {

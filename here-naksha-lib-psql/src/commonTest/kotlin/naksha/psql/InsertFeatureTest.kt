@@ -54,7 +54,7 @@ class InsertFeatureTest : PgTestBase() {
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                            .hasProperty("action", Action.CREATED.text)
+                            .hasProperty("action", Action.CREATE.text)
                     }
                     .hasTags(TagList("wicked"))
             }
@@ -129,7 +129,7 @@ class InsertFeatureTest : PgTestBase() {
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                            .hasProperty("action", Action.CREATED.text)
+                            .hasProperty("action", Action.CREATE.text)
                     }
                     .hasTags(TagList("wicked"))
             }
@@ -229,7 +229,7 @@ class InsertFeatureTest : PgTestBase() {
                             retrievedXyz
                                 .hasProperty("appId", PgTest.TEST_APP_ID)
                                 .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                                .hasProperty("action", Action.CREATED.text)
+                                .hasProperty("action", Action.CREATE.text)
                         }
                 }
         }

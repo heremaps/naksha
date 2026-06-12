@@ -58,7 +58,6 @@ import naksha.base.MapProxy;
 import naksha.base.StringList;
 import naksha.model.Action;
 import naksha.model.IReadSession;
-import naksha.model.ISession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
@@ -78,7 +77,6 @@ import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
-import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.model.util.RequestHelper;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -148,14 +146,14 @@ public class ViewTest {
     request.add(write.createFeature(TEST_MAP_ID, "", feature));
 //    when(storage.tupleToFeature(any())).thenReturn(feature);
 
-    Response success = new SuccessResponse(sampleXyzWriteResponse(1, Action.CREATED));
+    Response success = new SuccessResponse(sampleXyzWriteResponse(1, Action.CREATE));
     when(session.execute(request)).thenReturn(success);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
-    assertEquals(Action.CREATED, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
+    assertEquals(Action.CREATE, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
 
@@ -173,7 +171,7 @@ public class ViewTest {
     final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("0");
     request.add(write.deleteFeatureById(topologiesDS.getMapId(), topologiesDS.getCollectionId(), feature.getId()));
-    SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, Action.DELETED));
+    SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, Action.DELETE));
     when(session.execute(request)).thenReturn(successResponse1);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
 
@@ -181,7 +179,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatureTupleList().get(0).getId());
-    assertEquals(Action.DELETED, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
+    assertEquals(Action.DELETE, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
 

@@ -2,6 +2,7 @@
 
 package naksha.jbon
 
+import naksha.base.Int64
 import kotlin.js.JsExport
 
 /**
@@ -20,7 +21,7 @@ import kotlin.js.JsExport
 @JsExport
 interface IBook {
     /**
-     * The identifier of the dictionary; if any.
+     * The optional custom identifier of the book; if any.
      * @since 3.0.0
      */
     val id: String?
@@ -30,6 +31,24 @@ interface IBook {
      * @since 3.0.0
      */
     val length: Int
+
+    /**
+     * The book-type.
+     * @since 3.0
+     */
+    val bookType: BookType
+
+    /**
+     * The database-number of the book, if this is a global book stored in a database.
+     * @since 3.0
+     */
+    val databaseNumber: Int64?
+
+    /**
+     * The feature-number of the book, if this is a global book stored in a database.
+     * @since 3.0
+     */
+    val featureNumber: Int64?
 
     /**
      * Returns the element at the given index. If no such index exists, returns _null_.
@@ -46,7 +65,7 @@ interface IBook {
      * @return the index of the given string or -1, if the string is not part of the dictionary.
      * @since 3.0.0
      */
-    fun indexOf(string: String): Int
+    fun indexOfString(string: String): Int
 
     /**
      * Returns the string at the given index. If no such index exists, returns _null_.
@@ -54,7 +73,7 @@ interface IBook {
      * @return the string or _null_.
      * @since 3.0.0
      */
-    fun stringAt(index: Int): String?
+    fun getStringAt(index: Int): String?
 
     /**
      * Returns `true` if this dictionary contains a `memberNames` section — a parallel array
@@ -70,7 +89,7 @@ interface IBook {
      * @return the index, or `-1`.
      * @since 3.0.0
      */
-    fun getIndexOf(name: String): Int = -1
+    fun indexOfName(name: String): Int = -1
 
     /**
      * Returns the name at the given index from the `memberNames` section, or `null` if no
@@ -89,7 +108,7 @@ interface IBook {
     fun namesLength(): Int = 0
 
     /**
-     * Returns the value associated with the given name by looking up the index via [getIndexOf]
+     * Returns the value associated with the given name by looking up the index via [indexOfName]
      * and then reading the value via [get]. Returns _null_ when the name is not found or the
      * index maps to a _null_ slot.
      * @param name the member name to look up.
@@ -97,7 +116,7 @@ interface IBook {
      * @since 3.0.0
      */
     fun getByName(name: String): Any? {
-        val i = getIndexOf(name)
+        val i = indexOfName(name)
         return if (i < 0) null else get(i)
     }
 
@@ -107,5 +126,5 @@ interface IBook {
      * @return a list of all entries that match the given hash.
      * @since 3.0.0
      */
-    fun find(hash: Int): List<DictEntry>
+    fun getAllWithHash(hash: Int): List<DictEntry>
 }

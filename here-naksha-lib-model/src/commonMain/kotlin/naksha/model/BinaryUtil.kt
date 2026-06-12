@@ -211,7 +211,7 @@ class BinaryUtil private constructor() {
                 pos += 8
             } else fn = featureNumber
             val txn = dataview_get_int64(view, pos)
-            return TupleNumber(sn, mn, cn, fn, Version(txn))
+            return TupleNumber(sn, mn, cn, fn, txn)
         }
     }
 }
