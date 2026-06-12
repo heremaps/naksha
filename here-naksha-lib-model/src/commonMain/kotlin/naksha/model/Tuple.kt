@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.AnyList
 import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.MapProxy
@@ -95,14 +94,14 @@ data class Tuple @JvmOverloads constructor(
                 if (action != Action.VERSION && action == Action.CREATE) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action CREATE given, the feature exists already (has a uuid)")
                 }
-                newTn = TupleNumber.copy(prevTn, session.useTransaction().version.value)
+                newTn = TupleNumber.copy(prevTn, session.useTransaction().version.number)
             } else {
                 if (action != Action.VERSION && action != Action.CREATE) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action $action given, the feature does not exist (missing uuid)")
                 }
                 newTn = TupleNumber(
                     // The feature is stored in the same database as the collection it is inserted into.
-                    colTn.storageNumber,
+                    colTn.databaseNumber,
                     // The feature is stored in the same catalog as the collection it is inserted into.
                     colTn.mapNumber,
                     // The feature-number of the collection is the collection-number of the feature we want to store in the collection.
@@ -110,14 +109,14 @@ data class Tuple @JvmOverloads constructor(
                     // The feature-number of the actual feature. Will either be set explicit or calcualted.
                     feature.featureNumber,
                     // The version is the one of the transaction.
-                    session.useTransaction().version.value
+                    session.useTransaction().version.number
                 )
             }
             // Update the feature with its new tuple-number.
             tnMember.write(feature, newTn)
             val globalBookTn: TupleNumber?
             if (globalBook != null) {
-                if (newTn.storageNumber != globalBook.databaseNumber || globalBook.featureNumber == null) {
+                if (newTn.databaseNumber != globalBook.databaseNumber || globalBook.featureNumber == null) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "The given global book is not located in the same storage as the feature")
                 }
                 globalBookTn = TupleNumber.copy(newTn, storageNumber = globalBook.databaseNumber, featureNumber = globalBook.featureNumber)
@@ -240,7 +239,7 @@ data class Tuple @JvmOverloads constructor(
      */
     val nextTupleNumber: TupleNumber?
         get() {
-            if (nextVersion >= Version.HEAD.value) return null
+            if (nextVersion >= Version.HEAD.number) return null
             var nextTn = _nextTupleNumber
             if (nextTn == null) {
                 nextTn = TupleNumber.copy(tupleNumber, version = nextVersion)
@@ -454,7 +453,7 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      * @throws NakshaException if any error occurs.
      */
-    fun decodeFeature(globalBook: IBook?): NakshaFeature {
+    fun decodeFeature(globalBook: IBook?): NakshaFeature { // TODO: Java: After switching back to Java, we can allow arbitrary return types.
         val rawBytes = if (isGzipped(jbonBytes)) gzipInflate(jbonBytes) else jbonBytes
         val decoder = JbDecoder2(globalBook, membersBook)
         decoder.mapBytes(rawBytes)

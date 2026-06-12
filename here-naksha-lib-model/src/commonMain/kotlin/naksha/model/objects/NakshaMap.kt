@@ -72,20 +72,20 @@ open class NakshaMap() : NakshaFeature() {
     /**
      * Always return `2`, because all catalogs (maps) are always stored in `naksha~catalogs` collection.
      * @since 3.0
-     * @see [Naksha.CATALOGS_COL]
-     * @see [Naksha.CATALOGS_COL_NUMBER]
+     * @see [Naksha.CATALOGS_COL_ID]
+     * @see [Naksha.CATALOGS_COL_FN]
      */
     override val collectionNumber: Int
-        get() = Naksha.CATALOGS_COL_NUMBER
+        get() = Naksha.CATALOGS_COL_FN
 
     /**
      * Always return `0`, because all maps are always stored in `naksha~admin` map.
      * @since 3.0
-     * @see [Naksha.ADMIN_MAP]
-     * @see [Naksha.ADMIN_MAP_NUMBER]
+     * @see [Naksha.ADMIN_CATALOG_ID]
+     * @see [Naksha.ADMIN_CATALOG_FN]
      */
     override val mapNumber: Int
-        get() = Naksha.ADMIN_MAP_NUMBER
+        get() = Naksha.ADMIN_CATALOG_FN
 
     /**
      * The storage-id of the storage in which the map is located; `null` if not yet known.

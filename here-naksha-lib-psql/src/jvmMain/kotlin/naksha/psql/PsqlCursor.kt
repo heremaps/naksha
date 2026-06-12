@@ -97,7 +97,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
     /**
      * The names of the columns, indexed from 0, while in a SQL statement the index starts with 1.
      */
-    private fun columnNames(): Array<String> =
+    override fun columnNames(): Array<String> =
         columnNames ?: throw IllegalStateException("Initialization error: Missing column names array")
 
     /**

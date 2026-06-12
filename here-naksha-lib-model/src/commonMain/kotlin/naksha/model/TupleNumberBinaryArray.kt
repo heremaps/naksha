@@ -385,7 +385,7 @@ data class TupleNumberBinaryArray(
     override fun lastIndexOf(element: TupleNumber?): Int {
         if (element == null) return -1
         for (i in size - 1 downTo 0) {
-            if (element.storageNumber == getStorageNumber(i)
+            if (element.databaseNumber == getStorageNumber(i)
                 && element.mapNumber == getMapNumber(i)
                 && element.collectionNumber == getCollectionNumber(i)
                 && element.featureNumber == getFeatureNumber(i)
@@ -397,7 +397,7 @@ data class TupleNumberBinaryArray(
     override fun indexOf(element: TupleNumber?): Int {
         if (element == null) return -1
         for (i in 0 until size) {
-            if (element.storageNumber == getStorageNumber(i)
+            if (element.databaseNumber == getStorageNumber(i)
                 && element.mapNumber == getMapNumber(i)
                 && element.collectionNumber == getCollectionNumber(i)
                 && element.featureNumber == getFeatureNumber(i)

@@ -34,7 +34,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
             val row = e.index
             val write = e.value
             inRows.set(row, "id", write.id)
-            inRows.set(row, "expected_version", write.version?.value)
+            inRows.set(row, "expected_version", write.version?.number)
         }
     }
 
@@ -43,7 +43,7 @@ internal class PgWriterDelete(writer: PgWriter, collection: PgCollection, partit
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         // The new version with action bits set to DELETED (2).
-        val deleted_version = "(${tx.version.value}::int8 | 2)"
+        val deleted_version = "(${tx.version.number}::int8 | 2)"
 
         // All input provided by client, `id` and optionally `expected_version`
         val query = """WITH query AS (

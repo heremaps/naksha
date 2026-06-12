@@ -35,7 +35,6 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.*
-import naksha.psql.PgType
 
 class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
@@ -62,7 +61,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
             mapId = collection.mapId
-            collectionIds += Naksha.COLLECTIONS_COL
+            collectionIds += Naksha.ADMIN_COL_ID
             featureIds += collection.id
         }
         val virtBeforeDelete = executeRead(selectCollectionFromVirt)
@@ -332,7 +331,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
             mapId = map.id
-            collectionIds += Naksha.COLLECTIONS_COL
+            collectionIds += Naksha.ADMIN_COL_ID
             featureIds += collection.id
         }
         val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection::class)

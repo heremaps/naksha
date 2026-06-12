@@ -21,10 +21,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
      */
     override fun filter(featureTuple: FeatureTuple): FeatureTuple? {
         val pSearch = req.query.properties ?: return featureTuple
-        val tuple = featureTuple.tuple ?: return null
-        val sn = tuple.storageNumber
-        val dictReader = getStorageByNumber(sn) ?: cache.getDictReader(sn)
-        val feature = Naksha.decodeFeature(tuple.jbonBytes, dictReader) ?: return null
+        val feature = featureTuple.feature ?: return null
         return if (resolvePropsQueryOnFeature(pSearch, feature)) featureTuple else null
     }
 

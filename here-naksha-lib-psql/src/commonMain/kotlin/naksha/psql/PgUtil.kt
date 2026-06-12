@@ -6,11 +6,11 @@ import naksha.base.*
 import naksha.geo.SpGeometry
 import naksha.jbon.*
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.BOOKS_COL
-import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
+import naksha.model.Naksha.NakshaCompanion.ADMIN_COL_ID
+import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
+import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.objects.NakshaFeature
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
@@ -32,7 +32,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_MAP_QUOTED = quoteIdent(ADMIN_MAP)
+        val ADMIN_MAP_QUOTED = quoteIdent(ADMIN_CATALOG_ID)
 
         /**
          * The quoted identifier of the collection in which transactions are stored.
@@ -40,7 +40,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(TRANSACTIONS_COL)
+        val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(TRANSACTIONS_COL_ID)
 
         /**
          * The quoted identifier of the virtual catalogs collection to be used in queries.
@@ -48,7 +48,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_CATALOGS_COL_QUOTED = quoteIdent(CATALOGS_COL)
+        val ADMIN_CATALOGS_COL_QUOTED = quoteIdent(CATALOGS_COL_ID)
 
         /**
          * The quoted identifier of the virtual collection in which the books (global JBON2 dictionaries) are stored.
@@ -56,7 +56,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_BOOKS_COL_QUOTED = quoteIdent(BOOKS_COL)
+        val ADMIN_BOOKS_COL_QUOTED = quoteIdent(BOOKS_COL_ID)
 
         /**
          * The quoted identifier of the virtual collections collection to be used in queries.
@@ -64,7 +64,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val COLLECTIONS_COL_QUOTED = quoteIdent(COLLECTIONS_COL)
+        val COLLECTIONS_COL_QUOTED = quoteIdent(ADMIN_COL_ID)
 
         /**
          * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256").

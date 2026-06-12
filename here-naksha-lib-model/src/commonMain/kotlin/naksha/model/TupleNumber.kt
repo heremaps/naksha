@@ -22,13 +22,13 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * The in-memory representation of the unique [Tuple] identifier.
+ * The in-memory representation of the unique address of a [Tuple].
  *
- * The full qualified [Tuple] identifier is a 256-bit value _(32 byte)_, persisting out of the storage-number, map-number, collection-number, feature-number, and [transaction-number][Version]. Note that the lower two bits of `version.txn` encode the [action][Action].
+ * The full qualified [Tuple] address is a 256-bit value _(32 byte)_, persisting out of the database-number, catalog-number, collection-number, feature-number, and version. Note that the lower two bits of version encode the [action][Action].
  *
- * The tuple-number is stringified into:
+ * The tuple-number is stringified either into URN:
  * ```
- * {storage-number}:{map-number}:{collection-number}:{feature-number}:{version}
+ * urn:naksha:tn:{database-number}:{catalog-number}:{collection-number}:{feature-number}:{version}
  * ```
  *
  * - There are no two [tuples][Tuple] with the same [tuple-number][TupleNumber]; world-wide.
@@ -37,10 +37,10 @@ import kotlin.jvm.JvmStatic
 @JsExport
 data class TupleNumber(
     /**
-     * The storage-number, uniquely identifies the storage where the tuple is stored.
+     * The database-number, uniquely identifies the storage where the tuple is stored.
      * @since 3.0
      */
-    @JvmField val storageNumber: Int64,
+    @JvmField val databaseNumber: Int64,
 
     /**
      * The map-number of the map in which the tuple is stored within the storage.
@@ -63,7 +63,7 @@ data class TupleNumber(
 
     /**
      * The version _(transaction)_ of which the [Tuple] is part of.
-     * The lower 2 bits of [Version.value] encode the [Action].
+     * The lower 2 bits of [Version.number] encode the [Action].
      * @since 3.0
      * @see [Version.HEAD]
      */
@@ -97,7 +97,7 @@ data class TupleNumber(
     override fun hashCode(): Int = version.hashCode()
 
     override fun compareTo(other: TupleNumber): Int {
-        var i64_diff = storageNumber - other.storageNumber
+        var i64_diff = databaseNumber - other.databaseNumber
         if (i64_diff < 0) return -1
         if (i64_diff > 1) return 1
         var i32_diff = mapNumber - other.mapNumber
@@ -121,7 +121,7 @@ data class TupleNumber(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         return other is TupleNumber
-            && storageNumber == other.storageNumber
+            && databaseNumber == other.databaseNumber
             && mapNumber == other.mapNumber
             && collectionNumber == other.collectionNumber
             && featureNumber == other.featureNumber
@@ -140,7 +140,7 @@ data class TupleNumber(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-            _string = "$storageNumber:$mapNumber:$collectionNumber:$featureNumber:$version"
+            _string = "$databaseNumber:$mapNumber:$collectionNumber:$featureNumber:$version"
         }
         return _string
     }
@@ -161,7 +161,7 @@ data class TupleNumber(
         val fn = this.featureNumber
         if (fn >= 0) throw NakshaException(ILLEGAL_STATE, "The feature-number is not auto-generated, failed to calculate alternative")
         val new_fn = Naksha.alternativeInt64(fn)
-        return TupleNumber(storageNumber, mapNumber, collectionNumber, new_fn, version)
+        return TupleNumber(databaseNumber, mapNumber, collectionNumber, new_fn, version)
     }
 
     private var _urn: String? = null
@@ -251,7 +251,7 @@ data class TupleNumber(
         val view = Platform.newDataView(byteArray)
         var offset = 0
         if (variant.encodeStorageNumber()) {
-            dataview_set_int64(view, offset, storageNumber)
+            dataview_set_int64(view, offset, databaseNumber)
             offset += 8
         }
         if (variant.encodeMapNumber()) {
@@ -306,7 +306,7 @@ data class TupleNumber(
             mapNumber: Int? = null,
             storageNumber: Int64? = null,
         ) = TupleNumber(
-            storageNumber ?: tn.storageNumber,
+            storageNumber ?: tn.databaseNumber,
             mapNumber ?: tn.mapNumber,
             collectionNumber ?: tn.collectionNumber,
             featureNumber ?: tn.featureNumber,
@@ -319,7 +319,7 @@ data class TupleNumber(
          * This happens for various reasons, for example when a [Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a valid tuple-number.
          * @since 3.0
          */
-        val HEAD = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD.value)
+        val HEAD = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD.number)
 
         /**
          * Restore a [TupleNumber] from a binary encoding.
@@ -336,7 +336,7 @@ data class TupleNumber(
             offset: Int,
             variant: TupleNumberVariant,
             tn: TupleNumber
-        ): TupleNumber = fromBinary(Binary(bytes, offset), variant, tn.storageNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber)
+        ): TupleNumber = fromBinary(Binary(bytes, offset), variant, tn.databaseNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber)
 
         fun fromB256(bytes: ByteArray)
                 = fromByteArray(bytes, 0, B256)
@@ -447,7 +447,7 @@ data class TupleNumber(
          * - `map-number` _(32-bit integer)_
          * - `collection-number` _(32-bit integer)_
          * - `feature-number` _(64-bit integer)_
-         * - `version` _(64-bit integer, the raw [Version.value] value)_
+         * - `version` _(64-bit integer, the raw [Version.number] value)_
          * @param parts the string parts of the tuple-number.
          * @param offset the index in the given list where the `storage-number` is located, defaults to `0`.
          * @return the deserialized [TupleNumber].
@@ -463,7 +463,7 @@ data class TupleNumber(
             val mapNumber = parts[offset + MAP_NUMBER].toInt(10)
             val colNumber = parts[offset + COLLECTION_NUMBER].toInt(10)
             val featureNumber = Int64(parts[offset + FEATURE_NUMBER].toLong(10))
-            val version = Version.fromString(parts[offset + VERSION]).value
+            val version = Version.fromString(parts[offset + VERSION]).number
             return TupleNumber(storageNumber, mapNumber, colNumber, featureNumber, version)
         }
     }

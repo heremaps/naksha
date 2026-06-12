@@ -4,6 +4,7 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.Timestamp
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -42,24 +43,39 @@ import kotlin.jvm.JvmStatic
  *
  * ### String representation
  *
- * [toString] returns the raw [value] value as a plain decimal number, regardless of whether the
+ * [toString] returns the raw [number] value as a plain decimal number, regardless of whether the
  * version is dated or manual. [fromString] accepts both the decimal form and the legacy
  * `{year}:{month}:{day}:{seqWithAction}` form for backward-compatibility.
  *
- * @property value the raw 53-bit version number (upper 11 bits are always zero).
+ * @property number the raw 53-bit version number (upper 11 bits are always zero).
  * @since 3.0
  */
 @JsExport
-open class Version(@JvmField val value: Int64) : Comparable<Version> {
+open class Version(@JvmField val number: Int64) : Comparable<Version> {
+    // TODO: When we move nack to Java, we can extend Number, so that we're basically like a Long.
+    init {
+        if ((number and HEAD.number) != number) {
+            throw NakshaException(ILLEGAL_ARGUMENT, "$number is not a valid version")
+        }
+    }
 
     /**
-     * Convert a transaction number given as [Long] into a version.
-     * @param txn the transaction number.
+     * Convert a [Long] into a [Int64] version.
+     * @param value the transaction number.
      * @since 3.0
      */
     @Suppress("NON_EXPORTABLE_TYPE")
     @JsName("fromLong")
-    constructor(txn: Long) : this(Int64(txn))
+    constructor(value: Long) : this(Int64(value))
+
+    /**
+     * Convert a stringified version.
+     * @param value the stringified version as decimal number.
+     * @since 3.0
+     * @throws NumberFormatException if the given string is no valid version.
+     */
+    @JsName("fromString")
+    constructor(value: String) : this(Int64(value.toLong()))
 
     companion object VersionCompanion {
 
@@ -87,7 +103,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
          * Creates a version from its string representation.
          *
          * Accepts either:
-         * - A pure decimal encoding of the 64-bit [value] value.
+         * - A pure decimal encoding of the 64-bit [number] value.
          * - The human-readable form `{year}:{month}:{day}:{seq}` (seq is the 30-bit sequence, no action bits).
          *
          * Throws [NakshaError.ILLEGAL_ARGUMENT] if the string is invalid.
@@ -98,21 +114,9 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
         @JvmStatic
         fun fromString(s: String): Version {
             try {
-                if (s.indexOf(':') >= 0) {
-                    val parts = s.split(':')
-                    if (parts.size != 4) throw Exception("Expected 4 colon-separated parts")
-                    // The 4th field carries the raw lower 32 bits of the txn (including action bits in 1-0).
-                    val year  = parts[0].toInt()
-                    val month = parts[1].toInt()
-                    val day   = parts[2].toInt()
-                    val seqRaw = Int64(parts[3].toLong()) // raw lower 32 bits, includes action in bits 1-0
-                    val txn = (Int64(year) shl 41) or (Int64(month) shl 37) or (Int64(day) shl 32) or seqRaw
-                    return Version(txn)
-                } else {
-                    return Version(Int64(s.toLong()))
-                }
+                return Version(Int64(s.toLong()))
             } catch (_: Exception) {
-                throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid version string: $s")
+                throw NakshaException(ILLEGAL_ARGUMENT, "Invalid version string: $s")
             }
         }
 
@@ -152,7 +156,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
         /**
          * Constructs a **manual** version.
          *
-         * The resulting [value] must have its upper 21 bits (63–43) all zero, which means the effective
+         * The resulting [number] must have its upper 21 bits (63–43) all zero, which means the effective
          * value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since
          * the lower 2 bits are reserved for [action].
          *
@@ -188,10 +192,9 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
         }
 
         /**
-         * The _HEAD_ sentinel version _(9_007_199_254_740_991L aka `2^53-1`)_.
+         * The _HEAD_ sentinel version _(9_007_199_254_740_991L aka `2^53-1`)_. Can be used as well to mask version to ensure valid range.
          *
-         * When a [Tuple] is the current HEAD state its `nextVersion` is synthesised as this value
-         * (the column is not physically stored in HEAD tables).
+         * When a [Tuple] is the current HEAD state its `nextVersion` is synthesised as this value.
          * @since 3.0
          */
         @JvmField
@@ -239,7 +242,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
         val SEQ_MAX: Int64 = SEQ_30_MASK
 
         /**
-         * The raw increment to add to [value] to advance the sequence counter by one while keeping the
+         * The raw increment to add to [number] to advance the sequence counter by one while keeping the
          * action bits unchanged. Equal to `1 shl 2` = `4`.
          * @since 3.0
          */
@@ -257,7 +260,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
      */
     val year: Int
         get() {
-            if (_year < 0) _year = (value ushr 41).toInt()
+            if (_year < 0) _year = (number ushr 41).toInt()
             return _year
         }
 
@@ -269,7 +272,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
      */
     val month: Int
         get() {
-            if (_month < 0) _month = (value ushr 37).toInt() and 0xF
+            if (_month < 0) _month = (number ushr 37).toInt() and 0xF
             return _month
         }
 
@@ -281,7 +284,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
      */
     val day: Int
         get() {
-            if (_day < 0) _day = (value ushr 32).toInt() and 0x1F
+            if (_day < 0) _day = (number ushr 32).toInt() and 0x1F
             return _day
         }
 
@@ -298,7 +301,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
         get() {
             var s = _seq
             if (s == null) {
-                s = (value ushr 2) and SEQ_MAX
+                s = (number ushr 2) and SEQ_MAX
                 _seq = s
             }
             return s
@@ -308,7 +311,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
      * Returns `true` if this is a **dated** version, i.e. the year field (`txn ushr 41`) is ≥ 16.
      * @since 3.0
      */
-    fun isDated(): Boolean = (value ushr 41).toInt() >= 16
+    fun isDated(): Boolean = (number ushr 41).toInt() >= 16
 
     /**
      * Returns `true` if this is a **manual** version, i.e. the year field is < 16 and the upper 21 bits are zero.
@@ -318,28 +321,28 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
     fun isManualVersion(): Boolean = !isDated()
 
     /**
-     * Returns the [Action] encoded in the lower 2 bits of [value].
+     * Returns the [Action] encoded in the lower 2 bits of [number].
      * @since 3.0
      */
-    fun action(): Action = Action.fromValue(value.toInt() and 3)
+    fun action(): Action = Action.fromValue(number.toInt() and 3)
 
     private var _string: String? = null
 
     override fun equals(other: Any?): Boolean {
-        if (other is Int64) return value eq other
-        if (other is Version) return value eq other.value
+        if (other is Int64) return number eq other
+        if (other is Version) return number eq other.number
         return false
     }
 
     override fun compareTo(other: Version): Int {
-        val diff = value.minus(other.value)
+        val diff = number.minus(other.number)
         return if (diff.eq(0)) 0 else if (diff < 0) -1 else 1
     }
 
-    override fun hashCode(): Int = value.hashCode()
+    override fun hashCode(): Int = number.hashCode()
 
     /**
-     * Returns the version as a plain decimal string of the raw [value] value.
+     * Returns the version as a plain decimal string of the raw [number] value.
      *
      * This representation is lossless for all version types (dated and manual) and survives
      * a round-trip through [fromString].  The legacy `{year}:{month}:{day}:{seqWithAction}`
@@ -349,7 +352,7 @@ open class Version(@JvmField val value: Int64) : Comparable<Version> {
     override fun toString(): String {
         var s = _string
         if (s == null) {
-            s = value.toLong().toString()
+            s = number.toLong().toString()
             _string = s
         }
         return s

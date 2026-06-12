@@ -88,12 +88,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         val txn = request.version
         if (txn != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("${PgColumn.version} <= ${txn.value}")
+            where.append("${PgColumn.version} <= ${txn.number}")
         }
         val min_txn = request.minVersion
         if (min_txn != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("${PgColumn.version} >= ${min_txn.value}")
+            where.append("${PgColumn.version} >= ${min_txn.number}")
         }
     }
 

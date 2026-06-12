@@ -76,11 +76,11 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Always return `0`, because all collections are always stored in `naksha~collections` collection.
      * @since 3.0
-     * @see [Naksha.COLLECTIONS_COL]
-     * @see [Naksha.COLLECTIONS_COL_NUMBER]
+     * @see [Naksha.ADMIN_COL_ID]
+     * @see [Naksha.ADMIN_COL_FN]
      */
     override val collectionNumber: Int
-        get() = Naksha.COLLECTIONS_COL_NUMBER
+        get() = Naksha.ADMIN_COL_FN
 
     /**
      * The map-id of the map in which the collection is located; `null` if not yet known.
@@ -337,6 +337,30 @@ open class NakshaCollection() : NakshaFeature() {
         return this
     }
 
+    // TODO: Add a removeMember method.
+
+    /**
+     * Initializes the [members] to the bare minimum, therefore [mandatory members][StandardMembers.MANDATORY].
+     *
+     * The method should be called, if next to the minimal members additional proprietary members should be added.
+     * @since 3.0
+     */
+    fun withMinimalMembers(): NakshaCollection {
+        members = MemberList(StandardMembers.MANDATORY)
+        return this
+    }
+
+    /**
+     * Initializes the [members] to the [standard XYZ members][XyzMembers.ALL].
+     *
+     * The method should be called, if next to the standard XYZ members, additional proprietary members should be added.
+     * @since 3.0
+     */
+    fun withXyzMembers(): NakshaCollection {
+        members = MemberList(XyzMembers.ALL)
+        return this
+    }
+
     /**
      * Returns the members list. If the member list is currently `null`, it creates it from [XyzMembers.ALL]. If the list does not contain the mandatory members, they will be added.
      * @return the members list of this collection.
@@ -396,6 +420,28 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0
      */
     var indices: IndexList? by INDICES
+
+    /**
+     * Initializes the [indices] to the bare minimum, therefore [mandatory indices][StandardIndices.MANDATORY].
+     *
+     * The method should be called, if next to the minimal indices additional proprietary indices should be added.
+     * @since 3.0
+     */
+    fun withMinimalIndices(): NakshaCollection {
+        indices = IndexList(StandardIndices.MANDATORY)
+        return this
+    }
+
+    /**
+     * Initializes the [indices] to the [standard XYZ indices][XyzIndices.ALL].
+     *
+     * The method should be called, if next to the standard XYZ indices, additional proprietary indices should be added.
+     * @since 3.0
+     */
+    fun withXyzIndices(): NakshaCollection {
+        indices = IndexList(XyzIndices.ALL)
+        return this
+    }
 
     /**
      * @see [indices]

@@ -307,8 +307,8 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
         val prevByName = mutableMapOf<String, naksha.model.objects.Index>()
         val nextByName = mutableMapOf<String, naksha.model.objects.Index>()
         // Internal (mandatory) indices are always managed by the storage; skip them in the diff.
-        if (prevIdx != null) for (ci in prevIdx) if (ci != null && !ci.internal) prevByName[ci.name] = ci
-        if (nextIdx != null) for (ci in nextIdx) if (ci != null && !ci.internal) nextByName[ci.name] = ci
+        if (prevIdx != null) for (ci in prevIdx) if (ci != null && !ci.isInternal()) prevByName[ci.name] = ci
+        if (nextIdx != null) for (ci in nextIdx) if (ci != null && !ci.isInternal()) nextByName[ci.name] = ci
 
         // Removed (or changed): drop on every root.
         for ((name, pi) in prevByName) {
@@ -330,7 +330,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
     private fun customIndexEquals(a: naksha.model.objects.Index, b: naksha.model.objects.Index): Boolean {
         if (a.name != b.name) return false
         if (a.type != b.type) return false
-        if (a.unique != b.unique) return false
+        if (a.isUnique() != b.isUnique()) return false
         if (!listsEqual(a.on, b.on)) return false
         if (!listsEqual(a.include, b.include)) return false
         return true

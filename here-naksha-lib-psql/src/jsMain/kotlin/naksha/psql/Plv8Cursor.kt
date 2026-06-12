@@ -27,6 +27,10 @@ class Plv8Cursor: PgCursor {
         TODO("Not yet implemented")
     }
 
+    override fun columnNames(): Array<String> {
+        TODO("Not yet implemented")
+    }
+
     override fun contains(name: String): Boolean {
         TODO("Not yet implemented")
     }

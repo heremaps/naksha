@@ -14,5 +14,8 @@ import kotlin.jvm.JvmField
 class XyzIndices private constructor() {
 
     companion object XyzIndices_C {
+
+        // TODO: Please fix me, we need an own listOf(...)!
+        @JvmField val ALL: List<Index> = StandardIndices.ALL
     }
 }

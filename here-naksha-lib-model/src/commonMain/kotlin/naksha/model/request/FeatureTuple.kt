@@ -80,7 +80,8 @@ open class FeatureTuple(
             var feature = cachedFeature
             val tuple = this.tuple
             if (tuple != null && tuple !== cachedTuple && !doNotAutoUpdate) {
-                feature = tuple.decodeFeature()
+                // TODO: We need a global book for decoding, we should make Tuples explicit for clients!
+                feature = tuple.decodeFeature(null)
                 cachedFeature = feature
                 cachedJson = null
             }
@@ -116,5 +117,5 @@ open class FeatureTuple(
      * @return a new copy of the tuple converted into a feature.
      * @since 3.0
      */
-    open fun newFeature(): NakshaFeature? = tuple?.decodeFeature()
+    open fun newFeature(): NakshaFeature? = tuple?.decodeFeature(null) // TODO: Same as above, we need to change this generally!
 }
