@@ -8,13 +8,13 @@ import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
- * An enumeration about the action that actually was performed for a feature in a storage, being [CREATED], [UPDATED], or [DELETED].
+ * An enumeration about the action that actually was performed for a feature in a storage, being [CREATE], [UPDATE], or [DELETE].
  *
- * The numeric [intValue] corresponds to the lower two bits of a [Version.txn]:
- * - `0` ([CREATED]) — the feature was created in this version.
- * - `1` ([UPDATED]) — the feature was updated in this version.
- * - `2` ([DELETED]) — the feature was deleted in this version.
- * - `3` ([VERSION]) — both action bits are set; used as a sentinel to indicate that the [Version.txn] value itself
+ * The numeric [intValue] corresponds to the lower two bits of a [Version.value]:
+ * - `0` ([CREATE]) — the feature was created in this version.
+ * - `1` ([UPDATE]) — the feature was updated in this version.
+ * - `2` ([DELETE]) — the feature was deleted in this version.
+ * - `3` ([VERSION]) — both action bits are set; used as a sentinel to indicate that the [Version.value] value itself
  *   is being used as a version reference rather than encoding a state-change action.
  *
  * @since 1.0.0
@@ -29,17 +29,17 @@ class Action : JsEnum() {
 
     @Suppress("MemberVisibilityCanBePrivate")
     companion object Action_C {
-        internal const val CREATED_VALUE = 0
-        internal const val CREATED_STRING = "CREATE"
-        internal const val CREATED_SHORT = "c"
+        internal const val CREATE_VALUE = 0
+        internal const val CREATE_STRING = "CREATE"
+        internal const val CREATE_SHORT = "c"
 
-        internal const val UPDATED_VALUE = 1
-        internal const val UPDATED_STRING = "UPDATE"
-        internal const val UPDATED_SHORT = "u"
+        internal const val UPDATE_VALUE = 1
+        internal const val UPDATE_STRING = "UPDATE"
+        internal const val UPDATE_SHORT = "u"
 
-        internal const val DELETED_VALUE = 2
-        internal const val DELETED_STRING = "DELETE"
-        internal const val DELETED_SHORT = "d"
+        internal const val DELETE_VALUE = 2
+        internal const val DELETE_STRING = "DELETE"
+        internal const val DELETE_SHORT = "d"
 
         internal const val VERSION_VALUE = 3
         internal const val VERSION_STRING = "VERSION"
@@ -51,9 +51,9 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val CREATED = defIgnoreCase(Action::class, CREATED_STRING) { self ->
-            self.intValue = CREATED_VALUE
-            self.shortId = CREATED_SHORT
+        val CREATE = defIgnoreCase(Action::class, CREATE_STRING) { self ->
+            self.intValue = CREATE_VALUE
+            self.shortId = CREATE_SHORT
         }
 
         /**
@@ -62,9 +62,9 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UPDATED = defIgnoreCase(Action::class, UPDATED_STRING) { self ->
-            self.intValue = UPDATED_VALUE
-            self.shortId = UPDATED_SHORT
+        val UPDATE = defIgnoreCase(Action::class, UPDATE_STRING) { self ->
+            self.intValue = UPDATE_VALUE
+            self.shortId = UPDATE_SHORT
         }
 
         /**
@@ -73,13 +73,13 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val DELETED = defIgnoreCase(Action::class, DELETED_STRING) { self ->
-            self.intValue = DELETED_VALUE
-            self.shortId = DELETED_SHORT
+        val DELETE = defIgnoreCase(Action::class, DELETE_STRING) { self ->
+            self.intValue = DELETE_VALUE
+            self.shortId = DELETE_SHORT
         }
 
         /**
-         * Both action bits are set (`3`). Used as a sentinel to signal that the [Version.txn] value
+         * Both action bits are set (`3`). Used as a sentinel to signal that the [Version.value] value
          * is a version reference rather than a state-change action. Also returned by [fromValue] for
          * any unrecognised integer value.
          * @since 1.0.0
@@ -93,16 +93,16 @@ class Action : JsEnum() {
 
         // Full-name and short-name lookup map.
         private val FROM_STRING = mapOf(
-            Pair(CREATED_STRING, CREATED), Pair(CREATED_SHORT, CREATED),
-            Pair(UPDATED_STRING, UPDATED), Pair(UPDATED_SHORT, UPDATED),
-            Pair(DELETED_STRING, DELETED), Pair(DELETED_SHORT, DELETED),
+            Pair(CREATE_STRING, CREATE), Pair(CREATE_SHORT, CREATE),
+            Pair(UPDATE_STRING, UPDATE), Pair(UPDATE_SHORT, UPDATE),
+            Pair(DELETE_STRING, DELETE), Pair(DELETE_SHORT, DELETE),
             Pair(VERSION_STRING, VERSION), Pair(VERSION_SHORT, VERSION),
         )
 
         private val FROM_VALUE = mapOf(
-            Pair(CREATED_VALUE, CREATED),
-            Pair(UPDATED_VALUE, UPDATED),
-            Pair(DELETED_VALUE, DELETED),
+            Pair(CREATE_VALUE, CREATE),
+            Pair(UPDATE_VALUE, UPDATE),
+            Pair(DELETE_VALUE, DELETE),
             Pair(VERSION_VALUE, VERSION),
         )
 

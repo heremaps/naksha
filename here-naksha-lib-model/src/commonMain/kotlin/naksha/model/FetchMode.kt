@@ -20,37 +20,37 @@ inline fun FetchMode(vararg modes: Int): FetchMode {
 }
 
 /**
- * Set the [members][Tuple.members] bit.
+ * Set the [members][Tuple.membersBook] bit.
  * @since 3.0.0
  */
 inline fun FetchMode.withMeta(): Int = this or META_BIT
 
 /**
- * Clear the [members][Tuple.members] bit.
+ * Clear the [members][Tuple.membersBook] bit.
  * @since 3.0.0
  */
 inline fun FetchMode.noMeta(): Int = this and META_CLEAR
 
 /**
- * Test if the [members][Tuple.members] bit is set.
+ * Test if the [members][Tuple.membersBook] bit is set.
  * @since 3.0.0
  */
 inline fun FetchMode.fetchMeta(): Boolean = (this and META_BIT) == META_BIT
 
 /**
- * Set the _feature_ bit (covers [feature][Tuple.feature] and tags).
+ * Set the _feature_ bit (covers [feature][Tuple.jbonBytes] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.withFeature(): Int = this or FEATURE_BIT
 
 /**
- * Clear the _feature_ bit (covers [feature][Tuple.feature] and tags).
+ * Clear the _feature_ bit (covers [feature][Tuple.jbonBytes] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.noFeature(): Int = this and FEATURE_CLEAR
 
 /**
- * Test if the _feature_ bit is set (which covers [feature][Tuple.feature] and tags).
+ * Test if the _feature_ bit is set (which covers [feature][Tuple.jbonBytes] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.fetchFeature(): Boolean = (this and FEATURE_BIT) == FEATURE_BIT

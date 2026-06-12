@@ -76,7 +76,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             val versions = arrayOfNulls<Any>(tupleNumbers.size)
             for (i in tupleNumbers.indices) {
                 fns[i] = tupleNumbers[i].featureNumber
-                versions[i] = tupleNumbers[i].version.txn
+                versions[i] = tupleNumbers[i].version.value
             }
             val fnPlaceholder = placeholderForArg(fns, PgType.INT64_ARRAY)
             val versionPlaceholder = placeholderForArg(versions, PgType.INT64_ARRAY)
@@ -88,12 +88,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         val txn = request.version
         if (txn != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("${PgColumn.version} <= ${txn.txn}")
+            where.append("${PgColumn.version} <= ${txn.value}")
         }
         val min_txn = request.minVersion
         if (min_txn != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("${PgColumn.version} >= ${min_txn.txn}")
+            where.append("${PgColumn.version} >= ${min_txn.value}")
         }
     }
 

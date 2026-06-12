@@ -211,9 +211,9 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       return validatedErrorResponse;
     } else if (response instanceof SuccessResponse successResponse) {
       final Map<Action, List<NakshaFeature>> featureMap = postProcessedFeaturesByAction(successResponse, postProcessor);
-      final List<NakshaFeature> insertedFeatures = featureMap.get(Action.CREATED);
-      final List<NakshaFeature> updatedFeatures = featureMap.get(Action.UPDATED);
-      final List<NakshaFeature> deletedFeatures = featureMap.get(Action.DELETED);
+      final List<NakshaFeature> insertedFeatures = featureMap.get(Action.CREATE);
+      final List<NakshaFeature> updatedFeatures = featureMap.get(Action.UPDATE);
+      final List<NakshaFeature> deletedFeatures = featureMap.get(Action.DELETE);
       // extract violations if available
       List<NakshaFeature> violations = null;
       if (successResponse instanceof ContextXyzFeatureResponse cr) {
@@ -310,18 +310,18 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     for (NakshaFeature feature : features) {
       postProcessor.postProcess(feature);
       final Action action = feature.getProperties().getXyz().getAction();
-      if (action == Action.CREATED) {
+      if (action == Action.CREATE) {
         insertedFeatures.add(feature);
-      } else if (action == Action.UPDATED) {
+      } else if (action == Action.UPDATE) {
         updatedFeatures.add(feature);
-      } else if (action == Action.DELETED) {
+      } else if (action == Action.DELETE) {
         deletedFeatures.add(feature);
       }
     }
     final Map<Action, List<NakshaFeature>> featuresByAction = new HashMap<>();
-    featuresByAction.put(Action.CREATED, insertedFeatures);
-    featuresByAction.put(Action.UPDATED, updatedFeatures);
-    featuresByAction.put(Action.DELETED, deletedFeatures);
+    featuresByAction.put(Action.CREATE, insertedFeatures);
+    featuresByAction.put(Action.UPDATE, updatedFeatures);
+    featuresByAction.put(Action.DELETE, deletedFeatures);
     return featuresByAction;
   }
 }

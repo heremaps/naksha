@@ -11,6 +11,7 @@ import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
+// TODO: @AI: Fix the documentation, it does not match the actual one.
 /**
  * Wrapper for a version (transaction number), encoded as an unsigned 56-bit integer (the upper 8 bits are always zero).
  *
@@ -41,15 +42,15 @@ import kotlin.jvm.JvmStatic
  *
  * ### String representation
  *
- * [toString] returns the raw [txn] value as a plain decimal number, regardless of whether the
+ * [toString] returns the raw [value] value as a plain decimal number, regardless of whether the
  * version is dated or manual. [fromString] accepts both the decimal form and the legacy
  * `{year}:{month}:{day}:{seqWithAction}` form for backward-compatibility.
  *
- * @property txn the raw 64-bit transaction number (upper 8 bits always zero).
+ * @property value the raw 53-bit version number (upper 11 bits are always zero).
  * @since 3.0
  */
 @JsExport
-open class Version(@JvmField val txn: Int64) : Comparable<Version> {
+open class Version(@JvmField val value: Int64) : Comparable<Version> {
 
     /**
      * Convert a transaction number given as [Long] into a version.
@@ -86,7 +87,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          * Creates a version from its string representation.
          *
          * Accepts either:
-         * - A pure decimal encoding of the 64-bit [txn] value.
+         * - A pure decimal encoding of the 64-bit [value] value.
          * - The human-readable form `{year}:{month}:{day}:{seq}` (seq is the 30-bit sequence, no action bits).
          *
          * Throws [NakshaError.ILLEGAL_ARGUMENT] if the string is invalid.
@@ -125,13 +126,13 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          * @param month month of the year; must be in 1..12.
          * @param day   day of the month; must be in 1..31.
          * @param seq   30-bit sequence number within the day; must be in 0..1073741823 (0x3FFF_FFFF).
-         * @param action the [Action] to encode in the lower 2 bits; defaults to [Action.CREATED].
+         * @param action the [Action] to encode in the lower 2 bits; defaults to [Action.CREATE].
          * @since 3.0
          */
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        fun auto(year: Int, month: Int, day: Int, seq: Int64, action: Action = Action.CREATED): Version {
+        fun auto(year: Int, month: Int, day: Int, seq: Int64, action: Action = Action.CREATE): Version {
             require(year in YEAR_MIN..YEAR_MAX) {
                 "year must be in $YEAR_MIN..$YEAR_MAX, got $year"
             }
@@ -151,20 +152,20 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         /**
          * Constructs a **manual** version.
          *
-         * The resulting [txn] must have its upper 21 bits (63–43) all zero, which means the effective
+         * The resulting [value] must have its upper 21 bits (63–43) all zero, which means the effective
          * value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since
          * the lower 2 bits are reserved for [action].
          *
          * Throws [IllegalArgumentException] if [seq] is out of range.
          *
          * @param seq    41-bit sequence value; must be in 0..0x1FF_FFFF_FFFF.
-         * @param action the [Action] to encode in the lower 2 bits; defaults to [Action.CREATED].
+         * @param action the [Action] to encode in the lower 2 bits; defaults to [Action.CREATE].
          * @since 3.0
          */
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        fun manual(seq: Int64, action: Action = Action.CREATED): Version {
+        fun manual(seq: Int64, action: Action = Action.CREATE): Version {
             require(seq >= Int64(0) && seq <= MANUAL_SEQ_MASK) {
                 "seq for a manual version must be in 0..${MANUAL_SEQ_MASK.toLong()} (41-bit), got $seq"
             }
@@ -175,13 +176,13 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          * Creates a dated version for the current wall-clock time.
          *
          * @param seq    30-bit sequence number within the current day; must be in 0..1073741823.
-         * @param action the [Action] to encode; defaults to [Action.CREATED].
+         * @param action the [Action] to encode; defaults to [Action.CREATE].
          * @since 3.0
          */
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        fun now(seq: Int64, action: Action = Action.CREATED): Version {
+        fun now(seq: Int64, action: Action = Action.CREATE): Version {
             val now = Timestamp.now()
             return auto(now.year, now.month, now.day, seq, action)
         }
@@ -206,7 +207,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MIN = auto(16, 1, 1, Int64(0), Action.CREATED)
+        val MIN = auto(16, 1, 1, Int64(0), Action.CREATE)
         // 0n + (0n << 2n) + (1n << 32n) + (1n << (32n+5n)) + (16n << (32n+5n+4n)) = 35326106009600n
         // bitwise: 0x0000_2021_0000_0000
 
@@ -238,7 +239,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         val SEQ_MAX: Int64 = SEQ_30_MASK
 
         /**
-         * The raw increment to add to [txn] to advance the sequence counter by one while keeping the
+         * The raw increment to add to [value] to advance the sequence counter by one while keeping the
          * action bits unchanged. Equal to `1 shl 2` = `4`.
          * @since 3.0
          */
@@ -256,7 +257,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
      */
     val year: Int
         get() {
-            if (_year < 0) _year = (txn ushr 41).toInt()
+            if (_year < 0) _year = (value ushr 41).toInt()
             return _year
         }
 
@@ -268,7 +269,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
      */
     val month: Int
         get() {
-            if (_month < 0) _month = (txn ushr 37).toInt() and 0xF
+            if (_month < 0) _month = (value ushr 37).toInt() and 0xF
             return _month
         }
 
@@ -280,7 +281,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
      */
     val day: Int
         get() {
-            if (_day < 0) _day = (txn ushr 32).toInt() and 0x1F
+            if (_day < 0) _day = (value ushr 32).toInt() and 0x1F
             return _day
         }
 
@@ -297,7 +298,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
         get() {
             var s = _seq
             if (s == null) {
-                s = (txn ushr 2) and SEQ_MAX
+                s = (value ushr 2) and SEQ_MAX
                 _seq = s
             }
             return s
@@ -307,7 +308,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
      * Returns `true` if this is a **dated** version, i.e. the year field (`txn ushr 41`) is ≥ 16.
      * @since 3.0
      */
-    fun isDated(): Boolean = (txn ushr 41).toInt() >= 16
+    fun isDated(): Boolean = (value ushr 41).toInt() >= 16
 
     /**
      * Returns `true` if this is a **manual** version, i.e. the year field is < 16 and the upper 21 bits are zero.
@@ -317,28 +318,28 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     fun isManualVersion(): Boolean = !isDated()
 
     /**
-     * Returns the [Action] encoded in the lower 2 bits of [txn].
+     * Returns the [Action] encoded in the lower 2 bits of [value].
      * @since 3.0
      */
-    fun action(): Action = Action.fromValue(txn.toInt() and 3)
+    fun action(): Action = Action.fromValue(value.toInt() and 3)
 
     private var _string: String? = null
 
     override fun equals(other: Any?): Boolean {
-        if (other is Int64) return txn eq other
-        if (other is Version) return txn eq other.txn
+        if (other is Int64) return value eq other
+        if (other is Version) return value eq other.value
         return false
     }
 
     override fun compareTo(other: Version): Int {
-        val diff = txn.minus(other.txn)
+        val diff = value.minus(other.value)
         return if (diff.eq(0)) 0 else if (diff < 0) -1 else 1
     }
 
-    override fun hashCode(): Int = txn.hashCode()
+    override fun hashCode(): Int = value.hashCode()
 
     /**
-     * Returns the version as a plain decimal string of the raw [txn] value.
+     * Returns the version as a plain decimal string of the raw [value] value.
      *
      * This representation is lossless for all version types (dated and manual) and survives
      * a round-trip through [fromString].  The legacy `{year}:{month}:{day}:{seqWithAction}`
@@ -348,7 +349,7 @@ open class Version(@JvmField val txn: Int64) : Comparable<Version> {
     override fun toString(): String {
         var s = _string
         if (s == null) {
-            s = txn.toLong().toString()
+            s = value.toLong().toString()
             _string = s
         }
         return s

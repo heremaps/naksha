@@ -2,13 +2,8 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.toJSON
-import naksha.jbon.DictEntry
 import naksha.jbon.IBook
-import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
-import naksha.model.objects.StandardMembers
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
@@ -41,12 +36,12 @@ internal class PgRowDict(
         return col.values.getOrNull(row)
     }
 
-    override fun indexOf(string: String): Int {
+    override fun indexOfString(string: String): Int {
         val col = rows.columnByName[string]
         return col?.index ?: -1
     }
 
-    override fun stringAt(index: Int): String? {
+    override fun getStringAt(index: Int): String? {
         val col = rows.columns.getOrNull(index) ?: return null
         val v = col.values.getOrNull(row)
         return if (v is String) v else null
@@ -54,7 +49,7 @@ internal class PgRowDict(
 
     override fun hasNames(): Boolean = true
 
-    override fun getIndexOf(name: String): Int = indexOf(name)
+    override fun indexOfName(name: String): Int = indexOfString(name)
 
     override fun getNameAt(index: Int): String? = rows.columns.getOrNull(index)?.name
 
@@ -77,7 +72,7 @@ internal class PgRowDict(
         }
     }
 
-    override fun find(hash: Int): List<naksha.jbon.DictEntry> = emptyList()
+    override fun getAllWithHash(hash: Int): List<naksha.jbon.DictEntry> = emptyList()
 }
 
 /**
@@ -314,8 +309,8 @@ internal class PgColumnRows {
             featureNumber = fn,
             version = naksha.model.Version(version),
             nextVersion = nextVersion ?: Int64(-1L),
-            members = members,
-            feature = getByteArray(row, PgColumn.feature)
+            membersBook = members,
+            jbonBytes = getByteArray(row, PgColumn.feature)
         )
     }
 
@@ -383,7 +378,7 @@ internal class PgColumnRows {
 
     operator fun set(row: Int, tuple: Tuple) {
         withMinSize(row)
-        val members = tuple.members ?: return
+        val members = tuple.membersBook ?: return
         set(row, PgColumn.updated_at, members.getByName("updated_at") as? Int64)
         set(row, PgColumn.created_at, members.getByName("created_at") as? Int64)
         set(row, PgColumn.author_ts, members.getByName("author_ts") as? Int64)
@@ -411,7 +406,7 @@ internal class PgColumnRows {
         set(row, PgColumn.cs3, members.getByName("cs3") as? String)
         set(row, PgColumn.tags, members.getByName("tags") as? String)
         set(row, PgColumn.ref_point, members.getByName("ref_point") as? ByteArray)
-        set(row, PgColumn.feature, tuple.feature)
+        set(row, PgColumn.feature, tuple.jbonBytes)
         set(row, PgColumn.geo, members.getByName("geo") as? ByteArray)
         set(row, PgColumn.attachment, members.getByName("attachment") as? ByteArray)
     }

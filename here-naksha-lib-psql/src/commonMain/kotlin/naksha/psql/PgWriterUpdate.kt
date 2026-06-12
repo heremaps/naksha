@@ -30,7 +30,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
             if (tuple != null) {
                 writeById[write.id] = write
                 inRows[i] = tuple
-                inRows.set(i, "expected_version", write.version?.txn)
+                inRows.set(i, "expected_version", write.version?.value)
                 inRows.setCustomMembers(i, write.feature, members)
                 i++
             }
@@ -184,7 +184,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 // (sentinel "undefined" causes the DB to retain the existing value).
                 val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.getByteArray(StandardMembers.Geometry)
                 val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.getByteArray(StandardMembers.ReferencePoint)
-                val tags = tuple.getStringMember(StandardMembers.XyzTags)
+                val tags = tuple.getString(StandardMembers.XyzTags)
                 val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.getByteArray(StandardMembers.XyzAttachment)
                 val oldGeo = tuple.getByteArray(StandardMembers.Geometry)
                 val oldRefPoint = tuple.getByteArray(StandardMembers.ReferencePoint)
@@ -193,7 +193,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                     || (oldRefPoint == null || !oldRefPoint.contentEquals(referencePoint ?: ByteArray(0)))
                     || (oldAttachment == null || !oldAttachment.contentEquals(attachment ?: ByteArray(0)))
                 if (needsPatch) {
-                    val m = tuple.members
+                    val m = tuple.membersBook
                     val newMembers = if (m is naksha.jbon.HeapBook) {
                         val dict = m.copy()
                         dict.put(StandardMembers.Geometry.name, geo)
@@ -202,7 +202,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                         dict.put(StandardMembers.XyzAttachment.name, attachment)
                         dict
                     } else m
-                    write.tuple = tuple.copy(members = newMembers)
+                    write.tuple = tuple.copy(membersBook = newMembers)
                 }
             }
         }

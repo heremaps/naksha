@@ -51,7 +51,7 @@ public final class HandlerUtil {
       final @Nullable List<NakshaFeature> violations) {
 
     for (final NakshaFeature feature : features) {
-      feature.getProperties().getXyz().setRaw(XyzNs.ACTION, Action.UPDATED);
+      feature.getProperties().getXyz().setRaw(XyzNs.ACTION, Action.UPDATE);
     }
     // Create ContextResult with cursor, context and violations
     final ContextXyzFeatureResponse ctxResult = new ContextXyzFeatureResponse();

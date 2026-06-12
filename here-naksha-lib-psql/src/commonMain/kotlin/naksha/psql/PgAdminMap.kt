@@ -423,7 +423,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                         logger.info("Transaction counter is still at wrong day, rollover to next day")
                         // Rollover, we update sequence of the day. Start at seq=1 (auto() encodes action in bits 1-0).
                         version = Version.auto(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(1))
-                        txn = version.txn
+                        txn = version.value
                         conn.execute("SELECT setval($1, $2)", arrayOf(txnSequenceOid, txn + 4)).close()
                     }
                     logger.info("Release advisory lock")

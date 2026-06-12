@@ -9,8 +9,6 @@ import naksha.geo.SpPoint
 import naksha.model.DataEncoding
 import naksha.model.Naksha
 import naksha.model.NakshaError
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -345,7 +343,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0
      */
     open fun useMembers(): MemberList {
-        var write: Boolean = false
+        var write = false
         var list = this.members
         if (list == null) {
             list = MemberList(XyzMembers.ALL)
@@ -357,19 +355,36 @@ open class NakshaCollection() : NakshaFeature() {
         for (mandatory in StandardMembers.MANDATORY) {
             val found: Member? = list.get(mandatory.name)
             if (found != null) {
-                // We require same name and data-type, but not same JSON path.
-                if (mandatory.dataType != found.dataType) {
-                    throw NakshaException(
-                        ILLEGAL_STATE,
-                        "Member '${mandatory.name}' has different wrong data type: '${found.dataType}', expected '${mandatory.name}'"
-                    )
-                }
+                mandatory.asSame(found)
             } else {
                 list.add(mandatory)
             }
         }
         if (write) this.members = list
         return list
+    }
+
+    /**
+     * Search for the given member in this collection.
+     * @param member The member to search for, compares name and type.
+     * @param comparePath If _true_, then the path is as well compared; otherwise any path is accepted.
+     * @return the found member.
+     * @throws NakshaException If no such member was found.
+     */
+    @JvmOverloads
+    open fun useMember(member: Member, comparePath: Boolean = false): Member = member.asSame(useMembers().get(member.name), comparePath)
+
+    /**
+     * Search for the given member in this collection.
+     * @param member The member to search for, compares name and type.
+     * @param comparePath If _true_, then the path is as well compared; otherwise any path is accepted.
+     * @return the found member or `null`, if no such member is declared in this collection.
+     */
+    @JvmOverloads
+    open fun findMember(member: Member, comparePath: Boolean = false): Member? {
+        val found = useMembers().get(member.name)
+        if (member.isSameAs(found, comparePath)) return found
+        return null
     }
 
     /**

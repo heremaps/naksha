@@ -214,7 +214,7 @@ data class TupleNumberBinaryArray(
         val collectionNumber = sharedCollectionNumber ?: dataview_get_int32(view, offset + collectionNumberOffset)
         val featureNumber = sharedFeatureNumber ?: dataview_get_int64(view, offset + featureNumberOffset)
         val txn = dataview_get_int64(view, offset + txnOffset)
-        val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, Version(txn))
+        val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, txn)
         if (!disableCache) {
             var cache = tupleNumberCache
             if (index <= cache.size) { // Note: This only happens, when being EMPTY
@@ -389,7 +389,7 @@ data class TupleNumberBinaryArray(
                 && element.mapNumber == getMapNumber(i)
                 && element.collectionNumber == getCollectionNumber(i)
                 && element.featureNumber == getFeatureNumber(i)
-                && element.version.txn == getTxn(i)) return i
+                && element.version == getTxn(i)) return i
         }
         return -1
     }
@@ -401,7 +401,7 @@ data class TupleNumberBinaryArray(
                 && element.mapNumber == getMapNumber(i)
                 && element.collectionNumber == getCollectionNumber(i)
                 && element.featureNumber == getFeatureNumber(i)
-                && element.version.txn == getTxn(i)) return i
+                && element.version == getTxn(i)) return i
         }
         return -1
     }

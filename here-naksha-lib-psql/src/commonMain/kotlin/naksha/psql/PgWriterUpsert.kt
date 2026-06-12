@@ -209,10 +209,10 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     // with the existing value, so the in-memory tuple must reflect the final stored state.
                     val geo = if (PgColumn.geo in keepableByteCols) outRows.getByteArray(row, PgColumn.geo.name) else tuple.getByteArray(StandardMembers.Geometry)
                     val referencePoint = if (PgColumn.ref_point in keepableByteCols) outRows.getByteArray(row, PgColumn.ref_point.name) else tuple.getByteArray(StandardMembers.ReferencePoint)
-                    val tags = tuple.getStringMember(StandardMembers.XyzTags)
+                    val tags = tuple.getString(StandardMembers.XyzTags)
                     val attachment = if (PgColumn.attachment in keepableByteCols) outRows.getByteArray(row, PgColumn.attachment.name) else tuple.getByteArray(StandardMembers.XyzAttachment)
                     write.tupleNumber = updated_tn
-                    val m = tuple.members
+                    val m = tuple.membersBook
                     val newMembers = if (m is naksha.jbon.HeapBook) {
                         val dict = m.copy()
                         dict.put(StandardMembers.Geometry.name, geo)
@@ -223,9 +223,9 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     } else m
                     write.tuple = tuple.copy(
                         version = updated_tn.version,
-                        members = newMembers
+                        membersBook = newMembers
                     )
-                    write.action = Action.UPDATED
+                    write.action = Action.UPDATE
                 }
             }
         }

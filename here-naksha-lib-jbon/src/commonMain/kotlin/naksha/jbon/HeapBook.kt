@@ -2,14 +2,21 @@
 
 package naksha.jbon
 
+import naksha.base.Int64
 import kotlin.js.JsExport
+import kotlin.jvm.JvmOverloads
 
 /**
  * A mutable [IBook] implementation on the Java _HEAP_.
  * @since 3.0.0
  */
 @JsExport
-class HeapBook : IBook {
+class HeapBook(
+    override var bookType: BookType
+) : IBook {
+    override var databaseNumber: Int64? = null
+    override var featureNumber: Int64? = null
+
     private val _names = mutableListOf<String>()
     private val _values = mutableListOf<Any?>()
     private val _nameIndex = mutableMapOf<String, Int>()
@@ -21,9 +28,9 @@ class HeapBook : IBook {
 
     override fun get(index: Int): Any? = _values.getOrNull(index)
 
-    override fun indexOf(string: String): Int = _nameIndex[string] ?: -1
+    override fun indexOfString(string: String): Int = _nameIndex[string] ?: -1
 
-    override fun stringAt(index: Int): String? {
+    override fun getStringAt(index: Int): String? {
         val name = _names.getOrNull(index)
         if (name != null) return name
         return _values.getOrNull(index) as? String
@@ -31,7 +38,7 @@ class HeapBook : IBook {
 
     override fun hasNames(): Boolean = true
 
-    override fun getIndexOf(name: String): Int = _nameIndex[name] ?: -1
+    override fun indexOfName(name: String): Int = _nameIndex[name] ?: -1
 
     override fun getNameAt(index: Int): String? = _names.getOrNull(index)
 
@@ -42,15 +49,21 @@ class HeapBook : IBook {
         return _values.getOrNull(i)
     }
 
-    override fun find(hash: Int): List<DictEntry> = emptyList()
+    override fun getAllWithHash(hash: Int): List<DictEntry> = emptyList()
 
     /**
      * Creates a shallow copy of this dictionary.
+     * @param bookType The [BookType] of the copy, if different.
+     * @param databaseNumber The database-number of the copy, if different.
+     * @param featureNumber The feature-number of the copy, if different.
      * @return a new [HeapBook] with the same entries.
      * @since 3.0.0
      */
-    fun copy(): HeapBook {
-        val c = HeapBook()
+    @JvmOverloads
+    fun copy(bookType: BookType = this.bookType, databaseNumber: Int64? = this.databaseNumber, featureNumber: Int64? = this.featureNumber): HeapBook {
+        val c = HeapBook(bookType)
+        c.databaseNumber = this.databaseNumber
+        c.featureNumber = this.featureNumber
         for (i in _names.indices) {
             c.put(_names[i], _values[i])
         }

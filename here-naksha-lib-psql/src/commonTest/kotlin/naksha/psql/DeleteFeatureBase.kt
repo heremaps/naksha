@@ -68,7 +68,7 @@ abstract class DeleteFeatureBase(
         }).apply { // this = SuccessResponse
             assertEquals(1, features.size)
             val firstTuple = featureTupleList[0]?.tuple
-            assertSame(Action.CREATED, Action.fromValue((firstTuple?.getLongMember(naksha.model.objects.StandardMembers.Version)?.toInt() ?: -1) and 3))
+            assertSame(Action.CREATE, Action.fromValue((firstTuple?.getLong(naksha.model.objects.StandardMembers.Version)?.toInt() ?: -1) and 3))
         }
 
         // verify if delete table contains element
@@ -81,7 +81,7 @@ abstract class DeleteFeatureBase(
             assertEquals(1, features.size)
             val deletedFeature = assertNotNull(features[0])
             assertEquals(initialFeature.id, deletedFeature.id)
-            assertEquals(Action.DELETED, deletedFeature.properties.xyz.action)
+            assertEquals(Action.DELETE, deletedFeature.properties.xyz.action)
         }
     }
 
@@ -96,7 +96,7 @@ abstract class DeleteFeatureBase(
             executeWrite(WriteRequest().add(Write().createFeature(collection, NakshaFeature(featureId))))
                 .features.first()!!.properties.xyz.guid?.tupleNumber
         )
-        val createTxn = createdTn.version.txn
+        val createTxn = createdTn.version.value
         assertEquals(0L, (createTxn and ACTION_MASK).toLong(),
             "CREATE version must have action bits = 0 (CREATED)")
 
@@ -105,7 +105,7 @@ abstract class DeleteFeatureBase(
             executeWrite(WriteRequest().add(Write().updateFeature(collection, NakshaFeature(featureId), false)))
                 .features.first()!!.properties.xyz.guid?.tupleNumber
         )
-        val updateTxn = updatedTn.version.txn
+        val updateTxn = updatedTn.version.value
         assertEquals(1L, (updateTxn and ACTION_MASK).toLong(),
             "UPDATE version must have action bits = 1 (UPDATED)")
         assertTrue((updateTxn and ACTION_CLEAR) > (createTxn and ACTION_CLEAR),
@@ -116,7 +116,7 @@ abstract class DeleteFeatureBase(
             executeWrite(WriteRequest().add(Write().deleteFeatureById(collection, featureId)))
                 .features.first()!!.properties.xyz.guid?.tupleNumber
         )
-        val deleteTxn = deletedTn.version.txn
+        val deleteTxn = deletedTn.version.value
 
         // Lower 2 bits must be 2 (DELETED action).
         assertEquals(2L, (deleteTxn and ACTION_MASK).toLong(),
@@ -143,9 +143,9 @@ abstract class DeleteFeatureBase(
         }).apply {
             assertEquals(1, features.size)
             val tombstone = assertNotNull(features[0])
-            assertEquals(Action.DELETED, tombstone.properties.xyz.action)
+            assertEquals(Action.DELETE, tombstone.properties.xyz.action)
             // The raw version from HEAD must match exactly what the DELETE write returned.
-            assertEquals(deleteTxn, tombstone.properties.xyz.guid?.tupleNumber?.version?.txn)
+            assertEquals(deleteTxn, tombstone.properties.xyz.guid?.tupleNumber?.version?.value)
         }
     }
 

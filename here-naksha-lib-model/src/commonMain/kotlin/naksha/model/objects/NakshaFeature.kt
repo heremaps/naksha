@@ -69,7 +69,6 @@ open class NakshaFeature() : AnyObject() {
         private val PROPERTIES = NotNullProperty<NakshaFeature, NakshaProperties>(NakshaProperties::class)
         private val TITLE_NULL = NullableProperty<NakshaFeature, String>(String::class)
         private val DESCRIPTION_NULL = NullableProperty<NakshaFeature, String>(String::class)
-        private val ATTACHMENT_NULL = NullableProperty<NakshaFeature, ByteArray>(ByteArray::class)
     }
 
     /**
@@ -129,7 +128,8 @@ open class NakshaFeature() : AnyObject() {
             val cachedId = this.cachedId
             var cachedFeatureNumber = this.cachedFeatureNumber
 
-            // If the user changed the id.
+            // If the user changed the id (we by intention compare the reference, not the value!).
+            @Suppress("StringReferentialEquality")
             if (id === cachedId && cachedFeatureNumber != null) return cachedFeatureNumber
 
             // If the feature exists already, and the `id` was not changed, return existing feature number.

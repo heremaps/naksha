@@ -27,25 +27,25 @@ class TupleNumberTest {
 
     @Test
     fun actionCreatedEncodedInTxn() {
-        val t = tn(Action.CREATED)
-        assertEquals(Action.CREATED, t.action)
+        val t = tn(Action.CREATE)
+        assertEquals(Action.CREATE, t.action)
     }
 
     @Test
     fun actionUpdatedEncodedInTxn() {
-        val t = tn(Action.UPDATED)
-        assertEquals(Action.UPDATED, t.action)
+        val t = tn(Action.UPDATE)
+        assertEquals(Action.UPDATE, t.action)
     }
 
     @Test
     fun actionDeletedEncodedInTxn() {
-        val t = tn(Action.DELETED)
-        assertEquals(Action.DELETED, t.action)
+        val t = tn(Action.DELETE)
+        assertEquals(Action.DELETE, t.action)
     }
 
     @Test
     fun binaryRoundTripB64() {
-        val t = tn(Action.CREATED)
+        val t = tn(Action.CREATE)
         val bytes = t.toByteArray(B64)
         assertEquals(8, bytes.size)
         val restored = TupleNumber.fromB64(bytes, storageNumber, mapNumber, collectionNumber, featureNumber)
@@ -55,7 +55,7 @@ class TupleNumberTest {
 
     @Test
     fun binaryRoundTripB128() {
-        val t = tn(Action.UPDATED)
+        val t = tn(Action.UPDATE)
         val bytes = t.toByteArray(B128)
         assertEquals(16, bytes.size)
         val restored = TupleNumber.fromB128(bytes, storageNumber, mapNumber, collectionNumber)
@@ -66,7 +66,7 @@ class TupleNumberTest {
 
     @Test
     fun binaryRoundTripB160() {
-        val t = tn(Action.DELETED)
+        val t = tn(Action.DELETE)
         val bytes = t.toByteArray(B160)
         assertEquals(20, bytes.size)
         val restored = TupleNumber.fromB160(bytes, storageNumber, mapNumber)
@@ -78,7 +78,7 @@ class TupleNumberTest {
 
     @Test
     fun binaryRoundTripB192() {
-        val t = tn(Action.CREATED)
+        val t = tn(Action.CREATE)
         val bytes = t.toByteArray(B192)
         assertEquals(24, bytes.size)
         val restored = TupleNumber.fromB192(bytes, storageNumber)
@@ -90,7 +90,7 @@ class TupleNumberTest {
 
     @Test
     fun binaryRoundTripB256() {
-        val t = tn(Action.UPDATED)
+        val t = tn(Action.UPDATE)
         val bytes = t.toByteArray(B256)
         assertEquals(32, bytes.size)
         val restored = TupleNumber.fromB256(bytes)
@@ -103,7 +103,7 @@ class TupleNumberTest {
 
     @Test
     fun stringRoundTrip() {
-        val t = tn(Action.CREATED)
+        val t = tn(Action.CREATE)
         val s = t.toString()
         val parts = s.split(":")
         // 5 parts: storageNumber, mapNumber, collectionNumber, featureNumber, version

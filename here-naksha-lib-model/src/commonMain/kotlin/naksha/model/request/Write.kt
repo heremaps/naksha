@@ -212,7 +212,7 @@ open class Write : AnyObject() {
         set(value) {
             if (value == null) removeRaw("version") else {
                 versionValue = value
-                versionRaw = value.txn
+                versionRaw = value.value
                 setRaw("version", versionRaw)
             }
         }

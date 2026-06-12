@@ -24,7 +24,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         val tuple = featureTuple.tuple ?: return null
         val sn = tuple.storageNumber
         val dictReader = getStorageByNumber(sn) ?: cache.getDictReader(sn)
-        val feature = Naksha.decodeFeature(tuple.feature, dictReader) ?: return null
+        val feature = Naksha.decodeFeature(tuple.jbonBytes, dictReader) ?: return null
         return if (resolvePropsQueryOnFeature(pSearch, feature)) featureTuple else null
     }
 

@@ -1,13 +1,11 @@
 package naksha.psql
 
 import naksha.model.Action
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -41,7 +39,7 @@ class UpsertFeatureTest : PgTestBase() {
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
-        }).features.sortedBy { it!!.properties.xyz.version!!.txn.toLong() }
+        }).features.sortedBy { it!!.properties.xyz.version!!.value.toLong() }
 
         // Then
         assertThatFeature(retrievedFeatures[0]!!)
@@ -54,7 +52,7 @@ class UpsertFeatureTest : PgTestBase() {
                     .hasFeatureType(initialFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
-                            .hasProperty("action", Action.CREATED.text)
+                            .hasProperty("action", Action.CREATE.text)
                             .hasProperty("changeCount", 1)
                     }
             }
@@ -69,7 +67,7 @@ class UpsertFeatureTest : PgTestBase() {
                     .hasFeatureType(initialFeature.properties.featureType)
                     .hasXyzThat { retrievedXyz ->
                         retrievedXyz
-                            .hasProperty("action", Action.UPDATED.text)
+                            .hasProperty("action", Action.UPDATE.text)
                             .hasProperty("changeCount", 2)
                     }
             }
@@ -105,7 +103,7 @@ class UpsertFeatureTest : PgTestBase() {
         // TODO: only the first one is updated
         response.features.forEach { feature ->
             assertNotNull(feature)
-            assertEquals(Action.UPDATED, feature.properties.xyz.action)
+            assertEquals(Action.UPDATE, feature.properties.xyz.action)
         }
     }
 }

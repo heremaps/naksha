@@ -2,7 +2,12 @@
 
 package naksha.model.objects
 
+import naksha.base.Int64
 import naksha.base.JsEnum
+import naksha.geo.SpGeometry
+import naksha.model.TagList
+import naksha.model.TagMap
+import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
@@ -161,5 +166,30 @@ class MemberType : JsEnum() {
          */
         @JvmField
         val SET = defIgnoreCase(MemberType::class, "set")
+    }
+
+    /**
+     * Tests if the given value is of this type.
+     * @param value the value to test.
+     * @return `true` if the value is of this type; false otherwise.
+     */
+    fun isInstance(value: Any?): Boolean {
+        if (value == null) return false
+        return when (this) {
+            BOOLEAN -> value is Boolean
+            INT8 -> value is Byte
+            INT16 -> value is Byte || value is Short
+            INT32 -> value is Byte || value is Short || value is Int
+            INT64 -> value is Byte || value is Short || value is Int || value is Long || value is Int64
+            FLOAT32 -> value is Float
+            FLOAT64 -> value is Float || value is Double
+            STRING -> value is String
+            BYTE_ARRAY -> value is ByteArray
+            TUPLE_NUMBER -> value is TupleNumber
+            SPATIAL -> value is SpGeometry
+            TAGS, TAGS_FROM_ARRAY -> value is TagMap
+            SET -> value is List<*>
+            else -> false
+        }
     }
 }
