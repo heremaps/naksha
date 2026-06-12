@@ -1,15 +1,13 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
-import naksha.psql.PgColumn.PgColumnCompanion.allColumns
 
 /**
- * Helper class to convert rows into arrays of column and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
+ * Helper class to convert rows into arrays of column-data and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
  * @since 3.0
  */
 internal class PgColumnRows(val collection: NakshaCollection) {
@@ -18,6 +16,13 @@ internal class PgColumnRows(val collection: NakshaCollection) {
      * @since 3.0
      */
     val columns = mutableListOf<PgColumnEntry>()
+    init {
+        val members = collection.useMembers()
+        for (i in 0 until members.size) {
+            val member = members[i] ?: continue
+            columns.add(PgColumnEntry(i, member.name, PgType.ofMemberType(member.dataType)))
+        }
+    }
     internal val columnByName = mutableMapOf<String, PgColumnEntry>()
     private var isComplete: Boolean? = null
     private var names: String? = null
@@ -87,28 +92,6 @@ internal class PgColumnRows(val collection: NakshaCollection) {
     var collectionNumber: Int? = null
 
     /**
-     * The feature encoding that applies to every tuple in this result set.
-     *
-     * The encoding is no longer persisted as a per-row column; it is a per-collection setting
-     * looked up by callers (e.g. from [PgCollection.head.dataEncoding]) and passed here so the
-     * synthesized [Tuple.dataEncoding] tells decoders how to unpack the feature bytes.
-     *
-     * **MUST be set via [withDefaultDataEncoding] before any call to [getTuple] / [get]** —
-     * leaving it unset and then materializing a tuple would silently decode features under the
-     * wrong encoding, so [getTuple] throws instead of guessing.
-     * @since 3.0
-     */
-    var defaultDataEncoding: DataEncoding? = null
-
-    /**
-     * @see [defaultDataEncoding]
-     */
-    fun withDefaultDataEncoding(value: DataEncoding): PgColumnRows {
-        defaultDataEncoding = value
-        return this
-    }
-
-    /**
      * @see [collectionNumber]
      */
     fun withCollectionNumber(value: Int): PgColumnRows {
@@ -135,8 +118,6 @@ internal class PgColumnRows(val collection: NakshaCollection) {
             return detected
         }
 
-    fun addColumn(col: PgColumn): PgColumnRows = addColumn(col.name, col.type)
-
     fun addColumn(name: String, type: PgType): PgColumnRows {
         clearCache()
         val existing = columnByName[name]
@@ -162,41 +143,32 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         return this
     }
     fun getColumn(name: String): PgColumnEntry? = columnByName[name]
-    fun getColumn(col: PgColumn): PgColumnEntry? = columnByName[col.name]
     fun getColumn(index: Int): PgColumnEntry? = if (index in 0 until columns.size) columns[index] else null
     fun hasColumn(name: String): Boolean = getColumn(name) != null
-    fun hasColumn(col: PgColumn): Boolean = getColumn(col) != null
     fun hasColumn(index: Int): Boolean = getColumn(index) != null
 
 
     fun getAny(row: Int, columnName: String): Any? = columnByName[columnName]?.values?.get(row)
-    fun getAny(row: Int, column: PgColumn): Any? = getAny(row, column.name)
     fun getInt(row: Int, columnName: String): Int? {
         val value = getAny(row, columnName)
         return if (value is Int) value else null
     }
-    fun getInt(row: Int, column: PgColumn): Int? = getInt(row, column.name)
     fun getInt64(row: Int, columnName: String): Int64? {
         val value = getAny(row, columnName)
         return if (value is Int64) value else null
     }
-    fun getInt64(row: Int, column: PgColumn): Int64? = getInt64(row, column.name)
     fun getDouble(row: Int, columnName: String): Double? {
         val value = getAny(row, columnName)
         return if (value is Double) value else null
     }
-    fun getDouble(row: Int, column: PgColumn): Double? = getDouble(row, column.name)
     fun getString(row: Int, columnName: String): String? {
         val value = getAny(row, columnName)
         return if (value is String) value else null
     }
-    fun getString(row: Int, column: PgColumn): String? = getString(row, column.name)
     fun getByteArray(row: Int, columnName: String): ByteArray? {
         val value = getAny(row, columnName)
         return if (value is ByteArray) value else null
     }
-    fun getByteArray(row: Int, column: PgColumn): ByteArray? = getByteArray(row, column.name)
-    fun getB64(row: Int, column: PgColumn, featureNumber: Int64): TupleNumber? = getB64(row, column.name, featureNumber)
     fun getB64(row: Int, columnName: String, featureNumber: Int64): TupleNumber? {
         val raw = getByteArray(row, columnName) ?: return null
         val storageNumber = this.storageNumber ?: return null
@@ -208,7 +180,6 @@ internal class PgColumnRows(val collection: NakshaCollection) {
             null
         }
     }
-    fun getB128(row: Int, column: PgColumn): TupleNumber? = getB128(row, column.name)
     fun getB128(row: Int, columnName: String): TupleNumber? {
         val raw = getByteArray(row, columnName) ?: return null
         val storageNumber = this.storageNumber ?: return null
@@ -226,10 +197,6 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         val fn = getInt64(row, PgColumn.fn) ?: return null
         val version = getInt64(row, PgColumn.version) ?: return null
         val nextVersion = getInt64(row, PgColumn.next_version)
-        val encoding = defaultDataEncoding ?: throw illegalState(
-            "PgColumnRows.defaultDataEncoding was not set before calling getTuple(); " +
-                    "set it from the collection's dataEncoding via withDefaultDataEncoding(...)."
-        )
         val members = HeapBook(BookType.MEMBER_BOOK)
 
         return Tuple(
@@ -242,22 +209,6 @@ internal class PgColumnRows(val collection: NakshaCollection) {
             membersBook = members,
             jbonBytes = getByteArray(row, PgColumn.feature)
         )
-    }
-
-    /**
-     * Returns the value of a `jsonb` column as raw JSON text.
-     *
-     * `jsonb` columns come back from the cursor pre-parsed (a [naksha.base.PlatformMap] /
-     * [naksha.base.PlatformList]) since most callers want a typed object. For carriers that hold
-     * the raw JSON text (like tags) we round-trip through [toJSON] to recover it.
-     */
-    private fun getJsonText(row: Int, column: PgColumn): String? {
-        val value = getAny(row, column)
-        return when (value) {
-            null -> null
-            is String -> value
-            else -> toJSON(value)
-        }
     }
 
     operator fun get(row: Int): Tuple? {
@@ -276,7 +227,7 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         }
         return false
     }
-    fun set(row: Int, column: PgColumn, value: Any?): Boolean = set(row, column.name, value)
+
     /**
      * Adds one [PgColumnEntry] per declared [naksha.model.objects.Member].
      *
@@ -286,7 +237,7 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         if (members == null) return this
         for (m in members) {
             if (m == null) continue
-            addColumn(PgCustomMemberValues.pgColumnName(m.name), PgCustomMemberValues.pgTypeFor(m.dataType))
+            addColumn(PgMemberHelper.pgColumnName(m.name), PgMemberHelper.pgTypeFor(m.dataType))
         }
         return this
     }
@@ -300,15 +251,16 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         if (feature == null || members == null) return
         for (m in members) {
             if (m == null) continue
-            val raw = PgCustomMemberValues.walkFeature(feature, m.effectivePath())
-            val coerced = PgCustomMemberValues.coerce(raw, m.dataType, feature.id, m.name)
-            set(row, PgCustomMemberValues.pgColumnName(m.name), coerced)
+            val raw = PgMemberHelper.walkFeature(feature, m.effectivePath())
+            val coerced = PgMemberHelper.coerce(raw, m.dataType, feature.id, m.name)
+            set(row, PgMemberHelper.pgColumnName(m.name), coerced)
         }
     }
 
     operator fun set(row: Int, tuple: Tuple) {
         withMinSize(row)
-        val members = tuple.membersBook ?: return
+        val members = tuple.membersBook
+
         set(row, PgColumn.updated_at, members.getByName("updated_at") as? Int64)
         set(row, PgColumn.created_at, members.getByName("created_at") as? Int64)
         set(row, PgColumn.author_ts, members.getByName("author_ts") as? Int64)

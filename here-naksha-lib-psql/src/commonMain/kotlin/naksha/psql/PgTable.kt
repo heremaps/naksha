@@ -511,7 +511,7 @@ $TABLESPACE"""
             val colDef = when {
                 knownPgCol != null && knownPgCol !in standardSet -> knownPgCol.sqlDefinition
                 knownPgCol != null -> continue // already in headColumns loop above
-                else -> PgCustomMemberValues.sqlDefinitionFor(m)
+                else -> PgMemberHelper.sqlDefinitionFor(m)
             }
             conn.execute("ALTER TABLE $quotedName ADD COLUMN IF NOT EXISTS $colDef").close()
         }
@@ -581,7 +581,7 @@ $TABLESPACE"""
                 // Standard head columns are already in baseColumns; skip to avoid duplicates.
                 knownPgCol != null -> continue
                 // Truly custom member: generate from type mapping.
-                else -> PgCustomMemberValues.sqlDefinitionFor(member)
+                else -> PgMemberHelper.sqlDefinitionFor(member)
             }
             sb.append(",\n").append(colDef)
         }
@@ -589,7 +589,7 @@ $TABLESPACE"""
     }
 
     /**
-     * Maps a [PgType] to the same sort-order bucket used by [PgCustomMemberValues.columnSortOrder],
+     * Maps a [PgType] to the same sort-order bucket used by [PgMemberHelper_C.columnSortOrder],
      * so that standard and custom columns can be interleaved into the correct type-alignment group.
      */
     private fun pgTypeSortOrder(type: PgType): Int = when (type) {
@@ -636,9 +636,9 @@ $TABLESPACE"""
             val colDef = when {
                 knownPgCol != null && knownPgCol !in standardSet -> knownPgCol.sqlDefinition
                 knownPgCol != null -> continue // already in baseColumns — skip
-                else -> PgCustomMemberValues.sqlDefinitionFor(m)
+                else -> PgMemberHelper.sqlDefinitionFor(m)
             }
-            val bucket = PgCustomMemberValues.columnSortOrder(m.dataType)
+            val bucket = PgMemberHelper.columnSortOrder(m.dataType)
             extrasByBucket.getOrPut(bucket) { mutableListOf() }.add(colDef)
         }
 
@@ -776,7 +776,7 @@ ${TABLESPACE};""".trim()
     private fun physicalColumnName(name: String, members: MemberList?): String {
         if (members != null) {
             for (m in members) {
-                if (m != null && m.name == name) return PgCustomMemberValues.pgColumnName(name)
+                if (m != null && m.name == name) return PgMemberHelper.pgColumnName(name)
             }
         }
         return name

@@ -33,7 +33,7 @@ class StandardMembers private constructor() {
         @JvmField @JsStatic
         val Tn = Member("~tn", MemberType.TUPLE_NUMBER, JsonPath("tn"))
 
-         /**
+        /**
          * `nv` — **next-version** (`INT64`). The version at which this tuple was superseded
          * by the next state. Present only in history; in head the value is intrinsically the current
          * HEAD sentinel and is not stored as a physical member. Mandatory, storage-managed.

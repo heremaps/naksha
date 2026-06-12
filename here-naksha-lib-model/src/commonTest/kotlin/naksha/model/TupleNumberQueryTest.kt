@@ -30,7 +30,7 @@ class TupleNumberQueryTest {
     private fun randomTupleNumber() =
         TupleNumber(
             databaseNumber = Int64(random.nextInt(10)),
-            mapNumber = random.nextInt(10),
+            catalogNumber = random.nextInt(10),
             collectionNumber = random.nextInt(10),
             featureNumber = Int64(random.nextInt(10)),
             version = Version(Int64(random.nextInt(10)))

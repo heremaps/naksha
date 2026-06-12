@@ -5,9 +5,8 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.Naksha
-import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
-import naksha.model.Naksha.NakshaCompanion.ADMIN_COL_ID
-import naksha.model.Naksha.NakshaCompanion.ADMIN_COL_FN
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_FN
 import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_FN
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
@@ -54,16 +53,6 @@ open class PgMap internal constructor(
     val number: Int = nakshaMap.number
 ) {
     /**
-     * The admin-collection, aka `naksha~collections`, that exist in every catalog.
-     *
-     * The admin-collection contains the [NakshaCollection] features of all collections being part of the catalog. The admin-collection itself does not exist as dedicated feature, therefore is hardcoded here. Currently, there is no way to modify the members of it. However, in the future we at least want to allow clients to specify the members and indices when creating a new database. So the storage need to read the admin-collection and admin-catalog from some internal private location within the storage to get the member->JSON mapping, and to understand members and indices.
-     * @since 3.0
-     */
-    internal val adminCollection = NakshaCollection(ADMIN_COL_ID, ADMIN_CATALOG_ID)
-        .withXyzMembers()
-        .withXyzIndices()
-
-    /**
      * The map-identifier quoted optionally in double quotes.
      * @since 3.0
      */
@@ -101,7 +90,10 @@ open class PgMap internal constructor(
         get() {
             var c = _collections
             if (c == null) {
-                c = PgCollection(this, NakshaCollection().withMapId(id).withId(ADMIN_COL_ID))
+                val nakshaCollection = NakshaCollection(COLLECTIONS_COL_ID, id)
+                    .withXyzMembers()
+                    .withXyzIndices()
+                c = PgCollection(this, nakshaCollection)
                 _collections = c
             }
             return c
@@ -330,24 +322,23 @@ open class PgMap internal constructor(
     fun getPgCollectionById(conn: PgConnection?, id: String): PgCollection? {
         if (this is PgAdminMap) {
             return when (id) {
-                ADMIN_COL_ID -> collections
+                COLLECTIONS_COL_ID -> collections
                 TRANSACTIONS_COL_ID -> transactions
                 CATALOGS_COL_ID -> catalogs
                 BOOKS_COL_ID -> books
                 else -> null
             }
         }
-        if (id == ADMIN_COL_ID) return collections
+        if (id == COLLECTIONS_COL_ID) return collections
         val number = collectionNumberById[id]
         val existing = if (number != null) collectionCache[number] else null
         if (existing != null || conn == null) return existing
 
         // Read from database
-        val outRows = PgColumnRows()
+        val outRows = PgColumnRows(collections.head)
             .withStorageNumber(storage.number)
             .withMapNumber(this.number)
-            .withCollectionNumber(ADMIN_COL_FN)
-            .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
+            .withCollectionNumber(COLLECTIONS_COL_FN)
             .addColumns(headColumns)
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
@@ -360,7 +351,7 @@ WHERE id = $1 AND (version & 3) < 2"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaCollection = Naksha.decodeTuple(tuple).proxy(NakshaCollection::class)
+        val nakshaCollection = tuple.decodeFeature(null).proxy(NakshaCollection::class)
         val pgCollection = PgCollection(this, nakshaCollection)
         storeCollection(pgCollection)
         return pgCollection
@@ -376,23 +367,22 @@ WHERE id = $1 AND (version & 3) < 2"""
     fun getPgCollectionByNumber(conn: PgConnection?, number: Int): PgCollection? {
         if (this is PgAdminMap) {
             return when (number) {
-                ADMIN_COL_FN -> collections
+                COLLECTIONS_COL_FN -> collections
                 TRANSACTIONS_COL_FN -> transactions
                 CATALOGS_COL_FN -> catalogs
                 BOOKS_COL_FN -> books
                 else -> null
             }
         }
-        if (number == ADMIN_COL_FN) return collections
+        if (number == COLLECTIONS_COL_FN) return collections
         val existing = collectionCache[number]
         if (existing != null || conn == null) return existing
 
         // Read from database
-        val outRows = PgColumnRows()
+        val outRows = PgColumnRows(collections.head)
             .withStorageNumber(storage.number)
             .withMapNumber(this.number)
-            .withCollectionNumber(ADMIN_COL_FN)
-            .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
+            .withCollectionNumber(COLLECTIONS_COL_FN)
             .addColumns(headColumns)
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
@@ -405,7 +395,7 @@ WHERE fn = $1 AND (version & 3) < 2"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaCollection = Naksha.decodeTuple(tuple).proxy(NakshaCollection::class)
+        val nakshaCollection = tuple.decodeFeature(null).proxy(NakshaCollection::class)
         val pgCollection = PgCollection(this, nakshaCollection)
         storeCollection(pgCollection)
         return pgCollection

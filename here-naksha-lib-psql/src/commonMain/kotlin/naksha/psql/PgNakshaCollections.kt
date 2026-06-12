@@ -12,5 +12,5 @@ import kotlin.js.JsExport
 @JsExport
 class PgNakshaCollections internal constructor(map: PgMap) : PgCollection(map, NakshaCollection()
     .withMapId(map.id)
-    .withId(Naksha.ADMIN_COL_ID)
+    .withId(Naksha.COLLECTIONS_COL_ID)
 ), PgInternalCollection

@@ -22,7 +22,7 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
-
+\
     /**
      * Create a Naksha collection with settings.
      * @param id the collection-identifier.
@@ -76,11 +76,11 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Always return `0`, because all collections are always stored in `naksha~collections` collection.
      * @since 3.0
-     * @see [Naksha.ADMIN_COL_ID]
-     * @see [Naksha.ADMIN_COL_FN]
+     * @see [Naksha.COLLECTIONS_COL_ID]
+     * @see [Naksha.COLLECTIONS_COL_FN]
      */
     override val collectionNumber: Int
-        get() = Naksha.ADMIN_COL_FN
+        get() = Naksha.COLLECTIONS_COL_FN
 
     /**
      * The map-id of the map in which the collection is located; `null` if not yet known.

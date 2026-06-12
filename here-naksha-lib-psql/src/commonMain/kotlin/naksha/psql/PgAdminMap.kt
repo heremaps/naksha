@@ -15,15 +15,13 @@ import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_FN
-import naksha.model.Naksha.NakshaCompanion.ADMIN_COL_ID
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_FN
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
-import naksha.model.objects.MemberList
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
-import naksha.model.objects.StandardMembers
 import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -60,14 +58,6 @@ abstract class PgAdminMap internal constructor(
      */
     upgrade: Boolean?
 ) : PgMap(storage, NakshaMap().withStorageId(storage.id).withId(ADMIN_CATALOG_ID)), IDictReader {
-
-    /**
-     * This collection does not exist. It is only
-     */
-    internal val adminMapCollection = NakshaCollection(ADMIN_COL_ID, ADMIN_CATALOG_ID)
-        .withMinimalMembers()
-        .withMinimalIndices()
-
     /**
      * The page-size of the database (`current_setting('block_size')`).
      * @since 3.0.0
@@ -552,14 +542,12 @@ SELECT basics.*, procs.* FROM basics, procs;
         if (existing != null) return existing
         if (conn == null) return null
 
-        // Read from database
-        val outRows = PgColumnRows()
+        val outRows = PgColumnRows(catalogs.head)
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_CATALOG_FN)
             .withCollectionNumber(CATALOGS_COL_FN)
-            .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(headColumns)
-        val SQL = """SELECT *
+        val SQL = """SELECT ${outRows.names()}
 FROM "naksha~admin".${catalogs.headTable.quotedName}
 WHERE id = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
@@ -589,11 +577,10 @@ WHERE id = $1 AND (version & 3) < 2"""
         if (conn == null) return null
 
         // Read from database
-        val outRows = PgColumnRows()
+        val outRows = PgColumnRows(catalogs.head)
             .withStorageNumber(storage.number)
             .withMapNumber(ADMIN_CATALOG_FN)
             .withCollectionNumber(CATALOGS_COL_FN)
-            .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(headColumns)
         val SQL = """
             SELECT ${outRows.names()}

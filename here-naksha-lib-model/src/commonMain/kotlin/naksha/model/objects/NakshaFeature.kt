@@ -183,7 +183,7 @@ open class NakshaFeature() : AnyObject() {
      * @since 3.0
      */
     open val mapNumber: Int?
-        get() = guid?.tupleNumber?.mapNumber
+        get() = guid?.tupleNumber?.catalogNumber
 
     /**
      * Returns the storage-number of the storage in which the feature is currently persisted; `null` if the feature is not yet persisted.

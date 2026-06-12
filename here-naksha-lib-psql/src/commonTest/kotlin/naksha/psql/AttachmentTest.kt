@@ -120,7 +120,7 @@ class AttachmentTest : PgTestBase() {
         assertNotNull(insertedFeatureGuid)
         assertEquals(featureId, insertedFeatureGuid.id)
         assertEquals(storage.number, insertedFeatureGuid.tupleNumber.databaseNumber)
-        assertEquals(map.number, insertedFeatureGuid.tupleNumber.mapNumber)
+        assertEquals(map.number, insertedFeatureGuid.tupleNumber.catalogNumber)
         assertEquals(collection.number, insertedFeatureGuid.tupleNumber.collectionNumber)
 
         // Now, update the feature, leave the attachment as it is.
@@ -209,7 +209,7 @@ class AttachmentTest : PgTestBase() {
         assertNotNull(insertedFeatureGuid)
         assertEquals(featureId, insertedFeatureGuid.id)
         assertEquals(storage.number, insertedFeatureGuid.tupleNumber.databaseNumber)
-        assertEquals(map.number, insertedFeatureGuid.tupleNumber.mapNumber)
+        assertEquals(map.number, insertedFeatureGuid.tupleNumber.catalogNumber)
         assertEquals(collection.number, insertedFeatureGuid.tupleNumber.collectionNumber)
 
         // Now, update the feature, leave the attachment as it is.

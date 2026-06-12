@@ -535,7 +535,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           collectionFromRequest.setId(collectionId);
         });
       }
-      String finalCollectionId = isOnlyWriteCollections(wr) ? Naksha.ADMIN_COL_ID : collectionId;
+      String finalCollectionId = isOnlyWriteCollections(wr) ? Naksha.COLLECTIONS_COL_ID : collectionId;
       wr.getWrites().forEach(write -> {
         write.setMapId(mapId);
         write.setCollectionId(finalCollectionId);

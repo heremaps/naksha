@@ -180,7 +180,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     Write writeCollection = findSingleCreateCollectionWrite(capturedWrites);
     assertEquals(WriteOp.CREATE, writeCollection.getOp());
     assertEquals(testCase.correctCollection().getId(), writeCollection.getId());
-    assertEquals(Naksha.ADMIN_COL_ID, writeCollection.getCollectionId());
+    assertEquals(Naksha.COLLECTIONS_COL_ID, writeCollection.getCollectionId());
 
     // And: write features related to the same feature in correct collection
     List<Write> featureWrites = getSingularWritesToCollection(capturedWrites, testCase.correctCollection().getId());
@@ -393,10 +393,10 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // 1st and 3rd are WriteCollections against COLLECTIONS_COL with map from storage props
     assertTrue(RequestTypesUtil.isOnlyWriteCollections(calls.get(0)));
     assertTrue(RequestTypesUtil.isOnlyWriteCollections(calls.get(2)));
-    assertEquals(Naksha.ADMIN_COL_ID, calls.get(0).getWrites().get(0).getCollectionId());
+    assertEquals(Naksha.COLLECTIONS_COL_ID, calls.get(0).getWrites().get(0).getCollectionId());
     assertEquals(mapIdFromStorageProps, calls.get(0).getWrites().get(0).getMapId());
     assertEquals("target_collection", calls.get(0).getWrites().get(0).getFeature().getId());
-    assertEquals(Naksha.ADMIN_COL_ID, calls.get(2).getWrites().get(0).getCollectionId());
+    assertEquals(Naksha.COLLECTIONS_COL_ID, calls.get(2).getWrites().get(0).getCollectionId());
     assertEquals(mapIdFromStorageProps, calls.get(2).getWrites().get(0).getMapId());
     assertEquals("target_collection", calls.get(2).getWrites().get(0).getFeature().getId());
 
@@ -461,7 +461,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     verify(storageWriteSession).execute(captor.capture());
     Write write = captor.getValue().getWrites().get(0);
     assertTrue(RequestTypesUtil.isOnlyWriteCollections(captor.getValue()));
-    assertEquals(Naksha.ADMIN_COL_ID, write.getCollectionId(), "WriteCollections must target naksa~collections collection");
+    assertEquals(Naksha.COLLECTIONS_COL_ID, write.getCollectionId(), "WriteCollections must target naksa~collections collection");
     assertEquals(mapIdFromStorageProps, write.getMapId(), "MapId must be taken from storage props");
     assertEquals("apply_col", write.getFeature().getId());
   }
@@ -540,7 +540,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
   }
 
   private static Write findSingleCreateCollectionWrite(List<WriteRequest> writeRequests) {
-    List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.ADMIN_COL_ID);
+    List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.COLLECTIONS_COL_ID);
     assertEquals(1, collectionWrites.size(), "Expected single collection write");
     return collectionWrites.get(0);
   }
@@ -560,7 +560,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
   private static ArgumentMatcher<WriteRequest> matchesCreateCollectionRequest() {
     return writeRequest -> {
       WriteList writes = writeRequest.getWrites();
-      return writes.size() == 1 && Naksha.ADMIN_COL_ID.equals(writes.get(0).getCollectionId());
+      return writes.size() == 1 && Naksha.COLLECTIONS_COL_ID.equals(writes.get(0).getCollectionId());
     };
   }
 

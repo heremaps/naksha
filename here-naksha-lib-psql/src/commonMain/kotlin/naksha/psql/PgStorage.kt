@@ -4,9 +4,7 @@ package naksha.psql
 
 import naksha.base.fn.Fx2
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_COL_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
-import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 
 // TODO: Create "naksha~admin" map with map-number 0

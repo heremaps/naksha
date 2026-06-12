@@ -51,7 +51,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
     if (request instanceof WriteRequest wr) {
       for (Write write : wr.getWrites()) {
         Response singularResponse;
-        if (Naksha.ADMIN_COL_ID.equals(write.getCollectionId())) {
+        if (Naksha.COLLECTIONS_COL_ID.equals(write.getCollectionId())) {
           singularResponse = executeWriteCollection(write);
         } else {
           singularResponse = executeWriteFeature(write);

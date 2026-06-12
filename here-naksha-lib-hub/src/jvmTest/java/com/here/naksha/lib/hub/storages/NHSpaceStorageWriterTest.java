@@ -92,7 +92,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.DELETE)
-            .hasCollectionId(Naksha.ADMIN_COL_ID)
+            .hasCollectionId(Naksha.COLLECTIONS_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -129,7 +129,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.DELETE)
-            .hasCollectionId(Naksha.ADMIN_COL_ID)
+            .hasCollectionId(Naksha.COLLECTIONS_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -159,7 +159,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.DELETE)
-            .hasCollectionId(Naksha.ADMIN_COL_ID)
+            .hasCollectionId(Naksha.COLLECTIONS_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -200,7 +200,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
   private ArgumentMatcher<WriteRequest> writeCollectionRequest() {
     return writeRequest -> {
       List<Write> writes = writeRequest.getWrites();
-      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.ADMIN_COL_ID);
+      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.COLLECTIONS_COL_ID);
     };
   }
 

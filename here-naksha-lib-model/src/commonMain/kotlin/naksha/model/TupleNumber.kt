@@ -31,7 +31,7 @@ import kotlin.jvm.JvmStatic
  * urn:naksha:tn:{database-number}:{catalog-number}:{collection-number}:{feature-number}:{version}
  * ```
  *
- * - There are no two [tuples][Tuple] with the same [tuple-number][TupleNumber]; world-wide.
+ * - There are no two [tuples][Tuple] with the same [tuple-number][TupleNumber]; world-wide.\
  * @since 3.0
  */
 @JsExport
@@ -43,10 +43,10 @@ data class TupleNumber(
     @JvmField val databaseNumber: Int64,
 
     /**
-     * The map-number of the map in which the tuple is stored within the storage.
+     * The catalog-number of the map in which the tuple is stored within the storage.
      * @since 3.0.0
      */
-    @JvmField val mapNumber: Int,
+    @JvmField val catalogNumber: Int,
 
     /**
      * The collection-number of the collection in which the tuple is stored within the storage.
@@ -100,7 +100,7 @@ data class TupleNumber(
         var i64_diff = databaseNumber - other.databaseNumber
         if (i64_diff < 0) return -1
         if (i64_diff > 1) return 1
-        var i32_diff = mapNumber - other.mapNumber
+        var i32_diff = catalogNumber - other.catalogNumber
         if (i32_diff < 0) return -1
         if (i32_diff > 1) return 1
         i32_diff = collectionNumber - other.collectionNumber
@@ -122,7 +122,7 @@ data class TupleNumber(
         if (this === other) return true
         return other is TupleNumber
             && databaseNumber == other.databaseNumber
-            && mapNumber == other.mapNumber
+            && catalogNumber == other.catalogNumber
             && collectionNumber == other.collectionNumber
             && featureNumber == other.featureNumber
             && version == other.version
@@ -140,7 +140,7 @@ data class TupleNumber(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-            _string = "$databaseNumber:$mapNumber:$collectionNumber:$featureNumber:$version"
+            _string = "$databaseNumber:$catalogNumber:$collectionNumber:$featureNumber:$version"
         }
         return _string
     }
@@ -161,7 +161,7 @@ data class TupleNumber(
         val fn = this.featureNumber
         if (fn >= 0) throw NakshaException(ILLEGAL_STATE, "The feature-number is not auto-generated, failed to calculate alternative")
         val new_fn = Naksha.alternativeInt64(fn)
-        return TupleNumber(databaseNumber, mapNumber, collectionNumber, new_fn, version)
+        return TupleNumber(databaseNumber, catalogNumber, collectionNumber, new_fn, version)
     }
 
     private var _urn: String? = null
@@ -255,7 +255,7 @@ data class TupleNumber(
             offset += 8
         }
         if (variant.encodeMapNumber()) {
-            dataview_set_int32(view, offset, mapNumber)
+            dataview_set_int32(view, offset, catalogNumber)
             offset += 4
         }
         if (variant.encodeCollectionNumber()) {
@@ -307,7 +307,7 @@ data class TupleNumber(
             storageNumber: Int64? = null,
         ) = TupleNumber(
             storageNumber ?: tn.databaseNumber,
-            mapNumber ?: tn.mapNumber,
+            mapNumber ?: tn.catalogNumber,
             collectionNumber ?: tn.collectionNumber,
             featureNumber ?: tn.featureNumber,
             version ?: tn.version,
@@ -336,7 +336,7 @@ data class TupleNumber(
             offset: Int,
             variant: TupleNumberVariant,
             tn: TupleNumber
-        ): TupleNumber = fromBinary(Binary(bytes, offset), variant, tn.databaseNumber, tn.mapNumber, tn.collectionNumber, tn.featureNumber)
+        ): TupleNumber = fromBinary(Binary(bytes, offset), variant, tn.databaseNumber, tn.catalogNumber, tn.collectionNumber, tn.featureNumber)
 
         fun fromB256(bytes: ByteArray)
                 = fromByteArray(bytes, 0, B256)

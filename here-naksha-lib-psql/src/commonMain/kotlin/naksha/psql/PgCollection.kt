@@ -6,7 +6,6 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StoreMode
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
-import kotlin.jvm.JvmField
 
 /**
  * A collection is a set of database tables, that together form a logical feature store. This lower level implementation supports methods to create the collection physically (so the whole set of tables), to refresh the information about the collection, drop the tables, to add, or remove indices at runtime, aso.
@@ -276,8 +275,8 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
         // Added.
         for ((name, nm) in nextByName) {
             if (prevByName.containsKey(name)) continue
-            val pgIdent = "\"${PgCustomMemberValues.pgColumnName(name)}\""
-            val pgType = PgCustomMemberValues.pgSqlTypeFor(nm.dataType)
+            val pgIdent = "\"${PgMemberHelper.pgColumnName(name)}\""
+            val pgType = PgMemberHelper.pgSqlTypeFor(nm.dataType)
             for (root in mutableRootTables()) {
                 val sql = "ALTER TABLE ${root.quotedName} ADD COLUMN IF NOT EXISTS $pgIdent $pgType"
                 conn.execute(sql).close()
@@ -293,7 +292,7 @@ FOR EACH ROW EXECUTE FUNCTION naksha_trigger_after();"""
                         "Set Write.force = true to allow ALTER TABLE DROP COLUMN."
                 )
             }
-            val pgIdent = "\"${PgCustomMemberValues.pgColumnName(name)}\""
+            val pgIdent = "\"${PgMemberHelper.pgColumnName(name)}\""
             for (root in mutableRootTables()) {
                 val sql = "ALTER TABLE ${root.quotedName} DROP COLUMN IF EXISTS $pgIdent"
                 conn.execute(sql).close()

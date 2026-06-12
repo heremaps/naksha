@@ -12,6 +12,8 @@ import naksha.geo.SpGeometry
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
+import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaMap
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -48,18 +50,18 @@ class Naksha private constructor() {
         const val ADMIN_CATALOG_FN = 0
 
         /**
-         * The identifier of the admin-collection in which the collection-features of each catalog are persisted.
+         * The identifier of the collections-collection, the collection in which the collection-features of each catalog are persisted.
          *
-         * This collection exists in every catalog under Naksha management. The identifier of the collection itself is fixed to `naksha~collections`. The feature of the administration collection is an immutable feature. It is needed to bootstrap a new catalog, therefore it is not persisted anywhere.
+         * This collection exists in every catalog under Naksha management. The identifier of the collection itself is fixed to `naksha~collections`. The feature of the collections-collection is an immutable feature. It is needed to bootstrap a new catalog.
          * @since 3.0
          */
-        const val ADMIN_COL_ID = "naksha~collections"
+        const val COLLECTIONS_COL_ID = "naksha~collections"
 
         /**
-         * The collection-number of the admin-collection in which the collection-features of each catalog are persisted, it has the fixed feature-number _(`0`)_.
+         * The collection-number of the collections-collection in which the collection-features of each catalog are persisted, it has the fixed feature-number _(`0`)_.
          * @since 3.0
          */
-        const val ADMIN_COL_FN = 0
+        const val COLLECTIONS_COL_FN = 0
 
         /**
          * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~transactions`)_.
@@ -113,7 +115,7 @@ class Naksha private constructor() {
         @JvmStatic
         val internalIdToNumber = mapOf(
             Pair(ADMIN_CATALOG_ID, ADMIN_CATALOG_FN),
-            Pair(ADMIN_COL_ID, ADMIN_COL_FN),
+            Pair(COLLECTIONS_COL_ID, COLLECTIONS_COL_FN),
             Pair(TRANSACTIONS_COL_ID, TRANSACTIONS_COL_FN),
             Pair(CATALOGS_COL_ID, CATALOGS_COL_FN),
             Pair(BOOKS_COL_ID, BOOKS_COL_FN),

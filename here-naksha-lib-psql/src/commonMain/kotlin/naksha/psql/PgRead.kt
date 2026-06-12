@@ -77,9 +77,9 @@ internal data class PgRead(
      * @param tupleNumber the tuple-number of the tuple to read.
      */
     constructor(conn: PgConnection, adminMap: PgAdminMap, tupleNumber: TupleNumber) : this(
-        adminMap.getPgMapByNumber(conn, tupleNumber.mapNumber)
-            ?: throw mapNotFound("The map for map-number ${tupleNumber.mapNumber} not found"),
-        adminMap.getPgMapByNumber(conn, tupleNumber.mapNumber)?.getPgCollectionByNumber(conn, tupleNumber.collectionNumber)
+        adminMap.getPgMapByNumber(conn, tupleNumber.catalogNumber)
+            ?: throw mapNotFound("The map for map-number ${tupleNumber.catalogNumber} not found"),
+        adminMap.getPgMapByNumber(conn, tupleNumber.catalogNumber)?.getPgCollectionByNumber(conn, tupleNumber.collectionNumber)
             ?: throw collectionNotFound("The collection for collection-number ${tupleNumber.collectionNumber} not found"),
         tupleNumber,
         null

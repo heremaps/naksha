@@ -7,7 +7,7 @@ import naksha.geo.SpGeometry
 import naksha.jbon.*
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
-import naksha.model.Naksha.NakshaCompanion.ADMIN_COL_ID
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
@@ -64,7 +64,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val COLLECTIONS_COL_QUOTED = quoteIdent(ADMIN_COL_ID)
+        val COLLECTIONS_COL_QUOTED = quoteIdent(COLLECTIONS_COL_ID)
 
         /**
          * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256").

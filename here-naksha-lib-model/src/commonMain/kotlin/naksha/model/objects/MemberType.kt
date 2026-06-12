@@ -5,7 +5,8 @@ package naksha.model.objects
 import naksha.base.Int64
 import naksha.base.JsEnum
 import naksha.geo.SpGeometry
-import naksha.model.TagList
+import naksha.model.NakshaError.NakshaErrorCompanion.INITIALIZATION_FAILED
+import naksha.model.NakshaException
 import naksha.model.TagMap
 import naksha.model.TupleNumber
 import kotlin.js.JsExport
@@ -48,70 +49,70 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val BOOLEAN = defIgnoreCase(MemberType::class, "boolean")
+        val BOOLEAN = defIgnoreCase(MemberType::class, "boolean") { self -> self.sortOrder = 6 }
 
         /**
          * 8-bit signed integer in storage, but when reading from book, decode as long.
          * @since 3.0
          */
         @JvmField
-        val INT8 = defIgnoreCase(MemberType::class, "int8")
+        val INT8 = defIgnoreCase(MemberType::class, "int8") { self -> self.sortOrder = 5 }
 
         /**
          * 16-bit signed integer in storage, but when reading from book, decode as long.
          * @since 3.0
          */
         @JvmField
-        val INT16 = defIgnoreCase(MemberType::class, "int16")
+        val INT16 = defIgnoreCase(MemberType::class, "int16") { self -> self.sortOrder = 4 }
 
         /**
          * 32-bit signed integer in storage, but when reading from book, decode as long.
          * @since 3.0
          */
         @JvmField
-        val INT32 = defIgnoreCase(MemberType::class, "int32")
+        val INT32 = defIgnoreCase(MemberType::class, "int32") { self -> self.sortOrder = 2 }
 
         /**
          * 64-bit signed integer.
          * @since 3.0
          */
         @JvmField
-        val INT64 = defIgnoreCase(MemberType::class, "int64")
+        val INT64 = defIgnoreCase(MemberType::class, "int64") { self -> self.sortOrder = 0 }
 
         /**
          * 32-bit IEEE-754 floating point in storage, but when reading from book, decode as double.
          * @since 3.0
          */
         @JvmField
-        val FLOAT32 = defIgnoreCase(MemberType::class, "float32")
+        val FLOAT32 = defIgnoreCase(MemberType::class, "float32"){ self -> self.sortOrder = 3 }
 
         /**
          * 64-bit IEEE-754 floating point.
          * @since 3.0
          */
         @JvmField
-        val FLOAT64 = defIgnoreCase(MemberType::class, "float64")
+        val FLOAT64 = defIgnoreCase(MemberType::class, "float64") { self -> self.sortOrder = 1 }
 
         /**
          * Variable-length string.
          * @since 3.0
          */
         @JvmField
-        val STRING = defIgnoreCase(MemberType::class, "string")
+        val STRING = defIgnoreCase(MemberType::class, "string") { self -> self.sortOrder = 7 }
 
         /**
          * Raw byte array.
          * @since 3.0
          */
         @JvmField
-        val BYTE_ARRAY = defIgnoreCase(MemberType::class, "byte_array")
+        val BYTE_ARRAY = defIgnoreCase(MemberType::class, "byte_array") { self -> self.sortOrder = 13 }
 
         /**
          * A tuple-number, can be encoded as string or byte-array _(storage decides)_. To be used with [IndexType.BTREE].
          * @since 3.0
          */
         @JvmField
-        val TUPLE_NUMBER = defIgnoreCase(MemberType::class, "tuple_number")
+        val TUPLE_NUMBER = defIgnoreCase(MemberType::class, "tuple_number") { self -> self.sortOrder = 12 }
 
         /**
          * A geometry stored as raw [TWKB](https://github.com/nicowillis/twkb) bytes.
@@ -123,7 +124,7 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val SPATIAL = defIgnoreCase(MemberType::class, "spatial")
+        val SPATIAL = defIgnoreCase(MemberType::class, "spatial") { self -> self.sortOrder = 11 }
 
         /**
          * A map whose keys are strings and values are primitives, following the JBON2 tag-map
@@ -134,7 +135,7 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val TAGS = defIgnoreCase(MemberType::class, "tags")
+        val TAGS = defIgnoreCase(MemberType::class, "tags") { self -> self.sortOrder = 8 }
 
         /**
          * A string-array using Naksha tag syntax that is expanded into a [TAGS] map at write time.
@@ -148,7 +149,7 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val TAGS_FROM_ARRAY = defIgnoreCase(MemberType::class, "tags_from_array")
+        val TAGS_FROM_ARRAY = defIgnoreCase(MemberType::class, "tags_from_array") { self -> self.sortOrder = 9 }
 
         /**
          * A JSON array of unique primitive values (booleans, numbers, strings), following the JBON2
@@ -165,7 +166,7 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val SET = defIgnoreCase(MemberType::class, "set")
+        val SET = defIgnoreCase(MemberType::class, "set") { self -> self.sortOrder = 10 }
     }
 
     /**
@@ -192,4 +193,22 @@ class MemberType : JsEnum() {
             else -> false
         }
     }
+
+    var sortOrder: Int = -1
+        private set(value) {
+            val it: Iterator<MemberType> = iterate(MemberType::class)
+            var biggestSortOrder = -1
+            while (it.hasNext()) {
+                val memberType = it.next()
+                if (memberType.sortOrder == value) {
+                    throw NakshaException(INITIALIZATION_FAILED, "Found duplicate sortOrder, member $this == $memberType")
+                }
+                if (memberType.sortOrder > biggestSortOrder) biggestSortOrder = memberType.sortOrder
+            }
+            var expected = biggestSortOrder+1
+            if (value != biggestSortOrder) {
+                throw NakshaException(INITIALIZATION_FAILED, "Member $this is expected to have sortOrder $expected, but has $value")
+            }
+            field = value
+        }
 }

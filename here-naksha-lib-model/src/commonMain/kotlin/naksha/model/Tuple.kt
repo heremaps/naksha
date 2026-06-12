@@ -103,7 +103,7 @@ data class Tuple @JvmOverloads constructor(
                     // The feature is stored in the same database as the collection it is inserted into.
                     colTn.databaseNumber,
                     // The feature is stored in the same catalog as the collection it is inserted into.
-                    colTn.mapNumber,
+                    colTn.catalogNumber,
                     // The feature-number of the collection is the collection-number of the feature we want to store in the collection.
                     colTn.featureNumber.toInt(),
                     // The feature-number of the actual feature. Will either be set explicit or calcualted.
