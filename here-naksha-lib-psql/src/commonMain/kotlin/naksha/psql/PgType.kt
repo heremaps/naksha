@@ -3,7 +3,8 @@
 package naksha.psql
 
 import naksha.base.JsEnum
-import naksha.base.PlatformUtil
+import naksha.model.objects.Member
+import naksha.model.objects.MemberType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -154,6 +155,32 @@ class PgType : JsEnum() {
         @JsStatic
         @JvmStatic
         fun of(name: String?): PgType? = getDefined(name, PgType::class)
+
+        /**
+         * Returns the database column type to be used for a specific [MemberType].
+         * @param member the [MemberType] to lookup.
+         * @return the database column type to be used for a specific [MemberType].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun ofMemberType(member: Member): PgType = when (member.dataType) {
+            MemberType.BOOLEAN -> BOOLEAN
+            MemberType.INT8 -> SHORT
+            MemberType.INT16 -> SHORT
+            MemberType.INT32 -> INT
+            MemberType.INT64 -> INT64
+            MemberType.FLOAT32 -> FLOAT
+            MemberType.FLOAT64 -> DOUBLE
+            MemberType.STRING -> STRING
+            // MemberType.BYTE_ARRAY -> BYTE_ARRAY
+            // MemberType.TUPLE_NUMBER -> BYTE_ARRAY
+            // MemberType.SPATIAL -> BYTE_ARRAY
+            MemberType.TAGS -> JSONB
+            MemberType.TAGS_FROM_ARRAY -> JSONB
+            MemberType.SET -> JSONB
+            else -> BYTE_ARRAY
+        }
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")

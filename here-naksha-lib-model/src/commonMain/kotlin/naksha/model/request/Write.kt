@@ -5,7 +5,7 @@ package naksha.model.request
 import naksha.base.*
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
-import naksha.model.Naksha.NakshaCompanion.ADMIN_COL_ID
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.featureNumber
@@ -72,8 +72,8 @@ open class Write : AnyObject() {
             if (CATALOGS_COL_ID == a) return -1
             if (CATALOGS_COL_ID == b) return 1
             // We order all modifications done in internal collection's-collection second.
-            if (ADMIN_COL_ID == a) return -1
-            if (ADMIN_COL_ID == b) return 1
+            if (COLLECTIONS_COL_ID == a) return -1
+            if (COLLECTIONS_COL_ID == b) return 1
             // Rest by id
             return a.compareTo(b)
         }
@@ -167,7 +167,7 @@ open class Write : AnyObject() {
      *
      * - If a [map][NakshaMap] should be modified, then [Naksha.CATALOGS_COL_ID] should be used, within [Naksha.ADMIN_CATALOG_ID].
      * - If a [dictionary][NakshaDictionary] should be modified, the [Naksha.BOOKS_COL_ID] should be used, within [Naksha.ADMIN_CATALOG_ID].
-     * - If a [collection][NakshaCollection] should be modified, then [Naksha.ADMIN_COL_ID] should be used, must not be used together with [Naksha.ADMIN_CATALOG_ID], because the admin-map does not allow collection modification, it is internally managed.
+     * - If a [collection][NakshaCollection] should be modified, then [Naksha.COLLECTIONS_COL_ID] should be used, must not be used together with [Naksha.ADMIN_CATALOG_ID], because the admin-map does not allow collection modification, it is internally managed.
      * - If a [feature][NakshaFeature] should be created, then the [NakshaCollection] in which the feature should be stored is required.
      * - Throws [ILLEGAL_STATE], if the collection-id is read, before being set.
      * @since 3.0
@@ -630,7 +630,7 @@ open class Write : AnyObject() {
      */
     fun createCollection(collection: NakshaCollection): Write {
         this.mapId = collection.mapId
-        this.collectionId = ADMIN_COL_ID
+        this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.CREATE
         this.feature = collection
         return this
@@ -644,7 +644,7 @@ open class Write : AnyObject() {
      */
     fun updateCollection(collection: NakshaCollection, atomic: Boolean): Write {
         this.mapId = collection.mapId
-        this.collectionId = ADMIN_COL_ID
+        this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPDATE
         this.feature = collection
         this.atomic = atomic
@@ -658,7 +658,7 @@ open class Write : AnyObject() {
      */
     fun upsertCollection(collection: NakshaCollection): Write {
         this.mapId = collection.mapId
-        this.collectionId = ADMIN_COL_ID
+        this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = collection
         return this
@@ -672,7 +672,7 @@ open class Write : AnyObject() {
      */
     fun deleteCollection(collection: NakshaCollection, atomic: Boolean): Write {
         this.mapId = collection.mapId
-        this.collectionId = ADMIN_COL_ID
+        this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = collection
         this.atomic = atomic
@@ -689,7 +689,7 @@ open class Write : AnyObject() {
     @JvmOverloads
     fun deleteCollectionById(mapId: String? = null, collectionId: String, version: Version? = null): Write {
         this.mapId = mapId
-        this.collectionId = ADMIN_COL_ID
+        this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.DELETE
         this.id = collectionId
         this.version = version
@@ -931,7 +931,7 @@ open class Write : AnyObject() {
      * @return `true` if this write modifies a collection; `false` otherwise.
      * @since 3.0
      */
-    fun isCollectionModification(): Boolean = collectionId == ADMIN_COL_ID
+    fun isCollectionModification(): Boolean = collectionId == COLLECTIONS_COL_ID
 
     /**
      * Tests if this write modifies a feature within a collection.
@@ -954,7 +954,7 @@ open class Write : AnyObject() {
      * @see [WriteOp]
      */
     fun validate(): Write {
-        if (mapId == ADMIN_CATALOG_ID || collectionId == ADMIN_COL_ID) {
+        if (mapId == ADMIN_CATALOG_ID || collectionId == COLLECTIONS_COL_ID) {
             if (isInternalId(id)) {
                 throw NakshaException(ILLEGAL_STATE, "Modification of internal features forbidden: '$id'")
             }

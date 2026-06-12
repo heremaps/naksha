@@ -848,7 +848,7 @@ class CopyServiceTest {
 
     private void assertCreateCollectionWrite(Write write) {
         assertEquals(targetCopyElement.getMapId(), write.getMapId());
-        assertEquals(Naksha.ADMIN_COL_ID, write.getCollectionId());
+        assertEquals(Naksha.COLLECTIONS_COL_ID, write.getCollectionId());
         assertEquals(WriteOp.CREATE, write.getOp());
         assertNotNull(write.getFeature());
         assertEquals(targetCopyElement.getCollectionId(), write.getFeature().getId());

@@ -27,15 +27,6 @@ open class IndexList() : ListProxy<Index>(Index::class) {
      * Construct a list from a vararg of indexes.
      * @since 3.0
      */
-    @JsName("fromArray")
-    constructor(indexes: Array<Index>) : this() {
-        for (index in indexes) add(index)
-    }
-
-    /**
-     * Construct a list from a vararg of indexes.
-     * @since 3.0
-     */
     @JsName("fromList")
     constructor(indexes: List<Index>) : this() {
         addAll(indexes)

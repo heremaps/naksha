@@ -78,7 +78,7 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
                 // We found a first tuple, we hope that each tuple can be encoded in 64-bit only.
                 variant = B64
                 storageNumber = tupleNumber.databaseNumber
-                mapNumber = tupleNumber.mapNumber
+                mapNumber = tupleNumber.catalogNumber
                 collectionNumber = tupleNumber.collectionNumber
                 featureNumber = tupleNumber.featureNumber
                 continue
@@ -93,7 +93,7 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
                 break
             }
             if (variant === B192) continue
-            if (mapNumber != tupleNumber.mapNumber) {
+            if (mapNumber != tupleNumber.catalogNumber) {
                 // We need to encode individual map-, collection-, and feature-numbers
                 variant = B192
                 mapNumber = null
@@ -156,7 +156,7 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
                 i += 8
             }
             if (variant.encodeMapNumber()) {
-                dataview_set_int32(view, i, tupleNumber.mapNumber)
+                dataview_set_int32(view, i, tupleNumber.catalogNumber)
                 i += 4
             }
             if (variant.encodeCollectionNumber()) {

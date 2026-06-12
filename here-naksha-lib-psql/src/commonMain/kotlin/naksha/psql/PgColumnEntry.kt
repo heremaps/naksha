@@ -10,8 +10,6 @@ internal data class PgColumnEntry(
     val type: PgType,
     val values: AnyList = AnyList()
 ) {
-    constructor(column: PgColumn, index: Int = column.i) : this(index, column.name, column.type)
-
     fun withSize(size: Int): PgColumnEntry {
         values.size = size
         return this

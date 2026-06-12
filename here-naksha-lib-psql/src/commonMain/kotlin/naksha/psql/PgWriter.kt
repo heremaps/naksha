@@ -462,8 +462,8 @@ open class PgWriter internal constructor(
                     normalizedMembers.add(m)
                 }
             }
-            PgCustomMemberValues.validateMemberNames(normalizedMembers)
-            PgCustomMemberValues.sortMembersForStorage(normalizedMembers)
+            PgMemberHelper.validateMemberNames(normalizedMembers)
+            PgMemberHelper.sortMembersForStorage(normalizedMembers)
             collection.members = normalizedMembers
         }
 

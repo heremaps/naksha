@@ -61,7 +61,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
             mapId = collection.mapId
-            collectionIds += Naksha.ADMIN_COL_ID
+            collectionIds += Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
         val virtBeforeDelete = executeRead(selectCollectionFromVirt)
@@ -331,7 +331,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
             mapId = map.id
-            collectionIds += Naksha.ADMIN_COL_ID
+            collectionIds += Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
         val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection::class)
@@ -524,7 +524,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             assertEquals(expectedCount, columns.size,
                 "Expected ${PgColumn.headColumns.size} head columns + 1 custom column, got: $columns")
             assertTrue(PgColumn.headColumns.all { it.name in columns })
-            val customColName = PgCustomMemberValues.pgColumnName("score")
+            val customColName = PgMemberHelper.pgColumnName("score")
             assertTrue(customColName in columns, "Custom column '$customColName' not found in: $columns")
 
             // Indices: no default optional indices; only the declared custom index must be present.
@@ -563,7 +563,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             var dataType: String? = null
             conn.execute(
                 "SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
-                arrayOf(map.id, collection.id, PgCustomMemberValues.pgColumnName("labels"))
+                arrayOf(map.id, collection.id, PgMemberHelper.pgColumnName("labels"))
             ).use { cursor -> if (cursor.next()) dataType = cursor["data_type"] }
             assertEquals("jsonb", dataType, "SET member 'labels' must be materialized as jsonb")
 

@@ -31,7 +31,7 @@ import kotlin.js.JsName
  * @since 3.0
  */
 @JsExport
-class Member() : AnyObject() {
+class Member() : AnyObject(), Comparator<Member> {
 
     /**
      * Construct a member with a name and the given data type.
@@ -276,6 +276,8 @@ class Member() : AnyObject() {
      * @throws RuntimeException If the given feature has a broken path, so the path requires an array, but an object exists already.
      */
     fun write(feature: MapProxy<*,*>, value: Any?): Any? = feature.setPath(value, path)
+
+    override fun compare(a: Member, b: Member): Int = a.dataType.sortOrder - b.dataType.sortOrder
 
     companion object Member_C {
         private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
