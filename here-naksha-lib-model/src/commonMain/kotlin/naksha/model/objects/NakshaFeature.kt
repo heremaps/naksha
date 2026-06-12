@@ -190,7 +190,7 @@ open class NakshaFeature() : AnyObject() {
      * @since 3.0
      */
     open val storageNumber: Int64?
-        get() = guid?.tupleNumber?.storageNumber
+        get() = guid?.tupleNumber?.databaseNumber
 
     /**
      * The type of the feature, to be [GeoJSON](https://datatracker.ietf.org/doc/html/rfc7946) compatible, one of the following is expected:

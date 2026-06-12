@@ -4,26 +4,19 @@ package naksha.model
 
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.fromJSON
-import naksha.base.Platform.PlatformCompanion.gzipDeflate
-import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.Platform.PlatformCompanion.md5
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
-import naksha.model.objects.StandardMembers
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
-import naksha.jbon.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
-import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -41,66 +34,70 @@ class Naksha private constructor() {
         const val INTERNAL_PREFIX = "naksha~"
 
         /**
-         * The identifier of the administration map _(`naksha~admin`)_.
+         * The identifier of the administration catalog, fixed to `naksha~admin`. It can be found in any database under Naksha control.
+         *
+         * **Note**: The feature of the administration catalog is an immutable feature needed to bootstrap a Naksha controlled database, therefore it is not peristed anywhere.
          * @since 3.0
          */
-        const val ADMIN_MAP = "naksha~admin"
+        const val ADMIN_CATALOG_ID = "naksha~admin"
 
         /**
-         * The number of the administration map _(`0`)_.
+         * The identifier of the administration catalog, fixed to `0`. It can be found in any database under Naksha control.
          * @since 3.0
          */
-        const val ADMIN_MAP_NUMBER = 0
+        const val ADMIN_CATALOG_FN = 0
 
         /**
-         * The identifier of the virtual collection in which the collections of a map are managed, located within each map _(`naksha~collections`)_.
+         * The identifier of the admin-collection in which the collection-features of each catalog are persisted.
+         *
+         * This collection exists in every catalog under Naksha management. The identifier of the collection itself is fixed to `naksha~collections`. The feature of the administration collection is an immutable feature. It is needed to bootstrap a new catalog, therefore it is not persisted anywhere.
          * @since 3.0
          */
-        const val COLLECTIONS_COL = "naksha~collections"
+        const val ADMIN_COL_ID = "naksha~collections"
 
         /**
-         * The collection-number of the virtual collection in which the collections of a map are managed, located within each map _(`0`)_ .
+         * The collection-number of the admin-collection in which the collection-features of each catalog are persisted, it has the fixed feature-number _(`0`)_.
          * @since 3.0
          */
-        const val COLLECTIONS_COL_NUMBER = 0
+        const val ADMIN_COL_FN = 0
 
         /**
-         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~transactions`)_.
+         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~transactions`)_.
          * @since 3.0
          * @see [naksha.model.objects.NakshaTx]
          */
-        const val TRANSACTIONS_COL = "naksha~transactions"
+        const val TRANSACTIONS_COL_ID = "naksha~transactions"
 
         /**
-         * The collection-number of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP] _(`1`)_.
+         * The collection-number of the collection in which transactions are stored, located in the [admin-catalog][ADMIN_CATALOG_ID]. The feature-number of this collection is fixed to `1`.
          * @since 3.0
          */
-        const val TRANSACTIONS_COL_NUMBER = 1
+        const val TRANSACTIONS_COL_FN = 1
 
         /**
-         * The identifier of the collection in which catalogs (maps) are stored, located only within the [admin-map][ADMIN_MAP] _(`naksha~catalogs`)_.
+         * The identifier of the collection in which catalogs (maps) are stored, located only within the [admin-map][ADMIN_CATALOG_ID] _(`naksha~catalogs`)_.
          * @see [naksha.model.objects.NakshaMap]
          * @since 3.0
          */
-        const val CATALOGS_COL = "naksha~catalogs"
+        const val CATALOGS_COL_ID = "naksha~catalogs"
 
         /**
-         * The collection-number of the collection in which catalogs (maps) are stored, located in the [admin-map][ADMIN_MAP] _(`2`)_.
+         * The collection-number of the collection in which catalogs (maps) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`2`)_.
          * @since 3.0
          */
-        const val CATALOGS_COL_NUMBER = 2
+        const val CATALOGS_COL_FN = 2
 
         /**
-         * The identifier of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~books`)_.
+         * The identifier of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~books`)_.
          * @since 3.0
          */
-        const val BOOKS_COL = "naksha~books"
+        const val BOOKS_COL_ID = "naksha~books"
 
         /**
-         * The collection-number of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_MAP] _(`3`)_.
+         * The collection-number of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`3`)_.
          * @since 3.0
          */
-        const val BOOKS_COL_NUMBER = 3
+        const val BOOKS_COL_FN = 3
 
         /**
          * The maximum length of identifiers _(`42`)_ .
@@ -115,11 +112,11 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         val internalIdToNumber = mapOf(
-            Pair(ADMIN_MAP, ADMIN_MAP_NUMBER),
-            Pair(COLLECTIONS_COL, COLLECTIONS_COL_NUMBER),
-            Pair(TRANSACTIONS_COL, TRANSACTIONS_COL_NUMBER),
-            Pair(CATALOGS_COL, CATALOGS_COL_NUMBER),
-            Pair(BOOKS_COL, BOOKS_COL_NUMBER),
+            Pair(ADMIN_CATALOG_ID, ADMIN_CATALOG_FN),
+            Pair(ADMIN_COL_ID, ADMIN_COL_FN),
+            Pair(TRANSACTIONS_COL_ID, TRANSACTIONS_COL_FN),
+            Pair(CATALOGS_COL_ID, CATALOGS_COL_FN),
+            Pair(BOOKS_COL_ID, BOOKS_COL_FN),
         )
 
         /**
@@ -272,7 +269,7 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun mapNumber(id: String): Int {
-           if (id == ADMIN_MAP) return ADMIN_MAP_NUMBER
+           if (id == ADMIN_CATALOG_ID) return ADMIN_CATALOG_FN
            if (id == "0" || is31BitUnsigned.matches(id)) {
                try {
                    return id.toUInt(10).toInt()
@@ -294,7 +291,7 @@ class Naksha private constructor() {
         @JvmStatic
         fun collectionNumber(id: String): Int {
             val internalNumber = internalIdToNumber[id]
-            if (id != ADMIN_MAP && internalNumber != null) return internalNumber
+            if (id != ADMIN_CATALOG_ID && internalNumber != null) return internalNumber
             if (id == "0" || is31BitUnsigned.matches(id)) {
                 try {
                     return id.toUInt(10).toInt()
@@ -619,7 +616,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun getStorageByTupleNumber(tupleNumber: TupleNumber): IStorage? = storagesByNumber[tupleNumber.storageNumber]
+        fun getStorageByTupleNumber(tupleNumber: TupleNumber): IStorage? = storagesByNumber[tupleNumber.databaseNumber]
 
         /**
          * Set up the storage with the given configuration, enforces an [initStorage][AbstractStorage.initStorage] invocation that is forced to `create` or `upgrade` the storage.

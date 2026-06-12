@@ -24,7 +24,7 @@ actual class TupleHeapCache : ITupleCache {
     private var tuplesByStorage = AtomicMap<Int64, AtomicMap<TupleNumber, WeakRef<Tuple>>>()
 
     actual override fun get(tupleNumber: TupleNumber): Tuple?
-        = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
+        = tuplesByStorage[tupleNumber.databaseNumber]?.get(tupleNumber)?.deref()
 
     actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int, acceptFeature: Boolean): Int {
         var loaded = 0
@@ -47,7 +47,7 @@ actual class TupleHeapCache : ITupleCache {
 
     actual override fun put(tuple: Tuple) {
         val tupleNumber = tuple.tupleNumber
-        val storageNumber = tupleNumber.storageNumber
+        val storageNumber = tupleNumber.databaseNumber
         var storageTuples = tuplesByStorage[storageNumber]
         if (storageTuples == null) {
             storageTuples = AtomicMap()

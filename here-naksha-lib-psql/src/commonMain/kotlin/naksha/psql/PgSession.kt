@@ -307,7 +307,7 @@ open class PgSession(
             if (tx != null) {
                 try {
                     val transaction = tx.transaction
-                    val writeTx = Write().createFeature(Naksha.ADMIN_MAP, TRANSACTIONS_COL, transaction)
+                    val writeTx = Write().createFeature(Naksha.ADMIN_CATALOG_ID, TRANSACTIONS_COL, transaction)
                     val writeRequest = WriteRequest().add(writeTx)
                     // TODO: Should we use a savepoint here?
                     val writer = PgWriter(this, false)

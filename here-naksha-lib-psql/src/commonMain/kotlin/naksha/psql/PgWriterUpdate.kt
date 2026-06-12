@@ -30,7 +30,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
             if (tuple != null) {
                 writeById[write.id] = write
                 inRows[i] = tuple
-                inRows.set(i, "expected_version", write.version?.value)
+                inRows.set(i, "expected_version", write.version?.number)
                 inRows.setCustomMembers(i, write.feature, members)
                 i++
             }

@@ -71,7 +71,7 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
             require(pgMap != null) { "Missing map ${collection.mapId}" }
             val pgCollection = pgMap.getPgCollectionById(conn, collection.id)
             require(pgCollection != null) { "Missing collection ${collection.id}" }
-            assertEquals(storage.number, persistedTuple.tupleNumber.storageNumber)
+            assertEquals(storage.number, persistedTuple.tupleNumber.databaseNumber)
             assertEquals(pgMap.number, persistedTuple.tupleNumber.mapNumber)
             assertEquals(pgCollection.number, persistedTuple.tupleNumber.collectionNumber)
             assertEquals(featureNumber(feature.id), persistedTuple.tupleNumber.featureNumber)

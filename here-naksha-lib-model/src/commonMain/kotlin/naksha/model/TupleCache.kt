@@ -198,7 +198,7 @@ class TupleCache internal constructor() {
                     it != null && it.tuple == null && it.feature == null
                 else
                     it != null && it.tuple == null
-            }.filterNotNull().groupBy { it.tupleNumber.storageNumber }
+            }.filterNotNull().groupBy { it.tupleNumber.databaseNumber }
             for (entry in byStorage) {
                 val storageNumber = entry.key
                 val toLoad = entry.value
@@ -317,7 +317,7 @@ class TupleCache internal constructor() {
      */
     @JsName("getDictReaderForTuple")
     fun getDictReader(tuple: Tuple): IDictReader?
-        = getDictReader(tuple.tupleNumber.storageNumber)
+        = getDictReader(tuple.tupleNumber.databaseNumber)
 
     /**
      * A method to query for a dictionary reader.
@@ -327,7 +327,7 @@ class TupleCache internal constructor() {
     @JsName("getDictReaderForFeatureTuple")
     fun getDictReader(featureTuple: FeatureTuple): IDictReader? {
         val tuple = featureTuple.tuple ?: return null
-        return getDictReader(tuple.tupleNumber.storageNumber)
+        return getDictReader(tuple.tupleNumber.databaseNumber)
     }
 
     /**

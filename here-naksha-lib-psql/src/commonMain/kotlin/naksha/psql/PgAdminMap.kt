@@ -13,13 +13,17 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.IDictReader
 import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP_NUMBER
-import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_NUMBER
+import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
+import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_FN
+import naksha.model.Naksha.NakshaCompanion.ADMIN_COL_ID
+import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_FN
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
+import naksha.model.objects.MemberList
+import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaMap
+import naksha.model.objects.StandardMembers
 import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -55,7 +59,14 @@ abstract class PgAdminMap internal constructor(
      * @since 3.0.0
      */
     upgrade: Boolean?
-) : PgMap(storage, NakshaMap().withStorageId(storage.id).withId(ADMIN_MAP)), IDictReader {
+) : PgMap(storage, NakshaMap().withStorageId(storage.id).withId(ADMIN_CATALOG_ID)), IDictReader {
+
+    /**
+     * This collection does not exist. It is only
+     */
+    internal val adminMapCollection = NakshaCollection(ADMIN_COL_ID, ADMIN_CATALOG_ID)
+        .withMinimalMembers()
+        .withMinimalIndices()
 
     /**
      * The page-size of the database (`current_setting('block_size')`).
@@ -265,7 +276,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                 var installed_version: NakshaVersion
                 var installed_storage_id: String
                 var installed_storage_number: Int64
-                conn.execute("SELECT \"${ADMIN_MAP}\".naksha_version() AS v, \"${ADMIN_MAP}\".naksha_storage_id() AS id, \"${ADMIN_MAP}\".naksha_storage_number() AS n").fetch().use { cursor ->
+                conn.execute("SELECT \"${ADMIN_CATALOG_ID}\".naksha_version() AS v, \"${ADMIN_CATALOG_ID}\".naksha_storage_id() AS id, \"${ADMIN_CATALOG_ID}\".naksha_storage_number() AS n").fetch().use { cursor ->
                     try {
                         val v: Int64 = cursor["v"]
                         installed_version = NakshaVersion(v)
@@ -423,7 +434,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                         logger.info("Transaction counter is still at wrong day, rollover to next day")
                         // Rollover, we update sequence of the day. Start at seq=1 (auto() encodes action in bits 1-0).
                         version = Version.auto(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(1))
-                        txn = version.value
+                        txn = version.number
                         conn.execute("SELECT setval($1, $2)", arrayOf(txnSequenceOid, txn + 4)).close()
                     }
                     logger.info("Release advisory lock")
@@ -535,7 +546,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @since 3.0.0
      */
     fun getPgMapById(conn: PgConnection?, id: String): PgMap? {
-        if (ADMIN_MAP == id) return this
+        if (ADMIN_CATALOG_ID == id) return this
         val number = mapNumberById[id]
         val existing = if (number != null) mapCache[number] else null
         if (existing != null) return existing
@@ -544,21 +555,21 @@ SELECT basics.*, procs.* FROM basics, procs;
         // Read from database
         val outRows = PgColumnRows()
             .withStorageNumber(storage.number)
-            .withMapNumber(ADMIN_MAP_NUMBER)
-            .withCollectionNumber(CATALOGS_COL_NUMBER)
+            .withMapNumber(ADMIN_CATALOG_FN)
+            .withCollectionNumber(CATALOGS_COL_FN)
             .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(headColumns)
-        val SQL = """SELECT ${outRows.names()}
+        val SQL = """SELECT *
 FROM "naksha~admin".${catalogs.headTable.quotedName}
 WHERE id = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
-        plan.execute(arrayOf(id)).fetch().use {
-            outRows.addAll(cursor = it)
+        plan.execute(arrayOf(id)).fetch().use { cursor: PgCursor ->
+
         }
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaMap = Naksha.decodeTuple(tuple).proxy(NakshaMap::class)
+        val nakshaMap = tuple.decodeFeature(null).proxy(NakshaMap::class)
         val pgMap = PgMap(storage, nakshaMap)
         storeMap(pgMap)
         return pgMap
@@ -572,7 +583,7 @@ WHERE id = $1 AND (version & 3) < 2"""
      * @since 3.0.0
      */
     fun getPgMapByNumber(conn: PgConnection?, number: Int): PgMap? {
-        if (ADMIN_MAP_NUMBER == number) return this
+        if (ADMIN_CATALOG_FN == number) return this
         val existing = mapCache[number]
         if (existing != null) return existing
         if (conn == null) return null
@@ -580,8 +591,8 @@ WHERE id = $1 AND (version & 3) < 2"""
         // Read from database
         val outRows = PgColumnRows()
             .withStorageNumber(storage.number)
-            .withMapNumber(ADMIN_MAP_NUMBER)
-            .withCollectionNumber(CATALOGS_COL_NUMBER)
+            .withMapNumber(ADMIN_CATALOG_FN)
+            .withCollectionNumber(CATALOGS_COL_FN)
             .withDefaultDataEncoding(Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(headColumns)
         val SQL = """
@@ -597,7 +608,7 @@ WHERE id = $1 AND (version & 3) < 2"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaMap = Naksha.decodeTuple(tuple).proxy(NakshaMap::class)
+        val nakshaMap = tuple.decodeFeature(null).proxy(NakshaMap::class)
         val pgMap = PgMap(storage, nakshaMap)
         storeMap(pgMap)
         return pgMap

@@ -2,84 +2,17 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.toJSON
-import naksha.jbon.IBook
+import naksha.jbon.BookType
+import naksha.jbon.HeapBook
 import naksha.model.*
+import naksha.model.objects.NakshaCollection
 import naksha.psql.PgColumn.PgColumnCompanion.allColumns
-
-/**
-* Thin [IBook] wrapper that maps column names to row values from [PgColumnRows].
-     *
-     * This implements [IBook] by delegating index/name lookups to the underlying [rows]
- * instance so that [Tuple] getters can resolve members at read time.
- * @since 3.0
- */
-internal class PgRowDict(
-    val row: Int,
-    private val rows: PgColumnRows,
-    val fn: Int64,
-    val dataEncoding: DataEncoding,
-) : IBook {
-
-    override val id: String?
-        get() {
-            if (fn >= Int64(0)) {
-                return rows.getString(row, PgColumn.id)
-            }
-            return rows.getString(row, PgColumn.id)
-        }
-
-    override val length: Int
-        get() = rows.columns.size
-
-    override fun get(index: Int): Any? {
-        val col = rows.columns.getOrNull(index) ?: return null
-        return col.values.getOrNull(row)
-    }
-
-    override fun indexOfString(string: String): Int {
-        val col = rows.columnByName[string]
-        return col?.index ?: -1
-    }
-
-    override fun getStringAt(index: Int): String? {
-        val col = rows.columns.getOrNull(index) ?: return null
-        val v = col.values.getOrNull(row)
-        return if (v is String) v else null
-    }
-
-    override fun hasNames(): Boolean = true
-
-    override fun indexOfName(name: String): Int = indexOfString(name)
-
-    override fun getNameAt(index: Int): String? = rows.columns.getOrNull(index)?.name
-
-    override fun namesLength(): Int = rows.columns.size
-
-    override fun getByName(name: String): Any? {
-        val col = rows.columnByName[name] ?: return null
-        return col.values.getOrNull(row)
-    }
-
-    /**
-     * Returns the value of a `jsonb` column as raw JSON text.
-     */
-    private fun getJsonText(column: PgColumn): String? {
-        val value = rows.getAny(row, column)
-        return when (value) {
-            null -> null
-            is String -> value
-            else -> toJSON(value)
-        }
-    }
-
-    override fun getAllWithHash(hash: Int): List<naksha.jbon.DictEntry> = emptyList()
-}
 
 /**
  * Helper class to convert rows into arrays of column and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
  * @since 3.0
  */
-internal class PgColumnRows {
+internal class PgColumnRows(val collection: NakshaCollection) {
     /**
      * All columns being added already.
      * @since 3.0
@@ -287,6 +220,7 @@ internal class PgColumnRows {
             null
         }
     }
+
     fun getTuple(row: Int, storageNumber: Int64, mapNumber: Int, collectionNumber: Int): Tuple? {
         if (row < 0 || row >= size) return null
         val fn = getInt64(row, PgColumn.fn) ?: return null
@@ -296,12 +230,8 @@ internal class PgColumnRows {
             "PgColumnRows.defaultDataEncoding was not set before calling getTuple(); " +
                     "set it from the collection's dataEncoding via withDefaultDataEncoding(...)."
         )
-        val members = PgRowDict(
-            row = row,
-            rows = this,
-            fn = fn,
-            dataEncoding = encoding
-        )
+        val members = HeapBook(BookType.MEMBER_BOOK)
+
         return Tuple(
             storageNumber = storageNumber,
             mapNumber = mapNumber,

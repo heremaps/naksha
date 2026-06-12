@@ -2,8 +2,8 @@
 
 package naksha.psql
 
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
+import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardIndices
 import naksha.model.objects.StandardMembers
@@ -28,8 +28,8 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgNakshaTransactions internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
-    .withMapId(ADMIN_MAP)
-    .withId(TRANSACTIONS_COL)
+    .withMapId(ADMIN_CATALOG_ID)
+    .withId(TRANSACTIONS_COL_ID)
     .withStoreDeleted(StoreMode.OFF)
     .withStoreHistory(StoreMode.ON)
     .withStoreMeta(StoreMode.OFF)

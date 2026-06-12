@@ -94,7 +94,7 @@ class TupleNumberTest {
         val bytes = t.toByteArray(B256)
         assertEquals(32, bytes.size)
         val restored = TupleNumber.fromB256(bytes)
-        assertEquals(t.storageNumber, restored.storageNumber)
+        assertEquals(t.databaseNumber, restored.databaseNumber)
         assertEquals(t.mapNumber, restored.mapNumber)
         assertEquals(t.collectionNumber, restored.collectionNumber)
         assertEquals(t.featureNumber, restored.featureNumber)

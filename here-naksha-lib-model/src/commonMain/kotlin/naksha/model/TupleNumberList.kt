@@ -9,7 +9,6 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import naksha.model.BinaryUtil.BinaryUtil_C.TYPE_TUPLE_NUMBER_ARRAY
 import naksha.model.BinaryUtil.BinaryUtil_C.writeSimpleHeader
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
@@ -78,13 +77,13 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
             if (variant == null) {
                 // We found a first tuple, we hope that each tuple can be encoded in 64-bit only.
                 variant = B64
-                storageNumber = tupleNumber.storageNumber
+                storageNumber = tupleNumber.databaseNumber
                 mapNumber = tupleNumber.mapNumber
                 collectionNumber = tupleNumber.collectionNumber
                 featureNumber = tupleNumber.featureNumber
                 continue
             }
-            if (storageNumber != tupleNumber.storageNumber) {
+            if (storageNumber != tupleNumber.databaseNumber) {
                 // We need to encode all values individually
                 variant = B256
                 storageNumber = null
@@ -153,7 +152,7 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
         for (tupleNumber in this) {
             if (tupleNumber == null) continue
             if (variant.encodeStorageNumber()) {
-                dataview_set_int64(view, i, tupleNumber.storageNumber)
+                dataview_set_int64(view, i, tupleNumber.databaseNumber)
                 i += 8
             }
             if (variant.encodeMapNumber()) {

@@ -119,7 +119,7 @@ class AttachmentTest : PgTestBase() {
         val insertedFeatureGuid = readFeature.properties.xyz.guid
         assertNotNull(insertedFeatureGuid)
         assertEquals(featureId, insertedFeatureGuid.id)
-        assertEquals(storage.number, insertedFeatureGuid.tupleNumber.storageNumber)
+        assertEquals(storage.number, insertedFeatureGuid.tupleNumber.databaseNumber)
         assertEquals(map.number, insertedFeatureGuid.tupleNumber.mapNumber)
         assertEquals(collection.number, insertedFeatureGuid.tupleNumber.collectionNumber)
 
@@ -208,7 +208,7 @@ class AttachmentTest : PgTestBase() {
         val insertedFeatureGuid = readFeature.properties.xyz.guid
         assertNotNull(insertedFeatureGuid)
         assertEquals(featureId, insertedFeatureGuid.id)
-        assertEquals(storage.number, insertedFeatureGuid.tupleNumber.storageNumber)
+        assertEquals(storage.number, insertedFeatureGuid.tupleNumber.databaseNumber)
         assertEquals(map.number, insertedFeatureGuid.tupleNumber.mapNumber)
         assertEquals(collection.number, insertedFeatureGuid.tupleNumber.collectionNumber)
 

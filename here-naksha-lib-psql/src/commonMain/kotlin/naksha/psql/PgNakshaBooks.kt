@@ -13,8 +13,8 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgNakshaBooks internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
-    .withMapId(Naksha.ADMIN_MAP)
-    .withId(Naksha.BOOKS_COL)
+    .withMapId(Naksha.ADMIN_CATALOG_ID)
+    .withId(Naksha.BOOKS_COL_ID)
 ), PgInternalCollection, IDictManager {
 
     override fun putDictionary(dict: JbDictionary) {

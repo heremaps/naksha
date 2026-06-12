@@ -45,6 +45,12 @@ interface PgCursor : AutoCloseable {
     fun rowNumber(): Int
 
     /**
+     * Returns the names of the selected columns.
+     * @return the names of the selected columns.
+     */
+    fun columnNames(): Array<String>
+
+    /**
      * Tests if the current row has the given colum.
      * @param name the name of the column
      * @return _true_ if the current row contains a column with the given name.

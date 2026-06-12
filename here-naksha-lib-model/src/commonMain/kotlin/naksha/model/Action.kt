@@ -10,11 +10,11 @@ import kotlin.reflect.KClass
 /**
  * An enumeration about the action that actually was performed for a feature in a storage, being [CREATE], [UPDATE], or [DELETE].
  *
- * The numeric [intValue] corresponds to the lower two bits of a [Version.value]:
+ * The numeric [intValue] corresponds to the lower two bits of a [Version.number]:
  * - `0` ([CREATE]) — the feature was created in this version.
  * - `1` ([UPDATE]) — the feature was updated in this version.
  * - `2` ([DELETE]) — the feature was deleted in this version.
- * - `3` ([VERSION]) — both action bits are set; used as a sentinel to indicate that the [Version.value] value itself
+ * - `3` ([VERSION]) — both action bits are set; used as a sentinel to indicate that the [Version.number] value itself
  *   is being used as a version reference rather than encoding a state-change action.
  *
  * @since 1.0.0
@@ -79,7 +79,7 @@ class Action : JsEnum() {
         }
 
         /**
-         * Both action bits are set (`3`). Used as a sentinel to signal that the [Version.value] value
+         * Both action bits are set (`3`). Used as a sentinel to signal that the [Version.number] value
          * is a version reference rather than a state-change action. Also returned by [fromValue] for
          * any unrecognised integer value.
          * @since 1.0.0

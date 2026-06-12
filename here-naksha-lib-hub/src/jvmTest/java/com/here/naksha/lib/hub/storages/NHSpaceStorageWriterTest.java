@@ -3,7 +3,6 @@ package com.here.naksha.lib.hub.storages;
 
 import static com.here.naksha.lib.common.assertions.WriteRequestAssertions.assertThatWriteRequest;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
-import static naksha.model.NakshaContext.currentContext;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -16,7 +15,6 @@ import static org.mockito.Mockito.when;
 
 import com.here.naksha.lib.common.TestNakshaContext;
 import com.here.naksha.lib.core.EventPipeline;
-import com.here.naksha.lib.core.HubInternalIdentifiers;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.hub.AbstractTest;
@@ -37,7 +35,6 @@ import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
@@ -95,7 +92,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.DELETE)
-            .hasCollectionId(Naksha.COLLECTIONS_COL)
+            .hasCollectionId(Naksha.ADMIN_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -132,7 +129,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.DELETE)
-            .hasCollectionId(Naksha.COLLECTIONS_COL)
+            .hasCollectionId(Naksha.ADMIN_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -162,7 +159,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
             .hasOp(WriteOp.DELETE)
-            .hasCollectionId(Naksha.COLLECTIONS_COL)
+            .hasCollectionId(Naksha.ADMIN_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
 
@@ -203,7 +200,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
   private ArgumentMatcher<WriteRequest> writeCollectionRequest() {
     return writeRequest -> {
       List<Write> writes = writeRequest.getWrites();
-      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.COLLECTIONS_COL);
+      return writes.size() == 1 && writes.get(0).getCollectionId().equals(Naksha.ADMIN_COL_ID);
     };
   }
 
