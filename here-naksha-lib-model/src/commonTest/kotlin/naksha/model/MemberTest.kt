@@ -107,7 +107,7 @@ class MemberTest {
     @Test
     fun standardTagsMemberDefaultsToSet() {
         assertEquals(MemberType.SET, naksha.model.objects.StandardMembers.XyzTags.dataType)
-        assertEquals(IndexType.SET, naksha.model.objects.StandardIndices.Tags.type)
+        assertEquals(IndexType.SET, naksha.model.objects.XyzIndices.XyzTags.type)
     }
 
     @Test
