@@ -101,7 +101,7 @@ const val GEOMETRY_BIT: FetchMode = 2
 const val GEOMETRY_CLEAR: FetchMode = GEOMETRY_BIT.inv()
 
 /**
- * The _feature_ bit, covers [feature][Tuple.jbonBytes] and tags.
+ * The _feature_ bit, covers [feature][Tuple.featureBytes] and tags.
  * @since 3.0.0
  */
 const val FEATURE_BIT: FetchMode = 4

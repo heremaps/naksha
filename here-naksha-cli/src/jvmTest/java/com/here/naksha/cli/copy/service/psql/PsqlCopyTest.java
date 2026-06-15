@@ -32,7 +32,7 @@ import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
@@ -314,7 +314,7 @@ class PsqlCopyTest {
     private void addMapToTheStorage(IStorage storage, String mapId, SessionOptions sessionOptions) {
         WriteRequest writeRequest = new WriteRequest();
 
-        NakshaMap map = new NakshaMap().withId(mapId);
+        NakshaCatalog map = new NakshaCatalog().withId(mapId);
         Write createMap = new Write().createMap(map);
         writeRequest.add(createMap);
 

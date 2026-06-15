@@ -28,7 +28,7 @@ class ReadOrderedTest : PgTestBase() {
         val featuresToCreate = randomFeatures(COUNT)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
+                add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
             }
         }
         val writeFeaturesResp = executeWrite(writeFeaturesReq)

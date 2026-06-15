@@ -22,7 +22,7 @@ class InsertFeatureTest : PgTestBase() {
         xyz.tags.clear()
         xyz.tags.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
+            add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
         }
 
         // When: executing feature write request
@@ -30,7 +30,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
@@ -96,7 +96,7 @@ class InsertFeatureTest : PgTestBase() {
         val xyz = featureToCreate.properties.xyz
         xyz.tags.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
+            add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
         }
 
         // When: executing feature write request
@@ -104,7 +104,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
@@ -140,7 +140,7 @@ class InsertFeatureTest : PgTestBase() {
         // Given: features to create
         val featureToCreate = randomFeature()
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
+            add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
         }
 
         // When: executing feature write request
@@ -148,7 +148,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
@@ -169,7 +169,7 @@ class InsertFeatureTest : PgTestBase() {
         val featuresToCreate = randomFeatures(count = count)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
+                add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
             }
         }
         val firstFeatureToCreate = featuresToCreate[0]
@@ -193,7 +193,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
 //            this.version = version
 //            this.minVersion = version
@@ -238,7 +238,7 @@ class InsertFeatureTest : PgTestBase() {
         Platform.logger.info("Clear cache and reload feature from database")
         Naksha.cache.clear(storage)
         val featuresByIdResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds.add(firstFeatureToCreate.id)
         })
@@ -258,7 +258,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // Read only one feature by bounding box.
         val featuresByBBox = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             query.spatial =
                 SpIntersects(SpBoundingBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())
@@ -277,14 +277,14 @@ class InsertFeatureTest : PgTestBase() {
         val namedFeature = randomFeature() // has a UUID-style named id (fn < 0)
 
         val writeReq = WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, numericFeature))
-            add(Write().createFeature(collection.mapId, collection.id, namedFeature))
+            add(Write().createFeature(collection.catalogId, collection.id, numericFeature))
+            add(Write().createFeature(collection.catalogId, collection.id, namedFeature))
         }
         executeWrite(writeReq)
 
         // When: reading both features in a single request with mixed IDs
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += numericId
             featureIds += namedFeature.id
@@ -308,7 +308,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And
         val writeReq = WriteRequest().add(
-            Write().createFeature(collection.mapId, collection.id, featureWithDuplicatedId)
+            Write().createFeature(collection.catalogId, collection.id, featureWithDuplicatedId)
         )
         val insertDuplicateResponse = newWriteSession().use { session ->
             session.execute(writeReq)

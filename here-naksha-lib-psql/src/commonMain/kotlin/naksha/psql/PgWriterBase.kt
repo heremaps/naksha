@@ -73,8 +73,8 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     val inRows = PgColumnRows()
-        .withStorageNumber(storageNumber)
-        .withMapNumber(mapNumber)
+        .withDatabaseNumber(storageNumber)
+        .withCatalogNumber(mapNumber)
         .withCollectionNumber(collectionNumber)
         .withMinSize(writes.size)
 

@@ -66,7 +66,7 @@ import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -199,7 +199,7 @@ public class NakshaHub implements INaksha {
   }
 
   private NakshaContext setupMapAndContext(String mapId) {
-    NakshaMap map = new NakshaMap().withId(mapId);
+    NakshaCatalog map = new NakshaCatalog().withId(mapId);
     Write createMap = new Write().upsertMap(map, false);
     NakshaContext initialContext = NakshaContext.currentContext().withAuthor(NakshaHubConfig.defaultAppName());
     psqlStorage.runInWriteSession(SessionOptions.from(initialContext), writer -> {

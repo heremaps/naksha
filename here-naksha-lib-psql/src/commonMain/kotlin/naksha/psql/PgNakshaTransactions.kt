@@ -28,7 +28,7 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgNakshaTransactions internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
-    .withMapId(ADMIN_CATALOG_ID)
+    .withCatalogId(ADMIN_CATALOG_ID)
     .withId(TRANSACTIONS_COL_ID)
     .withStoreDeleted(StoreMode.OFF)
     .withStoreHistory(StoreMode.ON)

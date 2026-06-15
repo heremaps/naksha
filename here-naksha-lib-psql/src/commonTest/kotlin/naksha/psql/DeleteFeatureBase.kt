@@ -24,7 +24,7 @@ abstract class DeleteFeatureBase(
         val featureId = "feature_to_delete"
         val initialFeature = executeWrite(
             WriteRequest().add(
-                Write().createFeature(collection.mapId, collection.id, NakshaFeature(featureId))
+                Write().createFeature(collection.catalogId, collection.id, NakshaFeature(featureId))
             )
         ).let { // this = SuccessResponse
             val features = assertNotNull(it.features)
@@ -36,7 +36,7 @@ abstract class DeleteFeatureBase(
 
         val deletedFeatures = executeWrite(
             WriteRequest().add(
-                Write().deleteFeatureById(collection.mapId, collection.id, featureId)
+                Write().deleteFeatureById(collection.catalogId, collection.id, featureId)
             )
         ).let { // this = SuccessResponse
             val features = assertNotNull(it.features)
@@ -49,7 +49,7 @@ abstract class DeleteFeatureBase(
         // Verify that the feature does not exist
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
         }).let { // this = SuccessResponse
@@ -60,7 +60,7 @@ abstract class DeleteFeatureBase(
         // queryHistory=true (without queryDeleted) returns only past states from the history table.
         // The tombstone is in HEAD and is NOT included unless queryDeleted=true is also set.
         executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
@@ -73,7 +73,7 @@ abstract class DeleteFeatureBase(
 
         // verify if delete table contains element
         executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryDeleted = true
@@ -136,7 +136,7 @@ abstract class DeleteFeatureBase(
         // Confirm the tombstone is visible via queryDeleted and has the right action.
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureId
             queryDeleted = true
@@ -164,7 +164,7 @@ abstract class DeleteFeatureBase(
         assertEquals(1, createCollectionResp.length)
         assertEquals(1, createCollectionResp.features.size)
         val collection = assertNotNull(createCollectionResp.features[0]).proxy(NakshaCollection::class)
-        assertEquals(map.id, collection.mapId)
+        assertEquals(map.id, collection.catalogId)
         assertEquals("delete_no_history_but_shadow", collection.id)
 
         // Create feature.

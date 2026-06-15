@@ -54,7 +54,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val GlobalBookFeatureNumber = Member("~gbn", MemberType.INT64, JsonPath("gbn"))
+        val GlobalBookFeatureNumber = Member("~gbfn", MemberType.INT64, JsonPath("gbfn"))
 
         /**
          * `feature` — **Serialised feature** (`BYTE_ARRAY`). The encoded feature blob. The encoding is controlled by [NakshaCollection.dataEncoding]. Mandatory, storage-managed. The feature member is special in that it represents the feature itself, therefore the path is an empty list!

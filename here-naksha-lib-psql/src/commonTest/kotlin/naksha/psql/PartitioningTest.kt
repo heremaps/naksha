@@ -5,7 +5,6 @@ import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -90,7 +89,7 @@ class PartitioningTest : PgTestBase() {
 
         // also - should be able to read
         val readRequest = ReadFeatures()
-        readRequest.mapId = partitionedCollection.mapId
+        readRequest.mapId = partitionedCollection.catalogId
         readRequest.collectionIds.add(partitionedCollection.id)
         readRequest.featureIds.add("f1")
         val readResponse = executeRead(readRequest)

@@ -3,7 +3,7 @@ package naksha.psql
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.model.request.Write
 import naksha.model.request.WriteOp
 
@@ -132,10 +132,10 @@ internal data class PgWrite(val original: Write, val i: Int) {
     var asPgMap: PgMap? = null
 
     /**
-     * If this modifies a map, the feature cast to [NakshaMap].
+     * If this modifies a map, the feature cast to [NakshaCatalog].
      * @since 3.0
      */
-    var asNakshaMap: NakshaMap? = null
+    var asNakshaMap: NakshaCatalog? = null
 
     /**
      * If the feature is a collection, the [PgCollection] representation.

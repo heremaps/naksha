@@ -4,6 +4,7 @@ package naksha.jbon
 
 import naksha.base.Int64
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * An interface to be implemented by all books. Books can contain a combination of the following types, and only of these:
@@ -54,9 +55,22 @@ interface IBook {
      * Returns the element at the given index. If no such index exists, returns _null_.
      * @param index the index to query.
      * @return the value being one of: `null`, `Boolean`, `Int`, `Int64`, `Double`, `String`, `Map<String,Any?>`, or `List<Any?>`.
-     * @since 3.0.0
+     * @since 3.0
      */
-    fun get(index: Int): Any?
+    @JsName("getByIndex")
+    operator fun get(index: Int): Any?
+
+    /**
+     * Returns the value associated with the given name by looking up the index via [indexOfName] and then reading the value via [get]. Returns _null_ when the name is not found or the index maps to a _null_ slot.
+     * @param name the member name to look up.
+     * @return the value, or _null_ if the name is not present.
+     * @since 3.0
+     */
+    @JsName("getByName")
+    operator fun get(name: String): Any? {
+        val i = indexOfName(name)
+        return if (i < 0) null else get(i)
+    }
 
     /**
      * Returns the index of the given string or -1, if the string is not part of the dictionary.
@@ -106,19 +120,6 @@ interface IBook {
      * @since 3.0.0
      */
     fun namesLength(): Int = 0
-
-    /**
-     * Returns the value associated with the given name by looking up the index via [indexOfName]
-     * and then reading the value via [get]. Returns _null_ when the name is not found or the
-     * index maps to a _null_ slot.
-     * @param name the member name to look up.
-     * @return the value, or _null_ if the name is not present.
-     * @since 3.0.0
-     */
-    fun getByName(name: String): Any? {
-        val i = indexOfName(name)
-        return if (i < 0) null else get(i)
-    }
 
     /**
      * Find all entries in the dictionary that have the given hash.

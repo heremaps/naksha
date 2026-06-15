@@ -640,7 +640,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
         case SPACE_PROPERTIES:
           return JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
         case SPACE_ID:
-          return new NakshaCollection(space.getId()).withMapId(getMapId());
+          return new NakshaCollection(space.getId()).withCatalogId(getMapId());
         default:
           throw new IllegalStateException("Unexpected collection source: " + validCollectionSource);
       }
@@ -704,7 +704,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     }
     final NakshaCollection nakshaCollection = new NakshaCollection();
     nakshaCollection.setId(collectionId);
-    nakshaCollection.setMapId(getMapId());
+    nakshaCollection.setCatalogId(getMapId());
     SpaceProperties spaceProperties = new SpaceProperties();
     spaceProperties.setCollection(nakshaCollection);
     return spaceProperties;
@@ -715,7 +715,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     NakshaCollection collection = collectionId != null ? new NakshaCollection() : null;
     if (collection != null) {
       collection.setId(collectionId);
-      collection.setMapId(getMapId());
+      collection.setCatalogId(getMapId());
     }
     properties.setCollection(collection);
     return properties;
@@ -724,7 +724,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
   private static DefaultStorageHandlerProperties handlerProperties(String storageId) {
     final NakshaCollection nakshaCollection = new NakshaCollection();
     nakshaCollection.setId("handler_collection");
-    nakshaCollection.setMapId(getMapId());
+    nakshaCollection.setCatalogId(getMapId());
     DefaultStorageHandlerProperties properties = new DefaultStorageHandlerProperties();
     properties.setStorageId(storageId);
     properties.setCollection(nakshaCollection);

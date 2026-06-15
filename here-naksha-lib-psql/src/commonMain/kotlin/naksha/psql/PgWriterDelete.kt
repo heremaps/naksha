@@ -145,8 +145,8 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.id = query.id" else ""}
     override fun doExecute(conn: PgConnection) {
         if (writes.isEmpty()) return
         val outRows = PgColumnRows()
-            .withStorageNumber(storageNumber)
-            .withMapNumber(mapNumber)
+            .withDatabaseNumber(storageNumber)
+            .withCatalogNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
             .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(collection.effectiveHistoryColumns)

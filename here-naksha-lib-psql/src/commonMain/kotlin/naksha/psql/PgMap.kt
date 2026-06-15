@@ -16,7 +16,7 @@ import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_FN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -38,7 +38,7 @@ open class PgMap internal constructor(
      * The HEAD state of the map.
      * @since 3.0.0
      */
-    nakshaMap: NakshaMap,
+    nakshaMap: NakshaCatalog,
 
     /**
      * The map-id.
@@ -73,7 +73,7 @@ open class PgMap internal constructor(
      * @see [headRef]
      * @since 3.0
      */
-    val head: NakshaMap
+    val head: NakshaCatalog
         get() = headRef.get()
 
     private var _collections: PgCollection? = null
@@ -336,8 +336,8 @@ open class PgMap internal constructor(
 
         // Read from database
         val outRows = PgColumnRows(collections.head)
-            .withStorageNumber(storage.number)
-            .withMapNumber(this.number)
+            .withDatabaseNumber(storage.number)
+            .withCatalogNumber(this.number)
             .withCollectionNumber(COLLECTIONS_COL_FN)
             .addColumns(headColumns)
         setSearchPath(conn)
@@ -380,8 +380,8 @@ WHERE id = $1 AND (version & 3) < 2"""
 
         // Read from database
         val outRows = PgColumnRows(collections.head)
-            .withStorageNumber(storage.number)
-            .withMapNumber(this.number)
+            .withDatabaseNumber(storage.number)
+            .withCatalogNumber(this.number)
             .withCollectionNumber(COLLECTIONS_COL_FN)
             .addColumns(headColumns)
         setSearchPath(conn)

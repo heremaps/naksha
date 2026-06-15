@@ -52,7 +52,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         // Then: this collection is queryable and empty
         val readAllFromCollection = ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
         }
         val collectionContent = executeRead(readAllFromCollection)
@@ -60,7 +60,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
@@ -70,7 +70,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // When: Collection gets deleted
         executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(collection.mapId, collection.id)
+                Write().deleteCollectionById(collection.catalogId, collection.id)
             )
         )
 

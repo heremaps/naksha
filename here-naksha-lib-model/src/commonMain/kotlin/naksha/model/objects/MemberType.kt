@@ -194,6 +194,10 @@ class MemberType : JsEnum() {
         }
     }
 
+    /**
+     * The sort order of the type to ensure no padding is needed, so `INT8`, `FLOAT8`, `INT4`, `FLOAT4`, ...
+     * @since 3.0
+     */
     var sortOrder: Int = -1
         private set(value) {
             val it: Iterator<MemberType> = iterate(MemberType::class)

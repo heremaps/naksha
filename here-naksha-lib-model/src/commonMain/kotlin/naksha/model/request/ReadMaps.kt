@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A request to read [map features][naksha.model.objects.NakshaMap] from a storage.
+ * A request to read [map features][naksha.model.objects.NakshaCatalog] from a storage.
  * @since 3.0
  */
 @JsExport
@@ -64,7 +64,7 @@ open class ReadMaps() : ReadRequest() {
     /**
      * Convert this request into a [ReadFeatures] request.
      *
-     * Actually, reading maps is not different from reading features, because the storages will have a collection called `naksha~catalogs` in the admin-map in which the [map features][naksha.model.objects.NakshaMap] are stored, or at least the storage will simulate this virtual collection.
+     * Actually, reading maps is not different from reading features, because the storages will have a collection called `naksha~catalogs` in the admin-map in which the [map features][naksha.model.objects.NakshaCatalog] are stored, or at least the storage will simulate this virtual collection.
      *
      * This is necessary, if you want a more fine-grained query, like filter maps or request past states of the map feature.
      * @return this request as [ReadFeatures] request.

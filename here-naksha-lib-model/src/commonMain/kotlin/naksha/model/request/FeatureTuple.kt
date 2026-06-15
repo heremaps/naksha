@@ -4,6 +4,9 @@ package naksha.model.request
 
 import naksha.base.Platform
 import naksha.model.*
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.objects.Member
+import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StandardMembers
 import kotlin.js.JsExport
@@ -37,9 +40,20 @@ open class FeatureTuple(
      * @param feature the [NakshaFeature] from which to create this [FeatureTuple].
      * @since 3.0
      */
-    @JsName("fromNakshaFeature")
+    @JsName("fromFeatureAndCollection")
     @Suppress("LeakingThis")
-    constructor(feature: NakshaFeature) : this(feature.tupleNumber) {
+    constructor(feature: NakshaFeature, collection: NakshaCollection) : this(feature, collection.useMember(StandardMembers.Tn))
+
+    /**
+     * Create a feature-tuple from a [NakshaFeature].
+     * @param feature the [NakshaFeature] from which to create this [FeatureTuple].
+     * @since 3.0
+     */
+    @JsName("fromFeatureAndMember")
+    @Suppress("LeakingThis")
+    constructor(feature: NakshaFeature, tupleNumberMember: Member) :
+    this(tupleNumberMember.getTupleNumber(feature) ?: throw NakshaException(ILLEGAL_ARGUMENT, "Failed to get tuple-number of feature"))
+    {
         this.feature = feature
     }
 

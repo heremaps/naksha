@@ -2,15 +2,21 @@
 
 package naksha.model
 
+import naksha.base.AnyList
+import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.MapProxy
 import naksha.base.Platform.PlatformCompanion.gzipDeflate
 import naksha.base.Platform.PlatformCompanion.gzipInflate
+import naksha.base.PlatformList
+import naksha.base.PlatformMap
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.WeakRef
 import naksha.jbon.IBook
 import naksha.model.objects.Member
 import naksha.geo.SpGeometry
+import naksha.geo.SpType
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
 import naksha.jbon.JB2_MAGIC
@@ -38,7 +44,7 @@ data class Tuple @JvmOverloads constructor(
      * Feature serialized with the encoding described by the collection's dataEncoding.
      * @since 3.0
      */
-    @JvmField val jbonBytes: ByteArray,
+    @JvmField val featureBytes: ByteArray,
 
     /**
      * The members book provided by storage at read time. Contains dedicated member values, such as `id`, `tn`, etc.
@@ -82,13 +88,13 @@ data class Tuple @JvmOverloads constructor(
 
             // Update the tuple-number.
             val tnMember = collection.useMember(StandardMembers.Tn)
-            val colTn = tnMember.readTupleNumber(collection) ?:
+            val colTn = tnMember.getTupleNumber(collection) ?:
                 throw NakshaException(ILLEGAL_ARGUMENT, "The given collection does not have a valid tuple-number (uuid)")
             if (colTn.featureNumber > Int.MAX_VALUE || colTn.featureNumber < Int.MIN_VALUE) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "The given collection does have an invalid feature-number (uuid)")
             }
             // Read the current tuple-number of the feature; if any.
-            val prevTn: TupleNumber? = collection.useMember(StandardMembers.Tn).readTupleNumber(feature)
+            val prevTn: TupleNumber? = collection.useMember(StandardMembers.Tn).getTupleNumber(feature)
             val newTn: TupleNumber
             if (prevTn != null) {
                 if (action != Action.VERSION && action == Action.CREATE) {
@@ -106,14 +112,14 @@ data class Tuple @JvmOverloads constructor(
                     colTn.catalogNumber,
                     // The feature-number of the collection is the collection-number of the feature we want to store in the collection.
                     colTn.featureNumber.toInt(),
-                    // The feature-number of the actual feature. Will either be set explicit or calcualted.
-                    feature.featureNumber,
+                    // The feature-number of the feature, either the `id` is a feature-number or it is calculated form hashing the `id`.
+                    Naksha.featureNumber(feature.id),
                     // The version is the one of the transaction.
                     session.useTransaction().version.number
                 )
             }
             // Update the feature with its new tuple-number.
-            tnMember.write(feature, newTn)
+            tnMember.set(feature, newTn)
             val globalBookTn: TupleNumber?
             if (globalBook != null) {
                 if (newTn.databaseNumber != globalBook.databaseNumber || globalBook.featureNumber == null) {
@@ -214,14 +220,14 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     @JvmField
-    val tupleNumber: TupleNumber = membersBook.getByName(StandardMembers.Tn.name) as TupleNumber
+    val tupleNumber: TupleNumber = membersBook[StandardMembers.Tn.name] as TupleNumber
 
     /**
      * The next-version at which this tuple was superseded. `NULL`-sentinel indicates the tuple is the current _([Version.HEAD])_ state.
      * @since 3.0
      */
     var nextVersion: Int64
-        get() = membersBook.getByName(StandardMembers.NextVersion.name) as Int64
+        get() = membersBook[StandardMembers.NextVersion.name] as Int64
         set(version: Int64) {
             val members = this.membersBook
             if (members is HeapBook) {
@@ -279,7 +285,7 @@ data class Tuple @JvmOverloads constructor(
         get() {
             var id: String? = _id
             if (id != null) return id
-            id = membersBook.getByName(StandardMembers.Id.name) as String?
+            id = membersBook[StandardMembers.Id.name] as String?
             if (id != null) {
                 _id = id
                 return id
@@ -314,7 +320,7 @@ data class Tuple @JvmOverloads constructor(
      * @return the value from the [membersBook] book or `null`, if the member is missing, the value is `null`, or not the requested type.
      * @since 3.0
      */
-    fun getString(member: Member): String? = membersBook.getByName(member.name) as? String
+    fun getString(member: Member): String? = membersBook[member.name] as? String
 
     /**
      * Get a long member.
@@ -325,7 +331,7 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun getLong(member: Member, alt: Int64 = Int64(0L)): Int64 =
-        membersBook.getByName(member.name)?.let { v ->
+        membersBook[member.name]?.let { v ->
             when (v) {
                 is Int64 -> v
                 is Long -> Int64(v)
@@ -343,7 +349,7 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun getInt(member: Member, alt: Int = 0): Int =
-        membersBook.getByName(member.name)?.let { v ->
+        membersBook[member.name]?.let { v ->
             when (v) {
                 is Int -> v
                 is Number -> v.toInt()
@@ -360,7 +366,7 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun getDouble(member: Member, alt: Double = Double.NaN): Double =
-        membersBook.getByName(member.name)?.let { v ->
+        membersBook[member.name]?.let { v ->
             when (v) {
                 is Double -> v
                 is Number -> v.toDouble()
@@ -376,7 +382,7 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     @JvmOverloads
-    fun getBoolean(member: Member, alt: Boolean = false): Boolean = membersBook.getByName(member.name) as? Boolean ?: alt
+    fun getBoolean(member: Member, alt: Boolean = false): Boolean = membersBook[member.name] as? Boolean ?: alt
 
     /**
      * Get the raw value of the member.
@@ -384,7 +390,37 @@ data class Tuple @JvmOverloads constructor(
      * @return the value from the [membersBook] book or `null`, if the member is missing, the value is `null`, or not the requested type.
      * @since 3.0
      */
-    fun getMember(member: Member): Any? = membersBook.getByName(member.name)
+    fun getMember(member: Member): Any? {
+        return when (val raw = membersBook[member.name]) {
+            is String -> raw
+            is Int64 -> raw
+            is Byte -> Int64(raw.toInt())
+            is Short -> Int64(raw.toInt())
+            is Int -> Int64(raw)
+            is Long -> Int64(raw)
+            is Float -> raw.toDouble()
+            is Double -> raw
+            is ByteArray -> raw
+            is SpGeometry -> raw
+            is TagMap -> raw
+            is TagList -> raw
+            is ListProxy<*> -> raw
+            is PlatformList -> raw.proxy(AnyList::class)
+            is MapProxy<*, *> -> {
+                // Detect geometry.
+                // If noSpGeometry, we can't differ between a TagMap and a simple Object in raw JSON, so treat is as Object.
+                val type = SpType.ofDefined(raw["type"] as String?)
+                if (type != null) raw.proxy(type.klass) else raw
+            }
+            is PlatformMap -> {
+                // Detect geometry.
+                // If noSpGeometry, we can't differ between a TagMap and a simple Object in raw JSON, so treat is as Object.
+                val type = SpType.ofDefined(map_get(raw, "type") as String?)
+                if (type != null) raw.proxy(type.klass) else raw.proxy(AnyObject::class)
+            }
+            else -> null
+        }
+    }
 
     /**
      * Get the byte-array value of the member.
@@ -392,7 +428,7 @@ data class Tuple @JvmOverloads constructor(
      * @return the value from the [membersBook] book or `null`, if the member is missing, the value is `null`, or not the requested type.
      * @since 3.0
      */
-    fun getByteArray(member: Member): ByteArray? = membersBook.getByName(member.name) as ByteArray?
+    fun getByteArray(member: Member): ByteArray? = membersBook[member.name] as ByteArray?
 
     /**
      * Get the [SpGeometry] value of the member.
@@ -401,10 +437,10 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     fun getSpatial(member: Member): SpGeometry? {
-        val raw = membersBook.getByName(member.name)
+        val raw = membersBook[member.name]
         if (raw is SpGeometry) return raw
         if (raw is ByteArray) return try { Naksha.decodeGeometry(raw) } catch (_: Exception) { null }
-        if (raw is MapProxy<*,*>) return raw.proxy(SpGeometry::class)
+        if (raw is PlatformMap) return raw.proxy(SpGeometry::class)
         return null
     }
 
@@ -415,9 +451,9 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     fun getTags(member: Member): TagMap? {
-        val raw = membersBook.getByName(member.name)
+        val raw = membersBook[member.name]
         if (raw is TagMap) return raw
-        if (raw is MapProxy<*, *>) return raw.proxy(TagMap::class)
+        if (raw is PlatformMap) return raw.proxy(TagMap::class)
         return null
     }
 
@@ -428,9 +464,9 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     fun getTagList(member: Member): TagList? {
-        val raw = membersBook.getByName(member.name)
+        val raw = membersBook[member.name]
         if (raw is TagList) return raw
-        if (raw is ListProxy<*>) return raw.proxy(TagList::class)
+        if (raw is PlatformList) return raw.proxy(TagList::class)
         return null
     }
 
@@ -440,9 +476,10 @@ data class Tuple @JvmOverloads constructor(
      * @return the value from the [membersBook] book or `null`, if the member is missing, the value is `null`, or not the requested type.
      * @since 3.0
      */
-    fun getSet(member: Member): List<*>? {
-        val raw = membersBook.getByName(member.name)
-        if (raw is List<*>) return raw
+    fun getSet(member: Member): ListProxy<*>? {
+        val raw = membersBook[member.name]
+        if (raw is ListProxy<*>) return raw
+        if (raw is PlatformList) return raw.proxy(AnyList::class)
         return null
     }
 
@@ -454,7 +491,7 @@ data class Tuple @JvmOverloads constructor(
      * @throws NakshaException if any error occurs.
      */
     fun decodeFeature(globalBook: IBook?): NakshaFeature { // TODO: Java: After switching back to Java, we can allow arbitrary return types.
-        val rawBytes = if (isGzipped(jbonBytes)) gzipInflate(jbonBytes) else jbonBytes
+        val rawBytes = if (isGzipped(featureBytes)) gzipInflate(featureBytes) else featureBytes
         val decoder = JbDecoder2(globalBook, membersBook)
         decoder.mapBytes(rawBytes)
         return decoder.toAnyObject().proxy(NakshaFeature::class)

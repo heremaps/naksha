@@ -11,7 +11,7 @@ import naksha.common.test.CommonTestConstants
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaStorage
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
@@ -36,12 +36,12 @@ abstract class PgTestBase(
     collection: NakshaCollection? = NakshaCollection(""),
     mapId: String? = null,
 ) {
-    private var _map: NakshaMap? = null
+    private var _map: NakshaCatalog? = null
 
     /**
      * The selected map, throws an exception, when read before initialized _(the constructor by default initialized this)_.
      */
-    val map: NakshaMap
+    val map: NakshaCatalog
         get() = assertNotNull(_map, "Illegal state, no map used by the test")
 
     private var _collection: NakshaCollection? = null
@@ -90,7 +90,7 @@ abstract class PgTestBase(
      * @param mapId the `id` of the map to use within this test. If `null`, then [PgTest.TEST_MAP_ID] is used, if being an empty string _(`""`)_, then the camel-cased name of the test-class being used.
      * @return the map object.
      */
-    fun initMap(mapId: String?): NakshaMap {
+    fun initMap(mapId: String?): NakshaCatalog {
         val map_id = ensureMapId(mapId)
         var mapRef = initializedMaps[map_id]
         if (mapRef == null) {
@@ -103,14 +103,14 @@ abstract class PgTestBase(
                     dropMap(map_id)
 
                     // Create the map.
-                    var map = NakshaMap(map_id)
+                    var map = NakshaCatalog(map_id)
                     val request = WriteRequest()
                     request.writes += Write().createMap(map)
                     val response = executeWrite(request)
                     val features = response.features
                     assertEquals(1, features.size)
                     val feature = features.first()
-                    map = assertNotNull(feature).proxy(NakshaMap::class)
+                    map = assertNotNull(feature).proxy(NakshaCatalog::class)
                     mapRef = MapAndCollections(map)
                     initializedMaps[map_id] = assertNotNull(mapRef)
                     logger.info("Created test map: '$map_id'")
@@ -125,27 +125,27 @@ abstract class PgTestBase(
      * @param mapId the `id` of the map to initialize and use.
      * @return the map object.
      */
-    fun useMap(mapId: String?): NakshaMap {
+    fun useMap(mapId: String?): NakshaCatalog {
         val map = initMap(mapId)
         this._map = map
         return map
     }
 
-    fun initCollection(mapId: String, collectionId: String): Pair<NakshaMap, NakshaCollection>
+    fun initCollection(mapId: String, collectionId: String): Pair<NakshaCatalog, NakshaCollection>
         = initCollection(NakshaCollection(collectionId, mapId))
 
-    fun initCollection(collection: NakshaCollection): Pair<NakshaMap, NakshaCollection> {
+    fun initCollection(collection: NakshaCollection): Pair<NakshaCatalog, NakshaCollection> {
         if (collection.id == "") {
             collection.id = defaultName
         } else {
             Naksha.verifyId(collection.id)
         }
-        if (collection.mapId == null || collection.mapId == "") {
-            collection.mapId = map.id
+        if (collection.catalogId == null || collection.catalogId == "") {
+            collection.catalogId = map.id
         } else {
-            Naksha.verifyId(collection.mapId)
+            Naksha.verifyId(collection.catalogId)
         }
-        val mapId = collection.mapId
+        val mapId = collection.catalogId
         initMap(mapId)
         val mapRef = assertNotNull(initializedMaps[mapId], "The map '$mapId' failed to initialized")
         val colId = collection.id
@@ -154,7 +154,7 @@ abstract class PgTestBase(
             lock.acquire().use {
                 existing = mapRef.collections[colId]
                 if (existing == null) {
-                    collection.mapId = mapId
+                    collection.catalogId = mapId
                     val request = WriteRequest()
                     request.writes += Write().createCollection(collection)
                     storage.newWriteSession(newSessionOptions()).use { session ->
@@ -173,10 +173,10 @@ abstract class PgTestBase(
         return Pair(mapRef.map, assertNotNull(existing))
     }
 
-    fun useCollection(collectionId: String, mapId: String = map.id): Pair<NakshaMap, NakshaCollection>
+    fun useCollection(collectionId: String, mapId: String = map.id): Pair<NakshaCatalog, NakshaCollection>
             = useCollection(NakshaCollection(collectionId, mapId))
 
-    fun useCollection(collection: NakshaCollection): Pair<NakshaMap, NakshaCollection> {
+    fun useCollection(collection: NakshaCollection): Pair<NakshaCatalog, NakshaCollection> {
         val pair = initCollection(collection)
         this._map = pair.first
         this._collection = pair.second
@@ -297,7 +297,7 @@ abstract class PgTestBase(
         /**
          * The map.
          */
-        val map: NakshaMap,
+        val map: NakshaCatalog,
 
         /**
          * All collections in the map, created for the tests by `id`.

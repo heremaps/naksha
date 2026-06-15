@@ -9,6 +9,8 @@ import naksha.geo.SpPoint
 import naksha.model.DataEncoding
 import naksha.model.Naksha
 import naksha.model.NakshaError
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaError.NakshaErrorCompanion.NOT_FOUND
 import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -22,7 +24,7 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
-\
+
     /**
      * Create a Naksha collection with settings.
      * @param id the collection-identifier.
@@ -45,7 +47,7 @@ open class NakshaCollection() : NakshaFeature() {
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
-        this.mapId = mapId
+        this.catalogId = mapId
         this.storageClass = storageClass
         this.partitions = partitions
         this.storeDeleted = storeDeleted
@@ -55,7 +57,6 @@ open class NakshaCollection() : NakshaFeature() {
 
     override fun featureTypeDefaultValue(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaCollection = super.withId(value) as NakshaCollection
-    override fun withFeatureNumber(value: Int64): NakshaCollection = super.withFeatureNumber(value) as NakshaCollection
     override fun withType(value: String): NakshaCollection = super.withType(value) as NakshaCollection
     override fun withFeatureType(value: String): NakshaCollection = super.withFeatureType(value) as NakshaCollection
     override fun withBbox(value: SpBoundingBox?): NakshaCollection = super.withBbox(value) as NakshaCollection
@@ -64,37 +65,47 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withProperties(value: NakshaProperties): NakshaCollection = super.withProperties(value) as NakshaCollection
     override fun withMomType(value: String?): NakshaCollection = super.withMomType(value) as NakshaCollection
 
-    override fun featureNumberOfId(id: String): Int64 = Naksha.collectionNumber(id).toInt64()
-
     /**
-     * The number of the collection, which is basically [featureNumber].
+     * The database-number of the collection; **NOT** the database-number of the collection-feature itself, even while they are guaranteed to be the same.
      * @since 3.0
      */
-    val number: Int
-        get() = featureNumber.toInt()
+    var databaseNumber: Int64? by DATABASE_NUMBER
+    // TODO: Fix this, we need to calculate the database-number from the database-id, if an id is given!
 
     /**
-     * Always return `0`, because all collections are always stored in `naksha~collections` collection.
-     * @since 3.0
-     * @see [Naksha.COLLECTIONS_COL_ID]
-     * @see [Naksha.COLLECTIONS_COL_FN]
-     */
-    override val collectionNumber: Int
-        get() = Naksha.COLLECTIONS_COL_FN
-
-    /**
-     * The map-id of the map in which the collection is located; `null` if not yet known.
+     * The database-id of the collection; **NOT** the database-id of the collection-feature itself, even while they are guaranteed to be the same.
      * @since 3.0
      */
-    var mapId by MAP_ID
+    var databaseId: String? by DATABASE_ID
 
     /**
-     * @see [mapId]
+     * The catalog-number of the collection; **NOT** the catalog-number of the collection-feature itself, which would always be `0` _(`naksha~admin`)_.
+     * @since 3.0
      */
-    fun withMapId(value: String?): NakshaCollection {
-        mapId = value
+    var catalogNumber: Int? by CATALOG_NUMBER
+    // TODO: Fix this, we need to calculate the catalog-number from the catalog-id, if an id is given!
+
+    /**
+     * The custom identifier of the catalog in which the collection is located; ; **NOT** the catalog-id of the collection-feature itself, which would always be `naksha~admin`.
+     * @since 3.0
+     */
+    var catalogId: String? by CATALOG_ID
+
+    /**
+     * @see [catalogId]
+     */
+    fun withCatalogId(value: String?): NakshaCollection {
+        catalogId = value
         return this
     }
+
+    /**
+     * The collection-number of the collection; **NOT** the collection-number of the collection-feature itself, which would always be `0` _(`naksha~collections`)_. This should be the same as the feature-number!
+     * @since 3.0
+     */
+    var collectionNumber: Int? by COLLECTION_NUMBER
+    // TODO: Fix this, we need to calculate the collection-number from the collection-id (aka `id`).
+    //       Actually the feature-number of the collection and collection-number must be the same!
 
     /**
      * If partitions is given, then the collection is internally partitioned in the storage, optimised for large quantities of features. The default is no partitions; as a rule of thumb, add one more partition for every 10 to 20 million features expected.
@@ -183,55 +194,6 @@ open class NakshaCollection() : NakshaFeature() {
      */
     open fun withProtectionClass(value: String): NakshaCollection {
         this.protectionClass = value
-        return this
-    }
-
-    /**
-     * If the `featureType`as returned by [NakshaFeature.featureType] equals to this value, then the [metadata feature-type][naksha.model.Metadata.ft] will be `null`, otherwise [metadata feature-type][naksha.model.Metadata.ft] is set to the [NakshaFeature.featureType].
-     *
-     * ### Note
-     * The index on the [feature-type][naksha.model.Metadata.ft] is partial, features are only indexed when `ft` is not `null`, what is always the case, when it matches the [defaultFeatureType]. This is based upon the assumption, that in most cases all features within a collection do have the same feature-type. If this assumption holds true, and index would be a big waste, even when only a few features differ from the [defaultFeatureType], adding all values into the index would be a waste. So, this property is for the query planner to take advantage of this fact, when searching for feature-type. If the feature-type is the [defaultFeatureType], this means most of the time a full collection scan, so usage of the feature-type index is not helpful.
-     * @since 3.0
-     */
-    var defaultFeatureType by DEFAULT_FEATURE_TYPE
-
-    /**
-     * @see [defaultFeatureType]
-     */
-    open fun withDefaultFeatureType(value: String?): NakshaCollection {
-        removeRaw("defaultFeatureType")
-        return this
-    }
-
-    /**
-     * The feature encoding to use for new rows in this collection.
-     *
-     * - If _null_, the [dataEncoding][NakshaMap.dataEncoding] of the containing [map][NakshaMap] is used; if that is also _null_, [Naksha.DEFAULT_DATA_ENCODING] is used.
-     * @since 3.0
-     */
-    var dataEncoding by DATA_ENCODING
-
-    /**
-     * @see [dataEncoding]
-     */
-    open fun withDataEncoding(value: DataEncoding): NakshaCollection {
-        this.dataEncoding = value
-        return this
-    }
-
-    /**
-     * The identifier of the global dictionary to use, when encoding new rows.
-     *
-     * - If _null_, the storage will use whatever is best for the storage.
-     * @since 3.0
-     */
-    var encodeDict by STRING_NULL
-
-    /**
-     * @see [encodeDict]
-     */
-    open fun withEncodeDict(value: String?): NakshaCollection {
-        this.encodeDict = value
         return this
     }
 
@@ -397,6 +359,15 @@ open class NakshaCollection() : NakshaFeature() {
      */
     @JvmOverloads
     open fun useMember(member: Member, comparePath: Boolean = false): Member = member.asSame(useMembers().get(member.name), comparePath)
+
+    /**
+     * Search for the given member in this collection.
+     * @param memberName the name of the member to use.
+     * @return the member.
+     * @throws NakshaException with error [ILLEGAL_STATE], if no such member was found.
+     */
+    @JsName("useMemberByName")
+    open fun useMember(memberName: String): Member = useMembers().get(memberName) ?: throw NakshaException(ILLEGAL_STATE, "Member $memberName does not exist")
 
     /**
      * Search for the given member in this collection.
@@ -649,14 +620,15 @@ open class NakshaCollection() : NakshaFeature() {
         @JsStatic
         val UNKNOWN = Int64(-1)
 
+        private val DATABASE_NUMBER = NullableProperty<NakshaCollection, Int64>(Int64::class)
+        private val DATABASE_ID = NullableProperty<NakshaCollection, String>(String::class)
+        private val CATALOG_ID = NullableProperty<NakshaCollection, String>(String::class)
+        private val CATALOG_NUMBER = NullableProperty<NakshaCollection, Int>(Int::class)
+        private val COLLECTION_NUMBER = NullableProperty<NakshaCollection, Int>(Int::class)
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
         private val SHIFT = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 41 }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
-        private val DATA_ENCODING = NullableEnum<NakshaCollection, DataEncoding>(DataEncoding::class)
-        private val MAP_ID = NullableProperty<NakshaCollection, String>(String::class)
-        private val STRING_NULL = NullableProperty<NakshaCollection, String>(String::class)
-        private val DEFAULT_FEATURE_TYPE = NotNullProperty<NakshaCollection, String>(String::class) { _, _ -> TYPE }
         private val MEMBERS = NullableProperty<NakshaCollection, MemberList>(MemberList::class)
         private val INDICES = NullableProperty<NakshaCollection, IndexList>(IndexList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }

@@ -38,19 +38,19 @@ inline fun FetchMode.noMeta(): Int = this and META_CLEAR
 inline fun FetchMode.fetchMeta(): Boolean = (this and META_BIT) == META_BIT
 
 /**
- * Set the _feature_ bit (covers [feature][Tuple.jbonBytes] and tags).
+ * Set the _feature_ bit (covers [feature][Tuple.featureBytes] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.withFeature(): Int = this or FEATURE_BIT
 
 /**
- * Clear the _feature_ bit (covers [feature][Tuple.jbonBytes] and tags).
+ * Clear the _feature_ bit (covers [feature][Tuple.featureBytes] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.noFeature(): Int = this and FEATURE_CLEAR
 
 /**
- * Test if the _feature_ bit is set (which covers [feature][Tuple.jbonBytes] and tags).
+ * Test if the _feature_ bit is set (which covers [feature][Tuple.featureBytes] and tags).
  * @since 3.0.0
  */
 inline fun FetchMode.fetchFeature(): Boolean = (this and FEATURE_BIT) == FEATURE_BIT

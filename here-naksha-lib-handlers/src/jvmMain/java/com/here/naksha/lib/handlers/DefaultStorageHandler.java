@@ -36,7 +36,7 @@ import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -455,7 +455,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull SessionOptions sessionOptions,
       @NotNull IStorage storageImpl,
       @NotNull String mapId) {
-    WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaMap(mapId)));
+    WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaCatalog(mapId)));
     return singleWrite(sessionOptions, storageImpl, createMapRequest);
   }
 
@@ -531,7 +531,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       WriteRequest wr = (WriteRequest) request;
       if (isOnlyWriteCollections(wr)) {
         collectionsFrom(wr).forEach(collectionFromRequest -> {
-          collectionFromRequest.setMapId(mapId);
+          collectionFromRequest.setCatalogId(mapId);
           collectionFromRequest.setId(collectionId);
         });
       }

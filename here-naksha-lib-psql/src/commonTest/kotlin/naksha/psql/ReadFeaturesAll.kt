@@ -19,7 +19,7 @@ class ReadFeaturesAll : PgTestBase() {
         val featuresToCreate = randomFeatures(COUNT)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
+                add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
             }
         }
         val writeFeaturesResp = executeWrite(writeFeaturesReq)
@@ -35,7 +35,7 @@ class ReadFeaturesAll : PgTestBase() {
     @Test
     fun shouldReturnAllFeatures() {
         executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
         }).apply {
             assertEquals(COUNT, features.size)

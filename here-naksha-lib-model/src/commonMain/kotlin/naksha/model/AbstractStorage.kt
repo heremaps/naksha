@@ -79,7 +79,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
             if (configRef.get() == null || create==true || upgrade==true) {
                 val _config = storage.proxy(configKlass)
                 this._id = storage.id
-                this._number = storage.number
+                this._number = Naksha.featureNumber(storage.id)
                 this.hardCap = storage.hardCap
                 initStorage(_config, create, upgrade)
                 this.configRef.set(_config)

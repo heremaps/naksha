@@ -20,7 +20,7 @@ class AttachmentTest : PgTestBase() {
 
         // Write the feature
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, featureToCreate).withAttachment(attachmentBytes))
+            add(Write().createFeature(collection.catalogId, collection.id, featureToCreate).withAttachment(attachmentBytes))
         }
         executeWrite(writeFeaturesReq).apply {
             // Verify the result (will come from cache)
@@ -41,7 +41,7 @@ class AttachmentTest : PgTestBase() {
         // Read the feature
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {
@@ -73,7 +73,7 @@ class AttachmentTest : PgTestBase() {
 
         // Write the feature
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().upsertFeature(collection.mapId, collection.id, featureToCreate).withAttachment(attachmentBytes))
+            add(Write().upsertFeature(collection.catalogId, collection.id, featureToCreate).withAttachment(attachmentBytes))
         }
         executeWrite(writeFeaturesReq).apply {
             // Verify the result (will come from cache)
@@ -96,7 +96,7 @@ class AttachmentTest : PgTestBase() {
         Naksha.cache.clear()
         val readFeature: NakshaFeature
         executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {
@@ -130,7 +130,7 @@ class AttachmentTest : PgTestBase() {
         upsertFeature.properties["test"] = "end"
         val updateFeatureReq = WriteRequest().apply {
             // We do not modify attachment, therefore it should be UNDEFINED
-            add(Write().upsertFeature(collection.mapId, collection.id, upsertFeature))
+            add(Write().upsertFeature(collection.catalogId, collection.id, upsertFeature))
         }
         executeWrite(updateFeatureReq).apply {
             assertEquals(1, length)
@@ -162,7 +162,7 @@ class AttachmentTest : PgTestBase() {
 
         // Write the feature
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, featureToCreate).withAttachment(attachmentBytes))
+            add(Write().createFeature(collection.catalogId, collection.id, featureToCreate).withAttachment(attachmentBytes))
         }
         executeWrite(writeFeaturesReq).apply {
             // Verify the result (will come from cache)
@@ -185,7 +185,7 @@ class AttachmentTest : PgTestBase() {
         Naksha.cache.clear()
         val readFeature: NakshaFeature
         executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         }).apply {

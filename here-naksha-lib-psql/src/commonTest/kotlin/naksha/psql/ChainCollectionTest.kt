@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.model.Naksha
 import naksha.model.objects.Index
 import naksha.model.objects.IndexType
 import naksha.model.objects.Member
@@ -89,14 +88,14 @@ class ChainCollectionTest : PgTestBase(
         val tail = makeFeature(tailFn, leftFn = midFn,  rightFn = null)
 
         executeWrite(WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, head))
-            add(Write().createFeature(collection.mapId, collection.id, mid))
-            add(Write().createFeature(collection.mapId, collection.id, tail))
+            add(Write().createFeature(collection.catalogId, collection.id, head))
+            add(Write().createFeature(collection.catalogId, collection.id, mid))
+            add(Write().createFeature(collection.catalogId, collection.id, tail))
         })
 
         // When: reading all three back by their numeric IDs in one request
         val response = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += headFn.toString()
             featureIds += midFn.toString()
@@ -152,7 +151,7 @@ class ChainCollectionTest : PgTestBase(
         val conn = storage.adminConnection()
         conn.use {
             // The head-table name pattern is "<collection-id>" inside the map schema.
-            val mapId = collection.mapId
+            val mapId = collection.catalogId
             val colId = collection.id
             // Query pg_indexes for our custom indices.
             val sql = """
@@ -181,14 +180,14 @@ class ChainCollectionTest : PgTestBase(
         val mid  = makeFeature(midFn,  leftFn = headFn, rightFn = tailFn)
         val tail = makeFeature(tailFn, leftFn = midFn,  rightFn = null)
         executeWrite(WriteRequest().apply {
-            add(Write().upsertFeature(collection.mapId, collection.id, head))
-            add(Write().upsertFeature(collection.mapId, collection.id, mid))
-            add(Write().upsertFeature(collection.mapId, collection.id, tail))
+            add(Write().upsertFeature(collection.catalogId, collection.id, head))
+            add(Write().upsertFeature(collection.catalogId, collection.id, mid))
+            add(Write().upsertFeature(collection.catalogId, collection.id, tail))
         })
 
         // When: reading all features from this collection (no ID filter)
         val all = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
         })
 

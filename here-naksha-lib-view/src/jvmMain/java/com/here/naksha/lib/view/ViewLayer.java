@@ -53,7 +53,7 @@ public class ViewLayer {
    * @since 2.0
    */
   public ViewLayer(@NotNull IStorage storage, @NotNull NakshaCollection collection) {
-    this(storage, collection.getMapId(), collection.getId());
+    this(storage, collection.getCatalogId(), collection.getId());
   }
 
   /**

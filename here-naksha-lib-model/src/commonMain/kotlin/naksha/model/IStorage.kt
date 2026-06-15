@@ -141,7 +141,7 @@ interface IStorage : IDictReader {
      *
      * - Throws [NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @param feature the feature to encode; _null_ if no specific one is available.
-     * @param context the context in which the encoding happens (for example the [map][naksha.model.objects.NakshaMap] or [collection][naksha.model.objects.NakshaCollection]); _null_ if none is available.
+     * @param context the context in which the encoding happens (for example the [map][naksha.model.objects.NakshaCatalog] or [collection][naksha.model.objects.NakshaCollection]); _null_ if none is available.
      * @return best [DataEncoding] to use.
      * @since 3.0
      */
