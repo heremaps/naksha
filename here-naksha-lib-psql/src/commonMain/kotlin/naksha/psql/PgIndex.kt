@@ -696,7 +696,7 @@ ${if (where==null) "" else "WHERE $where"};"""
             idx.type = when {
                 pgIdx === gist_geo || pgIdx === spgist_geo || pgIdx === ref_point -> IndexType.SPATIAL
                 // The built-in tags index is a GIN index over the `tags` member, which is a SET
-                // (JSON array of unique strings) by default — matches StandardIndices.Tags.
+                // (JSON array of unique strings) by default — matches XyzIndices.XyzTags.
                 pgIdx === tags -> IndexType.SET
                 else -> IndexType.BTREE
             }
