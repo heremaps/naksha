@@ -147,8 +147,8 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
     override fun doExecute(conn: PgConnection) {
         val keepableByteCols = collection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
         val outRows = PgColumnRows()
-            .withStorageNumber(storageNumber)
-            .withMapNumber(mapNumber)
+            .withDatabaseNumber(storageNumber)
+            .withCatalogNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
             .addColumn(PgColumn.id)
             .addColumn(PgColumn.fn)

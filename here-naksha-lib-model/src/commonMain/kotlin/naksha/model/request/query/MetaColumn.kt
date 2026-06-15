@@ -585,7 +585,7 @@ open class MetaColumn() : AnyObject() {
         fun cs3(): MetaColumn = MetaColumn(CS3)
 
         /**
-         * The name of the virtual columns that stores the [feature][naksha.model.Tuple.jbonBytes].
+         * The name of the virtual columns that stores the [feature][naksha.model.Tuple.featureBytes].
          *
          * This can only be queried using a special [property query][IPropertyQuery].
          */

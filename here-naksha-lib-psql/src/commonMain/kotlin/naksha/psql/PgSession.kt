@@ -9,7 +9,7 @@ import naksha.base.Platform.PlatformCompanion.newAtomicInt64
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
@@ -433,8 +433,8 @@ open class PgSession(
         else
             collection.effectiveHeadColumns
         val rows = PgColumnRows()
-            .withStorageNumber(map.storage.number)
-            .withMapNumber(map.number)
+            .withDatabaseNumber(map.storage.number)
+            .withCatalogNumber(map.number)
             .withCollectionNumber(collection.number)
             .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(effectiveCols)
@@ -489,7 +489,7 @@ open class PgSession(
         }
     }
 
-    override fun getMapById(mapId: String): NakshaMap? {
+    override fun getMapById(mapId: String): NakshaCatalog? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
             storage.adminMap.getPgMapById(it.conn, mapId)?.head
@@ -508,7 +508,7 @@ open class PgSession(
         }
     }
 
-    override fun getMapByNumber(mapNumber: Int): NakshaMap? {
+    override fun getMapByNumber(mapNumber: Int): NakshaCatalog? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
             storage.adminMap.getPgMapByNumber(it.conn, mapNumber)?.head
@@ -527,7 +527,7 @@ open class PgSession(
         }
     }
 
-    override fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection? {
+    override fun getCollectionById(map: NakshaCatalog, collectionId: String): NakshaCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
             val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
@@ -548,7 +548,7 @@ open class PgSession(
         }
     }
 
-    override fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection? {
+    override fun getCollectionByNumber(map: NakshaCatalog, collectionNumber: Int): NakshaCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
             val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null

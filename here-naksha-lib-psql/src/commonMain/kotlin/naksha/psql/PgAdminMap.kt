@@ -15,13 +15,11 @@ import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_FN
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_FN
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
-import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -57,7 +55,7 @@ abstract class PgAdminMap internal constructor(
      * @since 3.0.0
      */
     upgrade: Boolean?
-) : PgMap(storage, NakshaMap().withStorageId(storage.id).withId(ADMIN_CATALOG_ID)), IDictReader {
+) : PgMap(storage, NakshaCatalog().withDatabaseId(storage.id).withId(ADMIN_CATALOG_ID)), IDictReader {
     /**
      * The page-size of the database (`current_setting('block_size')`).
      * @since 3.0.0
@@ -157,7 +155,7 @@ abstract class PgAdminMap internal constructor(
     // Called from invokeInitStorage->initStorage, so within a lock!
     init {
         val id = config.id // storageId
-        val number = config.number // storageNumber
+        val number = config.databaseNumber // storageNumber
         val doOverride = config.override == true
         val doCreate = create ?: config.create
         val doUpgrade = upgrade ?: config.upgrade
@@ -330,7 +328,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                 //mapNumberSequenceOid = cursor["map_oid"]
                 //colNumberSequenceOid = cursor["col_oid"]
             }
-            logger.info("Storage ${config.id} / ${config.number} initialized, txn-seq-oid=$txnSequenceOid, commit")
+            logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, txn-seq-oid=$txnSequenceOid, commit")
             conn.commit()
         }
     }
@@ -543,8 +541,8 @@ SELECT basics.*, procs.* FROM basics, procs;
         if (conn == null) return null
 
         val outRows = PgColumnRows(catalogs.head)
-            .withStorageNumber(storage.number)
-            .withMapNumber(ADMIN_CATALOG_FN)
+            .withDatabaseNumber(storage.number)
+            .withCatalogNumber(ADMIN_CATALOG_FN)
             .withCollectionNumber(CATALOGS_COL_FN)
             .addColumns(headColumns)
         val SQL = """SELECT ${outRows.names()}
@@ -557,7 +555,7 @@ WHERE id = $1 AND (version & 3) < 2"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaMap = tuple.decodeFeature(null).proxy(NakshaMap::class)
+        val nakshaMap = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
         val pgMap = PgMap(storage, nakshaMap)
         storeMap(pgMap)
         return pgMap
@@ -578,8 +576,8 @@ WHERE id = $1 AND (version & 3) < 2"""
 
         // Read from database
         val outRows = PgColumnRows(catalogs.head)
-            .withStorageNumber(storage.number)
-            .withMapNumber(ADMIN_CATALOG_FN)
+            .withDatabaseNumber(storage.number)
+            .withCatalogNumber(ADMIN_CATALOG_FN)
             .withCollectionNumber(CATALOGS_COL_FN)
             .addColumns(headColumns)
         val SQL = """
@@ -595,7 +593,7 @@ WHERE id = $1 AND (version & 3) < 2"""
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaMap = tuple.decodeFeature(null).proxy(NakshaMap::class)
+        val nakshaMap = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
         val pgMap = PgMap(storage, nakshaMap)
         storeMap(pgMap)
         return pgMap

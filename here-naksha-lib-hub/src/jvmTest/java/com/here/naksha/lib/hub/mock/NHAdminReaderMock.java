@@ -27,7 +27,6 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import naksha.geo.ProxyGeoUtil;
 import naksha.geo.SpGeometry;
-import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaError;
@@ -37,7 +36,7 @@ import naksha.model.TagMap;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.ReadFeatures;
@@ -280,22 +279,22 @@ public class NHAdminReaderMock implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getMapById(@NotNull String mapId) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
   @Override
-  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+  public @Nullable NakshaCatalog getMapByNumber(int mapNumber) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog map, int collectionNumber) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 

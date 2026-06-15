@@ -10,7 +10,7 @@ import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaTx
 import naksha.model.objects.StandardMembers
 import naksha.model.request.*
@@ -291,10 +291,10 @@ open class PgWriter internal constructor(
                 val op = write.op
                 var pgMap = storage.adminMap.getPgMapById(null, write.id) ?: storage.adminMap.getPgMapById(conn, write.id)
 
-                val nakshaMap: NakshaMap?
+                val nakshaMap: NakshaCatalog?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
-                    nakshaMap = if (feature is NakshaMap) feature else feature.proxy(NakshaMap::class)
+                    nakshaMap = if (feature is NakshaCatalog) feature else feature.proxy(NakshaCatalog::class)
                     nakshaMap.storageId = storage.id
                     if (pgMap == null) {
                         if (op == WriteOp.UPDATE) {
@@ -405,7 +405,7 @@ open class PgWriter internal constructor(
     }
 
     /**
-     * Invoked when a [NakshaMap][naksha.model.objects.NakshaMap] should be physically created.
+     * Invoked when a [NakshaMap][naksha.model.objects.NakshaCatalog] should be physically created.
      * @param map the map that should be physically created.
      * @since 3.0
      */
@@ -414,7 +414,7 @@ open class PgWriter internal constructor(
     }
 
     /**
-     * Invoked when a [NakshaMap][naksha.model.objects.NakshaMap] was created.
+     * Invoked when a [NakshaMap][naksha.model.objects.NakshaCatalog] was created.
      * @param map the map that was just created.
      * @since 3.0
      */

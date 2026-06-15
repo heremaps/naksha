@@ -1,13 +1,11 @@
 package naksha.psql
 
 import naksha.model.TagList
-import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.query.*
 import naksha.model.RandomFeatures
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -225,7 +223,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
 
     private fun executeTagsQuery(tagQuery: ITagQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection!!.id
             query.tags = tagQuery
         })

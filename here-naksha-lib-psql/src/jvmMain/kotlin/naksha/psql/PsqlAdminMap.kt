@@ -5,7 +5,7 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 
 /**
@@ -35,11 +35,11 @@ class PsqlAdminMap internal constructor(
         if (context is NakshaCollection) {
             val collectionEncoding = context.dataEncoding
             if (collectionEncoding != null) return collectionEncoding
-            val mapId = context.mapId ?: return Naksha.DEFAULT_DATA_ENCODING
+            val mapId = context.catalogId ?: return Naksha.DEFAULT_DATA_ENCODING
             val pgMap = getPgMapById(null, mapId)
             return pgMap?.head?.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
-        if (context is NakshaMap) {
+        if (context is NakshaCatalog) {
             return context.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
         return Naksha.DEFAULT_DATA_ENCODING

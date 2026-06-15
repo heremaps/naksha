@@ -41,6 +41,14 @@ open class NakshaError() : AnyObject() {
         const val EXCEPTION = "Exception"
 
         /**
+         * Thrown when a state is found that must not be found, for example some other part of the code should have prevented this state at this point.
+         *
+         * This results in a 500 Internal Server Error.
+         * @since 3.0.0
+         */
+        const val INTERNAL_ERROR = "InternalError"
+
+        /**
          * Returned when an already initialized storage is initialized, providing a wrong _storage-id_ and/or _storage-number_.
          * @since 3.0.0
          */

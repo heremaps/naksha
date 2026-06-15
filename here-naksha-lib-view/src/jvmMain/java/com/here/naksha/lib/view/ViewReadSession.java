@@ -30,8 +30,7 @@ import java.util.*;
 
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
-import naksha.model.objects.NakshaStorage;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
@@ -257,22 +256,22 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   }
 
   @Override
-  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getMapById(@NotNull String mapId) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+  public @Nullable NakshaCatalog getMapByNumber(int mapNumber) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog map, int collectionNumber) {
     throw new UnsupportedOperationException();
   }
 

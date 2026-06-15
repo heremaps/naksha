@@ -3,7 +3,7 @@ package com.here.naksha.cli.storages;
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -109,25 +109,25 @@ final class GeneratingSession implements IReadSession {
 
     @Nullable
     @Override
-    public NakshaMap getMapById(@NotNull String mapId) {
+    public NakshaCatalog getMapById(@NotNull String mapId) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
     @Nullable
     @Override
-    public NakshaMap getMapByNumber(int mapNumber) {
+    public NakshaCatalog getMapByNumber(int mapNumber) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
     @Nullable
     @Override
-    public NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+    public NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
     @Nullable
     @Override
-    public NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+    public NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog map, int collectionNumber) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 

@@ -21,7 +21,7 @@ class ReadLimitTest : PgTestBase() {
 
         // When
         val readWithLimit = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             limit = 2
         })

@@ -12,8 +12,6 @@ import naksha.geo.SpGeometry
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
-import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaMap
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -78,7 +76,7 @@ class Naksha private constructor() {
 
         /**
          * The identifier of the collection in which catalogs (maps) are stored, located only within the [admin-map][ADMIN_CATALOG_ID] _(`naksha~catalogs`)_.
-         * @see [naksha.model.objects.NakshaMap]
+         * @see [naksha.model.objects.NakshaCatalog]
          * @since 3.0
          */
         const val CATALOGS_COL_ID = "naksha~catalogs"
@@ -588,7 +586,7 @@ class Naksha private constructor() {
         @JvmStatic
         @JsStatic
         fun getStorage(storage: NakshaStorage): IStorage? {
-            val s = storagesByNumber[storage.number] ?: return null
+            val s = storagesByNumber[storage.databaseNumber] ?: return null
             val s2 = storagesById[storage.id] ?: return null
             return if (s!==s2 || s.config != storage) null else s
          }
@@ -655,16 +653,16 @@ class Naksha private constructor() {
         fun useStorage(config: NakshaStorage): IStorage = _useStorage(config, null)
 
         private fun _useStorage(config: NakshaStorage, forceCreateOrUpgrade: Boolean?): IStorage {
-            var s = storagesByNumber[config.number]
+            var s = storagesByNumber[config.databaseNumber]
             var s2 = storagesById[config.id]
             if (s !== s2) {
                 lock.acquire().use {
-                    s = storagesByNumber[config.number]
+                    s = storagesByNumber[config.databaseNumber]
                     s2 = storagesById[config.id]
                     if (s !== s2) {
                         throw NakshaException(
                             ILLEGAL_ARGUMENT,
-                            "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                            "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
                     }
                 }
             }
@@ -675,12 +673,12 @@ class Naksha private constructor() {
                 return localS
             }
             lock.acquire().use {
-                var storage = storagesByNumber[config.number]
+                var storage = storagesByNumber[config.databaseNumber]
                 val storage2 = storagesById[config.id]
                 if (storage !== storage2) {
                     throw NakshaException(
                         ILLEGAL_ARGUMENT,
-                        "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                        "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
                 }
                 if (storage != null) {
                     if (storage.config.configEquals(config)) {
@@ -692,7 +690,7 @@ class Naksha private constructor() {
                 storage = Platform.newInstanceOf(klass)
                 storage.invokeInitStorage(config, create = forceCreateOrUpgrade, upgrade = forceCreateOrUpgrade)
                 storagesById[config.id] = storage
-                storagesByNumber[config.number] = storage
+                storagesByNumber[config.databaseNumber] = storage
                 return storage
             }
         }
@@ -732,19 +730,19 @@ class Naksha private constructor() {
         @JvmStatic
         @JsStatic
         fun removeStorage(config: NakshaStorage): IStorage? {
-            val s = storagesByNumber[config.number]
+            val s = storagesByNumber[config.databaseNumber]
             if (s == null || s.config != config) return null
             lock.acquire().use {
-                val storage = storagesByNumber[config.number]
+                val storage = storagesByNumber[config.databaseNumber]
                 if (storage == null || storage.config != config) return null
                 val storage2 = storagesById[config.id]
                 if (storage !== storage2) {
                     throw NakshaException(
                         ILLEGAL_ARGUMENT,
-                        "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                        "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
                 }
                 storagesById.remove(config.id)
-                storagesByNumber.remove(config.number)
+                storagesByNumber.remove(config.databaseNumber)
                 storage.invokeShutdownStorage(true)
                 return storage
             }

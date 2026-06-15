@@ -34,7 +34,7 @@ class PsqlErrorMappingTest : PgTestBase() {
     fun shouldReturnConflictingCollectionError() {
         // Given
         val createAlreadyExistingCollection = WriteRequest().add(
-            Write().createCollection(NakshaCollection(collection.id, collection.mapId))
+            Write().createCollection(NakshaCollection(collection.id, collection.catalogId))
         )
 
         // When

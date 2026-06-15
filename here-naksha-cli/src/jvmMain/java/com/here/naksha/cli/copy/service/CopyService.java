@@ -11,7 +11,7 @@ import naksha.model.NakshaError;
 import naksha.model.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -225,7 +225,7 @@ public final class CopyService {
 
     private WriteRequest buildCreateMapRequest(String mapId) {
         WriteRequest writeRequest = new WriteRequest();
-        NakshaMap map = new NakshaMap(mapId);
+        NakshaCatalog map = new NakshaCatalog(mapId);
         Write write = new Write().createMap(map);
         writeRequest.add(write);
         return writeRequest;
@@ -234,7 +234,7 @@ public final class CopyService {
     private WriteRequest buildCreateCollectionRequest(CopyElement target) {
         WriteRequest writeRequest = new WriteRequest();
         NakshaCollection collection = new NakshaCollection(target.getCollectionId())
-                .withMapId(target.getMapId());
+                .withCatalogId(target.getMapId());
         Write write = new Write().createCollection(collection);
         writeRequest.add(write);
         return writeRequest;

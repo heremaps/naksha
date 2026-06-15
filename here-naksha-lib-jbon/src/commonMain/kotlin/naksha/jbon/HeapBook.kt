@@ -44,7 +44,7 @@ class HeapBook(
 
     override fun namesLength(): Int = _names.size
 
-    override fun getByName(name: String): Any? {
+    override fun get(name: String): Any? {
         val i = _nameIndex[name] ?: return null
         return _values.getOrNull(i)
     }

@@ -49,7 +49,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
             arrayOf(updatedVersion)
         )
         val byNextTnResp = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             query.metadata = nextVersionQuery
             queryHistory = true

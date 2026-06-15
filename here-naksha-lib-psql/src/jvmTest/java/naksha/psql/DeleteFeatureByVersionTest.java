@@ -151,7 +151,7 @@ class DeleteFeatureByVersionTest extends PgTestBase {
 
   private NakshaFeatureList getFeatureByIds(String... ids) {
     ReadFeatures readAll = new ReadFeatures()
-        .withMapId(getCollection().getMapId())
+        .withMapId(getCollection().getCatalogId())
         .addCollectionId(getCollection().getId());
     readAll.setFeatureIds(StringList.of(ids));
     return executeRead(readAll, newSessionOptions()).getFeatures();

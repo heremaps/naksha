@@ -4,33 +4,29 @@ import naksha.base.Int64
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
 import naksha.model.*
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
+import naksha.model.objects.Member
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StandardMembers
 
 /**
  * Helper class to convert rows into arrays of column-data and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
  * @since 3.0
  */
-internal class PgColumnRows(val collection: NakshaCollection) {
+internal class PgColumnRows {
     /**
      * All columns being added already.
      * @since 3.0
      */
     val columns = mutableListOf<PgColumnEntry>()
-    init {
-        val members = collection.useMembers()
-        for (i in 0 until members.size) {
-            val member = members[i] ?: continue
-            columns.add(PgColumnEntry(i, member.name, PgType.ofMemberType(member.dataType)))
-        }
-    }
     internal val columnByName = mutableMapOf<String, PgColumnEntry>()
-    private var isComplete: Boolean? = null
     private var names: String? = null
     private var namesAggregate: String? = null
     private var placeholders: String? = null
     private var arrayTypeNames: Array<String>? = null
     private fun clearCache(): PgColumnRows {
-        isComplete = null
         names = null
         namesAggregate = null
         placeholders = null
@@ -58,30 +54,75 @@ internal class PgColumnRows(val collection: NakshaCollection) {
     }
 
     /**
-     * If all rows are coming from the same storage, the storage-number of it.
+     * When set, clear the [columns] and add all columns of the given [NakshaCollection].
      * @since 3.0
      */
-    var storageNumber: Int64? = null
+    var collection: NakshaCollection? = null
+        set(collection) {
+            if (collection != null) {
+                clearCache()
+                columns.clear()
+                databaseNumber = collection.databaseNumber
+                catalogNumber = collection.catalogNumber
+                collectionNumber = collection.collectionNumber
+                val members = collection.useMembers()
+                if (!members.isSortedByIndex()) throw NakshaException(ILLEGAL_ARGUMENT, "The given collection is not sorted by index")
+                for (i in 0 until members.size) {
+                    val member = members[i] ?: throw NakshaException(INTERNAL_ERROR, "The member at index $i is null; this must not happen")
+                    val index = member.index ?: throw NakshaException(INTERNAL_ERROR, "The member at index $i has no index; this must not happen")
+                    if (index != i) throw NakshaException(INTERNAL_ERROR, "The member at index $i has an member-index $index; this must not happen, expected $i")
+                    columns.add(PgColumnEntry(i, member.name, PgType.ofMemberType(member)))
+                }
+            }
+            field = collection
+        }
 
     /**
-     * @see [storageNumber]
+     * Add the members of the given [NakshaCollection] to the row-set.
+     *
+     * The members of the given collection must be sorted by index.
+     * @param collection the [NakshaCollection] of which to add the members.
+     * @return this
+     * @since 3.0
      */
-    fun withStorageNumber(value: Int64): PgColumnRows {
-        storageNumber = value
+    fun withCollection(collection: NakshaCollection): PgColumnRows {
+        this.collection = collection
         return this
     }
 
     /**
-     * If all rows are coming from the same map, the map-number of it.
+     * If all rows are coming from the same storage, the storage-number of it.
      * @since 3.0
      */
-    var mapNumber: Int? = null
+    var databaseNumber: Int64? = null
+        set(value) {
+            collection = null
+            field = value
+        }
 
     /**
-     * @see [mapNumber]
+     * @see [databaseNumber]
      */
-    fun withMapNumber(value: Int): PgColumnRows {
-        mapNumber = value
+    fun withDatabaseNumber(value: Int64): PgColumnRows {
+        databaseNumber = value
+        return this
+    }
+
+    /**
+     * If all rows are coming from the same catalog, the catalog-number of it.
+     * @since 3.0
+     */
+    var catalogNumber: Int? = null
+        set(value) {
+            collection = null
+            field = value
+        }
+
+    /**
+     * @see [catalogNumber]
+     */
+    fun withCatalogNumber(value: Int): PgColumnRows {
+        catalogNumber = value
         return this
     }
 
@@ -90,6 +131,10 @@ internal class PgColumnRows(val collection: NakshaCollection) {
      * @since 3.0
      */
     var collectionNumber: Int? = null
+        set(value) {
+            collection = null
+            field = value
+        }
 
     /**
      * @see [collectionNumber]
@@ -98,25 +143,6 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         collectionNumber = value
         return this
     }
-
-    /**
-     * Tests if tuple read from these rows will be complete.
-     * @since 3.0
-     */
-    val complete: Boolean
-        get() {
-            val c = isComplete
-            if (c != null) return c
-            var detected = true
-            for (pgColumn in allColumns) {
-                if (!hasColumn(pgColumn)) {
-                    detected = false
-                    break
-                }
-            }
-            isComplete = detected
-            return detected
-        }
 
     fun addColumn(name: String, type: PgType): PgColumnRows {
         clearCache()
@@ -129,19 +155,6 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         return this
     }
 
-    fun addColumns(cols: List<PgColumn>): PgColumnRows {
-        clearCache()
-        var i = columns.size
-        for (col in cols) {
-            val existing = columnByName[col.name]
-            if (existing == null) {
-                val column = PgColumnEntry(col, i++).withSize(size)
-                columns.add(column)
-                columnByName[column.name] = column
-            }
-        }
-        return this
-    }
     fun getColumn(name: String): PgColumnEntry? = columnByName[name]
     fun getColumn(index: Int): PgColumnEntry? = if (index in 0 until columns.size) columns[index] else null
     fun hasColumn(name: String): Boolean = getColumn(name) != null
@@ -171,8 +184,8 @@ internal class PgColumnRows(val collection: NakshaCollection) {
     }
     fun getB64(row: Int, columnName: String, featureNumber: Int64): TupleNumber? {
         val raw = getByteArray(row, columnName) ?: return null
-        val storageNumber = this.storageNumber ?: return null
-        val mapNumber = this.mapNumber ?: return null
+        val storageNumber = this.databaseNumber ?: return null
+        val mapNumber = this.catalogNumber ?: return null
         val collectionNumber = this.collectionNumber ?: return null
         return try {
             TupleNumber.fromB64(raw, storageNumber, mapNumber, collectionNumber, featureNumber)
@@ -182,8 +195,8 @@ internal class PgColumnRows(val collection: NakshaCollection) {
     }
     fun getB128(row: Int, columnName: String): TupleNumber? {
         val raw = getByteArray(row, columnName) ?: return null
-        val storageNumber = this.storageNumber ?: return null
-        val mapNumber = this.mapNumber ?: return null
+        val storageNumber = this.databaseNumber ?: return null
+        val mapNumber = this.catalogNumber ?: return null
         val collectionNumber = this.collectionNumber ?: return null
         return try {
             TupleNumber.fromB128(raw, storageNumber, mapNumber, collectionNumber)
@@ -192,31 +205,36 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         }
     }
 
-    fun getTuple(row: Int, storageNumber: Int64, mapNumber: Int, collectionNumber: Int): Tuple? {
+    /**
+     * Read the given row into a tuple, requires that a [collection] is assigned.
+     * @param row the row number.
+     * @return the [Tuple] extracted from the row or `null`, if either no [collection] set, the row number is outside the result-set, or something else failed.
+     * @since 3.0
+     */
+    fun getTuple(row: Int): Tuple? {
         if (row < 0 || row >= size) return null
-        val fn = getInt64(row, PgColumn.fn) ?: return null
-        val version = getInt64(row, PgColumn.version) ?: return null
-        val nextVersion = getInt64(row, PgColumn.next_version)
-        val members = HeapBook(BookType.MEMBER_BOOK)
-
-        return Tuple(
-            storageNumber = storageNumber,
-            mapNumber = mapNumber,
-            collectionNumber = collectionNumber,
-            featureNumber = fn,
-            version = naksha.model.Version(version),
-            nextVersion = nextVersion ?: Int64(-1L),
-            membersBook = members,
-            jbonBytes = getByteArray(row, PgColumn.feature)
-        )
+        val collection = this.collection ?: return null
+        val members = collection.members ?: return null
+        val membersBook = HeapBook(BookType.MEMBER_BOOK)
+        var featureBytes: ByteArray? = null
+        for (i in 0 until members.size) {
+            val member: Member = members[i] ?: throw NakshaException(ILLEGAL_STATE, "Member #$i of collection ${collection.id} is null")
+            val name = member.name
+            val column: PgColumnEntry = getColumn(name) ?: throw NakshaException(ILLEGAL_STATE, "Missing member '$name' at index $i of collection ${collection.id}")
+            val value = column.values[row]
+            if (StandardMembers.Feature.name == name) {
+                // Special case, root feature.
+                if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
+                featureBytes = value
+            } else {
+                membersBook.put(name, value)
+            }
+        }
+        if (featureBytes == null) throw NakshaException(ILLEGAL_STATE, "Missing mandatory member '${StandardMembers.Feature.name}'!")
+        return Tuple(featureBytes = featureBytes, membersBook = membersBook)
     }
 
-    operator fun get(row: Int): Tuple? {
-        val storage_num = storageNumber ?: return null
-        val map_num = mapNumber ?: return null
-        val col_num = collectionNumber ?: return null
-        return getTuple(row, storage_num, map_num, col_num)
-    }
+    operator fun get(row: Int): Tuple? = getTuple(row)
 
     fun set(row: Int, columnName: String, value: Any?): Boolean {
         val column = getColumn(columnName)
@@ -242,55 +260,16 @@ internal class PgColumnRows(val collection: NakshaCollection) {
         return this
     }
 
-    /**
-     * Populates the [Member][naksha.model.objects.Member] columns for the given row by walking the [feature] using each member's [path][naksha.model.objects.Member.effectivePath] and coercing the value to the SQL type.
-     *
-     * Missing keys and mismatched types both produce a NULL column value. Mismatches additionally emit a warning via [naksha.base.Platform.PlatformCompanion.logger].
-     */
-    fun setCustomMembers(row: Int, feature: naksha.model.objects.NakshaFeature?, members: naksha.model.objects.MemberList?) {
-        if (feature == null || members == null) return
-        for (m in members) {
-            if (m == null) continue
-            val raw = PgMemberHelper.walkFeature(feature, m.effectivePath())
-            val coerced = PgMemberHelper.coerce(raw, m.dataType, feature.id, m.name)
-            set(row, PgMemberHelper.pgColumnName(m.name), coerced)
-        }
-    }
-
     operator fun set(row: Int, tuple: Tuple) {
         withMinSize(row)
-        val members = tuple.membersBook
-
-        set(row, PgColumn.updated_at, members.getByName("updated_at") as? Int64)
-        set(row, PgColumn.created_at, members.getByName("created_at") as? Int64)
-        set(row, PgColumn.author_ts, members.getByName("author_ts") as? Int64)
-        set(row, PgColumn.cv0, members.getByName("cv0") as? Double)
-        set(row, PgColumn.cv1, members.getByName("cv1") as? Double)
-        set(row, PgColumn.cv2, members.getByName("cv2") as? Double)
-        set(row, PgColumn.cv3, members.getByName("cv3") as? Double)
-        set(row, PgColumn.hash, members.getByName("hash") as? Int)
-        set(row, PgColumn.here_tile, members.getByName("here_tile") as? Int)
-        set(row, PgColumn.cc, members.getByName("cc") as? Int)
-        val fn = tuple.featureNumber
-        set(row, PgColumn.fn, fn)
-        set(row, PgColumn.version, tuple.version.txn)
-        set(row, PgColumn.next_version, tuple.nextVersion)
-        set(row, PgColumn.base_tn, members.getByName("base_tn") as? ByteArray)
-        set(row, PgColumn.id, if (fn >= Int64(0)) null else members.getByName("id") as? String)
-        set(row, PgColumn.app_id, members.getByName("app_id") as? String)
-        set(row, PgColumn.author, members.getByName("author") as? String)
-        set(row, PgColumn.origin, members.getByName("origin") as? String)
-        set(row, PgColumn.target, members.getByName("target") as? String)
-        set(row, PgColumn.ft, members.getByName("ft") as? String)
-        set(row, PgColumn.cs0, members.getByName("cs0") as? String)
-        set(row, PgColumn.cs1, members.getByName("cs1") as? String)
-        set(row, PgColumn.cs2, members.getByName("cs2") as? String)
-        set(row, PgColumn.cs3, members.getByName("cs3") as? String)
-        set(row, PgColumn.tags, members.getByName("tags") as? String)
-        set(row, PgColumn.ref_point, members.getByName("ref_point") as? ByteArray)
-        set(row, PgColumn.feature, tuple.jbonBytes)
-        set(row, PgColumn.geo, members.getByName("geo") as? ByteArray)
-        set(row, PgColumn.attachment, members.getByName("attachment") as? ByteArray)
+        val membersBook = tuple.membersBook
+        val END = membersBook.namesLength()
+        for (i in 0 until END) {
+            val memberName = membersBook.getNameAt(i) ?: continue
+            val column = getColumn(memberName) ?: continue
+            val value = membersBook[memberName]
+            set(row, column.name, value)
+        }
     }
 
     operator fun set(row: Int, cursor: PgCursor) {

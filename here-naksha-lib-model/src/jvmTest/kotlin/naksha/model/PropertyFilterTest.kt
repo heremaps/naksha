@@ -483,7 +483,7 @@ class PropertyFilterTest {
                 featureNumber = featureNumber(feature.id),
                 version = version,
                 membersBook = members,
-                jbonBytes = featureBytes
+                featureBytes = featureBytes
             )
             return FeatureTuple(tupleNumber, tuple)
         }

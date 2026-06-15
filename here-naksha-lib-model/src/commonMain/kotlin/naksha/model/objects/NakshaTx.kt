@@ -22,7 +22,6 @@ open class NakshaTx : NakshaFeature() {
 
     override fun featureTypeDefaultValue(): String = "naksha.Tx"
     override fun withId(value: String): NakshaTx = super.withId(value) as NakshaTx
-    override fun withFeatureNumber(value: Int64): NakshaTx = super.withFeatureNumber(value) as NakshaTx
     override fun withType(value: String): NakshaTx = super.withType(value) as NakshaTx
     override fun withFeatureType(value: String): NakshaTx = super.withFeatureType(value) as NakshaTx
     override fun withBbox(value: SpBoundingBox?): NakshaTx = super.withBbox(value) as NakshaTx

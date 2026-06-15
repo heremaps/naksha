@@ -37,7 +37,6 @@ open class NakshaDictionary() : NakshaFeature() {
 
     override fun featureTypeDefaultValue(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaDictionary = super.withId(value) as NakshaDictionary
-    override fun withFeatureNumber(value: Int64): NakshaDictionary = super.withFeatureNumber(value) as NakshaDictionary
     override fun withType(value: String): NakshaDictionary = super.withType(value) as NakshaDictionary
     override fun withFeatureType(value: String): NakshaDictionary = super.withFeatureType(value) as NakshaDictionary
     override fun withBbox(value: SpBoundingBox?): NakshaDictionary = super.withBbox(value) as NakshaDictionary

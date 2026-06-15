@@ -93,7 +93,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // READ FEATURE HISTORY
         Naksha.cache.clear()
         val readResp = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
@@ -116,7 +116,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertEquals(2, updatedTuple.getInt(naksha.model.objects.StandardMembers.ChangeCountXyz))
         assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry))
         assertEquals(createdTuple.getString(naksha.model.objects.StandardMembers.XyzTags), updatedTuple.getString(naksha.model.objects.StandardMembers.XyzTags))
-        assertNotEquals(createdTuple.jbonBytes, updatedTuple.jbonBytes)
+        assertNotEquals(createdTuple.featureBytes, updatedTuple.featureBytes)
         assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint))
         assertNull(createdTuple.decodeFeature()?.properties["new_attr"])
         assertEquals("some_value", updatedTuple.decodeFeature()?.properties["new_attr"])
@@ -260,7 +260,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
     private fun fetchSingleFeature(id: String): NakshaFeature {
         Naksha.cache.clear()
         val readFeatureResp = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             featureIds += id
         })

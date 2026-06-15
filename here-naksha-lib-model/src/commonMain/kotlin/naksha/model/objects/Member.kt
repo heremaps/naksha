@@ -7,6 +7,7 @@ import naksha.base.Int64
 import naksha.base.MapProxy
 import naksha.base.NotNullEnum
 import naksha.base.NotNullProperty
+import naksha.base.NullableProperty
 import naksha.base.Proxy
 import naksha.geo.SpGeometry
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -91,6 +92,14 @@ class Member() : AnyObject(), Comparator<Member> {
      * @since 3.0
      */
     var dataType: MemberType by DATA_TYPE
+
+    /**
+     * The index of this member in the storage; the index is set by the storage ones a collection is created.
+     *
+     * This value is maintained by the storage; it **MUST NOT** be modified by clients. Storages may manage this value or ignore it, this is implementation dependent. Changes done by the client are ignored by the storage.
+     * @since 3.0
+     */
+    val index: Int? by INDEX
 
     /** True iff the underlying map has an entry for [dataType]. */
     fun hasDataType(): Boolean = hasRaw("dataType")
@@ -193,7 +202,7 @@ class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readTupleNumber(feature: MapProxy<*,*>): TupleNumber? {
+    fun getTupleNumber(feature: MapProxy<*,*>): TupleNumber? {
         val raw = feature.getPath(path)
         if (raw is TupleNumber) return raw
         if (raw is String) return TupleNumber.fromString(raw)
@@ -205,7 +214,7 @@ class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readBoolean(feature: MapProxy<*,*>): Boolean? {
+    fun getBoolean(feature: MapProxy<*,*>): Boolean? {
         val raw = feature.getPath(path)
         if (raw is Boolean) return raw
         return null
@@ -227,7 +236,7 @@ class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readLong(feature: MapProxy<*,*>): Int64? {
+    fun getInt64(feature: MapProxy<*,*>): Int64? {
         val raw = feature.getPath(path)
         if (raw is Int64) return raw
         if (raw is Long) return Int64(raw)
@@ -240,7 +249,7 @@ class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readDouble(feature: MapProxy<*,*>): Double? {
+    fun getDouble(feature: MapProxy<*,*>): Double? {
         val raw = feature.getPath(path)
         if (raw is Double) return raw
         if (raw is Number) return raw.toDouble()
@@ -252,7 +261,7 @@ class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readGeometry(feature: MapProxy<*,*>): SpGeometry? {
+    fun getGeometry(feature: MapProxy<*,*>): SpGeometry? {
         val raw = feature.getPath(path)
         if (raw is SpGeometry) return raw
         return null
@@ -263,7 +272,7 @@ class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readByteArray(feature: MapProxy<*,*>): ByteArray? {
+    fun getByteArray(feature: MapProxy<*,*>): ByteArray? {
         val raw = feature.getPath(path)
         if (raw is ByteArray) return raw
         return null
@@ -275,13 +284,14 @@ class Member() : AnyObject(), Comparator<Member> {
      * @return the previous value.
      * @throws RuntimeException If the given feature has a broken path, so the path requires an array, but an object exists already.
      */
-    fun write(feature: MapProxy<*,*>, value: Any?): Any? = feature.setPath(value, path)
+    fun set(feature: MapProxy<*,*>, value: Any?): Any? = feature.setPath(value, path)
 
     override fun compare(a: Member, b: Member): Int = a.dataType.sortOrder - b.dataType.sortOrder
 
     companion object Member_C {
         private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
+        private val INDEX = NullableProperty<Member, Int>(Int::class)
         private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath(listOf("properties", self.name)) }
         private val INTERNAL = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
     }

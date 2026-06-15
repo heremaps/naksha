@@ -67,8 +67,8 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
 
         // And: `storeNumber` checks out
         storage.adminConnection().use { conn ->
-            val pgMap = storage.adminMap.getPgMapById(conn, collection.mapId!!)
-            require(pgMap != null) { "Missing map ${collection.mapId}" }
+            val pgMap = storage.adminMap.getPgMapById(conn, collection.catalogId!!)
+            require(pgMap != null) { "Missing map ${collection.catalogId}" }
             val pgCollection = pgMap.getPgCollectionById(conn, collection.id)
             require(pgCollection != null) { "Missing collection ${collection.id}" }
             assertEquals(storage.number, persistedTuple.tupleNumber.databaseNumber)

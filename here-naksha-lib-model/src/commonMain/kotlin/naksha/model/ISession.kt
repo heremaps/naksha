@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.model.request.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -116,7 +116,7 @@ interface ISession : AutoCloseable {
      * @return the map; _null_ if no such map exists.
      * @since 3.0
      */
-    fun getMapById(mapId: String): NakshaMap?
+    fun getMapById(mapId: String): NakshaCatalog?
 
     /**
      * Returns the map for the given number.
@@ -126,7 +126,7 @@ interface ISession : AutoCloseable {
      * @return the map; _null_ if no such map exists.
      * @since 3.0
      */
-    fun getMapByNumber(mapNumber: Int): NakshaMap?
+    fun getMapByNumber(mapNumber: Int): NakshaCatalog?
 
     /**
      * Returns the collection for the given identifier.
@@ -137,7 +137,7 @@ interface ISession : AutoCloseable {
      * @return the collection; _null_ if no such collection exists.
      * @since 3.0
      */
-    fun getCollectionById(map: NakshaMap, collectionId: String): NakshaCollection?
+    fun getCollectionById(map: NakshaCatalog, collectionId: String): NakshaCollection?
 
     /**
      * Returns the collection for the given number.
@@ -148,7 +148,7 @@ interface ISession : AutoCloseable {
      * @return the collection; _null_ if no such collection exists.
      * @since 3.0
      */
-    fun getCollectionByNumber(map: NakshaMap, collectionNumber: Int): NakshaCollection?
+    fun getCollectionByNumber(map: NakshaCatalog, collectionNumber: Int): NakshaCollection?
 
     /**
      * Load all tuples into the given [feature-tuples][FeatureTuple].

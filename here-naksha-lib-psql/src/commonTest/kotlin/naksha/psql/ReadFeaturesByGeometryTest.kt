@@ -33,7 +33,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         // And: reading feature
         val retrievedFeatures = executeRead(
             ReadFeatures().apply {
-                mapId = collection.mapId
+                mapId = collection.catalogId
                 collectionIds += collection.id
                 featureIds += feature.id
             }
@@ -66,7 +66,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         // And: reading feature
         val retrievedFeatures = executeRead(
             ReadFeatures().apply {
-                mapId = collection.mapId
+                mapId = collection.catalogId
                 collectionIds += collection.id
                 featureIds += feature.id
             }
@@ -251,7 +251,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
 
     private fun executeSpatialQuery(spatialQuery: ISpatialQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
+            mapId = collection.catalogId
             collectionIds += collection.id
             query.spatial = spatialQuery
         })

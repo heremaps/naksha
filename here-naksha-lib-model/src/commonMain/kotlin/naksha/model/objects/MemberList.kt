@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.ListProxy
-import naksha.model.NakshaError
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -47,6 +47,61 @@ open class MemberList() : ListProxy<Member>(Member::class) {
     }
 
     /**
+     * Sort this list by the sort-order of the [MemberType].
+     * @return this.
+     * @since 3.0
+     * @throws NakshaException with error [ILLEGAL_STATE], if any member is `null` or has no `dataType`.
+     */
+    fun sortByDataType(): MemberList {
+        sortBy { member -> member?.dataType?.sortOrder ?: throw NakshaException(ILLEGAL_STATE, "Member is null or has no dataType") }
+        return this
+    }
+
+    /**
+     * Sort this list by the index of the [MemberType].
+     * @return this.
+     * @since 3.0
+     * @throws NakshaException with error [ILLEGAL_STATE], if any member is `null` or has no valid `index`.
+     */
+    fun sortByIndex(): MemberList {
+        sortBy { member -> member?.index ?: throw NakshaException(ILLEGAL_STATE, "Member is null or has no index") }
+        return this
+    }
+
+    /**
+     * Tests if this list is [sorted by data-type][sortByDataType].
+     * @return _true_ if the entries are sorted; _false_ otherwise.
+     */
+    fun isSortedByDataType(): Boolean {
+        val END = this.size
+        var max = 0
+        for (i in 0 until END) {
+            val member = this[i] ?: return false
+            val sortOrder = member.dataType.sortOrder
+            // The elements towards the end of the list must have the biggest sort-order value, we always sort ascending.
+            // This results in members in byte-alignment order, so INT8, FLOAT8, INT4, FLOAT4, ...
+            // This prevents padding in the database.
+            if (max > sortOrder) return false
+            max = sortOrder
+        }
+        return true
+    }
+
+    /**
+     * Tests if this list is [sorted by data-type][sortByDataType].
+     * @return _true_ if the entries are sorted; _false_ otherwise.
+     */
+    fun isSortedByIndex(): Boolean {
+        val END = this.size
+        for (i in 0 until END) {
+            val member = this[i] ?: return false
+            val index = member.index ?: return false
+            if (index != i) return false
+        }
+        return true
+    }
+
+    /**
      * Get the member with the given name from this list.
      * @param name The name of the member.
      * @return The first member with that name or `null`, if no such member was found.
@@ -63,12 +118,12 @@ open class MemberList() : ListProxy<Member>(Member::class) {
      */
     fun validate() {
         for (i in 0 until this.size) {
-            val member = this[i] ?: throw NakshaException(NakshaError.ILLEGAL_STATE, "Member at index $i is null")
+            val member = this[i] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $i is null")
             val memberName = member.name
             for (j in (i + 1) until this.size) {
-                val later = this[j] ?: throw NakshaException(NakshaError.ILLEGAL_STATE, "Member at index $j is null")
+                val later = this[j] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $j is null")
                 if (memberName == later.name) {
-                    throw NakshaException(NakshaError.ILLEGAL_STATE, "Member at index $i has same name as member at $j: $memberName")
+                    throw NakshaException(ILLEGAL_STATE, "Member at index $i has same name as member at $j: $memberName")
                 }
             }
         }
