@@ -137,23 +137,29 @@ open class PgCatalog internal constructor(
     }
 
     /**
-     * Returns the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
-     * @return the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
+     * Returns the `search_path` so that this schema _(catalog)_ is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
+     * @return the `search_path` so that this schema _(catalog)_ is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
      */
-    fun getSearchPath(): String = if (this is PgAdminCatalog) {
-        "SET search_path = \"naksha~admin\", topology, hint_plan, public"
+    fun searchPath(): String = if (this is PgAdminCatalog) {
+        "\"naksha~admin\", topology, hint_plan, public"
     } else {
-        "SET search_path = ${quotedId}, \"naksha~admin\", topology, hint_plan, public"
+        "${quotedId}, \"naksha~admin\", topology, hint_plan, public"
     }
 
     /**
      * Sets the `search_path` for the current transaction, so until `commit` or `rollback`.
+     *
+     * Actually:
+     * ```sql
+     * SET search_path = ${searchPath()}
+     * ```
+     *
      * @param conn the connection where to set the search path.
      * @since 3.0
-     * @see [getSearchPath]
+     * @see [searchPath]
      */
     fun setSearchPath(conn: PgConnection) {
-        conn.execute(getSearchPath()).close()
+        conn.execute("SET search_path = ${searchPath()}").close()
     }
 
     /**
@@ -365,7 +371,7 @@ FROM ${collections.headTable.quotedName}
 WHERE id = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         plan.execute(arrayOf(id)).fetch().use {
-            outRows.addAll(cursor = it)
+            outRows.readAll(cursor = it)
         }
         if (outRows.size == 0) return null
         val tuple = outRows[0] ?: return null

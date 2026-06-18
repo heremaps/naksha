@@ -160,7 +160,7 @@ class CopyServiceTest {
     void shouldSucceedWithAutoCreateTargetAndAbsentTargetCollection() throws FeaturesWriteExecutorException {
         // Given: valid target storage with write sessions
         IStorage targetStorage = createTargetStorage(sessionOptions);
-        IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.MAP_EXISTS);
+        IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.CATALOG_EXISTS);
         IWriteSession createCollectionWriteSession = createWriteSessionReturningSuccessResponse();
         when(targetStorage.newWriteSession(sessionOptions))
                 .thenReturn(createMapWriteSession)
@@ -220,7 +220,7 @@ class CopyServiceTest {
     void shouldSucceedWithAutoCreateTargetAndExistingTargetMapAndCollection() throws FeaturesWriteExecutorException {
         // Given: valid target storage with write sessions
         IStorage targetStorage = createTargetStorage(sessionOptions);
-        IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.MAP_EXISTS);
+        IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.CATALOG_EXISTS);
         IWriteSession createCollectionWriteSession = createWriteSessionReturningErrorResponse(NakshaError.COLLECTION_EXISTS);
         when(targetStorage.newWriteSession(sessionOptions))
                 .thenReturn(createMapWriteSession)

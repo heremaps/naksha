@@ -443,7 +443,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @param catalog the catalog to store, must have a valid _HEAD_ state **and** must have a valid [TupleNumber].
      * @since 3.0
      */
-    protected fun storeCatalog(catalog: PgCatalog) {
+    protected fun cacheCatalog(catalog: PgCatalog) {
         do {
             val id = catalog.id
             val newCatalog = catalog.head
@@ -468,27 +468,36 @@ SELECT basics.*, procs.* FROM basics, procs;
         } while (true)
     }
 
-    protected fun invalidateCatalog(catalog: PgCatalog) {
-        catalogCache.remove(catalog.head.catalogNumber, catalog)
+    /**
+     * Remove the catalog with the given catalog-number from the cache.
+     */
+    protected fun invalidateCatalog(catalog: PgCatalog, atomic: Boolean = true) {
+        if (atomic) catalogCache.remove(catalog.head.catalogNumber, catalog) else catalogCache.remove(catalog.head.catalogNumber)
     }
 
     /**
-     * Create a new [map][PgCatalog] using the given connection, and return it.
+     * Create a new [catalog][PgCatalog] using the given connection, and return it.
      *
      * ### Note
-     * Does not commit the given connection, therefore the map is not yet persisted, but can be used through the given connection. The method neither creates the corresponding entry in the collection's collection of the admin-map, it only creates the schema and collection-number sequence counter!
-     *
-     * - Throws [NakshaError.MAP_EXISTS] if such a map exists already.
+     * Does not commit the given connection, therefore the catalog _(aka schema)_ is not yet persisted, but can be used through the given connection. The method neither creates the corresponding entry in the collection's collection of the admin-catalog, it only creates the schema.
      * @param conn the connection to use to access the database.
-     * @param map the map to create.
-     * @return the created map.
+     * @param catalog the catalog to create.
+     * @throws NakshaException with [NakshaError.CATALOG_EXISTS] if a catalog with the same `id` exists, or if a catalog with a different `id`, but same feature-number exists _(hash collision)_.
      * @since 3.0.0
      */
-    fun createPgCatalog(conn: PgConnection, map: PgCatalog) {
-        if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't create internal maps: ${map.id}")
-        conn.execute("CREATE SCHEMA IF NOT EXISTS ${map.quotedId}").close()
-        map.createPgCollection(conn, map.collections) // 0
-        invalidateCatalog(map)
+    fun createPgCatalog(conn: PgConnection, catalog: PgCatalog) {
+        if (Naksha.isInternalId(catalog.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't create internal catalogs: ${catalog.id}")
+        if (!Naksha.isValidId(catalog.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Invalid catalog identifier: ${catalog.id}")
+        // TODO: We need to ensure that there is no other schema with the same feature-number:
+        // Write: `ALTER SCHEMA ${catalog.quotedId} SET SCHEMA OPTION 'featureNumber' 'stringifiedFN';`
+        // Read:
+        // SELECT nspname, nspconfig FROM pg_namespace WHERE nspname = '${catalog.id}';
+        // SELECT nspname, split_part(kv, '=', 2) AS feature_number
+        // FROM pg_namespace, unnest(nspconfig) AS kv
+        // WHERE nspname = '${catalog.id}' AND split_part(kv, '=', 1) = 'featureNumber';
+        conn.execute("CREATE SCHEMA IF NOT EXISTS ${catalog.quotedId}").close()
+        catalog.createPgCollection(conn, catalog.collections) // 0
+        invalidateCatalog(catalog)
     }
 
     /**
@@ -507,9 +516,9 @@ SELECT basics.*, procs.* FROM basics, procs;
     }
 
     /**
-     * Returns the existing map with the given identifier; if any.
+     * Returns the existing catalog with the given identifier; if any.
      * @param conn the connection to use to access the database.
-     * @param id the map-id to query.
+     * @param id the catalog-id to query.
      * @return the map, if it exists; _null_ otherwise.
      * @since 3.0.0
      */
@@ -519,20 +528,20 @@ SELECT basics.*, procs.* FROM basics, procs;
         val existing = catalogCache[catalogNumber]
         if (existing != null || conn==null) return existing
 
-        val outRows = PgRows().useHeadTable().withCollection(catalogs.head)
-        val SQL = """SELECT ${outRows.names()}
+        val outRows = PgRows().withCollection(catalogs)
+        val SQL = """SELECT ${outRows.aliases()}
 FROM "naksha~admin".${catalogs.headTable.quotedName}
 WHERE id = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
-        plan.execute(arrayOf(id)).fetch().use { cursor: PgCursor ->
-
+        plan.execute(arrayOf(id)).fetch().use { cursor ->
+            if (!outRows.read(cursor)) return null
         }
         if (outRows.size == 0) return null
-        val tuple = outRows[0] ?: return null
+        val tuple: Tuple = outRows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaMap = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
-        val pgCatalog = PgCatalog(storage, nakshaMap)
-        storeCatalog(pgCatalog)
+        val nakshaCatalog = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
+        val pgCatalog = PgCatalog(storage, nakshaCatalog)
+        cacheCatalog(pgCatalog)
         return pgCatalog
     }
 
@@ -550,23 +559,19 @@ WHERE id = $1 AND (version & 3) < 2"""
         if (conn == null) return null
 
         // Read from database
-        val outRows = PgRows().useHeadTable().withCollection(catalogs.head)
-        val SQL = """
-            SELECT ${outRows.names()}
-            FROM "naksha~admin".${catalogs.headTable.quotedName}
-            WHERE fn = $1 AND (version & 3) < 2
-            """.trimIndent()
+        val rows = PgRows().withCollection(catalogs)
+        val SQL = """SELECT ${rows.aliases()} 
+FROM "naksha~admin".${catalogs.headTable.quotedName} 
+WHERE fn = $1 AND (version & 3) < 2"""
+        setSearchPath(conn)
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
-        conn.execute(getSearchPath())
-        plan.execute(arrayOf(number)).fetch().use {
-            outRows.addAll(cursor = it)
-        }
-        if (outRows.size == 0) return null
-        val tuple = outRows[0] ?: return null
+        plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }
+        if (rows.size == 0) return null
+        val tuple = rows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaMap = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
-        val pgCatalog = PgCatalog(storage, nakshaMap)
-        storeCatalog(pgCatalog)
+        val nakshaCatalog = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
+        val pgCatalog = PgCatalog(storage, nakshaCatalog)
+        cacheCatalog(pgCatalog)
         return pgCatalog
     }
 

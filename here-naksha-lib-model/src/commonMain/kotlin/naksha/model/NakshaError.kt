@@ -108,7 +108,7 @@ open class NakshaError() : AnyObject() {
          * A not further specified conflict occurred when performing an operation, for example when the database reports a unique index violation, and the storage is not able to give a more specific reason.
          * @since 3.0.0
          * @see [isConflict]
-         * @see [MAP_EXISTS]
+         * @see [CATALOG_EXISTS]
          * @see [MAP_NOT_FOUND]
          * @see [COLLECTION_EXISTS]
          * @see [COLLECTION_NOT_FOUND]
@@ -216,7 +216,7 @@ open class NakshaError() : AnyObject() {
          *
          * @since 3.0.0
          */
-        const val MAP_EXISTS = "MapExists"
+        const val CATALOG_EXISTS = "MapExists"
 
         /**
          * A map does not exist, but is expected to exist.
@@ -281,7 +281,7 @@ open class NakshaError() : AnyObject() {
      * @since 3.0
      */
     fun isConflict(): Boolean = when(code) {
-        MAP_EXISTS,
+        CATALOG_EXISTS,
         MAP_NOT_FOUND,
         COLLECTION_EXISTS,
         COLLECTION_NOT_FOUND,

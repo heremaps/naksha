@@ -247,7 +247,7 @@ open class PgWriter internal constructor(
                     txCol.add(tupleNumber, col.partitions)
                 }
                 featuresModified += 1
-            } else if (write.isMapModification) {
+            } else if (write.isCatalogModification) {
                 val map = write.asPgCatalog
                 if (map != null) transaction.useMap(map.id, map.number, write.action)
             } else if (write.isCollectionModification) {
@@ -286,34 +286,34 @@ open class PgWriter internal constructor(
                 throw collectionNotFound("The write #${write.i} refers to not existing collection '$colId'")
             write.collection = collection
 
-            // If this operation modifies a map.
-            if (write.isMapModification) {
+            // If this operation modifies a catalog.
+            if (write.isCatalogModification) {
                 val op = write.op
-                var pgMap = storage.adminCatalog.getPgCatalogById(null, write.id) ?: storage.adminCatalog.getPgCatalogById(conn, write.id)
+                var pgCatalog = storage.adminCatalog.getPgCatalogById(null, write.id) ?: storage.adminCatalog.getPgCatalogById(conn, write.id)
 
                 val nakshaMap: NakshaCatalog?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
                     nakshaMap = if (feature is NakshaCatalog) feature else feature.proxy(NakshaCatalog::class)
                     nakshaMap.storageId = storage.id
-                    if (pgMap == null) {
+                    if (pgCatalog == null) {
                         if (op == WriteOp.UPDATE) {
                             throw mapNotFound("The UPDATE (write #${write.i}) failed, because the map '$featureId' does not exist")
                         }
-                        pgMap = PgCatalog(storage, nakshaMap)
-                        createPgMap(pgMap)
+                        pgCatalog = PgCatalog(storage, nakshaMap)
+                        createPgCatalog(pgCatalog)
                     } else if (op == WriteOp.CREATE) {
                         throw mapExists("The write #${write.i} failed, because the map '$featureId' does exist already")
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
-                    if (pgMap != null) {
-                        deletePgMap(pgMap)
+                    if (pgCatalog != null) {
+                        deletePgMap(pgCatalog)
                     }
                     nakshaMap = null
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
-                write.asPgCatalog = pgMap
+                write.asPgCatalog = pgCatalog
                 write.asNakshaMap = nakshaMap
             }
 
@@ -406,11 +406,11 @@ open class PgWriter internal constructor(
 
     /**
      * Invoked when a [NakshaMap][naksha.model.objects.NakshaCatalog] should be physically created.
-     * @param map the map that should be physically created.
+     * @param catalog the catalog that should be physically created.
      * @since 3.0
      */
-    protected open fun createPgMap(map: PgCatalog) {
-        storage.adminCatalog.createPgCatalog(conn, map)
+    protected open fun createPgCatalog(catalog: PgCatalog) {
+        storage.adminCatalog.createPgCatalog(conn, catalog)
     }
 
     /**

@@ -298,12 +298,12 @@ internal class PgRows {
     }
 
     /**
-     * Add the current row of the cursor to the end of the rows list.
+     * Read from the given cursor and add a row to the end of the row-set. Requires that the cursor is positioned on a row _([PgCursor.isRow])_. Does not move the cursor forward.
      * @param cursor the cursor from which to read.
-     * @return `true` if a rows was read; `false` if the cursor is not at a valid row  _([PgCursor.isRow] is _false_).
+     * @return `true` if a row was read; `false` if the cursor is not at a valid row  _([PgCursor.isRow] is _false_).
      * @since 3.0
      */
-    fun add(cursor: PgCursor): Boolean {
+    fun read(cursor: PgCursor): Boolean {
         if (cursor.isRow()) {
             set(size ,cursor)
             return true
@@ -312,14 +312,16 @@ internal class PgRows {
     }
 
     /**
-     * Read all rows from cursor to the end of the rows, expects the cursor to be at first result, usage:
+     * Read all rows from cursor to the end of the rows, expects the cursor to be positioned at the first row that should be read, usage:
      * ```kotlin
-     * plan.execute(queryValues).fetch().use { resultRows.addAll(it) }
+     * val rows = PgRows().withCollection(pgCollection)
+     * plan.execute(query).fetch().use { rows.readAll(it) }
+     * // Process the rows
      * ```
      * @since 3.0
      */
-    fun addAll(cursor: PgCursor): PgRows {
-        while (add(cursor)) cursor.next()
+    fun readAll(cursor: PgCursor): PgRows {
+        while (read(cursor)) cursor.next()
         return this
     }
 

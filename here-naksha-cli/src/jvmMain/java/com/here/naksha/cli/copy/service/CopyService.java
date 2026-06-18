@@ -158,7 +158,7 @@ public final class CopyService {
             );
             case ErrorResponse errorResponse -> {
                 NakshaError nakshaError = errorResponse.getError();
-                if (!nakshaError.getCode().equals(NakshaError.MAP_EXISTS)) {
+                if (!nakshaError.getCode().equals(NakshaError.CATALOG_EXISTS)) {
                     throw new CopyServiceException("Problem with creating map!", new NakshaException(nakshaError));
                 }
                 logger.info("Map(id: \"{}\") is already present on storage(id: \"{}\")!", mapId, storage.getId());

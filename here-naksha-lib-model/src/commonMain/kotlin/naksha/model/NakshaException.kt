@@ -12,7 +12,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.MAP_EXISTS
+import naksha.model.NakshaError.NakshaErrorCompanion.CATALOG_EXISTS
 import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 
@@ -110,12 +110,12 @@ fun generalException(msg: String, cause: Throwable? = null): NakshaException = N
 fun mapNotFound(msg: String): NakshaException = NakshaException(MAP_NOT_FOUND, msg)
 
 /**
- * Create [MAP_EXISTS] exception.
+ * Create [CATALOG_EXISTS] exception.
  * @param msg the message.
  * @return the [NakshaException].
  * @since 3.0
  */
-fun mapExists(msg: String): NakshaException = NakshaException(MAP_EXISTS, msg)
+fun mapExists(msg: String): NakshaException = NakshaException(CATALOG_EXISTS, msg)
 
 /**
  * Create [COLLECTION_NOT_FOUND] exception.

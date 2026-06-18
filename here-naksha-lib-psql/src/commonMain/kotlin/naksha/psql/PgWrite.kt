@@ -115,7 +115,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
      */
     var tuple: Tuple? = null
 
-    val isMapModification: Boolean
+    val isCatalogModification: Boolean
         get() = original.isMapModification()
     val isCollectionModification: Boolean
         get() = original.isCollectionModification()
@@ -123,7 +123,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = Naksha.ADMIN_CATALOG_ID == map.id && Naksha.TRANSACTIONS_COL_ID == collection.id
     // This variant differs from write.isFeatureModification, because it includes dictionaries, which are just features for us!
     val isFeatureModification: Boolean
-        get() = !isTransactionModification && !isMapModification && !isCollectionModification
+        get() = !isTransactionModification && !isCatalogModification && !isCollectionModification
 
     /**
      * If the feature is a map, the [PgCatalog] representation.
