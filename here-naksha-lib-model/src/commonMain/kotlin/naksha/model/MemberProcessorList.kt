@@ -12,4 +12,14 @@ import kotlin.js.JsExport
  * @since 3.0
  */
 @JsExport
-open class MemberProcessorList(private val delegate: MutableList<IMemberProcessor> = ArrayList()) : MutableList<IMemberProcessor> by delegate
+open class MemberProcessorList(private val delegate: MutableList<IMemberProcessor> = ArrayList()) : MutableList<IMemberProcessor> by delegate {
+    /**
+     * Create a shallow copy of this list.
+     * @return the shallow copy.
+     */
+    fun copy(): MemberProcessorList {
+        val copy = MemberProcessorList()
+        for (e in delegate) copy.add(e)
+        return copy
+    }
+}

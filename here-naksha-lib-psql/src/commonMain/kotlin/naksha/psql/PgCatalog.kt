@@ -5,6 +5,7 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.model.Action
+import naksha.model.IWriteSession
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_FN
@@ -16,9 +17,14 @@ import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_FN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
+import naksha.model.PgTx
 import naksha.model.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
+import naksha.model.objects.StandardMembers.StandardMembers_C.Id
+import naksha.model.objects.XyzMembers
+import naksha.model.objects.XyzProcessors
+import naksha.psql.PgColumn.PgColumn_C.FN
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -107,7 +113,7 @@ open class PgCatalog internal constructor(
      * @param collection the collection to store, must have a valid _HEAD_ state **and** must have a valid [TupleNumber].
      * @since 3.0
      */
-    protected fun storeCollection(collection: PgCollection) {
+    protected fun cacheCollection(collection: PgCollection) {
         do {
             val id = collection.id
             val newCollection = collection.head
@@ -168,67 +174,40 @@ open class PgCatalog internal constructor(
      * ### Note
      * - This method does not commit the given connection, therefore the collection is not yet persisted, but can be used through the given connection.
      * - The method does not insert the corresponding entry into the collection's collection, this must be done upfront by the caller.
-     *
-     * - Throws [NakshaError.MAP_NOT_FOUND] if the given map does not exist _(anymore)_.
-     * - Throws [NakshaError.COLLECTION_EXISTS] if such a collection exists already in the given map.
      * @param conn the connection to use to access the database.
      * @param collection the collection to create.
      * @return the created map.
      * @since 3.0
      */
-    open fun createPgCollection(conn: PgConnection, collection: PgCollection) {
-        // Ensure that all tables and indices are created in the correct map!
+    open fun createPgCollection(session: IWriteSession, conn: PgConnection, collection: PgCollection) {
+        // Ensure that all tables and indices are created in the correct schema!
         setSearchPath(conn)
-        val NOW = Epoch()
+        val processors = session.processors
+        val backup = processors.backup(true)
+        try {
+            processors.addProcessor(XyzMembers.XyzCreatedAt, XyzProcessors.xyzCreatedAt)
+            processors.addProcessor(XyzMembers.XyzUpdatedAt, XyzProcessors.xyzUpdatedAt)
+            processors.addProcessor(XyzMembers.XyzAppId, XyzProcessors.xyzAppId)
+            processors.addProcessor(XyzMembers.XyzAuthor, XyzProcessors.xyzAuthor)
+            processors.addProcessor(XyzMembers.XyzAuthorTimestamp, XyzProcessors.xyzAuthorTimestamp)
 
-        // The indices list drives which optional indices are created:
-        //   - null  → backward-compatible: all DEFAULT_INDICES (non-internal), but only when members is also null
-        //             (when members is explicitly set, only custom indices from the indices list are created)
-        //   - non-null → only the client-declared (already stripped of internal entries by normalizeCollection)
-        // Mandatory/internal indices (id_unique, txn_unique, id, version, gbn) are always created below
-        // and are not present in either list.
-        val optionalIndices = collection.head.indices
-        val membersExplicit = collection.head.members != null
-        val defaultPgIndices: List<PgIndex> = if (optionalIndices == null && !membersExplicit) PgIndex.DEFAULT_INDICES.filter { !it.internal } else emptyList()
+            val pgSession = session as PgSession
+            val tx: PgTx = pgSession.useTx()
 
-        /** Creates one optional index on [table]: delegates to createIndex for known PgIndex names,
-         *  or to createCustomIndex for user-defined names. */
-        fun createOptionalIndex(table: PgTable, idx: naksha.model.objects.Index) {
-            val pgIdx = PgIndex.of(idx.name)
-            if (pgIdx != null) table.createIndex(conn, pgIdx)
-            else table.createCustomIndex(conn, idx)
-        }
+            val headTable = collection.headTable
+            headTable.create(conn)
+            for (index in collection.headIndices) headTable.createIndex(conn, index)
 
-        val head = collection.headTable
-        head.create(conn)
-        head.createIndex(conn, PgIndex.id_unique)
-        head.createIndex(conn, PgIndex.version)
-        head.createIndex(conn, PgIndex.gbn_idx)
-        for (index in defaultPgIndices) head.createIndex(conn, index)
-        if (optionalIndices != null) for (idx in optionalIndices) if (idx != null) createOptionalIndex(head, idx)
-
-        val meta = collection.metaTable
-        if (meta != null) {
-            meta.create(conn)
-            meta.createIndex(conn, PgIndex.id_unique)
-            meta.createIndex(conn, PgIndex.version)
-            meta.createIndex(conn, PgIndex.gbn_idx)
-            for (index in defaultPgIndices) meta.createIndex(conn, index)
-            if (optionalIndices != null) for (idx in optionalIndices) if (idx != null) createOptionalIndex(meta, idx)
-        }
-
-        val history = collection.historyTable
-        if (history != null) {
+            val history = collection.historyTable
             history.create(conn)
-            history.createPartition(conn, NOW.year)
-            history.createPartition(conn, NOW.year + 1)
-            history.createIndex(conn, PgIndex.id)
-            history.createIndex(conn, PgIndex.version)
-            history.createIndex(conn, PgIndex.gbn_idx)
-            for (index in defaultPgIndices) history.createIndex(conn, index)
-            if (optionalIndices != null) for (idx in optionalIndices) if (idx != null) createOptionalIndex(history, idx)
+            history.createPartition(conn, collection.historyPartitionNumberOf(tx.version.number))
+            for (index in collection.historyIndices) headTable.createIndex(conn, index)
+
+            // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
+            invalidateCollection(collection)
+        } finally {
+            processors.restore(backup, clear = true, consume = true)
         }
-        invalidateCollection(collection)
     }
 
     /**
@@ -238,86 +217,8 @@ open class PgCatalog internal constructor(
      * @since 3.0.0
      */
     private fun refreshPgCollection(conn: PgConnection, collection: PgCollection): PgCollection {
-        // TODO: Fix me!
-        val cursor = PgRelation.select(conn, collection.catalog.id, id)
-        cursor.use {
-            //
-            // NOTE: We ignore all unknown relations, that allows users to add some own indices and relations!
-            //
-            var headRelation: PgRelation? = null
-            val headIndices: MutableList<PgIndex> = mutableListOf()
-            val headPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
-            val headYears: MutableMap<Int, PgRelation> = mutableMapOf()
-            var historyRelation: PgRelation? = null
-            val historyIndices: MutableList<PgIndex> = mutableListOf()
-            val historyYears: MutableMap<Int, PgRelation> = mutableMapOf()
-            val historyPartitions: MutableMap<Int, PgRelation> = mutableMapOf()
-            var metaRelation: PgRelation? = null
-            val metaIndices: MutableList<PgIndex> = mutableListOf()
-            while (cursor.next()) {
-                val rel = PgRelation(cursor)
-                    if (rel.isAnyHeadRelation()) {
-                        if (rel.isHeadRootRelation()) {
-                            headRelation = rel
-                        } else if (rel.isTable()) {
-                            val i = rel.partitionNumber()
-                            if (i >= 0) headPartitions[i] = rel
-                        } else if (rel.isIndex()) {
-                            val index = PgIndex.of(rel.name)
-                            if (index != null && index !in headIndices) headIndices.add(index)
-                        }
-                    }
-                    if (rel.isAnyHistoryRelation()) {
-                        if (rel.isHistoryRootRelation()) {
-                            historyRelation = rel
-                        } else if (rel.isHistoryYearRelation()) {
-                            val year = rel.year()
-                            if (year > 0) historyYears[year] = rel
-                        } else if (rel.isHistoryPartition()) {
-                            val i = rel.partitionNumber()
-                            if (i >= 0) historyPartitions[i] = rel
-                        } else if (rel.isIndex()) {
-                            val index = PgIndex.of(rel.name)
-                            if (index != null && index !in historyIndices) historyIndices.add(index)
-                        }
-                    }
-                if (rel.isAnyMetaRelation()) {
-                    if (rel.isMetaRootRelation()) {
-                        metaRelation = rel
-                    } else if (rel.isIndex()) {
-                        val index = PgIndex.of(rel.name)
-                        if (index != null && index !in metaIndices) metaIndices.add(index)
-                    }
-                }
-            }
-
-            if (headRelation != null) {
-                if (headRelation.isPartition()) {
-                    val parts = headPartitions.size
-                    if (parts < 2 || parts > 256) {
-                        throw NakshaException(
-                            ILLEGAL_STATE,
-                            "Invalid amount of HEAD partitions found, must be 2..256, but is ${headPartitions.size}"
-                        )
-                    }
-                    collection.headTable = PgHeadTable(collection, headRelation.storageClass, parts)
-                } else {
-                    collection.headTable = PgHeadTable(collection, headRelation.storageClass, 0)
-                }
-                for (index in headIndices) collection.headTable.addIndex(index)
-            }
-            if (historyRelation != null) {
-                val history = PgHistoryTable(collection.headTable)
-                collection.historyTable = history
-                for (entry in historyYears) history.years[entry.key] = PgHistoryYear(history, entry.key)
-            }
-            if (metaRelation != null) {
-                val meta = PgMetaTable(collection.headTable)
-                collection.metaTable = meta
-                for (index in metaIndices) meta.addIndex(index)
-            }
-        }
-        return collection
+        // TODO: Implement me, but only if needed!
+        throw UnsupportedOperationException()
     }
 
     /**
@@ -331,13 +232,15 @@ open class PgCatalog internal constructor(
         val builder = StringBuilder()
         val head = collection.headTable
         builder.append("DROP TABLE IF EXISTS ${head.quotedName} CASCADE;\n")
-        val meta = collection.metaTable
-        if (meta != null) builder.append("DROP TABLE IF EXISTS ${meta.quotedName} CASCADE;\n")
+
         val history = collection.historyTable
-        if (history != null) builder.append("DROP TABLE IF EXISTS ${history.quotedName} CASCADE;\n")
+        builder.append("DROP TABLE IF EXISTS ${history.quotedName} CASCADE;\n")
+
         val SQL = builder.toString()
-        logger.info("Dropped collection '{}' with collection-number {}", collection.id, collection.head.collectionNumber)
         conn.execute(SQL).close()
+        logger.info("Dropped collection '{}' with collection-number {}", collection.id, collection.head.collectionNumber)
+
+        // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
         invalidateCollection(collection)
     }
 
@@ -364,21 +267,22 @@ open class PgCatalog internal constructor(
         if (existing != null || conn == null) return existing
 
         // Read from database
-        val outRows = PgRows().withCollection(collections.head)
         setSearchPath(conn)
-        val SQL = """SELECT ${outRows.aliases()}
-FROM ${collections.headTable.quotedName}
-WHERE id = $1 AND (version & 3) < 2"""
+        val TABLE = collections.headTable.quotedName
+        val ID = collections.column(Id)
+        val SQL = "SELECT * FROM $TABLE WHERE $ID = $1"
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
+        val rows = PgRows().withCollection(collections)
         plan.execute(arrayOf(id)).fetch().use {
-            outRows.readAll(cursor = it)
+            rows.readAll(cursor = it)
         }
-        if (outRows.size == 0) return null
-        val tuple = outRows[0] ?: return null
+        if (rows.size == 0) return null
+        val tuple = rows[0] ?: return null
         Naksha.cache.store(tuple)
         val nakshaCollection = tuple.decodeFeature(null).proxy(NakshaCollection::class)
         val pgCollection = PgCollection(this, nakshaCollection)
-        storeCollection(pgCollection)
+        // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
+        cacheCollection(pgCollection)
         return pgCollection
     }
 
@@ -404,21 +308,19 @@ WHERE id = $1 AND (version & 3) < 2"""
         if (existing != null || conn == null) return existing
 
         // Read from database
-        val outRows = PgRows().useHeadTable().withCollection(collections.head)
         setSearchPath(conn)
-        val SQL = """SELECT ${outRows.names()}
-FROM ${collections.headTable.quotedName}
-WHERE fn = $1 AND (version & 3) < 2"""
+        val TABLE = collections.headTable.quotedName
+        val SQL = "SELECT * FROM $TABLE WHERE $FN = $1"
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
-        plan.execute(arrayOf(number)).fetch().use {
-            outRows.addAll(cursor = it)
-        }
-        if (outRows.size == 0) return null
-        val tuple = outRows[0] ?: return null
+        val rows = PgRows().withCollection(collections)
+        plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }
+        if (rows.size == 0) return null
+        val tuple = rows[0] ?: return null
         Naksha.cache.store(tuple)
         val nakshaCollection = tuple.decodeFeature(null).proxy(NakshaCollection::class)
         val pgCollection = PgCollection(this, nakshaCollection)
-        storeCollection(pgCollection)
+        // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
+        cacheCollection(pgCollection)
         return pgCollection
     }
 

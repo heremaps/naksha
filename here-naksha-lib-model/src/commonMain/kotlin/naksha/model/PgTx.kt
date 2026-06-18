@@ -4,7 +4,6 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.jbon.IDictReader
-import naksha.jbon.HeapBook
 import naksha.model.objects.*
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -19,7 +18,7 @@ import kotlin.js.JsName
  * @since 3.0
  */
 @JsExport
-open class StorageTx private constructor(
+open class PgTx private constructor(
     /**
      * The storage instance for which this transaction is done. Does not have to be supplied.
      * @since 3.0
@@ -94,12 +93,12 @@ open class StorageTx private constructor(
      * The statistical transaction information, updated while this class is being used, should eventually be writted into the transaction-log of the storage.
      * @since 3.0
      */
-    open val transaction: NakshaTx = NakshaTx().setVersion(version)
+    open val nakshaTx: NakshaTx = NakshaTx().setVersion(version)
 
     /**
      * The `updated_at` value being used for all [Tuple] created, basically just reads `transaction.time`.
      * @since 3.0
      */
     open val updatedAt: Int64
-        get() = transaction.time
+        get() = nakshaTx.time
 }

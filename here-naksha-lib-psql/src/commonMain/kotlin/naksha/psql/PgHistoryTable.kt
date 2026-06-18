@@ -82,7 +82,14 @@ $TABLESPACE"""
         for (entry in partitions) entry.value.create(conn)
     }
 
-    fun createPartition(conn: PgConnection, partitionNumber: Int) {
+    /**
+     * Create a new [PgHistoryPartition], if no such partition exists already.
+     * @param conn the connection to be used to modify the database.
+     * @param partitionNumber the partition-number of the partition to create.
+     * @return the [PgHistoryPartition] created or already existing.
+     * @see [PgCollection.historyPartitionNumberOf]
+     */
+    fun createPartition(conn: PgConnection, partitionNumber: Int): PgHistoryPartition {
         var partition = partitions[partitionNumber]
         if (partition == null) {
             partition = PgHistoryPartition(this, partitionNumber)
@@ -92,6 +99,7 @@ $TABLESPACE"""
         for (index in indices) {
             partition.createIndex(conn, index)
         }
+        return partition
     }
 
     fun addPartition(partitionNumber: Int) {

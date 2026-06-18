@@ -194,7 +194,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         /**
          * The _HEAD_ sentinel version _(`9_007_199_254_740_991` aka `2^53-1`)_. Can be used as well to mask version to ensure valid version number, like `version & Version.HEAD`.
          *
-         * When a [Tuple] is the _HEAD_ state its next-version is synthesized as this value.
+         * When a [Tuple] is the _HEAD_ state its next-version is synthesized as this value or as `null`, which has by definition the same meaning.
          * @since 3.0
          */
         @JvmField
@@ -234,7 +234,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
 
         /**
          * The maximum value of the 30-bit sequence field (`0x3FFF_FFFF` = 1073741823).
-         * Also usable as a bitmask to extract the sequence from a shifted value.
+         * Also, usable as a bitmask to extract the sequence from a shifted value.
          * @since 3.0
          */
         @JvmField

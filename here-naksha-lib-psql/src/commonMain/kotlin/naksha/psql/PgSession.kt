@@ -220,7 +220,7 @@ open class PgSession(
      * The current transaction wrapper; if any.
      * @since 3.0
      */
-    internal var tx: StorageTx? = null
+    internal var tx: PgTx? = null
         private set
 
     /**
@@ -228,19 +228,19 @@ open class PgSession(
      * @return the current transaction.
      * @since 3.0
      */
-    internal fun useTx(): StorageTx {
+    internal fun useTx(): PgTx {
         assertMutable()
         assertOpen()
-        var tx: StorageTx? = this.tx
+        var tx: PgTx? = this.tx
         if (tx == null) {
             val txn = storage.newConnection(options, false, null).use { conn -> storage.adminCatalog.newTxn(conn) }
-            tx = StorageTx(storage, txn.version, options.appId, options.author, storage.adminCatalog, this)
+            tx = PgTx(storage, txn.version, options.appId, options.author, storage.adminCatalog, this)
             this.tx = tx
         }
         return tx
     }
 
-    override fun getTransaction(): NakshaTx? = tx?.transaction
+    override fun getTransaction(): NakshaTx? = tx?.nakshaTx
 
     /**
      * Return the current transaction, if no transaction started yet, starts a new one.
@@ -248,7 +248,7 @@ open class PgSession(
      * - Throws [NakshaError.ILLEGAL_STATE] if this is session is [readOnly] or [closed][isClosed].
      * @return the current transaction.
      */
-    override fun useTransaction(): NakshaTx = useTx().transaction
+    override fun useTransaction(): NakshaTx = useTx().nakshaTx
 
     private var executionCount: Int = 0
 
@@ -306,7 +306,7 @@ open class PgSession(
             val tx = tx
             if (tx != null) {
                 try {
-                    val transaction = tx.transaction
+                    val transaction = tx.nakshaTx
                     val writeTx = Write().createFeature(Naksha.ADMIN_CATALOG_ID, TRANSACTIONS_COL, transaction)
                     val writeRequest = WriteRequest().add(writeTx)
                     // TODO: Should we use a savepoint here?

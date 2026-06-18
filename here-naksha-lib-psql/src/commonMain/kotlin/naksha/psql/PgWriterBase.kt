@@ -66,7 +66,7 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     val transaction: NakshaTx
-        get() = tx.transaction
+        get() = tx.nakshaTx
 
     /**
      * The rows to write.

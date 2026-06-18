@@ -7,6 +7,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.objects.IndexList
 import naksha.model.objects.Member
+import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType.MemberType_C.BYTE_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.INT64
 import naksha.model.objects.MemberType.MemberType_C.STRING
@@ -71,17 +72,23 @@ open class PgCollection internal constructor(
     val shift: Int = nakshaCollection.shift
 
     /**
+     * Returns the partition index of the [PgHistoryPartition] in which features can be found, that are modified in the given version.
+     * @param version the version in which features are modified.
+     * @return the partition index of the [PgHistoryPartition] into which _HEAD_ features will be moved, when modified in the given version.
+     * @since 3.0
+     */
+    fun historyPartitionNumberOf(version: Int64): Int = (version shr shift).toInt()
+
+    /**
      * Convert the given member into a [PgColumn], only fails for the standard member [Tn].
-     * @param member the member to convert, must not me [Tuple-Number][StandardMembers.Tn].
+     * @param member the member to convert, must not me [Tuple-Number][Tn].
      * @param index the real index in the physical table at which to place the member.
      * @return the [PgColumn] for the member.
-     * @throws NakshaException with error [ILLEGAL_ARGUMENT], if the given member is [Tn].
+     * @throws NakshaException with error [INTERNAL_ERROR], if the given member is [Tn].
      * @since 3.0
      */
     private fun fromMember(member: Member, index: Int): PgColumn {
-        if (Tn.name == member.name) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "The tuple-number can't be converted using PgColumn.fromMember")
-        }
+        if (Tn.name == member.name) throw NakshaException(INTERNAL_ERROR, "The tuple-number can't be converted using fromMember")
         val memberName = member.name
         // These mandatory members get special storage handling.
         when (memberName) {
@@ -98,13 +105,19 @@ open class PgCollection internal constructor(
         }
     }
 
+    /**
+     * Read the [members][NakshaCollection.members] from the given [NakshaCollection] and turn them into a [PgColumn] list. If the members of the given [NakshaCollection] and not yet [ordered by index][MemberList.isSortedByIndex], then the method will invoke a [sort by type][MemberList.sortByDataTypeAndAssignIndex].
+     * @param nakshaCollection the collection from which to extract the [PgColumn]'s.
+     * @return an array with all extracted [PgColumn]'s.
+     */
     private fun generateColumns(nakshaCollection: NakshaCollection): Array<PgColumn> {
-        val members = nakshaCollection.useMembers()
+        val members: MemberList = nakshaCollection.useMembers()
         if (!members.isSortedByIndex()) {
             members.sortByDataTypeAndAssignIndex()
         }
         var i = 0
-        return Array(members.size + 1) { // we split tuple-number into `fn` and `version`, therefore +1
+        // We split tuple-number into `fn` and `version`, therefore we need size + 1.
+        return Array(members.size + 1) {
             when (it) {
                 // The first three members are fixed to:
                 0 -> PgColumn.FN

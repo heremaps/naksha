@@ -63,7 +63,7 @@ open class PgWriter internal constructor(
      * @since 3.0
      */
     val transaction: NakshaTx
-        get() = tx.transaction
+        get() = tx.nakshaTx
 
     /**
      * Performs the given writes.
@@ -233,7 +233,7 @@ open class PgWriter internal constructor(
         val tupleNumbers = TupleNumberList()
         tupleNumbers.setCapacity(writes.size)
         val tupleList = ArrayList<Tuple>(writes.size)
-        val transaction = tx.transaction
+        val transaction = tx.nakshaTx
         var featuresModified = 0
         for (write in targetWrites) {
             val tupleNumber = write.tupleNumber

@@ -56,7 +56,7 @@ interface ISession : AutoCloseable {
      * @return the member processor map.
      * @since 3.0
      */
-    fun processors(): MemberProcessorMap
+    val processors: MemberProcessorMap
 
     // TODO: Define a streaming API (full table scan) to consume all features from a collection.
     //       This API is designed to backup data, or to execute a read request with a huge cardinality,
