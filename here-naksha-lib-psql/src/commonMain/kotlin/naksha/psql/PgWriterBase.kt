@@ -76,7 +76,7 @@ internal abstract class PgWriterBase protected constructor(
         .withDatabaseNumber(storageNumber)
         .withCatalogNumber(mapNumber)
         .withCollectionNumber(collectionNumber)
-        .withMinSize(writes.size)
+        .withMinRows(writes.size)
 
     /**
      * Generates a live mapping between the write instructions and the partition-index into which they will write.

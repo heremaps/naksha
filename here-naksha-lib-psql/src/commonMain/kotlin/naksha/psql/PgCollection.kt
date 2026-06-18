@@ -271,24 +271,22 @@ open class PgCollection internal constructor(
     /**
      * Returns the [PgColumn] that corresponds to the given member.
      * @param member the [Member] for which to return the column.
-     * @return the [PgColumn] that corresponds to the given member.
-     * @throws NakshaException if the given `member` does not have a dedicated [PgColumn].
+     * @return the [PgColumn] that with the given name; `null` if no such column exists.
      * @since 3.0
      */
-    fun column(member: Member): PgColumn = column(member.name)
+    fun column(member: Member): PgColumn? = column(member.name)
 
     /**
      * Returns the [PgColumn] that has the given name.
      * @param name the name of the column to return.
-     * @return the [PgColumn] that with the given name.
-     * @throws NakshaException if the given `name` does not have a dedicated [PgColumn].
+     * @return the [PgColumn] that with the given name; `null` if no such column exists.
      * @since 3.0
      */
-    fun column(name: String): PgColumn {
+    fun column(name: String): PgColumn? {
         for (column in columns) {
             if (column.name == name) return column
         }
-        throw NakshaException(INTERNAL_ERROR, "headColumn($name) called, but no such columns exists")
+        return null
     }
 
     /**

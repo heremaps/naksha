@@ -101,7 +101,7 @@ public class NHAdminReaderMock implements IReadSession {
   }
 
   private List<NakshaFeature> getFeatures(List<String> collectionIds, List<String> featureIds, RequestQuery query) {
-    if (query.getProperties() != null || query.getMetadata() != null || !query.getRefTiles().isEmpty()) {
+    if (query.getProperties() != null || query.getMembers() != null || !query.getRefTiles().isEmpty()) {
       throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Mock supports only tags and spatial query"));
     }
     final List<NakshaFeature> allFeaturesFromCollections = getAllFeaturesFromCollections(collectionIds);

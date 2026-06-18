@@ -11,6 +11,7 @@ import naksha.base.NullableProperty
 import naksha.base.Proxy
 import naksha.geo.SpGeometry
 import naksha.model.Naksha
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import naksha.model.TupleNumber
@@ -44,6 +45,7 @@ class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("of")
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
+        Naksha.verifyInternalId(name)
         this.name = name
         this.dataType = dataType
         this.path = path ?: JsonPath(listOf("properties", name))
@@ -60,6 +62,7 @@ class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("relocate")
     constructor(origin: Member, path: JsonPath) : this() {
+        if (origin.isVirtual()) throw NakshaException(ILLEGAL_ARGUMENT, "Virtual members can't be copied")
         this.name = origin.name
         this.dataType = origin.dataType
         this.path = path
@@ -146,6 +149,17 @@ class Member() : AnyObject(), Comparator<Member> {
 
     /** True if this member is mandatory. */
     fun isMandatory(): Boolean = mandatory
+
+    internal var virtual: Boolean = false
+    internal fun withVirtual(): Member {
+        this.virtual = true
+        return this
+    }
+
+    /**
+     * True if this member is a virtual member. There are only
+     */
+    fun isVirtual(): Boolean = mandatory
 
     /** Remove [mandatory] from the underlying map; returns this for chaining. */
     internal fun removeMandatory(): Member {

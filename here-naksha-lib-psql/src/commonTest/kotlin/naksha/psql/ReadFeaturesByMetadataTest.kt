@@ -235,7 +235,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
             mapId = collection.catalogId
             collectionIds += collection.id
-            query.metadata = MemberAnd(
+            query.members = MemberAnd(
                 MemberQuery(MetaColumn.author(), StringOp.EQUALS, author),
                 MemberQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
             )
@@ -393,7 +393,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
             mapId = collection.catalogId
             collectionIds += collection.id
-            query.metadata = MemberOr(
+            query.members = MemberOr(
                 MemberQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
                 MemberQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
             )
@@ -426,7 +426,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
             queryHistory = true
             queryDeleted = true
             query = RequestQuery().apply {
-                metadata = MemberQuery(MetaColumn.action(), DoubleOp.NE, Action.CREATE.intValue)
+                members = MemberQuery(MetaColumn.action(), DoubleOp.NE, Action.CREATE.intValue)
             }
         }
         val response = executeRead(getHistoryWithoutUpdates)
@@ -456,7 +456,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         return executeRead(ReadFeatures().apply {
             mapId = collection.catalogId
             collectionIds += collection.id
-            query.metadata = metaQuery
+            query.members = metaQuery
         })
     }
 }

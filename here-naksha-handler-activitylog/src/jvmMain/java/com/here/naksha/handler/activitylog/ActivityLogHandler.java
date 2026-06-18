@@ -177,7 +177,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     ReadFeatures requestPredecessors = new ReadFeatures();
     requestPredecessors.setCollectionIds(StringList.of(properties.getSpaceId()));
     requestPredecessors.setQueryHistory(true);
-    requestPredecessors.getQuery().setMetadata(nextVersionQuery);
+    requestPredecessors.getQuery().setMembers(nextVersionQuery);
     return requestPredecessors;
   }
 

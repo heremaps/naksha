@@ -239,8 +239,7 @@ abstract class PgTable(
     }
 
     /**
-     * Maps a [PgType] to the same sort-order bucket used by [PgMemberHelper_C.columnSortOrder],
-     * so that standard and custom columns can be interleaved into the correct type-alignment group.
+     * Maps a [PgType] to a sort-order.
      */
     private fun pgTypeSortOrder(type: PgType): Int = when (type) {
         PgType.INT64   -> 0  // INT64
@@ -251,7 +250,8 @@ abstract class PgTable(
         PgType.BOOLEAN -> 6  // BOOLEAN
         PgType.STRING  -> 7  // STRING
         PgType.BYTE_ARRAY -> 8  // BYTE_ARRAY / SPATIAL
-        else -> 11
+        PgType.JSONB -> 9  // JSONB, aka TAGS and SET
+        else -> 10 // should not happen!
     }
 
     /**

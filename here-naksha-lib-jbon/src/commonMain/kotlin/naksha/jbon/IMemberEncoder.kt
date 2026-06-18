@@ -8,8 +8,7 @@ package naksha.jbon
  */
 fun interface IMemberEncoder {
     /**
-     * @param path The current path segments (root is empty). The current key/index is at
-     *             `path[pathEnd - 1]` when `pathEnd > 0`.
+     * @param path The current path segments (root is empty). The current key/index is at `path[pathEnd - 1]` when `pathEnd > 0`.
      * @param pathEnd The amount of valid path segments in [path].
      * @param value The value that is about to be encoded.
      * @return members-book index (>= 0) or -1 to continue normal encoding.

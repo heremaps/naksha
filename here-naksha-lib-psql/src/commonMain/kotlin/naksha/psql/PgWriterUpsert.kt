@@ -38,7 +38,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
 
         // This is what we should INSERT or UPDATE.
         val new_row = """WITH new_row AS (
-  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
+  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
 
         // Select existing.
@@ -73,7 +73,7 @@ internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partit
         // Insert new rows for which there was no existing HEAD version.
         // Sentinel "undefined" on any BYTE_ARRAY column is treated as NULL on insert (no prior value to retain).
         val head_inserted = """, head_inserted AS (
-  INSERT INTO ${headTable.quotedName} (${inRows.names()})
+  INSERT INTO ${headTable.quotedName} (${inRows.aliases()})
   SELECT ${inRows.columns.joinToString(", ") { col ->
   val q = PgUtil.quoteIdent(col.name)
   if (keepableByteCols.any { it.name == col.name })

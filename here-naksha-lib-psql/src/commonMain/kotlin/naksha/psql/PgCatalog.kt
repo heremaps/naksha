@@ -360,7 +360,7 @@ open class PgCatalog internal constructor(
         // Read from database
         val outRows = PgRows().withCollection(collections.head)
         setSearchPath(conn)
-        val SQL = """SELECT ${outRows.names()}
+        val SQL = """SELECT ${outRows.aliases()}
 FROM ${collections.headTable.quotedName}
 WHERE id = $1 AND (version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))

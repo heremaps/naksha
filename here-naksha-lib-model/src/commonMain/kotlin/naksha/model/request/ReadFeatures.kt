@@ -23,10 +23,7 @@ open class ReadFeatures : ReadRequest() {
 
     companion object ReadFeatures_C {
         private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
-        private val BOOLEAN_OR_FALSE =
-            NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val BOOLEAN_OR_TRUE =
-            NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> true }
+        private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
         private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
         private val VERSION_OR_NULL = NullableProperty<ReadRequest, Version>(Version::class)
         private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class)
@@ -131,7 +128,7 @@ open class ReadFeatures : ReadRequest() {
     /**
      * Extend the request to include features that are in a deleted state _(defaults to `false`)_.
      */
-    var queryDeleted by BOOLEAN_OR_FALSE
+    var queryDeleted: Boolean by BOOLEAN_OR_FALSE
 
     /**
      * Extend the request to search through historic states of features _(defaults to `false`)_.
@@ -140,7 +137,7 @@ open class ReadFeatures : ReadRequest() {
      * [versions] is greater than `1`, results are ordered automatically by the storage in reverse
      * version order, so the most recent state is returned first.
      */
-    var queryHistory by BOOLEAN_OR_FALSE
+    var queryHistory: Boolean by BOOLEAN_OR_FALSE
 
     /**
      * Defines how many states (versions) of each matching feature should be returned _(defaults to `1`)_.
@@ -158,7 +155,7 @@ open class ReadFeatures : ReadRequest() {
      * Requesting multiple versions can have a significant performance impact and should be used with care.
      * @since 3.0.0
      */
-    var versions by INT_OR_1
+    var versions: Int by INT_OR_1
 
     /**
      * Limit the read to all states at or after the given minimum version, `null` if no limit.
@@ -167,7 +164,8 @@ open class ReadFeatures : ReadRequest() {
      * will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
      * @since 3.0.0
      */
-    var minVersion by VERSION_OR_NULL
+    // TODO: Change to Int64 aka Long!
+    var minVersion: Version? by VERSION_OR_NULL
 
     /**
      * Limit the read to states at or before the given maximum version, `null` if no limit
@@ -180,21 +178,23 @@ open class ReadFeatures : ReadRequest() {
      * will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
      * @since 3.0.0
      */
-    var version by VERSION_OR_NULL
+    // TODO: Change to Int64 aka Long!
+    var version: Version? by VERSION_OR_NULL
 
     /**
      * Order the result-set like given; this is an expensive operation and should be avoided.
      *
      * If an order is required, but no specific one, then it is strongly recommended to stick with the [deterministic order][OrderBy.deterministic], which is produced by creating a blank empty [OrderBy] object or through the static helper method [OrderBy.deterministic]. Ordering by anything else can have a drastic performance impact.
      */
-    var orderBy by ORDER_BY_OR_NULL
+    var orderBy: OrderBy? by ORDER_BY_OR_NULL
 
     /**
      * Add all features that match the given IDs into the result-set.
+     *
+     * If more complex queries are need, please use a [MemberQuery][naksha.model.request.query.MemberQuery], see [query].
      * @since 3.0.0
      */
-    //TODO CASL-1149 should support custom queries
-    var featureIds by STRING_LIST
+    var featureIds: StringList by STRING_LIST
 
     /**
      * Add all features that match the given [GUIDs][naksha.model.Guid] into the result-set.
@@ -202,13 +202,15 @@ open class ReadFeatures : ReadRequest() {
      * This can be used to load features in specific states.
      * @since 3.0.0
      */
-    var guids by GUID_LIST
+    // TODO: We should replace this with `tupleNumbers`, because that is what we will encode into `uuid` and that is what the clients need.
+    //       Is there any use-case for the GUID any longer?
+    var guids: GuidList by GUID_LIST
 
     /**
      * Add all features that match the given query into the result-set.
      * @since 3.0.0
      */
-    var query by QUERY
+    var query: RequestQuery by QUERY
 
     /**
      * Tests whether this request is effectively a query for all features in their current **HEAD** state,

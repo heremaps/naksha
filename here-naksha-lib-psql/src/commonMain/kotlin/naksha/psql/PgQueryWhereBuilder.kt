@@ -248,7 +248,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
     }
 
     private fun whereMetadata() {
-        val metaQuery = request.query.metadata
+        val metaQuery = request.query.members
         if (metaQuery != null) {
             if (where.isNotEmpty()) {
                 where.append(" AND (")

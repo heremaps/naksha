@@ -42,7 +42,7 @@ internal class PgWriterUpdate(writer: PgWriter, collection: PgCollection, partit
 
         // All input provided by client (the updates)
         val query = """WITH new_row AS (
-  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
+  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
 
         val effHead = collection.effectiveHeadColumns

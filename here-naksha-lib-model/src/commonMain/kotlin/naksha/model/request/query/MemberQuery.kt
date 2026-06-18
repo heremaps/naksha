@@ -5,6 +5,7 @@ package naksha.model.request.query
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
+import naksha.model.objects.Member
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -22,7 +23,7 @@ open class MemberQuery() : AnyObject(), IMemberQuery {
      * @since 3.0
      */
     @JsName("of")
-    constructor(column: MetaColumn, op: AnyOp, value: Any? = null) : this() {
+    constructor(column: Member, op: AnyOp, value: Any? = null) : this() {
         this.column = column
         this.op = op
         this.value = value

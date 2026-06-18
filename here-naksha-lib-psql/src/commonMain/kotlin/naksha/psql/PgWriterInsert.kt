@@ -41,7 +41,7 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
         val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
 
         val new_row = """WITH new_row AS (
-  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.names()})
+  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
 
         // Detect any existing tombstone in HEAD for the same id (auto-purge target).
@@ -78,7 +78,7 @@ internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partit
 
         // Plain INSERT for features that have no tombstone in HEAD (the normal case).
         val head_inserted = """, head_inserted AS (
-  INSERT INTO ${headTable.quotedName} (${inRows.names()})
+  INSERT INTO ${headTable.quotedName} (${inRows.aliases()})
   SELECT * FROM new_row
   WHERE new_row.id NOT IN (SELECT id FROM head_tombstone)
   RETURNING id, fn, version

@@ -31,7 +31,7 @@ import kotlin.jvm.JvmStatic
  * urn:naksha:tn:{database-number}:{catalog-number}:{collection-number}:{feature-number}:{version}
  * ```
  *
- * - There are no two [tuples][Tuple] with the same [tuple-number][TupleNumber]; world-wide.\
+ * There are no two [tuple][Tuple] with the same [tuple-number][TupleNumber]; world-wide.
  * @since 3.0
  */
 @JsExport

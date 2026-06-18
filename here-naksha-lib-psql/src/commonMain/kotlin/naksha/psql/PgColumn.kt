@@ -62,7 +62,7 @@ data class PgColumn(
      * @since 3.0
      */
     @JvmField
-    val extra: String?,
+    val extra: String? = null,
 
     /**
      * The type of the column.

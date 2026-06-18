@@ -34,6 +34,20 @@ class StandardMembers private constructor() {
         val Tn = Member("_tn", MemberType.TUPLE_NUMBER, JsonPath("tn")).withMandatory()
 
         /**
+         * Virtual member that refers to the feature-number of the [tuple-number][Tn], the only purpose is for queries and result ordering.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val FeatureNumber = Member("_fn", MemberType.INT64, null).withMandatory().withVirtual()
+
+        /**
+         * Virtual member that refers to the version of the [tuple-number][Tn], the only purpose is for queries and result ordering.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val Version = Member("_version", MemberType.INT64, null).withMandatory().withVirtual()
+
+        /**
          * `_nv` — **next-version** (`INT64`). The version at which this tuple was superseded by the next state. Present only in _HISTORY_; in _HEAD_ the value is intrinsically the current [HEAD version][naksha.model.Version.HEAD].
          * @since 3.0
          */

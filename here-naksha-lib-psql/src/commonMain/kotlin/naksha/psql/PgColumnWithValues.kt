@@ -13,16 +13,16 @@ internal data class PgColumnWithValues(
      * The database column.
      * @since 3.0
      */
-    val column: PgColumn,
+    val pgColumn: PgColumn,
 
     /**
-     * The index of the [PgRows], can differ from the physical indexing.
+     * An optional alias, if the column is mapped to a different name in the result-set.
      * @since 3.0
      */
-    val index: Int = column.index,
+    val alias: String = pgColumn.name,
 
     /**
-     * When used in [PgRows], the values of the column for each row.
+     * The values of the column for each row.
      * @since 3.0
      */
     val values: AnyList = AnyList()
@@ -32,6 +32,7 @@ internal data class PgColumnWithValues(
         return this
     }
     fun anyValues(): MutableList<Any?> = values
+    /** Returns all values of this column as array. */
     fun anyArray(): Array<Any?> = values.toArray()
     fun intValues(): MutableList<Int?> = values as MutableList<Int?>
     fun intArray(): Array<Int?> = values.toArray() as Array<Int?>
@@ -43,4 +44,6 @@ internal data class PgColumnWithValues(
     fun stringArray(): Array<String?> = values.toArray() as Array<String?>
     fun byteArrayValues(): MutableList<ByteArray?> = values as MutableList<ByteArray?>
     fun byteArrayArray(): Array<ByteArray?> = values.toArray() as Array<ByteArray?>
+
+    override fun toString(): String = alias
 }
