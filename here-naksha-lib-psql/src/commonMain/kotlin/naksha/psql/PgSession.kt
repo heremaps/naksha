@@ -233,8 +233,8 @@ open class PgSession(
         assertOpen()
         var tx: StorageTx? = this.tx
         if (tx == null) {
-            val txn = storage.newConnection(options, false, null).use { conn -> storage.adminMap.newTxn(conn) }
-            tx = StorageTx(storage, txn.version, options.appId, options.author, storage.adminMap, this)
+            val txn = storage.newConnection(options, false, null).use { conn -> storage.adminCatalog.newTxn(conn) }
+            tx = StorageTx(storage, txn.version, options.appId, options.author, storage.adminCatalog, this)
             this.tx = tx
         }
         return tx
@@ -380,9 +380,9 @@ open class PgSession(
             (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->
                 val conn = readConn.conn
                 val byCollection = mutableMapOf<String, MutableList<PgRead>>()
-                val adminMap = storage.adminMap
+                val adminCatalog = storage.adminCatalog
                 for (featureTuple in missing) {
-                    val read = PgRead(conn, adminMap, featureTuple.tupleNumber)
+                    val read = PgRead(conn, adminCatalog, featureTuple.tupleNumber)
                     read.featureTuple = featureTuple
                     var reads = byCollection[read.groupId]
                     if (reads == null) {
@@ -399,15 +399,6 @@ open class PgSession(
     }
 
     /**
-     * Returns the effective HEAD-table column list for the given collection.
-     *
-     * For backward-compatible collections ([NakshaCollection.members] is `null`) this is the full
-     * Delegates to [PgCollection.effectiveHeadColumns].
-     */
-    private fun effectiveHeadColumns(collection: PgCollection): List<PgColumn> =
-        collection.effectiveHeadColumns
-
-    /**
      * Load [Tuple] from a specific collection, can be executed in parallel, when multiple collections are needed. We should make parallel reading optional, we experienced that when used for example in EMR, too many connections can harm. However, the cache could keep objects in Redis or alike, and then read perfectly fine in parallel!
      *
      * @param conn the connection to use for this read.
@@ -421,23 +412,14 @@ open class PgSession(
         //       Maybe this is already fast enough?
         if (reads.isEmpty()) throw illegalState("Reads must not be empty")
         val first = reads.first()
-        val map = first.map
+        val map = first.catalog
         val collection = first.collection
         val historyTables = first.historyTables
         // When history tables are included in the read, we need `next_version` in the result set
         // (for the UNION ALL to have matching columns and so history tuples carry their next_version).
         // For HEAD-only reads it is absent from the physical table, so we skip it and getTuple
         // reads it as null (correct for live HEAD rows).
-        val effectiveCols = if (historyTables != null)
-            collection.effectiveHistoryColumns
-        else
-            collection.effectiveHeadColumns
-        val rows = PgColumnRows()
-            .withDatabaseNumber(map.storage.number)
-            .withCatalogNumber(map.number)
-            .withCollectionNumber(collection.number)
-            .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
-            .addColumns(effectiveCols)
+        val rows = PgRows().useHeadTable(historyTables == null).withCollection(collection.head)
         map.setSearchPath(conn)
         val headTables = first.headTables
         val sql = StringBuilder()
@@ -492,80 +474,80 @@ open class PgSession(
     override fun getMapById(mapId: String): NakshaCatalog? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminMap.getPgMapById(it.conn, mapId)?.head
+            storage.adminCatalog.getPgCatalogById(it.conn, mapId)?.head
         }
     }
 
     /**
-     * Returns the [PgMap] for the given id.
+     * Returns the [PgCatalog] for the given id.
      * @param mapId the map-id.
-     * @return the [PgMap]; _null_ if the map does not yet exist.
+     * @return the [PgCatalog]; _null_ if the map does not yet exist.
      */
-    fun getPgMapById(mapId: String): PgMap? {
+    fun getPgMapById(mapId: String): PgCatalog? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminMap.getPgMapById(it.conn, mapId)
+            storage.adminCatalog.getPgCatalogById(it.conn, mapId)
         }
     }
 
     override fun getMapByNumber(mapNumber: Int): NakshaCatalog? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminMap.getPgMapByNumber(it.conn, mapNumber)?.head
+            storage.adminCatalog.getPgCatalogByNumber(it.conn, mapNumber)?.head
         }
     }
 
     /**
-     * Returns the [PgMap] for the given number.
+     * Returns the [PgCatalog] for the given number.
      * @param mapNumber the map-number.
-     * @return the [PgMap]; _null_ if the map does not yet exist.
+     * @return the [PgCatalog]; _null_ if the map does not yet exist.
      */
-    fun getPgMapByNumber(mapNumber: Int): PgMap? {
+    fun getPgMapByNumber(mapNumber: Int): PgCatalog? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminMap.getPgMapByNumber(it.conn, mapNumber)
+            storage.adminCatalog.getPgCatalogByNumber(it.conn, mapNumber)
         }
     }
 
     override fun getCollectionById(map: NakshaCatalog, collectionId: String): NakshaCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
+            val pgMap = storage.adminCatalog.getPgCatalogById(it.conn, map.id) ?: return null
             pgMap.getPgCollectionById(it.conn, collectionId)?.head
         }
     }
 
     /**
      * Returns the [PgCollection] for the given id.
-     * @param pgMap the [PgMap] in which to search for the collection.
+     * @param pgCatalog the [PgCatalog] in which to search for the collection.
      * @param collectionId the collection-id.
      * @return the [PgCollection]; _null_ if the collection does not yet exist.
      */
-    fun getPgCollectionById(pgMap: PgMap, collectionId: String): PgCollection? {
+    fun getPgCollectionById(pgCatalog: PgCatalog, collectionId: String): PgCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgMap.getPgCollectionById(it.conn, collectionId)
+            pgCatalog.getPgCollectionById(it.conn, collectionId)
         }
     }
 
     override fun getCollectionByNumber(map: NakshaCatalog, collectionNumber: Int): NakshaCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            val pgMap = storage.adminMap.getPgMapById(it.conn, map.id) ?: return null
+            val pgMap = storage.adminCatalog.getPgCatalogById(it.conn, map.id) ?: return null
             pgMap.getPgCollectionByNumber(it.conn, collectionNumber)?.head
         }
     }
 
     /**
      * Returns the [PgCollection] for the given number.
-     * @param pgMap the [PgMap] in which to search for the collection.
+     * @param pgCatalog the [PgCatalog] in which to search for the collection.
      * @param collectionNumber the collection-number.
      * @return the [PgCollection]; _null_ if the collection does not yet exist.
      */
-    fun getPgCollectionByNumber(pgMap: PgMap, collectionNumber: Int): PgCollection? {
+    fun getPgCollectionByNumber(pgCatalog: PgCatalog, collectionNumber: Int): PgCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgMap.getPgCollectionByNumber(it.conn, collectionNumber)
+            pgCatalog.getPgCollectionByNumber(it.conn, collectionNumber)
         }
     }
 

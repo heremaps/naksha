@@ -9,8 +9,6 @@ import naksha.base.StringList
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 /**
  * The reference to a property within a feature.
@@ -18,7 +16,7 @@ import kotlin.jvm.JvmStatic
  * **Warning:** You should not search for the `id`, `geometry`, or anything from [`properties->@ns:com:here:xyz`][naksha.model.XyzNs] using this query, because there are specialized, and optimized, dedicated queries available. So avoid things like `PQuery(Property("id"), StringOp.EQUALS, "foo"`.
  * @see naksha.model.request.ReadFeatures.featureIds
  * @see ISpatialQuery
- * @see IMetaQuery
+ * @see IMemberQuery
  * @see ITagQuery
  */
 @JsExport

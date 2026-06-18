@@ -3,7 +3,7 @@ package naksha.model
 import naksha.base.Int64
 import naksha.model.request.query.AnyOp
 import naksha.model.request.query.MetaColumn
-import naksha.model.request.query.MetaQuery
+import naksha.model.request.query.MemberQuery
 import kotlin.random.Random
 import kotlin.test.Ignore
 import kotlin.test.Test
@@ -21,7 +21,7 @@ class TupleNumberQueryTest {
             randomTupleNumber().toByteArray(TupleNumberVariant.B64),
             randomTupleNumber().toByteArray(TupleNumberVariant.B64)
         )
-        val metaQuery = MetaQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, serializedTupleNumbers)
+        val metaQuery = MemberQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, serializedTupleNumbers)
 
         // Then
         assertIs<Array<ByteArray>>(metaQuery.value)

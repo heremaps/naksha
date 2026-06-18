@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  * The internal collection in each map that keeps track of the collections being in the map.
  */
 @JsExport
-class PgNakshaCollections internal constructor(map: PgMap) : PgCollection(map, NakshaCollection()
+class PgNakshaCollections internal constructor(map: PgCatalog) : PgCollection(map, NakshaCollection()
     .withCatalogId(map.id)
     .withId(Naksha.COLLECTIONS_COL_ID)
 ), PgInternalCollection

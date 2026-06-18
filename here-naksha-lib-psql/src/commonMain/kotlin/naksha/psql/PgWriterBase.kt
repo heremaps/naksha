@@ -47,7 +47,7 @@ internal abstract class PgWriterBase protected constructor(
         get() = collection.storage.number
 
     val mapNumber: Int
-        get() = collection.map.number
+        get() = collection.catalog.number
 
     val collectionNumber: Int
         get() = collection.number
@@ -72,7 +72,7 @@ internal abstract class PgWriterBase protected constructor(
      * The rows to write.
      * @since 3.0
      */
-    val inRows = PgColumnRows()
+    val inRows = PgRows()
         .withDatabaseNumber(storageNumber)
         .withCatalogNumber(mapNumber)
         .withCollectionNumber(collectionNumber)
@@ -143,7 +143,7 @@ internal abstract class PgWriterBase protected constructor(
         val hst = collection.historyTable ?: return null
         var yearTable: PgHistoryYear? = hst.years[year]
         if (yearTable == null) {
-            hst.addYear(year)
+            hst.addPartition(year)
             yearTable = hst.years[year]
             if (yearTable == null) {
                 throw illegalState("Internal error, failed to add history year $year")
@@ -163,7 +163,7 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     fun execute(conn: PgConnection) {
-        collection.map.setSearchPath(conn)
+        collection.catalog.setSearchPath(conn)
         return doExecute(conn)
     }
 

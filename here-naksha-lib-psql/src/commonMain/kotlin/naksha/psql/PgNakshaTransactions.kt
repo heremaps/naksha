@@ -27,7 +27,7 @@ import kotlin.js.JsExport
  * HERE global sequencer populates them.
  */
 @JsExport
-class PgNakshaTransactions internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
+class PgNakshaTransactions internal constructor(adminMap: PgAdminCatalog) : PgCollection(adminMap, NakshaCollection()
     .withCatalogId(ADMIN_CATALOG_ID)
     .withId(TRANSACTIONS_COL_ID)
     .withStoreDeleted(StoreMode.OFF)

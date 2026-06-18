@@ -31,7 +31,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresByAppId = executeMetaQuery(
-            MetaQuery(
+            MemberQuery(
                 column = MetaColumn.appId(),
                 op = StringOp.EQUALS,
                 value = sessionOptions.appId
@@ -58,7 +58,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresByAppIdPrefix = executeMetaQuery(
-            MetaQuery(
+            MemberQuery(
                 column = MetaColumn.appId(),
                 op = StringOp.STARTS_WITH,
                 value = "prefixed_test_app"
@@ -85,7 +85,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresByAuthor = executeMetaQuery(
-            MetaQuery(
+            MemberQuery(
                 column = MetaColumn.author(),
                 op = StringOp.EQUALS,
                 value = sessionOptions.author
@@ -112,7 +112,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresByAuthorPrefix = executeMetaQuery(
-            MetaQuery(
+            MemberQuery(
                 column = MetaColumn.author(),
                 op = StringOp.STARTS_WITH,
                 value = "Jacky"
@@ -136,7 +136,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresById = executeMetaQuery(
-            MetaQuery(
+            MemberQuery(
                 column = MetaColumn.id(),
                 op = StringOp.EQUALS,
                 value = inputFeature.id
@@ -160,7 +160,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresByIdPrefix = executeMetaQuery(
-            MetaQuery(
+            MemberQuery(
                 column = MetaColumn.id(),
                 op = StringOp.STARTS_WITH,
                 value = TEST_FEATURE_ID.substring(0..4)
@@ -186,7 +186,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresByType = executeMetaQuery(
-            MetaQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.featureType)
+            MemberQuery(MetaColumn.featureType(), StringOp.EQUALS, inputFeature.featureType)
         ).features
 
         // Then:
@@ -208,7 +208,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresByTypePrefix = executeMetaQuery(
-            MetaQuery(MetaColumn.featureType(), StringOp.STARTS_WITH, "quite")
+            MemberQuery(MetaColumn.featureType(), StringOp.STARTS_WITH, "quite")
         ).features
 
         // Then:
@@ -235,9 +235,9 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
             mapId = collection.catalogId
             collectionIds += collection.id
-            query.metadata = MetaAnd(
-                MetaQuery(MetaColumn.author(), StringOp.EQUALS, author),
-                MetaQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
+            query.metadata = MemberAnd(
+                MemberQuery(MetaColumn.author(), StringOp.EQUALS, author),
+                MemberQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
             )
         })
 
@@ -257,7 +257,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
 
         // And:
-        val featuresByCreatedAt = executeMetaQuery(MetaQuery(
+        val featuresByCreatedAt = executeMetaQuery(MemberQuery(
             MetaColumn.createdAt(),
             DoubleOp.EQ,
             insertedFeatureXyz.createdAt
@@ -279,7 +279,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
 
         // And:
-        val featuresByUpdatedAt = executeMetaQuery(MetaQuery(
+        val featuresByUpdatedAt = executeMetaQuery(MemberQuery(
             MetaColumn.updatedAt(),
             DoubleOp.EQ,
             insertedFeatureXyz.updatedAt
@@ -304,13 +304,13 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresCreatedInFrame = executeMetaQuery(
-            MetaAnd(
-                MetaQuery(
+            MemberAnd(
+                MemberQuery(
                     MetaColumn.createdAt(),
                     DoubleOp.GT,
                     insertedFeatureXyz.createdAt - 100
                 ),
-                MetaQuery(
+                MemberQuery(
                     MetaColumn.createdAt(),
                     DoubleOp.LT,
                     insertedFeatureXyz.createdAt + 100
@@ -337,13 +337,13 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And:
         val featuresUpdatedInFrame = executeMetaQuery(
-            MetaAnd(
-                MetaQuery(
+            MemberAnd(
+                MemberQuery(
                     MetaColumn.updatedAt(),
                     DoubleOp.GTE,
                     insertedFeatureXyz.updatedAt
                 ),
-                MetaQuery(
+                MemberQuery(
                     MetaColumn.updatedAt(),
                     DoubleOp.LTE,
                     insertedFeatureXyz.updatedAt + 100
@@ -367,7 +367,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
 
         // And:
-        val featuresByAuthorTs = executeMetaQuery(MetaQuery(
+        val featuresByAuthorTs = executeMetaQuery(MemberQuery(
             MetaColumn.authorTs(),
             DoubleOp.EQ,
             insertedFeatureXyz.authorTs
@@ -393,9 +393,9 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
             mapId = collection.catalogId
             collectionIds += collection.id
-            query.metadata = MetaOr(
-                MetaQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
-                MetaQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
+            query.metadata = MemberOr(
+                MemberQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
+                MemberQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
             )
         }).features
 
@@ -426,7 +426,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
             queryHistory = true
             queryDeleted = true
             query = RequestQuery().apply {
-                metadata = MetaQuery(MetaColumn.action(), DoubleOp.NE, Action.CREATE.intValue)
+                metadata = MemberQuery(MetaColumn.action(), DoubleOp.NE, Action.CREATE.intValue)
             }
         }
         val response = executeRead(getHistoryWithoutUpdates)
@@ -452,7 +452,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         return persistedFeature.properties.xyz
     }
 
-    private fun executeMetaQuery(metaQuery: IMetaQuery): SuccessResponse {
+    private fun executeMetaQuery(metaQuery: IMemberQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
             mapId = collection.catalogId
             collectionIds += collection.id

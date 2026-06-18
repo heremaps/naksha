@@ -76,7 +76,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             val versions = arrayOfNulls<Any>(tupleNumbers.size)
             for (i in tupleNumbers.indices) {
                 fns[i] = tupleNumbers[i].featureNumber
-                versions[i] = tupleNumbers[i].version.value
+                versions[i] = tupleNumbers[i].version
             }
             val fnPlaceholder = placeholderForArg(fns, PgType.INT64_ARRAY)
             val versionPlaceholder = placeholderForArg(versions, PgType.INT64_ARRAY)
@@ -260,24 +260,24 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         }
     }
 
-    private fun whereNestedMetadata(metaQuery: IMetaQuery) {
+    private fun whereNestedMetadata(metaQuery: IMemberQuery) {
         when (metaQuery) {
-            is MetaNot -> not(
+            is MemberNot -> not(
                 subClause = metaQuery.query,
                 subClauseResolver = this::whereNestedMetadata
             )
 
-            is MetaAnd -> and(
+            is MemberAnd -> and(
                 subClauses = metaQuery.filterNotNull(),
                 subClauseResolver = this::whereNestedMetadata
             )
 
-            is MetaOr -> or(
+            is MemberOr -> or(
                 subClauses = metaQuery.filterNotNull(),
                 subClauseResolver = this::whereNestedMetadata
             )
 
-            is MetaQuery -> {
+            is MemberQuery -> {
                 val isActionQuery = metaQuery.column == MetaColumn.action()
                 val pgColumn =
                     if (isActionQuery) {

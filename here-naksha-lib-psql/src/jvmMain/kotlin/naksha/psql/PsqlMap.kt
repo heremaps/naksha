@@ -14,14 +14,14 @@ import java.util.concurrent.TimeUnit
  * @since 3.0
  */
 data class PsqlMap(
-    val adminMap: PsqlAdminMap,
-    val pgMap: PgMap? = null,
-    val id: String = pgMap?.id ?: throw illegalArg("PsqlMap without valid id"),
-    val number: Int = pgMap?.number ?: throw illegalArg("PsqlMap without valid number")
+    val adminMap: PsqlAdminCatalog,
+    val pgCatalog: PgCatalog? = null,
+    val id: String = pgCatalog?.id ?: throw illegalArg("PsqlMap without valid id"),
+    val number: Int = pgCatalog?.number ?: throw illegalArg("PsqlMap without valid number")
 ): Expiry<Int, PsqlCollection> {
 
     /**
-     * Tests if the underlying [PgMap] still exist.
+     * Tests if the underlying [PgCatalog] still exist.
      * @return `true` if the map exists; `false` if this is a tombstone cache entry.
      */
     fun exists(): Boolean = head.get() != null
@@ -29,7 +29,7 @@ data class PsqlMap(
     /**
      * The current HEAD state, _null_ if the map does not exist _(after being deleted)_.
      */
-    val head = AtomicRef(pgMap)
+    val head = AtomicRef(pgCatalog)
 
     // ----------------------------< Children management aka collection caching >------------------------------------------
 

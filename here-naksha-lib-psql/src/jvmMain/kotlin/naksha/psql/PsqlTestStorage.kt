@@ -169,7 +169,7 @@ class PsqlTestStorage : PsqlStorage() {
         super.initStorage(config, create, upgrade)
     }
 
-    override fun newAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PsqlAdminMap {
-        return PsqlAdminMap(this, config, create, upgrade)
+    override fun newAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PsqlAdminCatalog {
+        return PsqlAdminCatalog(this, config, create, upgrade)
     }
 }

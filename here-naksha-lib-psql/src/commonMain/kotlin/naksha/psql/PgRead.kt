@@ -12,7 +12,7 @@ internal data class PgRead(
     /**
      * The map to read from.
      */
-    val map: PgMap,
+    val catalog: PgCatalog,
 
     /**
      * The collection to read from.
@@ -52,7 +52,7 @@ internal data class PgRead(
      *
      * Actually, allows grouping so that the same map/collection is merged, and that all reads that are from all partitions of a collection are grouped together, and all that read from the same partition. Therefore, eventually the first read from a group with the same group-id, will always read from the same map, collection, partition(s).
      */
-    val groupId: String = if (!readPartition) "${map.id}:${collection.id}" else "${map.id}:${collection.id}:${partition}"
+    val groupId: String = if (!readPartition) "${catalog.id}:${collection.id}" else "${catalog.id}:${collection.id}:${partition}"
 ) {
     companion object PgRead_C {
         private val UNDEFINED = ArrayList<PgTable>(0)
@@ -68,7 +68,7 @@ internal data class PgRead(
      * @param map the map to read.
      * @param collection the collection to read.
      */
-    constructor(map: PgMap, collection: PgCollection): this(map, collection, null, null)
+    constructor(map: PgCatalog, collection: PgCollection): this(map, collection, null, null)
 
     /**
      * Read a tuple by tuple-number.
@@ -76,10 +76,10 @@ internal data class PgRead(
      * @param adminMap the admin-map.
      * @param tupleNumber the tuple-number of the tuple to read.
      */
-    constructor(conn: PgConnection, adminMap: PgAdminMap, tupleNumber: TupleNumber) : this(
-        adminMap.getPgMapByNumber(conn, tupleNumber.catalogNumber)
+    constructor(conn: PgConnection, adminMap: PgAdminCatalog, tupleNumber: TupleNumber) : this(
+        adminMap.getPgCatalogByNumber(conn, tupleNumber.catalogNumber)
             ?: throw mapNotFound("The map for map-number ${tupleNumber.catalogNumber} not found"),
-        adminMap.getPgMapByNumber(conn, tupleNumber.catalogNumber)?.getPgCollectionByNumber(conn, tupleNumber.collectionNumber)
+        adminMap.getPgCatalogByNumber(conn, tupleNumber.catalogNumber)?.getPgCollectionByNumber(conn, tupleNumber.collectionNumber)
             ?: throw collectionNotFound("The collection for collection-number ${tupleNumber.collectionNumber} not found"),
         tupleNumber,
         null
@@ -91,7 +91,7 @@ internal data class PgRead(
      * @param collection the collection to read.
      * @param id the feature-id of the tuple to read.
      */
-    constructor(map: PgMap, collection: PgCollection, id: String) : this(map, collection, null, id)
+    constructor(map: PgCatalog, collection: PgCollection, id: String) : this(map, collection, null, id)
 
     private fun initHeadTables(): List<PgTable> {
         val headTable = collection.headTable
@@ -122,11 +122,6 @@ internal data class PgRead(
             return tables
         }
 
-    /**
-     * The meta-table to read.
-     */
-    val metaTable: PgTable? = collection.metaTable
-
     fun initHistoryTables(): List<PgTable>? {
         val history = collection.historyTable ?: return null
         // TODO: hack to be be fixed as part of CASL-1095
@@ -137,8 +132,8 @@ internal data class PgRead(
         if(history.years.isEmpty()){
             // see: PgMap.createPgCollection
             val year = Epoch().year
-            history.addYear(year)
-            history.addYear(year + 1)
+            history.addPartition(year)
+            history.addPartition(year + 1)
         }
         val tables = ArrayList<PgTable>(history.years.size)
         for (entry in history.years) {

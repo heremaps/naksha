@@ -133,7 +133,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
         // All nullable BYTE_ARRAY columns may carry the "keep if undefined" sentinel and must be
         // read back from the DB so the in-memory tuple reflects the final stored value.
         val keepableByteCols = collection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
-        val rows = PgColumnRows()
+        val rows = PgRows()
             .withDatabaseNumber(storageNumber)
             .withCatalogNumber(mapNumber)
             .withCollectionNumber(collectionNumber)

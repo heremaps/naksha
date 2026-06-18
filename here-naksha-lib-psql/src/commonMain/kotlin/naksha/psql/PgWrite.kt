@@ -18,16 +18,16 @@ internal data class PgWrite(val original: Write, val i: Int) {
     /**
      * The map into which to write.
      *
-     * - If a map is modified, this is [Naksha.ADMIN_MAP][naksha.model.Naksha.ADMIN_CATALOG_ID], [asPgMap] and [asNakshaMap] will be set.
+     * - If a map is modified, this is [Naksha.ADMIN_MAP][naksha.model.Naksha.ADMIN_CATALOG_ID], [asPgCatalog] and [asNakshaMap] will be set.
      * - If a collection is modified, this is the map in which [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL_ID] is located, [asPgCollection] and [asNakshaCollection] will be set.
      * @since 3.0
      */
-    lateinit var map: PgMap
+    lateinit var map: PgCatalog
 
     /**
      * The collection into which to write.
      *
-     * - If a map is modified, this is [Naksha.CATALOGS_COL][naksha.model.Naksha.CATALOGS_COL_ID], [asPgMap] and [asNakshaMap] will be set.
+     * - If a map is modified, this is [Naksha.CATALOGS_COL][naksha.model.Naksha.CATALOGS_COL_ID], [asPgCatalog] and [asNakshaMap] will be set.
      * - If a collection is modified, this is [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL_ID], [asPgCollection] and [asNakshaCollection] will be set.
      * @since 3.0
      */
@@ -126,10 +126,10 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = !isTransactionModification && !isMapModification && !isCollectionModification
 
     /**
-     * If the feature is a map, the [PgMap] representation.
+     * If the feature is a map, the [PgCatalog] representation.
      * @since 3.0
      */
-    var asPgMap: PgMap? = null
+    var asPgCatalog: PgCatalog? = null
 
     /**
      * If this modifies a map, the feature cast to [NakshaCatalog].

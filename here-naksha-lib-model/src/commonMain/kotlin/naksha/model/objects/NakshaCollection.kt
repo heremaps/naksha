@@ -9,9 +9,11 @@ import naksha.geo.SpPoint
 import naksha.model.DataEncoding
 import naksha.model.Naksha
 import naksha.model.NakshaError
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.NOT_FOUND
 import naksha.model.NakshaException
+import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -66,27 +68,53 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaCollection = super.withMomType(value) as NakshaCollection
 
     /**
-     * The database-number of the collection; **NOT** the database-number of the collection-feature itself, even while they are guaranteed to be the same.
+     * Helper to get/set the [TupleNumber] of the collection-feature. All collection features follow the old XYZ-Hub style, therefore the location of the [TupleNumber] is clear at `properties->@ns:com:here:xyz->uuid`.
      * @since 3.0
      */
-    var databaseNumber: Int64? by DATABASE_NUMBER
-    // TODO: Fix this, we need to calculate the database-number from the database-id, if an id is given!
+    var tupleNumber: TupleNumber?
+        get() = XyzMembers.XyzTn.getTupleNumber(this)
+        set(value) {
+            XyzMembers.XyzTn.set(this, value)
+        }
 
     /**
-     * The database-id of the collection; **NOT** the database-id of the collection-feature itself, even while they are guaranteed to be the same.
+     * The database-number of the collection; the collection-feature itself is stored in the same database as the collection it describes.
+     * @since 3.0
+     * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
+     */
+    val databaseNumber: Int64
+        get() = tupleNumber?.databaseNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
+
+    /**
+     * The database-id of the collection; the collection-feature itself is stored in the same database as the collection it describes.
      * @since 3.0
      */
     var databaseId: String? by DATABASE_ID
 
     /**
-     * The catalog-number of the collection; **NOT** the catalog-number of the collection-feature itself, which would always be `0` _(`naksha~admin`)_.
-     * @since 3.0
+     * @see [databaseId]
      */
-    var catalogNumber: Int? by CATALOG_NUMBER
-    // TODO: Fix this, we need to calculate the catalog-number from the catalog-id, if an id is given!
+    fun withDatabaseId(value: String): NakshaCollection {
+        val tn = tupleNumber
+        if (tn != null) {
+            if (Naksha.databaseNumber(value) != tn.databaseNumber) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "The given database-id does not match the database-number of the collection.")
+            }
+        }
+        databaseId = value
+        return this
+    }
 
     /**
-     * The custom identifier of the catalog in which the collection is located; ; **NOT** the catalog-id of the collection-feature itself, which would always be `naksha~admin`.
+     * The catalog-number of the collection; the collection-feature itself is stored in the same catalog as the collection it describes.
+     * @since 3.0
+     * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
+     */
+    val catalogNumber: Int
+        get() = tupleNumber?.catalogNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
+
+    /**
+     * The custom identifier of the catalog in which the collection is located; the collection-feature itself is stored in the same catalog as the collection it describes.
      * @since 3.0
      */
     var catalogId: String? by CATALOG_ID
@@ -94,18 +122,27 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [catalogId]
      */
-    fun withCatalogId(value: String?): NakshaCollection {
+    fun withCatalogId(value: String): NakshaCollection {
         catalogId = value
+        val tn = tupleNumber
+        if (tn != null) {
+            if (Naksha.catalogNumber(value) != tn.catalogNumber) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "The given catalog-id does not match the catalog-number of the collection.")
+            }
+        }
+        databaseId = value
         return this
     }
 
     /**
-     * The collection-number of the collection; **NOT** the collection-number of the collection-feature itself, which would always be `0` _(`naksha~collections`)_. This should be the same as the feature-number!
+     * The collection-number of the collection, this is actually the same as the feature-number.
+     *
+     * It is **NOT** the collection-number of this collection-feature, so where the collection-feature itself is stored, which has always the collection-number `0`, because all collection features are always stored in the collection `naksha~collections`.
      * @since 3.0
+     * @see [Naksha.collectionNumber]
      */
-    var collectionNumber: Int? by COLLECTION_NUMBER
-    // TODO: Fix this, we need to calculate the collection-number from the collection-id (aka `id`).
-    //       Actually the feature-number of the collection and collection-number must be the same!
+    val collectionNumber: Int
+        get() = Naksha.collectionNumber(id)
 
     /**
      * If partitions is given, then the collection is internally partitioned in the storage, optimised for large quantities of features. The default is no partitions; as a rule of thumb, add one more partition for every 10 to 20 million features expected.
@@ -620,11 +657,8 @@ open class NakshaCollection() : NakshaFeature() {
         @JsStatic
         val UNKNOWN = Int64(-1)
 
-        private val DATABASE_NUMBER = NullableProperty<NakshaCollection, Int64>(Int64::class)
         private val DATABASE_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val CATALOG_ID = NullableProperty<NakshaCollection, String>(String::class)
-        private val CATALOG_NUMBER = NullableProperty<NakshaCollection, Int>(Int::class)
-        private val COLLECTION_NUMBER = NullableProperty<NakshaCollection, Int>(Int::class)
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
         private val SHIFT = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 41 }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)

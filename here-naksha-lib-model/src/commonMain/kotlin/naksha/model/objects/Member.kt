@@ -10,6 +10,7 @@ import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.Proxy
 import naksha.geo.SpGeometry
+import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
 import naksha.model.TupleNumber
@@ -17,18 +18,18 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A column materialized on a [NakshaCollection] — either a mandatory/default built-in column or a
- * user-defined one.
+ * A materialized part of a feature.
  *
- * At write time, the storage walks the feature using [path], extracts the value, coerces it to the
- * [dataType], and stores it in a storage-specific column derived from [name]. The value also remains
- * in the encoded feature blob.
+ * At write time, the storage walks the feature using [path], extracts the value, coerces it to the [dataType], and stores it in a storage-specific location derived from the [name]. The value is removed from the feature, and instead of the actual value a reference into the dedicated storage place is added, so that when decoding the feature, it can be copied back.
  *
- * The [name] must be a valid Naksha identifier (see [naksha.model.Naksha.verifyId]).
- * Mandatory columns (e.g. `fn`, `version`, `id`, `feature`) are injected by the storage and must
- * not be redeclared by the client with a different type.
+ * The [name] must be a valid Naksha identifier (see [naksha.model.Naksha.verifyId]). Mandatory members are injected by the storage and **must not** be redeclared by the client with a different type. Mandatory members are:
+ * - [Tuple-Number][naksha.model.objects.StandardMembers.StandardMembers_C.Tn]
+ * - [NextVersion][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion]
+ * - [GlobalBookFeatureNumber][naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber]
+ * - [Id][naksha.model.objects.StandardMembers.StandardMembers_C.Id]
+ * - [Feature][naksha.model.objects.StandardMembers.StandardMembers_C.Feature]
  *
- * If [path] is not set, the storage defaults to `["properties", <name>]` at write time.
+ * If [path] is not explicitly set, the implicit path defaults to `["properties", <name>]`.
  * @since 3.0
  */
 @JsExport
@@ -138,23 +139,23 @@ class Member() : AnyObject(), Comparator<Member> {
     fun read(proxy: Proxy): Any? = proxy.getPath(path)
 
     /**
-     * Whether this member is storage-managed (internal). When `true`, the storage controls the DDL for this member. Defaults to `false`.
+     * Whether this member is a storage-managed mandatory member. When `true`, the storage controls the DDL for this member. Defaults to `false`.
      * @since 3.0
      */
-    private var internal: Boolean by INTERNAL
+    private var mandatory: Boolean by MANDATORY
 
-    /** True iff the underlying map has an entry for [internal]. */
-    fun isInternal(): Boolean = internal
+    /** True if this member is mandatory. */
+    fun isMandatory(): Boolean = mandatory
 
-    /** Remove [internal] from the underlying map; returns this for chaining. */
-    internal fun removeInternal(): Member {
-        removeRaw("internal")
+    /** Remove [mandatory] from the underlying map; returns this for chaining. */
+    internal fun removeMandatory(): Member {
+        removeRaw("mandatory")
         return this
     }
 
-    /** Fluent setter for [internal]; returns this for chaining. */
-    internal fun withInternal(value: Boolean): Member {
-        internal = value
+    /** Fluent setter for [mandatory]; returns this for chaining. */
+    internal fun withMandatory(value: Boolean = true): Member {
+        mandatory = value
         return this
     }
 
@@ -225,7 +226,7 @@ class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readString(feature: MapProxy<*,*>): String? {
+    fun getString(feature: MapProxy<*,*>): String? {
         val raw = feature.getPath(path)
         if (raw is String) return raw
         return null
@@ -293,6 +294,6 @@ class Member() : AnyObject(), Comparator<Member> {
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
         private val INDEX = NullableProperty<Member, Int>(Int::class)
         private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath(listOf("properties", self.name)) }
-        private val INTERNAL = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
+        private val MANDATORY = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
     }
 }

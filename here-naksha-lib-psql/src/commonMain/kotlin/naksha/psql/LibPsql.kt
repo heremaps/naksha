@@ -35,64 +35,49 @@ val adminVersion = NakshaVersion.of("3.0.0-beta.24")
 internal const val PG_S = "\$"
 
 /**
- * ``: The identifier for the HEAD-table, no prefix.
+ * ``: The postfix for the HEAD-table, no prefix.
  */
 internal const val PG_HEAD = ""
 
 /**
- * `$del`: The identifier for the DELETION-table.
- */
-internal const val PG_DEL = "${PG_S}del"
-
-/**
- * `$hst`: The identifier for the HISTORY-table.
+ * `$hst`: The postfix for the HISTORY-table.
  */
 internal const val PG_HST = "${PG_S}hst"
 
 /**
- * `$meta`: The identifier for the META-table.
+ * `$meta`: The postfix for the META-table.
  */
 internal const val PG_META = "${PG_S}meta"
 
 /**
- * `$i_???`: The prefix used for indices, followed by the index identifier, e.g. `$i_id`
+ * `$i`: The prefix used for index-names. The pattern is `{tablename}$i{
  */
-internal const val PG_IDX = "${PG_S}i_"
+internal const val PG_IDX = "${PG_S}i"
 
 /**
- * `$ci_???`: The prefix used for user-defined (custom) indices, followed by the index identifier, e.g. `$ci_my_idx`.
+ * `$c`: The prefix used for constraints, followed by the identifier of the constraint.
  */
-internal const val PG_CUSTOM_IDX = "${PG_S}ci_"
+internal const val PG_CONSTRAINT = "${PG_S}c"
 
 /**
- * `$c_??`: The prefix used for constraints, followed by the identifier of the constraint.
+ * `$c_nv`: The postfix of the history-constraint above [next_version][PgColumn.NEXT_VERSION] _(shifted partition)_.
  */
-internal const val PG_CONSTRAINT = "${PG_S}c_"
+internal const val PG_HISTORY_CONSTRAINT = "${PG_CONSTRAINT}nv"
 
 /**
- * The name of the constraint above [next_version][PgColumn.next_version] (yearly partition).
+ * `$c_fn`: The postfix of the distribution-constraint above [feature-number][PgColumn.FN].
  */
-internal const val PG_TN_NEXT_CONSTRAINT = "${PG_CONSTRAINT}nt"
+internal const val PG_DIST_CONSTRAINT = "${PG_CONSTRAINT}fn"
 
 /**
- * The name of the partition-constraint above [id][PgColumn.id].
+ * `$h`: The prefix used for history-partitions.
  */
-internal const val PG_ID_CONSTRAINT = "${PG_CONSTRAINT}id"
+internal const val PG_HISTORY_PARTITION = "${PG_S}h"
 
 /**
- * `$p_`: The prefix used for numerated partitions, the final value is `$p???` with `?` being `[0-9]`.
+ * `$p`: The prefix used for distribution-partitions.
  */
-internal const val PG_PART = "${PG_S}p"
-
-/**
- * `$head`: The separator used for HEAD-table index names: `{tableName}$head${indexName}`.
- */
-internal const val PG_HEAD_IDX = "${PG_S}head${PG_S}"
-
-/**
- * `$y_`: The prefix used for yearly partitions of the TRANSACTIONS table, the final value is `$y????` with `?` being `[0-9]`.
- */
-internal const val PG_YEAR = "${PG_S}y"
+internal const val PG_DIST_PARTITION = "${PG_S}p"
 
 /**
  * The prefix used for all internal tables.

@@ -12,7 +12,7 @@ import kotlin.js.JsExport
  * The internal collection in the admin-map, that keeps track of the books (global JBON2 dictionaries) of the storage.
  */
 @JsExport
-class PgNakshaBooks internal constructor(adminMap: PgAdminMap) : PgCollection(adminMap, NakshaCollection()
+class PgNakshaBooks internal constructor(adminMap: PgAdminCatalog) : PgCollection(adminMap, NakshaCollection()
     .withCatalogId(Naksha.ADMIN_CATALOG_ID)
     .withId(Naksha.BOOKS_COL_ID)
 ), PgInternalCollection, IDictManager {

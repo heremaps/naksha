@@ -38,7 +38,7 @@ class PgReader(
             val session = this.session
             val query = PgQueryBuilder(session, request).build()
             val conn = session.useConnection()
-            session.storage.adminMap.setSearchPath(conn)
+            session.storage.adminCatalog.setSearchPath(conn)
             if (PlatformUtil.ENABLE_INFO) {
                 if (session.logQueries) {
                     session.logAtInfo(query.sql)
@@ -63,7 +63,7 @@ class PgReader(
                         val col_num: Int = collectionNumber ?: cursor["col_num"]
                         val fn: naksha.base.Int64 = cursor["fn"]
                         val version: naksha.base.Int64 = cursor["version"]
-                        featureTuples.add(FeatureTuple(TupleNumber(storageNumber, mapNumber, col_num, fn, Version(version))))
+                        featureTuples.add(FeatureTuple(TupleNumber(storageNumber, mapNumber, col_num, fn, version)))
                     }
                 }
                 return SuccessResponse().withFeatureTupleList(featureTuples)

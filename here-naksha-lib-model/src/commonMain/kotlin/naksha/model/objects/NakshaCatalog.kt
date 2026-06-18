@@ -7,6 +7,11 @@ import naksha.base.NullableProperty
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
+import naksha.model.Naksha
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaException
+import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -37,9 +42,7 @@ open class NakshaCatalog() : NakshaFeature() {
          */
         const val FEATURE_TYPE = "naksha.Catalog"
 
-        private val DATABASE_NUMBER = NullableProperty<NakshaCatalog, Int64>(Int64::class)
         private val DATABASE_ID = NullableProperty<NakshaCatalog, String>(String::class)
-        private val CATALOG_NUMBER = NullableProperty<NakshaCatalog, Int>(Int::class)
     }
 
     override fun featureTypeDefaultValue(): String = FEATURE_TYPE
@@ -53,11 +56,22 @@ open class NakshaCatalog() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaCatalog = super.withMomType(value) as NakshaCatalog
 
     /**
-     * The database-number of the collection; **NOT** the database-number of the collection-feature itself, even while they are guaranteed to be the same.
+     * Helper to get/set the [TupleNumber] of the catalog-feature. All catalogs features follow the old XYZ-Hub style, therefore the location of the [TupleNumber] is clear.
      * @since 3.0
      */
-    var databaseNumber: Int64? by DATABASE_NUMBER
-    // TODO: Fix this, we need to calculate the database-number from the database-id, if an id is given!
+    var tupleNumber: TupleNumber?
+        get() = XyzMembers.XyzTn.getTupleNumber(this)
+        set(value) {
+            XyzMembers.XyzTn.set(this, value)
+        }
+
+    /**
+     * The database-number of the catalog; the catalog-feature itself is stored in the same database as the catalog it describes.
+     * @since 3.0
+     * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
+     */
+    val databaseNumber: Int64
+        get() = tupleNumber?.databaseNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
 
     /**
      * The database-id of the collection; **NOT** the database-id of the collection-feature itself, even while they are guaranteed to be the same.
@@ -68,16 +82,24 @@ open class NakshaCatalog() : NakshaFeature() {
     /**
      * @see [databaseId]
      */
-    fun withDatabaseId(value: String?): NakshaCatalog {
+    fun withDatabaseId(value: String): NakshaCatalog {
+        val tn = tupleNumber
+        if (tn != null) {
+            if (Naksha.databaseNumber(value) != tn.databaseNumber) {
+                throw NakshaException(ILLEGAL_ARGUMENT, "The given database-id does not match the database-number of the collection.")
+            }
+        }
         databaseId = value
         return this
     }
 
     /**
-     * The catalog-number of the collection; **NOT** the catalog-number of the collection-feature itself, which would always be `0` _(`naksha~admin`)_.
+     * The catalog-number of the catalog, this is actually the same as the feature-number.
+     *
+     * It is **NOT** the catalog-number of this catalog-feature, so where the catalog-feature itself is stored, which has always the catalog-number `0`, because all catalog features are always stored in the catalog `naksha~admin`.
      * @since 3.0
+     * @see [Naksha.catalogNumber]
      */
-    var catalogNumber: Int? by CATALOG_NUMBER
-    // TODO: Fix this, we need to calculate the catalog-number from the catalog-id (aka `id`).
-    //       Actually the feature-number of the catalog and catalog-number must be the same!
+    val catalogNumber: Int
+        get() = Naksha.catalogNumber(id)
 }

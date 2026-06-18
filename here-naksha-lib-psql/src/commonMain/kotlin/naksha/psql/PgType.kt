@@ -157,14 +157,24 @@ class PgType : JsEnum() {
         fun of(name: String?): PgType? = getDefined(name, PgType::class)
 
         /**
+         * Returns the database column type to be used for a specific [Member].
+         * @param member the [Member] to lookup.
+         * @return the database column type to be used for a specific [Member].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun ofMember(member: Member): PgType = ofMemberType(member.dataType)
+
+        /**
          * Returns the database column type to be used for a specific [MemberType].
-         * @param member the [MemberType] to lookup.
+         * @param memberType the [MemberType] to lookup.
          * @return the database column type to be used for a specific [MemberType].
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun ofMemberType(member: Member): PgType = when (member.dataType) {
+        fun ofMemberType(memberType: MemberType): PgType = when (memberType) {
             MemberType.BOOLEAN -> BOOLEAN
             MemberType.INT8 -> SHORT
             MemberType.INT16 -> SHORT

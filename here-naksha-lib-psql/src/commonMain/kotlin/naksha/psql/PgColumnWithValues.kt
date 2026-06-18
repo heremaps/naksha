@@ -3,14 +3,31 @@ package naksha.psql
 import naksha.base.AnyList
 import naksha.base.Int64
 
+/**
+ * Rows as selected in [PgRows].
+ * @since 3.0
+ */
 @Suppress("UNCHECKED_CAST")
-internal data class PgColumnEntry(
-    val index: Int,
-    val name: String,
-    val type: PgType,
+internal data class PgColumnWithValues(
+    /**
+     * The database column.
+     * @since 3.0
+     */
+    val column: PgColumn,
+
+    /**
+     * The index of the [PgRows], can differ from the physical indexing.
+     * @since 3.0
+     */
+    val index: Int = column.index,
+
+    /**
+     * When used in [PgRows], the values of the column for each row.
+     * @since 3.0
+     */
     val values: AnyList = AnyList()
 ) {
-    fun withSize(size: Int): PgColumnEntry {
+    fun withSize(size: Int): PgColumnWithValues {
         values.size = size
         return this
     }

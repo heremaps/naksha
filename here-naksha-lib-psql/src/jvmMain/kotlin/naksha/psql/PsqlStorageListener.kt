@@ -13,7 +13,7 @@ internal class PsqlStorageListener(storage: PsqlStorage) : Thread("lib-psql-list
     private val storageRef: WeakReference<PsqlStorage> = WeakReference(storage)
     private val shutdown = AtomicBoolean(false)
     private val adminOptions = Naksha.adminOptions
-    private val adminMap = storage.adminMap as PsqlAdminMap
+    private val adminMap = storage.adminCatalog as PsqlAdminCatalog
     private val cluster = storage.cluster
     private val e = Exception()
 

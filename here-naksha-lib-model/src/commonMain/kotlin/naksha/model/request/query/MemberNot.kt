@@ -11,19 +11,19 @@ import kotlin.js.JsName
  * Negates the query.
  */
 @JsExport
-class MetaNot() : AnyObject(), IMetaQuery {
+class MemberNot() : AnyObject(), IMemberQuery {
 
     /**
      * Create a negation of the given query.
      * @param query the query to negate.
      */
     @JsName("of")
-    constructor(query: IMetaQuery) : this() {
+    constructor(query: IMemberQuery) : this() {
         this.query = query
     }
 
     companion object SpNot_C {
-        private val QUERY = NotNullProperty<MetaNot, IMetaQuery>(IMetaQuery::class)
+        private val QUERY = NotNullProperty<MemberNot, IMemberQuery>(IMemberQuery::class)
     }
 
     /**

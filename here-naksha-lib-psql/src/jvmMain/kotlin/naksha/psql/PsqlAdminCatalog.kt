@@ -13,12 +13,12 @@ import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
  * @since 3.0
  */
 @Suppress("MemberVisibilityCanBePrivate")
-class PsqlAdminMap internal constructor(
+class PsqlAdminCatalog internal constructor(
     storage: PgStorage,
     config: PgConfig,
     create: Boolean?,
     upgrade: Boolean?
-) : PgAdminMap(storage, config, create, upgrade) {
+) : PgAdminCatalog(storage, config, create, upgrade) {
 
     override val storage: PsqlStorage
         get() = super.storage as PsqlStorage
@@ -26,17 +26,17 @@ class PsqlAdminMap internal constructor(
     override fun getDataEncoding(feature: Any?, context: Any?): DataEncoding {
         if (context is PgCollection) {
             var encoding = context.head.dataEncoding
-            if (encoding == null) encoding = context.map.head.dataEncoding
+            if (encoding == null) encoding = context.catalog.head.dataEncoding
             return encoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
-        if (context is PgMap) {
+        if (context is PgCatalog) {
             return context.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
         if (context is NakshaCollection) {
             val collectionEncoding = context.dataEncoding
             if (collectionEncoding != null) return collectionEncoding
             val mapId = context.catalogId ?: return Naksha.DEFAULT_DATA_ENCODING
-            val pgMap = getPgMapById(null, mapId)
+            val pgMap = getPgCatalogById(null, mapId)
             return pgMap?.head?.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
         }
         if (context is NakshaCatalog) {
@@ -55,11 +55,11 @@ class PsqlAdminMap internal constructor(
         return null
     }
 
-    override fun createAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int {
+    override fun createAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int {
         return upsertAdminMap(conn, storageId, storageNumber, psqlVersion, null, null)
     }
 
-    override fun upgradeAdminMap(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
+    override fun upgradeAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
         upsertAdminMap(conn, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
     }
 

@@ -15,18 +15,18 @@ import naksha.model.objects.StandardMembers
  * Helper class to convert rows into arrays of column-data and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
  * @since 3.0
  */
-internal class PgColumnRows {
+internal class PgRows {
     /**
      * All columns being added already.
      * @since 3.0
      */
-    val columns = mutableListOf<PgColumnEntry>()
-    internal val columnByName = mutableMapOf<String, PgColumnEntry>()
+    val columns = mutableListOf<PgColumnWithValues>()
+    internal val columnByName = mutableMapOf<String, PgColumnWithValues>()
     private var names: String? = null
     private var namesAggregate: String? = null
     private var placeholders: String? = null
     private var arrayTypeNames: Array<String>? = null
-    private fun clearCache(): PgColumnRows {
+    private fun clearCache(): PgRows {
         names = null
         namesAggregate = null
         placeholders = null
@@ -48,30 +48,55 @@ internal class PgColumnRows {
             }
         }
 
-    fun withMinSize(size: Int): PgColumnRows {
+    fun withMinSize(size: Int): PgRows {
         if (this.size < size) this.size = size
         return this
     }
 
     /**
-     * When set, clear the [columns] and add all columns of the given [NakshaCollection].
+     * If set to true, then the [StandardMembers.NextVersion] is not added when setting the [collection] or calling [withCollection].
      * @since 3.0
      */
-    var collection: NakshaCollection? = null
+    var isHead: Boolean = false
+
+    /**
+     * Disables the [StandardMembers.NextVersion], which does not exist in the _HEAD_ table.
+     * @param useHead if the _HEAD_ table is used; defaults to _true_.
+     * @since 3.0
+     */
+    fun useHeadTable(useHead: Boolean = true): PgRows {
+        isHead = useHead
+        return this
+    }
+
+    /**
+     * When set, clear the [columns] and add all columns of the given [PgCollection].
+     * @since 3.0
+     */
+    var collection: PgCollection? = null
         set(collection) {
             if (collection != null) {
                 clearCache()
-                columns.clear()
-                databaseNumber = collection.databaseNumber
-                catalogNumber = collection.catalogNumber
                 collectionNumber = collection.collectionNumber
+                catalogNumber = collection.catalog.catalogNumber
+                databaseNumber = collection.catalog.storage.number
+
                 val members = collection.useMembers()
-                if (!members.isSortedByIndex()) throw NakshaException(ILLEGAL_ARGUMENT, "The given collection is not sorted by index")
-                for (i in 0 until members.size) {
+                if (!members.isSortedByIndex()) throw NakshaException(ILLEGAL_ARGUMENT, "The members of the given collection are not sorted by index")
+                // We add the internal `~fn` (feature-number) and `~version` first.
+                columns.clear()
+                var index = 0
+                columns.add(PgColumnWithValues(index++, "~fn", PgType.INT64))
+                columns.add(PgColumnWithValues(index++, "~version", PgType.INT64))
+                for (i in 0 ..< members.size) {
                     val member = members[i] ?: throw NakshaException(INTERNAL_ERROR, "The member at index $i is null; this must not happen")
-                    val index = member.index ?: throw NakshaException(INTERNAL_ERROR, "The member at index $i has no index; this must not happen")
-                    if (index != i) throw NakshaException(INTERNAL_ERROR, "The member at index $i has an member-index $index; this must not happen, expected $i")
-                    columns.add(PgColumnEntry(i, member.name, PgType.ofMemberType(member)))
+                    if (i != member.index) throw NakshaException(INTERNAL_ERROR, "The member at index $i has an member-index $index; this must not happen, expected $i")
+                    // We store the tuple-number in the "~fn" and "~version" columns!
+                    if (StandardMembers.Tn.name == member.name) continue
+                    // In the HEAD table there is no next-version!
+                    if (isHead && StandardMembers.NextVersion.name == member.name) continue
+                    // Everything else as declared.
+                    columns.add(PgColumnWithValues(index++, member.name, PgType.ofMemberType(member)))
                 }
             }
             field = collection
@@ -85,7 +110,7 @@ internal class PgColumnRows {
      * @return this
      * @since 3.0
      */
-    fun withCollection(collection: NakshaCollection): PgColumnRows {
+    fun withCollection(collection: NakshaCollection): PgRows {
         this.collection = collection
         return this
     }
@@ -103,7 +128,7 @@ internal class PgColumnRows {
     /**
      * @see [databaseNumber]
      */
-    fun withDatabaseNumber(value: Int64): PgColumnRows {
+    fun withDatabaseNumber(value: Int64): PgRows {
         databaseNumber = value
         return this
     }
@@ -121,7 +146,7 @@ internal class PgColumnRows {
     /**
      * @see [catalogNumber]
      */
-    fun withCatalogNumber(value: Int): PgColumnRows {
+    fun withCatalogNumber(value: Int): PgRows {
         catalogNumber = value
         return this
     }
@@ -139,24 +164,24 @@ internal class PgColumnRows {
     /**
      * @see [collectionNumber]
      */
-    fun withCollectionNumber(value: Int): PgColumnRows {
+    fun withCollectionNumber(value: Int): PgRows {
         collectionNumber = value
         return this
     }
 
-    fun addColumn(name: String, type: PgType): PgColumnRows {
+    fun addColumn(name: String, type: PgType): PgRows {
         clearCache()
         val existing = columnByName[name]
         if (existing == null) {
-            val column = PgColumnEntry(columns.size, name, type).withSize(size)
+            val column = PgColumnWithValues(columns.size, name, type).withSize(size)
             columns.add(column)
             columnByName[column.name] = column
         }
         return this
     }
 
-    fun getColumn(name: String): PgColumnEntry? = columnByName[name]
-    fun getColumn(index: Int): PgColumnEntry? = if (index in 0 until columns.size) columns[index] else null
+    fun getColumn(name: String): PgColumnWithValues? = columnByName[name]
+    fun getColumn(index: Int): PgColumnWithValues? = if (index in 0 until columns.size) columns[index] else null
     fun hasColumn(name: String): Boolean = getColumn(name) != null
     fun hasColumn(index: Int): Boolean = getColumn(index) != null
 
@@ -220,7 +245,7 @@ internal class PgColumnRows {
         for (i in 0 until members.size) {
             val member: Member = members[i] ?: throw NakshaException(ILLEGAL_STATE, "Member #$i of collection ${collection.id} is null")
             val name = member.name
-            val column: PgColumnEntry = getColumn(name) ?: throw NakshaException(ILLEGAL_STATE, "Missing member '$name' at index $i of collection ${collection.id}")
+            val column: PgColumnWithValues = getColumn(name) ?: throw NakshaException(ILLEGAL_STATE, "Missing member '$name' at index $i of collection ${collection.id}")
             val value = column.values[row]
             if (StandardMembers.Feature.name == name) {
                 // Special case, root feature.
@@ -244,20 +269,6 @@ internal class PgColumnRows {
             return true
         }
         return false
-    }
-
-    /**
-     * Adds one [PgColumnEntry] per declared [naksha.model.objects.Member].
-     *
-     * Idempotent — built-in names are never re-added by addColumns(allColumns), and members are checked individually.
-     */
-    fun addCustomMembers(members: naksha.model.objects.MemberList?): PgColumnRows {
-        if (members == null) return this
-        for (m in members) {
-            if (m == null) continue
-            addColumn(PgMemberHelper.pgColumnName(m.name), PgMemberHelper.pgTypeFor(m.dataType))
-        }
-        return this
     }
 
     operator fun set(row: Int, tuple: Tuple) {
@@ -310,7 +321,7 @@ internal class PgColumnRows {
      * ```
      * @since 3.0
      */
-    fun addAll(cursor: PgCursor): PgColumnRows {
+    fun addAll(cursor: PgCursor): PgRows {
         while (add(cursor)) cursor.next()
         return this
     }
@@ -319,7 +330,7 @@ internal class PgColumnRows {
      * Read all rows from cursor, expects the cursor to be at first result and that for each column, there is an array of values, so an aggregate generated via `ARRAY_AGG`.
      * @since 3.0
      */
-    fun addAggregated(cursor: PgCursor): PgColumnRows {
+    fun addAggregated(cursor: PgCursor): PgRows {
         if (cursor.isRow()) {
             for (column in columns) {
                 if (cursor.contains(column.name)) {
@@ -334,19 +345,6 @@ internal class PgColumnRows {
             }
         }
         return this
-    }
-
-    /**
-     * Returns the names of all columns as comma separated string.
-     * @return the names of all columns as comma separated string.
-     * @since 3.0
-     */
-    fun names(): String {
-        val cached = this.names
-        if (cached != null) return cached
-        val names = columns.joinToString(", ") { PgUtil.quoteIdent(it.name) }
-        this.names = names
-        return names
     }
 
     /**
@@ -368,10 +366,23 @@ internal class PgColumnRows {
         val cached = this.namesAggregate
         if (cached != null) return cached
         val names = columns.joinToString(", ") {
-            val q = PgUtil.quoteIdent(it.name)
-            "ARRAY_AGG($q) AS $q"
-        }
+                val q = PgUtil.quoteIdent(it.name)
+                "ARRAY_AGG($q) AS $q"
+            }
         this.namesAggregate = names
+        return names
+    }
+
+    /**
+     * Returns the names of all columns as comma separated string.
+     * @return the names of all columns as comma separated string.
+     * @since 3.0
+     */
+    fun names(): String {
+        val cached = this.names
+        if (cached != null) return cached
+        val names = columns.joinToString(", ") { PgUtil.quoteIdent(it.name) }
+        this.names = names
         return names
     }
 

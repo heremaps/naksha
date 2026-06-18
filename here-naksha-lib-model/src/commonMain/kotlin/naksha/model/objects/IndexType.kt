@@ -11,7 +11,7 @@ import kotlin.reflect.KClass
  * The kind of index to create for an [Index].
  *
  * - [BTREE] — ordered index for equality and range queries on primitive columns (numbers, booleans, strings, byte-arrays).
- * - [SPATIAL] — spatial index over a geometry column (e.g. the built-in `geo`).
+ * - [SPATIAL] — spatial index over a geometry column ([MemberType.SPATIAL]) (e.g. the built-in `geo`).
  * - [TAGS] — inverted index over a tags column ([MemberType.TAGS] or [MemberType.TAGS_FROM_ARRAY]);
  *   supports key/value containment lookups.
  * - [SET] — inverted index over a set column ([MemberType.SET]); supports element containment lookups.

@@ -15,8 +15,8 @@ open class PsqlStorage : PgStorage(), IStorage {
 
     override val configKlass: KClass<PgConfig> = PgConfig::class
 
-    override val adminMap: PsqlAdminMap
-        get() = super.adminMap as PsqlAdminMap
+    override val adminCatalog: PsqlAdminCatalog
+        get() = super.adminCatalog as PsqlAdminCatalog
 
     private var _cluster: PgCluster? = null
 
@@ -55,22 +55,22 @@ open class PsqlStorage : PgStorage(), IStorage {
             _cluster = c
         }
         setAdminMap(newAdminMap(config, create, upgrade))
-        adminMap.start()
+        adminCatalog.start()
     }
 
-    protected open fun newAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PsqlAdminMap
-        = PsqlAdminMap(this, config, create, upgrade)
+    protected open fun newAdminMap(config: PgConfig, create: Boolean?, upgrade: Boolean?): PsqlAdminCatalog
+        = PsqlAdminCatalog(this, config, create, upgrade)
 
     override fun newSession(options: SessionOptions, readOnly: Boolean): PgSession {
         useInitialized()
         return PgSession(this, options, readOnly)
     }
 
-    override fun getDataEncoding(feature: Any?, context: Any?): DataEncoding = adminMap.getDataEncoding(feature, context)
+    override fun getDataEncoding(feature: Any?, context: Any?): DataEncoding = adminCatalog.getDataEncoding(feature, context)
 
-    override fun getDictionary(id: String): JbDictionary? = adminMap.getDictionary(id)
+    override fun getDictionary(id: String): JbDictionary? = adminCatalog.getDictionary(id)
 
-    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = adminMap.getEncodingDictionary(feature, context)
+    override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = adminCatalog.getEncodingDictionary(feature, context)
 
     override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection
         = cluster.newConnection(options, readOnly, init)

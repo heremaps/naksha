@@ -11,6 +11,7 @@ import naksha.model.Naksha
 import naksha.model.NakshaError
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaException
+import naksha.model.TupleNumber
 import kotlin.js.*
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic

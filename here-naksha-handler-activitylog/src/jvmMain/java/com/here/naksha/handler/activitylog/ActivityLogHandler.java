@@ -57,7 +57,7 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.MetaColumn;
-import naksha.model.request.query.MetaQuery;
+import naksha.model.request.query.MemberQuery;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -173,7 +173,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     for (int i = 0; i < tupleNumbers.size(); i++) {
       versions[i] = tupleNumbers.get(i).version.value;
     }
-    MetaQuery nextVersionQuery = new MetaQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, versions);
+    MemberQuery nextVersionQuery = new MemberQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, versions);
     ReadFeatures requestPredecessors = new ReadFeatures();
     requestPredecessors.setCollectionIds(StringList.of(properties.getSpaceId()));
     requestPredecessors.setQueryHistory(true);

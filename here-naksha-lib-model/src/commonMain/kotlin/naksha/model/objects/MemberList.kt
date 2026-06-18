@@ -4,6 +4,7 @@ package naksha.model.objects
 
 import naksha.base.ListProxy
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -47,13 +48,18 @@ open class MemberList() : ListProxy<Member>(Member::class) {
     }
 
     /**
-     * Sort this list by the sort-order of the [MemberType].
+     * Sort this list by the sort-order of the [MemberType] and updates the `index` of all members.
      * @return this.
      * @since 3.0
      * @throws NakshaException with error [ILLEGAL_STATE], if any member is `null` or has no `dataType`.
      */
-    fun sortByDataType(): MemberList {
+    fun sortByDataTypeAndAssignIndex(): MemberList {
         sortBy { member -> member?.dataType?.sortOrder ?: throw NakshaException(ILLEGAL_STATE, "Member is null or has no dataType") }
+        // Save the order.
+        for (i in 0 until size) {
+            val member = this[i] ?: throw NakshaException(INTERNAL_ERROR, "Member is null, that must not happen, should have caught before")
+            member["index"] = i
+        }
         return this
     }
 
@@ -69,7 +75,7 @@ open class MemberList() : ListProxy<Member>(Member::class) {
     }
 
     /**
-     * Tests if this list is [sorted by data-type][sortByDataType].
+     * Tests if this list is sorted by [data-type][sortByDataTypeAndAssignIndex].
      * @return _true_ if the entries are sorted; _false_ otherwise.
      */
     fun isSortedByDataType(): Boolean {
@@ -88,7 +94,7 @@ open class MemberList() : ListProxy<Member>(Member::class) {
     }
 
     /**
-     * Tests if this list is [sorted by data-type][sortByDataType].
+     * Tests if this list is sorted by [index][sortByIndex].
      * @return _true_ if the entries are sorted; _false_ otherwise.
      */
     fun isSortedByIndex(): Boolean {

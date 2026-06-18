@@ -20,7 +20,7 @@ import kotlin.jvm.JvmField
  * - [naksha.model.request.query.SpOr] - logical OR for spatial conditions
  * - [naksha.model.request.query.TagOr] - logical OR for tag conditions
  * - [naksha.model.request.query.POr] - logical OR for property conditions
- * - [naksha.model.request.query.MetaOr] - logical OR for metadata conditions
+ * - [naksha.model.request.query.MemberOr] - logical OR for metadata conditions
  *
  * @since 3.0
  */
@@ -35,7 +35,7 @@ open class RequestQuery : AnyObject() {
         private val SPATIAL_QUERY_OR_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)
         private val TAG_QUERY_OR_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery::class)
         private val PROPERTIES_QUERY_OR_NULL = NullableProperty<RequestQuery, IPropertyQuery>(IPropertyQuery::class)
-        private val METADATA_QUERY_OR_NULL = NullableProperty<RequestQuery, IMetaQuery>(IMetaQuery::class)
+        private val METADATA_QUERY_OR_NULL = NullableProperty<RequestQuery, IMemberQuery>(IMemberQuery::class)
     }
 
     /**
@@ -62,7 +62,7 @@ open class RequestQuery : AnyObject() {
     /**
      * Search for features matching the given metadata query.
      * @since 3.0.0
-     * @see IMetaQuery
+     * @see IMemberQuery
      */
     var metadata by METADATA_QUERY_OR_NULL
 

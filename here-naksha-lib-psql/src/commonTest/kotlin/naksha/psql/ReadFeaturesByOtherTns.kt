@@ -8,7 +8,7 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.request.query.AnyOp
 import naksha.model.request.query.MetaColumn
-import naksha.model.request.query.MetaQuery
+import naksha.model.request.query.MemberQuery
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -43,7 +43,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
         val updatedVersion: Int64 = updateResp.features[0]!!.tupleNumber.version.value
 
         // When: querying for features whose `next_version` matches that version
-        val nextVersionQuery = MetaQuery(
+        val nextVersionQuery = MemberQuery(
             MetaColumn.nextVersion(),
             AnyOp.IS_ANY_OF,
             arrayOf(updatedVersion)

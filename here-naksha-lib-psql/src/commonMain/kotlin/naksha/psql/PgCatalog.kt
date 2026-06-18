@@ -4,6 +4,7 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
+import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_FN
@@ -15,9 +16,9 @@ import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_FN
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
+import naksha.model.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
-import naksha.psql.PgColumn.PgColumnCompanion.headColumns
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -27,30 +28,30 @@ import kotlin.jvm.JvmField
  * @since 3.0
  */
 @JsExport
-open class PgMap internal constructor(
+open class PgCatalog internal constructor(
     /**
-     * The reference to the storage.
+     * The reference to the storage (effectively the same as the database, for now).
      * @since 3.0.0
      */
     open val storage: PgStorage,
 
     /**
-     * The HEAD state of the map.
+     * The HEAD state of the catalog.
      * @since 3.0.0
      */
-    nakshaMap: NakshaCatalog,
+    nakshaCatalog: NakshaCatalog,
 
     /**
-     * The map-id.
+     * The custom catalog-identifier.
      * @since 3.0
      */
-    val id: String = nakshaMap.id,
+    val id: String = nakshaCatalog.id,
 
     /**
-     * The map-number.
+     * The catalog-number of the catalog, actually the same as the feature-number of the [NakshaCatalog] feature.
      * @since 3.0
      */
-    val number: Int = nakshaMap.number
+    val catalogNumber: Int = Naksha.catalogNumber(id),
 ) {
     /**
      * The map-identifier quoted optionally in double quotes.
@@ -63,10 +64,10 @@ open class PgMap internal constructor(
      * The _HEAD_ state of the map.
      *
      * ### Note
-     * If the map is deleted, this value stays unmodified, because the [PgMap] will be removed from caching. However, if only the _HEAD_ state of the map is modified, so basically an `UPDATE` is done, the _HEAD_ reference is replaced on-the-fly.
+     * If the map is deleted, this value stays unmodified, because the [PgCatalog] will be removed from caching. However, if only the _HEAD_ state of the map is modified, so basically an `UPDATE` is done, the _HEAD_ reference is replaced on-the-fly.
      * @since 3.0
      */
-    val headRef = AtomicNonNullRef(nakshaMap)
+    val headRef = AtomicNonNullRef(nakshaCatalog)
 
     /**
      * Reads [headRef].
@@ -100,24 +101,46 @@ open class PgMap internal constructor(
         }
 
     protected val collectionCache = AtomicMap<Int, PgCollection>()
-    protected val collectionNumberById = AtomicMap<String, Int>()
 
+    /**
+     * Store the given [PgCollection] into the cache.
+     * @param collection the collection to store, must have a valid _HEAD_ state **and** must have a valid [TupleNumber].
+     * @since 3.0
+     */
     protected fun storeCollection(collection: PgCollection) {
-        collectionNumberById[collection.id] = collection.number
-        // TODO: Improve this, we should keep the PgCollection that has the higher version!
-        collectionCache[collection.number] = collection
+        do {
+            val id = collection.id
+            val newCollection = collection.head
+            val collectionNumber = newCollection.collectionNumber
+            val newVersion = newCollection.tupleNumber?.version ?: throw NakshaException(
+                ILLEGAL_STATE,
+                "Cannot store collection '$id' in cache, missing `tupleNumber`"
+            )
+
+            val existing = collectionCache[collectionNumber]
+            val existingTn = existing?.head?.tupleNumber
+            val existingVersion: Int64? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
+            if (existingVersion != null && existingVersion > newVersion) {
+                logger.debug("Do not update collection '$id', the existing version ($existingVersion) is newer than the new ($newVersion)")
+                break
+            }
+            if (existing != null) {
+                if (collectionCache.replace(collectionNumber, existing, collection)) break
+            } else {
+                if (collectionCache.putIfAbsent(collectionNumber, collection) == null) break
+            }
+        } while (true)
     }
 
     internal fun invalidateCollection(collection: PgCollection) {
-        collectionCache.remove(collection.number, collection)
-        //collectionNumberById.remove(collection.id, collection.number)
+        collectionCache.remove(collection.head.collectionNumber, collection)
     }
 
     /**
      * Returns the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
      * @return the `search_path` so that this map is on the top, followed by `naksha~admin`, `topology`, `hint_plan`, `public`.
      */
-    fun getSearchPath(): String = if (this is PgAdminMap) {
+    fun getSearchPath(): String = if (this is PgAdminCatalog) {
         "SET search_path = \"naksha~admin\", topology, hint_plan, public"
     } else {
         "SET search_path = ${quotedId}, \"naksha~admin\", topology, hint_plan, public"
@@ -191,8 +214,8 @@ open class PgMap internal constructor(
         val history = collection.historyTable
         if (history != null) {
             history.create(conn)
-            history.createYear(conn, NOW.year)
-            history.createYear(conn, NOW.year + 1)
+            history.createPartition(conn, NOW.year)
+            history.createPartition(conn, NOW.year + 1)
             history.createIndex(conn, PgIndex.id)
             history.createIndex(conn, PgIndex.version)
             history.createIndex(conn, PgIndex.gbn_idx)
@@ -210,7 +233,7 @@ open class PgMap internal constructor(
      */
     private fun refreshPgCollection(conn: PgConnection, collection: PgCollection): PgCollection {
         // TODO: Fix me!
-        val cursor = PgRelation.select(conn, collection.map.id, id)
+        val cursor = PgRelation.select(conn, collection.catalog.id, id)
         cursor.use {
             //
             // NOTE: We ignore all unknown relations, that allows users to add some own indices and relations!
@@ -271,19 +294,19 @@ open class PgMap internal constructor(
                             "Invalid amount of HEAD partitions found, must be 2..256, but is ${headPartitions.size}"
                         )
                     }
-                    collection.headTable = PgHead(collection, headRelation.storageClass, parts)
+                    collection.headTable = PgHeadTable(collection, headRelation.storageClass, parts)
                 } else {
-                    collection.headTable = PgHead(collection, headRelation.storageClass, 0)
+                    collection.headTable = PgHeadTable(collection, headRelation.storageClass, 0)
                 }
                 for (index in headIndices) collection.headTable.addIndex(index)
             }
             if (historyRelation != null) {
-                val history = PgHistory(collection.headTable)
+                val history = PgHistoryTable(collection.headTable)
                 collection.historyTable = history
                 for (entry in historyYears) history.years[entry.key] = PgHistoryYear(history, entry.key)
             }
             if (metaRelation != null) {
-                val meta = PgMeta(collection.headTable)
+                val meta = PgMetaTable(collection.headTable)
                 collection.metaTable = meta
                 for (index in metaIndices) meta.addIndex(index)
             }
@@ -307,7 +330,7 @@ open class PgMap internal constructor(
         val history = collection.historyTable
         if (history != null) builder.append("DROP TABLE IF EXISTS ${history.quotedName} CASCADE;\n")
         val SQL = builder.toString()
-        logger.info("Dropped collection {}@{}", collection.id, collection.number)
+        logger.info("Dropped collection '{}' with collection-number {}", collection.id, collection.head.collectionNumber)
         conn.execute(SQL).close()
         invalidateCollection(collection)
     }
@@ -320,7 +343,7 @@ open class PgMap internal constructor(
      * @since 3.0.0
      */
     fun getPgCollectionById(conn: PgConnection?, id: String): PgCollection? {
-        if (this is PgAdminMap) {
+        if (this is PgAdminCatalog) {
             return when (id) {
                 COLLECTIONS_COL_ID -> collections
                 TRANSACTIONS_COL_ID -> transactions
@@ -330,16 +353,12 @@ open class PgMap internal constructor(
             }
         }
         if (id == COLLECTIONS_COL_ID) return collections
-        val number = collectionNumberById[id]
-        val existing = if (number != null) collectionCache[number] else null
+        val collectionNumber = Naksha.collectionNumber(id)
+        val existing = collectionCache[collectionNumber]
         if (existing != null || conn == null) return existing
 
         // Read from database
-        val outRows = PgColumnRows(collections.head)
-            .withDatabaseNumber(storage.number)
-            .withCatalogNumber(this.number)
-            .withCollectionNumber(COLLECTIONS_COL_FN)
-            .addColumns(headColumns)
+        val outRows = PgRows().withCollection(collections.head)
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
 FROM ${collections.headTable.quotedName}
@@ -365,7 +384,7 @@ WHERE id = $1 AND (version & 3) < 2"""
      * @since 3.0.0
      */
     fun getPgCollectionByNumber(conn: PgConnection?, number: Int): PgCollection? {
-        if (this is PgAdminMap) {
+        if (this is PgAdminCatalog) {
             return when (number) {
                 COLLECTIONS_COL_FN -> collections
                 TRANSACTIONS_COL_FN -> transactions
@@ -379,11 +398,7 @@ WHERE id = $1 AND (version & 3) < 2"""
         if (existing != null || conn == null) return existing
 
         // Read from database
-        val outRows = PgColumnRows(collections.head)
-            .withDatabaseNumber(storage.number)
-            .withCatalogNumber(this.number)
-            .withCollectionNumber(COLLECTIONS_COL_FN)
-            .addColumns(headColumns)
+        val outRows = PgRows().useHeadTable().withCollection(collections.head)
         setSearchPath(conn)
         val SQL = """SELECT ${outRows.names()}
 FROM ${collections.headTable.quotedName}
@@ -408,7 +423,7 @@ WHERE fn = $1 AND (version & 3) < 2"""
      * @return the list of existing collections, _(empty, when no collections exist)_.
      * @since 3.0.0
      */
-    fun listPgCollections(conn: PgConnection, map: PgMap): PgCollectionList {
+    fun listPgCollections(conn: PgConnection, map: PgCatalog): PgCollectionList {
         val list = PgCollectionList()
         // TODO: Implement me!
         return list

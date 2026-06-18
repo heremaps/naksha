@@ -18,7 +18,7 @@ import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaFeature
 
 /**
- * Helpers to map [CustomMember] values from a [NakshaFeature] into a [PgColumnRows] row.
+ * Helpers to map [CustomMember] values from a [NakshaFeature] into a [PgRows] row.
  *
  * - [walkFeature]: descend a [NakshaFeature] using the member's path; returns _null_ if the path is missing.
  * - [coerce]: coerce a raw value to the type of the member; returns _null_ and logs a warning on mismatch.
@@ -29,15 +29,6 @@ import naksha.model.objects.NakshaFeature
 class PgMemberHelper private constructor() {
 
     companion object PgMemberHelper_C {
-
-        /**
-         * The set of all reserved column names — any name that belongs to a built-in [PgColumn].
-         * Custom members must not use any of these names; [validateMemberNames] enforces this.
-         */
-        private val reservedColumnNames: Set<String> by lazy {
-            PgColumn.allColumns.map { it.name }.toSet()
-        }
-
         /**
          * Returns the physical Postgres column name for the given member name.
          * The name is used as-is; collision with built-in columns is prevented by [validateMemberNames].

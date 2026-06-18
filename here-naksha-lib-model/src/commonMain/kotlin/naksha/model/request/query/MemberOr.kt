@@ -7,17 +7,17 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Logically AND combine.
+ * Logically OR combine.
  */
 @JsExport
-class MetaAnd() : ListProxy<IMetaQuery>(IMetaQuery::class), IMetaQuery {
+class MemberOr() : ListProxy<IMemberQuery>(IMemberQuery::class), IMemberQuery {
 
     /**
      * Create a logical AND combination of the given queries.
      * @param queries the queries to combine.
      */
     @JsName("of")
-    constructor(vararg queries: IMetaQuery) : this() {
+    constructor(vararg queries: IMemberQuery) : this() {
         addAll(queries)
     }
 }

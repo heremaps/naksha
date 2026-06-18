@@ -52,8 +52,7 @@ interface ISession : AutoCloseable {
     /**
      * Returns the [MemberProcessorMap] for this session.
      *
-     * Use the map to register, remove, or inspect [IMemberProcessor] instances for individual members.
-     * Processors are invoked in the order in which they were added.
+     * Use the map to register, remove, or inspect [IMemberProcessor] instances for individual member processing. Processors are invoked in the order in which they were added.
      * @return the member processor map.
      * @since 3.0
      */

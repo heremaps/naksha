@@ -54,9 +54,9 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.IMetaQuery;
+import naksha.model.request.query.IMemberQuery;
 import naksha.model.request.query.MetaColumn;
-import naksha.model.request.query.MetaQuery;
+import naksha.model.request.query.MemberQuery;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -469,8 +469,8 @@ class ActivityLogHandlerTest {
   }
 
   private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
-    IMetaQuery metaQuery = readFeatures.getQuery().getMetadata();
-    if (!(metaQuery instanceof MetaQuery mq)) return false;
+    IMemberQuery metaQuery = readFeatures.getQuery().getMetadata();
+    if (!(metaQuery instanceof MemberQuery mq)) return false;
     boolean basicCheck = mq.getColumn().equals(MetaColumn.nextVersion())
                          && mq.getOp().equals(AnyOp.IS_ANY_OF);
     if (!basicCheck) return false;

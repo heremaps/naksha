@@ -179,19 +179,55 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun verifyId(id: String?): String {
+            verifyId(id, internal = false, throwOnError = true)
+            return id!!
+        }
+
+        /**
+         * Tests if the given **id** is a valid identifier, so matches:
+         *
+         * `[a-z_][a-z0-9_:-~$]{31}`
+         *
+         * If the given identifier is invalid, the methods throws [NakshaError.ILLEGAL_ID].
+         * @param id the identifier to test.
+         * @return the given identifier, tested.
+         * @since 3.0
+         * @see [isValidId]
+         */
+        @JsStatic
+        @JvmStatic
+        fun verifyInternalId(id: String?): String {
+            verifyId(id, internal = true, throwOnError = true)
+            return id!!
+        }
+
+        @JsStatic
+        @JvmStatic
+        private fun verifyId(id: String?, internal: Boolean, throwOnError: Boolean): Boolean {
             if (id.isNullOrEmpty()) {
-                throw illegalId("The given identifier is null or empty")
+                if (throwOnError) throw illegalId("The given identifier is null or empty")
+                else return false
             }
             if (id == "naksha") {
-                throw illegalId("The identifier 'naksha' is forbidden")
+                if (throwOnError) throw illegalId("The identifier 'naksha' is forbidden")
+                else return false
             }
             if (id.length > MAX_ID_LENGTH) {
-                throw illegalId("The identifier '$id' is too long: ${id.length}, must be maximal $MAX_ID_LENGTH")
+                if (throwOnError) throw illegalId("The identifier '$id' is too long: ${id.length}, must be maximal $MAX_ID_LENGTH")
+                else return false
             }
             var i = 0
             var c = id[i++]
             if (c.code < 'a'.code || c.code > 'z'.code) {
-                throw illegalId("The first character must be a-z, but was $c")
+                if (!internal) {
+                    if (throwOnError) throw illegalId("The first character must be a-z, but was $c")
+                    else return false
+                }
+                // Internal identifiers may start with `_`
+                if (c.code != '_'.code) {
+                    if (throwOnError) throw illegalId("The first character must be a-z or '_' (underscore), but was $c")
+                    else return false
+                }
             }
             while (i < id.length) {
                 c = id[i++]
@@ -199,10 +235,20 @@ class Naksha private constructor() {
                     in 'a'.code..'z'.code -> continue
                     in '0'.code..'9'.code -> continue
                     '_'.code, ':'.code, '-'.code -> continue
-                    else -> throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-]")
+                    '~'.code, '$'.code -> if (!internal) {
+                        if (throwOnError) throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-]")
+                        else return false
+                    } else continue
+                    else -> if (!internal) {
+                        if (throwOnError) throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-]")
+                        else return false
+                    } else {
+                        if (throwOnError) throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-~$]")
+                        else return false
+                    }
                 }
             }
-            return id
+            return true
         }
 
         /**
@@ -213,7 +259,12 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun isInternalId(id: String?): Boolean = id != null && id.startsWith(INTERNAL_PREFIX)
+        fun isInternalId(id: String?): Boolean =
+            // Every identifier that is a valid internal identifier
+            verifyId(id, internal = true, throwOnError = false)
+            // but not a valid normal identifier
+            && !verifyId(id, internal = false, throwOnError = false)
+            // is actually an internal identifier
 
         /**
          * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.
@@ -239,16 +290,16 @@ class Naksha private constructor() {
         private val is31BitUnsigned = Regex("^[1-9][0-9]{0,9}\$")
 
         /**
-         * A method to calculate a valid storage-number from the storage-id.
+         * A method to calculate a valid database-number from the database-id.
          *
-         * @param id the id, from which to extract the storage-number.
-         * @return the storage-number.
+         * @param id the id, from which to extract the database-number.
+         * @return the database-number.
          * @since 3.0
          * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun storageNumber(id: String): Int64 {
+        fun databaseNumber(id: String): Int64 {
             if (id == "0" || is63BitUnsigned.matches(id)) {
                 try {
                     return id.toLong(10).toInt64()
@@ -259,16 +310,16 @@ class Naksha private constructor() {
         }
 
        /**
-         * A method to calculate a valid map-number from the map-id.
+         * A method to calculate a valid catalog-number from the catalog-id.
          *
-         * @param id the map-id, from which to extract the map-number.
-         * @return the map-number.
+         * @param id the catalog-id, from which to extract the catalog-number.
+         * @return the catalog-number.
          * @since 3.0
          * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun mapNumber(id: String): Int {
+        fun catalogNumber(id: String): Int {
            if (id == ADMIN_CATALOG_ID) return ADMIN_CATALOG_FN
            if (id == "0" || is31BitUnsigned.matches(id)) {
                try {

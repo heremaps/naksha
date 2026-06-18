@@ -20,7 +20,7 @@ internal const val TG_LEVEL_ROW = "ROW"
 internal const val TG_LEVEL_STATEMENT = "STATEMENT"
 
 /**
- * The raw row as returned by PostgresQL triggers. Check [PgColumn.allColumns], it should match this.
+ * The raw row as returned by PostgresQL triggers. Check [PgColumn_C.allColumns], it should match this.
  */
 @JsPlainObject
 external interface Plv8Row {

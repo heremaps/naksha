@@ -2,9 +2,7 @@ package naksha.psql
 
 import naksha.model.*
 import naksha.model.request.*
-import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder.SortOrderCompanion.ASCENDING
-import naksha.psql.PgColumn.PgColumnCompanion.next_version
 import kotlin.math.max
 import kotlin.math.min
 
@@ -129,13 +127,13 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val selects = StringBuilder()
         for (entry in pgCollections.withIndex()) {
             val pgCollection = entry.value
-            val map = pgCollection.map
+            val map = pgCollection.catalog
             val read = PgRead(pgMap, pgCollection)
 
             // Note: To simplify queries, we actually always embed the collection-number internally,
             //       eventually, before returning the result, we decide if we put it into the header
             //       of the tuple-number-binary or individually into each row-identifier.
-            select_cols[0] = "${pgCollection.number} AS col_num"
+            select_cols[0] = "${pgCollection.collectionNumber} AS col_num"
             val select_cols_string = select_cols.joinToString(", ")
 
             val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
@@ -218,8 +216,8 @@ SELECT ${if (thePgCollection == null) "col_num, fn, version" else "fn, version"}
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),
             argTypes = whereClause?.argTypeNames ?: emptyArray(),
             pgStorage.number,
-            pgMap.number,
-            thePgCollection?.number
+            pgMap.catalogNumber,
+            thePgCollection?.collectionNumber
         )
     }
 }

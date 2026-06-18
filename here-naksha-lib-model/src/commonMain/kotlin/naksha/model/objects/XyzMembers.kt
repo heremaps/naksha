@@ -8,6 +8,10 @@ import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
+/**
+ * All members being part of the classic XYZ-Hub architecture, plus further extensions added later in Data-Hub and Naksha v1, v2. All internal adminstrative object are stored in this format.
+ * @since 3.0
+ */
 @JsExport
 class XyzMembers private constructor() {
     companion object XyzMembers_C {
@@ -20,35 +24,35 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzTn = Member("~tn", MemberType.TUPLE_NUMBER, JsonPath("properties", "@ns:com:here:xyz", "uuid"))
+        val XyzTn = Member(StandardMembers.Tn, JsonPath("properties", "@ns:com:here:xyz", "uuid"))
 
         /**
          * The same as [StandardMembers.NextVersion], but with a Data-Hub compatible path.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzNextVersion = Member("~nv", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "nextVersion"))
+        val XyzNextVersion = Member(StandardMembers.NextVersion, JsonPath("properties", "@ns:com:here:xyz", "nextVersion"))
 
         /**
          * The same as [StandardMembers.GlobalBookFeatureNumber], but with a Data-Hub compatible path.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzGlobalBookFeatureNumber = Member("~gbfn", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "globalBookFn"))
+        val XyzGlobalBookFeatureNumber = Member(StandardMembers.GlobalBookFeatureNumber, JsonPath("properties", "@ns:com:here:xyz", "globalBookFn"))
 
         /**
          * The same as [StandardMembers.Feature].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeature = Member("~feature", MemberType.BYTE_ARRAY, JsonPath())
+        val XyzFeature = Member(StandardMembers.Feature, JsonPath())
 
         /**
          * The same as [StandardMembers.Feature].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzId = Member("~id", MemberType.STRING, JsonPath("id"))
+        val XyzId = Member(StandardMembers.Id, JsonPath("id"))
 
         // -------------------------------------------------------------------------
         // Optional members.
@@ -223,8 +227,7 @@ class XyzMembers private constructor() {
         val XyzTags = Member("tags", MemberType.SET, JsonPath("properties", "@ns:com:here:xyz", "tags"))
 
         /**
-         * `ref_point` — geometry reference point (always a single point), stored as TWKB. Used to
-         * compute the [XyzHereTile] value. `null` if the feature has no explicit reference point.
+         * `ref_point` — geometry reference point (always a single point), stored as TWKB. Used to compute the [XyzHereTile] value. `null` if the feature has no explicit reference point.
          * Default member.
          * @since 3.0
          */

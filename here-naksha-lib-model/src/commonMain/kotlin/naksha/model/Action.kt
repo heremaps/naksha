@@ -1,5 +1,6 @@
 package naksha.model
 
+import naksha.base.Int64
 import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
@@ -119,6 +120,13 @@ class Action : JsEnum() {
         @JsStatic
         @JvmStatic
         fun fromValue(value: Int): Action = FROM_VALUE[value] ?: VERSION
+
+        /**
+         * Helper to obtain an [Action] from its 64-bit version value. Returns [VERSION] for unrecognised values.
+         */
+        @JsStatic
+        @JvmStatic
+        fun fromVersion(version: Int64): Action = FROM_VALUE[version.toInt() and 3] ?: VERSION
     }
 
     /**

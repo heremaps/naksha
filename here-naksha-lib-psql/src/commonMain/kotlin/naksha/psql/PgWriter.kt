@@ -97,11 +97,11 @@ open class PgWriter internal constructor(
      * @since 3.0
      */
     private fun addPgWrite(
-        map: PgMap,
+        map: PgCatalog,
         collection: PgCollection,
         writeOp: WriteOp,
         write: PgWrite,
-        byMap: MutableMap<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>,
+        byMap: MutableMap<PgCatalog, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>,
         writeListCapacity: Int) {
         var byCollection = byMap[map]
         if (byCollection == null) {
@@ -136,8 +136,8 @@ open class PgWriter internal constructor(
      * @since 3.0
      */
     private fun groupOperations(writes: ArrayList<PgWrite>)
-      : MutableMap<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>> {
-        val byMap = mutableMapOf<PgMap, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>()
+      : MutableMap<PgCatalog, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>> {
+        val byMap = mutableMapOf<PgCatalog, MutableMap<PgCollection, Array<MutableMap<WriteOp, ArrayList<PgWrite>>?>>>()
         var writeListCapacity = writes.size
         for (i in writes.indices) {
             val write = writes[i]
@@ -248,7 +248,7 @@ open class PgWriter internal constructor(
                 }
                 featuresModified += 1
             } else if (write.isMapModification) {
-                val map = write.asPgMap
+                val map = write.asPgCatalog
                 if (map != null) transaction.useMap(map.id, map.number, write.action)
             } else if (write.isCollectionModification) {
                 val map = write.map
@@ -276,7 +276,7 @@ open class PgWriter internal constructor(
 
             // Detect tbe map into which to write.
             val mapId = write.original.mapId ?: throw illegalArg("The given write does not have a map-id")
-            val map = storage.adminMap.getPgMapById(conn, mapId) ?:
+            val map = storage.adminCatalog.getPgCatalogById(conn, mapId) ?:
                 throw mapNotFound("The write #${write.i} refers to not existing map '$mapId'")
             write.map = map
 
@@ -289,7 +289,7 @@ open class PgWriter internal constructor(
             // If this operation modifies a map.
             if (write.isMapModification) {
                 val op = write.op
-                var pgMap = storage.adminMap.getPgMapById(null, write.id) ?: storage.adminMap.getPgMapById(conn, write.id)
+                var pgMap = storage.adminCatalog.getPgCatalogById(null, write.id) ?: storage.adminCatalog.getPgCatalogById(conn, write.id)
 
                 val nakshaMap: NakshaCatalog?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
@@ -300,7 +300,7 @@ open class PgWriter internal constructor(
                         if (op == WriteOp.UPDATE) {
                             throw mapNotFound("The UPDATE (write #${write.i}) failed, because the map '$featureId' does not exist")
                         }
-                        pgMap = PgMap(storage, nakshaMap)
+                        pgMap = PgCatalog(storage, nakshaMap)
                         createPgMap(pgMap)
                     } else if (op == WriteOp.CREATE) {
                         throw mapExists("The write #${write.i} failed, because the map '$featureId' does exist already")
@@ -313,7 +313,7 @@ open class PgWriter internal constructor(
                 } else {
                     throw illegalState("The write #${write.i} refers to an unsupported operation: '$op'")
                 }
-                write.asPgMap = pgMap
+                write.asPgCatalog = pgMap
                 write.asNakshaMap = nakshaMap
             }
 
@@ -367,7 +367,7 @@ open class PgWriter internal constructor(
         return list
     }
 
-    private fun executeWrite(map: PgMap, collection: PgCollection, partition: Int, byWriteOp: Map<WriteOp, List<PgWrite>>) {
+    private fun executeWrite(map: PgCatalog, collection: PgCollection, partition: Int, byWriteOp: Map<WriteOp, List<PgWrite>>) {
         // DELETE
         val deletes = byWriteOp[WriteOp.DELETE]
         if (deletes != null) {
@@ -409,8 +409,8 @@ open class PgWriter internal constructor(
      * @param map the map that should be physically created.
      * @since 3.0
      */
-    protected open fun createPgMap(map: PgMap) {
-        storage.adminMap.createPgMap(conn, map)
+    protected open fun createPgMap(map: PgCatalog) {
+        storage.adminCatalog.createPgCatalog(conn, map)
     }
 
     /**
@@ -418,8 +418,8 @@ open class PgWriter internal constructor(
      * @param map the map that was just created.
      * @since 3.0
      */
-    protected open fun deletePgMap(map: PgMap) {
-        storage.adminMap.deletePgMap(conn, map)
+    protected open fun deletePgMap(map: PgCatalog) {
+        storage.adminCatalog.deletePgCatalog(conn, map)
     }
 
     /**
@@ -544,7 +544,7 @@ open class PgWriter internal constructor(
      * @since 3.0
      */
     protected open fun createPgCollection(collection: PgCollection) {
-        collection.map.createPgCollection(conn, collection)
+        collection.catalog.createPgCollection(conn, collection)
     }
 
     /**
@@ -553,6 +553,6 @@ open class PgWriter internal constructor(
      * @since 3.0
      */
     protected open fun deletePgCollection(collection: PgCollection) {
-        collection.map.deletePgCollection(conn, collection)
+        collection.catalog.deletePgCollection(conn, collection)
     }
 }

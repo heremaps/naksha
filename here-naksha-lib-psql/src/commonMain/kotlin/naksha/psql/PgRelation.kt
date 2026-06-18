@@ -72,9 +72,9 @@ data class PgRelation(
         var n = _partNumber
         if (n != null) return n
         n = -1
-        var i = name.indexOf(PG_PART)
+        var i = name.indexOf(PG_DIST_PARTITION)
         if (i > 0) {
-            i += PG_PART.length
+            i += PG_DIST_PARTITION.length
             if (i + 3 <= name.length) try {
                 n = name.substring(i, i + 3).toInt(10)
             } catch (_: Exception) {}
@@ -127,13 +127,13 @@ data class PgRelation(
     }
 
     fun isAnyHeadRelation() = name.indexOf(PG_DEL) < 0 && name.indexOf(PG_HST) < 0 && name.indexOf(PG_META) < 0
-    fun isHeadRootRelation() = isAnyHeadRelation() && (isTable() || isPartition()) && name.indexOf(PG_PART) < 0
+    fun isHeadRootRelation() = isAnyHeadRelation() && (isTable() || isPartition()) && name.indexOf(PG_DIST_PARTITION) < 0
     fun isTxnYearRelation() = isAnyHeadRelation() && isTable() && name.indexOf(PG_YEAR) > 0
 
     // ---
 
     fun isAnyDeleteRelation() = name.indexOf(PG_DEL) > 0
-    fun isDeleteRootRelation() = isAnyDeleteRelation() && (isTable() || isPartition()) && name.indexOf(PG_PART) < 0
+    fun isDeleteRootRelation() = isAnyDeleteRelation() && (isTable() || isPartition()) && name.indexOf(PG_DIST_PARTITION) < 0
 
     // ---
 
@@ -147,12 +147,12 @@ data class PgRelation(
     /** History year-partition: `$hst$<digits>` at end, no `$p` suffix. */
     fun isHistoryYearRelation(): Boolean {
         if (!isAnyHistoryRelation() || (!isTable() && !isPartition())) return false
-        return year() > 0 && name.indexOf(PG_PART, name.indexOf(PG_HST)) < 0
+        return year() > 0 && name.indexOf(PG_DIST_PARTITION, name.indexOf(PG_HST)) < 0
     }
     /** History perf-partition: `$hst$<digits>$p<digits>`. */
     fun isHistoryPartition(): Boolean {
         if (!isAnyHistoryRelation() || !isTable()) return false
-        return year() > 0 && name.indexOf(PG_PART, name.indexOf(PG_HST)) >= 0
+        return year() > 0 && name.indexOf(PG_DIST_PARTITION, name.indexOf(PG_HST)) >= 0
     }
 
     // ---

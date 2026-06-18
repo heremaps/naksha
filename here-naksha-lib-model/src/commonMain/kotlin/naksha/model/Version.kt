@@ -192,9 +192,9 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         }
 
         /**
-         * The _HEAD_ sentinel version _(9_007_199_254_740_991L aka `2^53-1`)_. Can be used as well to mask version to ensure valid range.
+         * The _HEAD_ sentinel version _(`9_007_199_254_740_991` aka `2^53-1`)_. Can be used as well to mask version to ensure valid version number, like `version & Version.HEAD`.
          *
-         * When a [Tuple] is the current HEAD state its `nextVersion` is synthesised as this value.
+         * When a [Tuple] is the _HEAD_ state its next-version is synthesized as this value.
          * @since 3.0
          */
         @JvmField

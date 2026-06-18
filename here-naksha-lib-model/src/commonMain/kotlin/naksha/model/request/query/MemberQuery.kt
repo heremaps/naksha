@@ -9,11 +9,11 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A meta-data query within the Naksha feature.
+ * A query about a specific [member][naksha.model.objects.Member].
  * @since 3.0
  */
 @JsExport
-open class MetaQuery() : AnyObject(), IMetaQuery {
+open class MemberQuery() : AnyObject(), IMemberQuery {
     /**
      * Create an initialized property query.
      * @param column the column of the metadata to query.
@@ -29,9 +29,9 @@ open class MetaQuery() : AnyObject(), IMetaQuery {
     }
 
     companion object PropertyQueryCompanion {
-        private val COLUMNS = NotNullProperty<MetaQuery, MetaColumn>(MetaColumn::class)
-        private val QUERY_OP = NotNullProperty<MetaQuery, AnyOp>(AnyOp::class)
-        private val ANY = NullableProperty<MetaQuery, Any>(Any::class)
+        private val COLUMNS = NotNullProperty<MemberQuery, MetaColumn>(MetaColumn::class)
+        private val QUERY_OP = NotNullProperty<MemberQuery, AnyOp>(AnyOp::class)
+        private val ANY = NullableProperty<MemberQuery, Any>(Any::class)
     }
 
     /**

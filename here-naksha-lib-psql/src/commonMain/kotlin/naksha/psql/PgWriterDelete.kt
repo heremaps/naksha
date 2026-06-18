@@ -144,7 +144,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.id = query.id" else ""}
 
     override fun doExecute(conn: PgConnection) {
         if (writes.isEmpty()) return
-        val outRows = PgColumnRows()
+        val outRows = PgRows()
             .withDatabaseNumber(storageNumber)
             .withCatalogNumber(mapNumber)
             .withCollectionNumber(collectionNumber)
