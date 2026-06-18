@@ -10,27 +10,27 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A query about a specific [member][naksha.model.objects.Member].
+ * Query a [member][naksha.model.objects.Member].
  * @since 3.0
  */
 @JsExport
 open class MemberQuery() : AnyObject(), IMemberQuery {
     /**
-     * Create an initialized property query.
-     * @param column the column of the metadata to query.
+     * Create an initialized member query.
+     * @param member the member to query.
      * @param op the operation to execute.
      * @param value the parameter value of the operation.
      * @since 3.0
      */
     @JsName("of")
-    constructor(column: Member, op: AnyOp, value: Any? = null) : this() {
-        this.column = column
+    constructor(member: Member, op: AnyOp, value: Any? = null) : this() {
+        this.member = member
         this.op = op
         this.value = value
     }
 
-    companion object PropertyQueryCompanion {
-        private val COLUMNS = NotNullProperty<MemberQuery, MetaColumn>(MetaColumn::class)
+    companion object MemberQuery_C {
+        private val MEMBERS = NotNullProperty<MemberQuery, Member>(Member::class)
         private val QUERY_OP = NotNullProperty<MemberQuery, AnyOp>(AnyOp::class)
         private val ANY = NullableProperty<MemberQuery, Any>(Any::class)
     }
@@ -38,15 +38,15 @@ open class MemberQuery() : AnyObject(), IMemberQuery {
     /**
      * The column to query.
      */
-    var column by COLUMNS
+    var member: Member by MEMBERS
 
     /**
      * The operation to execute.
      */
-    var op by QUERY_OP
+    var op: AnyOp by QUERY_OP
 
     /**
      * The parameter value of the operation; if any.
      */
-    var value by ANY
+    var value: Any? by ANY
 }

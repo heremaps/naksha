@@ -3,11 +3,17 @@ package naksha.model.request
 import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.UNDEFINED
+import naksha.base.PlatformList
+import naksha.base.PlatformListApi
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.PlatformMap
+import naksha.base.PlatformMapApi
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.PlatformUtil
 import naksha.base.Proxy
-import naksha.model.Naksha
-import naksha.model.Naksha.NakshaCompanion.cache
-import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
+import naksha.model.objects.JsonPath
 
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.query.*
@@ -35,8 +41,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             is POr -> return pQuery.any { resolvePropsQueryOnFeature(it, feature) }
             is PNot -> return !resolvePropsQueryOnFeature(pQuery.query, feature)
             is PQuery -> {
-                val path = pQuery.property.path.filterNotNull()
-                val propValue = walkPath(feature, path)
+                val propValue = walkPath(feature, pQuery.property.path)
                 return resolveEachOp(pQuery.op, propValue, pQuery.value)
             }
         }
@@ -44,31 +49,44 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
     }
 
     /**
-     * Walk a property path on an object. Returns [Platform.UNDEFINED] if the path does not exist.
+     * Walk a property path on an object or array.
+     * @return [Platform.UNDEFINED] if the path does not exist.
      */
-    private fun walkPath(root: Any?, path: List<String>): Any? {
-        var current: Any? = root
+    private fun walkPath(objectOrArray: Any?, path: JsonPath): Any? {
+        var current: Any? = objectOrArray
         for (key in path) {
+            if (key == null) return UNDEFINED
             current = when (current) {
                 is AnyList -> {
-                    val index = key.toIntOrNull() ?: return Platform.UNDEFINED
-                    if (index < 0 || index >= current.size) return Platform.UNDEFINED
+                    val index: Int = (key as Number?)?.toInt() ?: return UNDEFINED
+                    if (index < 0 || index >= current.size) return UNDEFINED
                     current[index]
                 }
-                is AnyObject -> if (current.containsKey(key)) current[key] else return Platform.UNDEFINED
                 is NakshaFeature -> {
                     val raw = current.getRaw(key)
-                    if (raw === Platform.UNDEFINED) return Platform.UNDEFINED else raw
+                    if (raw === UNDEFINED) return UNDEFINED else raw
                 }
-                else -> return Platform.UNDEFINED
+                is AnyObject -> if (current.containsKey(key)) current[key] else return UNDEFINED
+                is PlatformList -> {
+                    val index: Int = (key as Number?)?.toInt() ?: return UNDEFINED
+                    if (index < 0 || index >= array_get_length(current)) return UNDEFINED
+                    array_get(current, index)
+                }
+                is PlatformMap -> {
+                    if (key !is String) return UNDEFINED
+                    map_get(current, key)
+                }
+                else -> return UNDEFINED
             }
         }
+        if (current is PlatformList) return current.proxy(AnyList::class)
+        if (current is PlatformMap) return current.proxy(AnyObject::class)
         return current
     }
 
     private fun resolveEachOp(op: AnyOp, featureProperty: Any?, queryProperty: Any?) : Boolean {
         return when (op) {
-            AnyOp.EXISTS -> featureProperty != Platform.UNDEFINED
+            AnyOp.EXISTS -> featureProperty != UNDEFINED
             AnyOp.IS_NULL -> featureProperty == null
             AnyOp.IS_NOT_NULL -> featureProperty != null
             AnyOp.IS_TRUE -> featureProperty == true
@@ -146,7 +164,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         return try {
             Proxy.box(Platform.fromJSON(json), Any::class)
         } catch (e: Exception) {
-            Platform.PlatformCompanion.logger.warn("JSON parsing failed for string that appeared to be JSON: $json")
+            Platform.logger.warn("JSON parsing failed for string that appeared to be JSON: $json")
             json
         }
     }

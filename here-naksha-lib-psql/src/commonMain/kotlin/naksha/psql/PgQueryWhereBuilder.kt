@@ -278,14 +278,14 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
             )
 
             is MemberQuery -> {
-                val isActionQuery = metaQuery.column == MetaColumn.action()
+                val isActionQuery = metaQuery.member == MetaColumn.action()
                 val pgColumn =
                     if (isActionQuery) {
                         PgColumn.version
                     } else {
-                        PgColumn.ofRowColumn(metaQuery.column) ?: throw NakshaException(
+                        PgColumn.ofRowColumn(metaQuery.member) ?: throw NakshaException(
                             NakshaError.ILLEGAL_STATE,
-                            "Couldn't find PgColumn for TupleColumn: ${metaQuery.column.name}"
+                            "Couldn't find PgColumn for TupleColumn: ${metaQuery.member.name}"
                         )
                     }
                 val leftOperand = if (isActionQuery) {

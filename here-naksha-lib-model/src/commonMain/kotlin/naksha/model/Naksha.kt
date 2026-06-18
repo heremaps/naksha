@@ -201,7 +201,6 @@ class Naksha private constructor() {
             return id!!
         }
 
-        @JsStatic
         @JvmStatic
         private fun verifyId(id: String?, internal: Boolean, throwOnError: Boolean): Boolean {
             if (id.isNullOrEmpty()) {

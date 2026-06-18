@@ -471,7 +471,7 @@ class ActivityLogHandlerTest {
   private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
     IMemberQuery metaQuery = readFeatures.getQuery().getMembers();
     if (!(metaQuery instanceof MemberQuery mq)) return false;
-    boolean basicCheck = mq.getColumn().equals(MetaColumn.nextVersion())
+    boolean basicCheck = mq.getMember().equals(MetaColumn.nextVersion())
                          && mq.getOp().equals(AnyOp.IS_ANY_OF);
     if (!basicCheck) return false;
     if (expectedTns.length == 0) return mq.getValue() != null;

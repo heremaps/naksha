@@ -34,7 +34,7 @@ import kotlin.js.JsName
  * @since 3.0
  */
 @JsExport
-class Member() : AnyObject(), Comparator<Member> {
+open class Member() : AnyObject(), Comparator<Member> {
 
     /**
      * Construct a member with a name and the given data type.

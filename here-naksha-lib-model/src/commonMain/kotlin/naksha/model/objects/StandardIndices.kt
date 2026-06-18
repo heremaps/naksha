@@ -10,7 +10,7 @@ import kotlin.jvm.JvmField
  * The canonical, storage-managed indices that every Naksha storage understands.
  *
  * These are flavour-independent: the [MANDATORY] indices are always present, the standard optional
- * [GistGeometry] indexes the standard [StandardMembers.Geometry] member, and the [SPECIAL] indices
+ * [Geometry] indexes the standard [StandardMembers.Geometry] member, and the [SPECIAL] indices
  * are declared explicitly per collection (e.g. `naksha~transactions`). The default index set for a
  * Data-Hub (XYZ) compatible collection lives in [XyzIndices], the index counterpart of [XyzMembers].
  * @since 3.0
@@ -82,18 +82,13 @@ class StandardIndices private constructor() {
         // -------------------------------------------------------------------------
 
         /**
-         * `gist_geo` — spatial ([IndexType.SPATIAL]) GIST index over the geometry member
-         * (WHERE `geo IS NOT NULL`).
+         * `geo` — spatial ([IndexType.SPATIAL]) GIST index over the geometry member (WHERE `geo IS NOT NULL`).
          *
-         * Geometry is a **standard** member (part of the GeoJSON standard, see
-         * [StandardMembers.Geometry]), so its index is defined here. An index refers to a member by
-         * its identity (name + type), not by JSON path, so this same index applies to the XYZ
-         * geometry member ([XyzMembers.XyzGeometry], also named `geo`); [XyzIndices.ALL] references
-         * it rather than redeclaring it.
+         * Geometry is a **standard** member (part of the GeoJSON standard, see [StandardMembers.Geometry]).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val GistGeometry = Index("gist_geo", IndexType.SPATIAL, "geo")
+        val Geometry = Index("geo", IndexType.SPATIAL, "geo")
 
         // -------------------------------------------------------------------------
         // Special indices — not added automatically; declared explicitly per collection

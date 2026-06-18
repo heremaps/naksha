@@ -14,7 +14,7 @@ import kotlin.jvm.JvmField
  * [NakshaCollection.withXyzIndices].
  *
  * An index refers to a member by its identity (name + type), not by JSON path, so indices that
- * target a member which is also standard (e.g. the geometry member, see [StandardIndices.GistGeometry])
+ * target a member which is also standard (e.g. the geometry member, see [StandardIndices.Geometry])
  * are **referenced** from [StandardIndices] rather than redeclared here. The storage-managed indices
  * that every collection always has live in [StandardIndices.MANDATORY].
  * @since 3.0
@@ -131,7 +131,7 @@ class XyzIndices private constructor() {
         /**
          * All indices for a default XYZ collection, in declaration order: the [StandardIndices.MANDATORY]
          * indices (always present), followed by the XYZ default indices, followed by the geometry index
-         * (referenced from [StandardIndices.GistGeometry], since geometry is a standard member).
+         * (referenced from [StandardIndices.Geometry], since geometry is a standard member).
          *
          * Does **not** include the [StandardIndices.SPECIAL] indices (`pn`/`pt`/`gv`), which are declared
          * explicitly only where needed (e.g. `naksha~transactions`).
@@ -147,7 +147,7 @@ class XyzIndices private constructor() {
             XyzCustomValue0, XyzCustomValue1, XyzCustomValue2, XyzCustomValue3,
             XyzCustomString0, XyzCustomString1, XyzCustomString2, XyzCustomString3,
             XyzReferencePoint,
-            StandardIndices.GistGeometry,
+            StandardIndices.Geometry,
         )
     }
 }

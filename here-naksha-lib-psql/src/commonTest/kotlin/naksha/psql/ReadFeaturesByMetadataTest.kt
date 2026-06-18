@@ -32,7 +32,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val featuresByAppId = executeMetaQuery(
             MemberQuery(
-                column = MetaColumn.appId(),
+                member = MetaColumn.appId(),
                 op = StringOp.EQUALS,
                 value = sessionOptions.appId
             )
@@ -59,7 +59,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val featuresByAppIdPrefix = executeMetaQuery(
             MemberQuery(
-                column = MetaColumn.appId(),
+                member = MetaColumn.appId(),
                 op = StringOp.STARTS_WITH,
                 value = "prefixed_test_app"
             )
@@ -86,7 +86,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val featuresByAuthor = executeMetaQuery(
             MemberQuery(
-                column = MetaColumn.author(),
+                member = MetaColumn.author(),
                 op = StringOp.EQUALS,
                 value = sessionOptions.author
             )
@@ -113,7 +113,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val featuresByAuthorPrefix = executeMetaQuery(
             MemberQuery(
-                column = MetaColumn.author(),
+                member = MetaColumn.author(),
                 op = StringOp.STARTS_WITH,
                 value = "Jacky"
             )
@@ -137,7 +137,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val featuresById = executeMetaQuery(
             MemberQuery(
-                column = MetaColumn.id(),
+                member = MetaColumn.id(),
                 op = StringOp.EQUALS,
                 value = inputFeature.id
             )
@@ -161,7 +161,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val featuresByIdPrefix = executeMetaQuery(
             MemberQuery(
-                column = MetaColumn.id(),
+                member = MetaColumn.id(),
                 op = StringOp.STARTS_WITH,
                 value = TEST_FEATURE_ID.substring(0..4)
             )
