@@ -526,7 +526,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (request instanceof ReadFeatures) {
       ReadFeatures rf = (ReadFeatures) request;
       rf.setCatalogId(mapId);
-      rf.setCollectionIds(StringList.of(collectionId));
+      rf.setCollectionId(StringList.of(collectionId));
     } else if (request instanceof WriteRequest) {
       WriteRequest wr = (WriteRequest) request;
       if (isOnlyWriteCollections(wr)) {

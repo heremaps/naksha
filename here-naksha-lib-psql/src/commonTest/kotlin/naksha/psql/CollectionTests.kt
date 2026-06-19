@@ -53,7 +53,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // Then: this collection is queryable and empty
         val readAllFromCollection = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
         }
         val collectionContent = executeRead(readAllFromCollection)
         assertEquals(0, collectionContent.features.size)
@@ -61,7 +61,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += Naksha.COLLECTIONS_COL_ID
+            collectionId += Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
         val virtBeforeDelete = executeRead(selectCollectionFromVirt)
@@ -208,7 +208,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         val readFeatureRequest = ReadFeatures()
         readFeatureRequest.catalogId = map.id
-        readFeatureRequest.collectionIds.add(collectionName)
+        readFeatureRequest.collectionId.add(collectionName)
         readFeatureRequest.featureIds.add(feature.id)
         val readFeaturesResponse = executeRead(readFeatureRequest)
         assertEquals(1, readFeaturesResponse.features.size)
@@ -281,7 +281,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         val readFeature = ReadFeatures()
         readFeature.catalogId = map.id
-        readFeature.collectionIds.add(collectionId)
+        readFeature.collectionId.add(collectionId)
         readFeature.featureIds.add(feature.id)
         val readFeatureResponse = executeRead(readFeature)
         assertEquals(1, readFeatureResponse.features.size)
@@ -331,7 +331,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
             catalogId = map.id
-            collectionIds += Naksha.COLLECTIONS_COL_ID
+            collectionId += Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
         val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection::class)

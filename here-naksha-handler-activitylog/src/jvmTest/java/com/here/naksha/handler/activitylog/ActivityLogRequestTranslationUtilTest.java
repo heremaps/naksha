@@ -9,12 +9,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import java.util.Random;
-import naksha.base.JvmInt64;
+
 import naksha.base.StringList;
 import naksha.model.Guid;
 import naksha.model.GuidList;
-import naksha.model.TupleNumber;
 import naksha.model.Version;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.query.IPropertyQuery;
@@ -172,7 +170,7 @@ class ActivityLogRequestTranslationUtilTest {
 
   private void verifyAllHistoricalVersionsInCollection(ReadFeatures readFeatures) {
     assertTrue(readFeatures.getQueryHistory());
-    StringList collectionIds = readFeatures.getCollectionIds();
+    StringList collectionIds = readFeatures.getCollectionId();
     assertEquals(1, collectionIds.size());
     assertEquals(TEST_SPACE_ID, collectionIds.get(0));
     assertEquals(Integer.MAX_VALUE, readFeatures.getVersions());

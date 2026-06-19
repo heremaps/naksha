@@ -117,7 +117,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   private @NotNull Response executeReadFeatures(final @NotNull ReadFeatures rf) {
-    List<String> collectionIds = rf.getCollectionIds();
+    List<String> collectionIds = rf.getCollectionId();
     if (collectionIds.size() > 1) {
       throw new UnsupportedOperationException("Reading from multiple spaces not supported!");
     }
@@ -161,7 +161,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   private @NotNull Response executeReadFeaturesFromCustomSpaces(final @NotNull ReadFeatures rf) {
-    List<String> collectionIds = rf.getCollectionIds();
+    List<String> collectionIds = rf.getCollectionId();
     if (collectionIds.size() > 1) {
       return new ErrorResponse(new NakshaError(
           NakshaError.UNSUPPORTED_OPERATION,

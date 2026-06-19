@@ -81,7 +81,7 @@ open class ReadCollections : ReadRequest() {
     fun toReadFeatures(): ReadFeatures {
         val req = ReadFeatures()
         req.catalogId = mapId
-        req.collectionIds.add(Naksha.COLLECTIONS_COL_ID)
+        req.collectionId.add(Naksha.COLLECTIONS_COL_ID)
         req.featureIds.addAll(collectionIds)
         return req
     }

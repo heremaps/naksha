@@ -106,7 +106,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeGetHandlers() {
     // Create ReadFeatures Request to read all handlers from Admin DB
-    final ReadFeatures request = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
+    final ReadFeatures request = new ReadFeatures().withCollectionId(EVENT_HANDLERS);
     request.setCatalogId(naksha().getAdminMapId());
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);
@@ -117,7 +117,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeGetHandlerById() {
     // Create ReadFeatures Request to read the handler with the specific ID from Admin DB
     final String handlerId = routingContext.pathParam(HANDLER_ID);
-    final ReadFeatures request = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
+    final ReadFeatures request = new ReadFeatures().withCollectionId(EVENT_HANDLERS);
     request.setCatalogId(naksha().getAdminMapId());
     request.setFeatureIds(StringList.of(handlerId));
     // Submit request to NH Space Storage

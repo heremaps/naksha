@@ -337,7 +337,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         .withPropertyQuery(propertyQuery)
         .withTagQuery(tagQuery);
     rdRequest.setFeatureIds(suppliedFeatureIds);
-    rdRequest.setCollectionIds(StringList.of(spaceId));
+    rdRequest.setCollectionId(StringList.of(spaceId));
     rdRequest.setLimit(limit);
 
     // Forward request to NH Space Storage reader instance
@@ -422,7 +422,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     query.setTags(tagQuery);
     final ReadFeatures rdRequest = new ReadFeatures();
     rdRequest.setFeatureIds(suppliedFeatureIds);
-    rdRequest.setCollectionIds(StringList.of(spaceId));
+    rdRequest.setCollectionId(StringList.of(spaceId));
     rdRequest.setQuery(query);
     rdRequest.withPropertyQuery(propertyQuery);
 
@@ -502,7 +502,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     query.setSpatial(radiusQuery);
     query.setTags(tagQuery);
     final ReadFeatures rdRequest = new ReadFeatures();
-    rdRequest.setCollectionIds(StringList.of(spaceId));
+    rdRequest.setCollectionId(StringList.of(spaceId));
     rdRequest.setFeatureIds(suppliedFeatureIds);
     rdRequest.setQuery(query);
     rdRequest.withPropertyQuery(propertyQuery);

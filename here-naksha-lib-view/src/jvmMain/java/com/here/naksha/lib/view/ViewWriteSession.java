@@ -64,7 +64,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
     } else if (request instanceof ReadFeatures) {
       final ReadFeatures readFeatures = (ReadFeatures) request;
       readFeatures.setCatalogId(writeLayer.getMapId());
-      readFeatures.setCollectionIds(new StringList(writeLayer.getCollectionId()));
+      readFeatures.setCollectionId(new StringList(writeLayer.getCollectionId()));
     } else {
       throw new IllegalArgumentException("Unsupported request type: " + request.getClass());
     }

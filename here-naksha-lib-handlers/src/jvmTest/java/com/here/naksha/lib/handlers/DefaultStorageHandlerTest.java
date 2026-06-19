@@ -678,7 +678,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
   private static Request readRandomFeature() {
     ReadFeatures readFeatures = new ReadFeatures();
     readFeatures.setCatalogId("random_map_" + RandomUtils.nextInt());
-    readFeatures.setCollectionIds(new StringList("random_collection_" + RandomUtils.nextInt()));
+    readFeatures.setCollectionId(new StringList("random_collection_" + RandomUtils.nextInt()));
     readFeatures.setFeatureIds(new StringList("random_feature_" + RandomUtils.nextInt()));
     return readFeatures;
   }

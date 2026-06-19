@@ -34,7 +34,7 @@ class PgPropertyFilterTest: PgTestBase() {
         // And: A read request is created with the property query.
         val readRequest = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
         }.withPropertyQuery(pQuery)
         // When: read request is executed
         val response = executeRead(readRequest)
@@ -66,7 +66,7 @@ class PgPropertyFilterTest: PgTestBase() {
         // And: A read request is made with the custom filter manually added.
         val readRequest = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             resultFilters.add(IdContainsFilter("keep_this"))
         }
         // When: read request is executed
@@ -124,7 +124,7 @@ class PgPropertyFilterTest: PgTestBase() {
         // Given: A read request that is designed to fail by targeting a non-existent collection.
         val readRequest = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += "non_existent_collection"
+            collectionId += "non_existent_collection"
         }
 
         // When: The failing request is executed.
@@ -146,7 +146,7 @@ class PgPropertyFilterTest: PgTestBase() {
         // When: A read request is made to fetch that specific feature by ID, with no result filters.
         val readRequest = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             featureIds += feature.id
         }
         val response = storage.newReadSession(newSessionOptions()).use { session ->

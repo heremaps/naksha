@@ -148,5 +148,6 @@ data class PgColumn(
         val NEXT_VERSION = PgColumn(2, NextVersion.name, INT64, "STORAGE $PLAIN NOT NULL")
     }
 
+    /** Returns the [ident] of the column, so the quoted [name]. */
     override fun toString(): String = ident
 }

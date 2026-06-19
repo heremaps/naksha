@@ -35,7 +35,7 @@ public class LayerReadRequest {
     //       because the view is always fixed to certain map/collection!
     this.request = request.copy(false);
     this.request.setCatalogId(viewLayer.getMapId());
-    this.request.setCollectionIds(new StringList(viewLayer.getCollectionId()));
+    this.request.setCollectionId(new StringList(viewLayer.getCollectionId()));
     this.viewLayer = viewLayer;
     this.session = session;
   }

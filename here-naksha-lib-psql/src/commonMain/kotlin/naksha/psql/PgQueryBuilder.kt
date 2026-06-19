@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.model.*
+import naksha.model.Naksha.NakshaCompanion.HARD_TUPLE_LIMIT
 import naksha.model.request.*
 import naksha.model.request.query.SortOrder.SortOrderCompanion.ASCENDING
 import kotlin.math.max
@@ -31,18 +32,13 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     private fun readFeatures(req: ReadFeatures): PgQuery {
         // Collect needed data
         val pgStorage = session.storage
-        val catalogId = req.catalogId ?: throw illegalArg("catalogId is missing")
+        val catalogId = req.catalogId ?: throw illegalArg("Request has not 'catalogId'")
         val pgCatalog = session.getPgCatalogById(catalogId) ?: throw mapNotFound("Catalog with id '$catalogId' does not exist")
-        val REQ_LIMIT = min(max(0, req.limit ?: Naksha.HARD_TUPLE_LIMIT), session.storage.hardCap)
-        if (REQ_LIMIT == 0) throw illegalArg("Invalid limit given: ${req.limit}, must be 0 to 16777216")
-        val pgCollections: MutableList<PgCollection> = mutableListOf()
-        for (collectionId in req.collectionIds) {
-            if (collectionId == null) continue
-            val pgCollection = session.getPgCollectionById(pgCatalog, collectionId) ?:
-                throw collectionNotFound("Collection with id '$collectionId' not found in map '$catalogId'")
-            pgCollections.add(pgCollection)
-        }
-        if (pgCollections.isEmpty()) throw illegalArg("Empty collection-ids in request")
+        val REQ_LIMIT = min(max(0, req.limit ?: HARD_TUPLE_LIMIT), session.storage.hardCap)
+        if (REQ_LIMIT == 0) throw illegalArg("Invalid limit given: ${req.limit}, must be 0 to $HARD_TUPLE_LIMIT")
+        val collectionId: String = req.collectionId ?: throw illegalArg("Request has no 'collectionId'")
+        val pgCollection = session.getPgCollectionById(pgCatalog, collectionId) ?:
+            throw collectionNotFound("Collection with id '$collectionId' not found in catalog '$catalogId'")
         val version = req.version
         val minVersion = req.minVersion
         val versions = req.versions

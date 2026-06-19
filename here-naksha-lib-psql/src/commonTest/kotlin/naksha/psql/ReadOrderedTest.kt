@@ -49,7 +49,7 @@ class ReadOrderedTest : PgTestBase() {
     fun searchOrderedById() {
         executeRead(ReadFeatures().apply {
             catalogId = TEST_MAP_ID
-            collectionIds += collection.id
+            collectionId += collection.id
             orderBy = OrderBy.id()
             limit = ORDER_BY_ID_LIMIT
         }).apply {
@@ -63,7 +63,7 @@ class ReadOrderedTest : PgTestBase() {
 
         executeRead(ReadFeatures().apply {
             catalogId = TEST_MAP_ID
-            collectionIds += collection.id
+            collectionId += collection.id
             orderBy = OrderBy(MetaColumn.id(), order = SortOrder.ASCENDING)
             limit = ORDER_BY_ID_LIMIT
         }).apply {

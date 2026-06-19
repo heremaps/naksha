@@ -22,7 +22,7 @@ class ReadLimitTest : PgTestBase() {
         // When
         val readWithLimit = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             limit = 2
         })
 

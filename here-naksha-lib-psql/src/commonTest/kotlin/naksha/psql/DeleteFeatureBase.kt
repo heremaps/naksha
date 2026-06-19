@@ -50,7 +50,7 @@ abstract class DeleteFeatureBase(
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             featureIds += initialFeature.id
         }).let { // this = SuccessResponse
             val features = assertNotNull(it.features)
@@ -61,7 +61,7 @@ abstract class DeleteFeatureBase(
         // The tombstone is in HEAD and is NOT included unless queryDeleted=true is also set.
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             featureIds += initialFeature.id
             queryHistory = true
             versions = 10
@@ -74,7 +74,7 @@ abstract class DeleteFeatureBase(
         // verify if delete table contains element
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             featureIds += initialFeature.id
             queryDeleted = true
         }).apply { // this = SuccessResponse
@@ -137,7 +137,7 @@ abstract class DeleteFeatureBase(
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             featureIds += featureId
             queryDeleted = true
         }).apply {

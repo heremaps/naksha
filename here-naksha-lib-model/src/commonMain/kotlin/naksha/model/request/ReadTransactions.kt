@@ -14,7 +14,7 @@ import kotlin.js.JsExport
 open class ReadTransactions : ReadFeatures() {
     init {
         catalogId = Naksha.ADMIN_CATALOG_ID
-        collectionIds.add(Naksha.TRANSACTIONS_COL_ID)
+        collectionId.add(Naksha.TRANSACTIONS_COL_ID)
     }
 
     /**

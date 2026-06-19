@@ -58,7 +58,7 @@ class ActivityLogRequestTranslationUtil {
     readFeatures.setQueryHistory(true);
     readFeatures.setQueryDeleted(true);
     readFeatures.setVersions(Integer.MAX_VALUE);
-    readFeatures.setCollectionIds(StringList.of(spaceId));
+    readFeatures.setCollectionId(StringList.of(spaceId));
 
     // extract UUIDs from featureIds, reset featureIds
     StringList rawGuids = readFeatures.getFeatureIds();

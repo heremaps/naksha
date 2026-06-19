@@ -2,19 +2,38 @@
 
 package naksha.model.objects
 
+import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Int64
+import naksha.base.ListProxy
 import naksha.base.MapProxy
 import naksha.base.NotNullEnum
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
+import naksha.base.PlatformList
+import naksha.base.PlatformMap
 import naksha.base.Proxy
+import naksha.base.proxy
 import naksha.geo.SpGeometry
 import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
+import naksha.model.TagList
+import naksha.model.TagMap
 import naksha.model.TupleNumber
+import naksha.model.objects.ByteArrayMember
+import naksha.model.objects.Float32Member
+import naksha.model.objects.Float64Member
+import naksha.model.objects.Int16Member
+import naksha.model.objects.Int32Member
+import naksha.model.objects.Int64Member
+import naksha.model.objects.Int8Member
+import naksha.model.objects.SetMember
+import naksha.model.objects.SpatialMember
+import naksha.model.objects.StringMember
+import naksha.model.objects.TagsMember
+import naksha.model.objects.TupleNumberMember
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -302,6 +321,47 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
+     * Helper to read a [TagMap] form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun getTagMap(feature: MapProxy<*,*>): TagMap? {
+        val raw = feature.getPath(path)
+        if (raw is TagMap) return raw
+        if (raw is MapProxy<*,*>) return raw.proxy(TagMap::class)
+        if (raw is PlatformMap) return raw.proxy(TagMap::class)
+        return null
+    }
+
+    /**
+     * Helper to read a [TagMap] form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun getTagList(feature: MapProxy<*,*>): TagList? {
+        val raw = feature.getPath(path)
+        if (raw is TagList) return raw
+        if (raw is ListProxy<*>) return raw.proxy(TagList::class)
+        if (raw is PlatformList) return raw.proxy(TagList::class)
+        return null
+    }
+
+    // TODO: We need support for real sets!
+
+    /**
+     * Helper to read a set form the given feature.
+     * @param feature The feature to read from.
+     * @return the read value or `null`, if the feature does not store a valid value at the member path.
+     */
+    fun getSet(feature: MapProxy<*,*>): AnyList? {
+        val raw = feature.getPath(path)
+        if (raw is AnyList) return raw
+        if (raw is ListProxy<*>) return raw.proxy(AnyList::class)
+        if (raw is PlatformList) return raw.proxy(AnyList::class)
+        return null
+    }
+
+    /**
      * Helper to write a member value to the given feature.
      * @param feature The feature to write to.
      * @return the previous value.
@@ -318,4 +378,44 @@ open class Member() : AnyObject(), Comparator<Member> {
         private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath(listOf("properties", self.name)) }
         private val MANDATORY = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
     }
+
+    /**
+     * Returns the concrete subtype of this member.
+     * @return the concrete subtype of this member, for example [BoolMember]
+     * @since 3.0
+     */
+    fun subType(): Member {
+        val klass = this::class
+        if (klass != Member::class) return this
+        when (dataType) {
+            MemberType.BOOLEAN -> proxy(BoolMember::class)
+            MemberType.INT8 -> proxy(Int8Member::class)
+            MemberType.INT16 -> proxy(Int16Member::class)
+            MemberType.INT32 -> proxy(Int32Member::class)
+            MemberType.INT64 -> proxy(Int64Member::class)
+            MemberType.FLOAT32 -> proxy(Float32Member::class)
+            MemberType.FLOAT64 -> proxy(Float64Member::class)
+            MemberType.STRING -> proxy(StringMember::class)
+            MemberType.BYTE_ARRAY -> proxy(ByteArrayMember::class)
+            MemberType.TUPLE_NUMBER -> proxy(TupleNumberMember::class)
+            MemberType.SPATIAL -> proxy(SpatialMember::class)
+            MemberType.TAGS, MemberType.TAGS_FROM_ARRAY -> proxy(TagsMember::class)
+            MemberType.SET -> proxy(SetMember::class)
+        }
+        return this
+    }
+
+    fun asBool(): BoolMember = proxy(BoolMember::class)
+    fun asInt8(): Int8Member = proxy(Int8Member::class)
+    fun asInt16(): Int16Member = proxy(Int16Member::class)
+    fun asInt32(): Int32Member = proxy(Int32Member::class)
+    fun asInt64(): Int64Member = proxy(Int64Member::class)
+    fun asFloat32(): Float32Member = proxy(Float32Member::class)
+    fun asFloat64(): Float64Member = proxy(Float64Member::class)
+    fun asString(): StringMember = proxy(StringMember::class)
+    fun asByteArray(): ByteArrayMember = proxy(ByteArrayMember::class)
+    fun asTupleNumber(): TupleNumberMember = proxy(TupleNumberMember::class)
+    fun asSpatial(): SpatialMember = proxy(SpatialMember::class)
+    fun asTags(): TagsMember = proxy(TagsMember::class)
+    fun asSet(): SetMember = proxy(SetMember::class)
 }

@@ -113,7 +113,7 @@ public class ParallelQueryExecutor {
     final String collectionId = layer.getCollectionId();
     final ReadFeatures readRequest = request.copy(false);
     readRequest.setCatalogId(layer.getMapId());
-    readRequest.setCollectionIds(new StringList(collectionId));
+    readRequest.setCollectionId(new StringList(collectionId));
 
     final @NotNull Response readResponse = session.execute(readRequest);
     final FeatureTupleList featureList = getFeatureTuples(readResponse);

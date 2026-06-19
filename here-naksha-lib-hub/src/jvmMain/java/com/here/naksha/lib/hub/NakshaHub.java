@@ -387,7 +387,7 @@ public class NakshaHub implements INaksha {
 
   @Override
   public @NotNull ExtensionConfig getExtensionConfig() {
-    final ReadFeatures readRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS).withMapId(adminMapId);
+    final ReadFeatures readRequest = new ReadFeatures().withCollectionId(EVENT_HANDLERS).withCatalogId(adminMapId);
     final PQuery pQueryExists = new PQuery(new Property(EXTN_ID_PROP_PATH), AnyOp.EXISTS);
     final PQuery pQueryNotNull = new PQuery(new Property(EXTN_ID_PROP_PATH), AnyOp.IS_NOT_NULL);
     final IPropertyQuery propertyQuery = new PAnd(pQueryExists, pQueryNotNull);

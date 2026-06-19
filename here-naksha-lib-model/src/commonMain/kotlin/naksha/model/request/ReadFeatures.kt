@@ -7,6 +7,7 @@ import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.GuidList
 import naksha.model.Version
+import naksha.model.request.query.IMemberQuery
 import naksha.model.request.query.IPropertyQuery
 import naksha.model.request.query.ITagQuery
 import kotlin.js.JsExport
@@ -23,17 +24,17 @@ open class ReadFeatures : ReadRequest() {
 
     companion object ReadFeatures_C {
         private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
+        private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class) { _, _ -> StringList() }
         private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
         private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
         private val VERSION_OR_NULL = NullableProperty<ReadRequest, Version>(Version::class)
-        private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class)
         private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
         private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
         private val QUERY = NotNullProperty<ReadRequest, RequestQuery>(RequestQuery::class)
     }
 
     /**
-     * The id of the map from which to read.
+     * The id of the catalog from which to read.
      *
      * @since 3.0
      */
@@ -42,7 +43,7 @@ open class ReadFeatures : ReadRequest() {
     /**
      * @see [catalogId]
      */
-    open fun withMapId(value: String?): ReadFeatures {
+    open fun withCatalogId(value: String?): ReadFeatures {
         catalogId = value
         return this
     }
@@ -56,6 +57,7 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
+    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
     open fun withPropertyQuery(pQuery: IPropertyQuery?): ReadFeatures {
         this.query.properties = pQuery
         this.resultFilters.removeAll { it is PropertyFilter }
@@ -72,6 +74,7 @@ open class ReadFeatures : ReadRequest() {
      * This method comes handy if [IPropertyQuery] was mutated outside of this class scope,
      * in such cases we need to populate the filter once again so it will be in sync with the query
      */
+    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
     fun refreshPropertyFilter() {
         this.resultFilters.removeAll { it is PropertyFilter }
         if(query.properties != null) {
@@ -88,6 +91,7 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
+    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
     open fun withTagQuery(tQuery: ITagQuery?): ReadFeatures {
         this.query.tags = tQuery
         return this
@@ -97,31 +101,16 @@ open class ReadFeatures : ReadRequest() {
      * Ids of collections to read.
      * @since 3.0
      */
-    var collectionIds by STRING_LIST
+    var collectionId: String? by STRING_OR_NULL
 
     /**
-     * Adds the given collection-id into [collectionIds], if it is not already in it.
-     * @param collectionId the collection-id to add.
+     * Sets the collection-id into [collectionId].
+     * @param collectionId the collection-id to set.
      * @return this.
      * @since 3.0
      */
-    open fun addCollectionId(collectionId: String?): ReadFeatures {
-        if (!collectionIds.contains(collectionId)) collectionIds.add(collectionId)
-        return this
-    }
-
-    /**
-     * Adds the given collection-ids into [collectionIds], if it is not already in it.
-     * @param collectionIds the collection-ids to add.
-     * @return this.
-     * @since 3.0
-     */
-    open fun addCollectionIds(vararg collectionIds: String): ReadFeatures {
-        val ids = this.collectionIds
-        @Suppress("SENSELESS_COMPARISON")
-        if (collectionIds != null && collectionIds.isNotEmpty()) {
-            for (id in collectionIds) if (!ids.contains(id)) ids.add(id)
-        }
+    open fun withCollectionId(collectionId: String?): ReadFeatures {
+        this.collectionId = collectionId
         return this
     }
 
@@ -190,10 +179,9 @@ open class ReadFeatures : ReadRequest() {
 
     /**
      * Add all features that match the given IDs into the result-set.
-     *
-     * If more complex queries are need, please use a [MemberQuery][naksha.model.request.query.MemberQuery], see [query].
      * @since 3.0.0
      */
+    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
     var featureIds: StringList by STRING_LIST
 
     /**
@@ -210,7 +198,20 @@ open class ReadFeatures : ReadRequest() {
      * Add all features that match the given query into the result-set.
      * @since 3.0.0
      */
+    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
     var query: RequestQuery by QUERY
+
+    /**
+     * Search for [members][naksha.model.objects.Member]s.
+     *
+     * This method now supports to search for all custom defined members. It allows arbitrary combination.
+     * @since 3.0
+     */
+    var memberQuery: IMemberQuery?
+        get() = query.members
+        set(value) {
+            query.members = value
+        }
 
     /**
      * Tests whether this request is effectively a query for all features in their current **HEAD** state,

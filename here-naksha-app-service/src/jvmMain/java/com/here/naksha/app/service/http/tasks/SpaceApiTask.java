@@ -132,7 +132,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   private @NotNull XyzResponse executeGetSpaces() {
-    final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
+    final ReadFeatures request = new ReadFeatures().withCollectionId(SPACES);
     request.setCatalogId(naksha().getAdminMapId());
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzCollectionResponse(response, Space.class, 0, DEF_ADMIN_FEATURE_LIMIT, null, null);
@@ -140,7 +140,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private @NotNull XyzResponse executeGetSpaceById() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
+    final ReadFeatures request = new ReadFeatures().withCollectionId(SPACES);
     request.setCatalogId(naksha().getAdminMapId());
     request.setFeatureIds(StringList.of(spaceId));
     Response response = executeReadRequestFromSpaceStorage(request);

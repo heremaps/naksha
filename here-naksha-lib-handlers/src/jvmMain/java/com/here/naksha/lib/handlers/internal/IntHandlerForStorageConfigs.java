@@ -108,8 +108,8 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Naksha
     final Property property =
         new Property(NakshaFeature.PROPERTIES_KEY, DefaultStorageHandlerProperties.STORAGE_ID);
     final PQuery activeHandlersPOp = new PQuery(property, StringOp.EQUALS, storageId);
-    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS)
-            .withMapId(nakshaHub.getAdminMapId())
+    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().withCollectionId(EVENT_HANDLERS)
+            .withCatalogId(nakshaHub.getAdminMapId())
             .withPropertyQuery(activeHandlersPOp);
     Response activeHandlersResponse = nakshaHub().getAdminStorage()
         .useReadSession(SessionOptions.from(NakshaContext.currentContext()), readSession -> readSession.execute(readActiveHandlersRequest));

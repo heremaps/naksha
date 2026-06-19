@@ -94,7 +94,7 @@ public class NHAdminReaderMock implements IReadSession {
   }
 
   protected @NotNull Response executeReadFeatures(@NotNull ReadFeatures rf) {
-    List<NakshaFeature> features = getFeatures(rf.getCollectionIds(), rf.getFeatureIds(), rf.getQuery());
+    List<NakshaFeature> features = getFeatures(rf.getCollectionId(), rf.getFeatureIds(), rf.getQuery());
     SuccessResponse response = new SuccessResponse();
     response.setFeatures(NakshaFeatureList.fromList(features));
     return response;

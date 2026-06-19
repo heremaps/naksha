@@ -1,0 +1,34 @@
+package naksha.model.objects
+
+import naksha.model.illegalArg
+import naksha.model.illegalState
+import naksha.model.objects.MemberType.MemberType_C.FLOAT32
+import kotlin.js.JsName
+
+class Float32Member() : TypedMember<Float32Member>() {
+    override fun verify(): Float32Member {
+        if (dataType != FLOAT32) {
+            throw illegalState("The member was illegally cast, expected subtype: $FLOAT32, found: $dataType")
+        }
+        return this
+    }
+
+    @JsName("of")
+    constructor(name: String, path: JsonPath? = null) : this() {
+        this.name = name
+        this.dataType = FLOAT32
+        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path.validate()
+    }
+
+    @JsName("from")
+    constructor(member: Member, path: JsonPath? = null) : this() {
+        if (member.dataType != FLOAT32) throw illegalArg("The given member is not of float32 type")
+        this.name = member.name
+        this.dataType = FLOAT32
+        this.path = path?.validate() ?: member.path
+    }
+
+    fun get(feature: NakshaFeature): Float? = getDouble(feature)?.toFloat()
+    fun set(feature: NakshaFeature, value: Float): Any? = setPath(feature, path, value)
+}

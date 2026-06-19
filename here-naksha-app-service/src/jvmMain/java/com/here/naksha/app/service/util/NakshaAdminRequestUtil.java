@@ -49,7 +49,7 @@ public class NakshaAdminRequestUtil {
   private static ReadFeatures getAdminResourcesRequest(INaksha naksha, String resourceCollection) {
     ReadFeatures readFeatures = new ReadFeatures();
     readFeatures.setCatalogId(naksha.getAdminMapId());
-    readFeatures.addCollectionId(resourceCollection);
+    readFeatures.withCollectionId(resourceCollection);
     return readFeatures;
   }
 

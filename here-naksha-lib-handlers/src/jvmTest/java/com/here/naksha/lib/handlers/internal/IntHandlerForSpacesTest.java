@@ -187,7 +187,7 @@ class IntHandlerForSpacesTest {
   }
 
   private ArgumentMatcher<ReadFeatures> anyReadHandlersRequest() {
-    return argument -> argument.getCollectionIds().size() == 1 && EVENT_HANDLERS.equals(argument.getCollectionIds().get(0));
+    return argument -> argument.getCollectionId().size() == 1 && EVENT_HANDLERS.equals(argument.getCollectionId().get(0));
   }
 
   private static SuccessResponse successfulResponseWithIds(List<String> ids) {

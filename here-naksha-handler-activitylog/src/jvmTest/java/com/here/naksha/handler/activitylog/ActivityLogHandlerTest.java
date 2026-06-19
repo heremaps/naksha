@@ -463,7 +463,7 @@ class ActivityLogHandlerTest {
 
   private boolean isHistoryAwareReadFeatures(ReadRequest readRequest) {
     if (readRequest instanceof ReadFeatures rf) {
-      return rf.getQueryHistory() && rf.getCollectionIds().size() == 1;
+      return rf.getQueryHistory() && rf.getCollectionId().size() == 1;
     }
     return false;
   }

@@ -30,14 +30,16 @@ open class JsonPath() : AnyList() {
 
     /**
      * Tests whether the path is valid, if not, throws an [NakshaException] with [ILLEGAL_STATE] error. Actually, the path must only contain strings and integers.
+     * @return this.
      * @since 3.0
      */
-    fun validate() {
+    fun validate(): JsonPath {
         for (i in 0 until this.size) {
             val segment = this[i] ?: throw NakshaException(ILLEGAL_STATE, "Illegal NULL at path position $i")
             if (segment !is String && segment !is Int) {
                 throw NakshaException(ILLEGAL_STATE, "Illegal value at path position $i, must be string or integer, found: '$segment'")
             }
         }
+        return this
     }
 }

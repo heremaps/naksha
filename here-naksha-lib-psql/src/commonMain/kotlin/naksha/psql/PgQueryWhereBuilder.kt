@@ -8,29 +8,34 @@ import naksha.base.StringList
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
 import naksha.model.*
+import naksha.model.objects.Member
 import naksha.model.objects.StandardMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
 import naksha.psql.PgColumn.PgColumn_C.FN
+import naksha.psql.PgColumn.PgColumn_C.VERSION
 
 /**
  * Helper to convert a [ReadFeatures] request into a sql `WHERE` query.
  *
  * The collection need to be provided, because they potentially _(when not cached)_ need to be read from the database, therefore, they require a session. We do not want to link this code to a session _(it would break unit testing)_, so we simply expect the collections as input parameter.
  * @param request the request to wrap.
- * @param collections the collections for which to generate the `WHERE` queries.
+ * @param collection the collection for which to generate the `WHERE` query.
  * @since 3.0
  * @see [build]
  */
-internal class PgQueryWhereBuilder(private val request: ReadFeatures, private val collections: List<PgCollection>) {
-    private val queries: MutableMap<PgCollection, PgQueryWhereClause> = mutableMapOf()
+internal class PgQueryWhereBuilder(private val request: ReadFeatures, private val collection: PgCollection) {
+
+    val where = StringBuilder()
+    val argValues: MutableList<Any?> = mutableListOf()
+    val argTypes: MutableList<PgType> = mutableListOf()
 
     /**
      * Convert the request into `WHERE` queries.
      * @return the [PgQueryWhereClause] for each collection given.
      * @since 3.0
      */
-    fun build(): Map<PgCollection, PgQueryWhereClause> {
+    fun build(): PgQueryWhereClause {
         whereFeatureId()
         whereGuids()
         whereVersion()
@@ -38,16 +43,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         whereSpatial()
         whereRefTiles()
         whereTags()
-        return queries
-    }
-
-    private fun queryOf(collection: PgCollection): PgQueryWhereClause {
-        var query = queries[collection]
-        if (query == null) {
-            query = PgQueryWhereClause(collection)
-            queries[collection] = query
-        }
-        return query
+        return PgQueryWhereClause(collection, where.toString(), argValues, argTypes)
     }
 
     private fun whereFeatureId() {
@@ -67,61 +63,51 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         if (featureNumbers.isEmpty() && featureIds.isEmpty()) return
 
         // For each collection:
-        for (collection in collections) {
-            val query: PgQueryWhereClause = queryOf(collection)
-            val where: StringBuilder = query.where
-            if (where.isNotEmpty()) where.append(" AND ")
+        if (where.isNotEmpty()) where.append(" AND ")
 
-            where.append("( ")
-            if (featureIds.isNotEmpty()) {
-                val placeholder: String = placeholderForArg(featureIds.toTypedArray(), PgType.STRING_ARRAY)
-                val ID = collection.column(StandardMembers.Id) ?: throw illegalArg("Collection does not defined `id` column")
-                where.append(ID.ident).append(" = ANY(").append(placeholder).append(")")
-            }
-            if (featureNumbers.isNotEmpty()) {
-                if (featureIds.isNotEmpty()) where.append(" OR ")
-
-                val placeholder: String = placeholderForArg(featureNumbers.toTypedArray<Any?>(), PgType.INT64_ARRAY)
-                if (where.isNotEmpty()) where.append(" AND ")
-                where.append(FN.ident).append(" = ANY(").append(placeholder).append(")")
-
-                conditions += "${PgColumn.fn} = ANY($placeholder)"
-            }
-            if (conditions.isNotEmpty()) {
-                if (query.isNotEmpty()) query.append(" AND ")
-                if (conditions.size == 1) query.append(conditions[0])
-                else query.append("(${conditions.joinToString(" OR ")})")
-            }
-            where.append(")")
+        where.append("( ")
+        if (featureIds.isNotEmpty()) {
+            val placeholder: String = placeholderForArg(featureIds.toTypedArray(), PgType.STRING_ARRAY)
+            val ID = collection.column(StandardMembers.Id) ?: throw illegalArg("Collection does not defined `id` column")
+            where.append(ID.ident).append(" = ANY(").append(placeholder).append(")")
         }
+        if (featureNumbers.isNotEmpty()) {
+            if (featureIds.isNotEmpty()) where.append(" OR ")
+
+            val placeholder: String = placeholderForArg(featureNumbers.toTypedArray<Any?>(), PgType.INT64_ARRAY)
+            if (where.isNotEmpty()) where.append(" AND ")
+            where.append(FN.ident).append(" = ANY(").append(placeholder).append(")")
+        }
+        where.append(")")
     }
 
     private fun whereGuids() {
         val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber }
         if (tupleNumbers.isNotEmpty()) {
             if (where.isNotEmpty()) where.append(" AND ")
+
             val fns = arrayOfNulls<Any>(tupleNumbers.size)
             val versions = arrayOfNulls<Any>(tupleNumbers.size)
             for (i in tupleNumbers.indices) {
                 fns[i] = tupleNumbers[i].featureNumber
                 versions[i] = tupleNumbers[i].version
             }
-            val fnPlaceholder = placeholderForArg(fns, PgType.INT64_ARRAY)
-            val versionPlaceholder = placeholderForArg(versions, PgType.INT64_ARRAY)
-            where.append("(${PgColumn.fn}, ${PgColumn.version}) IN (SELECT * FROM unnest($fnPlaceholder::int8[], $versionPlaceholder::int8[]))")
+            val featureNumbersArg = placeholderForArg(fns, PgType.INT64_ARRAY)
+            val versionsArg = placeholderForArg(versions, PgType.INT64_ARRAY)
+            where.append("($FN, $VERSION) IN (SELECT * FROM unnest($featureNumbersArg::int8[], $versionsArg::int8[]))")
         }
     }
 
     private fun whereVersion() {
-        val txn = request.version
-        if (txn != null) {
+        val version = request.version
+        if (version != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("${PgColumn.version} <= ${txn.number}")
+            where.append("$VERSION <= ${version.number}")
         }
-        val min_txn = request.minVersion
-        if (min_txn != null) {
+        val minVersion = request.minVersion
+        if (minVersion != null) {
             if (where.isNotEmpty()) where.append(" AND ")
-            where.append("${PgColumn.version} >= ${min_txn.number}")
+            where.append("$VERSION >= ${minVersion.number}")
         }
     }
 

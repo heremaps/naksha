@@ -175,7 +175,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
     }
     MemberQuery nextVersionQuery = new MemberQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, versions);
     ReadFeatures requestPredecessors = new ReadFeatures();
-    requestPredecessors.setCollectionIds(StringList.of(properties.getSpaceId()));
+    requestPredecessors.setCollectionId(StringList.of(properties.getSpaceId()));
     requestPredecessors.setQueryHistory(true);
     requestPredecessors.getQuery().setMembers(nextVersionQuery);
     return requestPredecessors;

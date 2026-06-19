@@ -179,6 +179,6 @@ public class FfwInterfaceReadExecute {
   }
 
   private static String baseEndpoint(ReadFeaturesProxyWrapper request) {
-    return request.getCollectionIds().get(0);
+    return request.getCollectionId().get(0);
   }
 }

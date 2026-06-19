@@ -82,7 +82,7 @@ class ReadHistoryTest : PgTestBase() {
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds.add(collection.id)
+            collectionId.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
             queryDeleted = true
@@ -122,7 +122,7 @@ class ReadHistoryTest : PgTestBase() {
 
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds.add(collection.id)
+            collectionId.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
             queryDeleted = true
@@ -144,7 +144,7 @@ class ReadHistoryTest : PgTestBase() {
 
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds.add(collection.id)
+            collectionId.add(collection.id)
             featureIds.add(featureId)
             queryHistory = true
             version = updatedFeature2.guid!!.tupleNumber.version

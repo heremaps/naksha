@@ -234,7 +234,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             query.members = MemberAnd(
                 MemberQuery(MetaColumn.author(), StringOp.EQUALS, author),
                 MemberQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
@@ -392,7 +392,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             query.members = MemberOr(
                 MemberQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
                 MemberQuery(MetaColumn.appId(), StringOp.STARTS_WITH, appId.substring(0, 2))
@@ -422,7 +422,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         // And: History table is queried for everything besides CREATED
         val getHistoryWithoutUpdates = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             queryHistory = true
             queryDeleted = true
             query = RequestQuery().apply {
@@ -442,7 +442,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
         insertFeature(feature = feature)
         val persistedFeatureResponse =  executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             featureIds += feature.id
         })
         val persistedFeatures = persistedFeatureResponse.features
@@ -455,7 +455,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
     private fun executeMetaQuery(metaQuery: IMemberQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionIds += collection.id
+            collectionId += collection.id
             query.members = metaQuery
         })
     }

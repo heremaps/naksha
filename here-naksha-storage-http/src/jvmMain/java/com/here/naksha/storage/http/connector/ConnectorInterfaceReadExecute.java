@@ -168,7 +168,7 @@ public class ConnectorInterfaceReadExecute {
     }
 
     private static String firstCollectionIdOrThrow(ReadFeaturesProxyWrapper request) {
-        StringList ids = request.getCollectionIds();
+        StringList ids = request.getCollectionId();
         if (ids == null || ids.isEmpty()) {
             throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
                     "collectionIds must contain at least one non-empty id");
