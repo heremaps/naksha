@@ -95,9 +95,9 @@ open class PgSession(
     }
 
     /**
-     * Assert that this session mutable.
-     * - Throws [NakshaError.ILLEGAL_STATE] if this session is [closed][isClosed].
+     * Assert that this session is closed.
      * @since 3.0
+     * @throws NakshaException with [ILLEGAL_STATE] if this session is [closed][isClosed].
      */
     fun assertOpen() {
         if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
@@ -490,50 +490,43 @@ SELECT * FROM from_hst"""
         return found
     }
 
-    override fun getCatalogById(catalogId: String): NakshaCatalog? {
-        assertOpen()
-        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminCatalog.getPgCatalogById(it.conn, catalogId)?.head
-        }
-    }
+    override fun getCatalogById(catalogId: String): NakshaCatalog? = getPgCatalogById(catalogId)?.head
 
     /**
      * Returns the [PgCatalog] for the given id.
-     * @param mapId the map-id.
+     * @param catalogId the catalog-id.
      * @return the [PgCatalog]; _null_ if the map does not yet exist.
      */
-    fun getPgMapById(mapId: String): PgCatalog? {
+    fun getPgCatalogById(catalogId: String): PgCatalog? {
+        val adminCatalog = storage.adminCatalog
+        val cachedCatalog = adminCatalog.getPgCatalogById(null, catalogId)
+        if (cachedCatalog != null) return cachedCatalog
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminCatalog.getPgCatalogById(it.conn, mapId)
+            adminCatalog.getPgCatalogById(it.conn, catalogId)
         }
     }
 
-    override fun getMapByNumber(catalogNumber: Int): NakshaCatalog? {
-        assertOpen()
-        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminCatalog.getPgCatalogByNumber(it.conn, catalogNumber)?.head
-        }
-    }
+    override fun getCatalogByNumber(catalogNumber: Int): NakshaCatalog? = getPgCatalogByNumber(catalogNumber)?.head
 
     /**
      * Returns the [PgCatalog] for the given number.
-     * @param mapNumber the map-number.
+     * @param catalogNumber the catalog-number.
      * @return the [PgCatalog]; _null_ if the map does not yet exist.
      */
-    fun getPgMapByNumber(mapNumber: Int): PgCatalog? {
+    fun getPgCatalogByNumber(catalogNumber: Int): PgCatalog? {
+        val adminCatalog = storage.adminCatalog
+        val cachedCatalog = adminCatalog.getPgCatalogByNumber(null, catalogNumber)
+        if (cachedCatalog != null) return cachedCatalog
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminCatalog.getPgCatalogByNumber(it.conn, mapNumber)
+            adminCatalog.getPgCatalogByNumber(it.conn, catalogNumber)
         }
     }
 
     override fun getCollectionById(catalog: NakshaCatalog, collectionId: String): NakshaCollection? {
-        assertOpen()
-        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            val pgMap = storage.adminCatalog.getPgCatalogById(it.conn, catalog.id) ?: return null
-            pgMap.getPgCollectionById(it.conn, collectionId)?.head
-        }
+        val pgCatalog = getPgCatalogById(catalog.id) ?: return null
+        return getPgCollectionById(pgCatalog, collectionId)?.head
     }
 
     /**
@@ -543,6 +536,8 @@ SELECT * FROM from_hst"""
      * @return the [PgCollection]; _null_ if the collection does not yet exist.
      */
     fun getPgCollectionById(pgCatalog: PgCatalog, collectionId: String): PgCollection? {
+        val cachedCollection = pgCatalog.getPgCollectionById(null, collectionId)
+        if (cachedCollection != null) return cachedCollection
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
             pgCatalog.getPgCollectionById(it.conn, collectionId)
@@ -550,11 +545,8 @@ SELECT * FROM from_hst"""
     }
 
     override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int): NakshaCollection? {
-        assertOpen()
-        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            val pgMap = storage.adminCatalog.getPgCatalogById(it.conn, catalog.id) ?: return null
-            pgMap.getPgCollectionByNumber(it.conn, collectionNumber)?.head
-        }
+        val pgCatalog = getPgCatalogById(catalog.id) ?: return null
+        return getPgCollectionByNumber(pgCatalog, collectionNumber)?.head
     }
 
     /**
@@ -564,6 +556,8 @@ SELECT * FROM from_hst"""
      * @return the [PgCollection]; _null_ if the collection does not yet exist.
      */
     fun getPgCollectionByNumber(pgCatalog: PgCatalog, collectionNumber: Int): PgCollection? {
+        val cachedCollection = pgCatalog.getPgCollectionByNumber(null, collectionNumber)
+        if (cachedCollection != null) return cachedCollection
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
             pgCatalog.getPgCollectionByNumber(it.conn, collectionNumber)

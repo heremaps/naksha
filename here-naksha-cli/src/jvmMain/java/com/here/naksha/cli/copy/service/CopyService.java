@@ -115,7 +115,7 @@ public final class CopyService {
         readFeatures.setCollectionIds(
                 StringList.of(source.getCollectionId())
         );
-        readFeatures.setMapId(source.getMapId());
+        readFeatures.setCatalogId(source.getMapId());
 
         return readFeatures;
     }

@@ -351,7 +351,7 @@ public class ViewTest {
 
     // And
     ReadFeatures readFeatures = new ReadFeatures();
-    readFeatures.setMapId(TEST_MAP_ID);
+    readFeatures.setCatalogId(TEST_MAP_ID);
     readFeatures.setCollectionIds(new StringList(firstLayer.getCollectionId(), secondLayer.getCollectionId(), thirdLayer.getCollectionId()));
 
     // When

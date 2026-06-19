@@ -93,7 +93,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // READ FEATURE HISTORY
         Naksha.cache.clear()
         val readResp = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
@@ -260,7 +260,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
     private fun fetchSingleFeature(id: String): NakshaFeature {
         Naksha.cache.clear()
         val readFeatureResp = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += id
         })

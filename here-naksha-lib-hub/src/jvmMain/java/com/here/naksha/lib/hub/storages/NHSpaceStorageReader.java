@@ -342,7 +342,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapByNumber(int catalogNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber) {
     throw NOT_SUPPORTED_ERROR;
   }
 

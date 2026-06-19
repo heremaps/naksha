@@ -49,7 +49,7 @@ abstract class DeleteFeatureBase(
         // Verify that the feature does not exist
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
         }).let { // this = SuccessResponse
@@ -60,7 +60,7 @@ abstract class DeleteFeatureBase(
         // queryHistory=true (without queryDeleted) returns only past states from the history table.
         // The tombstone is in HEAD and is NOT included unless queryDeleted=true is also set.
         executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true
@@ -73,7 +73,7 @@ abstract class DeleteFeatureBase(
 
         // verify if delete table contains element
         executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryDeleted = true
@@ -136,7 +136,7 @@ abstract class DeleteFeatureBase(
         // Confirm the tombstone is visible via queryDeleted and has the right action.
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureId
             queryDeleted = true

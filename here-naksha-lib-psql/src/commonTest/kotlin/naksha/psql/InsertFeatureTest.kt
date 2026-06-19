@@ -30,7 +30,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
@@ -104,7 +104,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
@@ -148,7 +148,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureToCreate.id
         })
@@ -193,7 +193,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And: reading all features from collection
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
 //            this.version = version
 //            this.minVersion = version
@@ -238,7 +238,7 @@ class InsertFeatureTest : PgTestBase() {
         Platform.logger.info("Clear cache and reload feature from database")
         Naksha.cache.clear(storage)
         val featuresByIdResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds.add(firstFeatureToCreate.id)
         })
@@ -258,7 +258,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // Read only one feature by bounding box.
         val featuresByBBox = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             query.spatial =
                 SpIntersects(SpBoundingBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())
@@ -284,7 +284,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // When: reading both features in a single request with mixed IDs
         val readResponse = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += numericId
             featureIds += namedFeature.id

@@ -798,7 +798,7 @@ class CopyServiceTest {
         ReadFeatures readFeatures = readFeaturesList.getFirst();
         assertEquals(1, readFeatures.getCollectionIds().getSize());
         assertEquals(srcCopyElement.getCollectionId(), readFeatures.getCollectionIds().getFirst());
-        assertEquals(srcCopyElement.getMapId(), readFeatures.getMapId());
+        assertEquals(srcCopyElement.getMapId(), readFeatures.getCatalogId());
     }
 
     private IStorage createFailingSrcStorage() {

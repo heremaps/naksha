@@ -35,7 +35,7 @@ class UpsertFeatureTest : PgTestBase() {
 
         // And: Retrieving feature by id
         val retrievedFeatures = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += initialFeature.id
             queryHistory = true

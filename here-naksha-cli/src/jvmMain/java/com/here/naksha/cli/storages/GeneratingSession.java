@@ -115,7 +115,7 @@ final class GeneratingSession implements IReadSession {
 
     @Nullable
     @Override
-    public NakshaCatalog getMapByNumber(int catalogNumber) {
+    public NakshaCatalog getCatalogByNumber(int catalogNumber) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 

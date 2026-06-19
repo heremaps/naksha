@@ -125,7 +125,7 @@ interface ISession : AutoCloseable {
      * @return the catalog; _null_ if no such catalog exists.
      * @since 3.0
      */
-    fun getMapByNumber(catalogNumber: Int): NakshaCatalog?
+    fun getCatalogByNumber(catalogNumber: Int): NakshaCatalog?
 
     /**
      * Returns the collection for the given identifier.

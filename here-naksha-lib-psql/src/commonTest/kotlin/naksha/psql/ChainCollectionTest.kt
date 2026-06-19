@@ -95,7 +95,7 @@ class ChainCollectionTest : PgTestBase(
 
         // When: reading all three back by their numeric IDs in one request
         val response = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += headFn.toString()
             featureIds += midFn.toString()
@@ -187,7 +187,7 @@ class ChainCollectionTest : PgTestBase(
 
         // When: reading all features from this collection (no ID filter)
         val all = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
         })
 

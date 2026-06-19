@@ -45,7 +45,7 @@ public class RequestHelper {
       final @NotNull String featureId
   ) {
     final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
-    readFeatures.setMapId(mapId);
+    readFeatures.setCatalogId(mapId);
     readFeatures.getFeatureIds().add(featureId);
     return readFeatures;
   }
@@ -63,7 +63,7 @@ public class RequestHelper {
       final @NotNull List<String> featureIds
   ) {
     final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
-    readFeatures.setMapId(mapId);
+    readFeatures.setCatalogId(mapId);
     readFeatures.getFeatureIds().addAll(featureIds);
     return readFeatures;
   }

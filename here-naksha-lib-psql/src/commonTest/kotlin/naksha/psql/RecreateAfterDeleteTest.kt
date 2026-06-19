@@ -40,7 +40,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         )
         Naksha.cache.clear()
         val updated = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureId
         }).features.first()!!
@@ -54,7 +54,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         // Confirm tombstone is visible via queryDeleted=true
         Naksha.cache.clear()
         val deleted = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureId
             queryDeleted = true
@@ -65,7 +65,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         // Confirm feature is invisible in a normal read
         Naksha.cache.clear()
         val notFound = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureId
         })
@@ -85,7 +85,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         // Confirm feature is visible again in a normal read
         Naksha.cache.clear()
         val found = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureId
         })
@@ -96,7 +96,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         // History after auto-purge: DELETED (archived tombstone), UPDATED, CREATED (old lifecycle).
         // Total = 1 (HEAD) + 3 (history) = 4, in descending version order.
         val historyOnly = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureId
             queryHistory = true
@@ -111,7 +111,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         // queryHistory + queryDeleted: same result — no tombstone in HEAD (was auto-purged),
         // so queryDeleted=true adds nothing here.
         val full = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += featureId
             queryHistory = true

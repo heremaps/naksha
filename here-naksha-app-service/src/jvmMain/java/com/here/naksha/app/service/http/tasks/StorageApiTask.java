@@ -104,7 +104,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
 
   private @NotNull XyzResponse executeGetStorages() {
     final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
-    request.setMapId(naksha().getAdminMapId());
+    request.setCatalogId(naksha().getAdminMapId());
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzCollectionResponse(response, NakshaStorage.class, STORAGE_MASKING);
   }
@@ -112,7 +112,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   private @NotNull XyzResponse executeGetStorageById() {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
     final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
-    request.setMapId(naksha().getAdminMapId());
+    request.setCatalogId(naksha().getAdminMapId());
     request.setFeatureIds(StringList.of(storageId));
     return transformedResponseTo(request);
   }

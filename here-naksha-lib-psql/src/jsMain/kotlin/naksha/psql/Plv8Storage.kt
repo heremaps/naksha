@@ -36,10 +36,6 @@ class Plv8Storage : PgStorage() {
         TODO("Not yet implemented")
     }
 
-    override fun getDataEncoding(feature: Any?, context: Any?): DataEncoding {
-        TODO("Not yet implemented")
-    }
-
     override fun getDictionary(id: String): JbDictionary? {
         TODO("Not yet implemented")
     }

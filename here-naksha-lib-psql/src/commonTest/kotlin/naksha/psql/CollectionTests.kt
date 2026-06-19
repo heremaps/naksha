@@ -52,7 +52,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         // Then: this collection is queryable and empty
         val readAllFromCollection = ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
         }
         val collectionContent = executeRead(readAllFromCollection)
@@ -60,7 +60,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
@@ -207,7 +207,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
 
         val readFeatureRequest = ReadFeatures()
-        readFeatureRequest.mapId = map.id
+        readFeatureRequest.catalogId = map.id
         readFeatureRequest.collectionIds.add(collectionName)
         readFeatureRequest.featureIds.add(feature.id)
         val readFeaturesResponse = executeRead(readFeatureRequest)
@@ -280,7 +280,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         feature = featureCreateResponse.features[0]!!
 
         val readFeature = ReadFeatures()
-        readFeature.mapId = map.id
+        readFeature.catalogId = map.id
         readFeature.collectionIds.add(collectionId)
         readFeature.featureIds.add(feature.id)
         val readFeatureResponse = executeRead(readFeature)
@@ -330,7 +330,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
-            mapId = map.id
+            catalogId = map.id
             collectionIds += Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }

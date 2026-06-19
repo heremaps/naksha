@@ -261,7 +261,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapByNumber(int catalogNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber) {
     throw new UnsupportedOperationException();
   }
 

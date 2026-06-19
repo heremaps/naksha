@@ -141,7 +141,7 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapByNumber(int catalogNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber) {
     return null;
   }
 

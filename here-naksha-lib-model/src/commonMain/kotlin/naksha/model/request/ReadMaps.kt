@@ -71,7 +71,7 @@ open class ReadMaps() : ReadRequest() {
      */
     fun toReadFeatures(): ReadFeatures {
         val req = ReadFeatures()
-        req.mapId = Naksha.ADMIN_CATALOG_ID
+        req.catalogId = Naksha.ADMIN_CATALOG_ID
         req.collectionIds.add(Naksha.CATALOGS_COL_ID)
         req.featureIds.addAll(mapIds)
         return req

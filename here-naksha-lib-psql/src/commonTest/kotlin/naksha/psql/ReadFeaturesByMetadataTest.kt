@@ -233,7 +233,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             query.members = MemberAnd(
                 MemberQuery(MetaColumn.author(), StringOp.EQUALS, author),
@@ -391,7 +391,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And: execute
         val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             query.members = MemberOr(
                 MemberQuery(MetaColumn.author(), StringOp.EQUALS, "this_is_totally_off"),
@@ -421,7 +421,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // And: History table is queried for everything besides CREATED
         val getHistoryWithoutUpdates = ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             queryHistory = true
             queryDeleted = true
@@ -441,7 +441,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
     private fun insertFeatureAndGetXyz(feature: NakshaFeature): XyzNs {
         insertFeature(feature = feature)
         val persistedFeatureResponse =  executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += feature.id
         })
@@ -454,7 +454,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
     private fun executeMetaQuery(metaQuery: IMemberQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             query.members = metaQuery
         })

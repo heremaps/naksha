@@ -289,7 +289,7 @@ class PsqlCopyTest {
         readFeatures.setCollectionIds(
                 StringList.of(collectionId)
         );
-        readFeatures.setMapId(mapId);
+        readFeatures.setCatalogId(mapId);
 
         return readFeatures;
     }

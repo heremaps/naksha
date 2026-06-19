@@ -13,7 +13,7 @@ import kotlin.js.JsExport
 @JsExport
 open class ReadTransactions : ReadFeatures() {
     init {
-        mapId = Naksha.ADMIN_CATALOG_ID
+        catalogId = Naksha.ADMIN_CATALOG_ID
         collectionIds.add(Naksha.TRANSACTIONS_COL_ID)
     }
 

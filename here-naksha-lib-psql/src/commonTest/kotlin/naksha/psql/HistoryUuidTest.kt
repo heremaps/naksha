@@ -40,7 +40,7 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
         // And:
         Naksha.cache.clear()
         val featureVersions = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += feature.id
             queryHistory = true
@@ -87,7 +87,7 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
         // And:
         Naksha.cache.clear()
         val featureVersions = executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
             featureIds += feature.id
             queryHistory = true

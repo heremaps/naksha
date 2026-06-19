@@ -37,13 +37,13 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
-    var mapId by STRING_OR_NULL
+    var catalogId by STRING_OR_NULL
 
     /**
-     * @see [mapId]
+     * @see [catalogId]
      */
     open fun withMapId(value: String?): ReadFeatures {
-        mapId = value
+        catalogId = value
         return this
     }
 

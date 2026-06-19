@@ -38,12 +38,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.Stream;
 
 import naksha.base.Int64;
-import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.model.*;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -114,7 +112,7 @@ public class ParallelQueryExecutor {
     int layerPriority = view.getViewCollection().priorityOf(layer);
     final String collectionId = layer.getCollectionId();
     final ReadFeatures readRequest = request.copy(false);
-    readRequest.setMapId(layer.getMapId());
+    readRequest.setCatalogId(layer.getMapId());
     readRequest.setCollectionIds(new StringList(collectionId));
 
     final @NotNull Response readResponse = session.execute(readRequest);

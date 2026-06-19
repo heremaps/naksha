@@ -35,7 +35,7 @@ class ReadFeaturesAll : PgTestBase() {
     @Test
     fun shouldReturnAllFeatures() {
         executeRead(ReadFeatures().apply {
-            mapId = collection.catalogId
+            catalogId = collection.catalogId
             collectionIds += collection.id
         }).apply {
             assertEquals(COUNT, features.size)
