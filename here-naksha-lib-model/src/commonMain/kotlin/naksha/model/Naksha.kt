@@ -106,6 +106,19 @@ class Naksha private constructor() {
          */
         const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
 
+        // TODO: This shows why we really need a special TupleNumberArray next to TupleNumberList, which stores all tuple-numbers in a single
+        //       byte-array, compressed by adding the database-number, catalog-number and collection-number upfront, then followed by all the
+        //       tuple-numbers. It will reduce memory consumption from 1 GiB to around 256 MiB.
+
+        /**
+         * The maximum amount of tuple that can be fetched using normal query methods.
+         *
+         * This protects the database and client for too big data. When reading tuples, each tuple-number is actually returned from the storage as 16-byte value, so feature-number and version. The Java client then adds database-number, catalog-number and collection-number. Therefore, the maximum amount of data transferred when fetching this amount of tuple is roughly `HARD_READ_LIMIT * 16`. This can already be huge, but when we copy this onto the JVM heap, we expand it, because we add the database-number _(8 byte)_, catalog-number _(4 byte)_ and collection-number _(4 byte)_ to it, plus the overhead of the [TupleNumber] instance (16-byte per instance). Then there is the array into which they are added, this array holds a reference for each [TupleNumber], so another 8-byte. In total, for JVM heap usage, we need to multiple this value with around 56 _(16+16+8+4+4+8)_. For the default value of 16,777,216 this already means around 1 GiB of heap usage, not even thinking about how much more memory will be used, when we start loading all these tuple!
+         * @since 3.0
+         */
+        @JvmStatic
+        var HARD_TUPLE_LIMIT = 16_777_216
+
         /**
          * An immutable map between the identifier of an internal collection to the number of that collection.
          * @since 3.0

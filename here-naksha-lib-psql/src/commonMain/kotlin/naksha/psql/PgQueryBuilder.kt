@@ -31,35 +31,22 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     private fun readFeatures(req: ReadFeatures): PgQuery {
         // Collect needed data
         val pgStorage = session.storage
-        val mapId = req.mapId ?: throw illegalArg("mapId is missing")
-        val pgMap = session.getPgMapById(mapId) ?: throw mapNotFound("Map with id '$mapId' does not exist")
-        // We select what the client wants, maximum is always 16777216
-        // Finally, the storage can limit result-size further down below 16777216 (normally we do not expect this to happen).
-        val REQ_LIMIT = min(max(0, req.limit ?: 16777216), session.storage.hardCap)
+        val catalogId = req.catalogId ?: throw illegalArg("catalogId is missing")
+        val pgCatalog = session.getPgCatalogById(catalogId) ?: throw mapNotFound("Catalog with id '$catalogId' does not exist")
+        val REQ_LIMIT = min(max(0, req.limit ?: Naksha.HARD_TUPLE_LIMIT), session.storage.hardCap)
         if (REQ_LIMIT == 0) throw illegalArg("Invalid limit given: ${req.limit}, must be 0 to 16777216")
         val pgCollections: MutableList<PgCollection> = mutableListOf()
         for (collectionId in req.collectionIds) {
             if (collectionId == null) continue
-            val pgCollection = session.getPgCollectionById(pgMap, collectionId) ?:
-                throw collectionNotFound("Collection with id '$collectionId' not found in map '$mapId'")
+            val pgCollection = session.getPgCollectionById(pgCatalog, collectionId) ?:
+                throw collectionNotFound("Collection with id '$collectionId' not found in map '$catalogId'")
             pgCollections.add(pgCollection)
         }
-        if (pgCollections.size <= 0) throw illegalArg("Empty collection-ids in request")
+        if (pgCollections.isEmpty()) throw illegalArg("Empty collection-ids in request")
         val version = req.version
-        if (version != null && !req.queryHistory) {
-            throw illegalArg("Setting 'version' to '$version' requires that 'queryHistory' is enabled!")
-        }
         val minVersion = req.minVersion
-        if (minVersion != null && !req.queryHistory) {
-            throw illegalArg("Setting 'minVersion' to '$minVersion' requires that 'queryHistory' is enabled!")
-        }
         val versions = req.versions
-        if (versions != 1 && !req.queryHistory) {
-            throw illegalArg("Setting 'versions' to $versions requires that 'queryHistory' is enabled!")
-        }
-        if (versions < 1) {
-            throw illegalArg("It is not possible to request less than one version of each feature")
-        }
+        if (versions < 1) throw illegalArg("It is not possible to request less than one version of each feature")
 
         val whereClause = PgQueryWhereBuilder(req).build()
         val whereQuery = whereClause?.where ?: ""
@@ -128,7 +115,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         for (entry in pgCollections.withIndex()) {
             val pgCollection = entry.value
             val map = pgCollection.catalog
-            val read = PgRead(pgMap, pgCollection)
+            val read = PgRead(pgCatalog, pgCollection)
 
             // Note: To simplify queries, we actually always embed the collection-number internally,
             //       eventually, before returning the result, we decide if we put it into the header
@@ -216,7 +203,7 @@ SELECT ${if (thePgCollection == null) "col_num, fn, version" else "fn, version"}
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),
             argTypes = whereClause?.argTypeNames ?: emptyArray(),
             pgStorage.number,
-            pgMap.catalogNumber,
+            pgCatalog.catalogNumber,
             thePgCollection?.collectionNumber
         )
     }

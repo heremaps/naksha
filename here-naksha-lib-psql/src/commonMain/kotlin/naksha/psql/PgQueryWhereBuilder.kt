@@ -1,32 +1,36 @@
 package naksha.psql
 
 import naksha.base.AnyList
+import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.StringList
 import naksha.geo.HereTile
 import naksha.geo.SpGeometry
 import naksha.model.*
+import naksha.model.objects.StandardMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.query.*
+import naksha.psql.PgColumn.PgColumn_C.FN
 
 /**
  * Helper to convert a [ReadFeatures] request into a sql `WHERE` query.
+ *
+ * The collection need to be provided, because they potentially _(when not cached)_ need to be read from the database, therefore, they require a session. We do not want to link this code to a session _(it would break unit testing)_, so we simply expect the collections as input parameter.
  * @param request the request to wrap.
+ * @param collections the collections for which to generate the `WHERE` queries.
  * @since 3.0
  * @see [build]
  */
-internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
-
-    private val argValues: MutableList<Any?> = mutableListOf()
-    private val argTypes: MutableList<PgType> = mutableListOf()
-    private val where = StringBuilder()
+internal class PgQueryWhereBuilder(private val request: ReadFeatures, private val collections: List<PgCollection>) {
+    private val queries: MutableMap<PgCollection, PgQueryWhereClause> = mutableMapOf()
 
     /**
-     * Convert the request into a `WHERE` query.
-     * @return the [PgQueryWhereClause].
+     * Convert the request into `WHERE` queries.
+     * @return the [PgQueryWhereClause] for each collection given.
      * @since 3.0
      */
-    fun build(): PgQueryWhereClause? {
+    fun build(): Map<PgCollection, PgQueryWhereClause> {
         whereFeatureId()
         whereGuids()
         whereVersion()
@@ -34,37 +38,61 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures) {
         whereSpatial()
         whereRefTiles()
         whereTags()
-        return if (where.isBlank()) {
-            null
-        } else {
-            PgQueryWhereClause(where = where.toString(), argValues = argValues, argTypes = argTypes)
+        return queries
+    }
+
+    private fun queryOf(collection: PgCollection): PgQueryWhereClause {
+        var query = queries[collection]
+        if (query == null) {
+            query = PgQueryWhereClause(collection)
+            queries[collection] = query
         }
+        return query
     }
 
     private fun whereFeatureId() {
-        val featureIds = request.featureIds.filterNotNull()
-        if (featureIds.isEmpty()) return
-
         // Partition into numeric IDs (fn >= 0, id stored as NULL in DB) and named IDs (fn < 0, id NOT NULL).
-        val numericFns = featureIds.mapNotNull { id ->
+        val reqIds: StringList = request.featureIds
+        val featureNumbers: MutableList<Int64> = mutableListOf()
+        val featureIds: MutableList<String> = mutableListOf()
+        for (id in reqIds) {
+            if (id == null) continue
             val fn = Naksha.featureNumber(id)
-            if (fn >= naksha.base.Int64(0)) fn else null
+            if (fn >= Int64(0)) {
+                featureNumbers.add(fn)
+            } else {
+                featureIds.add(id)
+            }
         }
-        val namedIds = featureIds.filter { id -> Naksha.featureNumber(id) < naksha.base.Int64(0) }
+        if (featureNumbers.isEmpty() && featureIds.isEmpty()) return
 
-        val conditions = mutableListOf<String>()
-        if (namedIds.isNotEmpty()) {
-            val placeholder = placeholderForArg(namedIds.toTypedArray(), PgType.STRING_ARRAY)
-            conditions += "${PgColumn.id} = ANY($placeholder)"
-        }
-        if (numericFns.isNotEmpty()) {
-            val placeholder = placeholderForArg(numericFns.toTypedArray<Any?>(), PgType.INT64_ARRAY)
-            conditions += "${PgColumn.fn} = ANY($placeholder)"
-        }
-        if (conditions.isNotEmpty()) {
+        // For each collection:
+        for (collection in collections) {
+            val query: PgQueryWhereClause = queryOf(collection)
+            val where: StringBuilder = query.where
             if (where.isNotEmpty()) where.append(" AND ")
-            if (conditions.size == 1) where.append(conditions[0])
-            else where.append("(${conditions.joinToString(" OR ")})")
+
+            where.append("( ")
+            if (featureIds.isNotEmpty()) {
+                val placeholder: String = placeholderForArg(featureIds.toTypedArray(), PgType.STRING_ARRAY)
+                val ID = collection.column(StandardMembers.Id) ?: throw illegalArg("Collection does not defined `id` column")
+                where.append(ID.ident).append(" = ANY(").append(placeholder).append(")")
+            }
+            if (featureNumbers.isNotEmpty()) {
+                if (featureIds.isNotEmpty()) where.append(" OR ")
+
+                val placeholder: String = placeholderForArg(featureNumbers.toTypedArray<Any?>(), PgType.INT64_ARRAY)
+                if (where.isNotEmpty()) where.append(" AND ")
+                where.append(FN.ident).append(" = ANY(").append(placeholder).append(")")
+
+                conditions += "${PgColumn.fn} = ANY($placeholder)"
+            }
+            if (conditions.isNotEmpty()) {
+                if (query.isNotEmpty()) query.append(" AND ")
+                if (conditions.size == 1) query.append(conditions[0])
+                else query.append("(${conditions.joinToString(" OR ")})")
+            }
+            where.append(")")
         }
     }
 
