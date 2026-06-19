@@ -148,8 +148,7 @@ open class PgWriter internal constructor(
                 WriteOp.CREATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
                     // In a CREATE case, UNDEFINED means the same as `null`
-                    val attachment = if (write.attachment === Write.UNDEFINED) null else write.attachment
-                    val tuple = tx.created(write.map.head, write.collection.head, f, attachment)
+                    val tuple = Tuple.encodeFeature(f, collection.head, Action.CREATE, session, null)
                     write.tuple = tuple
                     val tupleNumber = tuple.tupleNumber
                     write.tupleNumber = tupleNumber
@@ -157,14 +156,14 @@ open class PgWriter internal constructor(
                 WriteOp.UPSERT -> {
                     // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    val tuple = tx.created(write.map.head, write.collection.head, f, write.attachment)
+                    val tuple = Tuple.encodeFeature(f, collection.head, Action.CREATE, session, null)
                     write.tuple = tuple
                     val tupleNumber = tuple.tupleNumber
                     write.tupleNumber = tupleNumber
                 }
                 WriteOp.UPDATE -> {
                     val f = write.feature ?: throw illegalArg("The feature #${write.i} is null")
-                    val tuple = tx.updated(write.map.head, write.collection.head, f, write.attachment, write.original.atomic)
+                    val tuple = Tuple.encodeFeature(f, collection.head, Action.UPDATE, session, null)
                     write.tuple = tuple
                     val tupleNumber = tuple.tupleNumber
                     write.tupleNumber = tupleNumber
@@ -242,19 +241,19 @@ open class PgWriter internal constructor(
             if (write.isFeatureModification) {
                 val map = write.map
                 val col = write.collection
-                val txCol = transaction.useCatalog(map.id, map.number).useCollection(col.id, col.number)
+                val txCol = transaction.useCatalog(map.id, map.catalogNumber).useCollection(col.id, col.collectionNumber)
                 if (tupleNumber != null) {
                     txCol.add(tupleNumber, col.partitions)
                 }
                 featuresModified += 1
             } else if (write.isCatalogModification) {
                 val map = write.asPgCatalog
-                if (map != null) transaction.useCatalog(map.id, map.number, write.action)
+                if (map != null) transaction.useCatalog(map.id, map.catalogNumber, write.action)
             } else if (write.isCollectionModification) {
                 val map = write.map
                 val col = write.asPgCollection
                 if (col != null) {
-                    transaction.useCatalog(map.id, map.number).useCollection(col.id, col.number, write.action)
+                    transaction.useCatalog(map.id, map.catalogNumber).useCollection(col.id, col.collectionNumber, write.action)
                     map.invalidateCollection(col)
                 }
             }
@@ -295,7 +294,7 @@ open class PgWriter internal constructor(
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
                     nakshaMap = if (feature is NakshaCatalog) feature else feature.proxy(NakshaCatalog::class)
-                    nakshaMap.storageId = storage.id
+                    nakshaMap.databaseId = storage.id
                     if (pgCatalog == null) {
                         if (op == WriteOp.UPDATE) {
                             throw mapNotFound("The UPDATE (write #${write.i}) failed, because the map '$featureId' does not exist")
@@ -325,7 +324,7 @@ open class PgWriter internal constructor(
                 val nakshaCollection: NakshaCollection?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = write.feature ?: throw illegalArg("The write #${write.i} is $op, but the feature is null")
-                    nakshaCollection = if (feature is NakshaCollection) feature else feature.proxy(NakshaCollection::class)
+                    nakshaCollection = feature as? NakshaCollection ?: feature.proxy(NakshaCollection::class)
                     if (pgCollection == null) {
                         if (op == WriteOp.UPDATE) {
                             throw collectionNotFound(
@@ -445,7 +444,7 @@ open class PgWriter internal constructor(
         // ── Members ─────────────────────────────────────────────────────────────────
         val clientMembers = collection.members
         if (clientMembers != null) {
-            val mandatoryByName = PgColumn.mandatoryMembers.associateBy { it.name }
+            val mandatoryByName = StandardMembers.MANDATORY.associateBy { it.name }
             val normalizedMembers = MemberList()
             for (m in clientMembers) {
                 if (m == null) continue

@@ -91,19 +91,12 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = if (collection.partitions > 1) partitionNumber % collection.partitions else -1
 
     /**
-     * The attachment from the [Write] instruction, can be [Write.UNDEFINED]. If the attachment is [Write.UNDEFINED], an existing attachment should be retained.
-     * @since 3.0
-     */
-    val attachment: ByteArray?
-        get() = original.attachment
-
-    /**
      * If the operation is atomic, the version in which the _HEAD_ is expected to be; otherwise `null`.
      * @since 3.0
      */
     val version: Version?
         get() = if (original.atomic && op != WriteOp.CREATE && op != WriteOp.UPSERT)
-            original.version ?: original.tupleNumber?.version
+            original.version ?: Version(original.tupleNumber?.version!!)
         else
             null
 

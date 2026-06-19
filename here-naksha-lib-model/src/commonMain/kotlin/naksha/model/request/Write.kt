@@ -399,41 +399,6 @@ open class Write : AnyObject() {
     }
 
     /**
-     * Arbitrary attachment to be stored, if this is [CREATE][WriteOp.CREATE], [UPSERT][WriteOp.UPSERT], or [UPDATE][WriteOp.UPDATE].
-     *
-     * If being [UNDEFINED], then the attachment, in whatever state it is, is left unmodified, _(this is the default value)_. If the value is explicitly set to `null`, an existing attachments is removed, if set to a specific byte-array, then the attachment is updated.
-     *
-     * If this is a [CREATE][WriteOp.CREATE] operation, the value [UNDEFINED] has the same meaning as explicitly setting the value to `null`.
-     * @since 3.0
-     * @see [UNDEFINED]
-     */
-    var attachment: ByteArray? = UNDEFINED
-
-    /**
-     * @see [attachment]
-     */
-    fun withAttachment(value: ByteArray?): Write {
-        attachment = value
-        return this
-    }
-
-    /**
-     * Ask the storage to keep the attachment in the state in which it currently is. This is the default behavior.
-     * @return this.
-     * @since 3.0
-     */
-    fun keepAttachment(): Write {
-        attachment = UNDEFINED
-        return this
-    }
-
-    /**
-     * Tests if the attachment should be modified.
-     * @return `true` if the attachment should be modified; `false` if the attachment should stay unchanged _(default behavior)_.
-     */
-    fun attachmentModified(): Boolean = attachment !== UNDEFINED
-
-    /**
      * If enabled, a missing map is automatically created, when creating or modifying collections; defaults to `false`.
      *
      * To make the default map more transparent, this option can be enabled by clients like:
