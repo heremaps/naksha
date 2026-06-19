@@ -199,7 +199,7 @@ open class NakshaTx : NakshaFeature() {
      * @since 3.0
      */
     @JvmOverloads
-    fun useMap(id: String, number: Int, action: Action? = null): NakshaTxMap {
+    fun useCatalog(id: String, number: Int, action: Action? = null): NakshaTxMap {
         val existing = maps[id]
         if (existing != null) {
             if (action != null) existing.action = action

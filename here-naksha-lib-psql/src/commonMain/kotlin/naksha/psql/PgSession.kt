@@ -6,13 +6,17 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.longToInt64
 import naksha.base.Platform.PlatformCompanion.newAtomicInt64
+import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
+import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
+import naksha.psql.PgColumn.PgColumn_C.FN
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 import kotlin.math.min
@@ -346,9 +350,7 @@ open class PgSession(
      * Processors are invoked in the order in which they were added.
      * @since 3.0
      */
-    private val _processors = MemberProcessorMap()
-
-    override fun processors(): MemberProcessorMap = _processors
+    override val processors = MemberProcessorMap()
 
     override fun isClosed(): Boolean = _closed
 
@@ -372,6 +374,7 @@ open class PgSession(
         return PgLock(this, useConnection(), lockId, false)
     }
 
+    // TODO: We should only have one method being this one!
     override fun loadTuples(featureTuples: List<FeatureTuple?>) = loadTuples(featureTuples, 0, featureTuples.size, FETCH_ALL)
 
     override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, mode: FetchMode) {
@@ -379,20 +382,20 @@ open class PgSession(
         if (missing.isNotEmpty()) {
             (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->
                 val conn = readConn.conn
-                val byCollection = mutableMapOf<String, MutableList<PgRead>>()
                 val adminCatalog = storage.adminCatalog
+                val byCollection: MutableMap<PgCollection, FeatureTupleList> = mutableMapOf()
                 for (featureTuple in missing) {
-                    val read = PgRead(conn, adminCatalog, featureTuple.tupleNumber)
-                    read.featureTuple = featureTuple
-                    var reads = byCollection[read.groupId]
-                    if (reads == null) {
-                        reads = ArrayList(min(1000, missing.size))
-                        byCollection[read.groupId] = reads
+                    val tn = featureTuple.tupleNumber
+                    val collection: PgCollection = adminCatalog.getPgCollectionByNumber(conn, tn.collectionNumber) ?: continue
+                    var list = byCollection[collection]
+                    if (list == null) {
+                        list = FeatureTupleList()
+                        byCollection[collection] = list
                     }
-                    reads.add(read)
+                    list.add(featureTuple)
                 }
-                for (entry in byCollection) {
-                    loadTuplesFromCollection(conn, entry.value, mode)
+                for ((collection, featureTuples) in byCollection) {
+                    loadTuplesFromCollection(conn, collection, featureTuples)
                 }
             }
         }
@@ -402,73 +405,91 @@ open class PgSession(
      * Load [Tuple] from a specific collection, can be executed in parallel, when multiple collections are needed. We should make parallel reading optional, we experienced that when used for example in EMR, too many connections can harm. However, the cache could keep objects in Redis or alike, and then read perfectly fine in parallel!
      *
      * @param conn the connection to use for this read.
-     * @param reads the reads to perform.
-     * @param mode the load-mode
+     * @param collection the collection to read.
+     * @param featureTuples the tuple to load.
      */
-    private fun loadTuplesFromCollection(conn: PgConnection, reads: List<PgRead>, mode: FetchMode) {
-        // TODO: We can improve this to load the results as GZIP compressed binary!
-        //       Read BINARY.md for more information.
-        //       For the sake of delivery, we take the shortcut, and only us ARRAY_AGG
-        //       Maybe this is already fast enough?
-        if (reads.isEmpty()) throw illegalState("Reads must not be empty")
-        val first = reads.first()
-        val map = first.catalog
-        val collection = first.collection
-        val historyTables = first.historyTables
-        // When history tables are included in the read, we need `next_version` in the result set
-        // (for the UNION ALL to have matching columns and so history tuples carry their next_version).
-        // For HEAD-only reads it is absent from the physical table, so we skip it and getTuple
-        // reads it as null (correct for live HEAD rows).
-        val rows = PgRows().useHeadTable(historyTables == null).withCollection(collection.head)
-        map.setSearchPath(conn)
-        val headTables = first.headTables
-        val sql = StringBuilder()
-        // Prefix selected columns with `t.` so they don't collide with `fn` / `version` from the lookup CTE.
-        val prefixedRowNames = rows.columns.joinToString(", ") { "t.${it.name}" }
-        // HEAD has no `next_version` column; substitute NULL for live rows, but for tombstones
-        // (version & 3 == 2) set next_version = version so the tombstone is self-referential (terminal).
-        val prefixedRowNamesForHead = rows.columns.joinToString(", ") {
-            if (it.name == PgColumn.next_version.name)
-                "CASE WHEN (t.version & 3) >= 2 THEN t.version ELSE NULL::int8 END AS ${it.name}"
-            else "t.${it.name}"
+    private fun loadTuplesFromCollection(conn: PgConnection, collection: PgCollection, featureTuples: FeatureTupleList): Int {
+        if (featureTuples.isEmpty()) return 0
+        val HEAD_TABLE = collection.headTable.quotedName
+        val HISTORY_TABLE = collection.historyTable.quotedName
+        // Generate input array
+        val fn_version_bytes = ByteArray(featureTuples.size * 16)
+        val view = Platform.newDataView(fn_version_bytes)
+        for (i in 0..< featureTuples.size) {
+            val tn = featureTuples[i]?.tupleNumber ?: throw NakshaException(INTERNAL_ERROR, "featureTuples[$i] is null")
+            // Note: We do the math by intention. The CPU is very good at math, it's basically free.
+            //       However, memory access is really slow, by doing it this way, the CPU can reorder
+            //       the memory access, and the JIT can unroll the loop.
+            dataview_set_int64(view, i*16, tn.featureNumber)
+            dataview_set_int64(view, i*16 + 8, tn.version)
         }
-        sql.append("WITH ").append(TUPLE_LOOKUP_CTE).append(",\nresult AS(\n")
-        var unionAll = false
-        for (headTable in headTables) {
-            if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
-            sql.append("SELECT ").append(prefixedRowNamesForHead)
-                .append(" FROM ").append(headTable.quotedName)
-                .append(" t JOIN lookup l ON (t.fn, t.version) = (l.fn, l.version)\n")
-        }
-        if (historyTables != null) {
-            for (hstTable in historyTables) {
-                if (unionAll) sql.append("\tUNION ALL\n") else unionAll = true
-                sql.append("SELECT ").append(prefixedRowNames)
-                    .append(" FROM ").append(hstTable.quotedName)
-                    .append(" t JOIN lookup l ON (t.fn, t.version) = (l.fn, l.version)\n")
-            }
-        } else {
-            // No history tables: HEAD contains tombstones for deleted rows; no separate shadow table.
-        }
-        sql.append(")\nSELECT ").append(rows.namesAggregate()).append(" FROM result")
-        val SQL = sql.toString()
-        val tupleNumbers: Array<Any?> = reads.map { it.tupleNumber!!.toB128() }.toTypedArray()
+        val SQL = """
+WITH lookup AS (
+    SELECT 
+        ((get_byte(b, 0) & 255)::bigint << 56) |
+        ((get_byte(b, 1) & 255)::bigint << 48) |
+        ((get_byte(b, 2) & 255)::bigint << 40) |
+        ((get_byte(b, 3) & 255)::bigint << 32) |
+        ((get_byte(b, 4) & 255)::bigint << 24) |
+        ((get_byte(b, 5) & 255)::bigint << 16) |
+        ((get_byte(b, 6) & 255)::bigint << 8)  |
+        (get_byte(b, 7) & 255)::bigint        AS fn,
+        
+        ((get_byte(b, 8) & 255)::bigint << 56) |
+        ((get_byte(b, 9) & 255)::bigint << 48) |
+        ((get_byte(b, 10) & 255)::bigint << 40)|
+        ((get_byte(b, 11) & 255)::bigint << 32)|
+        ((get_byte(b, 12) & 255)::bigint << 24)|
+        ((get_byte(b, 13) & 255)::bigint << 16)|
+        ((get_byte(b, 14) & 255)::bigint << 8) |
+        (get_byte(b, 15) & 255)::bigint        AS version
+    FROM unnest($1::bytea[]) AS t(b)
+), from_head AS (
+    SELECT head.* FROM $HEAD_TABLE head 
+    JOIN lookup l ON (head.fn, head.version) = (l.fn, l.version)
+), from_hst AS (
+    SELECT hst.* FROM $HISTORY_TABLE hst 
+    JOIN lookup l ON (hst.fn, hst.version) = (l.fn, l.version)
+)
+SELECT * FROM from_head 
+UNION ALL 
+SELECT * FROM from_hst"""
+        collection.catalog.setSearchPath(conn)
+        val rows = PgRows().withCollection(collection)
         conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
-            plan.execute(arrayOf(tupleNumbers)).fetch().use { cursor ->
-                rows.addAggregated(cursor)
+            plan.execute(arrayOf(fn_version_bytes)).fetch().use { cursor ->
+                rows.readAll(cursor)
             }
         }
+        // Copy tuples into cache, which allows us in the next loop to read the tuple back from the cache.
         for (i in 0 until rows.size) {
             val tuple = rows[i] ?: continue
             Naksha.cache.store(tuple)
-            val tupleNumber = tuple.tupleNumber
-            for (read in reads) {
-                if (read.tupleNumber == tupleNumber) {
-                    read.featureTuple?.tuple = tuple
-                    break
+        }
+        var found = 0
+        for (i in 0..< featureTuples.size) {
+            val featureTuple = featureTuples[i] ?: throw NakshaException(INTERNAL_ERROR, "featureTuples[$i] is null")
+            val tn = featureTuple.tupleNumber
+            val tuple = Naksha.cache[tn]
+            if (tuple != null) {
+                // TODO: We need a cache for global books!
+                //       We can simply say that the global books need to be committed, before they can be used.
+                //       Additionally, they are immutable, onces stored, they can not be deleted nor mutated.
+                //       Therefore, if a
+                val feature: NakshaFeature = tuple.decodeFeature(null)
+                featureTuple.feature = feature
+                if (featureTuple.id != feature.id) {
+                    // This must not happen!
+                    val tn = featureTuple.tupleNumber
+                    throw NakshaException(
+                        INTERNAL_ERROR,
+                        "The `id` of feature-tuple '${feature.id}' does not match that of the loaded tuple: ${feature.id}, feature-number: '${tn.featureNumber}', version: ${tn.version}, collection: ${collection.id}"
+                    )
                 }
+                found++
             }
         }
+        return found
     }
 
     override fun getMapById(mapId: String): NakshaCatalog? {

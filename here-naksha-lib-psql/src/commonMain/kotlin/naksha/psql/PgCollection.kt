@@ -309,4 +309,10 @@ open class PgCollection internal constructor(
      */
     @JvmField
     var internal: Boolean = id.startsWith("naksha~")
+
+    // TODO: We need information from the database which history partitions exist.
+    //       Reading from history must be done using the root table, not individual partitions.
+    //       Only writing is done through individual partitions, and only for writing we need to know what exists!
+    //       We should add a method like this:
+    // internal fun update(conn: PgConnection) {}
 }

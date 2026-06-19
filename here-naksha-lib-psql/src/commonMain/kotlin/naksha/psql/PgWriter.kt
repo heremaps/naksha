@@ -242,19 +242,19 @@ open class PgWriter internal constructor(
             if (write.isFeatureModification) {
                 val map = write.map
                 val col = write.collection
-                val txCol = transaction.useMap(map.id, map.number).useCollection(col.id, col.number)
+                val txCol = transaction.useCatalog(map.id, map.number).useCollection(col.id, col.number)
                 if (tupleNumber != null) {
                     txCol.add(tupleNumber, col.partitions)
                 }
                 featuresModified += 1
             } else if (write.isCatalogModification) {
                 val map = write.asPgCatalog
-                if (map != null) transaction.useMap(map.id, map.number, write.action)
+                if (map != null) transaction.useCatalog(map.id, map.number, write.action)
             } else if (write.isCollectionModification) {
                 val map = write.map
                 val col = write.asPgCollection
                 if (col != null) {
-                    transaction.useMap(map.id, map.number).useCollection(col.id, col.number, write.action)
+                    transaction.useCatalog(map.id, map.number).useCollection(col.id, col.number, write.action)
                     map.invalidateCollection(col)
                 }
             }
