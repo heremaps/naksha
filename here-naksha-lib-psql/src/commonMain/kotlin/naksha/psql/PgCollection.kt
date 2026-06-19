@@ -24,6 +24,7 @@ import naksha.psql.PgColumn.PgColumn_C.EXTERNAL
 import naksha.psql.PgColumn.PgColumn_C.MAIN
 import naksha.psql.PgColumn.PgColumn_C.PLAIN
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmField
 
 /**
@@ -287,6 +288,7 @@ open class PgCollection internal constructor(
      * @return the [PgColumn] that with the given name; `null` if no such column exists.
      * @since 3.0
      */
+    @JsName("getColumnByMember")
     fun column(member: Member): PgColumn? = column(member.name)
 
     /**
@@ -295,6 +297,7 @@ open class PgCollection internal constructor(
      * @return the [PgColumn] that with the given name; `null` if no such column exists.
      * @since 3.0
      */
+    @JsName("getColumnByName")
     fun column(name: String): PgColumn? {
         for (column in columns) {
             if (column.name == name) return column

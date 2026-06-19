@@ -9,6 +9,7 @@ import kotlin.js.JsExport
  * @since 3.0
  */
 @JsExport
+@Deprecated("To be removed")
 interface IDictReader {
     /**
      * Retrieve the dictionary with the given identifier.

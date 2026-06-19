@@ -23,28 +23,6 @@ class PsqlAdminCatalog internal constructor(
     override val storage: PsqlStorage
         get() = super.storage as PsqlStorage
 
-    override fun getDataEncoding(feature: Any?, context: Any?): DataEncoding {
-        if (context is PgCollection) {
-            var encoding = context.head.dataEncoding
-            if (encoding == null) encoding = context.catalog.head.dataEncoding
-            return encoding ?: Naksha.DEFAULT_DATA_ENCODING
-        }
-        if (context is PgCatalog) {
-            return context.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
-        }
-        if (context is NakshaCollection) {
-            val collectionEncoding = context.dataEncoding
-            if (collectionEncoding != null) return collectionEncoding
-            val mapId = context.catalogId ?: return Naksha.DEFAULT_DATA_ENCODING
-            val pgMap = getPgCatalogById(null, mapId)
-            return pgMap?.head?.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
-        }
-        if (context is NakshaCatalog) {
-            return context.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING
-        }
-        return Naksha.DEFAULT_DATA_ENCODING
-    }
-
     override fun getDictionary(id: String): JbDictionary? {
         // TODO: Implement me!
         return null

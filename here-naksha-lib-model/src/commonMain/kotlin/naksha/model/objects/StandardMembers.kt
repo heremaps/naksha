@@ -6,6 +6,9 @@ import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
+// TODO: We need immutability for the standard members and other pre-declared members.
+//       If not, we could encounter a situation where someone accidentally modified a standard member.
+
 /**
  * The canonical set of standard members that every Naksha storage understands.
   * @since 3.0

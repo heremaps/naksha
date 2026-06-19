@@ -361,9 +361,12 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * Returns the members list. If the member list is currently `null`, it creates it from [XyzMembers.ALL]. If the list does not contain the mandatory members, they will be added.
+     * Returns the validated members list.
+     *
+     * If the member list is currently `null`, it creates it from [XyzMembers.ALL]. If the list does not contain the mandatory members, they will be added.
      * @return the members list of this collection.
      * @since 3.0
+     * @throws NakshaException with [ILLEGAL_STATE]
      */
     open fun useMembers(): MemberList {
         var write = false
@@ -378,9 +381,10 @@ open class NakshaCollection() : NakshaFeature() {
         for (mandatory in StandardMembers.MANDATORY) {
             val found: Member? = list.get(mandatory.name)
             if (found != null) {
-                mandatory.asSame(found)
+                mandatory.asSame(found, comparePath = false)
             } else {
                 list.add(mandatory)
+                write = true
             }
         }
         if (write) this.members = list

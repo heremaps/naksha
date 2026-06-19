@@ -12,6 +12,7 @@ import naksha.psql.PgColumn.PgColumn_C.FN
 import naksha.psql.PgColumn.PgColumn_C.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmField
 
 /**
@@ -72,6 +73,7 @@ WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE"""
      * @return the calculated partition-number.
      * @since 3.0
      */
+    @JsName("partitionNumberForFeatureNumber")
     fun partitionNumber(featureNumber: Int64): Int = Naksha.partitionNumber(featureNumber) % collection.partitions
 
     /**
@@ -80,6 +82,7 @@ WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE"""
      * @return the calculated partition-number.
      * @since 3.0
      */
+    @JsName("partitionNumberForFeatureId")
     fun partitionNumber(featureId: String): Int = Naksha.partitionNumber(featureId) % collection.partitions
 
     /**
@@ -87,6 +90,7 @@ WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE"""
      * @param featureNumber the feature-number of the feature to return the distribution-partition for.
      * @return either the distribution-partition to put the feature into or `null` if the table is not partitioned, features need to be written into the table itself.
      */
+    @JsName("getByFeatureNumber")
     operator fun get(featureNumber: Int64): PgDistributionPartition? {
         val partitions = this.partitions
         if (partitions.isEmpty()) return null
@@ -100,6 +104,7 @@ WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE"""
      * @param featureId the feature-id of the feature to return the distribution-partition for.
      * @return either the distribution-partition to put the feature into or `null` if the table is not partitioned, features need to be written into the table itself.
      */
+    @JsName("getByFeatureId")
     operator fun get(featureId: String): PgDistributionPartition? {
         val partitions = this.partitions
         if (partitions.isEmpty()) return null

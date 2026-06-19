@@ -16,10 +16,8 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
-import naksha.psql.PgColumn.PgColumn_C.FN
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
-import kotlin.math.min
 
 /**
  * A session linked to a PostgresQL database.
@@ -492,10 +490,10 @@ SELECT * FROM from_hst"""
         return found
     }
 
-    override fun getMapById(mapId: String): NakshaCatalog? {
+    override fun getCatalogById(catalogId: String): NakshaCatalog? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminCatalog.getPgCatalogById(it.conn, mapId)?.head
+            storage.adminCatalog.getPgCatalogById(it.conn, catalogId)?.head
         }
     }
 
@@ -511,10 +509,10 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getMapByNumber(mapNumber: Int): NakshaCatalog? {
+    override fun getMapByNumber(catalogNumber: Int): NakshaCatalog? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            storage.adminCatalog.getPgCatalogByNumber(it.conn, mapNumber)?.head
+            storage.adminCatalog.getPgCatalogByNumber(it.conn, catalogNumber)?.head
         }
     }
 
@@ -530,10 +528,10 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getCollectionById(map: NakshaCatalog, collectionId: String): NakshaCollection? {
+    override fun getCollectionById(catalog: NakshaCatalog, collectionId: String): NakshaCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            val pgMap = storage.adminCatalog.getPgCatalogById(it.conn, map.id) ?: return null
+            val pgMap = storage.adminCatalog.getPgCatalogById(it.conn, catalog.id) ?: return null
             pgMap.getPgCollectionById(it.conn, collectionId)?.head
         }
     }
@@ -551,10 +549,10 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getCollectionByNumber(map: NakshaCatalog, collectionNumber: Int): NakshaCollection? {
+    override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int): NakshaCollection? {
         assertOpen()
         return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            val pgMap = storage.adminCatalog.getPgCatalogById(it.conn, map.id) ?: return null
+            val pgMap = storage.adminCatalog.getPgCatalogById(it.conn, catalog.id) ?: return null
             pgMap.getPgCollectionByNumber(it.conn, collectionNumber)?.head
         }
     }

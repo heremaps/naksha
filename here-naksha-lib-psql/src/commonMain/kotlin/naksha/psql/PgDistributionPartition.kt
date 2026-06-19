@@ -10,6 +10,7 @@ import naksha.psql.PgColumn.PgColumn_C.FN
 import naksha.psql.PgColumn.PgColumn_C.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmField
 
 /**
@@ -38,11 +39,13 @@ class PgDistributionPartition private constructor(
     /**
      * Create a distribution partition in the [PgHeadTable].
      */
+    @JsName("newHeadDistributionPartition")
     constructor(parent: PgHeadTable, partitionNumber: Int) : this(parent as PgTable, partitionNumber)
 
     /**
      * Create a distribution partition in the history aka [PgHistoryPartition].
      */
+    @JsName("newHistoryDistributionPartition")
     constructor(parent: PgHistoryPartition, partitionNumber: Int) : this(parent as PgTable, partitionNumber)
 
     override fun CREATE_SQL(): String {

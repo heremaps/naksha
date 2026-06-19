@@ -18,6 +18,8 @@ import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
+// TODO: We need an immutable version of this, because this actually allows mutation.
+
 /**
  * A materialized part of a feature.
  *
@@ -191,6 +193,12 @@ open class Member() : AnyObject(), Comparator<Member> {
 
     /**
      * Ensures that the given `other` member is the same as this.
+     *
+     * The purpose of the method is generally to do:
+     * ```kotlin
+     * val member = StandardMember.Id.asSame(someCustomMember)
+     * ```
+     * Which will return the given custom member, ensuring that it still is the standard `id` member, but allows different paths.
      * @param other The member to compare this with.
      * @param comparePath If the path must be the same as well, defaults to _false_.
      * @return The `other` member, if it is the same as this.

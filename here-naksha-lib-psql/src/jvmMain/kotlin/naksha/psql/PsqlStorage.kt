@@ -66,8 +66,6 @@ open class PsqlStorage : PgStorage(), IStorage {
         return PgSession(this, options, readOnly)
     }
 
-    override fun getDataEncoding(feature: Any?, context: Any?): DataEncoding = adminCatalog.getDataEncoding(feature, context)
-
     override fun getDictionary(id: String): JbDictionary? = adminCatalog.getDictionary(id)
 
     override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary? = adminCatalog.getEncodingDictionary(feature, context)

@@ -115,7 +115,7 @@ final class GeneratingSession implements IReadSession {
 
     @Nullable
     @Override
-    public NakshaCatalog getMapByNumber(int mapNumber) {
+    public NakshaCatalog getMapByNumber(int catalogNumber) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
@@ -127,7 +127,7 @@ final class GeneratingSession implements IReadSession {
 
     @Nullable
     @Override
-    public NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog map, int collectionNumber) {
+    public NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 

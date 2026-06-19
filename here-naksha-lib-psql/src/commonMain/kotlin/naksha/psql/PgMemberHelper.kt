@@ -9,13 +9,13 @@ import naksha.base.ListProxy
 import naksha.base.PlatformList
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
-import naksha.model.NakshaError
-import naksha.model.NakshaException
 import naksha.model.TagList
 import naksha.model.objects.Member
-import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaFeature
+
+// TODO: This is AI generated slop, we need to review and only use what we really need!
+//       What is really used should go into static Member methods!
 
 /**
  * Helpers to map [CustomMember] values from a [NakshaFeature] into a [PgRows] row.
@@ -34,22 +34,6 @@ class PgMemberHelper private constructor() {
          * The name is used as-is; collision with built-in columns is prevented by [validateMemberNames].
          */
         fun pgColumnName(memberName: String): String = memberName
-
-        /**
-         * Validates that none of the members in [members] use a reserved built-in column name.
-         * Throws [NakshaException] with [NakshaError.ILLEGAL_ARGUMENT] on the first conflict found.
-         * Must be called before creating a new collection.
-         */
-        fun validateMemberNames(members: MemberList) {
-            for (member in members) {
-                if (member != null && member.name in reservedColumnNames) {
-                    throw NakshaException(
-                        NakshaError.ILLEGAL_ARGUMENT,
-                        "Custom member name '${member.name}' conflicts with a built-in column name"
-                    )
-                }
-            }
-        }
 
         fun pgTypeFor(type: MemberType): PgType = when (type) {
             MemberType.BOOLEAN -> PgType.BOOLEAN
@@ -330,40 +314,6 @@ class PgMemberHelper private constructor() {
             MemberType.TAGS_FROM_ARRAY -> 10
             MemberType.SET -> 11
             else -> 12
-        }
-
-        /**
-         * The set of member names that correspond to pre-defined optional [PgColumn]s (e.g. `geo`, `tags`, `cc`).
-         * When two members have the same type sort-order, pre-defined members are placed before user-invented ones.
-         */
-        private val predefinedMemberNames: Set<String> by lazy {
-            val mandatory = PgColumn.mandatoryColumns.map { it.name }.toSet()
-            PgColumn.headColumns.map { it.name }.filter { it !in mandatory }.toSet()
-        }
-
-        /**
-         * Sorts [members] in-place for optimal PostgreSQL column layout.
-         *
-         * Ordering rules (applied only at **collection-creation** time; never on updates):
-         * 1. Primary: type alignment group ([columnSortOrder])
-         * 2. Secondary: pre-defined members (matching a built-in optional column name) before user-invented ones
-         * 3. Tertiary: member name lexicographically ascending
-         *
-         * The sort is stable within each group so that the caller's intent is preserved as a tie-breaker.
-         */
-        fun sortMembersForStorage(members: MemberList) {
-            // TODO: Move this into MemberList as `sortForStorage()`
-            //       Use: members.sortedBy { it?.dataType?.sortOrder ?: Int.MAX_VALUE }
-            if (members.size <= 1) return
-            val snapshot = (0 until members.size).map { members[it]!! }
-            val sorted = snapshot.sortedWith(
-                compareBy(
-                { columnSortOrder(it.dataType) },
-                { if (it.name in predefinedMemberNames) 0 else 1 },
-                { it.name }
-            ))
-            members.clear()
-            members.addAll(sorted)
         }
 
         private fun warnMismatch(featureId: String, memberName: String, expected: String, value: Any) {

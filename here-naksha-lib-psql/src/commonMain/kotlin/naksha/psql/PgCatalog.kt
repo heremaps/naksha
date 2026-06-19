@@ -179,35 +179,23 @@ open class PgCatalog internal constructor(
      * @return the created map.
      * @since 3.0
      */
-    open fun createPgCollection(session: IWriteSession, conn: PgConnection, collection: PgCollection) {
+    open fun createPgCollection(conn: PgConnection, collection: PgCollection) {
         // Ensure that all tables and indices are created in the correct schema!
         setSearchPath(conn)
-        val processors = session.processors
-        val backup = processors.backup(true)
-        try {
-            processors.addProcessor(XyzMembers.XyzCreatedAt, XyzProcessors.xyzCreatedAt)
-            processors.addProcessor(XyzMembers.XyzUpdatedAt, XyzProcessors.xyzUpdatedAt)
-            processors.addProcessor(XyzMembers.XyzAppId, XyzProcessors.xyzAppId)
-            processors.addProcessor(XyzMembers.XyzAuthor, XyzProcessors.xyzAuthor)
-            processors.addProcessor(XyzMembers.XyzAuthorTimestamp, XyzProcessors.xyzAuthorTimestamp)
 
-            val pgSession = session as PgSession
-            val tx: PgTx = pgSession.useTx()
+        val headTable = collection.headTable
+        headTable.create(conn)
+        for (index in collection.headIndices) headTable.createIndex(conn, index)
 
-            val headTable = collection.headTable
-            headTable.create(conn)
-            for (index in collection.headIndices) headTable.createIndex(conn, index)
+        val history = collection.historyTable
+        history.create(conn)
+        // Note: We do not create history partitions, because doing so would require a session.
+        //       The reason is, that we need to know the version to know which history partition the HEAD will be moved into.
+        // history.createPartition(conn, collection.historyPartitionNumberOf(tx.version.number))
+        // for (index in collection.historyIndices) headTable.createIndex(conn, index)
 
-            val history = collection.historyTable
-            history.create(conn)
-            history.createPartition(conn, collection.historyPartitionNumberOf(tx.version.number))
-            for (index in collection.historyIndices) headTable.createIndex(conn, index)
-
-            // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
-            invalidateCollection(collection)
-        } finally {
-            processors.restore(backup, clear = true, consume = true)
-        }
+        // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
+        invalidateCollection(collection)
     }
 
     /**

@@ -141,7 +141,7 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapByNumber(int mapNumber) {
+  public @Nullable NakshaCatalog getMapByNumber(int catalogNumber) {
     return null;
   }
 
@@ -151,7 +151,7 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog map, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 

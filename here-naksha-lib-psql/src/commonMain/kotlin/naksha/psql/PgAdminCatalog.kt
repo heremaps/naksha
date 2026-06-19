@@ -585,9 +585,9 @@ WHERE fn = $1 AND (version & 3) < 2"""
         = PgMapList().withAll(catalogCache.mapNotNull { it.value })
     // TODO: This only reads the cache, but we need to load from database!
 
-    abstract fun getDataEncoding(feature: Any?, context: Any?): DataEncoding
-
+    @Deprecated("Will be replaced with global books")
     abstract override fun getDictionary(id: String): JbDictionary?
 
+    @Deprecated("Will be replaced with global books")
     abstract override fun getEncodingDictionary(feature: Any?, context: Any?): JbDictionary?
 }

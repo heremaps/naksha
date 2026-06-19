@@ -8,6 +8,7 @@ import naksha.psql.PgColumn.PgColumn_C.VERSION
 import naksha.psql.PgUtil.PgUtilCompanion.partitionNumber
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.jvm.JvmField
 
 /**
@@ -67,9 +68,11 @@ PARTITION BY RANGE ((($FN & 65535)::int4 % ${collection.partitions})$TABLESPACE;
      * @param featureId the ID of the feature to locate the performance partition for.
      * @return either the performance partition to put the feature into; _null_ if the table is not partitioned, features need to be written into the table itself.
      */
+    @JsName("getByFeatureId")
     operator fun get(featureId: String): PgDistributionPartition?
         = if (partitions.isEmpty()) null else partitions[partitionNumber(featureId) % partitions.size]
 
+    @JsName("getByFeatureNumber")
     operator fun get(featureNumber: Int64): PgDistributionPartition?
             = if (partitions.isEmpty()) null else partitions[featureNumber.toInt() % partitions.size]
 

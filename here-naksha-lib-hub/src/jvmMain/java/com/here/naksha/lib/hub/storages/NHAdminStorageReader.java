@@ -114,12 +114,12 @@ public class NHAdminStorageReader implements IReadSession {
 
   @Override
   public @Nullable NakshaCatalog getMapById(@NotNull String mapId) {
-    return session.getMapById(mapId);
+    return session.getCatalogById(mapId);
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapByNumber(int mapNumber) {
-    return session.getMapByNumber(mapNumber);
+  public @Nullable NakshaCatalog getMapByNumber(int catalogNumber) {
+    return session.getMapByNumber(catalogNumber);
   }
 
   @Override
@@ -133,8 +133,8 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog map, int collectionNumber) {
-    return session.getCollectionByNumber(map, collectionNumber);
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
+    return session.getCollectionByNumber(catalog, collectionNumber);
   }
 
   @Override

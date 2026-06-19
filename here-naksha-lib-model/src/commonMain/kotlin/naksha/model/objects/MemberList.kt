@@ -3,6 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.ListProxy
+import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.NakshaException
@@ -120,12 +121,15 @@ open class MemberList() : ListProxy<Member>(Member::class) {
     }
 
     /**
-     * Test whether this member list is valid, so does not have `null` entries and all members have unique names. Throws a [NakshaException], if any error is found.
+     * Test whether this member list is valid, so does not have `null` entries and all members have unique valid names. Throws a [NakshaException], if any error is found.
      */
     fun validate() {
         for (i in 0 until this.size) {
             val member = this[i] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $i is null")
             val memberName = member.name
+            if (!Naksha.isValidId(memberName, internal = true)) {
+                throw NakshaException(ILLEGAL_STATE, "Member at index $i has invalid name: $memberName")
+            }
             for (j in (i + 1) until this.size) {
                 val later = this[j] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $j is null")
                 if (memberName == later.name) {

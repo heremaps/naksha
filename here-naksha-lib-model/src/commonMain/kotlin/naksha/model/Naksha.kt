@@ -17,6 +17,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -140,14 +141,17 @@ class Naksha private constructor() {
          *
          * **Beware**: Identifiers must not contain upper-case letters, because many storages does not make a difference between upper- and lower-cased letters.
          * @param id the identifier.
+         * @param internal if _true_, then extends the allowed character set to `[a-z_][a-z0-9_:-~$]{31}`.
          * @return _true_ if the identifier is valid; _false_ otherwise.
          * @since 3.0
          * @see [verifyId]
+         * @see [verifyInternalId]
          * @see [MAX_ID_LENGTH]
          */
         @JsStatic
         @JvmStatic
-        fun isValidId(id: String?): Boolean {
+        @JvmOverloads
+        fun isValidId(id: String?, internal: Boolean = false): Boolean {
             if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) return false
             var i = 0
             var c = id[i++]

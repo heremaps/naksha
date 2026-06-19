@@ -84,7 +84,7 @@ data class Tuple @JvmOverloads constructor(
             globalBook: IBook?
         ): Tuple {
             val members = collection.useMembers()
-            val processors = session.processors()
+            val processors = session.processors
 
             // Update the tuple-number.
             val tnMember = collection.useMember(StandardMembers.Tn)

@@ -11,7 +11,7 @@ import naksha.model.objects.StoreMode
 import kotlin.js.JsExport
 
 /**
- * The internal collection in the admin-map, that keeps track of the transactions of the storage.
+ * The internal collection in the admin-catalog, that keeps track of the transactions of the storage.
  *
  * This is a standard partitioned collection with:
  * - 16 HEAD partitions (partitioned by `fn`)
@@ -27,7 +27,7 @@ import kotlin.js.JsExport
  * HERE global sequencer populates them.
  */
 @JsExport
-class PgNakshaTransactions internal constructor(adminMap: PgAdminCatalog) : PgCollection(adminMap, NakshaCollection()
+class PgNakshaTransactions internal constructor(adminCatalog: PgAdminCatalog) : PgCollection(adminCatalog, NakshaCollection()
     .withCatalogId(ADMIN_CATALOG_ID)
     .withId(TRANSACTIONS_COL_ID)
     .withStoreDeleted(StoreMode.OFF)
@@ -40,10 +40,11 @@ class PgNakshaTransactions internal constructor(adminMap: PgAdminCatalog) : PgCo
         StandardMembers.GlobalVersion,
     )
     .withIndices(
-        naksha.model.objects.Index().withName(PgIndex.txn_unique.name),
         StandardIndices.PublishNumber,
         StandardIndices.PublishTime,
         StandardIndices.GlobalVersion,
     )
 ), PgInternalCollection
 
+// TODO: We need to fix this, we want all internal collections to use XYZ members and indices
+//       For this case, we additionally want the publication members and indices.

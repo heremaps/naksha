@@ -8,16 +8,16 @@ import java.util.concurrent.TimeUnit
 /**
  * A cache for a specific map, which by itself will cache the collections.
  *
- * @property adminMap the admin-map to which this cache entry belongs.
+ * @property adminCatalog the admin-map to which this cache entry belongs.
  * @property id the map-id.
  * @property number the map-number.
  * @since 3.0
  */
-data class PsqlMap(
-    val adminMap: PsqlAdminCatalog,
+data class PsqlCatalog(
+    val adminCatalog: PsqlAdminCatalog,
     val pgCatalog: PgCatalog? = null,
-    val id: String = pgCatalog?.id ?: throw illegalArg("PsqlMap without valid id"),
-    val number: Int = pgCatalog?.number ?: throw illegalArg("PsqlMap without valid number")
+    val id: String = pgCatalog?.id ?: throw illegalArg("PsqlCatalog without valid id"),
+    val number: Int = pgCatalog?.catalogNumber ?: throw illegalArg("PsqlCatalog without valid number")
 ): Expiry<Int, PsqlCollection> {
 
     /**
