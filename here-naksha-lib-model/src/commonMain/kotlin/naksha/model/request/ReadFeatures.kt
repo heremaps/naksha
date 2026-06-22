@@ -7,6 +7,7 @@ import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.GuidList
 import naksha.model.Version
+import naksha.model.request.ops.Op
 import naksha.model.request.query.IMemberQuery
 import naksha.model.request.query.IPropertyQuery
 import naksha.model.request.query.ITagQuery
@@ -31,6 +32,7 @@ open class ReadFeatures : ReadRequest() {
         private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
         private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
         private val QUERY = NotNullProperty<ReadRequest, RequestQuery>(RequestQuery::class)
+        private val OP_OR_NULL = NullableProperty<ReadRequest, Op>(Op::class)
     }
 
     /**
@@ -57,7 +59,7 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
-    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
     open fun withPropertyQuery(pQuery: IPropertyQuery?): ReadFeatures {
         this.query.properties = pQuery
         this.resultFilters.removeAll { it is PropertyFilter }
@@ -74,7 +76,7 @@ open class ReadFeatures : ReadRequest() {
      * This method comes handy if [IPropertyQuery] was mutated outside of this class scope,
      * in such cases we need to populate the filter once again so it will be in sync with the query
      */
-    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
     fun refreshPropertyFilter() {
         this.resultFilters.removeAll { it is PropertyFilter }
         if(query.properties != null) {
@@ -91,7 +93,7 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
-    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
     open fun withTagQuery(tQuery: ITagQuery?): ReadFeatures {
         this.query.tags = tQuery
         return this
@@ -181,7 +183,7 @@ open class ReadFeatures : ReadRequest() {
      * Add all features that match the given IDs into the result-set.
      * @since 3.0.0
      */
-    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
     var featureIds: StringList by STRING_LIST
 
     /**
@@ -192,26 +194,23 @@ open class ReadFeatures : ReadRequest() {
      */
     // TODO: We should replace this with `tupleNumbers`, because that is what we will encode into `uuid` and that is what the clients need.
     //       Is there any use-case for the GUID any longer?
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
     var guids: GuidList by GUID_LIST
 
     /**
      * Add all features that match the given query into the result-set.
      * @since 3.0.0
      */
-    @Deprecated("Replaced with memberQuery", replaceWith = ReplaceWith("memberQuery"))
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
     var query: RequestQuery by QUERY
 
     /**
-     * Search for [members][naksha.model.objects.Member]s.
+     * The [operation][Op] to execute.
      *
-     * This method now supports to search for all custom defined members. It allows arbitrary combination.
+     * This replaces [query] and must not be used together with [query]. It actually allows to query for any member value.
      * @since 3.0
      */
-    var memberQuery: IMemberQuery?
-        get() = query.members
-        set(value) {
-            query.members = value
-        }
+    var op: Op? by OP_OR_NULL
 
     /**
      * Tests whether this request is effectively a query for all features in their current **HEAD** state,
