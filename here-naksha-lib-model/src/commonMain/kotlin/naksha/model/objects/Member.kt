@@ -29,8 +29,8 @@ import naksha.model.objects.Int16Member
 import naksha.model.objects.Int32Member
 import naksha.model.objects.Int64Member
 import naksha.model.objects.Int8Member
-import naksha.model.objects.SetMember
 import naksha.model.objects.SpatialMember
+import naksha.model.objects.TagListMember
 import naksha.model.objects.StringMember
 import naksha.model.objects.TagsMember
 import naksha.model.objects.TupleNumberMember
@@ -400,7 +400,7 @@ open class Member() : AnyObject(), Comparator<Member> {
             MemberType.TUPLE_NUMBER -> proxy(TupleNumberMember::class)
             MemberType.SPATIAL -> proxy(SpatialMember::class)
             MemberType.TAGS, MemberType.TAGS_FROM_ARRAY -> proxy(TagsMember::class)
-            MemberType.SET -> proxy(SetMember::class)
+            MemberType.TAG_LIST -> proxy(TagListMember::class)
         }
         return this
     }
@@ -417,5 +417,5 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun asTupleNumber(): TupleNumberMember = proxy(TupleNumberMember::class)
     fun asSpatial(): SpatialMember = proxy(SpatialMember::class)
     fun asTags(): TagsMember = proxy(TagsMember::class)
-    fun asSet(): SetMember = proxy(SetMember::class)
+    fun asTagList(): TagListMember = proxy(TagListMember::class)
 }

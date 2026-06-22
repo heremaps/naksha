@@ -547,14 +547,14 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     }
 
     /**
-     * When a custom [MemberType.SET] member is declared with a [IndexType.SET] index, the collection
+     * When a custom [MemberType.TAG_LIST] member is declared with a [IndexType.TAG_LIST] index, the collection
      * must materialize the member as a `jsonb` column and create a GIN index over it.
      */
     @Test
     fun membersSet_shouldCreateJsonbColumnAndGinIndex() {
         val collection = NakshaCollection("members_set_test", map.id).apply {
-            addMember(Member("labels", MemberType.SET))
-            addIndex(Index("idx_labels", IndexType.SET, "labels"))
+            addMember(Member("labels", MemberType.TAG_LIST))
+            addIndex(Index("idx_labels", IndexType.TAG_LIST, "labels"))
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -581,13 +581,13 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     }
 
     /**
-     * A [IndexType.SET] index must be rejected when it targets a member that is not a [MemberType.SET].
+     * A [IndexType.TAG_LIST] index must be rejected when it targets a member that is not a [MemberType.TAG_LIST].
      */
     @Test
-    fun membersSet_indexOnNonSetMemberShouldFail() {
+    fun membersSet_indexOnNonTagListMemberShouldFail() {
         val collection = NakshaCollection("members_set_invalid_test", map.id).apply {
             addMember(Member("score", MemberType.INT64))
-            addIndex(Index("idx_set_score", IndexType.SET, "score"))
+            addIndex(Index("idx_tag_list_score", IndexType.TAG_LIST, "score"))
         }
         executeWriteErrorResponse(WriteRequest().add(Write().createCollection(collection)))
     }
@@ -615,7 +615,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             addMember(Member("g_i16",   MemberType.INT16))
             addMember(Member("h_f32",   MemberType.FLOAT32))
             addMember(Member("i_json",  MemberType.TAGS))
-            addMember(Member("j_set",   MemberType.SET))
+            addMember(Member("j_tag_list", MemberType.TAG_LIST))
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 

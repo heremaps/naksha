@@ -48,7 +48,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
     }
 
     /**
-     * The default tags member is a [naksha.model.objects.MemberType.SET]: the tags array is stored
+     * The default tags member is a [naksha.model.objects.MemberType.TAG_LIST]: the tags list is stored
      * unmodified, the values are never split into key/value pairs. Therefore only full elements can
      * be matched — `TagExists("fullelem")` does not find a feature tagged `["fullelem=bar"]`.
      */

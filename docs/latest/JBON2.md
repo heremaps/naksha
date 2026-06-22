@@ -28,11 +28,11 @@ As the format name indicates, this format is object-oriented. All **JBON** data 
 - `Primitive`: The following _**units**_ are called _primitives_: `null`, `boolean`, `integer`, `float`, `timestamp`, `string`, and `tuple-number`.
 - `String`: A special _primitive_ that encodes a list of [UNICODE] code points, optionally including [references] to sub-strings. Strings are split using the [UNICODE] word boundary algorithm from [ICU4J].
 - `Array` _(`List<Any?>`)_: A list of arbitrary _**units**_ with significant order _(changing the order creates a different array)_.
-- `Set` _(`List<Primitive>`)_: A list of unique non-null _**primitives**_; the order of the elements is not significant, therefore the encoder will optimize the order by sorting the elements.
+- `TagList` _(`List<Primitive>`)_: A list of unique non-null _**primitives**_; the order of the elements is significant, and the list must not have duplicates, null or undefined.
 - `Object` _(`Map<String, Any?>`)_: A list of key-value pairs with all keys being unique non-null _**strings**_; the values can be any _**unit**_. The order of the entries is not significant, therefore the encoder will optimize by sorting the entries by their keys.
 - `Map` _(`Map<Primitive, Any?>`)_: A list of key-value pairs with keys limited to be unique non-null _**primitives**_; values can be any _**unit**_. The order of the entries is not significant, therefore the encoder will optimize by sorting the entries by their keys.
 - `Dictionary` _(`Map<String, String>`)_: A list of key-value pairs with keys being unique non-null _**strings**_ and values being non-null _**strings**_. The order of the entries is not significant, therefore the encoder will optimize by sorting the entries by their keys.
-- `Tags` _(`Map<String, Primitive?>`)_: A list of key-value pairs with keys being unique non-null _**strings**_, and the values being any _**primitive**_. The order of the entries is not significant, therefore the encoder will optimize by sorting the entries by their keys.
+- `TagMap` _(`Map<String, Primitive?>`)_: A list of key-value pairs with keys being unique non-null _**strings**_, and the values being any _**primitive**_. The order of the entries is not significant, therefore the encoder will optimize by sorting the entries by their keys.
 - `Book` _(`List<Any?>`)_: An addressable array of _**units**_ loaded into context.
 - `Tuple`: A special encoding of a _feature_ being an `Object` with some metadata to cooperate with the [Naksha data model].
 - `TWKB`: An embedded geometry encoded in [Tiny WKB].
@@ -71,7 +71,7 @@ Whenever data is sorted, the following sort order should be used:
 - Strings, are converted into their [UTF16 string], then sorted by their UTF-16 code-units, so that the sorting is compatible with JavaScript and Java.
   - This is not a locale-aware alphabetical sorting.
   - If a [UTF16 string] is part of the **JBON**, it is treated exactly like a string, except that no conversion is needed.
-- All structures (including [Array], [Map], [Set], [Object], [Tags], [Dictionary], [Book], [TupleNumberArray], [Tuple], [TWKB], and [Binary]) sort after all primitives, by their [logical bytes].
+- All structures (including [Array], [Map], [TagList], [Object], [TagMap], [Dictionary], [Book], [TupleNumberArray], [Tuple], [TWKB], and [Binary]) sort after all primitives, by their [logical bytes].
 
 Beware that [references] can't be sorted, they always behave exactly like the value to which they refer. So, when a reference to a [string] is given, the sorting is based on the value of the [string], not on the reference itself.
 
@@ -176,9 +176,9 @@ All _**units**_ start with a **lead-in** byte, which describes the actual type o
     - ss=3 / `11`: Size is **uint32**, 4 byte unsigned integer size
     - tttt= 0 / `11ss_0000`: [Array]
     - tttt= 1 / `11ss_0001`: [Map]
-    - tttt= 2 / `11ss_0010`: [Set]
+    - tttt= 2 / `11ss_0010`: [TagList]
     - tttt= 3 / `11ss_0011`: [Object]
-    - tttt= 4 / `11ss_0100`: [Tags]
+    - tttt= 4 / `11ss_0100`: [TagMap]
     - tttt= 5 / `11ss_0101`: [Dictionary]
     - tttt= 6 / `11ss_0110`: [Book]
     - tttt= 7 / `11ss_0111`: [TupleNumberArray]
@@ -253,7 +253,7 @@ The following types are indexable:
 - string
 - byte[]
 - tuple-number
-- tags
+- tagmap
 
 ## Timestamp
 A timestamp, encoded with a **lead-in** byte `0000_1100`. It encodes a unix epoch timestamp (UTC) in milliseconds, stored in big-endian encoding as 7-byte value following the **lead-in**. Therefore, it belongs to the primitives. We choose this encoding, because a year has 31,536,000,000 milliseconds, therefore 36-bit can encode 2 years, 40-bit encode 34 years, 48-bit encode already 8925 years, with 56-bit encoding around 2 million years, more than enough. Reducing the size from full 8 byte to 7 byte, saves one byte per value, but more significant, it allows to read timestamps atomically as a single 64-bit integer, then binary-ANDing with `0x00FF_FFFF_FFFF_FFFF` to get the timestamp in milliseconds.
@@ -499,7 +499,7 @@ If it is not empty, then the lowest four bit (`tttt`) encode the type of the str
 
 For the `Type` column in the following structure tables the maximum allowed type is used. The **lead-in** is always a single byte of type `byte` with the following size described as `int32`, encoded either as 1 byte, 2 byte or 4 byte unsigned integer in big-endian byte-order.
 
-When `ss=0` _(empty structure)_, the `byte_size` field is omitted; the total size of the structure is exactly 1 byte _(the **lead-in** only)_. All other fields shown in the structure tables below are likewise absent in the empty form. The `ss=00` _(empty form)_ is only meaningful for [Array], [Map], [Set], [Object], [Tags], [Dictionary] and [TupleNumberArray] _(where it represents the empty collection)_. For [Book], [Tuple], [TWKB], [Binary], and [UTF16 String], the `ss=00` form is invalid; decoders **MUST** reject it as malformed, and encoders **MUST NOT** emit it.
+When `ss=0` _(empty structure)_, the `byte_size` field is omitted; the total size of the structure is exactly 1 byte _(the **lead-in** only)_. All other fields shown in the structure tables below are likewise absent in the empty form. The `ss=00` _(empty form)_ is only meaningful for [Array], [Map], [TagList], [Object], [TagMap], [Dictionary] and [TupleNumberArray] _(where it represents the empty collection)_. For [Book], [Tuple], [TWKB], [Binary], and [UTF16 String], the `ss=00` form is invalid; decoders **MUST** reject it as malformed, and encoders **MUST NOT** emit it.
 
 All other values are variable encoded, for example `int` means any integer, `float` means any floating-point number. Therefore, an `int` with value `0` can be encoded as `int4`, the float `1.0` as `float4`. A question mark _(`?`)_ behind a type means that the value is nullable, so `null` can be stored instead of the actual value. If that is not the case, the value must not be `null`, nor a [reference] to `null` is allowed. Beware that all _**units**_ can always be replaced with a [reference] to relocate the _**unit**_ into a [book].
 
@@ -588,34 +588,34 @@ For the keys, the [primitive-stringification] is used, if needed.
 
 ---
 
-### Set (2)
-A set is a special [map] that does not store values, therefore it is a key-only map. The **lead-in** byte is `11ss_0010`; with `ss` encoding the size of the size, as usual.
+### TagList (2)
+A TagList is a list of unique non-null _**primitives**_; the order of the elements is significant, and the list must not have duplicates, null or undefined. The **lead-in** byte is `11ss_0010`; with `ss` encoding the size of the size, as usual.
 
 | Name      | Type             | Description                                                           |
 |-----------|------------------|-----------------------------------------------------------------------|
 | lead_in   | `byte`           | The **lead-in** byte, `11ss_0010`.                                    |
 | byte_size | `int32`          | The total size of the structure, including the **lead-in**, in bytes. |
 |           |                  |                                                                       |
-| entries   | ([primitive])... | The entries of the set.                                               |
+| entries   | ([primitive])... | The entries of the TagList.                                               |
 
-If `ss=00` _(**lead-in** is `1100_0010`)_, this implies an empty set _(`{"@type":"naksha:set"}`)_.
+If `ss=00` _(**lead-in** is `1100_0010`)_, this implies an empty TagList _(`{"@type":"naksha:taglist"}`)_.
 
-The entries in a set are not sorted, the order is significant. The entries must not be `null`, `undefined` or duplicates.
+The entries in a TagList are not sorted, the order is significant. The entries must not be `null`, `undefined` or duplicates.
 
 #### Logical Bytes
-The [logical bytes] of the set are calculated by adding the **lead-in** `1111_0010`, followed by the byte-size as 32-bit BE integer, followed by all `entries` [sorted] in ascending order. The same rules apply while generating the [logical bytes] that apply generally when encoding [logical bytes]. So, `entries` being [references] have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are.
+The [logical bytes] of the TagList are calculated by adding the **lead-in** `1111_0010`, followed by the byte-size as 32-bit BE integer, followed by all `entries` in their given order. The same rules apply while generating the [logical bytes] that apply generally when encoding [logical bytes]. So, `entries` being [references] have to be treated as if they were embedded, so they need to be added to the [logical bytes] the same way that real embedded values are.
 
 #### JSON
-The [JSON] serialization is done as object with values being `null`, and with a special type property:
+The [JSON] serialization is done as a normal array:
 
 ```javascript
-var set = {
-  "@type": "naksha:set",
-  "entries": []
-}
+var tagList = [
+  "foo",
+  "bar"
+]
 ```
 
-In [JSON] we have no better alternative to encode a set. For the entries, the [primitive-stringification] is used, if needed.
+For the entries, the [primitive-stringification] is used, if needed.
 
 ### Object (3)
 An object is a special [map] that only allows strings as keys. The **lead-in** byte is `11ss_0011`; with `ss` encoding the size of the size, as usual. All keys must be [strings].
@@ -645,8 +645,8 @@ However, in conflict case the explicit type name is `naksha:object`, needed only
 
 ---
 
-### Tags (4)
-The tags are a special [map] that allow only strings as keys and [primitives] as values. The **lead-in** byte is `11ss_0100`; with `ss` encoding the size of the size, as usual.
+### TagMap (4)
+A TagMap is a map with unique non-null _**string**_ keys and _**primitive**_ values. The **lead-in** byte is `11ss_0100`; with `ss` encoding the size of the size, as usual.
 
 | Name      | Type                        | Description                                                           |
 |-----------|-----------------------------|-----------------------------------------------------------------------|
@@ -655,20 +655,20 @@ The tags are a special [map] that allow only strings as keys and [primitives] as
 |           |                             |                                                                       |
 | entries   | ([string], [primitive]?)... | The key-value pairs.                                                  |
 
-If `ss=00` _(**lead-in** is `1100_0100`)_, this implies empty tags _(`{"@type":"naksha:tags"}`)_.
+If `ss=00` _(**lead-in** is `1100_0100`)_, this implies an empty TagMap _(`{"@type":"naksha:tagmap"}`)_.
 
-The entries in the maps are always encoded [sorted] ascending by the key.
+The entries in the TagMap are always encoded [sorted] ascending by the key.
 
 #### Logical Bytes
-The [logical bytes] of the tags are created by adding the **lead-in** `1111_0100`, followed by the byte-size as 32-bit BE integer, then all entries in order _(therefore, [sorted] by key, ascending)_.
+The [logical bytes] of the TagMap are created by adding the **lead-in** `1111_0100`, followed by the byte-size as 32-bit BE integer, then all entries in order _(therefore, [sorted] by key, ascending)_.
 
 #### JSON
 The [JSON] serialization is as object with special type property:
 
 ```javascript
-var tags = {
-  "@type": "naksha:tags",
-  "tag_name": tag_value
+var tagMap = {
+  "@type": "naksha:tagmap",
+  "key_name": key_value
 }
 ```
 
@@ -1285,10 +1285,10 @@ public enum JbonUnitType {
   BOOK,
   TUPLE_NUMBER,
   TUPLE,
-  SET,
+  TAG_LIST,
   MAP,
   DICTIONARY,
-  TAGS,
+  TAG_MAP,
   TWKB,
   BINARY
 }
@@ -1374,7 +1374,7 @@ public class Jbon {
   public void leave(int return_address) { /* ... */ }
 }
 
-// A thread-local JBON decoder that can support IArray, IObject, ISet, IMap, ITuple and ITupleNumber.
+// A thread-local JBON decoder that can support IArray, IObject, ITagList, IMap, ITuple and ITupleNumber.
 public class JbonDecoder {
   public JbonDecoder(@NotNull Jbon jbon) { this.jbon = jbon; }
   
@@ -1513,7 +1513,7 @@ public final class JbonArray extends JbonStruct implements IArray {
   public JbonArray(@NotNull JbonUnit unit) { super(unit); }
 }
 
-public final class JbonSet extends JbonStruct implements ISet {
+public final class JbonTagList extends JbonStruct implements ITagList {
   public JbonStruct(@NotNull JbonUnit unit) { super(unit); }
 }
 
@@ -1776,13 +1776,13 @@ The following changes are introduced in version 2 of this specification, compare
 [Map]: #map-1
 [map]: #map-1
 [maps]: #map-1
-[Set]: #set-2
+[TagList]: #set-2
 [set]: #set-2
 [sets]: #set-2
 [Object]: #object-3
 [object]: #object-3
 [objects]: #object-3
-[Tags]: #tags-4
+[TagMap]: #tags-4
 [tags]: #tags-4
 [Dictionary]: #dictionary-5
 [dictionary]: #dictionary-5

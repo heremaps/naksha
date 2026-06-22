@@ -17,8 +17,8 @@ import naksha.model.objects.Int16Member
 import naksha.model.objects.Int32Member
 import naksha.model.objects.Int64Member
 import naksha.model.objects.Int8Member
-import naksha.model.objects.SetMember
 import naksha.model.objects.SpatialMember
+import naksha.model.objects.TagListMember
 import naksha.model.objects.StringMember
 import naksha.model.objects.TagsMember
 import naksha.model.objects.TupleNumberMember
@@ -41,11 +41,12 @@ import kotlin.reflect.KClass
  *   order is **not** preserved.
  *   Only valid as a [Member] type; not a valid [IndexType].
  *   To index a [TAGS_FROM_ARRAY] column use [IndexType.TAGS].
- * - [SET]: a JSON array of unique primitive values (booleans, numbers, strings). The array is stored
- *   unmodified, so the element order is preserved when reading the feature back. Supports
- *   element-containment queries via [IndexType.SET]. This is the default type of the standard
- *   `tags` member, which keeps 100% downward compatibility with the classic XYZ tags array at
- *   `properties -> @ns:com:here:xyz -> tags`.
+ * - [TAG_LIST]: a list of unique primitive values (booleans, numbers, strings). Value order is
+ *   significant, but must not have duplicates, null or undefined. The storage persists the list
+ *   unmodified, so the element order is guaranteed to be preserved when reading the feature back.
+ *   Supports element-containment queries via [IndexType.TAG_LIST]. This is the default type of the
+ *   standard `tags` member, which keeps 100% downward compatibility with the classic XYZ tags array
+ *   at `properties -> @ns:com:here:xyz -> tags`.
  * @since 3.0
  */
 @JsExport
@@ -165,21 +166,21 @@ class MemberType : JsEnum() {
         val TAGS_FROM_ARRAY = defIgnoreCase(MemberType::class, "tags_from_array") { self -> self.sortOrder = 9; self.subtype = TagsMember::class }
 
         /**
-         * A JSON array of unique primitive values (booleans, numbers, strings), following the JBON2
-         * set specification: entries must not be `null` or duplicates, and the order is significant.
-         * The storage persists the array unmodified (as a JSON array in `jsonb`), so the element
-         * order is guaranteed to be preserved when reading the feature back.
+         * A list of unique primitive values (booleans, numbers, strings), following the JBON2
+         * TagList specification: entries must not be `null` or duplicates, and the order is
+         * significant. The storage persists the list unmodified (as a JSON array in `jsonb`), so
+         * the element order is guaranteed to be preserved when reading the feature back.
          *
          * This is the default type of the standard `tags` member (the classic XYZ tags array at
          * `properties -> @ns:com:here:xyz -> tags`, e.g. `["foo", "bar"]`). In contrast to
          * [TAGS_FROM_ARRAY] the values are not split into key/value pairs, therefore only full
          * elements can be searched, not keys or values.
          *
-         * Indexed via [IndexType.SET].
+         * Indexed via [IndexType.TAG_LIST].
          * @since 3.0
          */
         @JvmField
-        val SET = defIgnoreCase(MemberType::class, "set") { self -> self.sortOrder = 10; self.subtype = SetMember::class }
+        val TAG_LIST = defIgnoreCase(MemberType::class, "tag_list") { self -> self.sortOrder = 10; self.subtype = TagListMember::class }
     }
 
     /**
@@ -209,7 +210,7 @@ class MemberType : JsEnum() {
             TUPLE_NUMBER -> value is TupleNumber
             SPATIAL -> value is SpGeometry
             TAGS, TAGS_FROM_ARRAY -> value is TagMap
-            SET -> value is List<*>
+            TAG_LIST -> value is List<*>
             else -> false
         }
     }

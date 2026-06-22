@@ -8,7 +8,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Tests if a set-form tags member ([naksha.model.objects.MemberType.SET], the default for the
+ * Tests if a tag-list-form tags member ([naksha.model.objects.MemberType.TAG_LIST], the default for the
  * standard `tags` member) contains the given element.
  *
  * The element is matched in its type: strings, booleans, and numbers are all supported. For string

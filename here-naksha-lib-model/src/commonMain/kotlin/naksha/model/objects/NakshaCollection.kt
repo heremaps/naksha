@@ -426,7 +426,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * The indices to maintain on this collection.
      *
-     * Each [Index] declares a name, an [IndexType] ([IndexType.BTREE] / [IndexType.SPATIAL] / [IndexType.TAGS] / [IndexType.SET]), the column(s) to index, an optional include-list (for [IndexType.BTREE]), and a `unique` flag.
+     * Each [Index] declares a name, an [IndexType] ([IndexType.BTREE] / [IndexType.SPATIAL] / [IndexType.TAGS] / [IndexType.TAG_LIST]), the column(s) to index, an optional include-list (for [IndexType.BTREE]), and a `unique` flag.
      *
      * Indices are applied to every variant of the collection (head, history, deleted, meta) by the storage. Mandatory and default indices are injected by the storage; clients only need to declare additional custom indices here.
      * @since 3.0

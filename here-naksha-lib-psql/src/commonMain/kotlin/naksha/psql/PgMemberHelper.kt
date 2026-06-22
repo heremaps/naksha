@@ -48,7 +48,7 @@ class PgMemberHelper private constructor() {
             MemberType.SPATIAL -> PgType.BYTE_ARRAY
             MemberType.TAGS -> PgType.JSONB
             MemberType.TAGS_FROM_ARRAY -> PgType.JSONB
-            MemberType.SET -> PgType.JSONB
+            MemberType.TAG_LIST -> PgType.JSONB
             else -> PgType.STRING
         }
 
@@ -56,7 +56,7 @@ class PgMemberHelper private constructor() {
          * Returns the PostgreSQL DDL type string for the given member type, used inside `CREATE TABLE` / `ALTER TABLE ADD COLUMN`.
          * Note: there is no 1-byte signed integer type in PostgreSQL, so [MemberType.INT8] is materialized as `smallint`;
          * the storage enforces the 8-bit range on coercion.
-         * [MemberType.TAGS], [MemberType.TAGS_FROM_ARRAY], and [MemberType.SET] all use `jsonb STORAGE MAIN` —
+         * [MemberType.TAGS], [MemberType.TAGS_FROM_ARRAY], and [MemberType.TAG_LIST] all use `jsonb STORAGE MAIN` —
          * compressed inline, only TOASTed as a last resort. The only difference is the JSON shape:
          * TAGS and TAGS_FROM_ARRAY persist a JSON object, SET persists a JSON array.
          */
@@ -73,7 +73,7 @@ class PgMemberHelper private constructor() {
             MemberType.SPATIAL -> "bytea STORAGE EXTERNAL"
             MemberType.TAGS -> "jsonb STORAGE MAIN"
             MemberType.TAGS_FROM_ARRAY -> "jsonb STORAGE MAIN"
-            MemberType.SET -> "jsonb STORAGE MAIN"
+            MemberType.TAG_LIST -> "jsonb STORAGE MAIN"
             else -> "text"
         }
 
@@ -110,7 +110,7 @@ class PgMemberHelper private constructor() {
                 MemberType.SPATIAL -> coerceByteArray(value, featureId, memberName)
                 MemberType.TAGS -> coerceTags(value, featureId, memberName)
                 MemberType.TAGS_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
-                MemberType.SET -> coerceSet(value, featureId, memberName)
+                MemberType.TAG_LIST -> coerceTagList(value, featureId, memberName)
                 else -> {
                     warnMismatch(featureId, memberName, type.toString(), value)
                     null
@@ -240,11 +240,11 @@ class PgMemberHelper private constructor() {
         }
 
         /**
-         * Coerces a [MemberType.SET] value: a JSON array of unique primitives (booleans, numbers, strings).
+         * Coerces a [MemberType.TAG_LIST] value: a JSON array of unique primitives (booleans, numbers, strings).
          * The array is persisted unmodified (element order preserved). Entries that are `null`, non-primitive,
          * or duplicates violate the set contract; the value is then not materialized (warning + NULL column).
          */
-        private fun coerceSet(value: Any, featureId: String, memberName: String): String? {
+        private fun coerceTagList(value: Any, featureId: String, memberName: String): String? {
             val list: ListProxy<*> = when (value) {
                 is ListProxy<*> -> value
                 is PlatformList -> value.proxy(AnyList::class)
@@ -312,7 +312,7 @@ class PgMemberHelper private constructor() {
             MemberType.SPATIAL -> 8
             MemberType.TAGS -> 9
             MemberType.TAGS_FROM_ARRAY -> 10
-            MemberType.SET -> 11
+            MemberType.TAG_LIST -> 11
             else -> 12
         }
 

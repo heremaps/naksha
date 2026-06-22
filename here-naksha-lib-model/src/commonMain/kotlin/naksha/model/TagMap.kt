@@ -19,7 +19,7 @@ import kotlin.js.JsName
  * with use of [TagNormalizer] (that is used for example by [TagList])
  */
 @JsExport
-open class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
+class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
 
     @Suppress("LeakingThis")
     @JsName("of")

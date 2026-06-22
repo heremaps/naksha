@@ -49,12 +49,12 @@ class XyzIndices private constructor() {
         val XyzAuthor = Index("author", IndexType.BTREE, "author", "author_ts", "fn", "version")
 
         /**
-         * `tags` — inverted ([IndexType.SET]) index over the `tags` member, supporting element
+         * `tags` — inverted ([IndexType.TAG_LIST]) index over the `tags` member, supporting element
          * containment queries. See [XyzMembers.XyzTags].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzTags = Index("tags", IndexType.SET, "tags")
+        val XyzTags = Index("tags", IndexType.TAG_LIST, "tags")
 
         /**
          * `feature_type` — index on `ft`, `fn`, `version` (WHERE `ft IS NOT NULL`).

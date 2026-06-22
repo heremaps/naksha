@@ -128,7 +128,7 @@ class PgType : JsEnum() {
         /**
          * JSONB column type, bound as text (JSON).
          *
-         * Used by storages to materialize [naksha.model.objects.MemberType.TAGS], [naksha.model.objects.MemberType.TAGS_FROM_ARRAY] (JSON object), and [naksha.model.objects.MemberType.SET] (JSON array) members.
+         * Used by storages to materialize [naksha.model.objects.MemberType.TAGS], [naksha.model.objects.MemberType.TAGS_FROM_ARRAY] (JSON object), and [naksha.model.objects.MemberType.TAG_LIST] (JSON array) members.
          * @since 3.0
          */
         @JvmField
@@ -188,7 +188,7 @@ class PgType : JsEnum() {
             // MemberType.SPATIAL -> BYTE_ARRAY
             MemberType.TAGS -> JSONB
             MemberType.TAGS_FROM_ARRAY -> JSONB
-            MemberType.SET -> JSONB
+            MemberType.TAG_LIST -> JSONB
             else -> BYTE_ARRAY
         }
     }

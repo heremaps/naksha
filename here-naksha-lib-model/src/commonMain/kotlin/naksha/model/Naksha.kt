@@ -554,7 +554,7 @@ class Naksha private constructor() {
         }
 
         /**
-         * Encodes the given tag-list into the [set][naksha.model.objects.MemberType.SET]
+         * Encodes the given tag-list into the [tag_list][naksha.model.objects.MemberType.TAG_LIST]
          * representation: a JSON array, with the element order preserved.
          * @param tags the tags to encode.
          * @return the JSON array text representation, or _null_ if [tags] is _null_ / empty.
@@ -571,7 +571,7 @@ class Naksha private constructor() {
          * Decodes Naksha tags from their JSON text representation into a [TagList].
          *
          * Supports both persisted forms:
-         * - a JSON array ([set][naksha.model.objects.MemberType.SET], the default) is returned
+         * - a JSON array ([tag_list][naksha.model.objects.MemberType.TAG_LIST], the default) is returned
          *   unmodified, preserving the element order;
          * - a JSON object ([naksha.model.objects.MemberType.TAGS_FROM_ARRAY]) is re-flattened via
          *   [TagMap.toTagList], in which case the original order is not guaranteed.

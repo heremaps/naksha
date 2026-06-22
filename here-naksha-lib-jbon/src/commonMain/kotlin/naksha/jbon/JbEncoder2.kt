@@ -24,6 +24,11 @@ import kotlin.math.floor
  * when a [global] book is provided; the JBON2 string-reference format (`11_aaa_bbs`, 7 append
  * characters) is used.
  *
+ * Special structures:
+ * - [TagList][encodeTagList] (`JB2_STRUCT_TAG_LIST`): a list of unique primitive values where order
+ *   is significant, but must not have duplicates, null or undefined.
+ * - [TagMap][encodeTagMap] (`JB2_STRUCT_TAG_MAP`): a string-keyed map with primitive values.
+ *
  * @property global The global book/dictionary to use when encoding; if any.
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
@@ -749,6 +754,47 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
     }
 
     /**
+     * Write a TagList recursively. A TagList is a list of unique primitive values where order
+     * is significant, but must not have duplicates, null or undefined.
+     */
+    fun encodeTagList(list: ListProxy<*>): Int {
+        val start = startStruct()
+        var i = 0
+        while (i < list.size) {
+            pushPath(i)
+            try {
+                encodeValue(list[i])
+            } finally {
+                popPath()
+            }
+            i++
+        }
+        endStruct(JB2_STRUCT_TAG_LIST, start)
+        return start
+    }
+
+    /**
+     * Write a TagMap recursively. A TagMap is a string-keyed map with primitive values.
+     * Uses dictionary compression for keys when a global book is provided.
+     */
+    fun encodeTagMap(map: MapProxy<String, *>): Int {
+        val start = startStruct()
+        for (entry in map) {
+            val key = entry.key
+            val value = entry.value
+            writeKey(key)
+            pushPath(key)
+            try {
+                encodeValue(value)
+            } finally {
+                popPath()
+            }
+        }
+        endStruct(JB2_STRUCT_TAG_MAP, start)
+        return start
+    }
+
+    /**
      * Write a [JB2_STRUCT_TWKB] structure from raw TWKB bytes.
      *
      * The spec requires `ss != 00` (empty TWKB is invalid), so [bytes] must be non-empty.
@@ -825,8 +871,8 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
             is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
             is SpGeometry -> encodeGeometry(value)
             is ByteArray -> if (value.isNotEmpty()) encodeByteArray(value) else encodeNull()
-            is MapProxy<*, *> -> encodeObject(value as MapProxy<String, *>)
-            is ListProxy<*> -> encodeList(value)
+            is MapProxy<*, *> -> if (value::class.simpleName == "TagMap") encodeTagMap(value as MapProxy<String, *>) else encodeObject(value as MapProxy<String, *>)
+            is ListProxy<*> -> if (value::class.simpleName == "TagList") encodeTagList(value) else encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)
             null -> encodeNull()
             else -> throw IllegalArgumentException("Could not encode value for type: ${value::class}")

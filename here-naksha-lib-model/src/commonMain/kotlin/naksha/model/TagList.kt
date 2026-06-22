@@ -15,7 +15,7 @@ import kotlin.jvm.JvmStatic
  * A list of tags.
  */
 @JsExport
-open class TagList() : ListProxy<String>(String::class) {
+class TagList() : ListProxy<String>(String::class) {
 
     /**
      * Create a tag list from the given arguments; the tags are normalized.

@@ -54,7 +54,7 @@ data class PgIndex(
         val using = when (type) {
             BTREE -> "btree"
             SPATIAL -> "gist"
-            TAGS, SET -> "gin"
+            TAGS, TAG_LIST -> "gin"
             else -> throw NakshaException(INTERNAL_ERROR, "Invalid index type for index $name on table $tableName")
         }
         val indexName = quoteIdent(tableName, "\$i_", tableName)

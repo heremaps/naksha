@@ -83,7 +83,7 @@ class MemberTest {
         assertNotNull(IndexType.BTREE)
         assertNotNull(IndexType.SPATIAL)
         assertNotNull(IndexType.TAGS)
-        assertNotNull(IndexType.SET)
+        assertNotNull(IndexType.TAG_LIST)
     }
 
     @Test
@@ -101,13 +101,13 @@ class MemberTest {
         // Virtual / jsonb.
         assertNotNull(MemberType.TAGS)
         assertNotNull(MemberType.TAGS_FROM_ARRAY)
-        assertNotNull(MemberType.SET)
+        assertNotNull(MemberType.TAG_LIST)
     }
 
     @Test
     fun standardTagsMemberDefaultsToSet() {
-        assertEquals(MemberType.SET, naksha.model.objects.StandardMembers.XyzTags.dataType)
-        assertEquals(IndexType.SET, naksha.model.objects.XyzIndices.XyzTags.type)
+        assertEquals(MemberType.TAG_LIST, naksha.model.objects.StandardMembers.XyzTags.dataType)
+        assertEquals(IndexType.TAG_LIST, naksha.model.objects.XyzIndices.XyzTags.type)
     }
 
     @Test

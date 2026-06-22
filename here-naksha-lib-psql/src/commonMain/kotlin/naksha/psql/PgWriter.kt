@@ -515,7 +515,7 @@ open class PgWriter internal constructor(
                                         "but '$firstColName' has type $firstColType."
                                 )
                             }
-                            IndexType.SET -> if (firstColType != MemberType.SET) {
+                            IndexType.TAG_LIST -> if (firstColType != MemberType.TAG_LIST) {
                                 throw illegalArg(
                                     "SET index '${idx.name}' must target a member of type SET, " +
                                         "but '$firstColName' has type $firstColType."

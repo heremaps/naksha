@@ -179,9 +179,14 @@ internal const val JB2_STRUCT_SIZE32 = 0b0011_0000
 internal const val JB2_STRUCT_TYPE_MASK = 0b0000_1111
 internal const val JB2_STRUCT_ARRAY = 0 // 0000
 internal const val JB2_STRUCT_MAP = 1 // 0001
-internal const val JB2_STRUCT_SET = 2 // 0010
+/**
+ * TagList: a list of unique primitive values (booleans, numbers, strings). Value order is
+ * significant, but must not have duplicates, null or undefined.
+ */
+internal const val JB2_STRUCT_TAG_LIST = 2 // 0010
 internal const val JB2_STRUCT_OBJECT = 3 // 0011
-internal const val JB2_STRUCT_TAGS = 4 // 0100
+/** TagMap: a string-keyed map with primitive values. */
+internal const val JB2_STRUCT_TAG_MAP = 4 // 0100
 internal const val JB2_STRUCT_DICTIONARY = 5 // 0101
 internal const val JB2_STRUCT_BOOK = 6 // 0110
 internal const val JB2_STRUCT_TUPLE_NUMBER_ARRAY = 7 // 0111

@@ -218,13 +218,13 @@ class XyzMembers private constructor() {
         /**
          * `tags` — feature tags, the classic XYZ tags array located at
          * `properties -> @ns:com:here:xyz -> tags` (e.g. `["foo", "bar"]`), stored as a
-         * [set][MemberType.SET] of unique strings. The array is persisted unmodified, so the
+         * [tag_list][MemberType.TAG_LIST] of unique strings. The list is persisted unmodified, so the
          * element order is preserved when reading the feature back. `null` if the feature has no
-         * tags. Supports element containment queries via [IndexType.SET]. Default member.
+         * tags. Supports element containment queries via [IndexType.TAG_LIST]. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzTags = Member("tags", MemberType.SET, JsonPath("properties", "@ns:com:here:xyz", "tags"))
+        val XyzTags = Member("tags", MemberType.TAG_LIST, JsonPath("properties", "@ns:com:here:xyz", "tags"))
 
         /**
          * `ref_point` — geometry reference point (always a single point), stored as TWKB. Used to compute the [XyzHereTile] value. `null` if the feature has no explicit reference point.

@@ -11,8 +11,9 @@ import kotlin.jvm.JvmStatic
  *
  * This reader is intentionally focused on the subset that [JbEncoder2] produces: the `@JB\x02`
  * file header, primitives, strings (with string-references resolved against a book), and the
- * structures [Array], [Object], [Map], [Dictionary], [Book] and [Tuple]. It is enough to keep the
- * read path and round-trip tests working; the full JBON2 type set can be added incrementally.
+ * structures [Array], [Object], [Map], [TagList], [TagMap], [Dictionary], [Book] and [Tuple].
+ * It is enough to keep the read path and round-trip tests working; the full JBON2 type set
+ * can be added incrementally.
  *
  * The decoder maps a single top-level unit. To decode a stored tuple, call [mapBytes] which will
  * skip the file header (if present), descend into the [Tuple], and expose the feature [Object].
@@ -347,7 +348,7 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
         val contentStart = at + hs
         val contentEnd = contentStart + contentSize
         return when (type) {
-            JB2_STRUCT_ARRAY -> {
+            JB2_STRUCT_ARRAY, JB2_STRUCT_TAG_LIST -> {
                 val list = AnyList()
                 var p = contentStart
                 while (p < contentEnd) {
@@ -356,7 +357,7 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
                 }
                 list
             }
-            JB2_STRUCT_OBJECT, JB2_STRUCT_MAP -> {
+            JB2_STRUCT_OBJECT, JB2_STRUCT_MAP, JB2_STRUCT_TAG_MAP -> {
                 val obj = AnyObject()
                 var p = contentStart
                 while (p < contentEnd) {
