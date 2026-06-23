@@ -11,7 +11,7 @@ import kotlin.js.JsExport
  * @since 3.0
  */
 @JsExport
-class Equals() : Op() {
+class Equals() : Op(), ICompare {
     companion object Equals_C {
         private val VALUE = NullableProperty<Equals, Any>(Any::class)
     }

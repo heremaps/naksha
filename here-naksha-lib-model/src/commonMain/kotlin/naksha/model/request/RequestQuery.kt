@@ -43,9 +43,7 @@ open class RequestQuery : AnyObject() {
      * @since 3.0.0
      * @see ISpatialQuery
      */
-    // TODO: We need to replace this with MemberQueries.
-    //       Actually, in the members we can store multiple geometries, all of them can be searched.
-    @Deprecated("Use member queries, there can be multiple spatial members that can be searched and combined.")
+    @Deprecated("Use op queries, there can be multiple spatial members that can be searched and combined.")
     var spatial by SPATIAL_QUERY_OR_NULL
 
     /**
@@ -53,9 +51,7 @@ open class RequestQuery : AnyObject() {
      * @since 3.0.0
      * @see ITagQuery
      */
-    // TODO: We need to replace this with MemberQueries.
-    //       Actually, in the members we can store multiple tag-like members, all of them can be searched.
-    @Deprecated("Use member queries, there can be multiple tag-like members that can be searched and combined.")
+    @Deprecated("Use op queries, there can be multiple tag-like members that can be searched and combined.")
     var tags by TAG_QUERY_OR_NULL
 
     /**
@@ -63,9 +59,6 @@ open class RequestQuery : AnyObject() {
      * @since 3.0.0
      * @see IPropertyQuery
      */
-    // TODO: Remove this completely, we should only allow to actually search for members.
-    //       Not members must be post-filtered by the client, we can offer the helper we have for this case.
-    //       This makes it as well very clear to the client and user, what can found fast, and what will be slow.
     @Deprecated("Remove this completely, we only allow to actually search for members.")
     var properties by PROPERTIES_QUERY_OR_NULL
 
@@ -74,8 +67,7 @@ open class RequestQuery : AnyObject() {
      * @since 3.0.0
      * @see IMemberQuery
      */
-    // TODO: Because actually everything boils down to member-queries only, we should move this into the ReadFeatures directly.
-    //       We only need this property in ReadFeaturs, so that clients can defined how indices they have created are used.
+    @Deprecated("Use op queries, meta has been removed.")
     var members by MEMBER_QUERY_OR_NULL
 
     /**
@@ -84,8 +76,7 @@ open class RequestQuery : AnyObject() {
      * If the list is empty, no limit is applied.
      * @since 3.0.0
      */
-    // TODO: Remove this completely, clients that need spatial queries should use spatial members.
-    @Deprecated("Please use spatial members instead")
+    @Deprecated("Use op queries, there can be multiple refTiles-like members that can be searched and combined.")
     var refTiles by INT_LIST
 
     /**
@@ -94,7 +85,7 @@ open class RequestQuery : AnyObject() {
      * @return this.
      * @since 3.0.0
      */
-    @Deprecated("Please use spatial members instead")
+    @Deprecated("Please use op queries instead")
     fun addRefTile(tile: HereTile): RequestQuery {
         refTiles.add(tile.intKey)
         return this
@@ -106,7 +97,7 @@ open class RequestQuery : AnyObject() {
      * @return this.
      * @since 3.0.0
      */
-    @Deprecated("Please use spatial members instead")
+    @Deprecated("Please use op queries instead")
     fun removeRefTile(tile: HereTile): RequestQuery {
         refTiles.remove(tile.intKey)
         return this

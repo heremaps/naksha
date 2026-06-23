@@ -8,17 +8,17 @@ import naksha.model.objects.Member
 import kotlin.js.JsExport
 
 /**
- * Tests if all of the given [keys] exist on the member at [at].
+ * Tests if any of the given [keys] exist on the member at [at].
  * @since 3.0
  */
 @JsExport
-class TagHasAllOf() : Op() {
-    companion object TagHasAllOf_C {
-        private val KEYS = NotNullProperty<TagHasAllOf, StringList>(StringList::class) { _,_ -> StringList() }
+class TagMapHasAnyOf() : Op() {
+    companion object TagHasAnyOf_C {
+        private val KEYS = NotNullProperty<TagMapHasAnyOf, StringList>(StringList::class) { _, _ -> StringList() }
     }
 
     constructor(at: String, vararg keys: String) : this() {
-        this.op = TAG_HAS_ALL_OF
+        this.op = TAGMAP_HAS_ANY_OF
         this.at = at
         val _tagKeys = this.tagKeys
         for (key in keys) _tagKeys.add(key)

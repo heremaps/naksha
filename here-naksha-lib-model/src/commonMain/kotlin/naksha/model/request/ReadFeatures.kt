@@ -8,7 +8,6 @@ import naksha.base.StringList
 import naksha.model.GuidList
 import naksha.model.Version
 import naksha.model.request.ops.Op
-import naksha.model.request.query.IMemberQuery
 import naksha.model.request.query.IPropertyQuery
 import naksha.model.request.query.ITagQuery
 import kotlin.js.JsExport
@@ -59,7 +58,7 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
-    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
+    @Deprecated("Remove, need always to be done on the client using post-filtering", replaceWith = ReplaceWith("op"))
     open fun withPropertyQuery(pQuery: IPropertyQuery?): ReadFeatures {
         this.query.properties = pQuery
         this.resultFilters.removeAll { it is PropertyFilter }
@@ -194,7 +193,7 @@ open class ReadFeatures : ReadRequest() {
      */
     // TODO: We should replace this with `tupleNumbers`, because that is what we will encode into `uuid` and that is what the clients need.
     //       Is there any use-case for the GUID any longer?
-    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
+    @Deprecated("Replace with load by tuple-number, should not be part of the query!", replaceWith = ReplaceWith("op"))
     var guids: GuidList by GUID_LIST
 
     /**
@@ -205,12 +204,12 @@ open class ReadFeatures : ReadRequest() {
     var query: RequestQuery by QUERY
 
     /**
-     * The [operation][Op] to execute.
+     * The [operations][Op] to execute to query members.
      *
-     * This replaces [query] and must not be used together with [query]. It actually allows to query for any member value.
+     * This replaces [query] and must not be used together with [query]. It actually allows to query for any member value. In doubt, [queryMembers] always wins.
      * @since 3.0
      */
-    var op: Op? by OP_OR_NULL
+    var queryMembers: Op? by OP_OR_NULL
 
     /**
      * Tests whether this request is effectively a query for all features in their current **HEAD** state,

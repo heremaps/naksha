@@ -17,10 +17,8 @@ import kotlin.js.JsExport
 open class ReadRequest : Request() {
     companion object ReadRequestCompanion {
         private val INT_NULL = NullableProperty<ReadRequest, Int>(Int::class)
-        private val BOOLEAN =
-            NullableProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val FETCH_MODE =
-            NotNullProperty<Request, FetchMode>(FetchMode::class) { _, _ -> FETCH_ALL }
+        private val BOOLEAN = NullableProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
+        private val FETCH_MODE = NotNullProperty<Request, FetchMode>(FetchMode::class) { _, _ -> FETCH_ALL }
     }
 
     override fun defaultRowOptions(): ReturnColumns = ReturnColumns.all()

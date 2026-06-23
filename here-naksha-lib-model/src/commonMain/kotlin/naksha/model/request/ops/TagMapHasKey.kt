@@ -11,13 +11,13 @@ import kotlin.js.JsExport
  * @since 3.0
  */
 @JsExport
-class TagExists() : Op() {
+class TagMapHasKey() : Op() {
     companion object TagExists_C {
-        private val KEY = NotNullProperty<TagExists, String>(String::class) { _,_ -> "" }
+        private val KEY = NotNullProperty<TagMapHasKey, String>(String::class) { _, _ -> "" }
     }
 
     constructor(at: String, key: String) : this() {
-        this.op = TAG_EXISTS
+        this.op = TAGMAP_HAS_KEY
         this.at = at
         this.key = key
     }

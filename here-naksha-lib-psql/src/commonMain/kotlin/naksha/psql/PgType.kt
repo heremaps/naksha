@@ -157,6 +157,18 @@ class PgType : JsEnum() {
         fun of(name: String?): PgType? = getDefined(name, PgType::class)
 
         /**
+         * Detects the [PgType] of the given value, if it has any.
+         * @param value the value for which to detect the [PgType]
+         * @return the matching [PgType] or `null`, if none matches.
+         */
+        @JsStatic
+        @JvmStatic
+        fun ofValue(value: Any?): PgType? {
+            // TODO: Implement detection.
+            return null
+        }
+
+        /**
          * Returns the database column type to be used for a specific [Member].
          * @param member the [Member] to lookup.
          * @return the database column type to be used for a specific [Member].
@@ -220,4 +232,17 @@ class PgType : JsEnum() {
      */
     var childType: PgType? = null
         private set
+
+    /**
+     * Converts the given value in this type, so that it can be given to JDBC.
+     *
+     * For example, converts a `List<String>` into a `String[]`.
+     * @param value the value to convert into this type.
+     * @return the value so that it can be used with JDBC.
+     */
+    fun convertValue(value: Any?): Any? {
+        // TODO: We need to convert certain values to postgres valid ones
+        //       For lists, we need to convert them into typed arrays.
+        return value
+    }
 }

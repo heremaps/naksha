@@ -18,7 +18,7 @@ class IsAnyOf() : Op() {
     }
 
     constructor(at: String, vararg items: Any) : this() {
-        this.op = ANY_OF
+        this.op = IS_ANY_OF
         this.at = at
         val _items = this.items
         for (item in items) _items.add(item)

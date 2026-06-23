@@ -12,13 +12,13 @@ import kotlin.js.JsExport
  * @since 3.0
  */
 @JsExport
-class TagListHasAnyOf() : Op() {
+class TagListContainsAnyOf() : Op() {
     companion object TagListHasAnyOf_C {
-        private val ITEMS = NotNullProperty<TagListHasAnyOf, AnyList>(AnyList::class) { _,_ -> AnyList() }
+        private val ITEMS = NotNullProperty<TagListContainsAnyOf, AnyList>(AnyList::class) { _, _ -> AnyList() }
     }
 
     constructor(at: String, vararg items: Any) : this() {
-        this.op = TAGLIST_HAS_ANY_OF
+        this.op = TAGLIST_CONTAINS_ANY_OF
         this.at = at
         val _items = this.items
         for (item in items) _items.add(item)

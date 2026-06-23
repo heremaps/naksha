@@ -34,20 +34,24 @@ open class Op : AnyObject() {
         const val LT = "lt"
         const val LTE = "lte"
         const val STARTS_WITH = "starts_with"
-        const val ANY_OF = "any_of"
+        const val IS_ANY_OF = "any_of"
         const val INTERSECTS = "intersects"
-        const val TAG_EXISTS = "tag_exists"
-        const val TAG_HAS_ANY_OF = "tag_has_any_of"
-        const val TAG_HAS_ALL_OF = "tag_has_all_of"
+        const val TAGMAP_HAS_KEY = "tagmap_has_key"
+        const val TAGMAP_HAS_ANY_OF = "tagmap_has_any_of"
+        const val TAGMAP_HAS_ALL_OF = "tagmap_has_all_of"
         const val TAG_IS_NULL = "tag_is_null"
         const val TAG_EQ = "tag_eq"
-        const val TAG_STARTS_WITH = "tag_starts_with"
         const val TAG_GT = "tag_gt"
         const val TAG_GTE = "tag_gte"
         const val TAG_LT = "tag_lt"
         const val TAG_LTE = "tag_lte"
-        const val TAGLIST_HAS_ANY_OF = "taglist_has_any_of"
-        const val TAGLIST_HAS_ALL_OF = "taglist_has_all_of"
+        const val TAG_STARTS_WITH = "tag_starts_with"
+        @Suppress("SpellCheckingInspection")
+        const val TAGLIST_CONTAINS = "taglist_contains"
+        @Suppress("SpellCheckingInspection")
+        const val TAGLIST_CONTAINS_ANY_OF = "taglist_contains_any_of"
+        @Suppress("SpellCheckingInspection")
+        const val TAGLIST_CONTAINS_ALL_OF = "taglist_contains_all_of"
 
         /**
          * Auto-detect the concrete type of member operation and return the cast real type.
@@ -56,36 +60,39 @@ open class Op : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun detect(op: MapProxy<*,*>): Op? = when(op.getRaw("op") as String?) {
-            AND -> op.proxy(And::class)
-            OR -> op.proxy(Or::class)
-            NOT -> op.proxy(Not::class)
-            IS_NULL -> op.proxy(IsNull::class)
-            IS_TRUE -> op.proxy(IsTrue::class)
-            IS_FALSE -> op.proxy(IsFalse::class)
-            EQ -> op.proxy(Equals::class)
-            GT -> op.proxy(Gt::class)
-            GTE -> op.proxy(Gte::class)
-            LT -> op.proxy(Lt::class)
-            LTE -> op.proxy(Lte::class)
-            STARTS_WITH -> op.proxy(StartsWith::class)
-            ANY_OF -> op.proxy(IsAnyOf::class)
-            INTERSECTS -> op.proxy(Intersects::class)
-            TAG_EXISTS -> op.proxy(TagExists::class)
-            TAG_HAS_ANY_OF -> op.proxy(TagHasAnyOf::class)
-            TAG_HAS_ALL_OF -> op.proxy(TagHasAllOf::class)
-            TAG_IS_NULL -> op.proxy(TagIsNull::class)
-            TAG_EQ -> op.proxy(TagEquals::class)
-            TAG_STARTS_WITH -> op.proxy(TagStartsWith::class)
-            TAG_GT -> op.proxy(TagGt::class)
-            TAG_GTE -> op.proxy(TagGte::class)
-            TAG_LT -> op.proxy(TagLt::class)
-            TAG_LTE -> op.proxy(TagLte::class)
-            TAGLIST_HAS_ANY_OF -> op.proxy(TagListHasAnyOf::class)
-            TAGLIST_HAS_ALL_OF -> op.proxy(TagListHasAllOf::class)
-            else -> null
+        fun detect(op: MapProxy<*,*>): Op? {
+            if (op is Op && op::class != Op::class) return op
+            return when(op.getRaw("op") as String?) {
+                AND -> op.proxy(And::class)
+                OR -> op.proxy(Or::class)
+                NOT -> op.proxy(Not::class)
+                IS_NULL -> op.proxy(IsNull::class)
+                IS_TRUE -> op.proxy(IsTrue::class)
+                IS_FALSE -> op.proxy(IsFalse::class)
+                EQ -> op.proxy(Equals::class)
+                GT -> op.proxy(Gt::class)
+                GTE -> op.proxy(Gte::class)
+                LT -> op.proxy(Lt::class)
+                LTE -> op.proxy(Lte::class)
+                STARTS_WITH -> op.proxy(StartsWith::class)
+                IS_ANY_OF -> op.proxy(IsAnyOf::class)
+                INTERSECTS -> op.proxy(Intersects::class)
+                TAGMAP_HAS_KEY -> op.proxy(TagMapHasKey::class)
+                TAGMAP_HAS_ANY_OF -> op.proxy(TagMapHasAnyOf::class)
+                TAGMAP_HAS_ALL_OF -> op.proxy(TagMapHasAllOf::class)
+                TAG_IS_NULL -> op.proxy(TagIsNull::class)
+                TAG_EQ -> op.proxy(TagEquals::class)
+                TAG_STARTS_WITH -> op.proxy(TagStartsWith::class)
+                TAG_GT -> op.proxy(TagGt::class)
+                TAG_GTE -> op.proxy(TagGte::class)
+                TAG_LT -> op.proxy(TagLt::class)
+                TAG_LTE -> op.proxy(TagLte::class)
+                TAGLIST_CONTAINS_ANY_OF -> op.proxy(TagListContainsAnyOf::class)
+                TAGLIST_CONTAINS_ALL_OF -> op.proxy(TagListContainsAllOf::class)
+                else -> null
+            }
         }
-    }
+   }
 
     /**
      * The operation identifier.
