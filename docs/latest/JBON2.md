@@ -1093,14 +1093,14 @@ object lead-in        (1 byte)   <-- root {…}
     string "highway"      (8 byte)
     string "residential"  (12 byte)
     string "maxSpeed"     (9 byte)
-    tiny-int 50           (2 byte)  <-- int8 lead-in + 1 byte value
+    int8 50               (2 byte)  <-- int8 lead-in + 1 byte value
     string "oneway"       (7 byte)
     boolean false         (1 byte)
 = 1+1+3+3+5+8+11+1+1+8+12+9+2+7+1
 = 73 byte
 ```
 
-So 73 byte per feature, two features ≈ **146 byte**, plus an array wrapper (lead-in + size = 2 byte) ≈ **148 byte**. Compared to 195 byte [JSON], a saving of around **24%**, which is what you would also expect from [CBOR]. Not impressive — the binary is just more compact than text.
+So 73 byte per feature. Two features (146 byte) plus the array wrapper (lead-in + size = 2 byte) = **148 byte** of payload, wrapped in an array structure (lead-in + byte_size = 2 byte) = **150 byte** total. Compared to 195 byte [JSON], a saving of around **23%**, which is what you would also expect from [CBOR]. Not impressive — the binary is just more compact than text.
 
 ### Medium compression: shared `local` book
 A **JBON** encoder can detect that both features share the same keys and values, and lift them into a `local` [book]. The book is embedded next to the features:
@@ -1137,29 +1137,29 @@ object lead-in        (1 byte)   <-- root {…}
     ref "highway"     (1 byte)   <-- mref4
     ref "residential" (1 byte)   <-- mref4
     ref "maxSpeed"    (1 byte)   <-- mref4
-    tiny-int 50       (2 byte)
+    int8 50           (2 byte)
     ref "oneway"      (1 byte)   <-- mref4
     boolean false     (1 byte)
 = 1+1+1+3+1+1+1+1+1+1+1+1+2+1+1
 = 18 byte
 ```
 
-So per feature 18 byte. Two features (36 byte) plus the array wrapper (2 byte) plus the `local` [book] (67 byte) ≈ **105 byte**. That is **46% smaller** than [JSON] (195 byte), and crucially the saving grows with the number of features: at 100 features the book amortises over 100 × 18 + 67 ≈ 1867 byte, vs. ~9700 byte of [JSON] — an **81% reduction**.
+So per feature 18 byte. Two features (36 byte) plus the `local` [book] (67 byte) plus the array wrapper (2 byte) = **105 byte** of payload, wrapped in an array structure (2 byte) = **107 byte** total. That is **45% smaller** than [JSON] (195 byte), and crucially the saving grows with the number of features: at 100 features the book amortises over 100 × 18 + 67 + 2 ≈ 1869 byte, vs. ~9700 byte of [JSON] — an **81% reduction**.
 
 ### Large compression: shared `global` book with template
-If a `global` [book] is provided that defines a template _feature_ — i.e. an [Object] with `type:"Feature"`, `properties.highway:"residential"`, `properties.maxSpeed:50`, `properties.oneway:false` as default values — then a feature that matches the template only needs to encode its own `id`:
+If a `global` [book] is provided that defines a template _feature_ — i.e. an [Object] with `type:"Feature"`, `properties.highway:"residential"`, `properties.maxSpeed:50`, `properties.oneway:false` as default values — then a feature that matches the template only needs to encode a reference to that template plus its own `id`. The decoder merges the template defaults with the explicitly encoded key-value pairs, so the resulting object appears as if all properties were present in the binary:
 
 ```
 object lead-in        (1 byte)   <-- root {…}
   byte_size           (1 byte)
-  ref to template     (2 byte)   <-- ref8 into global book
+  ref to properties   (2 byte)   <-- ref8 into global book of shared properties
   ref "id"            (1 byte)   <-- mref4
   string "f1"         (3 byte)
 = 1+1+2+1+3
 = 8 byte
 ```
 
-So per feature 8 byte. Two features (16 byte) plus array wrapper (2 byte) ≈ **18 byte**, while the `global` [book] is **not** part of the file (it is shared across features, possibly across whole collections). This is a **91% reduction** vs. [JSON] (195 byte) — and the ratio improves further as more features share the same template.
+So per feature 8 byte. Two features (16 byte) plus array wrapper (2 byte) = **18 byte** of payload, wrapped in an array structure (2 byte) = **20 byte** total, while the `global` [book] is **not** part of the file (it is shared across features, possibly across whole collections). This is a **90% reduction** vs. [JSON] (195 byte) — and the ratio improves further as more features share the same template.
 
 At 1,000,000 such features, [JSON] would be roughly 96 MB, while **JBON** with a shared `global` [book] would be roughly **8 MB**, regardless of where the [book] is stored. The `global` [book] itself is small _(a few hundred bytes for this example)_ and is loaded once into the decoder.
 
@@ -1168,9 +1168,9 @@ At 1,000,000 such features, [JSON] would be roughly 96 MB, while **JBON** with a
 | Encoding                   | Per feature | 2 features total | 1,000,000 features | Reduction (2 features) | Reduction (1M features) |
 |----------------------------|------------:|-----------------:|-------------------:|-----------------------:|------------------------:|
 | [JSON]                     |     96 byte |         195 byte |             ~96 MB |                     0% |                      0% |
-| **JBON** _(no book)_       |     73 byte |         148 byte |             ~73 MB |                    24% |                     24% |
-| **JBON** _(`local` book)_  |     18 byte |         105 byte |             ~18 MB |                    46% |                     81% |
-| **JBON** _(`global` book)_ |      8 byte |          18 byte |              ~8 MB |                    91% |                     92% |
+| **JBON** _(no book)_       |     73 byte |         150 byte |             ~73 MB |                    23% |                     24% |
+| **JBON** _(`local` book)_  |     18 byte |         107 byte |             ~18 MB |                    45% |                     81% |
+| **JBON** _(`global` book)_ |      8 byte |          20 byte |              ~8 MB |                    90% |                     92% |
 
 The decisive observation is that none of these levels require a different decoder or a different format version; they all use the same **JBON** binary format. The encoder picks the level it wants, the decoder is oblivious.
 
