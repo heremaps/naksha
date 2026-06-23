@@ -119,6 +119,9 @@ data class PgColumn(
          */
         const val MAIN = "MAIN"
 
+        /** Constant for the name of the feature-number column. */
+        const val FN_NAME = "_fn"
+
         /**
          * The feature-number.
          *
@@ -127,7 +130,10 @@ data class PgColumn(
          */
         @JvmField
         @JsStatic
-        val FN = PgColumn(0, "_fn", INT64, "STORAGE $PLAIN NOT NULL")
+        val FN = PgColumn(0, FN_NAME, INT64, "STORAGE $PLAIN NOT NULL")
+
+        /** Constant for the name of the version column. */
+        const val VERSION_NAME = "_version"
 
         /**
          * The version (with action in the lower 2 bits) of this tuple.
@@ -137,7 +143,13 @@ data class PgColumn(
          */
         @JvmField
         @JsStatic
-        val VERSION = PgColumn(1, "_version", INT64, "STORAGE $PLAIN NOT NULL")
+        val VERSION = PgColumn(1, VERSION_NAME, INT64, "STORAGE $PLAIN NOT NULL")
+
+        /**
+         * Constant for the name of the next-version column.
+         * @see [naksha.model.objects.StandardMembers.NextVersion]
+         */
+        const val NEXT_VERSION_NAME = "_nv"
 
         /**
          * The next-version (with action in the lower 2 bits) of this tuple, only available in the history.
@@ -145,7 +157,7 @@ data class PgColumn(
          */
         @JvmField
         @JsStatic
-        val NEXT_VERSION = PgColumn(2, NextVersion.name, INT64, "STORAGE $PLAIN NOT NULL")
+        val NEXT_VERSION = PgColumn(2, NEXT_VERSION_NAME, INT64, "STORAGE $PLAIN NOT NULL")
     }
 
     /** Returns the [ident] of the column, so the quoted [name]. */

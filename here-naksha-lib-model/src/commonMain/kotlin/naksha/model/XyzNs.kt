@@ -3,8 +3,6 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.model.objects.StandardMembers
-import naksha.model.objects.XyzMembers
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthor
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthorTimestamp
@@ -517,7 +515,7 @@ class XyzNs : AnyObject() {
         get() {
             // Downward compatibility hack.
             val raw = getRaw("version")
-            if (raw is Int64 && raw >= Version.MIN) return Version(raw)
+            if (raw is Int64 && raw >= Version.MIN_AUTO) return Version(raw)
             val version = guid?.tupleNumber?.version
             return if (version != null) Version(version) else null
         }

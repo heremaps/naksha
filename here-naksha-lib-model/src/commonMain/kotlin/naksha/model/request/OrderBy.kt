@@ -31,10 +31,26 @@ class OrderBy() : AnyObject() {
      * @param order the sort order, if [ANY][SortOrder.ANY] is given, then the storage can pick whatever is faster.
      * @param next if a second-level order is requested; i.e. order by `id`, then by `version`.
      */
-    @JsName("of")
+    @JsName("ofMember")
     @JvmOverloads
     constructor(member: Member?, order: SortOrder = ANY, next: OrderBy? = null) : this() {
-        this.column = member
+        this.member = member?.name
+        this.sortOrder = order
+        this.next = next
+    }
+
+    /**
+     * Create an order.
+     *
+     * If [member] is `null`, [next] must be `null` as well.
+     * @param memberName the name fo the member by which to order by, if _null_, any member is accepted, only a deterministic order is requested.
+     * @param order the sort order, if [ANY][SortOrder.ANY] is given, then the storage can pick whatever is faster.
+     * @param next if a second-level order is requested; i.e. order by `id`, then by `version`.
+     */
+    @JsName("of")
+    @JvmOverloads
+    constructor(memberName: String?, order: SortOrder = ANY, next: OrderBy? = null) : this() {
+        this.member = memberName
         this.sortOrder = order
         this.next = next
     }
@@ -68,22 +84,30 @@ class OrderBy() : AnyObject() {
         @JvmStatic
         fun id(): OrderBy = OrderBy(StandardMembers.Id, next = version())
 
-        private val MEMBER_OR_NULL = NullableProperty<OrderBy, Member>(Member::class)
+        private val STRING_OR_NULL = NullableProperty<OrderBy, String>(String::class)
         private val SORT_ORDER = NotNullEnum<OrderBy, SortOrder>(SortOrder::class) { _, _ -> ANY }
         private val NEXT_OR_NULL = NullableProperty<OrderBy, OrderBy>(OrderBy::class)
     }
 
     /**
-     * The [Member] by which to order, if `null`, then deterministic ordering is requested.
+     * The name of the [Member] by which to order, if `null`, then deterministic ordering is requested.
      * @since 3.0
      */
-    var column: Member? by MEMBER_OR_NULL
+    var member: String? by STRING_OR_NULL
 
     /**
-     * @see [column]
+     * @see [member]
      */
-    fun withMember(value: Member?): OrderBy {
-        column = value
+    fun withMember(member: Member?): OrderBy {
+        this.member = member?.name
+        return this
+    }
+
+    /**
+     * @see [member]
+     */
+    fun withMember(name: String?): OrderBy {
+        this.member = name
         return this
     }
 
@@ -119,20 +143,16 @@ class OrderBy() : AnyObject() {
      * Tests if this represents deterministic ordering, which means that no specific column is selected (`null`), the order is [Any], and no other conditions are given ([next] = `null`).
      * @return `true` if this represents the deterministic order; `false` otherwise.
      */
-    fun isDeterministic(): Boolean = column == null && sortOrder == ANY && next == null
+    fun isDeterministic(): Boolean = member == null && sortOrder == ANY && next == null
 
     override fun equals(other: Any?): Boolean {
         if (other !is OrderBy) return false
-        return column == other.column
+        return member == other.member
             && sortOrder == other.sortOrder
             && next == other.next
     }
 
     override fun hashCode(): Int = super.hashCode()
 
-    override fun toString(): String {
-        val col = column ?: return ""
-        val next = this.next
-        return "${col.name} $sortOrder${if (next != null) ", $next" else ""}"
-    }
+    override fun toString(): String = "OrderBy(member=$member, sortOrder=$sortOrder, next=$next)"
 }

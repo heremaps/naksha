@@ -2,15 +2,18 @@
 
 package naksha.model.request
 
+import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.GuidList
 import naksha.model.Version
+import naksha.model.illegalArg
 import naksha.model.request.ops.Op
 import naksha.model.request.query.IPropertyQuery
 import naksha.model.request.query.ITagQuery
 import kotlin.js.JsExport
+import kotlin.math.max
 
 /**
  * Read features from a collection of a map of a storage.
@@ -27,7 +30,6 @@ open class ReadFeatures : ReadRequest() {
         private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class) { _, _ -> StringList() }
         private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
         private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
-        private val VERSION_OR_NULL = NullableProperty<ReadRequest, Version>(Version::class)
         private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
         private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
         private val QUERY = NotNullProperty<ReadRequest, RequestQuery>(RequestQuery::class)
@@ -123,53 +125,103 @@ open class ReadFeatures : ReadRequest() {
     /**
      * Extend the request to search through historic states of features _(defaults to `false`)_.
      *
-     * Setting this to `true` adds past states from the **HISTORY** section to the result set. When
-     * [versions] is greater than `1`, results are ordered automatically by the storage in reverse
-     * version order, so the most recent state is returned first.
+     * Setting this to `true` adds past states from the **HISTORY** section to the result set. When [versions] is greater than `1`, results are ordered automatically by the storage in reverse version order, so the most recent state is returned first.
      */
     var queryHistory: Boolean by BOOLEAN_OR_FALSE
 
     /**
      * Defines how many states (versions) of each matching feature should be returned _(defaults to `1`)_.
      *
-     * A value of `1` means only the single latest state closest to the given maximal [version] is
-     * returned; if no [version] is given, the current HEAD state is meant.
-     *
-     * This parameter is ignored for queries by [Guid][naksha.model.Guid], because a
-     * [Guid][naksha.model.Guid] already identifies an exact state. The parameter requires
-     * [queryHistory] to be `true`.
-     *
-     * If set to anything other than `1` _(the default)_ while [queryHistory] is `false`, the request
-     * will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
+     * - A value of `1` _(the default)_ means only the single latest state closest to the given maximal [version] is returned.
+     * - If the underlying JSON map contains a values that is not a number or invalid, the default value `1` will be used.
      *
      * Requesting multiple versions can have a significant performance impact and should be used with care.
      * @since 3.0.0
      */
-    var versions: Int by INT_OR_1
+    var versions: Int
+        get() {
+            val raw = getRaw("versions")
+            if (raw is Int64) return max(1, raw.toInt())
+            if (raw is Number) return max(1, raw.toInt())
+            return 1
+        }
+        set(value) {
+            if (value < 1) throw illegalArg("versions must not be a value less than 1")
+            set("versions", value)
+        }
 
     /**
      * Limit the read to all states at or after the given minimum version, `null` if no limit.
      *
-     * If set to anything other than `null` _(the default)_ while [queryHistory] is `false`, the request
-     * will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
+     * If the underlying JSON map contains a values that is not a number or invalid, the default value `null` will be used.
      * @since 3.0.0
      */
-    // TODO: Change to Int64 aka Long!
-    var minVersion: Version? by VERSION_OR_NULL
+    var minVersion: Int64?
+        get() {
+            val raw = getRaw("minVersion")
+            if (raw is Int64) return if (raw < Version.MIN.number || raw > Version.HEAD.number) null else raw
+            if (raw is Number) {
+                val value = Int64(raw.toLong())
+                return if (value < Version.MIN.number || value > Version.HEAD.number) null else value
+            }
+            return null
+        }
+        set(value) {
+            if (value != null && (value < Version.MIN.number || value > Version.HEAD.number)) {
+                throw illegalArg("minVersion must be a value between ${Version.MIN} and ${Version.HEAD}, but was $value")
+            }
+            set("minVersion", value)
+        }
+
+    fun withMinVersion(minVersion: Int64?): ReadFeatures {
+        this.minVersion = minVersion
+        return this
+    }
+
+    fun withMinVersion(minVersion: Version?): ReadFeatures {
+        this.minVersion = minVersion?.number
+        return this
+    }
+
+    fun withMinVersion(minVersion: Long?): ReadFeatures {
+        this.minVersion = if (minVersion != null) Int64(minVersion) else null
+        return this
+    }
 
     /**
-     * Limit the read to states at or before the given maximum version, `null` if no limit
-     * _(returns the current HEAD state)_.
+     * Limit the read to states at or before the given maximum version, `null` if no limit _([HEAD][naksha.model.Version.VersionCompanion.HEAD])_.
      *
-     * This effectively requests a specific historical snapshot when no [minVersion] is set and
-     * [versions] is `1` (the default).
+     * This effectively requests a specific historical snapshot, when no [minVersion] is set and [versions] is `1`, which is the default for both parameters.
      *
-     * If set to anything other than `null` _(the default)_ while [queryHistory] is `false`, the request
-     * will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
+     * If the underlying JSON map contains a values that is not a number or invalid, the default value `null` will be used.
      * @since 3.0.0
      */
-    // TODO: Change to Int64 aka Long!
-    var version: Version? by VERSION_OR_NULL
+    var version: Int64?
+        get() {
+            val raw = getRaw("version")
+            if (raw is Int64) return raw
+            if (raw is Number) return Int64(raw.toLong())
+            return null
+        }
+        set(value) {
+            set("version", value)
+        }
+
+    fun withVersion(version: Int64?): ReadFeatures {
+        this.version = version
+        return this
+    }
+
+    fun withVersion(version: Version?): ReadFeatures {
+        this.version = version?.number
+        return this
+    }
+
+    fun withVersion(version: Long?): ReadFeatures {
+        this.version = if (version != null) Int64(version) else null
+        return this
+    }
+
 
     /**
      * Order the result-set like given; this is an expensive operation and should be avoided.
