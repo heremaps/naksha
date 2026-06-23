@@ -148,7 +148,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
         val keepableByteCols = collection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
         val outRows = PgRows()
             .withDatabaseNumber(storageNumber)
-            .withCatalogNumber(mapNumber)
+            .withCatalogNumber(catalogNumber)
             .withCollectionNumber(collectionNumber)
             .addColumn(PgColumn.id)
             .addColumn(PgColumn.fn)
@@ -189,14 +189,14 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 val fn = outRows.getInt64(row, "fn") ?: throw generalException("Missing 'fn' in SQL result")
                 val id = outRows.getString(row, "id") ?: fn.toString()
                 val versionTxn = outRows.getInt64(row, "version") ?: throw generalException("Missing 'version' in SQL result")
-                val tn = TupleNumber(storageNumber, mapNumber, collectionNumber, fn, Version(versionTxn))
+                val tn = TupleNumber(storageNumber, catalogNumber, collectionNumber, fn, Version(versionTxn))
 
                 // We need to patch the tuple of all inserts, that were replaced with updates!
                 // The content is the same, but the action, operation, and change-count change.
                 val updatedFn = outRows.getInt64(row, "updated_fn")
                 val updatedVersionTxn = outRows.getInt64(row, "updated_version")
                 if (updatedFn != null && updatedVersionTxn != null) {
-                    val updated_tn = TupleNumber(storageNumber, mapNumber, collectionNumber, updatedFn, Version(updatedVersionTxn))
+                    val updated_tn = TupleNumber(storageNumber, catalogNumber, collectionNumber, updatedFn, Version(updatedVersionTxn))
                     // If an update was done, we need the following values to be available:
                     val hasCc = PgColumn.cc in collection.effectiveHeadColumns
                     val changeCount: Int = if (hasCc) {

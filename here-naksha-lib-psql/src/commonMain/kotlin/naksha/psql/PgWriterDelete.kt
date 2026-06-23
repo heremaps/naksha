@@ -146,7 +146,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.id = query.id" else ""}
         if (writes.isEmpty()) return
         val outRows = PgRows()
             .withDatabaseNumber(storageNumber)
-            .withCatalogNumber(mapNumber)
+            .withCatalogNumber(catalogNumber)
             .withCollectionNumber(collectionNumber)
             .withDefaultDataEncoding(collection.head.dataEncoding ?: Naksha.DEFAULT_DATA_ENCODING)
             .addColumns(collection.effectiveHistoryColumns)
@@ -190,7 +190,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.id = query.id" else ""}
                 val tombstone_fn = outRows.getInt64(row, PgColumn.fn)
                 val tombstone_version = outRows.getInt64(row, PgColumn.version)
                 val tn = if (tombstone_fn != null && tombstone_version != null) {
-                    TupleNumber(storageNumber, mapNumber, collectionNumber, tombstone_fn, Version(tombstone_version))
+                    TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, Version(tombstone_version))
                 } else null
                 write.tupleNumber = tn
 

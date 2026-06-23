@@ -135,7 +135,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
         val keepableByteCols = collection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
         val rows = PgRows()
             .withDatabaseNumber(storageNumber)
-            .withCatalogNumber(mapNumber)
+            .withCatalogNumber(catalogNumber)
             .withCollectionNumber(collectionNumber)
             .addColumn("id", PgType.STRING)
             .addColumn("existing_id", PgType.STRING)

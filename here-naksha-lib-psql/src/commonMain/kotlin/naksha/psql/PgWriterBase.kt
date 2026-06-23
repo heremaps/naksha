@@ -46,11 +46,11 @@ internal abstract class PgWriterBase protected constructor(
     val storageNumber: Int64
         get() = collection.storage.number
 
-    val mapNumber: Int
-        get() = collection.catalog.number
+    val catalogNumber: Int
+        get() = collection.catalog.catalogNumber
 
     val collectionNumber: Int
-        get() = collection.number
+        get() = collection.collectionNumber
 
     /**
      * The transaction to operate upon.
@@ -74,7 +74,7 @@ internal abstract class PgWriterBase protected constructor(
      */
     val inRows = PgRows()
         .withDatabaseNumber(storageNumber)
-        .withCatalogNumber(mapNumber)
+        .withCatalogNumber(catalogNumber)
         .withCollectionNumber(collectionNumber)
         .withMinRows(writes.size)
 
@@ -140,6 +140,8 @@ internal abstract class PgWriterBase protected constructor(
     val headTable: PgTable = initHeadTable()
 
     private fun initHistoryTable(): PgTable? {
+        // TODO:
+        tx.version
         val hst = collection.historyTable ?: return null
         var yearTable: PgHistoryYear? = hst.years[year]
         if (yearTable == null) {

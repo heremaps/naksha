@@ -311,11 +311,22 @@ open class PgCollection internal constructor(
      * Internal collections have some limitation, for example it is not possible to add or drop indices, nor can they be created through normal methods. They are basically immutable by design, but the content can be read and modified to some degree.
      */
     @JvmField
-    var internal: Boolean = id.startsWith("naksha~")
+    val internal: Boolean = id.startsWith("naksha~")
 
-    // TODO: We need information from the database which history partitions exist.
-    //       Reading from history must be done using the root table, not individual partitions.
-    //       Only writing is done through individual partitions, and only for writing we need to know what exists!
-    //       We should add a method like this:
-    // internal fun update(conn: PgConnection) {}
+    /**
+     * Verify the given new _HEAD_ state, ensure that none of the following values is modified:
+     * - [NakshaCollection.members] - Ensure that they result in the same [columns].
+     * - [NakshaCollection.indices] - Ensure that they result in the same [headIndices] and [historyIndices].
+     * - [NakshaCollection.shift] - The shift must not change, because it impacts partitioning.
+     * - [NakshaCollection.id] - Must match [id] and the resulting calculated [collectionNumber] must match as well.
+     * - [NakshaCollection.storageClass] - Must match [storageClass], changing the storage class is not allowed.
+     * - [NakshaCollection.partitions] - Must patch [partitions], changing the number of partitions is not allowed.
+     *
+     * Actually all other values can be changes, with only some having an impact to this object.
+     * @param newHead the new _HEAD_ state to be verified.
+     * @throws NakshaException with error [ILLEGAL_STATE] if the columns or indices in the given `newHead` have been changed.
+     */
+    fun verifyNewHeadState(newHead: NakshaCollection) {
+        // TODO: Implement me!
+    }
 }

@@ -331,8 +331,6 @@ open class PgWriter internal constructor(
                                 "The UPDATE (write #${write.i}) failed, because the collection '$featureId' does not exist in map '$mapId'"
                             )
                         }
-                        // Normalize members and indices (inject defaults, validate, sort) — CREATE only.
-                        normalizeCollection(nakshaCollection)
                         pgCollection = PgCollection(map, nakshaCollection)
                         createPgCollection(pgCollection)
                     } else if (op == WriteOp.CREATE) {
@@ -340,8 +338,8 @@ open class PgWriter internal constructor(
                             "The write #${write.i} failed, because the collection '$featureId' does exist already in map '$mapId'"
                         )
                     } else {
-                        // UPSERT or UPDATE on an existing collection: diff schema (members + custom indexes) and apply.
-                        pgCollection.applyMembersAndIndexes(conn, pgCollection.head, nakshaCollection, write.original.force)
+                        // UPSERT or UPDATE on an existing collection: Ensure that no invalid changes are asked for.
+                        pgCollection.verifyNewHeadState(nakshaCollection)
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
                     if (pgCollection != null) {
@@ -419,122 +417,6 @@ open class PgWriter internal constructor(
      */
     protected open fun deletePgMap(map: PgCatalog) {
         storage.adminCatalog.deletePgCatalog(conn, map)
-    }
-
-    /**
-     * Normalizes a [NakshaCollection] before it is physically created:
-     *
-     * **Members** — when the client provides an explicit (non-null) `members` list:
-     * - Mandatory members (`fn`, `version`, `id`, `feature`) are silently deduplicated if declared
-     *   with the exact same type, or rejected with [NakshaError.ILLEGAL_ARGUMENT] on type mismatch.
-     * - Non-mandatory names that conflict with any reserved [PgColumn] name are rejected.
-     * - The surviving client-declared members are sorted for optimal PostgreSQL column layout.
-     * When `members` is **null** (backward-compatible) it is left as-is; the DDL layer will use the
-     * full built-in column schema.
-     *
-     * **Indices** — when the client provides an explicit (non-null) `indices` list:
-     * - Any entry whose [naksha.model.objects.Index.internal] flag is `true` is silently dropped
-     *   (clients must not declare storage-managed indices).
-     * When `indices` is **null** (backward-compatible) it is left as-is; the DDL layer will create
-     * all default optional indices.
-     *
-     * This method modifies [collection] in place and returns it.
-     */
-    protected fun normalizeCollection(collection: NakshaCollection): NakshaCollection {
-        // ── Members ─────────────────────────────────────────────────────────────────
-        val clientMembers = collection.members
-        if (clientMembers != null) {
-            val mandatoryByName = StandardMembers.MANDATORY.associateBy { it.name }
-            val normalizedMembers = MemberList()
-            for (m in clientMembers) {
-                if (m == null) continue
-                val mandatory = mandatoryByName[m.name]
-                if (mandatory != null) {
-                    // Mandatory column declared by client: exact type → silently drop; type conflict → reject.
-                    if (m.dataType != mandatory.dataType) {
-                        throw illegalArg(
-                            "Member '${m.name}' is a mandatory column with type ${mandatory.dataType}; " +
-                                "client declared it with type ${m.dataType}"
-                        )
-                    }
-                } else {
-                    normalizedMembers.add(m)
-                }
-            }
-            PgMemberHelper.validateMemberNames(normalizedMembers)
-            PgMemberHelper.sortMembersForStorage(normalizedMembers)
-            collection.members = normalizedMembers
-        }
-
-        // ── Indices ──────────────────────────────────────────────────────────────────
-        val clientIndices = collection.indices
-        if (clientIndices != null) {
-            val normalizedIndices = IndexList()
-            for (idx in clientIndices) {
-                if (idx == null) continue
-                if (idx.internal) continue   // clients must not declare internal indices
-                normalizedIndices.add(idx)
-            }
-            // When members are explicitly set, validate that every index column name
-            // refers to a known member (standard built-in or custom declared).
-            if (clientMembers != null) {
-                val knownNames = buildSet<String> {
-                    addAll(StandardMembers.ALL_NAMES)
-                    for (m in collection.members ?: emptyList<Member>()) if (m != null) add(m.name)
-                }
-                // Build a lookup: member name → dataType (standard + custom)
-                val memberTypeByName: Map<String, MemberType> = buildMap {
-                    for (sm in StandardMembers.ALL) put(sm.name, sm.dataType)
-                    for (m in collection.members ?: emptyList<Member>()) if (m != null) put(m.name, m.dataType)
-                }
-                for (idx in normalizedIndices) {
-                    if (idx == null) continue
-                    val firstColName = idx.on.firstOrNull { it != null }
-                    for (colName in idx.on) {
-                        if (colName != null && colName !in knownNames) {
-                            throw illegalArg(
-                                "Index '${idx.name}' references unknown member '$colName'. " +
-                                    "Declare the member in the collection's members list, or use a standard member name."
-                            )
-                        }
-                    }
-                    // Type-compatibility: SPATIAL index requires a SPATIAL member as its first column;
-                    // BTREE/other index must not target a SPATIAL member (no ordering defined for TWKB).
-                    if (firstColName != null) {
-                        val firstColType = memberTypeByName[firstColName]
-                        when (idx.type) {
-                            IndexType.SPATIAL -> if (firstColType != MemberType.SPATIAL) {
-                                throw illegalArg(
-                                    "SPATIAL index '${idx.name}' must target a member of type SPATIAL, " +
-                                        "but '$firstColName' has type $firstColType."
-                                )
-                            }
-                            IndexType.TAG_MAP -> if (firstColType != MemberType.TAG_MAP && firstColType != MemberType.TAG_MAP_FROM_ARRAY) {
-                                throw illegalArg(
-                                    "TAGS index '${idx.name}' must target a member of type TAGS or TAGS_FROM_ARRAY, " +
-                                        "but '$firstColName' has type $firstColType."
-                                )
-                            }
-                            IndexType.TAG_LIST -> if (firstColType != MemberType.TAG_LIST) {
-                                throw illegalArg(
-                                    "SET index '${idx.name}' must target a member of type SET, " +
-                                        "but '$firstColName' has type $firstColType."
-                                )
-                            }
-                            else -> if (firstColType == MemberType.SPATIAL) {
-                                throw illegalArg(
-                                    "Index '${idx.name}' of type ${idx.type} cannot target SPATIAL member '$firstColName'. " +
-                                        "Use IndexType.SPATIAL for geometry columns."
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-            collection.indices = normalizedIndices
-        }
-
-        return collection
     }
 
     /**
