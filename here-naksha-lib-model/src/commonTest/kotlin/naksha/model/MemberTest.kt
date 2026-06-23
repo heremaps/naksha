@@ -82,7 +82,7 @@ class MemberTest {
     fun indexTypesExist() {
         assertNotNull(IndexType.BTREE)
         assertNotNull(IndexType.SPATIAL)
-        assertNotNull(IndexType.TAGS)
+        assertNotNull(IndexType.TAG_MAP)
         assertNotNull(IndexType.TAG_LIST)
     }
 
@@ -99,8 +99,8 @@ class MemberTest {
         assertNotNull(MemberType.STRING)
         assertNotNull(MemberType.BYTE_ARRAY)
         // Virtual / jsonb.
-        assertNotNull(MemberType.TAGS)
-        assertNotNull(MemberType.TAGS_FROM_ARRAY)
+        assertNotNull(MemberType.TAG_MAP)
+        assertNotNull(MemberType.TAG_MAP_FROM_ARRAY)
         assertNotNull(MemberType.TAG_LIST)
     }
 

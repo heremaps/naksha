@@ -614,7 +614,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             addMember(Member("f_i8",    MemberType.INT8))
             addMember(Member("g_i16",   MemberType.INT16))
             addMember(Member("h_f32",   MemberType.FLOAT32))
-            addMember(Member("i_json",  MemberType.TAGS))
+            addMember(Member("i_json",  MemberType.TAG_MAP))
             addMember(Member("j_tag_list", MemberType.TAG_LIST))
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))

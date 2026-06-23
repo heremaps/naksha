@@ -116,10 +116,10 @@ abstract class PgAdminCatalog internal constructor(
     val postgresVersion: NakshaVersion
 
     /**
-     * The OID of the transaction sequence.
+     * The OID of the current HEAD version.
      * @since 3.0.0
      */
-    val txnSequenceOid: Int
+    val versionSequenceOid: Int
 
     /**
      * The OID of the map-number sequence.
@@ -312,14 +312,14 @@ SELECT basics.*, procs.* FROM basics, procs;
                 }
             }
             setSearchPath(conn)
-            logger.info("Load OID of '$NAKSHA_TXN_SEQ' from admin schema (schema-oid=$schemaOid)")
-            val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_TXN_SEQ'"
+            logger.info("Load OID of '$NAKSHA_VERSION_SEQ' from admin schema (schema-oid=$schemaOid)")
+            val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_VERSION_SEQ'"
             conn.execute(SQL).fetch().use { cursor ->
-                txnSequenceOid = cursor["oid"]
+                versionSequenceOid = cursor["oid"]
                 //mapNumberSequenceOid = cursor["map_oid"]
                 //colNumberSequenceOid = cursor["col_oid"]
             }
-            logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, txn-seq-oid=$txnSequenceOid, commit")
+            logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, txn-seq-oid=$versionSequenceOid, commit")
             conn.commit()
         }
     }
@@ -377,7 +377,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      */
     fun getTxn(conn: PgConnection): Int64 {
         val QUERY = "SELECT currval($1) as txn"
-        val cursor = conn.execute(QUERY, arrayOf(txnSequenceOid)).fetch()
+        val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
         cursor.use {
             val txn: Int64 = cursor["txn"]
             return txn
@@ -391,30 +391,29 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @since 3.0.0
      */
     fun newTxn(conn: PgConnection): PgTxn {
-        val QUERY = "SELECT nextval($1) as txn, (extract(epoch from transaction_timestamp())*1000)::int8 as time"
-        val cursor = conn.execute(QUERY, arrayOf(txnSequenceOid)).fetch()
+        val QUERY = "SELECT nextval($1) as version, (extract(epoch from transaction_timestamp())*1000)::int8 as time"
+        val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
         cursor.use {
-            var txn: Int64 = cursor["txn"]
-            val txts: Int64 = cursor["time"]
-            var version = Version(txn)
-            val txInstant = Instant.fromEpochMilliseconds(txts.toLong())
+            var number: Int64 = cursor["version"]
+            val time: Int64 = cursor["time"]
+            var version = Version(number)
+            val txInstant = Instant.fromEpochMilliseconds(time.toLong())
             val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
             if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
                 logger.info("Transaction counter is in wrong day")
                 logger.info("Acquire advisory lock")
                 conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                 try {
-                    val c2 = conn.execute("SELECT nextval($1) as txn", arrayOf(txnSequenceOid)).fetch()
+                    val c2 = conn.execute("SELECT nextval($1) as version", arrayOf(versionSequenceOid)).fetch()
                     c2.use {
-                        txn = c2["txn"]
-                        version = Version(txn)
+                        number = c2["version"]
+                        version = Version(number)
                     }
                     if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
                         logger.info("Transaction counter is still at wrong day, rollover to next day")
-                        // Rollover, we update sequence of the day. Start at seq=1 (auto() encodes action in bits 1-0).
-                        version = Version.auto(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(1))
-                        txn = version.number
-                        conn.execute("SELECT setval($1, $2)", arrayOf(txnSequenceOid, txn + 4)).close()
+                        version = Version.auto(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0), Action.VERSION)
+                        number = version.number
+                        conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, number + 4)).close()
                     }
                     logger.info("Release advisory lock")
                     conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
@@ -432,7 +431,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             //       Doing a commit here is necessary to avoid that we get a lock to the txn sequence!
             //       Even while sequences are normally not locked, it can happen under circumstances.
             conn.commit()
-            return PgTxn(txn, txts, version)
+            return PgTxn(number, time, version)
         }
     }
 

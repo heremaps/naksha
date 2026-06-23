@@ -5,9 +5,9 @@ import naksha.model.NakshaException
 import naksha.model.objects.Index
 import naksha.model.objects.IndexType
 import naksha.model.objects.IndexType.IndexType_C.BTREE
-import naksha.model.objects.IndexType.IndexType_C.SET
 import naksha.model.objects.IndexType.IndexType_C.SPATIAL
-import naksha.model.objects.IndexType.IndexType_C.TAGS
+import naksha.model.objects.IndexType.IndexType_C.TAG_MAP
+import naksha.model.objects.IndexType.IndexType_C.TAG_LIST
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -54,7 +54,7 @@ data class PgIndex(
         val using = when (type) {
             BTREE -> "btree"
             SPATIAL -> "gist"
-            TAGS, TAG_LIST -> "gin"
+            TAG_MAP, TAG_LIST -> "gin"
             else -> throw NakshaException(INTERNAL_ERROR, "Invalid index type for index $name on table $tableName")
         }
         val indexName = quoteIdent(tableName, "\$i_", tableName)

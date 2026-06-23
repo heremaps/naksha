@@ -6,6 +6,7 @@ import naksha.base.NotNullProperty
 import naksha.geo.SpGeometry
 import naksha.model.objects.Member
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Tests if the geometry member at [at] intersects with the given [value] geometry.
@@ -18,6 +19,7 @@ class Intersects() : Op() {
         private val TRANSFORMERS = NotNullProperty<Intersects, SpTransformationList>(SpTransformationList::class) { _,_ -> SpTransformationList() }
     }
 
+    @JsName("forName")
     constructor(at: String, geometry: SpGeometry, vararg transformers: SpTransformation) : this() {
         this.op = INTERSECTS
         this.at = at
@@ -26,6 +28,7 @@ class Intersects() : Op() {
         for (t in transformers) _transformers.add(t)
     }
 
+    @JsName("forMember")
     constructor(at: Member, geometry: SpGeometry, vararg transformers: SpTransformation) : this(at.name, geometry, *transformers)
 
     /**

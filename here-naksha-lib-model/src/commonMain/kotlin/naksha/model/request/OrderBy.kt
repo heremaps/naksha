@@ -98,6 +98,7 @@ class OrderBy() : AnyObject() {
     /**
      * @see [member]
      */
+    @JsName("withMember")
     fun withMember(member: Member?): OrderBy {
         this.member = member?.name
         return this
@@ -106,6 +107,7 @@ class OrderBy() : AnyObject() {
     /**
      * @see [member]
      */
+    @JsName("withMemberName")
     fun withMember(name: String?): OrderBy {
         this.member = name
         return this

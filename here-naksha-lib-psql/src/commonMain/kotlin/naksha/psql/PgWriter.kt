@@ -509,7 +509,7 @@ open class PgWriter internal constructor(
                                         "but '$firstColName' has type $firstColType."
                                 )
                             }
-                            IndexType.TAGS -> if (firstColType != MemberType.TAGS && firstColType != MemberType.TAGS_FROM_ARRAY) {
+                            IndexType.TAG_MAP -> if (firstColType != MemberType.TAG_MAP && firstColType != MemberType.TAG_MAP_FROM_ARRAY) {
                                 throw illegalArg(
                                     "TAGS index '${idx.name}' must target a member of type TAGS or TAGS_FROM_ARRAY, " +
                                         "but '$firstColName' has type $firstColType."

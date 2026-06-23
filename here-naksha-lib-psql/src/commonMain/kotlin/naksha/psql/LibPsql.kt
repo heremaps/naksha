@@ -84,7 +84,7 @@ internal const val PG_DIST_PARTITION = "${PG_S}p"
  */
 internal const val PG_INTERNAL_PREFIX = Naksha.INTERNAL_PREFIX
 
-internal const val NAKSHA_TXN_SEQ = "naksha_txn_seq"
+internal const val NAKSHA_VERSION_SEQ = "naksha_version_seq"
 //internal const val NAKSHA_MAP_SEQ = "naksha_map_seq"
 //internal const val NAKSHA_COL_SEQ = "naksha_col_seq"
 

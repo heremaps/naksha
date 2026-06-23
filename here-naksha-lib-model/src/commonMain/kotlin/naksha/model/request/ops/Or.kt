@@ -4,6 +4,7 @@ package naksha.model.request.ops
 
 import naksha.base.NotNullProperty
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Logical OR.
@@ -15,6 +16,7 @@ class Or() : Op() {
         private val VALUES = NotNullProperty<Or, OpList>(OpList::class) { _, _ -> OpList() }
     }
 
+    @JsName("of")
     constructor(vararg children: Op) : this() {
         this.op = OR
         val _children = this.children

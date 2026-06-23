@@ -5,6 +5,7 @@ package naksha.model.request.ops
 import naksha.base.NotNullProperty
 import naksha.model.objects.Member
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Tests if the tag [key] on the member at [at] starts with the given [value].
@@ -17,6 +18,7 @@ class TagStartsWith() : Op() {
         private val VALUE = NotNullProperty<TagStartsWith, String>(String::class) { _,_ -> "" }
     }
 
+    @JsName("forName")
     constructor(at: String, key: String, value: String) : this() {
         this.op = TAG_STARTS_WITH
         this.at = at
@@ -24,6 +26,7 @@ class TagStartsWith() : Op() {
         this.value = value
     }
 
+    @JsName("forMember")
     constructor(at: Member, key: String, value: String) : this(at.name, key, value)
 
     var key: String by KEY

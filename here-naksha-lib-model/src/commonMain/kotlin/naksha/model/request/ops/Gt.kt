@@ -6,6 +6,7 @@ import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.model.objects.Member
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Tests if the member at [at] is greater than the given [value] (GreaterThan).
@@ -17,12 +18,14 @@ class Gt() : Op() {
         private val VALUE = NotNullProperty<Gt, Any>(Any::class)
     }
 
+    @JsName("forName")
     constructor(at: String, value: Any) : this() {
         this.op = GT
         this.at = at
         this.value = value
     }
 
+    @JsName("forMember")
     constructor(at: Member, value: Any) : this(at.name, value)
 
     var value: Any by VALUE

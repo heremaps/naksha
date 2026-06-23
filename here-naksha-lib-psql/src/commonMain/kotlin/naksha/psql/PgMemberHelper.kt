@@ -46,8 +46,8 @@ class PgMemberHelper private constructor() {
             MemberType.STRING -> PgType.STRING
             MemberType.BYTE_ARRAY -> PgType.BYTE_ARRAY
             MemberType.SPATIAL -> PgType.BYTE_ARRAY
-            MemberType.TAGS -> PgType.JSONB
-            MemberType.TAGS_FROM_ARRAY -> PgType.JSONB
+            MemberType.TAG_MAP -> PgType.JSONB
+            MemberType.TAG_MAP_FROM_ARRAY -> PgType.JSONB
             MemberType.TAG_LIST -> PgType.JSONB
             else -> PgType.STRING
         }
@@ -56,7 +56,7 @@ class PgMemberHelper private constructor() {
          * Returns the PostgreSQL DDL type string for the given member type, used inside `CREATE TABLE` / `ALTER TABLE ADD COLUMN`.
          * Note: there is no 1-byte signed integer type in PostgreSQL, so [MemberType.INT8] is materialized as `smallint`;
          * the storage enforces the 8-bit range on coercion.
-         * [MemberType.TAGS], [MemberType.TAGS_FROM_ARRAY], and [MemberType.TAG_LIST] all use `jsonb STORAGE MAIN` —
+         * [MemberType.TAG_MAP], [MemberType.TAG_MAP_FROM_ARRAY], and [MemberType.TAG_LIST] all use `jsonb STORAGE MAIN` —
          * compressed inline, only TOASTed as a last resort. The only difference is the JSON shape:
          * TAGS and TAGS_FROM_ARRAY persist a JSON object, SET persists a JSON array.
          */
@@ -71,8 +71,8 @@ class PgMemberHelper private constructor() {
             MemberType.STRING -> "text COLLATE \"C\""
             MemberType.BYTE_ARRAY -> "bytea"
             MemberType.SPATIAL -> "bytea STORAGE EXTERNAL"
-            MemberType.TAGS -> "jsonb STORAGE MAIN"
-            MemberType.TAGS_FROM_ARRAY -> "jsonb STORAGE MAIN"
+            MemberType.TAG_MAP -> "jsonb STORAGE MAIN"
+            MemberType.TAG_MAP_FROM_ARRAY -> "jsonb STORAGE MAIN"
             MemberType.TAG_LIST -> "jsonb STORAGE MAIN"
             else -> "text"
         }
@@ -108,8 +108,8 @@ class PgMemberHelper private constructor() {
                 MemberType.STRING -> coerceString(value, featureId, memberName)
                 MemberType.BYTE_ARRAY -> coerceByteArray(value, featureId, memberName)
                 MemberType.SPATIAL -> coerceByteArray(value, featureId, memberName)
-                MemberType.TAGS -> coerceTags(value, featureId, memberName)
-                MemberType.TAGS_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
+                MemberType.TAG_MAP -> coerceTags(value, featureId, memberName)
+                MemberType.TAG_MAP_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
                 MemberType.TAG_LIST -> coerceTagList(value, featureId, memberName)
                 else -> {
                     warnMismatch(featureId, memberName, type.toString(), value)
@@ -310,8 +310,8 @@ class PgMemberHelper private constructor() {
             MemberType.STRING -> 7
             MemberType.BYTE_ARRAY -> 8
             MemberType.SPATIAL -> 8
-            MemberType.TAGS -> 9
-            MemberType.TAGS_FROM_ARRAY -> 10
+            MemberType.TAG_MAP -> 9
+            MemberType.TAG_MAP_FROM_ARRAY -> 10
             MemberType.TAG_LIST -> 11
             else -> 12
         }

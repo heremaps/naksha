@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.model.TupleNumber
 import naksha.model.illegalArg
 import naksha.model.illegalState
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER

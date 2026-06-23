@@ -4,8 +4,6 @@ import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaCatalog
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
 
 /**
@@ -158,7 +156,8 @@ class PsqlAdminCatalog internal constructor(
             )
         )
         logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
-        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_TXN_SEQ AS ${PgType.INT64} START 4 INCREMENT BY 4 CACHE 40;").close()
+        // For a version number, the lower two bit must be always set.
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_VERSION_SEQ AS ${PgType.INT64} START 3 INCREMENT BY 4 CACHE 40;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
         createPgCollection(conn, collections) // 0

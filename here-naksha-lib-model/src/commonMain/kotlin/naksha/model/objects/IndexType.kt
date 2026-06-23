@@ -12,7 +12,7 @@ import kotlin.reflect.KClass
  *
  * - [BTREE] — ordered index for equality and range queries on primitive columns (numbers, booleans, strings, byte-arrays).
  * - [SPATIAL] — spatial index over a geometry column ([MemberType.SPATIAL]) (e.g. the built-in `geo`).
- * - [TAGS] — inverted index over a tags column ([MemberType.TAGS] or [MemberType.TAGS_FROM_ARRAY]);
+ * - [TAG_MAP] — inverted index over a tags column ([MemberType.TAG_MAP] or [MemberType.TAG_MAP_FROM_ARRAY]);
  *   supports key/value containment lookups.
  * - [TAG_LIST] — inverted index over a tag-list column ([MemberType.TAG_LIST]); supports element containment lookups.
  * @since 3.0
@@ -41,12 +41,12 @@ class IndexType : JsEnum() {
         val SPATIAL = defIgnoreCase(IndexType::class, "spatial")
 
         /**
-         * Inverted index over a [MemberType.TAGS] or [MemberType.TAGS_FROM_ARRAY] column.
+         * Inverted index over a [MemberType.TAG_MAP] or [MemberType.TAG_MAP_FROM_ARRAY] column.
          * Supports key/value containment lookups.
          * @since 3.0
          */
         @JvmField
-        val TAGS = defIgnoreCase(IndexType::class, "tags")
+        val TAG_MAP = defIgnoreCase(IndexType::class, "tag_map")
 
         /**
          * Inverted index over a [MemberType.TAG_LIST] column. Supports element containment lookups,

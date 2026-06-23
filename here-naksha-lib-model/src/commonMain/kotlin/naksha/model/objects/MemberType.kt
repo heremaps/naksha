@@ -9,19 +9,6 @@ import naksha.model.NakshaError.NakshaErrorCompanion.INITIALIZATION_FAILED
 import naksha.model.NakshaException
 import naksha.model.TagMap
 import naksha.model.TupleNumber
-import naksha.model.objects.BoolMember
-import naksha.model.objects.ByteArrayMember
-import naksha.model.objects.Float32Member
-import naksha.model.objects.Float64Member
-import naksha.model.objects.Int16Member
-import naksha.model.objects.Int32Member
-import naksha.model.objects.Int64Member
-import naksha.model.objects.Int8Member
-import naksha.model.objects.SpatialMember
-import naksha.model.objects.TagListMember
-import naksha.model.objects.StringMember
-import naksha.model.objects.TagsMember
-import naksha.model.objects.TupleNumberMember
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
@@ -32,15 +19,15 @@ import kotlin.reflect.KClass
  * - Primitives: [BOOLEAN], [INT8], [INT16], [INT32], [INT64], [FLOAT32], [FLOAT64], [STRING], [BYTE_ARRAY].
  * - [SPATIAL]: a geometry stored as raw TWKB bytes. The storage persists this as a binary column and
  *   supports spatial queries. Only a [IndexType.SPATIAL] index may be placed on a [SPATIAL] member.
- * - [TAGS]: a map whose keys are strings and values are primitives (matches JBON2 tag-map specification).
+ * - [TAG_MAP]: a map whose keys are strings and values are primitives (matches JBON2 tag-map specification).
  *   The storage persists this as a flat key/value map that supports containment queries.
- * - [TAGS_FROM_ARRAY]: like [TAGS] but the input is a `TagList` (Naksha tag-array syntax, e.g.
+ * - [TAG_MAP_FROM_ARRAY]: like [TAG_MAP] but the input is a `TagList` (Naksha tag-array syntax, e.g.
  *   `["key=value", "name:=42"]`). The list is converted to a tag-map at write time and stored in the
- *   same flat key/value representation as [TAGS]. Beware that the conversion has a side effect:
+ *   same flat key/value representation as [TAG_MAP]. Beware that the conversion has a side effect:
  *   reading the feature back returns the tags re-flattened from the map, so the original array
  *   order is **not** preserved.
  *   Only valid as a [Member] type; not a valid [IndexType].
- *   To index a [TAGS_FROM_ARRAY] column use [IndexType.TAGS].
+ *   To index a [TAG_MAP_FROM_ARRAY] column use [IndexType.TAG_MAP].
  * - [TAG_LIST]: a list of unique primitive values (booleans, numbers, strings). Value order is
  *   significant, but must not have duplicates, null or undefined. The storage persists the list
  *   unmodified, so the element order is guaranteed to be preserved when reading the feature back.
@@ -145,25 +132,25 @@ class MemberType : JsEnum() {
          * specification. The storage persists this as a flat key/value map that supports
          * containment queries.
          *
-         * Indexed via [IndexType.TAGS].
+         * Indexed via [IndexType.TAG_MAP].
          * @since 3.0
          */
         @JvmField
-        val TAGS = defIgnoreCase(MemberType::class, "tags") { self -> self.sortOrder = 8; self.subtype = TagsMember::class }
+        val TAG_MAP = defIgnoreCase(MemberType::class, "tag_map") { self -> self.sortOrder = 8; self.subtype = TagsMember::class }
 
         /**
-         * A string-array using Naksha tag syntax that is expanded into a [TAGS] map at write time.
+         * A string-array using Naksha tag syntax that is expanded into a [TAG_MAP] map at write time.
          * Provided for downward compatibility with XYZ Hub and previous Naksha v2 clients that send
          * tags as arrays rather than maps.
          *
          * Input is `["key=value", "name:=42"]`; materialized form is `{"key":"value","name":42}`.
-         * Stored in the same flat key/value representation as [TAGS].
+         * Stored in the same flat key/value representation as [TAG_MAP].
          *
-         * **Not valid as an [IndexType].** To index this column use [IndexType.TAGS].
+         * **Not valid as an [IndexType].** To index this column use [IndexType.TAG_MAP].
          * @since 3.0
          */
         @JvmField
-        val TAGS_FROM_ARRAY = defIgnoreCase(MemberType::class, "tags_from_array") { self -> self.sortOrder = 9; self.subtype = TagsMember::class }
+        val TAG_MAP_FROM_ARRAY = defIgnoreCase(MemberType::class, "tag_map_from_array") { self -> self.sortOrder = 9; self.subtype = TagsMember::class }
 
         /**
          * A list of unique primitive values (booleans, numbers, strings), following the JBON2
@@ -173,7 +160,7 @@ class MemberType : JsEnum() {
          *
          * This is the default type of the standard `tags` member (the classic XYZ tags array at
          * `properties -> @ns:com:here:xyz -> tags`, e.g. `["foo", "bar"]`). In contrast to
-         * [TAGS_FROM_ARRAY] the values are not split into key/value pairs, therefore only full
+         * [TAG_MAP_FROM_ARRAY] the values are not split into key/value pairs, therefore only full
          * elements can be searched, not keys or values.
          *
          * Indexed via [IndexType.TAG_LIST].
@@ -209,7 +196,7 @@ class MemberType : JsEnum() {
             BYTE_ARRAY -> value is ByteArray
             TUPLE_NUMBER -> value is TupleNumber
             SPATIAL -> value is SpGeometry
-            TAGS, TAGS_FROM_ARRAY -> value is TagMap
+            TAG_MAP, TAG_MAP_FROM_ARRAY -> value is TagMap
             TAG_LIST -> value is List<*>
             else -> false
         }

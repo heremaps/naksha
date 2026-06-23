@@ -6,6 +6,7 @@ import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.model.objects.Member
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Tests if the tag [key] on the member at [at] is less than the given [value].
@@ -18,6 +19,7 @@ class TagLt() : Op() {
         private val VALUE = NotNullProperty<TagLt, Any>(Any::class)
     }
 
+    @JsName("forName")
     constructor(at: String, key: String, value: Any) : this() {
         this.op = TAG_LT
         this.at = at
@@ -25,6 +27,7 @@ class TagLt() : Op() {
         this.value = value
     }
 
+    @JsName("forMember")
     constructor(at: Member, key: String, value: Any) : this(at.name, key, value)
 
     var key: String by KEY

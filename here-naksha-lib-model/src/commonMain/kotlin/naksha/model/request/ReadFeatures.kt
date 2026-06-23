@@ -13,6 +13,7 @@ import naksha.model.request.ops.Op
 import naksha.model.request.query.IPropertyQuery
 import naksha.model.request.query.ITagQuery
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.math.max
 
 /**
@@ -173,16 +174,19 @@ open class ReadFeatures : ReadRequest() {
             set("minVersion", value)
         }
 
+    @JsName("withMinVersionInt64")
     fun withMinVersion(minVersion: Int64?): ReadFeatures {
         this.minVersion = minVersion
         return this
     }
 
+    @JsName("withMinVersion")
     fun withMinVersion(minVersion: Version?): ReadFeatures {
         this.minVersion = minVersion?.number
         return this
     }
 
+    @JsName("withMinVersionLong")
     fun withMinVersion(minVersion: Long?): ReadFeatures {
         this.minVersion = if (minVersion != null) Int64(minVersion) else null
         return this
@@ -207,16 +211,19 @@ open class ReadFeatures : ReadRequest() {
             set("version", value)
         }
 
+    @JsName("withVersionInt64")
     fun withVersion(version: Int64?): ReadFeatures {
         this.version = version
         return this
     }
 
+    @JsName("withVersion")
     fun withVersion(version: Version?): ReadFeatures {
         this.version = version?.number
         return this
     }
 
+    @JsName("withVersionLong")
     fun withVersion(version: Long?): ReadFeatures {
         this.version = if (version != null) Int64(version) else null
         return this

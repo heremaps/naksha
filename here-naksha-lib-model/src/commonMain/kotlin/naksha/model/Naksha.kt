@@ -573,7 +573,7 @@ class Naksha private constructor() {
          * Supports both persisted forms:
          * - a JSON array ([tag_list][naksha.model.objects.MemberType.TAG_LIST], the default) is returned
          *   unmodified, preserving the element order;
-         * - a JSON object ([naksha.model.objects.MemberType.TAGS_FROM_ARRAY]) is re-flattened via
+         * - a JSON object ([naksha.model.objects.MemberType.TAG_MAP_FROM_ARRAY]) is re-flattened via
          *   [TagMap.toTagList], in which case the original order is not guaranteed.
          * @param json the JSON text to decode (value of the `tags` member).
          * @return the decoded tag-list, or _null_ if [json] is _null_, blank, or neither an array nor an object.

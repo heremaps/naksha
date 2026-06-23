@@ -65,8 +65,8 @@ object FeatureMemberValues {
             MemberType.STRING -> coerceString(value, featureId, memberName)
             MemberType.BYTE_ARRAY -> coerceByteArray(value, featureId, memberName)
             MemberType.SPATIAL -> coerceSpatial(value, featureId, memberName)
-            MemberType.TAGS -> coerceTags(value, featureId, memberName)
-            MemberType.TAGS_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
+            MemberType.TAG_MAP -> coerceTags(value, featureId, memberName)
+            MemberType.TAG_MAP_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
             else -> {
                 warnMismatch(featureId, memberName, type.toString(), value)
                 null

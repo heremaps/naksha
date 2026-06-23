@@ -5,6 +5,7 @@ package naksha.model.request.ops
 import naksha.base.NotNullProperty
 import naksha.model.objects.Member
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Tests if the member at [at] starts with the given [value].
@@ -16,12 +17,14 @@ class StartsWith() : Op() {
         private val VALUE = NotNullProperty<StartsWith, String>(String::class) { _,_ -> "" }
     }
 
+    @JsName("forName")
     constructor(at: String, value: String) : this() {
         this.op = STARTS_WITH
         this.at = at
         this.value = value
     }
 
+    @JsName("forMember")
     constructor(at: Member, value: String) : this(at.name, value)
 
     var value: String by VALUE

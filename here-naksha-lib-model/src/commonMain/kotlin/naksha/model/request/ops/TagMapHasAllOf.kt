@@ -6,6 +6,7 @@ import naksha.base.NotNullProperty
 import naksha.base.StringList
 import naksha.model.objects.Member
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Tests if all of the given [keys] exist on the member at [at].
@@ -17,6 +18,7 @@ class TagMapHasAllOf() : Op() {
         private val KEYS = NotNullProperty<TagMapHasAllOf, StringList>(StringList::class) { _, _ -> StringList() }
     }
 
+    @JsName("forName")
     constructor(at: String, vararg keys: String) : this() {
         this.op = TAGMAP_HAS_ALL_OF
         this.at = at
@@ -24,6 +26,7 @@ class TagMapHasAllOf() : Op() {
         for (key in keys) _tagKeys.add(key)
     }
 
+    @JsName("forMember")
     constructor(at: Member, vararg keys: String) : this(at.name, *keys)
 
     var tagKeys: StringList by KEYS

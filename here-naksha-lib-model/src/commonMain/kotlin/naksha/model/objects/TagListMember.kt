@@ -1,6 +1,7 @@
 package naksha.model.objects
 
-import naksha.base.AnyList
+import naksha.base.ListProxy
+import naksha.model.TagList
 import naksha.model.illegalArg
 import naksha.model.illegalState
 import naksha.model.objects.MemberType.MemberType_C.TAG_LIST
@@ -30,6 +31,6 @@ class TagListMember() : TypedMember<TagListMember>() {
         this.path = path?.validate() ?: member.path
     }
 
-    fun get(feature: NakshaFeature): AnyList? = getTagList(feature)
-    fun set(feature: NakshaFeature, value: AnyList): Any? = setPath(feature, path, value)
+    fun get(feature: NakshaFeature): TagList? = getTagList(feature)
+    fun set(feature: NakshaFeature, value: ListProxy<*>): Any? = setPath(feature, path, value)
 }

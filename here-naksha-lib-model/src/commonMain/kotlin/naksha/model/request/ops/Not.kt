@@ -5,6 +5,7 @@ package naksha.model.request.ops
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Logical NOT.
@@ -16,6 +17,7 @@ class Not() : Op() {
         private val CHILD = NotNullProperty<Not, Op>(Op::class)
     }
 
+    @JsName("of")
     constructor(child: Op) : this() {
         this.op = NOT
         this.child = child

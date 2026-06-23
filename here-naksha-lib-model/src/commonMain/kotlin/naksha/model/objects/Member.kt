@@ -13,7 +13,6 @@ import naksha.base.NullableProperty
 import naksha.base.PlatformList
 import naksha.base.PlatformMap
 import naksha.base.Proxy
-import naksha.base.proxy
 import naksha.geo.SpGeometry
 import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
@@ -22,18 +21,6 @@ import naksha.model.NakshaException
 import naksha.model.TagList
 import naksha.model.TagMap
 import naksha.model.TupleNumber
-import naksha.model.objects.ByteArrayMember
-import naksha.model.objects.Float32Member
-import naksha.model.objects.Float64Member
-import naksha.model.objects.Int16Member
-import naksha.model.objects.Int32Member
-import naksha.model.objects.Int64Member
-import naksha.model.objects.Int8Member
-import naksha.model.objects.SpatialMember
-import naksha.model.objects.TagListMember
-import naksha.model.objects.StringMember
-import naksha.model.objects.TagsMember
-import naksha.model.objects.TupleNumberMember
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -399,7 +386,7 @@ open class Member() : AnyObject(), Comparator<Member> {
             MemberType.BYTE_ARRAY -> proxy(ByteArrayMember::class)
             MemberType.TUPLE_NUMBER -> proxy(TupleNumberMember::class)
             MemberType.SPATIAL -> proxy(SpatialMember::class)
-            MemberType.TAGS, MemberType.TAGS_FROM_ARRAY -> proxy(TagsMember::class)
+            MemberType.TAG_MAP, MemberType.TAG_MAP_FROM_ARRAY -> proxy(TagsMember::class)
             MemberType.TAG_LIST -> proxy(TagListMember::class)
         }
         return this

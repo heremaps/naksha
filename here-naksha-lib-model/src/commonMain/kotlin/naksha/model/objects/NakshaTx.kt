@@ -45,7 +45,7 @@ open class NakshaTx : NakshaFeature() {
      */
     @JvmOverloads
     fun setEpoch(epoch: Timestamp, seq: Int64 = Int64(0)): NakshaTx {
-        val version = Version.auto(epoch.year, epoch.month, epoch.day, seq)
+        val version = Version.auto(epoch.year, epoch.month, epoch.day, seq, Action.VERSION)
         setRaw("id", version.toString())
         setRaw("time", epoch.ts)
         return this

@@ -4,6 +4,7 @@ package naksha.model.request.ops
 
 import naksha.base.NotNullProperty
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Logical AND.
@@ -15,6 +16,7 @@ class And() : Op() {
         private val VALUES = NotNullProperty<And, OpList>(OpList::class) { _, _ -> OpList() }
     }
 
+    @JsName("of")
     constructor(vararg children: Op) : this() {
         this.op = AND
         val _children = this.children
