@@ -160,6 +160,14 @@ data class PgColumn(
         val NEXT_VERSION = PgColumn(2, NEXT_VERSION_NAME, INT64, "STORAGE $PLAIN NOT NULL")
     }
 
+    /**
+     * Check if this column is the same as the given one, so [name] and [memberType] match.
+     * @param other the other column to test against.
+     * @return _true_ if the two columns are the same; _false_ otherwise.
+     * @since 3.0
+     */
+    infix fun eq(other: PgColumn?): Boolean = this === other || (other != null && name == other.name && memberType == other.memberType)
+
     /** Returns the [ident] of the column, so the quoted [name]. */
     override fun toString(): String = ident
 }

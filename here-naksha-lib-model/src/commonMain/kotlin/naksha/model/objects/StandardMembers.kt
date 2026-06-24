@@ -139,5 +139,12 @@ class StandardMembers private constructor() {
          */
         @JvmField @JsStatic
         val Geometry = Member("geo", MemberType.SPATIAL, JsonPath("geometry"))
+
+        /**
+         * `cc` — change-count: how many times this feature has been modified. There is some special low-level treatment for this member, if it is added to a collection. It is always initialized with `1` and incremented for every new state.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val ChangeCount = Member("cc", MemberType.INT32, JsonPath("properties", "changeCount"))
      }
 }

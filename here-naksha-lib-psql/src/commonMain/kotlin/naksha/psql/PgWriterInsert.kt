@@ -99,8 +99,8 @@ LEFT JOIN head_inserted ON head_inserted.id = new_row.id
     }
 
     override fun doExecute(conn: PgConnection) {
-        if (writes.isEmpty()) return
-        val plan = plan(conn, collection)
+        if (pgWrites.isEmpty()) return
+        val plan = plan(conn, pgCollection)
         val array = inRows.values()
         if (PlatformUtil.ENABLE_INFO) {
             if (session.logQueries) {
@@ -116,7 +116,7 @@ LEFT JOIN head_inserted ON head_inserted.id = new_row.id
         plan.pgPlan.execute(array).close()
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
-        if (writes.size != 1 || writes[0].isFeatureModification) {
+        if (pgWrites.size != 1 || pgWrites[0].isFeatureModification) {
             logger.info("INSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
         }
     }

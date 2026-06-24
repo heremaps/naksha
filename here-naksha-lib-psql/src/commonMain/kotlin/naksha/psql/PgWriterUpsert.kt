@@ -145,7 +145,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
     }
 
     override fun doExecute(conn: PgConnection) {
-        val keepableByteCols = collection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
+        val keepableByteCols = pgCollection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
         val outRows = PgRows()
             .withDatabaseNumber(storageNumber)
             .withCatalogNumber(catalogNumber)
@@ -162,8 +162,8 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .addColumn("head_inserted_version", PgType.INT64)
             .addColumn("head_to_history_version", PgType.INT64)
         for (col in keepableByteCols) outRows.addColumn(col.name, PgType.BYTE_ARRAY)
-        if (writes.isEmpty()) return
-        val plan = plan(conn, collection)
+        if (pgWrites.isEmpty()) return
+        val plan = plan(conn, pgCollection)
         // TupleNumber.fromB128(inRows.columns[11].values_field[0] as ByteArray, naksha.base.Int64(0), 0, 0).partitionNumber % 16
         val array = inRows.values()
         val session = this.session
@@ -180,7 +180,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
         val cursor = plan.pgPlan.execute(array)
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
-        if (writes.size != 1 || writes[0].isFeatureModification) {
+        if (pgWrites.size != 1 || pgWrites[0].isFeatureModification) {
             logger.info("UPSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
         }
         cursor.fetch().use {
@@ -198,7 +198,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 if (updatedFn != null && updatedVersionTxn != null) {
                     val updated_tn = TupleNumber(storageNumber, catalogNumber, collectionNumber, updatedFn, Version(updatedVersionTxn))
                     // If an update was done, we need the following values to be available:
-                    val hasCc = PgColumn.cc in collection.effectiveHeadColumns
+                    val hasCc = PgColumn.cc in pgCollection.effectiveHeadColumns
                     val changeCount: Int = if (hasCc) {
                         outRows.getInt(row, "cc") ?:
                             throw generalException("Missing 'cc' in update result for feature '$id'")

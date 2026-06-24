@@ -22,7 +22,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
      * - If a collection is modified, this is the map in which [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL_ID] is located, [asPgCollection] and [asNakshaCollection] will be set.
      * @since 3.0
      */
-    lateinit var map: PgCatalog
+    lateinit var catalog: PgCatalog
 
     /**
      * The collection into which to write.
@@ -113,7 +113,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
     val isCollectionModification: Boolean
         get() = original.isCollectionModification()
     val isTransactionModification: Boolean
-        get() = Naksha.ADMIN_CATALOG_ID == map.id && Naksha.TRANSACTIONS_COL_ID == collection.id
+        get() = Naksha.ADMIN_CATALOG_ID == catalog.id && Naksha.TRANSACTIONS_COL_ID == collection.id
     // This variant differs from write.isFeatureModification, because it includes dictionaries, which are just features for us!
     val isFeatureModification: Boolean
         get() = !isTransactionModification && !isCatalogModification && !isCollectionModification

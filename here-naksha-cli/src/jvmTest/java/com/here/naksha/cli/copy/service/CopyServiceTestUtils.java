@@ -108,7 +108,7 @@ public final class CopyServiceTestUtils {
         assertEquals(target.getCollectionId(), w.getCollectionId(),
                 "Every write Collection ID should match target Collection ID"
         );
-        assertEquals(target.getMapId(), w.getMapId(),
+        assertEquals(target.getMapId(), w.getCatalogId(),
                 "Every write Map ID should match target Map ID"
         );
     }

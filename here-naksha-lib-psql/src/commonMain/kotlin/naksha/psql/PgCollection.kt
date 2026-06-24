@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.*
+import naksha.base.fn.Fn1
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
@@ -148,6 +149,23 @@ open class PgCollection internal constructor(
      */
     @JvmField
     val columns: Array<PgColumn> = generateColumns(nakshaCollection)
+
+    /**
+     * Join the identities of all [columns], separated by comma, optionally filtered by the given filter.
+     * @param filter an optional filter method to remove _(or replace)_ certain columns.
+     * @return a comma separated list of [ident][PgColumn.ident] strings.
+     * @since 3.0
+     */
+    fun joinColumns(filter: Fn1<String?, PgColumn>? = null): String {
+        val sb = StringBuilder()
+        for (column in columns) {
+            val ident: String? = if (filter != null) filter.call(column) else column.ident
+            if (ident == null) continue
+            if (sb.isNotEmpty()) sb.append(", ")
+            sb.append(ident)
+        }
+        return sb.toString()
+    }
 
     private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
         return Array(nakshaCollection.indices?.size ?: 0) { i ->
@@ -312,6 +330,18 @@ open class PgCollection internal constructor(
      */
     @JvmField
     val internal: Boolean = id.startsWith("naksha~")
+
+    /**
+     * Ensures that the [PgHistoryPartition] for the given version exists.
+     *
+     * **Note**: If the current cache does not confirm that the corresponding history table exists, we can simply create it with `IF EXISTS` clause. It will not harm, when it exists already, but prevent yet another roundtrip. As we _(for now)_ have decided that columns and indices are immutable, we do not need to update old partition tables, and we can cache only the latest history table. This may change over time, because ones we start adding the feature that data can be imported, we may need to manage history partitions that are older than the latest _(current)_ table that we normally only write into. However, until that is done, this function can be kept simple .
+     * @param version the version to be written.
+     * @since 3.0
+     */
+    fun prepareWrite(version: Int64) {
+        val partitionNumber = version shr shift
+        // TODO: Check if this partition exists, if not, create it, cache it, and initiate the write.
+    }
 
     /**
      * Verify the given new _HEAD_ state, ensure that none of the following values is modified:

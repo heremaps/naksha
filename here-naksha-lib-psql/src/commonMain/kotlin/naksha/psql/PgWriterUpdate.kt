@@ -129,10 +129,10 @@ LEFT JOIN inserted ON inserted.id = new_row.id
     }
 
     override fun doExecute(conn: PgConnection) {
-        if (writes.isEmpty()) return
+        if (pgWrites.isEmpty()) return
         // All nullable BYTE_ARRAY columns may carry the "keep if undefined" sentinel and must be
         // read back from the DB so the in-memory tuple reflects the final stored value.
-        val keepableByteCols = collection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
+        val keepableByteCols = pgCollection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
         val rows = PgRows()
             .withDatabaseNumber(storageNumber)
             .withCatalogNumber(catalogNumber)
@@ -142,7 +142,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
             .addColumn("existing_version", PgType.INT64)
             .addColumn("head_id", PgType.STRING)
         for (col in keepableByteCols) rows.addColumn(col.name, PgType.BYTE_ARRAY)
-        val plan = plan(conn, collection)
+        val plan = plan(conn, pgCollection)
         val array = this.inRows.values()
         if (PlatformUtil.ENABLE_INFO) {
             if (session.logQueries) {
@@ -157,7 +157,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
         val cursor = plan.pgPlan.execute(array)
         val end = Platform.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
-        if (writes.size != 1 || writes[0].isFeatureModification) {
+        if (pgWrites.size != 1 || pgWrites[0].isFeatureModification) {
             logger.info("UPDATE of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
         }
         cursor.fetch().use {

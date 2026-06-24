@@ -110,7 +110,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzChangeCount = Member("cc", MemberType.INT32, JsonPath("properties", "@ns:com:here:xyz", "changeCount"))
+        val XyzChangeCount = Member(StandardMembers.ChangeCount, JsonPath("properties", "@ns:com:here:xyz", "changeCount"))
 
         /**
          * `base_tn` — base tuple-number (`BYTE_ARRAY`), set when a three-way merge was performed.

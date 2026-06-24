@@ -85,14 +85,14 @@ data class TupleNumber(
         get() = Action.fromValue(version.toInt() and 3)
 
     /**
-     * Calculates the partition-index where this [Tuple] will be located.
+     * Calculates the distribution partition-index where this [Tuple] will be located.
      *
-     * If the given partitions are less than `2`, the method always returns `0`, if the number is bigger than `65536` the result will be mapped back into the range between `0` and `65536` _(exclusive)_.
+     * If the given partitions are less than `2`, the method always returns `-1`. If the number is bigger than `65536` the result will be mapped back into the range between `0` and `65536` _(exclusive)_.
      * @param partitions the number of partitions
-     * @return the partition-index, a value between `0` and `partitions - 1`, maximal `65535`
+     * @return the partition-index, a value between `0` and `partitions - 1` _(maximal 65535)_; or `-1` if there are no distribution partitions.
      * @since 3.0
      */
-    fun partitionIndex(partitions: Int): Int = if (partitions <= 1) 0 else (partitionNumber % partitions) and 0xffff
+    fun partitionIndex(partitions: Int): Int = if (partitions < 2) -1 else (partitionNumber % partitions) and 0xffff
 
     override fun hashCode(): Int = version.hashCode()
 

@@ -46,10 +46,10 @@ internal class PgRows {
         }
 
     /**
-     * Ensures that in all columns have at least this amount of values, if too short, adds `null` values until the minimal size is reached.
+     * Ensures that all columns have at least this amount of values, if too short, adds `null` values until the minimal size is reached.
      * @since 3.0
      */
-    fun withMinRows(rowsCount: Int): PgRows {
+    fun setMinRows(rowsCount: Int): PgRows {
         if (this.size < rowsCount) {
             this.size = rowsCount
             for (column in columns) {
@@ -150,7 +150,7 @@ internal class PgRows {
         if (existing == null) {
             val column = PgColumnWithValues(column, alias).withSize(size)
             columns.add(column)
-            withMinRows(size)
+            setMinRows(size)
         }
         return this
     }
@@ -160,7 +160,7 @@ internal class PgRows {
         if (existing == null) {
             val column = PgColumnWithValues(PgColumn(-1, alias, type)).withSize(size)
             columns.add(column)
-            withMinRows(size)
+            setMinRows(size)
         }
         return this
     }
@@ -175,11 +175,17 @@ internal class PgRows {
 
 
     fun getAny(row: Int, alias: String): Any? = getColumn(alias)?.values?.get(row)
+    fun getAny(row: Int, column: PgColumn): Any? = getAny(row, column.name)
     fun getInt(row: Int, alias: String): Int? = getAny(row, alias) as? Int
+    fun getInt(row: Int, column: PgColumn): Int? = getInt(row, column.name)
     fun getInt64(row: Int, alias: String): Int64? = getAny(row, alias) as Int64?
+    fun getInt64(row: Int, column: PgColumn): Int64? = getInt64(row, column.name)
     fun getDouble(row: Int, alias: String): Double? = getAny(row, alias) as Double?
+    fun getDouble(row: Int, column: PgColumn): Double? = getDouble(row, column.name)
     fun getString(row: Int, alias: String): String? = getAny(row, alias) as String?
+    fun getString(row: Int, column: PgColumn): String? = getString(row, column.name)
     fun getByteArray(row: Int, alias: String): ByteArray? = getAny(row, alias) as ByteArray?
+    fun getByteArray(row: Int, column: PgColumn): ByteArray? = getByteArray(row, column.name)
     fun getSpatial(row: Int, alias: String): SpGeometry? {
         val raw = getByteArray(row, alias) ?: return null
         return try {
@@ -259,7 +265,7 @@ internal class PgRows {
     fun set(row: Int, columnName: String, value: Any?): Boolean {
         val column = getColumn(columnName)
         if (column != null) {
-            withMinRows(row)
+            setMinRows(row)
             column.values[row] = value
             return true
         }
@@ -267,7 +273,7 @@ internal class PgRows {
     }
 
     operator fun set(row: Int, tuple: Tuple) {
-        withMinRows(row)
+        setMinRows(row)
         val membersBook = tuple.membersBook
         val END = membersBook.namesLength()
         for (i in 0 until END) {
@@ -288,7 +294,7 @@ internal class PgRows {
      */
     operator fun set(row: Int, cursor: PgCursor) {
         if (!cursor.isRow()) return
-        withMinRows(row)
+        setMinRows(row)
         val columnNames = cursor.columnNames()
         for (columnName in columnNames) {
             val column = getColumn(columnName) ?: continue

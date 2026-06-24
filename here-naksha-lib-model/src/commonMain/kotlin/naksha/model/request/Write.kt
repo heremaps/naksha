@@ -108,8 +108,8 @@ open class Write : AnyObject() {
 
             // Sorts by map-id, collection-id, feature-id.
             // Sorts admin-map, map's collection, and collection's collection first.
-            val a_mapId = a.mapId ?: throw illegalState("Write for feature '${a.id}' does not have 'mapId'")
-            val b_mapId = b.mapId ?: throw illegalState("Write for feature '${b.id}' does not have 'mapId'")
+            val a_mapId = a.catalogId ?: throw illegalState("Write for feature '${a.id}' does not have 'mapId'")
+            val b_mapId = b.catalogId ?: throw illegalState("Write for feature '${b.id}' does not have 'mapId'")
             val a_colId = a.collectionId ?: throw illegalState("Write for feature '${a.id}' does not have 'collectionId'")
             val b_colId = b.collectionId ?: throw illegalState("Write for feature '${b.id}' does not have 'collectionId'")
             val map_diff = compareMapIds(a_mapId, b_mapId)
@@ -154,13 +154,13 @@ open class Write : AnyObject() {
      * If a [map][NakshaCatalog] or [dictionary][NakshaDictionary] should be modified, then use [Naksha.ADMIN_CATALOG_ID].
      * @since 3.0
      */
-    var mapId by MAP_ID
+    var catalogId by MAP_ID
 
     /**
-     * @see [mapId]
+     * @see [catalogId]
      */
     fun withMapId(value: String?): Write {
-        mapId = value
+        catalogId = value
         return this
     }
 
@@ -446,7 +446,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun createDictionary(dict: NakshaDictionary): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = BOOKS_COL_ID
         this.op = WriteOp.CREATE
         this.feature = dict
@@ -461,7 +461,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun updateDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = BOOKS_COL_ID
         this.op = WriteOp.UPDATE
         this.feature = dict
@@ -476,7 +476,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun upsertDictionary(dict: NakshaDictionary): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = BOOKS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = dict
@@ -491,7 +491,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun deleteDictionary(dict: NakshaDictionary, atomic: Boolean): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = BOOKS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = dict
@@ -508,7 +508,7 @@ open class Write : AnyObject() {
      */
     @JvmOverloads
     fun deleteDictionaryById(dictId: String, version: Version? = null): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = BOOKS_COL_ID
         this.op = WriteOp.DELETE
         this.id = dictId
@@ -524,7 +524,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun createMap(map: NakshaCatalog): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.CREATE
         this.feature = map
@@ -539,7 +539,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun updateMap(map: NakshaCatalog, atomic: Boolean): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.UPDATE
         this.feature = map
@@ -555,7 +555,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun upsertMap(map: NakshaCatalog, atomic: Boolean): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = map
@@ -571,7 +571,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun deleteMap(map: NakshaCatalog, atomic: Boolean): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = map
@@ -588,7 +588,7 @@ open class Write : AnyObject() {
      */
     @JvmOverloads
     fun deleteMapById(id: String, version: Version? = null): Write {
-        this.mapId = ADMIN_CATALOG_ID
+        this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.DELETE
         this.id = id
@@ -603,7 +603,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun createCollection(collection: NakshaCollection): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.CREATE
         this.feature = collection
@@ -617,7 +617,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun updateCollection(collection: NakshaCollection, atomic: Boolean): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPDATE
         this.feature = collection
@@ -631,7 +631,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun upsertCollection(collection: NakshaCollection): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = collection
@@ -645,7 +645,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun deleteCollection(collection: NakshaCollection, atomic: Boolean): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = collection
@@ -662,7 +662,7 @@ open class Write : AnyObject() {
      */
     @JvmOverloads
     fun deleteCollectionById(mapId: String? = null, collectionId: String, version: Version? = null): Write {
-        this.mapId = mapId
+        this.catalogId = mapId
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.DELETE
         this.id = collectionId
@@ -679,7 +679,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun createFeature(collection: NakshaCollection, feature: NakshaFeature): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = collection.id
         this.op = WriteOp.CREATE
         this.feature = feature
@@ -697,7 +697,7 @@ open class Write : AnyObject() {
     @JsName("createFeatureUsingIds")
     @JvmOverloads
     fun createFeature(mapId: String? = null, collectionId: String, feature: NakshaFeature): Write {
-        this.mapId = mapId
+        this.catalogId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.CREATE
         this.feature = feature
@@ -712,7 +712,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun updateFeature(collection: NakshaCollection, feature: NakshaFeature, atomic: Boolean): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = collection.id
         this.op = WriteOp.UPDATE
         this.feature = feature
@@ -731,7 +731,7 @@ open class Write : AnyObject() {
     @JsName("updateFeatureUsingIds")
     @JvmOverloads
     fun updateFeature(mapId: String? = null, collectionId: String, feature: NakshaFeature, atomic: Boolean): Write {
-        this.mapId = mapId
+        this.catalogId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.UPDATE
         this.feature = feature
@@ -746,7 +746,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun upsertFeature(collection: NakshaCollection, feature: NakshaFeature): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = collection.id
         this.op = WriteOp.UPSERT
         this.feature = feature
@@ -763,7 +763,7 @@ open class Write : AnyObject() {
     @JsName("upsertFeatureUsingIds")
     @JvmOverloads
     fun upsertFeature(mapId: String? = null, collectionId: String, feature: NakshaFeature): Write {
-        this.mapId = mapId
+        this.catalogId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.UPSERT
         this.feature = feature
@@ -778,7 +778,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun deleteFeature(collection: NakshaCollection, feature: NakshaFeature, atomic: Boolean): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = collection.id
         this.op = WriteOp.DELETE
         this.feature = feature
@@ -796,7 +796,7 @@ open class Write : AnyObject() {
      */
     @JvmOverloads
     fun deleteFeatureById(collection: NakshaCollection, id: String, version: Version? = null): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = collection.id
         this.op = WriteOp.DELETE
         this.id = id
@@ -817,7 +817,7 @@ open class Write : AnyObject() {
     @JsName("deleteFeatureByIds")
     @JvmOverloads
     fun deleteFeatureById(mapId: String? = null, collectionId: String, id: String, version: Version? = null): Write {
-        this.mapId = mapId
+        this.catalogId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.DELETE
         this.id = id
@@ -834,7 +834,7 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     fun purgeFeature(collection: NakshaCollection, feature: NakshaFeature, atomic: Boolean): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = collection.id
         this.op = WriteOp.PURGE
         this.feature = feature
@@ -853,7 +853,7 @@ open class Write : AnyObject() {
     @JsName("purgeFeatureById")
     @JvmOverloads
     fun purgeFeatureById(collection: NakshaCollection, id: String, version: Version? = null): Write {
-        this.mapId = collection.catalogId
+        this.catalogId = collection.catalogId
         this.collectionId = collection.id
         this.op = WriteOp.PURGE
         this.id = id
@@ -874,7 +874,7 @@ open class Write : AnyObject() {
     @JsName("purgeFeatureByIds")
     @JvmOverloads
     fun purgeFeatureById(mapId: String? = null, collectionId: String, id: String, version: Version? = null): Write {
-        this.mapId = mapId
+        this.catalogId = mapId
         this.collectionId = collectionId
         this.op = WriteOp.PURGE
         this.id = id
@@ -889,7 +889,7 @@ open class Write : AnyObject() {
      * @return `true` if this write modifies a dictionary; `false` otherwise.
      * @since 3.0
      */
-    fun isDictionaryModification(): Boolean = mapId == ADMIN_CATALOG_ID && collectionId == BOOKS_COL_ID
+    fun isDictionaryModification(): Boolean = catalogId == ADMIN_CATALOG_ID && collectionId == BOOKS_COL_ID
 
     /**
      * Tests if this write modifies a map.
@@ -897,7 +897,7 @@ open class Write : AnyObject() {
      * @return `true` if this write modifies a map; `false` otherwise.
      * @since 3.0
      */
-    fun isMapModification(): Boolean = mapId == ADMIN_CATALOG_ID && collectionId == CATALOGS_COL_ID
+    fun isMapModification(): Boolean = catalogId == ADMIN_CATALOG_ID && collectionId == CATALOGS_COL_ID
 
     /**
      * Tests if this write modifies a collection.
@@ -928,7 +928,7 @@ open class Write : AnyObject() {
      * @see [WriteOp]
      */
     fun validate(): Write {
-        if (mapId == ADMIN_CATALOG_ID || collectionId == COLLECTIONS_COL_ID) {
+        if (catalogId == ADMIN_CATALOG_ID || collectionId == COLLECTIONS_COL_ID) {
             if (isInternalId(id)) {
                 throw NakshaException(ILLEGAL_STATE, "Modification of internal features forbidden: '$id'")
             }

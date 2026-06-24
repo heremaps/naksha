@@ -19,32 +19,11 @@ class WriteOp : JsEnum(), Comparable<WriteOp> {
         val NULL = def(WriteOp::class, null)
 
         /**
-         * Create the feature, fail if the feature exists already.
-         */
-        @JvmField
-        @JsStatic
-        val CREATE = defIgnoreCase(WriteOp::class, "CREATE") { self -> self.order = 0 }
-
-        /**
-         * Update or created the feature, should never fail.
-         */
-        @JvmField
-        @JsStatic
-        val UPSERT = defIgnoreCase(WriteOp::class, "UPSERT") { self -> self.order = 1 }
-
-        /**
-         * Update the feature, fail if the feature does not exist.
-         */
-        @JvmField
-        @JsStatic
-        val UPDATE = defIgnoreCase(WriteOp::class, "UPDATE") { self -> self.order = 2 }
-
-        /**
          * Delete the feature, does not fail normally, even when the feature does not exist.
          */
         @JvmField
         @JsStatic
-        val DELETE = defIgnoreCase(WriteOp::class, "DELETE") { self -> self.order = 3 }
+        val DELETE = defIgnoreCase(WriteOp::class, "DELETE") { self -> self.order = 0 }
 
         /**
          * Delete the feature, and remove remainders from the shadow delete table, so delete fully.
@@ -53,11 +32,32 @@ class WriteOp : JsEnum(), Comparable<WriteOp> {
          */
         @JvmField
         @JsStatic
-        val PURGE = defIgnoreCase(WriteOp::class, "PURGE") { self -> self.order = 4 }
+        val PURGE = defIgnoreCase(WriteOp::class, "PURGE") { self -> self.order = 1 }
+
+        /**
+         * Create the feature, fail if the feature exists already.
+         */
+        @JvmField
+        @JsStatic
+        val CREATE = defIgnoreCase(WriteOp::class, "CREATE") { self -> self.order = 2 }
+
+        /**
+         * Update or created the feature, should never fail.
+         */
+        @JvmField
+        @JsStatic
+        val UPSERT = defIgnoreCase(WriteOp::class, "UPSERT") { self -> self.order = 3 }
+
+        /**
+         * Update the feature, fail if the feature does not exist.
+         */
+        @JvmField
+        @JsStatic
+        val UPDATE = defIgnoreCase(WriteOp::class, "UPDATE") { self -> self.order = 4 }
     }
 
     /**
-     * An ordering number, defaults to 100 (so order at the end).
+     * An ordering number of the operation. Logically, we first want to `DELETE`, then `PURGE`, then `CREATE`, then `UPSERT`, and finally `UPDATE`. The `PURGE` simply copies the current feature state from _HEAD_ into _HISTORY_, setting the next-version. It can be an explicit operation, but mostly will be an intrinsic operation of `CREATE`, `UPSERT`, or `UPDATE`.
      */
     var order: Int = 100
         private set
