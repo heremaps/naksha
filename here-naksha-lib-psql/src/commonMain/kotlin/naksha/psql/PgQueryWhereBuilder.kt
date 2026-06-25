@@ -57,6 +57,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 for (child in children) {
                     if (child == null) continue
                     if (first) first = false else where.append(" AND ")
+                    // TODO optimization if only TagMapHasKey
                     applyOp(child)
                 }
                 if (children.size > 1) where.append(") ") else where.append(" ")
@@ -70,6 +71,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 for (child in children) {
                     if (child == null) continue
                     if (first) first = false else where.append(" OR ")
+                    // TODO optimization if only TagMapHasKey
                     applyOp(child)
                 }
                 if (children.size > 1) where.append(") ") else where.append(" ")
@@ -217,13 +219,44 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                     .append(", ").append(placeholderForArg(value, pgType)).append(") ")
             }
             is TagListContains -> {
-                // TODO: Implement me
+                val pgType = PgType.ofValue(op.item)
+                    ?: throw illegalArg("The given value is no valid argument for ${op.op}}: ${op.item}")
+                val value = pgType.convertValue(op.item)
+                // [NOT ]foo::jsonb @> $1::jsonb
+                val placeholder = placeholderForArg(value, pgType)
+                if (negate) where.append("NOT ")
+                where.append(at).append("::jsonb @> ").append(placeholder).append("::jsonb ")
             }
             is TagListContainsAllOf -> {
-                // TODO: Implement me
+                val pgType = PgType.ofValue(op.items)
+                    ?: throw illegalArg("The given value is no valid argument for ${op.op}}: ${op.items}")
+                val value = pgType.convertValue(op.items)
+                val placeholder = placeholderForArg(toJSON(value), pgType)
+                if (negate) where.append("NOT ")
+                where.append(at).append("::jsonb @> ").append(placeholder).append("::jsonb ")
             }
             is TagListContainsAnyOf -> {
-                // TODO: Implement me
+                val items = op.items.filterNotNull()
+                // Any-of over empty set -> false; negated -> true
+                if (items.isEmpty()) {
+                    if (negate) where.append("TRUE ") else where.append("FALSE ")
+                    return
+                }
+
+                if (negate) where.append("NOT ")
+                // Multiple items: build OR of single-element containment checks
+                where.append('(')
+                val pgType = PgType.ofValue(op.items.first())
+                    ?: throw illegalArg("The given value is no valid argument for ${op.op}}: ${op.items.first()}")
+                var first = true
+                for (item in items) {
+                    if (!first) where.append(" OR ")
+                    first = false
+                    val value = pgType.convertValue(item)
+                    val placeholder = placeholderForArg(value, pgType)
+                    where.append(at).append("::jsonb @> ").append(placeholder).append("::jsonb")
+                }
+                where.append(") ")
             }
             is Intersects -> {
                 // TODO: Implement me
@@ -325,12 +358,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 //        val version = request.version
 //        if (version != null) {
 //            if (where.isNotEmpty()) where.append(" AND ")
-//            where.append("$VERSION <= ${version.number}")
+//            where.append("$VERSION <= ${version.toInt()}")
 //        }
 //        val minVersion = request.minVersion
 //        if (minVersion != null) {
 //            if (where.isNotEmpty()) where.append(" AND ")
-//            where.append("$VERSION >= ${minVersion.number}")
+//            where.append("$VERSION >= ${minVersion.toInt()}")
 //        }
 //    }
 //
@@ -370,7 +403,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 //                    null -> queryGeometry
 //                    else -> resolveTransformation(transformation, queryGeometry)
 //                }
-//                where.append("ST_Intersects(naksha_2d(${PgColumn.geo}), $geometryToCompare)")
+//                where.append("ST_Intersects(naksha_2d(${StandardMembers.Geometry}), $geometryToCompare)")
 //            }
 //
 //            is SpRefInHereTile -> {
@@ -481,7 +514,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 //            hereTile.maxLevelUpperBound().intKey,
 //            PgType.INT
 //        )
-//        return "(${PgColumn.here_tile} >= $lowerBoundPlaceholder AND ${PgColumn.here_tile} <= $upperBoundPlaceholder)"
+//        return "(${StandardMembers.HereTile} >= $lowerBoundPlaceholder AND ${StandardMembers.HereTile} <= $upperBoundPlaceholder)"
 //    }
 //
 //    private fun whereMetadata() {
@@ -518,7 +551,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 //                val isActionQuery = metaQuery.member == MetaColumn.action()
 //                val pgColumn =
 //                    if (isActionQuery) {
-//                        PgColumn.version
+//                        StandardMembers.Version
 //                    } else {
 //                        PgColumn.ofRowColumn(metaQuery.member) ?: throw NakshaException(
 //                            NakshaError.ILLEGAL_STATE,
@@ -543,7 +576,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 //                        val placeholder = placeholderForArg(metaQuery.value, placeholderType)
 //                        resolveDoubleOp(op, leftOperand, placeholder)
 //                    }
-//                    AnyOp.IS_ANY_OF -> {
+//                    is AnyOp.IS_ANY_OF -> {
 //                        val placeholder = placeholderForArg(metaQuery.value, arrayTypeFor(placeholderType))
 //                        "$leftOperand = ANY($placeholder)"
 //                    }
