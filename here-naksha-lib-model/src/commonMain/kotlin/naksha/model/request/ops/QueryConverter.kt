@@ -101,10 +101,8 @@ class QueryConverter private constructor() {
             is TagValueIsString -> TagEquals(XyzMembers.XyzTags, query.name, query.value)
             is TagValueIsDouble -> convertTagValueIsDouble(query)
 
-            is TagValueMatches -> throw NakshaException(
-                UNSUPPORTED_OPERATION,
-                "TagValueMatches (regular expression matching) has no generalized operation equivalent at this time"
-            )
+            // Regular-expression matching on the tag value.
+            is TagValueMatches -> TagMatches(XyzMembers.XyzTags, query.name, query.regex)
 
             is TagQuery -> throw NakshaException(
                 UNSUPPORTED_OPERATION, "Can't convert tag-query of type '${query::class.simpleName}'"
