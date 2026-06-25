@@ -1,19 +1,15 @@
 package naksha.psql
 
-import naksha.base.AnyList
 import naksha.base.Int64
-import naksha.base.ListProxy
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.StringList
-import naksha.geo.HereTile
-import naksha.geo.SpGeometry
-import naksha.model.*
+import naksha.model.Naksha
+import naksha.model.NakshaError
+import naksha.model.NakshaException
+import naksha.model.illegalArg
 import naksha.model.objects.StandardMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ops.*
-import kotlin.collections.get
-import kotlin.text.append
-import kotlin.text.iterator
 
 /**
  * Helper to convert a [ReadFeatures] request into a sql `WHERE` query.
@@ -38,10 +34,11 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     fun build(): PgQueryWhereClause? {
         var op: Op? = request.queryMembers
         if (op == null) op = QueryConverter.convert(request.query)
-        // TODO: Convert `featureIds`
-        // TODO: Convert `guids`
         if (op == null) return null
         applyOp(op)
+        if (request.featureIds.isNotEmpty()) { // backward compatibility for feature IDs read requests
+            whereFeatureId()
+        }
         return PgQueryWhereClause(collection, where.toString(), argValues, argTypes)
     }
 
@@ -259,7 +256,14 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 where.append(") ")
             }
             is Intersects -> {
-                // TODO: Implement me
+                val geoBytes = Naksha.encodeGeometry(op.value)
+                val geoBytesPlaceholder = placeholderForArg(geoBytes, PgType.BYTE_ARRAY)
+                val queryGeometry = "naksha_2d($geoBytesPlaceholder)"
+                val transformation = op.transformers
+                val geometryToCompare =
+                    if (transformation.isEmpty()) queryGeometry
+                    else resolveTransformation(transformation, queryGeometry)
+                where.append("ST_Intersects(naksha_2d(${StandardMembers.Geometry}), $geometryToCompare)")
             }
             else -> throw illegalArg("Unknown operation: '$op'")
         }
@@ -300,42 +304,105 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         return "\$${argTypes.size}"
     }
 
+    private fun resolveTransformation(
+        transformationList: SpTransformationList,
+        basicGeometry: String
+    ): String {
+        var geometry = basicGeometry
+        for (transformation in transformationList) {
+            geometry = when (transformation) {
+                is SpBuffer -> resolveBuffer(transformation, geometry)
+                else -> throw NakshaException(
+                    NakshaError.UNSUPPORTED_OPERATION,
+                    "This transformation is not yet supported: ${transformation!!::class.simpleName}"
+                )
+            }
+        }
+        return geometry
+    }
+
+    private fun resolveBuffer(buffer: SpBuffer, basicGeometry: String): String {
+        val geo = if (buffer.geography) {
+            "$basicGeometry::geography"
+        } else {
+            basicGeometry
+        }
+        val distancePlaceholder = placeholderForArg(buffer.distance, PgType.DOUBLE)
+        val bufferStyleParams = bufferStyleParams(buffer)
+        return if (bufferStyleParams != null) {
+            "ST_Buffer($geo, $distancePlaceholder, $bufferStyleParams)"
+        } else {
+            "ST_Buffer($geo, $distancePlaceholder)"
+        }
+    }
+
+    private fun bufferStyleParams(buffer: SpBuffer): String? {
+        val bufferStyleParams = StringBuilder()
+        if (buffer.quadSegments != null) {
+            val quadSegPlaceholder = placeholderForArg(buffer.quadSegments, PgType.INT)
+            bufferStyleParams.append("quad_segs=$quadSegPlaceholder")
+        }
+        if (buffer.joinStyle != null) {
+            val joinStylePlaceholder = placeholderForArg(buffer.joinStyle!!.value, PgType.STRING)
+            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("join=$joinStylePlaceholder")
+        }
+        if (buffer.joinLimit != null) {
+            val joinLimitPlaceholder = placeholderForArg(buffer.joinLimit, PgType.DOUBLE)
+            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("mitre_limit=$joinLimitPlaceholder")
+        }
+        if (buffer.endCap != null) {
+            val endCapPlaceholder = placeholderForArg(buffer.endCap!!.value, PgType.STRING)
+            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("endcap=$endCapPlaceholder")
+        }
+        if (buffer.side != null) {
+            val sidePlaceholder = placeholderForArg(buffer.side!!.value, PgType.STRING)
+            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
+            bufferStyleParams.append("side=$sidePlaceholder")
+        }
+        return if (bufferStyleParams.isNotEmpty()) {
+            bufferStyleParams.toString()
+        } else {
+            null
+        }
+    }
+
+        private fun whereFeatureId() {
+        // Partition into numeric IDs (fn >= 0, id stored as NULL in DB) and named IDs (fn < 0, id NOT NULL).
+        val reqIds: StringList = request.featureIds
+        val featureNumbers: MutableList<Int64> = mutableListOf()
+        val featureIds: MutableList<String> = mutableListOf()
+        for (id in reqIds) {
+            if (id == null) continue
+            val fn = Naksha.featureNumber(id)
+            if (fn >= Int64(0)) {
+                featureNumbers.add(fn)
+            } else {
+                featureIds.add(id)
+            }
+        }
+        if (featureNumbers.isEmpty() && featureIds.isEmpty()) return
+
+        // For each collection:
+        if (where.isNotEmpty()) where.append(" AND ")
+
+        where.append("( ")
+        if (featureIds.isNotEmpty()) {
+            val op = IsAnyOf(at = StandardMembers.Id, items = featureIds.toTypedArray())
+            applyOp(op)
+        }
+        if (featureNumbers.isNotEmpty()) {
+            if (featureIds.isNotEmpty()) where.append(" OR ")
+
+            val op = IsAnyOf(at = StandardMembers.FeatureNumber, items = featureNumbers.toTypedArray())
+            applyOp(op)
+        }
+        where.append(")")
+    }
+
     // --------------------------------------------------------< OLD CODE >-------------------------------------------------------------
-//
-//    private fun whereFeatureId() {
-//        // Partition into numeric IDs (fn >= 0, id stored as NULL in DB) and named IDs (fn < 0, id NOT NULL).
-//        val reqIds: StringList = request.featureIds
-//        val featureNumbers: MutableList<Int64> = mutableListOf()
-//        val featureIds: MutableList<String> = mutableListOf()
-//        for (id in reqIds) {
-//            if (id == null) continue
-//            val fn = Naksha.featureNumber(id)
-//            if (fn >= Int64(0)) {
-//                featureNumbers.add(fn)
-//            } else {
-//                featureIds.add(id)
-//            }
-//        }
-//        if (featureNumbers.isEmpty() && featureIds.isEmpty()) return
-//
-//        // For each collection:
-//        if (where.isNotEmpty()) where.append(" AND ")
-//
-//        where.append("( ")
-//        if (featureIds.isNotEmpty()) {
-//            val placeholder: String = placeholderForArg(featureIds.toTypedArray(), PgType.STRING_ARRAY)
-//            val ID = collection.column(StandardMembers.Id) ?: throw illegalArg("Collection does not defined `id` column")
-//            where.append(ID.ident).append(" = ANY(").append(placeholder).append(")")
-//        }
-//        if (featureNumbers.isNotEmpty()) {
-//            if (featureIds.isNotEmpty()) where.append(" OR ")
-//
-//            val placeholder: String = placeholderForArg(featureNumbers.toTypedArray<Any?>(), PgType.INT64_ARRAY)
-//            if (where.isNotEmpty()) where.append(" AND ")
-//            where.append(FN.ident).append(" = ANY(").append(placeholder).append(")")
-//        }
-//        where.append(")")
-//    }
 //
 //    private fun whereGuids() {
 //        val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber }
@@ -417,72 +484,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 //        }
 //    }
 //
-//    private fun nakshaGeometry(geometry: SpGeometry): String {
-//        val geoBytes = Naksha.encodeGeometry(geometry)
-//        val geoBytesPlaceholder = placeholderForArg(geoBytes, PgType.BYTE_ARRAY)
-//        return "naksha_2d($geoBytesPlaceholder)"
-//    }
-//
-//    private fun resolveTransformation(
-//        transformation: SpTransformation,
-//        basicGeometry: String
-//    ): String {
-//        return when (transformation) {
-//            is SpBuffer -> resolveBuffer(transformation, basicGeometry)
-//            else -> throw NakshaException(
-//                NakshaError.UNSUPPORTED_OPERATION,
-//                "This transformation is not yet supported: ${transformation::class.simpleName}"
-//            )
-//        }
-//    }
-//
-//    private fun resolveBuffer(buffer: SpBuffer, basicGeometry: String): String {
-//        val geo = if (buffer.geography) {
-//            "$basicGeometry::geography"
-//        } else {
-//            basicGeometry
-//        }
-//        val distancePlaceholder = placeholderForArg(buffer.distance, PgType.DOUBLE)
-//        val bufferStyleParams = bufferStyleParams(buffer)
-//        return if (bufferStyleParams != null) {
-//            "ST_Buffer($geo, $distancePlaceholder, $bufferStyleParams)"
-//        } else {
-//            "ST_Buffer($geo, $distancePlaceholder)"
-//        }
-//    }
-//
-//    private fun bufferStyleParams(buffer: SpBuffer): String? {
-//        val bufferStyleParams = StringBuilder()
-//        if (buffer.quadSegments != null) {
-//            val quadSegPlaceholder = placeholderForArg(buffer.quadSegments, PgType.INT)
-//            bufferStyleParams.append("quad_segs=$quadSegPlaceholder")
-//        }
-//        if (buffer.joinStyle != null) {
-//            val joinStylePlaceholder = placeholderForArg(buffer.joinStyle!!.value, PgType.STRING)
-//            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
-//            bufferStyleParams.append("join=$joinStylePlaceholder")
-//        }
-//        if (buffer.joinLimit != null) {
-//            val joinLimitPlaceholder = placeholderForArg(buffer.joinLimit, PgType.DOUBLE)
-//            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
-//            bufferStyleParams.append("mitre_limit=$joinLimitPlaceholder")
-//        }
-//        if (buffer.endCap != null) {
-//            val endCapPlaceholder = placeholderForArg(buffer.endCap!!.value, PgType.STRING)
-//            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
-//            bufferStyleParams.append("endcap=$endCapPlaceholder")
-//        }
-//        if (buffer.side != null) {
-//            val sidePlaceholder = placeholderForArg(buffer.side!!.value, PgType.STRING)
-//            if (bufferStyleParams.isNotEmpty()) bufferStyleParams.append(" ")
-//            bufferStyleParams.append("side=$sidePlaceholder")
-//        }
-//        return if (bufferStyleParams.isNotEmpty()) {
-//            bufferStyleParams.toString()
-//        } else {
-//            null
-//        }
-//    }
 //
 //    private fun whereRefTiles() {
 //        val hereTiles = request.query.refTiles
