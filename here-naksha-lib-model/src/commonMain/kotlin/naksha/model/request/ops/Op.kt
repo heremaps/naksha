@@ -46,6 +46,7 @@ open class Op : AnyObject() {
         const val TAG_LT = "tag_lt"
         const val TAG_LTE = "tag_lte"
         const val TAG_STARTS_WITH = "tag_starts_with"
+        const val TAG_MATCHES = "tag_matches"
         @Suppress("SpellCheckingInspection")
         const val TAGLIST_CONTAINS = "taglist_contains"
         @Suppress("SpellCheckingInspection")
@@ -83,6 +84,7 @@ open class Op : AnyObject() {
                 TAG_IS_NULL -> op.proxy(TagIsNull::class)
                 TAG_EQ -> op.proxy(TagEquals::class)
                 TAG_STARTS_WITH -> op.proxy(TagStartsWith::class)
+                TAG_MATCHES -> op.proxy(TagMatches::class)
                 TAG_GT -> op.proxy(TagGt::class)
                 TAG_GTE -> op.proxy(TagGte::class)
                 TAG_LT -> op.proxy(TagLt::class)
