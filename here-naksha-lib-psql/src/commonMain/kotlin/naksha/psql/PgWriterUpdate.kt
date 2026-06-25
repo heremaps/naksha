@@ -4,6 +4,7 @@ import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.model.*
+import naksha.model.objects.MemberType
 import naksha.model.objects.StandardMembers
 import naksha.model.objects.StoreMode
 
@@ -19,25 +20,21 @@ internal class PgWriterUpdate(
     start: Int,
     end: Int
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
+
+    val headTable = pgCollection.headTable
+    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
+    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
+    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
     private val writeById = mutableMapOf<String, PgWrite>()
 
     init {
-        inRows.addColumns(collection.effectiveHeadColumns)
+        inRows.addColumns(pgCollection.columns)
         // Separate column for the expected/atomic version, because `version` itself
         // is now a real HEAD column carrying the new tuple's version.
-        inRows.addColumn("expected_version", PgType.INT64) // needed to do atomic updates
-        val members = collection.head.members
-        inRows.addCustomMembers(members)
-        var i = 0
-        for (write in writes) {
-            val tuple = write.tuple
-            if (tuple != null) {
-                writeById[write.id] = write
-                inRows[i] = tuple
-                inRows.set(i, "expected_version", write.version?.number)
-                inRows.setCustomMembers(i, write.feature, members)
-                i++
-            }
+        inRows.addColumn("expected_version", MemberType.INT64) // needed to do atomic updates
+        loadAllTuple { row, _, pgWrite ->
+            writeById[pgWrite.id] = pgWrite
+            inRows.set(row, "expected_version", pgWrite.version?.number)
         }
     }
 

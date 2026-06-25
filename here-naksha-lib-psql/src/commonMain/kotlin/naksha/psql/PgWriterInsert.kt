@@ -6,6 +6,9 @@ import naksha.base.PlatformUtil
 import naksha.model.illegalState
 import naksha.model.objects.StandardMembers
 import naksha.model.objects.StoreMode
+import naksha.psql.PgColumn.PgColumn_C.FN
+import naksha.psql.PgColumn.PgColumn_C.NEXT_VERSION
+import naksha.psql.PgColumn.PgColumn_C.VERSION
 
 /**
  * Execute an **INSERT** _(aka [CREATE][naksha.model.request.WriteOp.CREATE])_ into a collection.
@@ -25,14 +28,11 @@ internal class PgWriterInsert(
     start: Int,
     end: Int
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
+
     init {
         inRows.addColumns(pgCollection.columns)
+        loadAllTuple()
     }
-
-    val headTable = pgCollection.headTable
-    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
-    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
-    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
 
     private fun plan(conn: PgConnection): PgWriterPlan {
         val new_row = """WITH new_row AS (
@@ -40,53 +40,50 @@ internal class PgWriterInsert(
 )"""
 
         // Detect any existing tombstone in HEAD for the same id (auto-purge target).
-        val effectiveHead = collection.effectiveHeadColumns
         val head_tombstone = """, head_tombstone AS (
-  SELECT ${effectiveHead.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
-  FROM ${headTable.quotedName} AS head
-  JOIN new_row ON head.id = new_row.id
-  WHERE (head.version & 3) >= 2
+  SELECT ${pgCollection.joinColumns { column -> "head.$column AS $column" }}
+  FROM $headIdent AS head
+  JOIN new_row ON head.$FN = new_row.$FN
+  WHERE (head.$VERSION & 3) >= 2
 )"""
 
         // Archive the tombstone into history so the deletion is preserved in the audit trail.
         // next_version = new feature's version (the tombstone is succeeded by the new creation).
-        val effCopyHistory = collection.effectiveCopyIntoHistoryColumns
-        val tombstone_to_history = if (insert_into_history != null) """, tombstone_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${effCopyHistory.joinToString(",") { it.name }})
-  SELECT new_row.version AS ${PgColumn.next_version},
-         ${effCopyHistory.joinToString(", ") { "head_tombstone.${it.name} AS ${it.name}" }}
+        val tombstone_to_history = if (historyTable != null) """, tombstone_to_history AS (
+  INSERT INTO $historyIdent ($NEXT_VERSION, ${pgCollection.joinColumns { column -> if (NEXT_VERSION eq column) null else column.ident }})
+  SELECT new_row.$VERSION AS $NEXT_VERSION,
+         ${pgCollection.joinColumns { column -> if (NEXT_VERSION eq column) null else "head_tombstone.$column" }}
   FROM head_tombstone
-  JOIN new_row ON new_row.id = head_tombstone.id
-  RETURNING id, fn, version
+  JOIN new_row ON new_row.$FN = head_tombstone.$FN
+  RETURNING $FN, $VERSION
 )""" else ""
 
-        // Overwrite the tombstone in HEAD with the new feature (UPDATE in-place, keeps the same fn).
+        // Overwrite the tombstone in HEAD (except for fn) with the new feature (UPDATE in-place).
         // All columns are replaced; cc resets to 1 for the new lifecycle.
         val head_overwrite = """, head_overwrite AS (
-  UPDATE ${headTable.quotedName}
-  SET ${effectiveHead.filter { it !== PgColumn.fn }.joinToString(", ") { "${it.name} = new_row.${it.name}" }}
+  UPDATE $headIdent
+  SET ${pgCollection.joinColumns { column -> if (column eq FN) null else "$column = new_row.$column" }}
   FROM new_row
-  JOIN head_tombstone ON head_tombstone.id = new_row.id
-  WHERE ${headTable.quotedName}.fn = head_tombstone.fn
-  RETURNING ${headTable.quotedName}.id, ${headTable.quotedName}.fn, ${headTable.quotedName}.version
+  JOIN head_tombstone ON head_tombstone.$FN = new_row.$FN
+  WHERE $headIdent.$FN = head_tombstone.$FN
+  RETURNING $headIdent.$FN, $headIdent.$VERSION
 )"""
 
         // Plain INSERT for features that have no tombstone in HEAD (the normal case).
         val head_inserted = """, head_inserted AS (
-  INSERT INTO ${headTable.quotedName} (${inRows.aliases()})
+  INSERT INTO $headIdent (${inRows.aliases()})
   SELECT * FROM new_row
-  WHERE new_row.id NOT IN (SELECT id FROM head_tombstone)
-  RETURNING id, fn, version
+  WHERE new_row.$FN NOT IN (SELECT $FN FROM head_tombstone)
+  RETURNING $FN, $VERSION
 )"""
 
         val SQL = """$new_row$head_tombstone${tombstone_to_history}$head_overwrite$head_inserted
 SELECT
-    COALESCE(head_overwrite.id, head_inserted.id) AS id,
-    COALESCE(head_overwrite.fn, head_inserted.fn) AS fn,
-    COALESCE(head_overwrite.version, head_inserted.version) AS version
+    COALESCE(head_overwrite.$FN, head_inserted.$FN) AS $FN,
+    COALESCE(head_overwrite.$VERSION, head_inserted.$VERSION) AS $VERSION
 FROM new_row
-LEFT JOIN head_overwrite ON head_overwrite.id = new_row.id
-LEFT JOIN head_inserted ON head_inserted.id = new_row.id
+LEFT JOIN head_overwrite ON head_overwrite.$FN = new_row.$FN
+LEFT JOIN head_inserted ON head_inserted.$FN = new_row.$FN
 """
         val typeNames = inRows.typeNames()
         val pgPlan = conn.prepare(SQL, typeNames)

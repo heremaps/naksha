@@ -19,22 +19,16 @@ internal class PgWriterUpsert(
     start: Int,
     end: Int
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
+
+    val headTable = pgCollection.headTable
+    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
+    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
+    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
     private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
     init {
-        inRows.addColumns(collection.effectiveHeadColumns)
-        val members = collection.head.members
-        inRows.addCustomMembers(members)
-        var i = 0
-        for (write in writes) {
-            val tuple = write.tuple
-            if (tuple != null) {
-                inRows[i] = tuple
-                inRows.setCustomMembers(i, write.feature, members)
-                writeByTn[tuple.tupleNumber] = write
-                i++
-            }
-        }
+        inRows.addColumns(pgCollection.columns)
+        loadAllTuple { _, tuple, pgWrite -> writeByTn[tuple.tupleNumber] = pgWrite }
     }
 
     private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {

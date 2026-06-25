@@ -2,8 +2,18 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.IntMutable
+import naksha.base.fn.Fn1
+import naksha.base.fn.Fx1
+import naksha.base.fn.Fx2
+import naksha.base.fn.Fx3
+import naksha.model.Tuple
+import naksha.model.TupleNumber
 import naksha.model.Version
+import naksha.model.illegalArg
+import naksha.model.illegalState
 import naksha.model.objects.NakshaTx
+import naksha.model.objects.StandardMembers
+import kotlin.collections.mutableMapOf
 
 /**
  * Base class for all operations, so for:
@@ -54,6 +64,19 @@ internal abstract class PgWriterBase protected constructor(
 
     val collectionNumber: Int
         get() = pgCollection.collectionNumber
+
+    /** The _HEAD_ table. */
+    val headTable = pgCollection.headTable
+    /** The quoted name of the _HEAD_ table. */
+    val headIdent = headTable.quotedName
+    /** The _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
+    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
+    /** The quoted name of the _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
+    val historyIdent = historyTable?.quotedName
+    /** The `id` column */
+    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
+    /** The change-count column, if there is any defined. */
+    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
 
     /**
      * The transaction to operate upon.
@@ -127,6 +150,24 @@ internal abstract class PgWriterBase protected constructor(
     fun execute(conn: PgConnection) {
         pgCollection.catalog.setSearchPath(conn)
         return doExecute(conn)
+    }
+
+    /**
+     * Add all tuple from [pgWrites], expects that the columns are prepared.
+     * @param lambda a lambda optionally being called after every imported tuple, with `row`, `tuple` and `pgWrite` as arguments.
+     * @return the number of rows loaded.
+     */
+    protected fun loadAllTuple(lambda: Fx3<Int, Tuple, PgWrite>? = null): Int {
+        var row = 0
+        inRows.setMinRows(inRows.size + (end - start))
+        for (i in start ..< end) {
+            val pgWrite = pgWrites[i]
+            val tuple = pgWrite.tuple ?: throw illegalArg("The write #$i has no tuple, failed to load all tuple")
+            inRows[row] = tuple
+            lambda?.call(row, tuple, pgWrite)
+            row++
+        }
+        return row
     }
 
     /**

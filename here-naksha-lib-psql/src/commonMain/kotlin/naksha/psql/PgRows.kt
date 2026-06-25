@@ -407,13 +407,15 @@ internal class PgRows {
     /**
      * Returns the placeholders of all columns as comma separated string _(&dollar;1, &dollar;2, ...)_, usage:
      *
-     * ```sql
-     * WITH new_row AS (
+     * ```kotlin
+     * val sql = """WITH new_row AS (
      *   SELECT * FROM UNNEST(${rows.placeholders()})
      *   AS t(${rows.names()})
      * )
-     * INSERT INTO ${collection.head.quotedName} (${rows.names()})
-     * SELECT * FROM new_row
+     * INSERT INTO ${collection.head.quotedName} (${rows.aliases()})
+     * SELECT * FROM new_row"""
+     * val plan = conn.prepare(sql, rows.typeNames())
+     * val cursor = plan.execute(rows.values())
      * ```
      *
      * @return the placeholders of all columns as comma separated string.
@@ -440,9 +442,10 @@ internal class PgRows {
      *   SELECT * FROM UNNEST(${rows.placeholders()})
      *   AS t(${rows.names()})
      * )
-     * INSERT INTO ${collection.head.quotedName} (${rows.names()})
+     * INSERT INTO ${collection.head.quotedName} (${rows.aliases()})
      * SELECT * FROM new_row"""
      * val plan = conn.prepare(sql, rows.typeNames())
+     * val cursor = plan.execute(rows.values())
      * ```
      * @return the array type-names of all columns.
      * @since 3.0
@@ -457,10 +460,10 @@ internal class PgRows {
      *   SELECT * FROM UNNEST(${rows.placeholders()})
      *   AS t(${rows.names()})
      * )
-     * INSERT INTO ${collection.head.quotedName} (${rows.names()})
+     * INSERT INTO ${collection.head.quotedName} (${rows.aliases()})
      * SELECT * FROM new_row"""
      * val plan = conn.prepare(sql, rows.typeNames())
-     * val cursor = plan.execute(rows.valuesExecutable())
+     * val cursor = plan.execute(rows.values())
      * ```
      * Beware that the array really is two-dimensional: `Array<Array<Any?>>`.
      * @return the values of all columns as `Array<Any?>`.

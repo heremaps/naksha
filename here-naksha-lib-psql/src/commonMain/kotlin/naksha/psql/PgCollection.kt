@@ -152,16 +152,18 @@ open class PgCollection internal constructor(
 
     /**
      * Join the identities of all [columns], separated by comma, optionally filtered by the given filter.
+     * @param prefix an optional prefix to be added in front of each column being joined.
      * @param filter an optional filter method to remove _(or replace)_ certain columns.
      * @return a comma separated list of [ident][PgColumn.ident] strings.
      * @since 3.0
      */
-    fun joinColumns(filter: Fn1<String?, PgColumn>? = null): String {
+    fun joinColumns(prefix: String? = null, filter: Fn1<String?, PgColumn>? = null): String {
         val sb = StringBuilder()
         for (column in columns) {
             val ident: String? = if (filter != null) filter.call(column) else column.ident
             if (ident == null) continue
             if (sb.isNotEmpty()) sb.append(", ")
+            if (prefix != null) sb.append(prefix)
             sb.append(ident)
         }
         return sb.toString()

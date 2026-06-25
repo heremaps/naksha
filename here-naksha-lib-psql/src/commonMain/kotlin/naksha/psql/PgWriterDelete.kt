@@ -38,22 +38,17 @@ internal class PgWriterDelete(
     val purge: Boolean = false
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
     init {
-        inRows.addColumn("id", MemberType.STRING)
+        inRows.addColumn(FN.ident, MemberType.INT64)
         inRows.addColumn("expected_version", MemberType.INT64)
         var row = 0
         for (i in start until end) {
             val pgWrite = pgWrites[i]
-            inRows.set(row, "id", pgWrite.id)
+            inRows.set(row, FN.ident, pgWrite.tupleNumber!!.featureNumber)
             inRows.set(row, "expected_version", pgWrite.version?.number)
             row++
         }
         check(row == (end-start))
     }
-
-    val headTable = pgCollection.headTable
-    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
-    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
-    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
 
     private fun plan(conn: PgConnection): PgWriterPlan {
         // The new version with action bits set to DELETED (2).
@@ -61,23 +56,23 @@ internal class PgWriterDelete(
 
         // All input provided by client, `id` and optionally `expected_version`
         val query = """WITH query AS (
-  SELECT * FROM UNNEST($1, $2) AS t($ID, expected_version)
+  SELECT * FROM UNNEST($1, $2) AS t($FN, expected_version)
 )"""
 
         // Select id and version of all rows matching query.id — used for conflict detection.
         val head_select = """, head_select AS (
-  SELECT head.$ID AS $ID, head.$FN AS $FN, head.$VERSION AS $VERSION
-  FROM ${headTable.quotedName} AS head, query
-  WHERE head.$ID = query.$ID
+  SELECT head.$FN AS $FN, head.$VERSION AS $VERSION
+  FROM $headIdent AS head, query
+  WHERE head.$FN = query.$FN
 )"""
 
         // Select the HEAD rows to act on:
         // - Optional atomic version check (expected_version).
         // - Skip rows already deleted ((version & 3) >= 2) — idempotent.
         val head_row = """, head_row AS (
-  SELECT ${pgCollection.columns.joinToString(", ") { column -> "head.$column AS $column" }}
-  FROM ${headTable.quotedName} AS head, query
-  WHERE head.$ID = query.$ID
+  SELECT ${pgCollection.joinColumns { column -> "head.$column AS $column" }}
+  FROM $headIdent AS head, query
+  WHERE head.$FN = query.$FN
     AND (query.expected_version IS NULL OR (query.expected_version & -4) = (head.$VERSION & -4))
     AND (head.$VERSION & 3) < 2
 )"""
@@ -85,32 +80,28 @@ internal class PgWriterDelete(
         // Archive the current HEAD row into history (identical to how UPDATE does it).
         // next_version = the new deleted version, signaling "succeeded by a deletion".
         val head_to_history = if (historyTable != null) """, head_to_history AS (
-  INSERT INTO ${historyTable.quotedName} ($NEXT_VERSION, ${pgCollection.joinColumns { if (it.name != NEXT_VERSION.name) it.ident else null }})
+  INSERT INTO $historyIdent ($NEXT_VERSION, ${pgCollection.joinColumns { if (it.name != NEXT_VERSION.name) it.ident else null }})
   SELECT $deleted_version AS $NEXT_VERSION,
          ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
   FROM head_row
-  RETURNING $ID, $FN, $VERSION
+  RETURNING $FN, $VERSION
 )""" else ""
 
         // For DELETE: UPDATE version (action bits = DELETED) and cc in HEAD.
         // Only these two control-columns change; all data columns remain identical.
         val head_updated = if (!purge) """, head_updated AS (
-  UPDATE ${headTable.quotedName}
-  SET $VERSION = $deleted_version
-      ${if (CC!=null) ", $CC = ${headTable.quotedName}.$CC + 1" else ""}
+  UPDATE $headIdent
+  SET $VERSION = $deleted_version${if (CC!=null) ", $CC = $headIdent.$CC + 1" else ""}
   FROM head_row
-  WHERE ${headTable.quotedName}.$FN = head_row.$FN
-  RETURNING ${headTable.quotedName}.$ID
-            , ${headTable.quotedName}.$FN
-            , ${headTable.quotedName}.$VERSION
-${if (CC!=null) "            , ${headTable.quotedName}.$CC" else ""}
+  WHERE $headIdent.$FN = head_row.$FN
+  RETURNING $headIdent.$FN, $headIdent.$VERSION${if (CC!=null) ", $headIdent.$CC" else ""}
 )""" else ""
 
         // For PURGE: DELETE the HEAD row entirely.
         val head_deleted = if (purge) """, head_deleted AS (
-  DELETE FROM ${headTable.quotedName}
+  DELETE FROM $headIdent
   WHERE ($FN, $VERSION) IN (SELECT $FN, $VERSION FROM head_row)
-  RETURNING $ID, $FN, $VERSION
+  RETURNING $FN, $VERSION
 )""" else ""
 
         // For PURGE only: also write a tombstone record into history to explicitly mark
@@ -122,7 +113,7 @@ ${if (CC!=null) "            , ${headTable.quotedName}.$CC" else ""}
   SELECT $deleted_version AS $VERSION, $deleted_version AS $NEXT_VERSION, 
          ${pgCollection.joinColumns { column -> if (VERSION eq column || NEXT_VERSION eq column) null else "head_row.$column AS $column" }}
   FROM head_row
-  RETURNING $ID, $FN, $VERSION
+  RETURNING $FN, $VERSION
 )""" else ""
 
         // The returned row for DELETE is the updated HEAD row (same data, new version/cc).
@@ -140,15 +131,15 @@ SELECT
     head_select.$VERSION AS select_version,
     head_row.$VERSION AS head_version,
     ${if (!purge) "head_updated.$VERSION AS deleted_version," else "head_deleted.$VERSION AS deleted_version,"}
-    query.$ID AS query_id,
+    query.$FN AS query_fn,
     query.expected_version AS query_expected_version
 FROM query
-LEFT JOIN head_row ON head_row.$ID = query.$ID
-${if (!purge) "LEFT JOIN head_updated ON head_updated.$ID = query.$ID" else ""}
-${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$ID = query.$ID" else ""}
-${if (history_tombstone.isNotEmpty()) "LEFT JOIN history_tombstone ON history_tombstone.$ID = query.$ID" else ""}
-LEFT JOIN head_select ON head_select.ID = query.$ID
-${if (purge) "LEFT JOIN head_deleted ON head_deleted.$ID = query.$ID" else ""}
+LEFT JOIN head_row ON head_row.$FN = query.$FN
+${if (!purge) "LEFT JOIN head_updated ON head_updated.$FN = query.$FN" else ""}
+${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FN = query.$FN" else ""}
+${if (history_tombstone.isNotEmpty()) "LEFT JOIN history_tombstone ON history_tombstone.$FN = query.$FN" else ""}
+LEFT JOIN head_select ON head_select.$FN = query.$ID
+${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
 ;"""
         val typeNames = inRows.typeNames()
         val pgPlan = conn.prepare(SQL, typeNames)
@@ -175,7 +166,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$ID = query.$ID" else ""}
             .addColumn("select_version", MemberType.INT64)
             .addColumn("head_version", MemberType.INT64)
             .addColumn("deleted_version", MemberType.INT64)
-            .addColumn("query_id", MemberType.STRING)
+            .addColumn("query_fn", MemberType.INT64)
             .addColumn("query_expected_version", MemberType.INT64)
         val plan = plan(conn)
         val array = inRows.values()
@@ -201,7 +192,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$ID = query.$ID" else ""}
             outRows.readAll(cursor)
             for (row in 0 until outRows.size) {
                 val write = pgWrites[row]
-                val id = outRows.getString(row, "query_id") ?: throw generalException("Missing 'query_id' in result")
+                val fn = outRows.getString(row, "query_fn") ?: throw generalException("Missing 'query_fn' in result")
 
                 val tuple = outRows[row]
                 if (tuple != null) write.tuple = tuple
@@ -218,7 +209,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$ID = query.$ID" else ""}
                 if (select_fn == null || select_version == null) {
                     if (write.version != null) {
                         throw featureNotFound(
-                            "Expected feature '$id' in version '${write.version}', but no such feature exists"
+                            "Expected feature '$fn' in version '${write.version}', but no such feature exists"
                         )
                     }
                     continue
@@ -226,7 +217,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$ID = query.$ID" else ""}
                 val head_version = outRows.getInt64(row, "head_version")
                 if (head_version == null || select_version != head_version) {
                     throw conflict(
-                        "The feature '$id' was expected in version '${write.version}', but found in '${Version(select_version)}'"
+                        "The feature '$fn' was expected in version '${write.version}', but found in '${Version(select_version)}'"
                     )
                 }
             }
