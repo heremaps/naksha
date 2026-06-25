@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
@@ -7,6 +8,9 @@ import naksha.model.*
 import naksha.model.objects.MemberType
 import naksha.model.objects.StandardMembers
 import naksha.model.objects.StoreMode
+import naksha.psql.PgColumn.PgColumn_C.FN
+import naksha.psql.PgColumn.PgColumn_C.NEXT_VERSION
+import naksha.psql.PgColumn.PgColumn_C.VERSION
 
 /**
  * Execute a [UPDATE][naksha.model.request.WriteOp.UPDATE].
@@ -21,108 +25,86 @@ internal class PgWriterUpdate(
     end: Int
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
 
-    val headTable = pgCollection.headTable
-    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
-    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
-    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
-    private val writeById = mutableMapOf<String, PgWrite>()
-
+    // All columns that are BYTE_ARRAYs (can be empty)
+    private val byteArrayCols = pgCollection.columns.filter { it.memberType == MemberType.BYTE_ARRAY }
+    private val writeByFn = mutableMapOf<Int64, PgWrite>()
     init {
         inRows.addColumns(pgCollection.columns)
-        // Separate column for the expected/atomic version, because `version` itself
-        // is now a real HEAD column carrying the new tuple's version.
         inRows.addColumn("expected_version", MemberType.INT64) // needed to do atomic updates
-        loadAllTuple { row, _, pgWrite ->
-            writeById[pgWrite.id] = pgWrite
+        loadAllTuple { row, tuple, pgWrite ->
+            writeByFn[tuple.tupleNumber.featureNumber] = pgWrite
+            // Separate column for the expected HEAD version.
             inRows.set(row, "expected_version", pgWrite.version?.number)
         }
     }
 
-    private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {
-        val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
-
+    private fun plan(conn: PgConnection): PgWriterPlan {
         // All input provided by client (the updates)
         val query = """WITH new_row AS (
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
 
-        val effHead = collection.effectiveHeadColumns
-        val effCopyHistory = collection.effectiveCopyIntoHistoryColumns
-
-        // select `id` and version of all rows that match new_row.id
-        val head_select = """, head_select AS (
-  SELECT head.id AS id, head.fn AS fn, head.version AS version
-  FROM ${headTable.quotedName} AS head, new_row
-  WHERE head.id = new_row.id
-)"""
-
-        val effHeadNames = effHead.joinToString(", ") { it.name }
-        // All nullable BYTE_ARRAY columns support the "keep if undefined" sentinel.
-        // `feature` is mandatory (NOT NULL) and never carries the sentinel.
-        val keepableByteCols = effHead.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
-
-        // If the client requested an atomic update, so it provided an `expected_version`, then
-        // we only update the head row, when the version matches.
-        // If we need to create a history entry, select all HEAD columns, otherwise the minimal set
-        // needed: id/fn/version for control flow, plus all keepable BYTE_ARRAY columns so the CASE
-        // expressions in `inserted` can reference head_row.<col>.
-        val leanHeadRowCols = (listOf(PgColumn.id, PgColumn.fn, PgColumn.version) + keepableByteCols).distinct()
+        // Select head rows that we want to update, lock the rows for update
+        // We do not select rows in deleted state, as they can't be updated.
+        // The reason is: Update explicitly only updates a living object
+        // So it must fail when there is no existing object or only a tombstone exists (logically the same as not existing)
         val head_row = """, head_row AS (
-  SELECT ${if (insert_into_history != null)
-         effHead.joinToString(", ") { "head.${it.name} AS ${it.name}" }
-    else leanHeadRowCols.joinToString(", ") { "head.${it.name} AS ${it.name}" }}
-  FROM ${headTable.quotedName} AS head, new_row
-  WHERE head.id = new_row.id AND (new_row.expected_version IS NULL OR (new_row.expected_version & -4) = (head.version & -4))
+  SELECT ${pgCollection.joinColumns { column -> "head.$column" }}
+  FROM $headIdent AS head, new_row
+  WHERE head.$FN = new_row.$FN AND (new_row.expected_version IS NULL OR (new_row.expected_version & -4) = (head.$VERSION & -4))
   FOR UPDATE NOWAIT
 )"""
 
-        // Insert the current `head_row` into history. The new tuple's version becomes the demoted row's next_version.
-        val head_to_history = if (insert_into_history != null) """, head_to_history AS (
-  INSERT INTO ${insert_into_history.quotedName} (${PgColumn.next_version}, ${effCopyHistory.joinToString(",") { it.name }})
-  SELECT new_row.version AS ${PgColumn.next_version},
-         ${effCopyHistory.joinToString(", ") { "head_row.${it.name} AS ${it.name}" }}
+        // Copy the current HEAD row into HISTORY; set the next version to the version for the history row.
+        val head_to_history = if (historyTable != null) """, head_to_history AS (
+  INSERT INTO $historyIdent ($NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
+  SELECT new_row.$VERSION AS $NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column" }})
   FROM head_row
-  LEFT JOIN new_row ON new_row.id = head_row.id
-  RETURNING id, fn, version
+  LEFT JOIN new_row ON new_row.$FN = head_row.$FN
+  RETURNING $FN, $VERSION
 )""" else ""
 
-        // Delete `head_row` from HEAD.
+        // Delete HEAD rows that have been copied into history.
         val head_deleted = """, head_deleted AS (
-  DELETE FROM ${headTable.quotedName}
-  WHERE (fn, version) IN (SELECT fn, version FROM head_row)
-  RETURNING id, fn, version
+  DELETE FROM $headIdent
+  WHERE $FN IN (SELECT $FN FROM head_row)
+  RETURNING $FN, $VERSION
 )"""
 
         val inserted = """, inserted AS (
-INSERT INTO ${headTable.quotedName} ($effHeadNames)
-SELECT ${effHead.joinToString(", ") { col ->
-    if (col in keepableByteCols)
-        "CASE WHEN new_row.${col.name} = convert_to('undefined', 'UTF8') THEN head_row.${col.name} ELSE new_row.${col.name} END AS ${col.name}"
-    else "new_row.${col.name} AS ${col.name}"
-        }}
+INSERT INTO $headIdent ($NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
+SELECT NULL AS $NEXT_VERSION, ${pgCollection.joinColumns { column -> 
+    if (column eq NEXT_VERSION)
+        null
+    else if (column.memberType == MemberType.BYTE_ARRAY)
+        "CASE WHEN new_row.$column = convert_to('undefined', 'UTF8') THEN head_row.$column ELSE new_row.$column END AS $column"
+    else
+        "head_row.$column" 
+}})
 FROM new_row
-LEFT JOIN head_row ON head_row.id = new_row.id
-RETURNING id, fn, version${if (keepableByteCols.isNotEmpty()) keepableByteCols.joinToString("") { ", ${it.name}" } else ""}
+LEFT JOIN head_row ON head_row.$FN = new_row.$FN
+RETURNING $FN, $VERSION${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { column ->
+    // We return NULL, when the input contained data, because the client knows this already, no need to send back.
+    // If the client provided `undefined`, we return the actual value so we can build a correct tuple.
+    "CASE WHEN new_row.$column = convert_to('undefined', 'UTF8') THEN $column ELSE null END AS $column"
+  }}" else ""}
 )"""
 
-        val SQL = """$query$head_select$head_row$head_to_history$head_deleted$inserted
+        val SQL = """$query$head_row$head_to_history$head_deleted$inserted
 SELECT
-    new_row.id AS id,
-    new_row.fn AS fn,
-    new_row.version AS version,
-    head_select.id AS existing_id,
-    head_select.version AS existing_version,
-    head_row.id AS head_id,
-    ${if (head_to_history.isNotEmpty()) "head_to_history.id AS history_id," else ""}
-    head_deleted.id AS head_deleted_id,
-    inserted.id AS inserted_id,
-    ${if (keepableByteCols.isNotEmpty()) keepableByteCols.joinToString(",\n    ") { "inserted.${it.name} AS ${it.name}" } else "null::bytea AS attachment"}
+    new_row.$FN AS $FN,
+    new_row.$VERSION AS $VERSION,
+    head_row.$FN AS _existing_fn,
+    head_row.$VERSION AS _existing_version,
+    ${if (byteArrayCols.isNotEmpty()) byteArrayCols.joinToString(",\n    ") { column -> "inserted.$column AS $column" } + ",\n    " else ""}
+    ${if (head_to_history.isNotEmpty()) "head_to_history.$FN AS _history_fn," else "NULL AS _history_fn"}
+    head_deleted.$FN AS _head_deleted_fn,
+    inserted.$FN AS _inserted_fn,
 FROM new_row
-LEFT JOIN head_select ON head_select.id = new_row.id
-LEFT JOIN head_row ON head_row.id = new_row.id
-${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.id = new_row.id" else ""}
-LEFT JOIN head_deleted ON head_deleted.id = new_row.id
-LEFT JOIN inserted ON inserted.id = new_row.id
+LEFT JOIN head_row ON head_row.$FN = new_row.$FN
+${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FN = new_row.$FN" else ""}
+LEFT JOIN head_deleted ON head_deleted.$FN = new_row.$FN
+LEFT JOIN inserted ON inserted.$FN = new_row.$FN
 ;"""
         val typeNames = inRows.typeNames()
         val pgPlan = conn.prepare(SQL, typeNames)
@@ -133,17 +115,20 @@ LEFT JOIN inserted ON inserted.id = new_row.id
         if (pgWrites.isEmpty()) return
         // All nullable BYTE_ARRAY columns may carry the "keep if undefined" sentinel and must be
         // read back from the DB so the in-memory tuple reflects the final stored value.
-        val keepableByteCols = pgCollection.effectiveHeadColumns.filter { it.type == PgType.BYTE_ARRAY && it !== PgColumn.feature }
         val rows = PgRows()
             .withDatabaseNumber(storageNumber)
             .withCatalogNumber(catalogNumber)
             .withCollectionNumber(collectionNumber)
-            .addColumn("id", PgType.STRING)
-            .addColumn("existing_id", PgType.STRING)
-            .addColumn("existing_version", PgType.INT64)
-            .addColumn("head_id", PgType.STRING)
-        for (col in keepableByteCols) rows.addColumn(col.name, PgType.BYTE_ARRAY)
-        val plan = plan(conn, pgCollection)
+        rows.addColumn(FN)
+            .addColumn(VERSION)
+            .addColumn("_existing_fn", MemberType.INT64)
+            .addColumn("_existing_version", MemberType.INT64)
+        for (column in byteArrayCols) rows.addColumn(column)
+        rows.addColumn("_history_fn", MemberType.INT64)
+        rows.addColumn("_head_deleted_fn", MemberType.INT64)
+        rows.addColumn("_inserted_fn", MemberType.INT64)
+
+        val plan = plan(conn)
         val array = this.inRows.values()
         if (PlatformUtil.ENABLE_INFO) {
             if (session.logQueries) {
@@ -162,7 +147,7 @@ LEFT JOIN inserted ON inserted.id = new_row.id
             logger.info("UPDATE of ${rows.size} rows took ${seconds * 1000}ms, therefore ${rows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
         }
         cursor.fetch().use {
-            rows.addAll(cursor)
+            rows.readAll(cursor)
             for (rowNum in 0 until rows.size) {
                 // The original `id` of the feature to update.
                 val id  = rows.getString(rowNum, "id") ?: throw illegalState("Column 'id' in result must not be null")
@@ -173,38 +158,38 @@ LEFT JOIN inserted ON inserted.id = new_row.id
                 }
                 val existing_version = rows.getInt64(rowNum, "existing_version") ?: throw illegalState("Missing version in HEAD select for feature '$id'")
                 // Fetch the original write and tuple for this row.
-                val write = writeById[id] ?: throw illegalState("Missing write state for feature '$id'")
-                val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
-                // The `id` from the eventually read head-row, this is only available, if the existing_id is the expected version!
-                val head_id = rows.getString(rowNum, "head_id")
-                if (head_id != id) { // Conflict!
-                    val expectedVersion = write.version ?: throw illegalState("Missing expected version for feature '$id'")
-                    throw conflict("The feature '$id' was expected in version $expectedVersion, but actually found in ${Version(existing_version)}")
-                }
-                // Patch back all BYTE_ARRAY columns whose stored value may differ from what the client sent
-                // (sentinel "undefined" causes the DB to retain the existing value).
-                val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.getByteArray(StandardMembers.Geometry)
-                val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.getByteArray(StandardMembers.ReferencePoint)
-                val tags = tuple.getString(StandardMembers.XyzTags)
-                val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.getByteArray(StandardMembers.XyzAttachment)
-                val oldGeo = tuple.getByteArray(StandardMembers.Geometry)
-                val oldRefPoint = tuple.getByteArray(StandardMembers.ReferencePoint)
-                val oldAttachment = tuple.getByteArray(StandardMembers.XyzAttachment)
-                val needsPatch = (oldGeo == null || !oldGeo.contentEquals(geo ?: ByteArray(0)))
-                    || (oldRefPoint == null || !oldRefPoint.contentEquals(referencePoint ?: ByteArray(0)))
-                    || (oldAttachment == null || !oldAttachment.contentEquals(attachment ?: ByteArray(0)))
-                if (needsPatch) {
-                    val m = tuple.membersBook
-                    val newMembers = if (m is naksha.jbon.HeapBook) {
-                        val dict = m.copy()
-                        dict.put(StandardMembers.Geometry.name, geo)
-                        dict.put(StandardMembers.ReferencePoint.name, referencePoint)
-                        dict.put(StandardMembers.XyzTags.name, tags)
-                        dict.put(StandardMembers.XyzAttachment.name, attachment)
-                        dict
-                    } else m
-                    write.tuple = tuple.copy(membersBook = newMembers)
-                }
+//                val write = writeById[id] ?: throw illegalState("Missing write state for feature '$id'")
+//                val tuple = write.tuple ?: throw generalException("Missing tuple for feature '$id'")
+//                // The `id` from the eventually read head-row, this is only available, if the existing_id is the expected version!
+//                val head_id = rows.getString(rowNum, "head_id")
+//                if (head_id != id) { // Conflict!
+//                    val expectedVersion = write.version ?: throw illegalState("Missing expected version for feature '$id'")
+//                    throw conflict("The feature '$id' was expected in version $expectedVersion, but actually found in ${Version(existing_version)}")
+//                }
+//                // Patch back all BYTE_ARRAY columns whose stored value may differ from what the client sent
+//                // (sentinel "undefined" causes the DB to retain the existing value).
+//                val geo = if (PgColumn.geo in keepableByteCols) rows.getByteArray(rowNum, PgColumn.geo.name) else tuple.getByteArray(StandardMembers.Geometry)
+//                val referencePoint = if (PgColumn.ref_point in keepableByteCols) rows.getByteArray(rowNum, PgColumn.ref_point.name) else tuple.getByteArray(StandardMembers.ReferencePoint)
+//                val tags = tuple.getString(StandardMembers.XyzTags)
+//                val attachment = if (PgColumn.attachment in keepableByteCols) rows.getByteArray(rowNum, PgColumn.attachment.name) else tuple.getByteArray(StandardMembers.XyzAttachment)
+//                val oldGeo = tuple.getByteArray(StandardMembers.Geometry)
+//                val oldRefPoint = tuple.getByteArray(StandardMembers.ReferencePoint)
+//                val oldAttachment = tuple.getByteArray(StandardMembers.XyzAttachment)
+//                val needsPatch = (oldGeo == null || !oldGeo.contentEquals(geo ?: ByteArray(0)))
+//                    || (oldRefPoint == null || !oldRefPoint.contentEquals(referencePoint ?: ByteArray(0)))
+//                    || (oldAttachment == null || !oldAttachment.contentEquals(attachment ?: ByteArray(0)))
+//                if (needsPatch) {
+//                    val m = tuple.membersBook
+//                    val newMembers = if (m is naksha.jbon.HeapBook) {
+//                        val dict = m.copy()
+//                        dict.put(StandardMembers.Geometry.name, geo)
+//                        dict.put(StandardMembers.ReferencePoint.name, referencePoint)
+//                        dict.put(StandardMembers.XyzTags.name, tags)
+//                        dict.put(StandardMembers.XyzAttachment.name, attachment)
+//                        dict
+//                    } else m
+//                    write.tuple = tuple.copy(membersBook = newMembers)
+//                }
             }
         }
     }

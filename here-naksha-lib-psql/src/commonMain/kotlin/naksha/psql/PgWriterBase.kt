@@ -14,6 +14,7 @@ import naksha.model.illegalState
 import naksha.model.objects.NakshaTx
 import naksha.model.objects.StandardMembers
 import kotlin.collections.mutableMapOf
+import kotlin.jvm.JvmStatic
 
 /**
  * Base class for all operations, so for:
@@ -54,6 +55,7 @@ internal abstract class PgWriterBase protected constructor(
     val end: Int,
 ) {
     companion object PgWriterBase_C {
+        @JvmStatic
         protected val UNDEFINED: ByteArray = "undefined".encodeToByteArray()
     }
 
