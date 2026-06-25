@@ -299,15 +299,6 @@ open class PgWriter internal constructor(
         }
     }
 
-    private fun MutableMap<PgCollection, MutableList<PgWrite>>.getOrCreate(collection: PgCollection): MutableList<PgWrite> {
-        var list = this[collection]
-        if (list == null) {
-            list = ArrayList()
-            this[collection] = list
-        }
-        return list
-    }
-
     /**
      * Execute all writes between `start` _(inclusive)_ and `end` _(exclusive)_.
      * @param pgWrites the list of ordered writes.
@@ -347,7 +338,7 @@ open class PgWriter internal constructor(
         }
         //
         if (e > s) {
-            val tupleWriter = PgWriterDelete(this, pgCollection, pgWrites, s, e, purge = false)
+            val tupleWriter = PgWriterDelete(this, pgCollection, pgWrites, s, e, purge = true)
             tupleWriter.execute(conn)
             e = s
         }
@@ -361,7 +352,7 @@ open class PgWriter internal constructor(
             e++
         }
         if (e > s) {
-            val tupleWriter = PgWriterInsert(this, pgCollection, partition, inserts)
+            val tupleWriter = PgWriterInsert(this, pgCollection, pgWrites, s, e)
             tupleWriter.execute(conn)
             e = s
         }
@@ -375,7 +366,7 @@ open class PgWriter internal constructor(
             e++
         }
         if (e > s) {
-            val tupleWriter = PgWriterUpsert(this, pgCollection, partition, upserts)
+            val tupleWriter = PgWriterUpsert(this, pgCollection, pgWrites, s, e)
             tupleWriter.execute(conn)
             e = s
         }
@@ -389,7 +380,7 @@ open class PgWriter internal constructor(
             e++
         }
         if (e > s) {
-            val tupleWriter = PgWriterUpdate(this, pgCollection, partition, updates)
+            val tupleWriter = PgWriterUpdate(this, pgCollection, pgWrites, s, e)
             tupleWriter.execute(conn)
             e = s
         }

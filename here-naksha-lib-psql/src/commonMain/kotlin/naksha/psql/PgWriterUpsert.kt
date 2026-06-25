@@ -12,9 +12,13 @@ import naksha.model.objects.StoreMode
  * @since 3.0
  * @see [PgWriter]
  */
-internal class PgWriterUpsert(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
-    : PgWriterBase(writer, collection, partition, writes)
-{
+internal class PgWriterUpsert(
+    pgWriter: PgWriter,
+    pgCollection: PgCollection,
+    pgWrites: List<PgWrite>,
+    start: Int,
+    end: Int
+) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
     private val writeByTn = mutableMapOf<TupleNumber, PgWrite>()
 
     init {
