@@ -30,7 +30,6 @@ open class ReadFeatures : ReadRequest() {
         private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
         private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class) { _, _ -> StringList() }
         private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
         private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
         private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
         private val QUERY = NotNullProperty<ReadRequest, RequestQuery>(RequestQuery::class)

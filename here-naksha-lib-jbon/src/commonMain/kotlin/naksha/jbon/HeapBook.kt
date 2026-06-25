@@ -4,7 +4,9 @@ package naksha.jbon
 
 import naksha.base.Int64
 import kotlin.js.JsExport
+import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
+import kotlin.jvm.JvmStatic
 
 /**
  * A mutable [IBook] implementation on the Java _HEAP_.
@@ -14,6 +16,41 @@ import kotlin.jvm.JvmOverloads
 class HeapBook(
     override var bookType: BookType
 ) : IBook {
+    companion object HeapBook_C {
+        /**
+         * Creates a copy of the given book.
+         * @param other The [IBook] to make a copy of.
+         * @param databaseNumber The database-number of the copy, if different.
+         * @param featureNumber The feature-number of the copy, if different.
+         * @return a new [HeapBook] with the same entries.
+         * @since 3.0.0
+         */
+        @JvmStatic
+        @JsStatic
+        @JvmOverloads
+        fun copyOf(other: IBook, databaseNumber: Int64? = other.databaseNumber, featureNumber: Int64? = other.featureNumber): HeapBook {
+            val c = HeapBook(other.bookType)
+            c.id = other.id
+            c.databaseNumber = other.databaseNumber
+            c.featureNumber = other.featureNumber
+            if (other is HeapBook) {
+                c._names.addAll(other._names)
+                c._values.addAll(other._values)
+                for ((name,index) in other._nameIndex) c._nameIndex[name] = index
+            } else {
+                val namesLen = other.namesLength()
+                for (i in 0..<namesLen) {
+                    val name = other.getNameAt(i)!!
+                    val value = other[name]
+                    c.put(name, value)
+                }
+            }
+            return c
+        }
+
+
+    }
+
     override var databaseNumber: Int64? = null
     override var featureNumber: Int64? = null
 

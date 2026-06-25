@@ -2,6 +2,7 @@
 
 package naksha.model.objects
 
+import naksha.model.TupleNumber
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
@@ -14,6 +15,7 @@ import kotlin.jvm.JvmField
  */
 @JsExport
 class XyzMembers private constructor() {
+
     companion object XyzMembers_C {
         // -------------------------------------------------------------------------
         // Mandatory members — storage-managed, always present.
@@ -24,14 +26,14 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzTn = Member(StandardMembers.Tn, JsonPath("properties", "@ns:com:here:xyz", "uuid"))
+        val XyzTn = TupleNumberMember(StandardMembers.Tn, JsonPath("properties", "@ns:com:here:xyz", "uuid"))
 
         /**
          * The same as [StandardMembers.NextVersion], but with a Data-Hub compatible path.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzNextVersion = Member(StandardMembers.NextVersion, JsonPath("properties", "@ns:com:here:xyz", "nextVersion"))
+        val XyzNextVersion = Int64Member(StandardMembers.NextVersion, JsonPath("properties", "@ns:com:here:xyz", "nextVersion"))
 
         /**
          * The same as [StandardMembers.GlobalBookFeatureNumber], but with a Data-Hub compatible path.
