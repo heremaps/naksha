@@ -101,10 +101,16 @@ class Naksha private constructor() {
         const val BOOKS_COL_FN = 3
 
         /**
-         * The maximum length of identifiers _(`42`)_ .
+         * The maximum length of identifiers _(`42`)_.
          * @since 3.0
          */
         const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
+
+        /**
+         * The maximum length of internal identifiers.
+         * @since 3.0
+         */
+        const val MAX_INTERNAL_ID_LENGTH = 63
 
         // TODO: This shows why we really need a special TupleNumberArray next to TupleNumberList, which stores all tuple-numbers in a single
         //       byte-array, compressed by adding the database-number, catalog-number and collection-number upfront, then followed by all the
@@ -146,141 +152,6 @@ class Naksha private constructor() {
          */
         @JvmField
         var DEFAULT_SESSION_LOG_LEVEL: String? = null
-
-        /**
-         * Tests if the given **id** is a valid identifier, so matches:
-         *
-         * `[a-z][a-z0-9_:-]{42}`
-         *
-         * **Beware**: Identifiers must not contain upper-case letters, because many storages does not make a difference between upper- and lower-cased letters.
-         * @param id the identifier.
-         * @param internal if _true_, then extends the allowed character set to `[a-z_][a-z0-9_:-~$]{31}`.
-         * @return _true_ if the identifier is valid; _false_ otherwise.
-         * @since 3.0
-         * @see [verifyId]
-         * @see [verifyInternalId]
-         * @see [MAX_ID_LENGTH]
-         */
-        @JsStatic
-        @JvmStatic
-        @JvmOverloads
-        fun isValidId(id: String?, internal: Boolean = false): Boolean {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) return false
-            var i = 0
-            var c = id[i++]
-            // First character must be a-z
-            if (c.code < 'a'.code || c.code > 'z'.code) return false
-            while (i < id.length) {
-                c = id[i++]
-                when (c.code) {
-                    in 'a'.code..'z'.code -> continue
-                    in '0'.code..'9'.code -> continue
-                    '_'.code, ':'.code, '-'.code -> continue
-                    else -> return false
-                }
-            }
-            return true
-        }
-
-        /**
-         * Tests if the given **id** is a valid identifier, so matches:
-         *
-         * `[a-z][a-z0-9_:-]{31}`
-         *
-         * If the given identifier is invalid, the methods throws [NakshaError.ILLEGAL_ID].
-         * @param id the identifier to test.
-         * @return the given identifier, tested.
-         * @since 3.0
-         * @see [isValidId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun verifyId(id: String?): String {
-            verifyId(id, internal = false, throwOnError = true)
-            return id!!
-        }
-
-        /**
-         * Tests if the given **id** is a valid identifier, so matches:
-         *
-         * `[a-z_][a-z0-9_:-~$]{31}`
-         *
-         * If the given identifier is invalid, the methods throws [NakshaError.ILLEGAL_ID].
-         * @param id the identifier to test.
-         * @return the given identifier, tested.
-         * @since 3.0
-         * @see [isValidId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun verifyInternalId(id: String?): String {
-            verifyId(id, internal = true, throwOnError = true)
-            return id!!
-        }
-
-        @JvmStatic
-        private fun verifyId(id: String?, internal: Boolean, throwOnError: Boolean): Boolean {
-            if (id.isNullOrEmpty()) {
-                if (throwOnError) throw illegalId("The given identifier is null or empty")
-                else return false
-            }
-            if (id == "naksha") {
-                if (throwOnError) throw illegalId("The identifier 'naksha' is forbidden")
-                else return false
-            }
-            if (id.length > MAX_ID_LENGTH) {
-                if (throwOnError) throw illegalId("The identifier '$id' is too long: ${id.length}, must be maximal $MAX_ID_LENGTH")
-                else return false
-            }
-            var i = 0
-            var c = id[i++]
-            if (c.code < 'a'.code || c.code > 'z'.code) {
-                if (!internal) {
-                    if (throwOnError) throw illegalId("The first character must be a-z, but was $c")
-                    else return false
-                }
-                // Internal identifiers may start with `_`
-                if (c.code != '_'.code) {
-                    if (throwOnError) throw illegalId("The first character must be a-z or '_' (underscore), but was $c")
-                    else return false
-                }
-            }
-            while (i < id.length) {
-                c = id[i++]
-                when (c.code) {
-                    in 'a'.code..'z'.code -> continue
-                    in '0'.code..'9'.code -> continue
-                    '_'.code, ':'.code, '-'.code -> continue
-                    '~'.code, '$'.code -> if (!internal) {
-                        if (throwOnError) throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-]")
-                        else return false
-                    } else continue
-                    else -> if (!internal) {
-                        if (throwOnError) throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-]")
-                        else return false
-                    } else {
-                        if (throwOnError) throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-~$]")
-                        else return false
-                    }
-                }
-            }
-            return true
-        }
-
-        /**
-         * Tests if the given identifier is an internal one.
-         * @param id the identifier to test.
-         * @return _true_ if this is an internal identifier; _false_ otherwise.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun isInternalId(id: String?): Boolean =
-            // Every identifier that is a valid internal identifier
-            verifyId(id, internal = true, throwOnError = false)
-            // but not a valid normal identifier
-            && !verifyId(id, internal = false, throwOnError = false)
-            // is actually an internal identifier
 
         /**
          * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.

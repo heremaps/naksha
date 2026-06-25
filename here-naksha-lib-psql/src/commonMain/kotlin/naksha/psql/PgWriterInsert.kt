@@ -3,6 +3,8 @@ package naksha.psql
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
+import naksha.model.illegalState
+import naksha.model.objects.StandardMembers
 import naksha.model.objects.StoreMode
 
 /**
@@ -16,30 +18,23 @@ import naksha.model.objects.StoreMode
  * @since 3.0
  * @see [PgWriter]
  */
-internal class PgWriterInsert(writer: PgWriter, collection: PgCollection, partition: Int, writes: List<PgWrite>)
-    : PgWriterBase(writer, collection, partition, writes)
-{
+internal class PgWriterInsert(
+    pgWriter: PgWriter,
+    pgCollection: PgCollection,
+    pgWrites: List<PgWrite>,
+    start: Int,
+    end: Int
+) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
     init {
-        // Transactions HEAD is the one HEAD partitioned by `next_version` and must include the column.
-        val targetColumns = if (collection.headTable.partitionByColumn == PgColumn.next_version)
-            collection.effectiveHistoryColumns else collection.effectiveHeadColumns
-        inRows.addColumns(targetColumns)
-        val members = collection.head.members
-        inRows.addCustomMembers(members)
-        var i = 0
-        for (write in writes) {
-            val tuple = write.tuple
-            if (tuple != null) {
-                inRows[i] = tuple
-                inRows.setCustomMembers(i, write.feature, members)
-                i++
-            }
-        }
+        inRows.addColumns(pgCollection.columns)
     }
 
-    private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {
-        val insert_into_history = if (historyTable != null && collection.head.storeHistory == StoreMode.ON) historyTable else null
+    val headTable = pgCollection.headTable
+    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
+    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
+    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
 
+    private fun plan(conn: PgConnection): PgWriterPlan {
         val new_row = """WITH new_row AS (
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
@@ -100,7 +95,7 @@ LEFT JOIN head_inserted ON head_inserted.id = new_row.id
 
     override fun doExecute(conn: PgConnection) {
         if (pgWrites.isEmpty()) return
-        val plan = plan(conn, pgCollection)
+        val plan = plan(conn)
         val array = inRows.values()
         if (PlatformUtil.ENABLE_INFO) {
             if (session.logQueries) {

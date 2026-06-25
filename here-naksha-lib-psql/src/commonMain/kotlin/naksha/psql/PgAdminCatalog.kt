@@ -16,7 +16,6 @@ import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_FN
 import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.objects.NakshaCatalog
@@ -475,7 +474,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     }
 
     /**
-     * Create a new [catalog][PgCatalog] using the given connection, and return it.
+     * Create a new custom [catalog][PgCatalog] using the given connection, and return it.
      *
      * ### Note
      * Does not commit the given connection, therefore the catalog _(aka schema)_ is not yet persisted, but can be used through the given connection. The method neither creates the corresponding entry in the collection's collection of the admin-catalog, it only creates the schema.
@@ -485,8 +484,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @since 3.0.0
      */
     fun createPgCatalog(conn: PgConnection, catalog: PgCatalog) {
-        if (Naksha.isInternalId(catalog.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't create internal catalogs: ${catalog.id}")
-        if (!Naksha.isValidId(catalog.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Invalid catalog identifier: ${catalog.id}")
+        NakshaIdType.CATALOG.verify(catalog.id)
         // TODO: We need to ensure that there is no other schema with the same feature-number:
         // Write: `ALTER SCHEMA ${catalog.quotedId} SET SCHEMA OPTION 'featureNumber' 'stringifiedFN';`
         // Read:
@@ -505,13 +503,13 @@ SELECT basics.*, procs.* FROM basics, procs;
      * ### Note
      * Does not commit the given connection, therefore the map is not yet physically deleted. The method neither deletes the corresponding entry from the collection's collection of the admin-map, it only drops the schema!
      * @param conn the connection to use to access the database.
-     * @param map the map to delete.
+     * @param catalog the map to delete.
      * @since 3.0.0
      */
-    fun deletePgCatalog(conn: PgConnection, map: PgCatalog) {
-        if (Naksha.isInternalId(map.id)) throw NakshaException(ILLEGAL_ARGUMENT, "Can't delete internal maps: ${map.id}")
-        conn.execute("DROP SCHEMA IF EXISTS ${map.quotedId} CASCADE").close()
-        invalidateCatalog(map)
+    fun deletePgCatalog(conn: PgConnection, catalog: PgCatalog) {
+        NakshaIdType.CATALOG.verify(catalog.id)
+        conn.execute("DROP SCHEMA IF EXISTS ${catalog.quotedId} CASCADE").close()
+        invalidateCatalog(catalog)
     }
 
     /**

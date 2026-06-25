@@ -144,6 +144,16 @@ internal class PgRows {
         return this
     }
 
+    fun addColumns(columns: Array<PgColumn>): PgRows {
+        for (column in columns) {
+            val alias = column.name
+            val existing = getColumn(alias)
+            if (existing != null) continue
+            this.columns.add(PgColumnWithValues(column, alias).withSize(size))
+        }
+        return this
+    }
+
     fun addColumn(column: PgColumn, alias: String = column.name): PgRows {
         clearCache()
         val existing = getColumn(alias)

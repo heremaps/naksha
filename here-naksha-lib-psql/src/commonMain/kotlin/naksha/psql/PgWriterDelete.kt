@@ -55,8 +55,7 @@ internal class PgWriterDelete(
     val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
     val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
 
-    private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {
-
+    private fun plan(conn: PgConnection): PgWriterPlan {
         // The new version with action bits set to DELETED (2).
         val deleted_version = "(${tx.version.number}::int8 | 2)"
 
@@ -178,7 +177,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$ID = query.$ID" else ""}
             .addColumn("deleted_version", MemberType.INT64)
             .addColumn("query_id", MemberType.STRING)
             .addColumn("query_expected_version", MemberType.INT64)
-        val plan = plan(conn, pgCollection)
+        val plan = plan(conn)
         val array = inRows.values()
         if (PlatformUtil.ENABLE_INFO) {
             if (session.logQueries) {

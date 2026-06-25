@@ -8,8 +8,8 @@ import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.isInternalId
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
@@ -244,6 +244,7 @@ open class Write : AnyObject() {
         get() {
             val raw = getRaw("tupleNumber")
             if (raw is String) {
+                @Suppress("StringReferentialEquality") // Intentional reference compare !
                 if (raw === tupleNumberRaw) return tupleNumberValue
                 tupleNumberValue = TupleNumber.fromUrn(raw)
                 tupleNumberRaw = raw
@@ -280,7 +281,7 @@ open class Write : AnyObject() {
     var atomic: Boolean
         get() {
             val raw = getRaw("atomic")
-            return if (raw is Boolean) raw else false
+            return raw as? Boolean ?: false
         }
         set(value) {
             if (value) setRaw("atomic", true) else removeRaw("atomic")
@@ -359,10 +360,14 @@ open class Write : AnyObject() {
                 if (fn == null) fn = StandardMembers.Tn.getTupleNumber(feature)?.featureNumber
             }
             if (fn != null) return fn
+            // TODO: Eventually this boils down to how we handle collisions. In practise we rarely ever encountered a collision.
+            //       It seems that a 63-bit hash is so unique, that the few collisions can be ignored and the burden can be given
+            //       to the user to generate or use an alternative identifier, if two identifiers hash to the same number!
 
             val id = this.id
             val cachedId = featureNumberId
             val cachedNumber = featureNumberValue
+            @Suppress("StringReferentialEquality") // Intentional reference compare !
             if (id === cachedId && cachedNumber != null) return cachedNumber
             val number = featureNumber(id)
             featureNumberId = id
@@ -928,14 +933,24 @@ open class Write : AnyObject() {
      * @see [WriteOp]
      */
     fun validate(): Write {
-        if (catalogId == ADMIN_CATALOG_ID || collectionId == COLLECTIONS_COL_ID) {
-            if (isInternalId(id)) {
-                throw NakshaException(ILLEGAL_STATE, "Modification of internal features forbidden: '$id'")
+        // Writing into the admin-catalog means that we either want to mutate administrative objects.
+        if (catalogId == ADMIN_CATALOG_ID) {
+            if (collectionId == CATALOGS_COL_ID) { // Mutation of catalog.
+                NakshaIdType.CATALOG.verify(id)
+            } else if (collectionId == BOOKS_COL_ID) { // Mutation of book.
+                NakshaIdType.BOOK.verify(id)
+            } else if (collectionId == COLLECTIONS_COL_ID) { // Mutation of collection.
+                NakshaIdType.COLLECTION.verify(id)
+            } else if (collectionId == TRANSACTIONS_COL_ID) { // Mutation of transaction.
+                NakshaIdType.TRANSACTION.verify(id)
+            } else {
+                throw illegalArg("Write operation for invalid collection in admin catalog; id: '$id' ")
             }
+            return this
         }
-        if (!Naksha.isValidId(id)) {
-            throw NakshaException(ILLEGAL_STATE, "Invalid feature-id: '$id'")
-        }
+        if (collectionId == COLLECTIONS_COL_ID) { // Mutation of collection in custom catalog.
+            NakshaIdType.COLLECTION.verify(id)
+        } // otherwise, arbitrary feature is modified, we allow any identifier.
         return this
     }
 }

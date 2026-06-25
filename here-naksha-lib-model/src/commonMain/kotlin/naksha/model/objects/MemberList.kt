@@ -7,6 +7,8 @@ import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.NakshaException
+import naksha.model.NakshaIdType
+import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
@@ -127,7 +129,7 @@ open class MemberList() : ListProxy<Member>(Member::class) {
         for (i in 0 until this.size) {
             val member = this[i] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $i is null")
             val memberName = member.name
-            if (!Naksha.isValidId(memberName, internal = true)) {
+            if (INTERNAL_MEMBER.isValidId(memberName)) {
                 throw NakshaException(ILLEGAL_STATE, "Member at index $i has invalid name: $memberName")
             }
             for (j in (i + 1) until this.size) {

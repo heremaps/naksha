@@ -14,10 +14,10 @@ import naksha.base.PlatformList
 import naksha.base.PlatformMap
 import naksha.base.Proxy
 import naksha.geo.SpGeometry
-import naksha.model.Naksha
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
+import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import naksha.model.TagList
 import naksha.model.TagMap
 import naksha.model.TupleNumber
@@ -53,8 +53,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("of")
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
-        Naksha.verifyInternalId(name)
-        this.name = name
+        this.name = INTERNAL_MEMBER.verify(name)
         this.dataType = dataType
         this.path = path ?: JsonPath(listOf("properties", name))
         this.path.validate()

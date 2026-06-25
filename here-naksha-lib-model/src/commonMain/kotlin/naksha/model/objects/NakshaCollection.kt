@@ -11,6 +11,7 @@ import naksha.model.NakshaError
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaException
+import naksha.model.NakshaIdType
 import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -316,7 +317,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0
      */
     open fun addMember(value: Member): NakshaCollection {
-        Naksha.verifyId(value.name)
+        NakshaIdType.INTERNAL_MEMBER.verify(value.name)
         var list = this.members
         if (list == null) {
             list = MemberList()
@@ -324,11 +325,11 @@ open class NakshaCollection() : NakshaFeature() {
         }
         for (existing in list) {
             if (existing != null && existing.name == value.name) {
-                throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Duplicate member name: '${value.name}'")
+                throw NakshaException(ILLEGAL_ARGUMENT, "Duplicate member name: '${value.name}'")
             }
         }
         if (list.size >= MemberList.MAX_MEMBERS) {
-            throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
+            throw NakshaException(ILLEGAL_ARGUMENT, "Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
         }
         list.add(value)
         return this
@@ -485,7 +486,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0
      */
     open fun addIndex(value: Index): NakshaCollection {
-        Naksha.verifyId(value.name)
+        NakshaIdType.INDEX.verify(value.name)
         var list = this.indices
         if (list == null) {
             list = IndexList()

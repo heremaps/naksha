@@ -347,7 +347,7 @@ open class PgWriter internal constructor(
         }
         //
         if (e > s) {
-            val tupleWriter = PgWriterDelete(this, pgCollection, partition, purges, purge = true)
+            val tupleWriter = PgWriterDelete(this, pgCollection, pgWrites, s, e, purge = false)
             tupleWriter.execute(conn)
             e = s
         }
