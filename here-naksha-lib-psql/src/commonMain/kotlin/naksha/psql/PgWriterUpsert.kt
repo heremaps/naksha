@@ -25,8 +25,6 @@ internal class PgWriterUpsert(
     end: Int
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
 
-    // All columns that are no BYTE_ARRAY and that care not CC, FN, VERSION or NEXT_VERSION
-    private val copyCols = pgCollection.columns.filter { !(it eq CC || it eq FN || it eq VERSION || it eq NEXT_VERSION || it.memberType != MemberType.BYTE_ARRAY) }
     // All columns that are BYTE_ARRAYs (can be empty)
     private val byteArrayCols = pgCollection.columns.filter { it.memberType == MemberType.BYTE_ARRAY }
     private val writeByFn = mutableMapOf<Int64, PgWrite>()
@@ -35,7 +33,7 @@ internal class PgWriterUpsert(
         loadAllTuple { _, tuple, pgWrite -> writeByFn[tuple.tupleNumber.featureNumber] = pgWrite }
     }
 
-    private fun plan(conn: PgConnection, collection: PgCollection): PgWriterPlan {
+    private fun plan(conn: PgConnection): PgWriterPlan {
         // This is what we should INSERT or UPDATE.
         val new_row = """WITH new_row AS (
   SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
@@ -47,11 +45,8 @@ internal class PgWriterUpsert(
   WHERE $FN IN (SELECT $FN FROM new_row)
 )"""
 
-        // TODO: This is not fully correct, NEXT_VERSION must be equal to VERSION, when the action is DELETED.
-        //       Only when the current HEAD is in CREATE or UPDATE action, then the NEXT_VERSION is VERSION.
-        //       The reason is that tombstone states end the life-cycle. Clearly, still they need to be copied to history.
-        //       Basically, we need to split this into two parts, `tombstones_to_history` and `head_to_history`!
-        // Insert the current `head_row` into history. `next_version` is the new tuple's version with action set to UPDATE.
+        // Copy all current head row's into history that are in CREATE or UPDATE action.
+        // We need to set `next_version` to the new tuple's version, which is new row's version plus action UPDATE.
         val head_to_history = if (historyTable != null) """, head_to_history AS (
   INSERT INTO $historyIdent ($NEXT_VERSION, 
          ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
@@ -59,6 +54,24 @@ internal class PgWriterUpsert(
          ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.$FN = head_row.$FN
+  WHERE (head_row.$VERSION & -4) < 2 -- action = CREATE or UPDATE
+  RETURNING $FN, $VERSION${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { column ->
+    // We return NULL, when the input contained data, because the client knows this already, no need to send back.
+    // If the client provided `undefined`, we return the actual value so we can build a correct tuple.
+    "CASE WHEN new_row.$column = convert_to('undefined', 'UTF8') THEN $column ELSE null END AS $column"
+  }}" else ""}
+)""" else ""
+
+        // Copy all current head row's into history that are in DELETE action.
+        // In this case, we need to set `next_version` to the old tuple's version to signal end of lifetime.
+        val tombstone_to_history = if (historyTable != null) """, tombstone_to_history AS (
+  INSERT INTO $historyIdent ($NEXT_VERSION, 
+         ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
+  SELECT head_row.$VERSION AS $NEXT_VERSION,
+         ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
+  FROM head_row
+  LEFT JOIN new_row ON new_row.$FN = head_row.$FN
+  WHERE (head_row.$VERSION & -4) == 2 -- action = DELETE
   RETURNING $FN, $VERSION
 )""" else ""
 
@@ -69,53 +82,53 @@ internal class PgWriterUpsert(
   RETURNING $FN, $VERSION
 )"""
 
-        // TODO: Fix the two queries:
-        //       The `head_inserted` need to select from the new tombstone deletion
-        //       The `head_updated` need to select from the new head deletion
-
-        // Insert new rows for which there was no existing HEAD version or HEAD was in action DELETE.
+        // Copy new rows for which there was no existing HEAD version or HEAD was in action DELETE.
         // Sentinel "undefined" on any BYTE_ARRAY column is treated as NULL on insert (no prior value to retain).
         // Note: We expact that the ASCII string `undefined` is put into the BYTE_ARRAY, when it should be undefined.
-        //       That is why we check for `CASE WHEN colum = convert_to('undefined', 'UTF8') ...`
+        //       That is why we check for `CASE WHEN $ident = convert_to('undefined', 'UTF8') ...`
+
+        // ------------------------------------------ DO UPDATE --------------------------------------------------------
+        val head_updated = """, head_updated AS (
+  INSERT INTO $headIdent (${inRows.aliases()})
+  SELECT ${inRows.columns.joinToString(", ") { colWithValue ->
+    val ident = PgUtil.quoteIdent(colWithValue.alias)
+    val pgColumn = colWithValue.pgColumn
+    if (pgColumn eq CC) {
+        "(head_to_history.$CC + 1) AS $CC" // Increment Change-Count
+    } else if (pgColumn eq VERSION){
+        "((new_row.$VERSION & -4) | 1) AS $VERSION" // Set lower 2 bit to UPDATE (1)
+    } else if (pgColumn eq NEXT_VERSION){
+        "NULL AS $NEXT_VERSION" // in HEAD, next version must always be NULL
+    } else if (pgColumn.memberType == MemberType.BYTE_ARRAY) {
+        "CASE WHEN $ident = convert_to('undefined', 'UTF8') THEN head_to_history.$ident ELSE new_row.$ident END AS $ident"
+    } else ident
+  }} FROM new_row
+  LEFT JOIN head_to_history ON new_row.$FN = head_to_history.$FN
+  WHERE new_row.$FN IN (SELECT $FN FROM head_to_history)
+  RETURNING $FN, $VERSION
+)""" // Note: head_to_history contains all existing HEAD row in CREATE or UPDATE action.
+
+        // ------------------------------------------ DO INSERT --------------------------------------------------------
         val head_inserted = """, head_inserted AS (
   INSERT INTO $headIdent (${inRows.aliases()})
   SELECT ${inRows.columns.joinToString(", ") { colWithValue ->
     val ident = PgUtil.quoteIdent(colWithValue.alias)
-    if (colWithValue.pgColumn.memberType == MemberType.BYTE_ARRAY) {
+    val pgColumn = colWithValue.pgColumn
+    if (pgColumn eq CC) {
+        "1 AS $CC" // Change-Count = 1
+    } else if (pgColumn eq VERSION){
+        "($VERSION & -4) AS $VERSION" // Clear lower 2 bit to set action = CREATE (0)
+    } else if (pgColumn eq NEXT_VERSION){
+        "NULL AS $NEXT_VERSION" // in HEAD, next version must always be NULL
+    } else if (pgColumn.memberType == MemberType.BYTE_ARRAY) {
         "CASE WHEN $ident = convert_to('undefined', 'UTF8') THEN null ELSE $ident END AS $ident"
     } else ident
-  }} FROM new_row
-  WHERE new_row.$FN NOT IN (SELECT $FN FROM head_deleted)
-  RETURNING $VERSION
-)"""
+}} FROM new_row
+  WHERE new_row.$FN NOT IN (SELECT $FN FROM head_updated)
+  RETURNING $FN, $VERSION
+)""" // Note: for the real inserts, we do not need to return byte-array columns, because we send them, so its clear what the content will be.
 
-        // TODO: Instead of deleting HEAD, then INSERT, we can just UPDATE the HEAD, this could be beneficial.
-        // We patch VERSION and change the lower two bit from 0 (CREATED) to 1 (UPDATED)
-        val head_updated = """, head_updated AS (
-  INSERT INTO $headIdent (
-    ${if (copyCols.isNotEmpty()) "${copyCols.joinToString(", ") { it.ident }},\n    " else ""}
-    ${if (byteArrayCols.isNotEmpty()) "${byteArrayCols.joinToString(", ") { it.ident }},\n    " else ""}
-    ${if (CC != null) "$CC,\n    " else ""}
-    $FN,
-    $VERSION,
-    $NEXT_VERSION
-  )
-  SELECT
-    ${if (copyCols.isNotEmpty()) "${copyCols.joinToString(", ") { column -> "new_row.$column" }},\n    " else ""}
-    ${if (byteArrayCols.isNotEmpty()) byteArrayCols.joinToString(", ") { column ->
-        "CASE WHEN new_row.$column = convert_to('undefined', 'UTF8') THEN head_row.$column ELSE new_row.$column END AS $column"
-    } + ",\n    " else ""}
-    ${if (CC != null) "(head_row.$CC + 1) AS $CC," else ""}
-    new_row.$FN AS $FN,
-    ((new_row.version & -4) | 1) AS $VERSION,
-    null AS $NEXT_VERSION
-  FROM new_row
-  LEFT JOIN head_row ON head_row.$FN = new_row.$FN
-  WHERE new_row.$FN IN (SELECT $FN FROM head_deleted)
-  RETURNING $VERSION${byteArrayCols.joinToString("") { column -> column.ident }}${if (CC!=null) ", $CC" else ""}
-)"""
-
-        val SQL = """$new_row$head_row$head_deleted$head_to_history$head_inserted$head_updated
+        val SQL = """$new_row$head_row$head_to_history$tombstone_to_history$head_deleted$head_updated$head_inserted
 SELECT
     new_row.$FN AS $FN,
     new_row.$VERSION AS $VERSION,
@@ -158,7 +171,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                .addColumn("_clear_shadow_version", MemberType.INT64)
                .addColumn("_head_to_history_version", MemberType.INT64)
         if (pgWrites.isEmpty()) return
-        val plan = plan(conn, pgCollection)
+        val plan = plan(conn)
         val array = inRows.values()
         val session = this.session
         if (PlatformUtil.ENABLE_INFO) {
@@ -183,28 +196,29 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 val updated_fn = outRows.getInt64(row, "_updated_fn")
                 val updated_version = outRows.getInt64(row, "_updated_version")
                 if (updated_fn != null && updated_version != null) {
-                    // UPDATE executed
+                    // UPDATE was executed.
                     val pgWrite = writeByFn[updated_fn] ?: throw generalException("Received _updated_fn '$updated_fn', but found no matching PgWrite")
                     val updatedTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
-                    val
                     val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
                     // If an update was done, we need the following values to be available:
                     val change_count: Int = if (CC!=null) {
                         outRows.getInt(row, CC) ?: throw generalException("Missing '$CC' in update result for feature '${pgWrite.id}'")
                     } else 1
 
-                    // Update all BYTE_ARRAY rows that have been updated.
                     val insertTuple = pgWrite.tuple ?: throw generalException("Missing tuple for feature '${pgWrite.id}}'")
                     val insertMemberBook = insertTuple.membersBook
                     val updatedMembersBook = HeapBook.copyOf(insertMemberBook)
-                    for (column in byteArrayCols) {
-                        val value = outRows.getByteArray(row, column)
-                        updatedMembersBook.put(column.name, value)
-                    }
+                    if (CC != null) updatedMembersBook.put(CC.name, change_count)
                     updatedMembersBook.put(StandardMembers.Tn.name, updatedTupleNumber)
+                    // Update all BYTE_ARRAY members that have been updated.
+                    for (column in byteArrayCols) {
+                        val inValue = insertTuple.membersBook[column.name] as ByteArray?
+                        val newValue = if (inValue == null || UNDEFINED.contentEquals(inValue)) outRows.getByteArray(row, column) else inValue
+                        updatedMembersBook.put(column.name, newValue)
+                    }
                     val updatedTuple = insertTuple.copy(
                         membersBook = updatedMembersBook,
-                        previousTupleNumber = inser
+                        previousTupleNumber = previousTupleNumber
                     )
                     pgWrite.tuple = updatedTuple
                     pgWrite.tupleNumber = updatedTupleNumber

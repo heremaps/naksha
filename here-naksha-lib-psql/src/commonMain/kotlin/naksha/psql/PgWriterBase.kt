@@ -53,6 +53,10 @@ internal abstract class PgWriterBase protected constructor(
      */
     val end: Int,
 ) {
+    companion object PgWriterBase_C {
+        protected val UNDEFINED: ByteArray = "undefined".encodeToByteArray()
+    }
+
     val session: PgSession
         get() = pgWriter.session
 
