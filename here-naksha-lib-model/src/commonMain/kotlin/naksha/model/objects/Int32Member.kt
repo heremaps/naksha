@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.model.Tuple
 import naksha.model.illegalArg
 import naksha.model.illegalState
 import naksha.model.objects.MemberType.MemberType_C.INT32
@@ -33,6 +34,13 @@ class Int32Member() : TypedMember<Int32Member>() {
 
     /** Retrieves the int32 value of this member from the given feature. */
     fun get(feature: NakshaFeature): Int? = getInt64(feature)?.toInt()
+
+    /**
+     * Retrieves the int32 value of this member from the given tuple.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getFromTuple")
+    fun get(tuple: Tuple): Int? = getInt64(tuple)?.toInt()
 
     /** Sets the int32 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Int): Any? = setPath(feature, path, value)

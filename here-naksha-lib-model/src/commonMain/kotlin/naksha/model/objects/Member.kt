@@ -20,6 +20,7 @@ import naksha.model.NakshaException
 import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import naksha.model.TagList
 import naksha.model.TagMap
+import naksha.model.Tuple
 import naksha.model.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -341,15 +342,157 @@ open class Member() : AnyObject(), Comparator<Member> {
         return null
     }
 
-    // TODO: We need support for real sets!
+    /**
+     * Helper to read a [TupleNumber] from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getTupleNumberFromTuple")
+    fun getTupleNumber(tuple: Tuple): TupleNumber? {
+        val raw = tuple.membersBook[this.name] ?: return null
+        if (raw is TupleNumber) return raw
+        if (raw is String) return TupleNumber.fromString(raw)
+        if (raw is ByteArray) return TupleNumber.fromByteArray(raw)
+        return null
+    }
 
     /**
-     * Helper to read a set form the given feature.
+     * Helper to read a boolean from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getBooleanFromTuple")
+    fun getBoolean(tuple: Tuple): Boolean? {
+        val raw = tuple.membersBook[this.name]
+        if (raw is Boolean) return raw
+        return null
+    }
+
+    /**
+     * Helper to read a string from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getStringFromTuple")
+    fun getString(tuple: Tuple): String? {
+        val raw = tuple.membersBook[this.name]
+        if (raw is String) return raw
+        return null
+    }
+
+    /**
+     * Helper to read a 64-bit integer from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getInt64FromTuple")
+    fun getInt64(tuple: Tuple): Int64? {
+        val raw = tuple.membersBook[this.name]
+        if (raw is Int64) return raw
+        if (raw is Long) return Int64(raw)
+        if (raw is Number) return Int64(raw.toLong())
+        return null
+    }
+
+    /**
+     * Helper to read a 64-bit floating point number from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getDoubleFromTuple")
+    fun getDouble(tuple: Tuple): Double? {
+        val raw = tuple.membersBook[this.name]
+        if (raw is Double) return raw
+        if (raw is Number) return raw.toDouble()
+        return null
+    }
+
+    /**
+     * Helper to read a geometry from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getGeometryFromTuple")
+    fun getGeometry(tuple: Tuple): SpGeometry? {
+        val raw = tuple.membersBook[this.name]
+        if (raw is SpGeometry) return raw
+        return null
+    }
+
+    /**
+     * Helper to read a byte array from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getByteArrayFromTuple")
+    fun getByteArray(tuple: Tuple): ByteArray? {
+        val raw = tuple.membersBook[this.name]
+        if (raw is ByteArray) return raw
+        return null
+    }
+
+    /**
+     * Helper to read a [TagMap] from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getTagMapFromTuple")
+    fun getTagMap(tuple: Tuple): TagMap? {
+        val raw = tuple.membersBook[this.name]
+        if (raw is TagMap) return raw
+        if (raw is MapProxy<*,*>) return raw.proxy(TagMap::class)
+        if (raw is PlatformMap) return raw.proxy(TagMap::class)
+        return null
+    }
+
+    /**
+     * Helper to read a [TagList] from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getTagListFromTuple")
+    fun getTagList(tuple: Tuple): TagList? {
+        val raw = tuple.membersBook[this.name]
+        if (raw is TagList) return raw
+        if (raw is ListProxy<*>) return raw.proxy(TagList::class)
+        if (raw is PlatformList) return raw.proxy(TagList::class)
+        return null
+    }
+
+    /**
+     * Helper to write a member value to the given feature.
+     * @param feature The feature to write to.
+     * @return the previous value.
+     * Helper to read a set from the given feature.
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
     fun getSet(feature: MapProxy<*,*>): AnyList? {
         val raw = feature.getPath(path)
+        if (raw is AnyList) return raw
+        if (raw is ListProxy<*>) return raw.proxy(AnyList::class)
+        if (raw is PlatformList) return raw.proxy(AnyList::class)
+        return null
+    }
+
+    /**
+     * Helper to read a set from the given tuple.
+     * @param tuple The tuple to read from.
+     * @return the read value or `null`, if the tuple does not store a valid value for this member.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getSetFromTuple")
+    fun getSet(tuple: Tuple): AnyList? {
+        val raw = tuple.membersBook[this.name]
         if (raw is AnyList) return raw
         if (raw is ListProxy<*>) return raw.proxy(AnyList::class)
         if (raw is PlatformList) return raw.proxy(AnyList::class)

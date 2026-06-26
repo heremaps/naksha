@@ -2,6 +2,7 @@ package naksha.model.objects
 
 import naksha.base.ListProxy
 import naksha.model.TagList
+import naksha.model.Tuple
 import naksha.model.illegalArg
 import naksha.model.illegalState
 import naksha.model.objects.MemberType.MemberType_C.TAG_LIST
@@ -35,6 +36,13 @@ class TagListMember() : TypedMember<TagListMember>() {
 
     /** Retrieves the tag list value of this member from the given feature. */
     fun get(feature: NakshaFeature): TagList? = getTagList(feature)
+
+    /**
+     * Retrieves the tag list value of this member from the given tuple.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getFromTuple")
+    fun get(tuple: Tuple): TagList? = getTagList(tuple)
 
     /** Sets the tag list value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: ListProxy<*>): Any? = setPath(feature, path, value)

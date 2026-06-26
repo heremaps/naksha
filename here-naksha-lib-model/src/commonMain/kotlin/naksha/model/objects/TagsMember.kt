@@ -1,6 +1,7 @@
 package naksha.model.objects
 
 import naksha.model.TagMap
+import naksha.model.Tuple
 import naksha.model.illegalArg
 import naksha.model.illegalState
 import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
@@ -34,6 +35,13 @@ class TagsMember() : TypedMember<TagsMember>() {
 
     /** Retrieves the tag map value of this member from the given feature. */
     fun get(feature: NakshaFeature): TagMap? = getTagMap(feature)
+
+    /**
+     * Retrieves the tag map value of this member from the given tuple.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getFromTuple")
+    fun get(tuple: Tuple): TagMap? = getTagMap(tuple)
 
     /** Sets the tag map value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: TagMap): Any? = setPath(feature, path, value)

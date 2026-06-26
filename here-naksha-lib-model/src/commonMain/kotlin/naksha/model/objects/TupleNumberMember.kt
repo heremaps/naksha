@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.model.Tuple
 import naksha.model.TupleNumber
 import naksha.model.illegalArg
 import naksha.model.illegalState
@@ -34,6 +35,13 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
 
     /** Retrieves the tuple number value of this member from the given feature. */
     fun get(feature: NakshaFeature): TupleNumber? = getTupleNumber(feature)
+
+    /**
+     * Retrieves the tuple number value of this member from the given tuple.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getFromTuple")
+    fun get(tuple: Tuple): TupleNumber? = getTupleNumber(tuple)
 
     /** Sets the tuple number value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: TupleNumber): Any? = setPath(feature, path, value)

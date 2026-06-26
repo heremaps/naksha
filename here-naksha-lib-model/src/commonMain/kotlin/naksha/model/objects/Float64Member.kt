@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.model.Tuple
 import naksha.model.illegalArg
 import naksha.model.illegalState
 import naksha.model.objects.MemberType.MemberType_C.FLOAT64
@@ -33,6 +34,13 @@ class Float64Member() : TypedMember<Float64Member>() {
 
     /** Retrieves the float64 value of this member from the given feature. */
     fun get(feature: NakshaFeature): Double? = getDouble(feature)
+
+    /**
+     * Retrieves the float64 value of this member from the given tuple.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getFromTuple")
+    fun get(tuple: Tuple): Double? = getDouble(tuple)
 
     /** Sets the float64 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Double): Any? = setPath(feature, path, value)

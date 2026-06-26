@@ -1,6 +1,7 @@
 package naksha.model.objects
 
 import naksha.geo.SpGeometry
+import naksha.model.Tuple
 import naksha.model.illegalArg
 import naksha.model.illegalState
 import naksha.model.objects.MemberType.MemberType_C.SPATIAL
@@ -34,6 +35,13 @@ class SpatialMember() : TypedMember<SpatialMember>() {
 
     /** Retrieves the spatial geometry value of this member from the given feature. */
     fun get(feature: NakshaFeature): SpGeometry? = getGeometry(feature)
+
+    /**
+     * Retrieves the spatial geometry value of this member from the given tuple.
+     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
+     */
+    @JsName("getFromTuple")
+    fun get(tuple: Tuple): SpGeometry? = getGeometry(tuple)
 
     /** Sets the spatial geometry value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: SpGeometry): Any? = setPath(feature, path, value)
