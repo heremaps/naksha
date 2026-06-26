@@ -13,6 +13,7 @@ class ByteArrayMember() : TypedMember<ByteArrayMember>() {
         return this
     }
 
+    /** Creates a new byte array member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -21,6 +22,7 @@ class ByteArrayMember() : TypedMember<ByteArrayMember>() {
         this.path.validate()
     }
 
+    /** Creates a byte array member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != BYTE_ARRAY) throw illegalArg("The given member is not of byte_array type")
@@ -29,6 +31,9 @@ class ByteArrayMember() : TypedMember<ByteArrayMember>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the byte array value of this member from the given feature. */
     fun get(feature: NakshaFeature): ByteArray? = getByteArray(feature)
+
+    /** Sets the byte array value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: ByteArray): Any? = setPath(feature, path, value)
 }

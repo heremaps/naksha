@@ -13,6 +13,7 @@ class Int16Member() : TypedMember<Int16Member>() {
         return this
     }
 
+    /** Creates a new int16 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -21,6 +22,7 @@ class Int16Member() : TypedMember<Int16Member>() {
         this.path.validate()
     }
 
+    /** Creates an int16 member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != INT16) throw illegalArg("The given member is not of int16 type")
@@ -29,6 +31,9 @@ class Int16Member() : TypedMember<Int16Member>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the int16 value of this member from the given feature. */
     fun get(feature: NakshaFeature): Short? = getInt64(feature)?.toShort()
+
+    /** Sets the int16 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Short): Any? = setPath(feature, path, value)
 }

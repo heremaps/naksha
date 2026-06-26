@@ -13,6 +13,7 @@ class Int32Member() : TypedMember<Int32Member>() {
         return this
     }
 
+    /** Creates a new int32 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -21,6 +22,7 @@ class Int32Member() : TypedMember<Int32Member>() {
         this.path.validate()
     }
 
+    /** Creates an int32 member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != INT32) throw illegalArg("The given member is not of int32 type")
@@ -29,6 +31,9 @@ class Int32Member() : TypedMember<Int32Member>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the int32 value of this member from the given feature. */
     fun get(feature: NakshaFeature): Int? = getInt64(feature)?.toInt()
+
+    /** Sets the int32 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Int): Any? = setPath(feature, path, value)
 }

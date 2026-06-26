@@ -13,6 +13,7 @@ class Float64Member() : TypedMember<Float64Member>() {
         return this
     }
 
+    /** Creates a new float64 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -21,6 +22,7 @@ class Float64Member() : TypedMember<Float64Member>() {
         this.path.validate()
     }
 
+    /** Creates a float64 member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != FLOAT64) throw illegalArg("The given member is not of float64 type")
@@ -29,6 +31,9 @@ class Float64Member() : TypedMember<Float64Member>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the float64 value of this member from the given feature. */
     fun get(feature: NakshaFeature): Double? = getDouble(feature)
+
+    /** Sets the float64 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Double): Any? = setPath(feature, path, value)
 }

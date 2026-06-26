@@ -13,6 +13,7 @@ class Int8Member() : TypedMember<Int8Member>() {
         return this
     }
 
+    /** Creates a new int8 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -21,6 +22,7 @@ class Int8Member() : TypedMember<Int8Member>() {
         this.path.validate()
     }
 
+    /** Creates an int8 member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != INT8) throw illegalArg("The given member is not of int8 type")
@@ -29,6 +31,9 @@ class Int8Member() : TypedMember<Int8Member>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the int8 value of this member from the given feature. */
     fun get(feature: NakshaFeature): Byte? = getInt64(feature)?.toByte()
+
+    /** Sets the int8 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Byte): Any? = setPath(feature, path, value)
 }

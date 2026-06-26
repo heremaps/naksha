@@ -14,6 +14,7 @@ class TagsMember() : TypedMember<TagsMember>() {
         return this
     }
 
+    /** Creates a new tag map member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -22,6 +23,7 @@ class TagsMember() : TypedMember<TagsMember>() {
         this.path.validate()
     }
 
+    /** Creates a tag map member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != TAG_MAP) throw illegalArg("The given member is not of tags type")
@@ -30,6 +32,9 @@ class TagsMember() : TypedMember<TagsMember>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the tag map value of this member from the given feature. */
     fun get(feature: NakshaFeature): TagMap? = getTagMap(feature)
+
+    /** Sets the tag map value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: TagMap): Any? = setPath(feature, path, value)
 }

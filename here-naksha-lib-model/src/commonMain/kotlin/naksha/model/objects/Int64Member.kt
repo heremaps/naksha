@@ -14,6 +14,7 @@ class Int64Member() : TypedMember<Int64Member>() {
         return this
     }
 
+    /** Creates a new int64 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -22,6 +23,7 @@ class Int64Member() : TypedMember<Int64Member>() {
         this.path.validate()
     }
 
+    /** Creates an int64 member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != INT64) throw illegalArg("The given member is not of int64 type")
@@ -30,6 +32,9 @@ class Int64Member() : TypedMember<Int64Member>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the int64 value of this member from the given feature. */
     fun get(feature: NakshaFeature): Int64? = getInt64(feature)
+
+    /** Sets the int64 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Int64): Any? = setPath(feature, path, value)
 }

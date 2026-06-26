@@ -14,6 +14,7 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
         return this
     }
 
+    /** Creates a new tuple number member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -22,6 +23,7 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
         this.path.validate()
     }
 
+    /** Creates a tuple number member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != TUPLE_NUMBER) throw illegalArg("The given member is not of tuple_number type")
@@ -30,6 +32,9 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the tuple number value of this member from the given feature. */
     fun get(feature: NakshaFeature): TupleNumber? = getTupleNumber(feature)
+
+    /** Sets the tuple number value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: TupleNumber): Any? = setPath(feature, path, value)
 }

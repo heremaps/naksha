@@ -15,6 +15,7 @@ class TagListMember() : TypedMember<TagListMember>() {
         return this
     }
 
+    /** Creates a new tag list member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -23,6 +24,7 @@ class TagListMember() : TypedMember<TagListMember>() {
         this.path.validate()
     }
 
+    /** Creates a tag list member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != TAG_LIST) throw illegalArg("The given member is not of tag_list type")
@@ -31,6 +33,9 @@ class TagListMember() : TypedMember<TagListMember>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the tag list value of this member from the given feature. */
     fun get(feature: NakshaFeature): TagList? = getTagList(feature)
+
+    /** Sets the tag list value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: ListProxy<*>): Any? = setPath(feature, path, value)
 }

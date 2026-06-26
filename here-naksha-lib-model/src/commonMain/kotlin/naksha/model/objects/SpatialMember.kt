@@ -14,6 +14,7 @@ class SpatialMember() : TypedMember<SpatialMember>() {
         return this
     }
 
+    /** Creates a new spatial member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -22,6 +23,7 @@ class SpatialMember() : TypedMember<SpatialMember>() {
         this.path.validate()
     }
 
+    /** Creates a spatial member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != SPATIAL) throw illegalArg("The given member is not of spatial type")
@@ -30,6 +32,9 @@ class SpatialMember() : TypedMember<SpatialMember>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the spatial geometry value of this member from the given feature. */
     fun get(feature: NakshaFeature): SpGeometry? = getGeometry(feature)
+
+    /** Sets the spatial geometry value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: SpGeometry): Any? = setPath(feature, path, value)
 }

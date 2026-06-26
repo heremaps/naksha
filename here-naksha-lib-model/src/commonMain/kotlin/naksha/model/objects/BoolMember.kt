@@ -13,6 +13,7 @@ class BoolMember() : TypedMember<BoolMember>() {
         return this
     }
 
+    /** Creates a new boolean member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -21,14 +22,18 @@ class BoolMember() : TypedMember<BoolMember>() {
         this.path.validate()
     }
 
+    /** Creates a boolean member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != BOOLEAN) throw illegalArg("The given member is not of boolean type")
         this.name = member.name
         this.dataType = BOOLEAN
-        this.path = path?.validate() ?: member.path // Only verify modified path.
+        this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the boolean value of this member from the given feature. */
     fun get(feature: NakshaFeature): Boolean? = getBoolean(feature)
+
+    /** Sets the boolean value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Boolean): Boolean? = setPath(feature, path, value) as Boolean?
 }

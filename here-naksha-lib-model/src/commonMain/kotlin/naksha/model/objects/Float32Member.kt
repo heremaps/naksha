@@ -13,6 +13,7 @@ class Float32Member() : TypedMember<Float32Member>() {
         return this
     }
 
+    /** Creates a new float32 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -21,6 +22,7 @@ class Float32Member() : TypedMember<Float32Member>() {
         this.path.validate()
     }
 
+    /** Creates a float32 member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != FLOAT32) throw illegalArg("The given member is not of float32 type")
@@ -29,6 +31,9 @@ class Float32Member() : TypedMember<Float32Member>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the float32 value of this member from the given feature. */
     fun get(feature: NakshaFeature): Float? = getDouble(feature)?.toFloat()
+
+    /** Sets the float32 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Float): Any? = setPath(feature, path, value)
 }

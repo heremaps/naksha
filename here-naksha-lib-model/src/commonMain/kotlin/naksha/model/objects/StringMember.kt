@@ -13,6 +13,7 @@ class StringMember() : TypedMember<StringMember>() {
         return this
     }
 
+    /** Creates a new string member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
@@ -21,6 +22,7 @@ class StringMember() : TypedMember<StringMember>() {
         this.path.validate()
     }
 
+    /** Creates a string member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != STRING) throw illegalArg("The given member is not of string type")
@@ -29,6 +31,9 @@ class StringMember() : TypedMember<StringMember>() {
         this.path = path?.validate() ?: member.path
     }
 
+    /** Retrieves the string value of this member from the given feature. */
     fun get(feature: NakshaFeature): String? = getString(feature)
+
+    /** Sets the string value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: String): Any? = setPath(feature, path, value)
 }
