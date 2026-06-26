@@ -40,21 +40,21 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzGlobalBookFeatureNumber = Member(StandardMembers.GlobalBookFeatureNumber, JsonPath("properties", "@ns:com:here:xyz", "globalBookFn"))
+        val XyzGlobalBookFeatureNumber = Int64Member(StandardMembers.GlobalBookFeatureNumber, JsonPath("properties", "@ns:com:here:xyz", "globalBookFn"))
 
         /**
          * The same as [StandardMembers.Feature].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeature = Member(StandardMembers.Feature, JsonPath())
+        val XyzFeature = ByteArrayMember(StandardMembers.Feature, JsonPath())
 
         /**
          * The same as [StandardMembers.Feature].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzId = Member(StandardMembers.Id, JsonPath("id"))
+        val XyzId = StringMember(StandardMembers.Id, JsonPath("id"))
 
         // -------------------------------------------------------------------------
         // Optional members.
@@ -66,14 +66,14 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzGeometry = Member("geo", MemberType.SPATIAL, JsonPath("geometry"))
+        val XyzGeometry = SpatialMember(StandardMembers.Geometry, JsonPath("geometry"))
 
         /**
          * `updated_at` — millisecond epoch timestamp of the last modification. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzUpdatedAt = Member("updated_at", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "updatedAt"))
+        val XyzUpdatedAt = Int64Member("updated_at", JsonPath("properties", "@ns:com:here:xyz", "updatedAt"))
 
         /**
          * `created_at` — millisecond epoch timestamp of the initial creation. `null` means the
@@ -81,7 +81,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCreatedAt = Member("created_at", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "createdAt"))
+        val XyzCreatedAt = Int64Member("created_at", JsonPath("properties", "@ns:com:here:xyz", "createdAt"))
 
         /**
          * `author_ts` — millisecond epoch timestamp of the last author change. `null` means the
@@ -89,7 +89,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzAuthorTimestamp = Member("author_ts", MemberType.INT64, JsonPath("properties", "@ns:com:here:xyz", "authorTs"))
+        val XyzAuthorTimestamp = Int64Member("author_ts", JsonPath("properties", "@ns:com:here:xyz", "authorTs"))
 
         /**
          * `hash` — content hash of the tuple, computed by the storage. `null` if not recorded.
@@ -97,7 +97,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzHash = Member("hash", MemberType.INT32, JsonPath("properties", "@ns:com:here:xyz", "hash"))
+        val XyzHash = Int32Member("hash", JsonPath("properties", "@ns:com:here:xyz", "hash"))
 
         /**
          * `here_tile` — HERE tile key (binary) of the reference point. `null` if not known.
@@ -105,14 +105,14 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzHereTile = Member("here_tile", MemberType.INT32, JsonPath("properties", "@ns:com:here:xyz", "hereTile"))
+        val XyzHereTile = Int32Member("here_tile", JsonPath("properties", "@ns:com:here:xyz", "hereTile"))
 
         /**
          * `cc` — change-count: how many times this feature has been modified. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzChangeCount = Member(StandardMembers.ChangeCount, JsonPath("properties", "@ns:com:here:xyz", "changeCount"))
+        val XyzChangeCount = Int32Member(StandardMembers.ChangeCount, JsonPath("properties", "@ns:com:here:xyz", "changeCount"))
 
         /**
          * `base_tn` — base tuple-number (`BYTE_ARRAY`), set when a three-way merge was performed.
@@ -120,21 +120,21 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzBaseTn = Member("base_tn", MemberType.BYTE_ARRAY, JsonPath("properties", "@ns:com:here:xyz", "base"))
+        val XyzBaseTn = TupleNumberMember("base_tn", JsonPath("properties", "@ns:com:here:xyz", "base"))
 
         /**
          * `app_id` — identifier of the application that wrote this tuple. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzAppId = Member("app_id", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "appId"))
+        val XyzAppId = StringMember("app_id", JsonPath("properties", "@ns:com:here:xyz", "appId"))
 
         /**
          * `author` — identifier of the human author that takes ownership for this tuple. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzAuthor = Member("author", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "author"))
+        val XyzAuthor = StringMember("author", JsonPath("properties", "@ns:com:here:xyz", "author"))
 
         /**
          * `origin` — stringified reference to the originating feature when this feature was forked or
@@ -142,7 +142,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzOrigin = Member("origin", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "origin"))
+        val XyzOrigin = StringMember("origin", JsonPath("properties", "@ns:com:here:xyz", "origin"))
 
         /**
          * `target` — stringified reference to the feature into which this feature was joined.
@@ -150,7 +150,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzTarget = Member("target", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "target"))
+        val XyzTarget = StringMember("target", JsonPath("properties", "@ns:com:here:xyz", "target"))
 
         /**
          * `ft` — feature-type string. `null` when it matches the collection's
@@ -159,63 +159,63 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeatureType = Member("ft", MemberType.STRING, JsonPath("properties", "featureType"))
+        val XyzFeatureType = StringMember("ft", JsonPath("properties", "featureType"))
 
         /**
          * `cv0` — custom numeric value 0 (`FLOAT64`). `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue0 = Member("cv0", MemberType.FLOAT64, JsonPath("properties", "@ns:com:here:xyz", "cv0"))
+        val XyzCustomValue0 = Float64Member("cv0", JsonPath("properties", "@ns:com:here:xyz", "cv0"))
 
         /**
          * `cv1` — custom numeric value 1 (`FLOAT64`). `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue1 = Member("cv1", MemberType.FLOAT64, JsonPath("properties", "@ns:com:here:xyz", "cv1"))
+        val XyzCustomValue1 = Float64Member("cv1", JsonPath("properties", "@ns:com:here:xyz", "cv1"))
 
         /**
          * `cv2` — custom numeric value 2 (`FLOAT64`). `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue2 = Member("cv2", MemberType.FLOAT64, JsonPath("properties", "@ns:com:here:xyz", "cv2"))
+        val XyzCustomValue2 = Float64Member("cv2", JsonPath("properties", "@ns:com:here:xyz", "cv2"))
 
         /**
          * `cv3` — custom numeric value 3 (`FLOAT64`). `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue3 = Member("cv3", MemberType.FLOAT64, JsonPath("properties", "@ns:com:here:xyz", "cv3"))
+        val XyzCustomValue3 = Float64Member("cv3", JsonPath("properties", "@ns:com:here:xyz", "cv3"))
 
         /**
          * `cs0` — custom string value 0. `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString0 = Member("cs0", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "cs0"))
+        val XyzCustomString0 = StringMember("cs0", JsonPath("properties", "@ns:com:here:xyz", "cs0"))
 
         /**
          * `cs1` — custom string value 1. `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString1 = Member("cs1", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "cs1"))
+        val XyzCustomString1 = StringMember("cs1", JsonPath("properties", "@ns:com:here:xyz", "cs1"))
 
         /**
          * `cs2` — custom string value 2. `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString2 = Member("cs2", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "cs2"))
+        val XyzCustomString2 = StringMember("cs2", JsonPath("properties", "@ns:com:here:xyz", "cs2"))
 
         /**
          * `cs3` — custom string value 3. `null` if not used. Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString3 = Member("cs3", MemberType.STRING, JsonPath("properties", "@ns:com:here:xyz", "cs3"))
+        val XyzCustomString3 = StringMember("cs3", JsonPath("properties", "@ns:com:here:xyz", "cs3"))
 
         /**
          * `tags` — feature tags, the classic XYZ tags array located at
@@ -226,7 +226,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzTags = Member("tags", MemberType.TAG_LIST, JsonPath("properties", "@ns:com:here:xyz", "tags"))
+        val XyzTags = TagListMember("tags", JsonPath("properties", "@ns:com:here:xyz", "tags"))
 
         /**
          * `ref_point` — geometry reference point (always a single point), stored as TWKB. Used to compute the [XyzHereTile] value. `null` if the feature has no explicit reference point.
@@ -234,7 +234,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzReferencePoint = Member("ref_point", MemberType.SPATIAL, JsonPath("referencePoint"))
+        val XyzReferencePoint = SpatialMember("ref_point", JsonPath("referencePoint"))
 
         /**
          * All members of XYZ compatible features.
