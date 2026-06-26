@@ -20,7 +20,6 @@ import kotlin.jvm.JvmField
  * - [naksha.model.request.query.SpOr] - logical OR for spatial conditions
  * - [naksha.model.request.query.TagOr] - logical OR for tag conditions
  * - [naksha.model.request.query.POr] - logical OR for property conditions
- * - [naksha.model.request.query.MemberOr] - logical OR for metadata conditions
  *
  * @since 3.0
  */
@@ -35,7 +34,6 @@ open class RequestQuery : AnyObject() {
         private val SPATIAL_QUERY_OR_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)
         private val TAG_QUERY_OR_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery::class)
         private val PROPERTIES_QUERY_OR_NULL = NullableProperty<RequestQuery, IPropertyQuery>(IPropertyQuery::class)
-        private val MEMBER_QUERY_OR_NULL = NullableProperty<RequestQuery, IMemberQuery>(IMemberQuery::class)
     }
 
     /**
@@ -61,14 +59,6 @@ open class RequestQuery : AnyObject() {
      */
     @Deprecated("Remove this completely, we only allow to actually search for members.")
     var properties by PROPERTIES_QUERY_OR_NULL
-
-    /**
-     * Search for features matching the given member query.
-     * @since 3.0.0
-     * @see IMemberQuery
-     */
-    @Deprecated("Use op queries, meta has been removed.")
-    var members by MEMBER_QUERY_OR_NULL
 
     /**
      * Search for features that have a reference point in one of the given tiles.
@@ -112,6 +102,5 @@ open class RequestQuery : AnyObject() {
                 && spatial == null
                 && tags == null
                 && properties == null
-                && members == null
     }
 }
