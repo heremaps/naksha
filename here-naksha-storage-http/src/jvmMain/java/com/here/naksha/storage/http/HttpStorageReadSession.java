@@ -22,6 +22,7 @@ import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
 import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
 import naksha.model.IReadSession;
+import naksha.model.MemberProcessorMap;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.model.NakshaError;
@@ -136,7 +137,7 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 
@@ -157,6 +158,11 @@ public class HttpStorageReadSession implements IReadSession {
 
   @Override
   public @NotNull SessionOptions getOptions() {
+    throw new NotImplementedException("Not supported by HTTP storage");
+  }
+
+  @Override
+  public @NotNull MemberProcessorMap getProcessors() {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 

@@ -121,7 +121,6 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 
-  @Override
   public @NotNull naksha.model.DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }

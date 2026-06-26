@@ -30,6 +30,9 @@ import naksha.model.objects.IndexType
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
+import naksha.model.objects.XyzIndices
+import naksha.model.objects.XyzMembers
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
 import naksha.model.request.ErrorResponse
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
@@ -99,9 +102,9 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 args = arrayOf(collection.id)
             ).use { cursor ->
                 while (cursor.next()) columns.add(cursor["column_name"])
-                // HEAD has no `next_version` column (intrinsically HEAD); the table should match `headColumns`.
-                assertEquals(PgColumn.headColumns.size, columns.size)
-                assertTrue(PgColumn.headColumns.all { column -> columns.contains(column.name) })
+                assertEquals(XyzMembers.ALL.size + 1, columns.size)
+                // Note: We will not find TN in the database, because `lib-psql` stores `fn` and `version` instead.
+                assertTrue(XyzMembers.ALL.all { column -> if (column eq XyzTn) true else columns.contains(column.name) })
             }
         }
     }
@@ -148,24 +151,12 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
                 args = arrayOf(tableName)
             ).use { cursor ->
-                val addedIndices = mutableListOf<String>()
-                while (cursor.next()) addedIndices.add(cursor["indexname"])
-                check(indices.size <= addedIndices.size) { "Too few indices" }
-                indices.forEach { indexName ->
-                    check(indexName != null)
-                    val pgIndex = PgIndex.of(indexName)
-                    check(pgIndex != null) { "pgIndex of $indexName should not be null" }
-                    // Note: We know that the `id` index is replaced with `id_unique` internally for HEAD tables!
-                    if (pgIndex == PgIndex.id) {
-                        check(addedIndices.contains(pgIndex.id(tableName))
-                                || addedIndices.contains(PgIndex.id_unique.id(tableName))) {
-                            "Missing index ${pgIndex.name} aka $indexName"
-                        }
-                    } else {
-                        check(addedIndices.contains(pgIndex.id(tableName))) {
-                            "Missing index ${pgIndex.name} aka $indexName"
-                        }
-                    }
+                val existingIndices = mutableListOf<String>()
+                while (cursor.next()) existingIndices.add(cursor["indexname"])
+                check(indices.size <= existingIndices.size) { "Too few indices" }
+                XyzIndices.ALL.forEach { index ->
+                    val existingName = existingIndices.find { index.name == it }
+                    check(existingName != null) { "Index ${index.name} not found" }
                 }
             }
         }
@@ -208,7 +199,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         val readFeatureRequest = ReadFeatures()
         readFeatureRequest.catalogId = map.id
-        readFeatureRequest.collectionId.add(collectionName)
+        readFeatureRequest.collectionId = collectionName
         readFeatureRequest.featureIds.add(feature.id)
         val readFeaturesResponse = executeRead(readFeatureRequest)
         assertEquals(1, readFeaturesResponse.features.size)
@@ -281,7 +272,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
         val readFeature = ReadFeatures()
         readFeature.catalogId = map.id
-        readFeature.collectionId.add(collectionId)
+        readFeature.collectionId= collectionId
         readFeature.featureIds.add(feature.id)
         val readFeatureResponse = executeRead(readFeature)
         assertEquals(1, readFeatureResponse.features.size)
@@ -429,21 +420,22 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     @Test
     fun membersUndefined_shouldCreateAllColumnsAndDefaultIndices() {
         val collection = NakshaCollection("members_null_test", map.id)
-        // members is null by default — do NOT set it
+        // members are null by default — do NOT set them, then they will automatically become XyzMember.ALL!
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
         storage.adminConnection().use { conn ->
-            // Columns: must include all headColumns (28 columns, no next_version).
+            // Columns: must include all headColumns (28 columns).
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
                 arrayOf(map.id, collection.id)
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
+            // Note: `lib-psql` does split `tn` into `fn` and `version` columns, so we have one more column than members!
             assertEquals(
-                PgColumn.headColumns.size, columns.size,
-                "Expected all ${PgColumn.headColumns.size} head columns, got: $columns"
+                XyzMembers.ALL.size + 1, columns.size,
+                "Expected to find ${XyzMembers.ALL+1} columns, found: ${columns.size}, being: $columns"
             )
-            assertTrue(PgColumn.headColumns.all { it.name in columns })
+            assertTrue(XyzMembers.ALL.all { XyzMembers.XyzTn eq it || it.name in columns })
 
             // Indices: must include all default optional indices on the HEAD table.
             val indexNames = mutableListOf<String>()
@@ -451,11 +443,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
                 arrayOf(map.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
-            val defaultIndices = PgIndex.DEFAULT_INDICES.filter { !it.internal }
-            for (pgIdx in defaultIndices) {
-                val expectedId = pgIdx.id(collection.id)
-                assertTrue(expectedId in indexNames || PgIndex.id_unique.id(collection.id) in indexNames,
-                    "Expected default index '${pgIdx.name}' (id='$expectedId') to be present, found: $indexNames")
+            for (index in XyzIndices.ALL) {
+                assertTrue( index.name in indexNames,"Expected index '${index.name}' to be present, found: $indexNames")
             }
         }
     }

@@ -88,9 +88,8 @@ public class NHAdminStorage implements IStorage {
     return psqlStorage.getNumber();
   }
 
-  @Override
   public @NotNull DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
-    return psqlStorage.getDataEncoding(feature, context);
+    throw new UnsupportedOperationException("Not supported by NHAdminStorage");
   }
 
   @Override

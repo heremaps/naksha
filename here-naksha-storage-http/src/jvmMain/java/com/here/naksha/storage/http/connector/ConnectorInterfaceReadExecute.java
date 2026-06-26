@@ -167,17 +167,12 @@ public class ConnectorInterfaceReadExecute {
         }
     }
 
-    private static String firstCollectionIdOrThrow(ReadFeaturesProxyWrapper request) {
-        StringList ids = request.getCollectionId();
-        if (ids == null || ids.isEmpty()) {
-            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
-                    "collectionIds must contain at least one non-empty id");
-        }
-        String id0 = ids.get(0);
-        if (id0 == null || id0.isBlank()) {
-            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
-                    "First collectionId must be non-empty");
-        }
-        return id0;
+ private static String firstCollectionIdOrThrow(ReadFeaturesProxyWrapper request) {
+    String id = request.getCollectionId();
+    if (id == null || id.isBlank()) {
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
+              "collectionId must be non-empty");
     }
+    return id;
+  }
 }

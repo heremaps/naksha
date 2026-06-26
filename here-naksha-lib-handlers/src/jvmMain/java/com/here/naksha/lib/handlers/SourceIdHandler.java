@@ -204,8 +204,8 @@ public class SourceIdHandler extends AbstractEventHandler {
   }
 
   private static boolean propertyReferenceEqualsSourceId(Property pRef) {
-    List<@NotNull String> path = pRef.getPath();
-    return path.size() == PREF_PATHS_SIZE && path.containsAll(List.of(NakshaProperties.META_KEY, SOURCE_ID));
+    naksha.model.objects.JsonPath jp = pRef.getPath();
+    return jp.size() == PREF_PATHS_SIZE && jp.asList().containsAll(List.of(NakshaProperties.META_KEY, SOURCE_ID));
   }
 
   private static boolean sourceIdTransformationCapable(PQuery propertyOperation) {

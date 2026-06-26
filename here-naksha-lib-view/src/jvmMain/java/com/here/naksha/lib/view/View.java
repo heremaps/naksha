@@ -57,7 +57,6 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
     this.viewLayerCollection = viewLayerCollection;
   }
 
-  @Override
   public @NotNull naksha.model.DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
     throw new NotImplementedException("Not supported by View storage");
   }

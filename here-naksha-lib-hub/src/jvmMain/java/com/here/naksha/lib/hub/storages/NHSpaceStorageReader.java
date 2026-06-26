@@ -117,11 +117,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   private @NotNull Response executeReadFeatures(final @NotNull ReadFeatures rf) {
-    List<String> collectionIds = rf.getCollectionId();
-    if (collectionIds.size() > 1) {
-      throw new UnsupportedOperationException("Reading from multiple spaces not supported!");
-    }
-    final String spaceId = collectionIds.get(0);
+    String spaceId = rf.getCollectionId();
     logger.info("ReadFeatures Request against spaceId={}", spaceId);
     addSpaceIdToStreamInfo(spaceId);
     if (virtualSpaces.containsKey(spaceId)) {
@@ -161,13 +157,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   private @NotNull Response executeReadFeaturesFromCustomSpaces(final @NotNull ReadFeatures rf) {
-    List<String> collectionIds = rf.getCollectionId();
-    if (collectionIds.size() > 1) {
-      return new ErrorResponse(new NakshaError(
-          NakshaError.UNSUPPORTED_OPERATION,
-          "ReadFeatures from multiple collections not supported at present!"));
-    }
-    final String spaceId = collectionIds.get(0);
+    final String spaceId = rf.getCollectionId();
     final EventPipeline eventPipeline = pipelineFactory.eventPipeline();
     final Response response = setupEventPipelineForSpaceId(spaceId, eventPipeline);
     if (!(response instanceof SuccessResponse)) {
@@ -337,7 +327,12 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @NotNull naksha.model.MemberProcessorMap getProcessors() {
     throw NOT_SUPPORTED_ERROR;
   }
 

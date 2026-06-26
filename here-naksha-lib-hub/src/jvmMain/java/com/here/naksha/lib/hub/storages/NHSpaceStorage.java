@@ -132,7 +132,6 @@ public class NHSpaceStorage implements IStorage {
     throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 
-  @Override
   public @NotNull DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
     throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }

@@ -29,6 +29,7 @@ import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import java.util.*;
 
 import naksha.model.*;
+import naksha.model.MemberProcessorMap;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
@@ -188,7 +189,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
       }
       if (propertyQuery instanceof PQuery) {
         final PQuery query = ((PQuery) propertyQuery);
-        return query.getProperty().getPath().contains(Property.ID)
+        return query.getProperty().getPath().contains("id")
                && query.getOp().equals(AnyOp.IS_ANY_OF);
       }
     }
@@ -256,7 +257,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
     throw new UnsupportedOperationException();
   }
 
@@ -277,6 +278,11 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
 
   @Override
   public @NotNull SessionOptions getOptions() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @NotNull MemberProcessorMap getProcessors() {
     throw new UnsupportedOperationException();
   }
 }

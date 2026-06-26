@@ -113,8 +113,13 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapById(@NotNull String mapId) {
-    return session.getCatalogById(mapId);
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
+    return session.getCatalogById(catalogId);
+  }
+
+  @Override
+  public @NotNull naksha.model.MemberProcessorMap getProcessors() {
+    return session.getProcessors();
   }
 
   @Override

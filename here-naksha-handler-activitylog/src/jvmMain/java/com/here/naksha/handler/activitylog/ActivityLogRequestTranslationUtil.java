@@ -58,7 +58,7 @@ class ActivityLogRequestTranslationUtil {
     readFeatures.setQueryHistory(true);
     readFeatures.setQueryDeleted(true);
     readFeatures.setVersions(Integer.MAX_VALUE);
-    readFeatures.setCollectionId(StringList.of(spaceId));
+    readFeatures.setCollectionId(spaceId);
 
     // extract UUIDs from featureIds, reset featureIds
     StringList rawGuids = readFeatures.getFeatureIds();
@@ -82,6 +82,7 @@ class ActivityLogRequestTranslationUtil {
   }
 
   private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {
-    return StringOp.EQUALS.equals(pQuery.getOp()) && pQuery.getProperty().getPath().containsStringsInOrder(ACTIVITY_LOG_ID_PATH);
+    return StringOp.EQUALS.equals(pQuery.getOp())
+            && pQuery.getProperty().getPath().asList().stream().allMatch(s -> java.util.Arrays.asList(ACTIVITY_LOG_ID_PATH).contains(s));
   }
 }

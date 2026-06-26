@@ -56,8 +56,8 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.MetaColumn;
 import naksha.model.request.query.MemberQuery;
+import naksha.model.objects.StandardMembers;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -158,7 +158,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
   private void collectMissingPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
     List<TupleNumber> tnsOfRootsMissingPredecessor = collectedFeatures.activityLogRoots.stream()
         .filter(f -> !collectedFeatures.allByNuuid.containsKey(f.getId()))
-        .map(NakshaFeature::getTupleNumber)
+        .map(f -> StandardMembers.Tn.getTupleNumber(f))
         .toList();
     if (!tnsOfRootsMissingPredecessor.isEmpty()) {
       List<NakshaFeature> missingPredecessorsByNextVersion =
@@ -171,11 +171,11 @@ public class ActivityLogHandler extends AbstractEventHandler {
     // next_version is a plain int8 column, so we pass an Int64[] of the version values.
     Int64[] versions = new Int64[tupleNumbers.size()];
     for (int i = 0; i < tupleNumbers.size(); i++) {
-      versions[i] = tupleNumbers.get(i).version.value;
+      versions[i] = tupleNumbers.get(i).version;
     }
-    MemberQuery nextVersionQuery = new MemberQuery(MetaColumn.nextVersion(), AnyOp.IS_ANY_OF, versions);
+    MemberQuery nextVersionQuery = new MemberQuery(StandardMembers.NextVersion, AnyOp.IS_ANY_OF, versions);
     ReadFeatures requestPredecessors = new ReadFeatures();
-    requestPredecessors.setCollectionId(StringList.of(properties.getSpaceId()));
+    requestPredecessors.setCollectionId(properties.getSpaceId());
     requestPredecessors.setQueryHistory(true);
     requestPredecessors.getQuery().setMembers(nextVersionQuery);
     return requestPredecessors;

@@ -106,7 +106,7 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   }
 
   public ReadFeaturesProxyWrapper withCollection(String collectionId){
-    getCollectionId().add(collectionId);
+    setCollectionId(collectionId);
     return this;
   }
 

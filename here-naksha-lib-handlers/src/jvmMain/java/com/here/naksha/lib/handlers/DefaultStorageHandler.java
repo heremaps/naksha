@@ -526,7 +526,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (request instanceof ReadFeatures) {
       ReadFeatures rf = (ReadFeatures) request;
       rf.setCatalogId(mapId);
-      rf.setCollectionId(StringList.of(collectionId));
+      rf.setCollectionId(collectionId);
     } else if (request instanceof WriteRequest) {
       WriteRequest wr = (WriteRequest) request;
       if (isOnlyWriteCollections(wr)) {
@@ -537,7 +537,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       }
       String finalCollectionId = isOnlyWriteCollections(wr) ? Naksha.COLLECTIONS_COL_ID : collectionId;
       wr.getWrites().forEach(write -> {
-        write.setMapId(mapId);
+        write.setCatalogId(mapId);
         write.setCollectionId(finalCollectionId);
       });
     }

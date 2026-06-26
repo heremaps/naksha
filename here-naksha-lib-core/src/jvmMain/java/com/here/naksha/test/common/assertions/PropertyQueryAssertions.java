@@ -62,7 +62,11 @@ public class PropertyQueryAssertions {
   }
 
   public PropertyQueryAssertions hasProperty(Property expected) {
-    return hasProperty(expected.getPath());
+    java.util.List<String> path = new java.util.ArrayList<>();
+    for (Object segment : expected.getPath().asList()) {
+      path.add(segment.toString());
+    }
+    return hasProperty(path);
   }
 
   public PropertyQueryAssertions hasProperty(List<String> expected) {
