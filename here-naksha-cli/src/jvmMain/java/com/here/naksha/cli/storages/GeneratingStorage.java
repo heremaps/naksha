@@ -13,7 +13,6 @@ import com.here.naksha.cli.utils.JsonParserException;
 import kotlin.reflect.KClass;
 import naksha.base.Platform;
 import naksha.base.StringList;
-import naksha.jbon.JbDictionary;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -65,17 +64,6 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
     @Override
     public int getHardCap() {
         return Integer.MAX_VALUE;
-    }
-
-    @Override
-    public @NotNull DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
-        return Naksha.DEFAULT_DATA_ENCODING;
-    }
-
-    @Nullable
-    @Override
-    public JbDictionary getDictionary(@NotNull String id) {
-        return null;
     }
 
     @Override

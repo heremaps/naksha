@@ -235,12 +235,8 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     return execute(request);
   }
 
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
-  }
-
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
     final @NotNull ViewLayerCollection viewCollection = view.getViewCollection();
     // TODO: We need to group the tuples by layer using:
     //       viewCollection.getByTupleNumber()

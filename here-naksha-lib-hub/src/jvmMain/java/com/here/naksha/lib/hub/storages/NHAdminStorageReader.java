@@ -35,8 +35,6 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static naksha.model.LibModelKt.FETCH_ALL;
-
 public class NHAdminStorageReader implements IReadSession {
 
   /**
@@ -133,17 +131,12 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
-    session.loadTuples(featureTuples, from, to, mode);
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
+    session.loadTuples(featureTuples, from, to);
   }
 
   @Override
   public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
     return session.getCollectionByNumber(catalog, collectionNumber);
-  }
-
-  @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
   }
 }

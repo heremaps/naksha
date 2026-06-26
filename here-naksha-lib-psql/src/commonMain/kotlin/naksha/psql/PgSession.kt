@@ -372,10 +372,7 @@ open class PgSession(
         return PgLock(this, useConnection(), lockId, false)
     }
 
-    // TODO: We should only have one method being this one!
-    override fun loadTuples(featureTuples: List<FeatureTuple?>) = loadTuples(featureTuples, 0, featureTuples.size, FETCH_ALL)
-
-    override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int, mode: FetchMode) {
+    override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int) {
         val missing = featureTuples.subList(from, to).mapNotNull { if (it != null && it.tuple == null) it else null }
         if (missing.isNotEmpty()) {
             (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->

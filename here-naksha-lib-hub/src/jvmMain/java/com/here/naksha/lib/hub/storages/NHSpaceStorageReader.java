@@ -47,13 +47,7 @@ import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.FeatureTuple;
-import naksha.model.request.ReadCollections;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
+import naksha.model.request.*;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -164,11 +158,6 @@ public class NHSpaceStorageReader implements IReadSession {
       return response;
     }
     return eventPipeline.sendEvent(rf);
-  }
-
-  @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
   }
 
   record SpaceAndHandlerConfigs(Space space, List<EventHandlerConfig> eventHandlerConfigs) {
@@ -347,7 +336,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
     throw NOT_SUPPORTED_ERROR;
   }
 

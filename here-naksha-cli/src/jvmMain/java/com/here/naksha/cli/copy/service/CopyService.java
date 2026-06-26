@@ -112,9 +112,7 @@ public final class CopyService {
 
     private ReadFeatures createReadFeaturesRequest(CopyElement source) {
         ReadFeatures readFeatures = new ReadFeatures();
-        readFeatures.setCollectionId(
-                StringList.of(source.getCollectionId())
-        );
+        readFeatures.setCollectionId(source.getCollectionId());
         readFeatures.setCatalogId(source.getMapId());
 
         return readFeatures;

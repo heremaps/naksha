@@ -29,7 +29,7 @@ final class GeneratingStorageService {
         dummyFeatureTuples.setCapacity(numOfTuplesToGenerate);
         for (int i = 0; i < numOfTuplesToGenerate; ++i) {
             TupleNumber dummyTupleNumber = new TupleNumber(
-                storageNumber, 0, 0, Platform.intToInt64(0), Version.HEAD
+                storageNumber, 0, 0, Platform.intToInt64(0), Version.HEAD.number
             );
             FeatureTuple dummyFeatureTuple = new FeatureTuple(dummyTupleNumber, null);
             dummyFeatureTuples.add(dummyFeatureTuple);

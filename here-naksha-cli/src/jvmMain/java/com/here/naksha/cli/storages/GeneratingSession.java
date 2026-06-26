@@ -34,15 +34,15 @@ final class GeneratingSession implements IReadSession {
     }
 
     @Override
-    public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
+    public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
         GeneratingStorageService service = storage.getService();
         List<NakshaFeature> generatedFeatures = service.generateFeatures(
-            featureTuples.size(),
+            to - from,
             storage.getTileIds(),
             storage.getIdsPrefix(),
             templateFeature
         );
-        for (int i = 0; i < featureTuples.size(); ++i) {
+        for (int i = from; i < to; ++i) {
             FeatureTuple featureTuple = featureTuples.get(i);
             NakshaFeature feature = generatedFeatures.get(i);
             featureTuple.setFeature(feature);
@@ -109,7 +109,7 @@ final class GeneratingSession implements IReadSession {
 
     @Nullable
     @Override
-    public NakshaCatalog getMapById(@NotNull String mapId) {
+    public NakshaCatalog getCatalogById(@NotNull String mapId) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
@@ -131,8 +131,9 @@ final class GeneratingSession implements IReadSession {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
+    private final MemberProcessorMap processors = new MemberProcessorMap();
     @Override
-    public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
-        throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
+    public @NotNull MemberProcessorMap getProcessors() {
+      return processors;
     }
 }
