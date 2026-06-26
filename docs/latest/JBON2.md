@@ -28,7 +28,7 @@ As the format name indicates, this format is object-oriented. All **JBON** data 
 - `Primitive`: The following _**units**_ are called _primitives_: `null`, `boolean`, `integer`, `float`, `timestamp`, `string`, and `tuple-number`.
 - `String`: A special _primitive_ that encodes a list of [UNICODE] code points, optionally including [references] to sub-strings. Strings are split using the [UNICODE] word boundary algorithm from [ICU4J].
 - `Array` _(`List<Any?>`)_: A list of arbitrary _**units**_ with significant order _(changing the order creates a different array)_.
-- `TagList` _(`List<Primitive>`)_: A list of unique non-null _**primitives**_; the order of the elements is significant, and the list must not have duplicates, null or undefined.
+- `TagList` _(`List<String>`)_: A list of unique non-null _**strings**_; the order of the elements is significant, and the list must not have duplicates, null or undefined.
 - `Object` _(`Map<String, Any?>`)_: A list of key-value pairs with all keys being unique non-null _**strings**_; the values can be any _**unit**_. The order of the entries is not significant, therefore the encoder will optimize by sorting the entries by their keys.
 - `Map` _(`Map<Primitive, Any?>`)_: A list of key-value pairs with keys limited to be unique non-null _**primitives**_; values can be any _**unit**_. The order of the entries is not significant, therefore the encoder will optimize by sorting the entries by their keys.
 - `Dictionary` _(`Map<String, String>`)_: A list of key-value pairs with keys being unique non-null _**strings**_ and values being non-null _**strings**_. The order of the entries is not significant, therefore the encoder will optimize by sorting the entries by their keys.
@@ -589,14 +589,14 @@ For the keys, the [primitive-stringification] is used, if needed.
 ---
 
 ### TagList (2)
-A TagList is a list of unique non-null _**primitives**_; the order of the elements is significant, and the list must not have duplicates, null or undefined. The **lead-in** byte is `11ss_0010`; with `ss` encoding the size of the size, as usual.
+A TagList is a list of unique non-null _**string**_; the order of the elements is significant, and the list must not have duplicates, null or undefined. The **lead-in** byte is `11ss_0010`; with `ss` encoding the size of the size, as usual.
 
-| Name      | Type             | Description                                                           |
-|-----------|------------------|-----------------------------------------------------------------------|
-| lead_in   | `byte`           | The **lead-in** byte, `11ss_0010`.                                    |
-| byte_size | `int32`          | The total size of the structure, including the **lead-in**, in bytes. |
-|           |                  |                                                                       |
-| entries   | ([primitive])... | The entries of the TagList.                                               |
+| Name      | Type          | Description                                                           |
+|-----------|---------------|-----------------------------------------------------------------------|
+| lead_in   | `byte`        | The **lead-in** byte, `11ss_0010`.                                    |
+| byte_size | `int32`       | The total size of the structure, including the **lead-in**, in bytes. |
+|           |               |                                                                       |
+| entries   | ([string])... | The entries of the TagList.                                           |
 
 If `ss=00` _(**lead-in** is `1100_0010`)_, this implies an empty TagList _(`{"@type":"naksha:taglist"}`)_.
 
@@ -614,8 +614,6 @@ var tagList = [
   "bar"
 ]
 ```
-
-For the entries, the [primitive-stringification] is used, if needed.
 
 ### Object (3)
 An object is a special [map] that only allows strings as keys. The **lead-in** byte is `11ss_0011`; with `ss` encoding the size of the size, as usual. All keys must be [strings].
