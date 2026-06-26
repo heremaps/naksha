@@ -32,14 +32,12 @@ open class Index() : AnyObject() {
     /**
      * Construct a user-defined index.
      * @param name the index name (must be unique within the collection).
-     * @param type the index type.
      * @param on the member names to index.
      * @since 3.0
      */
     @JsName("of")
-    constructor(name: String, type: IndexType, vararg on: String) : this() {
+    constructor(name: String, vararg on: String) : this() {
         this.name = name
-        this.type = type
         val cols = StringList()
         cols.setCapacity(on.size)
         for (c in on) cols.add(c)
@@ -64,27 +62,6 @@ open class Index() : AnyObject() {
     /** Fluent setter for [name]; returns this for chaining. */
     fun withName(value: String): Index {
         name = value
-        return this
-    }
-
-    /**
-     * The index type.
-     * @since 3.0
-     */
-    var type: IndexType by TYPE
-
-    /** True iff the underlying map has an entry for [type]. */
-    fun hasType(): Boolean = hasRaw("type")
-
-    /** Remove [type] from the underlying map; returns this for chaining. */
-    fun removeType(): Index {
-        removeRaw("type")
-        return this
-    }
-
-    /** Fluent setter for [type]; returns this for chaining. */
-    fun withType(value: IndexType): Index {
-        type = value
         return this
     }
 
@@ -177,7 +154,6 @@ open class Index() : AnyObject() {
 
     companion object Index_C {
         private val NAME     = NotNullProperty<Index, String>(String::class) { _, _ -> "" }
-        private val TYPE     = NotNullEnum<Index, IndexType>(IndexType::class) { _, _ -> IndexType.BTREE }
         private val ON       = NotNullProperty<Index, StringList>(StringList::class)
         private val INCLUDE  = NullableProperty<Index, StringList>(StringList::class)
         private val UNIQUE   = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }

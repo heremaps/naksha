@@ -175,7 +175,6 @@ open class PgCollection internal constructor(
             val indices: IndexList = nakshaCollection.indices!!
             val index = indices[i] ?: throw NakshaException(ILLEGAL_STATE, "Index #$i must not be null")
             val indexName = index.name
-            val indexType = index.type
 
             val nakshaOn = index.on
             val on: ArrayList<PgColumn> = ArrayList(nakshaOn.size)
@@ -208,7 +207,7 @@ open class PgCollection internal constructor(
             } else {
                 include = null
             }
-            PgIndex(indexName, indexType, on.toTypedArray(), include?.toTypedArray() ?: emptyArray())
+            PgIndex(indexName, on.toTypedArray(), include?.toTypedArray() ?: emptyArray())
         }
     }
 

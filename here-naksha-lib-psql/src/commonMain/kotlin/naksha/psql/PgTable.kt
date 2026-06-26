@@ -201,7 +201,7 @@ abstract class PgTable(
      */
     open fun createIndex(conn: PgConnection, index: PgIndex) {
         if (!indices.contains(index)) {
-            index.create(conn, name)
+            index.create(conn, this)
             indices = indices + index
         }
     }

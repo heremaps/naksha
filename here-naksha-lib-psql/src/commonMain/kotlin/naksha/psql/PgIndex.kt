@@ -1,13 +1,8 @@
 package naksha.psql
 
-import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
-import naksha.model.NakshaException
+import naksha.model.illegalArg
 import naksha.model.objects.Index
-import naksha.model.objects.IndexType
-import naksha.model.objects.IndexType.IndexType_C.BTREE
-import naksha.model.objects.IndexType.IndexType_C.SPATIAL
-import naksha.model.objects.IndexType.IndexType_C.TAG_MAP
-import naksha.model.objects.IndexType.IndexType_C.TAG_LIST
+import naksha.model.objects.MemberType
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -28,13 +23,6 @@ data class PgIndex(
     val name: String,
 
     /**
-     * The index type.
-     * @since 3.0
-     */
-    @JvmField
-    var type: IndexType,
-
-    /**
      * The columns to index.
      * @since 3.0
      */
@@ -49,20 +37,48 @@ data class PgIndex(
     var includes: Array<PgColumn> = emptyArray()
 ) {
 
-    internal fun create(conn: PgConnection, tableName: String) {
-        val includeClause = if (includes.isEmpty()) "" else " INCLUDE (${includes.joinToString(", ")})"
-        val using = when (type) {
-            BTREE -> "btree"
-            SPATIAL -> "gist"
-            TAG_MAP, TAG_LIST -> "gin"
-            else -> throw NakshaException(INTERNAL_ERROR, "Invalid index type for index $name on table $tableName")
+    companion object PgIndex_C {
+        private fun indexAndOpsOf(column: PgColumn, indexName: String): Pair<String, String> = when (column.memberType) {
+            MemberType.INT8,
+            MemberType.INT16,
+            MemberType.INT32,
+            MemberType.INT64,
+            MemberType.FLOAT32,
+            MemberType.FLOAT64,
+            MemberType.BYTE_ARRAY -> Pair("btree", "")
+            MemberType.STRING -> Pair("btree", " COLLATE \"C\" text_pattern_ops")
+            MemberType.SPATIAL -> Pair("gist_btree", " gist_geometry_ops_2d")
+            MemberType.TAG_MAP -> Pair("gin", " jsonb_ops")
+            MemberType.TAG_MAP_FROM_ARRAY,
+            MemberType.TAG_LIST -> Pair("gin", " array_ops")
+            else -> throw illegalArg("The member type ${column.memberType} of column '$column' of index '$indexName' is not a valid index target")
         }
-        val indexName = quoteIdent(tableName, "\$i_", tableName)
-        val fillFactor = if (PgTable.isAnyHead(tableName)) "(fillfactor=50)" else "(fillfactor=100)"
-        val sql = """CREATE INDEX IF NOT EXISTS $indexName 
-ON ${quoteIdent(tableName)}
-USING $using$includeClause
-WITH $fillFactor"""
+    }
+
+    internal fun create(conn: PgConnection, table: PgTable) {
+        if (on.isEmpty()) throw illegalArg("Index without target columns: $name")
+        val primaryColumn = on.first()
+        val (primaryIndex, primaryDeclaration) = indexAndOpsOf(primaryColumn, name)
+        val secondaries = mutableListOf<Pair<String,String>>()
+        for (i in 0 ..< on.size) {
+            val pgColumn = on[i]
+            val secondary = indexAndOpsOf(pgColumn, name)
+            if (secondary.first != "btree" || !primaryIndex.contains(secondary.first)) {
+                throw illegalArg("The member #$i ($pgColumn) can not be used as secondary index element, only primitives are allows")
+            }
+            secondaries.add(secondary)
+        }
+        val includeClause = if (includes.isEmpty()) "" else " INCLUDE (${includes.joinToString(", ") { column -> 
+            val (index, _) = indexAndOpsOf(column, "include")
+            if (index != "btree") throw illegalArg("The include of column $column is not possible, because it is no primitive")
+            column.ident
+        }})"
+        val indexIdent = quoteIdent(table.name, "\$i_", table.name)
+        val fillFactor = if (PgTable.isAnyHead(table.name)) "(fillfactor=50)" else "(fillfactor=100)"
+        val sql = """CREATE INDEX IF NOT EXISTS $indexIdent 
+ON ${table.quotedName}
+USING $primaryIndex ($primaryDeclaration${secondaries.joinToString(", ") { secondary -> secondary.second }})$includeClause
+WITH $fillFactor""" //                        like "gin jsonb_ops"
         conn.execute(sql).close()
     }
 
@@ -77,7 +93,6 @@ WITH $fillFactor"""
 
         other as PgIndex
         if (name != other.name) return false
-        if (type != other.type) return false
         if (!on.contentEquals(other.on)) return false
         if (!includes.contentEquals(other.on)) return false
         return true
@@ -85,7 +100,6 @@ WITH $fillFactor"""
 
     override fun hashCode(): Int {
         var result = name.hashCode()
-        result = 31 * result + type.hashCode()
         result = 31 * result + on.contentHashCode()
         result = 31 * result + includes.contentHashCode()
         return result

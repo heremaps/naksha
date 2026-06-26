@@ -2,6 +2,7 @@
 
 package naksha.model.objects
 
+import naksha.geo.SpGeometry
 import naksha.model.TupleNumber
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
@@ -10,7 +11,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * All members being part of the classic XYZ-Hub architecture, plus further extensions added later in Data-Hub and Naksha v1, v2. All internal adminstrative object are stored in this format.
+ * All members being part of the classic XYZ-Hub architecture, plus further extensions added later in Data-Hub and Naksha v1, v2. All internal administrative object are stored in this format.
  * @since 3.0
  */
 @JsExport

@@ -29,7 +29,7 @@ class StandardIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val FeatureNumberUnique = Index("fn_unique", IndexType.BTREE, "fn").withInternal(true)
+        val FeatureNumberUnique = Index("fn_unique", "fn").withInternal(true)
 
         /**
          * `id_unique` — UNIQUE index on `id` (WHERE `id IS NOT NULL`). Present in HEAD, DELETED, and
@@ -37,7 +37,7 @@ class StandardIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val IdUnique = Index("id_unique", IndexType.BTREE, "id").withInternal(true).withUnique(true)
+        val IdUnique = Index("id_unique", "id").withInternal(true).withUnique(true)
 
         /**
          * `id` — non-unique index on `id`, `fn`, `version` (WHERE `id IS NOT NULL`). Present in
@@ -45,14 +45,14 @@ class StandardIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Id = Index("id", IndexType.BTREE, "id", "fn", "version").withInternal(true)
+        val Id = Index("id", "id", "fn", "version").withInternal(true)
 
         /**
          * `version` — non-unique index on `version`. Present in all tables. Mandatory.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Version = Index("version", IndexType.BTREE, "version").withInternal(true)
+        val Version = Index("version", "version").withInternal(true)
 
         /**
          * `gbn` — conditional non-unique index on `gbn` WHERE `gbn IS NOT NULL`. Used by the sequencer
@@ -61,7 +61,7 @@ class StandardIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val GlobalBookNumber = Index("gbn", IndexType.BTREE, "gbn").withInternal(true)
+        val GlobalBookNumber = Index("gbn", "gbn").withInternal(true)
 
         /**
          * All mandatory indices, in declaration order. These are always created by the storage.
@@ -82,13 +82,13 @@ class StandardIndices private constructor() {
         // -------------------------------------------------------------------------
 
         /**
-         * `geo` — spatial ([IndexType.SPATIAL]) GIST index over the geometry member (WHERE `geo IS NOT NULL`).
+         * `geo` — spatial index over the geometry member.
          *
          * Geometry is a **standard** member (part of the GeoJSON standard, see [StandardMembers.Geometry]).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Geometry = Index("geo", IndexType.SPATIAL, "geo")
+        val Geometry = Index("geo", "geo")
 
         // -------------------------------------------------------------------------
         // Special indices — not added automatically; declared explicitly per collection
@@ -101,7 +101,7 @@ class StandardIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val PublishNumber = Index("pn", IndexType.BTREE, "pn")
+        val PublishNumber = Index("pn", "pn")
 
         /**
          * `pt` — BTREE index on `pt` (WHERE `pt IS NOT NULL`). Enables efficient range scans
@@ -109,7 +109,7 @@ class StandardIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val PublishTime = Index("pt", IndexType.BTREE, "pt")
+        val PublishTime = Index("pt", "pt")
 
         /**
          * `gv` — BTREE index on `gv` (WHERE `gv IS NOT NULL`). Enables efficient range scans
@@ -117,7 +117,7 @@ class StandardIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val GlobalVersion = Index("gv", IndexType.BTREE, "gv")
+        val GlobalVersion = Index("gv", "gv")
 
         /**
          * All special indices — not added automatically but recognised by all storage implementations.

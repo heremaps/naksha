@@ -433,13 +433,13 @@ open class NakshaCollection() : NakshaFeature() {
     var indices: IndexList? by INDICES
 
     /**
-     * Initializes the [indices] to the bare minimum, therefore [mandatory indices][StandardIndices.MANDATORY].
+     * Initializes the [indices] to the bare minimum.
      *
      * The method should be called, if next to the minimal indices additional proprietary indices should be added.
      * @since 3.0
      */
     fun withMinimalIndices(): NakshaCollection {
-        indices = IndexList(StandardIndices.MANDATORY)
+        indices = IndexList()
         return this
     }
 
