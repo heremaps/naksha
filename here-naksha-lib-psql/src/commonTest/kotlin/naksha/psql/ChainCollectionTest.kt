@@ -7,6 +7,7 @@ import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -69,11 +70,11 @@ class ChainCollectionTest : PgTestBase(
         val members = assertNotNull(collection.members)
         assertEquals(2, members.size)
         assertEquals("left_fn", assertNotNull(members[0]).name)
-        assertContentEquals(listOf("properties", "left_fn"), assertNotNull(members[0]).effectivePath())
+        assertContentEquals(listOf("properties", "left_fn"), assertNotNull(members[0]).path)
         assertNull(assertNotNull(members[0]).path)
 
         assertEquals("right_fn", assertNotNull(members[1]).name)
-        assertContentEquals(listOf("properties", "right_fn"), assertNotNull(members[1]).effectivePath())
+        assertContentEquals(listOf("properties", "right_fn"), assertNotNull(members[1]).path)
         assertNull(assertNotNull(members[1]).path)
     }
 
@@ -106,7 +107,7 @@ class ChainCollectionTest : PgTestBase(
 
         // Then: verify head
         val headBack = assertNotNull(response.features.find { it?.id == headFn.toString() })
-        assertEquals(Int64(headFn), headBack.featureNumber)
+        assertEquals(Int64(headFn), XyzTn.get(headBack)?.featureNumber)
         assertNull(
             headBack.properties["left_fn"],
             "head.left_fn should be null"
@@ -119,7 +120,7 @@ class ChainCollectionTest : PgTestBase(
 
         // Then: verify mid
         val midBack = assertNotNull(response.features.find { it?.id == midFn.toString() })
-        assertEquals(Int64(midFn), midBack.featureNumber)
+        assertEquals(Int64(midFn), XyzTn.get(midBack)?.featureNumber)
         assertEquals(
             Int64(headFn),
             toInt64(midBack.properties["left_fn"]),
@@ -133,7 +134,7 @@ class ChainCollectionTest : PgTestBase(
 
         // Then: verify tail
         val tailBack = assertNotNull(response.features.find { it?.id == tailFn.toString() })
-        assertEquals(Int64(tailFn), tailBack.featureNumber)
+        assertEquals(Int64(tailFn), XyzTn.get(tailBack)?.featureNumber)
         assertEquals(
             Int64(midFn),
             toInt64(tailBack.properties["left_fn"]),
