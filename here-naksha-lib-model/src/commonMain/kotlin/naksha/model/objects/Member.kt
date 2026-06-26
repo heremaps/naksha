@@ -181,6 +181,14 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
+     * Check if this member is the same as the given one, so [name] and [dataType] match.
+     * @param other the other member to test against.
+     * @return _true_ if the two members are the same; _false_ otherwise.
+     * @since 3.0
+     */
+    infix fun eq(other: Member?): Boolean = isSameAs(other)
+
+    /**
      * Ensures that the given `found` member is the same as the `expected` member, allow different path.
      * @param other The member to compare this member with.
      * @param comparePath If the path must be the same as well, defaults to _false_.
@@ -234,6 +242,7 @@ open class Member() : AnyObject(), Comparator<Member> {
         val raw = feature.getPath(path)
         if (raw is TupleNumber) return raw
         if (raw is String) return TupleNumber.fromString(raw)
+        if (raw is ByteArray) return TupleNumber.fromByteArray(raw)
         return null
     }
 

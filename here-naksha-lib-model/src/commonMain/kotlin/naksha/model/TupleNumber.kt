@@ -353,7 +353,7 @@ data class TupleNumber(
          * Restore a [TupleNumber] from a binary encoding.
          * @param bytes the binary to read.
          * @param offset the index of the first byte to read.
-         * @param variant the variant to read.
+         * @param variant the variant to read, if omitted, the value is auto-detected by the byte-array size.
          * @param storageNumber if the binary does not encode the storage-number _(anything other than [B256])_, so variant is [B64], [B128], [B160], or [B192].
          * @param mapNumber if the binary does not encode the map-number, so variant is [B64], [B128], or [B160].
          * @param collectionNumber if the binary does not encode the collection-number, so variant is [B64] or [B128].
@@ -364,8 +364,8 @@ data class TupleNumber(
         @JvmOverloads
         fun fromByteArray(
             bytes: ByteArray,
-            offset: Int,
-            variant: TupleNumberVariant,
+            offset: Int = 0,
+            variant: TupleNumberVariant = TupleNumberVariant.fromValue(bytes.size - offset),
             storageNumber: Int64? = null,
             mapNumber: Int? = null,
             collectionNumber: Int? = null,
