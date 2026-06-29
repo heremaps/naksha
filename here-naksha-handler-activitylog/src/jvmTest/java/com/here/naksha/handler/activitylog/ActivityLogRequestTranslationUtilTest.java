@@ -44,7 +44,7 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And: there is a single guid passed from original featureId
     GuidList finalGuids = readFeatures.getGuids();
-    assertEquals(1, finalGuids.size());
+    assertEquals(1, finalGuids.getSize());
     assertEquals(guid, finalGuids.get(0));
   }
 
@@ -74,7 +74,7 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And: all guids defined in featureIds were moved to ReadFeatures.guids
     GuidList finalGuids = readFeatures.getGuids();
-    assertEquals(guids.size(), finalGuids.size());
+    assertEquals(guids.getSize(), finalGuids.getSize());
     assertTrue(finalGuids.containsAll(guids));
   }
 
@@ -97,7 +97,7 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And: there is a single featureId withing the request
     StringList featureIds = readFeatures.getFeatureIds();
-    assertEquals(1, featureIds.size());
+    assertEquals(1, featureIds.getSize());
     assertEquals(featureId, featureIds.get(0));
 
     // And:
@@ -127,7 +127,7 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And: all ids defined in AcitvityLogNs are now part of featureIds
     StringList featureIds = readFeatures.getFeatureIds();
-    assertEquals(2, featureIds.size());
+    assertEquals(2, featureIds.getSize());
     assertTrue(featureIds.containsAll(List.of(firstId, secondId)));
 
     // And: the pQuery left is effectively dead
@@ -159,20 +159,19 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And: feature ids are populated from ActivityLogNs
     StringList finalFeatureIds = readFeatures.getFeatureIds();
-    assertEquals(1, finalFeatureIds.size());
+    assertEquals(1, finalFeatureIds.getSize());
     assertEquals(activityLogId, finalFeatureIds.get(0));
 
     // And: guuids are populared from original feature ids
     GuidList finalGuids = readFeatures.getGuids();
-    assertEquals(1, finalGuids.size());
+    assertEquals(1, finalGuids.getSize());
     assertEquals(guid, finalGuids.get(0));
   }
 
   private void verifyAllHistoricalVersionsInCollection(ReadFeatures readFeatures) {
     assertTrue(readFeatures.getQueryHistory());
-    StringList collectionIds = readFeatures.getCollectionId();
-    assertEquals(1, collectionIds.size());
-    assertEquals(TEST_SPACE_ID, collectionIds.get(0));
+    String collectionId = readFeatures.getCollectionId();
+    assertEquals(TEST_SPACE_ID, collectionId);
     assertEquals(Integer.MAX_VALUE, readFeatures.getVersions());
   }
 }

@@ -7,7 +7,6 @@ import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFea
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -29,10 +28,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import naksha.base.AnyList;
-import naksha.base.Int64;
-import naksha.base.JvmInt64;
-import naksha.base.Timestamp;
+
+import naksha.base.*;
 import naksha.model.Action;
 import naksha.model.Guid;
 import naksha.model.IReadSession;
@@ -44,6 +41,7 @@ import naksha.model.Version;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
+import naksha.model.objects.XyzMembers;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadCollections;
 import naksha.model.request.ReadFeatures;
@@ -55,7 +53,6 @@ import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IMemberQuery;
-import naksha.model.request.query.MetaColumn;
 import naksha.model.request.query.MemberQuery;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -463,7 +460,7 @@ class ActivityLogHandlerTest {
 
   private boolean isHistoryAwareReadFeatures(ReadRequest readRequest) {
     if (readRequest instanceof ReadFeatures rf) {
-      return rf.getQueryHistory() && rf.getCollectionId().size() == 1;
+      return rf.getQueryHistory();
     }
     return false;
   }
@@ -471,7 +468,7 @@ class ActivityLogHandlerTest {
   private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
     IMemberQuery metaQuery = readFeatures.getQuery().getMembers();
     if (!(metaQuery instanceof MemberQuery mq)) return false;
-    boolean basicCheck = mq.getMember().equals(MetaColumn.nextVersion())
+    boolean basicCheck = ((Proxy)XyzMembers.XyzNextVersion).equals(mq.getMember())
                          && mq.getOp().equals(AnyOp.IS_ANY_OF);
     if (!basicCheck) return false;
     if (expectedTns.length == 0) return mq.getValue() != null;
@@ -483,7 +480,7 @@ class ActivityLogHandlerTest {
       versions = Arrays.asList(arr);
     } else if (value instanceof AnyList list) {
       versions = new java.util.ArrayList<>();
-      for (int i = 0; i < list.size(); i++) {
+      for (int i = 0; i < list.getSize(); i++) {
         Object item = list.get(i);
         if (item instanceof Int64 v) versions.add(v);
         else return false;
@@ -493,7 +490,7 @@ class ActivityLogHandlerTest {
     }
     if (versions.size() != expectedTns.length) return false;
     return Arrays.stream(expectedTns)
-        .map(tn -> tn.version.value)
+        .map(tn -> tn.version)
         .allMatch(expected -> versions.stream().anyMatch(expected::equals));
   }
 
