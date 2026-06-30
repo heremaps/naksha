@@ -79,7 +79,10 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 return
             }
         }
-        val at: String = op.at ?: throw illegalArg("Missing member name for operation $opName")
+        val rawAt: String = op.at ?: throw illegalArg("Missing member name for operation $opName")
+        // The action is virtual: resolve it to the version bit-mask instead of a physical column.
+        val isAction = rawAt == StandardMembers.Action.name
+        val at: String = if (isAction) "(${PgColumn.VERSION.name} & 3)::int4" else rawAt
         when (op) {
            is IsNull -> {
                 if (negate)
@@ -104,10 +107,11 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (value == null) {
                     if (negate) where.append(at).append(" IS NOT NULL ") else where.append(at).append(" IS NULL ")
                 } else {
+                    val placeholder = if (isAction) placeholderForArg(value, PgType.INT) else placeholderForArg(value)
                     if (negate)
-                        where.append(at).append("!=").append(placeholderForArg(value)).append(' ')
+                        where.append(at).append("!=").append(placeholder).append(' ')
                     else
-                        where.append(at).append('=').append(placeholderForArg(value)).append(' ')
+                        where.append(at).append('=').append(placeholder).append(' ')
                 }
             }
             is Lt -> {
@@ -140,7 +144,8 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             }
             is IsAnyOf -> {
                 if (negate) where.append("NOT ")
-                where.append(at).append("= ANY(").append(placeholderForArg(op.items)).append(") ")
+                val placeholder = if (isAction) placeholderForArg(op.items, PgType.INT_ARRAY) else placeholderForArg(op.items)
+                where.append(at).append("= ANY(").append(placeholder).append(") ")
             }
             is TagMapHasKey -> {
                 if (negate) where.append("NOT ")

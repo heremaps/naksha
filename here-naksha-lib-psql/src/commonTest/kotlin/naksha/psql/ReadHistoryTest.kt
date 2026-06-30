@@ -82,7 +82,7 @@ class ReadHistoryTest : PgTestBase() {
         Naksha.cache.clear()
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId.add(collection.id)
+            collectionId = collection.id
             featureIds.add(featureId)
             queryHistory = true
             queryDeleted = true
@@ -122,7 +122,7 @@ class ReadHistoryTest : PgTestBase() {
 
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId.add(collection.id)
+            collectionId = collection.id
             featureIds.add(featureId)
             queryHistory = true
             queryDeleted = true
@@ -144,10 +144,10 @@ class ReadHistoryTest : PgTestBase() {
 
         executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId.add(collection.id)
+            collectionId = collection.id
             featureIds.add(featureId)
             queryHistory = true
-            version = updatedFeature2.guid!!.tupleNumber.version
+            version = updatedFeature2.properties.xyz.guid!!.tupleNumber.version
             versions = 2
         }).apply {
             // We expect to have 4 versions, but only want the middle 2 back
@@ -163,7 +163,7 @@ class ReadHistoryTest : PgTestBase() {
             assertEquals(featureId, update2.id)
             assertEquals(Action.UPDATE, update2.properties.xyz.action)
 
-            assertEquals(update2.guid, update1.properties.xyz.nguid)
+            assertEquals(update2.properties.xyz.guid, update1.properties.xyz.nguid)
         }
     }
 }

@@ -56,7 +56,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
         this.name = INTERNAL_MEMBER.verify(name)
         this.dataType = dataType
-        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 
@@ -138,7 +138,7 @@ open class Member() : AnyObject(), Comparator<Member> {
 
     /** Fluent setter for [path]; returns this for chaining. */
     fun withPath(value: JsonPath?): Member {
-        path = value ?: JsonPath(listOf("properties", name))
+        path = value ?: JsonPath("properties", name)
         return this
     }
 
@@ -513,7 +513,7 @@ open class Member() : AnyObject(), Comparator<Member> {
         private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
         private val INDEX = NullableProperty<Member, Int>(Int::class)
-        private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath(listOf("properties", self.name)) }
+        private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath("properties", self.name) }
         private val MANDATORY = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
     }
 

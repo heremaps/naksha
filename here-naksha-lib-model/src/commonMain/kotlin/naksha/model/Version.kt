@@ -54,7 +54,8 @@ import kotlin.jvm.JvmStatic
 open class Version(@JvmField val number: Int64) : Comparable<Version> {
     // TODO: When we move nack to Java, we can extend Number, so that we're basically like a Long.
     init {
-        if ((number and HEAD.number) != number) {
+        // 2^53-1 mask inlined, not HEAD.number: HEAD is still null while it is being constructed here.
+        if ((number and Int64(9_007_199_254_740_991L)) != number) {
             throw NakshaException(ILLEGAL_ARGUMENT, "$number is not a valid version")
         }
     }

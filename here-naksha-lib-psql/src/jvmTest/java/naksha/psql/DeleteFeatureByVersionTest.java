@@ -176,6 +176,6 @@ class DeleteFeatureByVersionTest extends PgTestBase {
   }
 
   private Version versionOf(NakshaFeature nakshaFeature) {
-    return nakshaFeature.getTupleNumber().version;
+    return new Version(nakshaFeature.getProperties().getXyz().getGuid().tupleNumber.version);
   }
 }

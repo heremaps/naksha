@@ -22,14 +22,13 @@ import naksha.model.IReadSession;
 import java.util.List;
 
 import naksha.model.IStorage;
+import naksha.model.MemberProcessorMap;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static naksha.model.LibModelKt.FETCH_ALL;
 
 public class MockReadSession implements IReadSession {
 
@@ -103,7 +102,7 @@ public class MockReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
     return null;
   }
 
@@ -127,13 +126,14 @@ public class MockReadSession implements IReadSession {
     return null;
   }
 
+  @NotNull
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
-
+  public MemberProcessorMap getProcessors() {
+    return new MemberProcessorMap();
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
+
   }
 }

@@ -20,7 +20,7 @@ class SpatialMember() : TypedMember<SpatialMember>() {
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = SPATIAL
-        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 

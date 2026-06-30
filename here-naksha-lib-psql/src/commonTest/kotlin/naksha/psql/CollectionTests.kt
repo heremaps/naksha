@@ -26,10 +26,11 @@ import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.objects.Index
-import naksha.model.objects.IndexType
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
+import naksha.model.objects.StandardIndices
+import naksha.model.objects.StandardMembers
 import naksha.model.objects.XyzIndices
 import naksha.model.objects.XyzMembers
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
@@ -468,24 +469,20 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
                 arrayOf(map.id, collection.id)
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
+            val expectedColumns = expectedHeadColumnNames(collection)
             assertEquals(
-                PgColumn.headColumns.size, columns.size,
-                "Expected all ${PgColumn.headColumns.size} head columns, got: $columns"
+                expectedColumns.size, columns.size,
+                "Expected all ${expectedColumns.size} head columns, got: $columns"
             )
-            assertTrue(PgColumn.headColumns.all { it.name in columns })
+            assertTrue(expectedColumns.all { it in columns })
 
-            // Indices: no default optional indices must be present.
+            // Indices: no optional/default indices must be present (the collection declares none).
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
                 arrayOf(map.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
-            val defaultIndices = PgIndex.DEFAULT_INDICES.filter { !it.internal }
-            for (pgIdx in defaultIndices) {
-                val expectedId = pgIdx.id(collection.id)
-                assertFalse(expectedId in indexNames,
-                    "Default index '${pgIdx.name}' (id='$expectedId') should NOT be present, found: $indexNames")
-            }
+            assertNoOptionalIndices(indexNames, collection.id)
         }
     }
 
@@ -498,7 +495,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     fun membersNonEmpty_shouldCreateMandatoryPlusCustomColumnsAndCustomIndicesOnly() {
         val collection = NakshaCollection("members_custom_test", map.id).apply {
             addMember(Member("score", MemberType.INT64))
-            addIndex(Index("idx_score", IndexType.BTREE, "score"))
+            addIndex(Index("idx_score", "score"))
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -509,25 +506,20 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
                 arrayOf(map.id, collection.id)
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
-            val expectedCount = PgColumn.headColumns.size + 1 // +1 for score
-            assertEquals(expectedCount, columns.size,
-                "Expected ${PgColumn.headColumns.size} head columns + 1 custom column, got: $columns")
-            assertTrue(PgColumn.headColumns.all { it.name in columns })
+            val expectedColumns = expectedHeadColumnNames(collection) // mandatory head columns + score
+            assertEquals(expectedColumns.size, columns.size,
+                "Expected ${expectedColumns.size} columns (head + 1 custom), got: $columns")
+            assertTrue(expectedColumns.all { it in columns })
             val customColName = PgMemberHelper.pgColumnName("score")
             assertTrue(customColName in columns, "Custom column '$customColName' not found in: $columns")
 
-            // Indices: no default optional indices; only the declared custom index must be present.
+            // Indices: only the declared custom index must be present (no optional/default indices).
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
                 arrayOf(map.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
-            val defaultIndices = PgIndex.DEFAULT_INDICES.filter { !it.internal }
-            for (pgIdx in defaultIndices) {
-                val expectedId = pgIdx.id(collection.id)
-                assertFalse(expectedId in indexNames,
-                    "Default index '${pgIdx.name}' (id='$expectedId') should NOT be present, found: $indexNames")
-            }
+            assertNoOptionalIndices(indexNames, collection.id)
             // Custom index must be present.
             val customIndexId = "${collection.id}\$ci_idx_score"
             assertTrue(customIndexId in indexNames,
@@ -543,7 +535,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     fun membersSet_shouldCreateJsonbColumnAndGinIndex() {
         val collection = NakshaCollection("members_set_test", map.id).apply {
             addMember(Member("labels", MemberType.TAG_LIST))
-            addIndex(Index("idx_labels", IndexType.TAG_LIST, "labels"))
+            addIndex(Index("idx_labels", "labels"))
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -576,20 +568,12 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     fun membersSet_indexOnNonTagListMemberShouldFail() {
         val collection = NakshaCollection("members_set_invalid_test", map.id).apply {
             addMember(Member("score", MemberType.INT64))
-            addIndex(Index("idx_tag_list_score", IndexType.TAG_LIST, "score"))
+            addIndex(Index("idx_tag_list_score", "score"))
         }
         executeWriteErrorResponse(WriteRequest().add(Write().createCollection(collection)))
     }
 
-    /**
-     * Verifies that when a collection with custom members of every type is created, the physical
-     * column order in both the HEAD table and the HISTORY table follows the standard pattern:
-     *
-     * HEAD:    [standard head columns], <custom members sorted by type>
-     * HISTORY: [all standard columns including next_version], <custom members sorted by type>
-     *
-     * Custom members are sorted: INT64, FLOAT64, INT32, FLOAT32, INT16, INT8, BOOLEAN, STRING, BYTE_ARRAY, FLAT_MAP/TAGS.
-     */
+    /** Verifies the physical column order matches PgCollection.generateColumns (HEAD and HISTORY identical). */
     @Test
     fun membersCustom_shouldOrderColumnsForMinimalPadding() {
         val collection = NakshaCollection("members_order_test", map.id).apply {
@@ -608,26 +592,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
-        // Expected custom column order after sorting (type bucket, then name):
-        // INT64: b_i64 | FLOAT64: c_f64 | INT32: a_i32 | FLOAT32: h_f32 | INT16: g_i16 | INT8: f_i8 | BOOLEAN: e_bool | STRING: z_str | BYTE_ARRAY: d_bytes | FLAT_MAP: i_json
-        // Custom columns are slotted into their type bucket after the last standard column of the same group.
-        // Buckets with no matching standard column are flushed immediately after the preceding bucket.
-        // Bucket mapping: INT64=0, FLOAT64=1, INT32=2, FLOAT32=3, INT16=4, INT8=5, BOOLEAN=6, STRING=7, BYTE_ARRAY=8, TAGS=9, SET=11
-        val customByBucket = mapOf(
-            0 to listOf("b_i64"),        // INT64 → after gbn
-            1 to listOf("c_f64"),        // FLOAT64 → after cv3
-            2 to listOf("a_i32"),        // INT32 → after cc
-            3 to listOf("h_f32"),        // FLOAT32 → no std col, flush after INT32 group
-            4 to listOf("g_i16"),        // INT16 → no std col
-            5 to listOf("f_i8"),         // INT8 → no std col
-            6 to listOf("e_bool"),       // BOOLEAN → no std col, all four flush after cc
-            7 to listOf("z_str"),        // STRING → after cs3
-            8 to listOf("d_bytes"),      // BYTE_ARRAY → after attachment
-            9 to listOf("i_json"),       // TAGS → after BYTE_ARRAY group
-            11 to listOf("j_set"),       // SET → after the standard tags column (jsonb bucket)
-        )
-
-        fun assertColumnOrder(tableName: String, expectNextVersion: Boolean) {
+        val expected = expectedOrderedColumnNames(collection)
+        for (tableName in listOf(collection.id, "${collection.id}\$hst")) {
             val columns = mutableListOf<String>()
             storage.adminConnection().use { conn ->
                 conn.execute(
@@ -636,51 +602,10 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             }
             assertTrue(columns.isNotEmpty(), "No columns found for table '$tableName'")
-
-            // Build expected full order: standard columns interleaved with custom members in their type bucket.
-            // PgType → bucket mapping (matches pgTypeSortOrder in PgTable).
-            val pgTypeBucket = mapOf(
-                PgType.INT64 to 0, PgType.DOUBLE to 1, PgType.INT to 2,
-                PgType.FLOAT to 3, PgType.SHORT to 4, PgType.BOOLEAN to 6,
-                PgType.STRING to 7, PgType.BYTE_ARRAY to 8,
-            )
-            val baseStdCols = if (expectNextVersion) PgColumn.allColumns else PgColumn.headColumns
-            // Determine last standard column index per bucket.
-            val lastIdxForBucket = mutableMapOf<Int, Int>()
-            for ((idx, col) in baseStdCols.withIndex()) {
-                lastIdxForBucket[pgTypeBucket[col.type] ?: 11] = idx
-            }
-            val standardBuckets = lastIdxForBucket.keys.sorted()
-            val remaining = customByBucket.toMutableMap()
-            val expected = mutableListOf<String>()
-            for ((idx, col) in baseStdCols.withIndex()) {
-                expected.add(col.name)
-                val bucket = pgTypeBucket[col.type] ?: 11
-                if (lastIdxForBucket[bucket] == idx) {
-                    // Flush this bucket.
-                    remaining.remove(bucket)?.let { expected.addAll(it) }
-                    // Flush intermediate gap buckets before next standard bucket.
-                    val nextStd = standardBuckets.firstOrNull { it > bucket }
-                    for (b in remaining.keys.sorted()) {
-                        if (nextStd != null && b >= nextStd) break
-                        remaining.remove(b)?.let { expected.addAll(it) }
-                    }
-                }
-            }
-            // Flush any remaining (beyond last standard bucket, e.g. TAGS).
-            for (b in remaining.keys.sorted()) remaining[b]?.let { expected.addAll(it) }
-
-            // Filter actual to only the columns we care about (skip any extras not in expected).
-            val expectedSet = expected.toSet()
-            val actual = columns.filter { it in expectedSet }
+            val actual = columns.filter { it in expected.toSet() }
             assertEquals(expected, actual,
                 "Column order mismatch in '$tableName'.\nExpected: $expected\nActual  : $actual\nFull list: $columns")
         }
-
-        val headTable    = collection.id
-        val historyTable = "${collection.id}\$hst"
-        assertColumnOrder(headTable,    expectNextVersion = false)
-        assertColumnOrder(historyTable, expectNextVersion = true)
     }
 
     /**
@@ -694,8 +619,33 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             // Declare one real custom member ...
             addMember(Member("score", MemberType.INT64))
             // ... but index a name that does not exist as a member.
-            addIndex(Index("idx_ghost", IndexType.BTREE, "ghost_column"))
+            addIndex(Index("idx_ghost", "ghost_column"))
         }
         executeWriteErrorResponse(WriteRequest().add(Write().createCollection(collection)))
+    }
+
+    /** Asserts no optional/default indices (XYZ + pn/pt/gv) were auto-created; only declared ones are materialized. */
+    private fun assertNoOptionalIndices(indexNames: List<String>, collectionId: String) {
+        for (idx in XyzIndices.ALL + StandardIndices.SPECIAL) {
+            val forms = listOf(idx.name, "$collectionId\$i_${idx.name}", "$collectionId\$ci_${idx.name}")
+            assertTrue(forms.none { it in indexNames }, "Unexpected optional index '${idx.name}', found: $indexNames")
+        }
+    }
+
+    private fun expectedHeadColumnNames(collection: NakshaCollection): Set<String> =
+        expectedOrderedColumnNames(collection).toSet()
+
+    /** Physical columns in DDL order, mirroring PgCollection.generateColumns: _fn/_version/_nv then sorted members. */
+    private fun expectedOrderedColumnNames(collection: NakshaCollection): List<String> {
+        val members = collection.useMembers()
+        if (!members.isSortedByIndex()) members.sortByDataTypeAndAssignIndex()
+        val names = mutableListOf(PgColumn.FN.name, PgColumn.VERSION.name, PgColumn.NEXT_VERSION.name)
+        for (member in members) {
+            if (member == null) continue
+            val name = member.name
+            if (name == StandardMembers.Tn.name || name == StandardMembers.NextVersion.name) continue
+            names.add(PgMemberHelper.pgColumnName(name))
+        }
+        return names
     }
 }

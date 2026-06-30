@@ -90,7 +90,7 @@ class PartitioningTest : PgTestBase() {
         // also - should be able to read
         val readRequest = ReadFeatures()
         readRequest.catalogId = partitionedCollection.catalogId
-        readRequest.collectionId.add(partitionedCollection.id)
+        readRequest.collectionId = partitionedCollection.id
         readRequest.featureIds.add("f1")
         val readResponse = executeRead(readRequest)
         assertEquals(1, readResponse.features.size)

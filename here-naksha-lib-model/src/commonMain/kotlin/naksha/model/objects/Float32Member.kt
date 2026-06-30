@@ -19,7 +19,7 @@ class Float32Member() : TypedMember<Float32Member>() {
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = FLOAT32
-        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 

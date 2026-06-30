@@ -19,7 +19,7 @@ class Int32Member() : TypedMember<Int32Member>() {
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = INT32
-        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 

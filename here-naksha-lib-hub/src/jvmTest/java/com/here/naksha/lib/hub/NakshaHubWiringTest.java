@@ -184,14 +184,14 @@ class NakshaHubWiringTest extends AbstractTest {
     final IStorage spyStorageImpl = spy(storageImpl);
     when(adminStorageReader.execute(argThat(readRequest -> {
       if (readRequest instanceof ReadFeatures rr) {
-        return Objects.equals(rr.getCollectionId().get(0), SPACES);
+        return Objects.equals(rr.getCollectionId(), SPACES);
       }
       return false;
     })))
         .thenReturn(mockResultWithFeature(space));
     when(adminStorageReader.execute(argThat(readRequest -> {
       if (readRequest instanceof ReadFeatures rr) {
-        return Objects.equals(rr.getCollectionId().get(0), EVENT_HANDLERS);
+        return Objects.equals(rr.getCollectionId(), EVENT_HANDLERS);
       }
       return false;
     })))

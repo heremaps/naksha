@@ -55,7 +55,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import naksha.base.MapProxy;
-import naksha.base.StringList;
 import naksha.model.Action;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
@@ -233,8 +232,8 @@ public class ViewTest {
     // when not only by id
     clearInvocations(readSession);
     ReadFeatures request2 = new ReadFeatures();
-    POr propQuery = new POr(new PQuery(new Property(Property.ID), StringOp.EQUALS, "1"),
-        new PQuery(new Property(Property.APP_ID), StringOp.EQUALS, "app"));
+    POr propQuery = new POr(new PQuery(new Property("id"), StringOp.EQUALS, "1"),
+        new PQuery(new Property("app_id"), StringOp.EQUALS, "app"));
     RequestQuery requestQuery = new RequestQuery();
     requestQuery.setProperties(propQuery);
     request2.setQuery(requestQuery);
@@ -352,7 +351,7 @@ public class ViewTest {
     // And
     ReadFeatures readFeatures = new ReadFeatures();
     readFeatures.setCatalogId(TEST_MAP_ID);
-    readFeatures.setCollectionId(new StringList(firstLayer.getCollectionId(), secondLayer.getCollectionId(), thirdLayer.getCollectionId()));
+    readFeatures.setCollectionId(firstLayer.getCollectionId());
 
     // When
     new View(viewLayerCollection).newReadSession(sessionOptions).execute(readFeatures);

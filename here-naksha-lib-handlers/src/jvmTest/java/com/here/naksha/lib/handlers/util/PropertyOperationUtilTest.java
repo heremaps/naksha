@@ -1,7 +1,7 @@
 package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.lambdas.F1;
-import naksha.base.StringList;
+import naksha.model.objects.JsonPath;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.query.*;
 import org.junit.jupiter.api.Test;
@@ -239,7 +239,7 @@ class PropertyOperationUtilTest {
 
     private F1<Boolean, PQuery> pQueryMatchesPath(String... expectedPath) {
         return pQuery -> {
-            StringList queryPath = pQuery.getProperty().getPath();
+            JsonPath queryPath = pQuery.getProperty().getPath();
             if (expectedPath.length != queryPath.size()) {
                 return false;
             }

@@ -2,7 +2,6 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.model.objects.Index
-import naksha.model.objects.IndexType
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
@@ -40,8 +39,8 @@ class ChainCollectionTest : PgTestBase(
         addMember(Member("left_fn",  MemberType.INT64))
         addMember(Member("right_fn", MemberType.INT64))
         // BTREE indices on each custom column for efficient neighbour lookups.
-        addIndex(Index("idx_left_fn",  IndexType.BTREE, "left_fn"))
-        addIndex(Index("idx_right_fn", IndexType.BTREE, "right_fn"))
+        addIndex(Index("idx_left_fn",  "left_fn"))
+        addIndex(Index("idx_right_fn", "right_fn"))
     }
 ) {
     // Numeric feature-numbers for the three chain nodes.

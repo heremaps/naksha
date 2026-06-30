@@ -20,7 +20,7 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = TUPLE_NUMBER
-        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 

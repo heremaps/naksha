@@ -19,7 +19,7 @@ class StringMember() : TypedMember<StringMember>() {
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = STRING
-        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 

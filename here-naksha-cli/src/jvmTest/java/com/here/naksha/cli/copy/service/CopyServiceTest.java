@@ -796,8 +796,8 @@ class CopyServiceTest {
     private void assertReadFeatures(List<ReadFeatures> readFeaturesList) {
         assertEquals(1, readFeaturesList.size());
         ReadFeatures readFeatures = readFeaturesList.getFirst();
-        assertEquals(1, readFeatures.getCollectionId().getSize());
-        assertEquals(srcCopyElement.getCollectionId(), readFeatures.getCollectionId().getFirst());
+        assertNotNull(readFeatures.getCollectionId());
+        assertEquals(srcCopyElement.getCollectionId(), readFeatures.getCollectionId());
         assertEquals(srcCopyElement.getMapId(), readFeatures.getCatalogId());
     }
 

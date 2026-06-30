@@ -44,6 +44,7 @@ import naksha.model.Version;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
+import naksha.model.objects.StandardMembers;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadCollections;
 import naksha.model.request.ReadFeatures;
@@ -55,7 +56,6 @@ import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
 import naksha.model.request.ops.IsAnyOf;
 import naksha.model.request.ops.Op;
-import naksha.model.request.query.MetaColumn;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -462,7 +462,7 @@ class ActivityLogHandlerTest {
 
   private boolean isHistoryAwareReadFeatures(ReadRequest readRequest) {
     if (readRequest instanceof ReadFeatures rf) {
-      return rf.getQueryHistory() && rf.getCollectionId().size() == 1;
+      return rf.getQueryHistory();
     }
     return false;
   }
@@ -470,19 +470,19 @@ class ActivityLogHandlerTest {
   private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
     Op metaQuery = readFeatures.getQueryMembers();
     if (!(metaQuery instanceof IsAnyOf op)) return false;
-    if (!MetaColumn.nextVersion().getName().equals(op.getAt())) return false;
+    if (!StandardMembers.NextVersion.getName().equals(op.getAt())) return false;
     // next_version is an int8 column — the IsAnyOf items hold the Int64 version values.
     AnyList items = op.getItems();
-    if (expectedTns.length == 0) return items.size() > 0;
+    if (expectedTns.length == 0) return items.getSize() > 0;
     List<Int64> versions = new java.util.ArrayList<>();
-    for (int i = 0; i < items.size(); i++) {
+    for (int i = 0; i < items.getSize(); i++) {
       Object item = items.get(i);
       if (item instanceof Int64 v) versions.add(v);
       else return false;
     }
     if (versions.size() != expectedTns.length) return false;
     return Arrays.stream(expectedTns)
-        .map(tn -> tn.version.value)
+        .map(tn -> tn.version)
         .allMatch(expected -> versions.stream().anyMatch(expected::equals));
   }
 

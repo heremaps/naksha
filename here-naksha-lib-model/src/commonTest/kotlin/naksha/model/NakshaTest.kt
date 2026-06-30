@@ -5,6 +5,7 @@ import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
 import naksha.model.Naksha.NakshaCompanion.INT64_SIGN_BIT
+import naksha.model.NakshaIdType
 import kotlin.test.*
 
 class NakshaTest {
@@ -13,20 +14,20 @@ class NakshaTest {
     fun shouldLimitCollectionIdLength() {
         // expect
         var collectionId = collectionIdOf(1)
-        assertTrue(collectionId) { Naksha.isValidId(collectionId) }
+        assertTrue(collectionId) { NakshaIdType.COLLECTION.isValidId(collectionId) }
         collectionId = collectionIdOf(42)
-        assertTrue(collectionId) { Naksha.isValidId(collectionId) }
+        assertTrue(collectionId) { NakshaIdType.COLLECTION.isValidId(collectionId) }
 
         collectionId = collectionIdOf(45)
-        assertFalse(collectionId) { Naksha.isValidId(collectionId) }
-        assertFalse(collectionId) { Naksha.isValidId("") }
+        assertFalse(collectionId) { NakshaIdType.COLLECTION.isValidId(collectionId) }
+        assertFalse(collectionId) { NakshaIdType.COLLECTION.isValidId("") }
     }
 
     @Test
     fun shouldOnlyAllowCharacterAsFirstChar() {
         // expect
-        assertTrue{ Naksha.isValidId("c1232_name") }
-        assertFalse{ Naksha.isValidId("11232_name") }
+        assertTrue{ NakshaIdType.COLLECTION.isValidId("c1232_name") }
+        assertFalse{ NakshaIdType.COLLECTION.isValidId("11232_name") }
     }
 
     @Test
@@ -55,17 +56,17 @@ class NakshaTest {
     @Test
     fun shouldNotAllowCapitalLettersOrUnsupportedCharacters() {
         // expect
-        assertFalse{ Naksha.isValidId("C1232_name") }
-        assertFalse{ Naksha.isValidId("name\$a") }
-        assertFalse{ Naksha.isValidId("name&a") }
-        assertFalse{ Naksha.isValidId("name*a") }
-        assertFalse{ Naksha.isValidId("name#a") }
-        assertFalse{ Naksha.isValidId("name@a") }
-        assertFalse{ Naksha.isValidId("name!a") }
+        assertFalse{ NakshaIdType.COLLECTION.isValidId("C1232_name") }
+        assertFalse{ NakshaIdType.COLLECTION.isValidId("name\$a") }
+        assertFalse{ NakshaIdType.COLLECTION.isValidId("name&a") }
+        assertFalse{ NakshaIdType.COLLECTION.isValidId("name*a") }
+        assertFalse{ NakshaIdType.COLLECTION.isValidId("name#a") }
+        assertFalse{ NakshaIdType.COLLECTION.isValidId("name@a") }
+        assertFalse{ NakshaIdType.COLLECTION.isValidId("name!a") }
 
-        assertTrue{ Naksha.isValidId("name_a") }
-        assertTrue{ Naksha.isValidId("name-a") }
-        assertTrue{ Naksha.isValidId("name:a") }
+        assertTrue{ NakshaIdType.COLLECTION.isValidId("name_a") }
+        assertTrue{ NakshaIdType.COLLECTION.isValidId("name-a") }
+        assertTrue{ NakshaIdType.COLLECTION.isValidId("name:a") }
     }
 
     private fun collectionIdOf(length: Int): String = "c" + randomString(length - 1).lowercase()

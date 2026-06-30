@@ -21,7 +21,7 @@ class ReadFeaturesByGuuidTest :
 
         // And
         val createResp = insertFeatures(listOf(inputFeature1, inputFeature2, inputFeature3))
-        val guuidById = createResp.features.filterNotNull().associate { it.id to it.guid }
+        val guuidById = createResp.features.filterNotNull().associate { it.id to it.properties.xyz.guid }
 
         // When
         val readByGuid = ReadFeatures().apply {

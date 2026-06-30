@@ -19,7 +19,7 @@ class Float64Member() : TypedMember<Float64Member>() {
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = FLOAT64
-        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 

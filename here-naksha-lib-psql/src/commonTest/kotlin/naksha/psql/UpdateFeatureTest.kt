@@ -108,26 +108,24 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
 
         // Then
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)
-        assertEquals(createdTuple.getLong(naksha.model.objects.StandardMembers.NextVersion), updatedTuple.tupleNumber.version.value)
+        assertEquals(createdTuple.getLong(naksha.model.objects.StandardMembers.NextVersion), updatedTuple.tupleNumber.version)
         assertNull(updatedTuple.getLong(naksha.model.objects.StandardMembers.NextVersion, Int64(-1L)).let { if (it == Int64(-1L)) null else it })
-        // Both tuples share the collection's feature encoding (action lives in version bits).
-        assertEquals(createdTuple.dataEncoding, updatedTuple.dataEncoding)
-        assertEquals(1, createdTuple.getInt(naksha.model.objects.StandardMembers.ChangeCountXyz))
-        assertEquals(2, updatedTuple.getInt(naksha.model.objects.StandardMembers.ChangeCountXyz))
+        assertEquals(1, createdTuple.getInt(naksha.model.objects.XyzMembers.XyzChangeCount))
+        assertEquals(2, updatedTuple.getInt(naksha.model.objects.XyzMembers.XyzChangeCount))
         assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry))
-        assertEquals(createdTuple.getString(naksha.model.objects.StandardMembers.XyzTags), updatedTuple.getString(naksha.model.objects.StandardMembers.XyzTags))
+        assertEquals(createdTuple.getString(naksha.model.objects.XyzMembers.XyzTags), updatedTuple.getString(naksha.model.objects.XyzMembers.XyzTags))
         assertNotEquals(createdTuple.featureBytes, updatedTuple.featureBytes)
-        assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.ReferencePoint))
-        assertNull(createdTuple.decodeFeature()?.properties["new_attr"])
-        assertEquals("some_value", updatedTuple.decodeFeature()?.properties["new_attr"])
-        assertEquals(createdTuple.getLong(naksha.model.objects.StandardMembers.CreatedAtXyz)?.let { if (it == Int64(0L)) null else it } ?: createdTuple.getLong(naksha.model.objects.StandardMembers.XyzUpdatedAt), updatedTuple.getLong(naksha.model.objects.StandardMembers.CreatedAtXyz)?.let { if (it == Int64(0L)) null else it })
-        assertNotEquals(updatedTuple.getLong(naksha.model.objects.StandardMembers.CreatedAtXyz), updatedTuple.getLong(naksha.model.objects.StandardMembers.XyzUpdatedAt))
-        assertNull(createdTuple.getLong(naksha.model.objects.StandardMembers.CreatedAtXyz)?.let { if (it == Int64(0L)) null else it })
-        assertNotNull(createdTuple.getLong(naksha.model.objects.StandardMembers.XyzUpdatedAt))
-        assertEquals(createdTuple.getInt(naksha.model.objects.StandardMembers.HereTileXyz), updatedTuple.getInt(naksha.model.objects.StandardMembers.HereTileXyz))
+        assertEquals(createdTuple.getByteArray(naksha.model.objects.XyzMembers.XyzReferencePoint), updatedTuple.getByteArray(naksha.model.objects.XyzMembers.XyzReferencePoint))
+        assertNull(createdTuple.decodeFeature(null)?.properties["new_attr"])
+        assertEquals("some_value", updatedTuple.decodeFeature(null)?.properties["new_attr"])
+        assertEquals(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == Int64(0L)) null else it } ?: createdTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == Int64(0L)) null else it })
+        assertNotEquals(updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt))
+        assertNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == Int64(0L)) null else it })
+        assertNotNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt))
+        assertEquals(createdTuple.getInt(naksha.model.objects.XyzMembers.XyzHereTile), updatedTuple.getInt(naksha.model.objects.XyzMembers.XyzHereTile))
         assertEquals(Action.UPDATE, updatedTuple.tupleNumber.action)
         assertEquals(Action.CREATE, createdTuple.tupleNumber.action)
-        assertNotEquals(createdTuple.getLong(naksha.model.objects.StandardMembers.XyzAuthorTimestamp), updatedTuple.getLong(naksha.model.objects.StandardMembers.XyzAuthorTimestamp))
+        assertNotEquals(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzAuthorTimestamp), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzAuthorTimestamp))
     }
 
     @Test
@@ -191,7 +189,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(initialFeature.momType,persistedFeature.momType)
-        assertEquals(featureCreationResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(featureCreationResponse.features[0]!!.properties.xyz.guid?.tupleNumber?.featureNumber, persistedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
     }
 
     @Test
@@ -222,7 +220,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(desiredFeature.momType, persistedFeature.momType)
-        assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(updateResponse.features[0]!!.properties.xyz.guid?.tupleNumber?.featureNumber, persistedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
     }
 
     @Test
@@ -254,7 +252,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(desiredFeature.momType, persistedFeature.momType)
-        assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(updateResponse.features[0]!!.properties.xyz.guid?.tupleNumber?.featureNumber, persistedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
     }
 
     private fun fetchSingleFeature(id: String): NakshaFeature {

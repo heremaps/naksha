@@ -23,7 +23,7 @@ class PgRelationTest {
         assertEquals(0, pgRelation("topology\$p000").distributionPartition())
         assertEquals(256, pgRelation("topology\$del\$p256").distributionPartition())
         assertEquals(7, pgRelation("topology\$hst\$2024\$p007").distributionPartition())
-        assertEquals(2024, pgRelation("topology\$hst\$2024\$p001").year())
-        assertEquals(2024, pgRelation("topology\$hst\$2024").year())
+        assertEquals(2024, pgRelation("topology\$hst\$2024\$p001").rel_name.split('$')[2].toInt())
+        assertEquals(2024, pgRelation("topology\$hst\$2024").rel_name.split('$')[2].toInt())
     }
 }

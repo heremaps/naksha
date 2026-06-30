@@ -7,6 +7,7 @@ import naksha.model.Action
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.model.Version
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -38,7 +39,7 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
         assertEquals(feature.id, persistedTuple.id)
 
         // And: version stores date information
-        val version = persistedTuple.tupleNumber.version
+        val version = Version(persistedTuple.tupleNumber.version)
         assertEquals(now.year, version.year)
         assertEquals(now.monthNumber, version.month)
         assertEquals(now.dayOfMonth, version.day)
@@ -72,8 +73,8 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
             val pgCollection = pgMap.getPgCollectionById(conn, collection.id)
             require(pgCollection != null) { "Missing collection ${collection.id}" }
             assertEquals(storage.number, persistedTuple.tupleNumber.databaseNumber)
-            assertEquals(pgMap.number, persistedTuple.tupleNumber.catalogNumber)
-            assertEquals(pgCollection.number, persistedTuple.tupleNumber.collectionNumber)
+            assertEquals(pgMap.catalogNumber, persistedTuple.tupleNumber.catalogNumber)
+            assertEquals(pgCollection.collectionNumber, persistedTuple.tupleNumber.collectionNumber)
             assertEquals(featureNumber(feature.id), persistedTuple.tupleNumber.featureNumber)
             assertEquals(partitionNumber(featureNumber(feature.id)), persistedTuple.tupleNumber.partitionNumber)
         }
