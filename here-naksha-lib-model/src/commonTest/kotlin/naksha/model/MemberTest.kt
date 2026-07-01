@@ -79,13 +79,6 @@ class MemberTest {
     }
 
     @Test
-    fun indexTypesExist() {
-        assertNotNull(MemberType.SPATIAL)
-        assertNotNull(MemberType.TAG_MAP)
-        assertNotNull(MemberType.TAG_LIST)
-    }
-
-    @Test
     fun memberTypesCoverPrimitivesAndVirtuals() {
         // Primitives.
         assertNotNull(MemberType.BOOLEAN)

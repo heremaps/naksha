@@ -28,6 +28,9 @@ class NakshaTest {
         // expect
         assertTrue{ NakshaIdType.COLLECTION.isValidId("c1232_name") }
         assertFalse{ NakshaIdType.COLLECTION.isValidId("11232_name") }
+
+        assertTrue{ NakshaIdType.CATALOG.isValidId("c1232_name") }
+        assertFalse{ NakshaIdType.CATALOG.isValidId("11232_name") }
     }
 
     @Test
@@ -67,6 +70,18 @@ class NakshaTest {
         assertTrue{ NakshaIdType.COLLECTION.isValidId("name_a") }
         assertTrue{ NakshaIdType.COLLECTION.isValidId("name-a") }
         assertTrue{ NakshaIdType.COLLECTION.isValidId("name:a") }
+
+        assertFalse{ NakshaIdType.CATALOG.isValidId("C1232_name") }
+        assertFalse{ NakshaIdType.CATALOG.isValidId("name\$a") }
+        assertFalse{ NakshaIdType.CATALOG.isValidId("name&a") }
+        assertFalse{ NakshaIdType.CATALOG.isValidId("name*a") }
+        assertFalse{ NakshaIdType.CATALOG.isValidId("name#a") }
+        assertFalse{ NakshaIdType.CATALOG.isValidId("name@a") }
+        assertFalse{ NakshaIdType.CATALOG.isValidId("name!a") }
+
+        assertTrue{ NakshaIdType.CATALOG.isValidId("name_a") }
+        assertTrue{ NakshaIdType.CATALOG.isValidId("name-a") }
+        assertTrue{ NakshaIdType.CATALOG.isValidId("name:a") }
     }
 
     private fun collectionIdOf(length: Int): String = "c" + randomString(length - 1).lowercase()

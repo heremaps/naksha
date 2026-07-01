@@ -5,7 +5,7 @@ import naksha.base.Platform
 import naksha.base.Proxy
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
-import naksha.jbon.JbEncoder
+import naksha.jbon.JbEncoder2
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.FeatureTuple
@@ -458,8 +458,8 @@ class PropertyFilterTest {
     companion object {
         private fun wrapInTuple(featureJson: String): FeatureTuple {
             val feature = Proxy.box(Platform.fromJSON(featureJson), NakshaFeature::class)!!
-            val encoder = JbEncoder()
-            val featureBytes = encoder.buildFeatureFromMap(feature)
+            val encoder = JbEncoder2()
+            val featureBytes = encoder.buildTupleFromMap(feature)
             val storageNumber = Int64(1)
             val mapNumber = 0
             val collectionNumber = 0
