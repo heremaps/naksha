@@ -10,6 +10,8 @@ import naksha.model.illegalArg
 import naksha.model.objects.StandardMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ops.*
+import naksha.psql.PgColumn.PgColumn_C.FN
+import naksha.psql.PgColumn.PgColumn_C.VERSION
 
 /**
  * Helper to convert a [ReadFeatures] request into a sql `WHERE` query.
@@ -38,6 +40,9 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         applyOp(op)
         if (request.featureIds.isNotEmpty()) { // backward compatibility for feature IDs read requests
             whereFeatureId()
+        }
+        if (request.guids.isNotEmpty()) { // backward compatibility for GUIDs read requests
+            whereGuids()
         }
         return PgQueryWhereClause(collection, where.toString(), argValues, argTypes)
     }
@@ -409,22 +414,22 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 
     // --------------------------------------------------------< OLD CODE >-------------------------------------------------------------
 //
-//    private fun whereGuids() {
-//        val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber }
-//        if (tupleNumbers.isNotEmpty()) {
-//            if (where.isNotEmpty()) where.append(" AND ")
-//
-//            val fns = arrayOfNulls<Any>(tupleNumbers.size)
-//            val versions = arrayOfNulls<Any>(tupleNumbers.size)
-//            for (i in tupleNumbers.indices) {
-//                fns[i] = tupleNumbers[i].featureNumber
-//                versions[i] = tupleNumbers[i].version
-//            }
-//            val featureNumbersArg = placeholderForArg(fns, PgType.INT64_ARRAY)
-//            val versionsArg = placeholderForArg(versions, PgType.INT64_ARRAY)
-//            where.append("($FN, $VERSION) IN (SELECT * FROM unnest($featureNumbersArg::int8[], $versionsArg::int8[]))")
-//        }
-//    }
+    private fun whereGuids() {
+        val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber }
+        if (tupleNumbers.isNotEmpty()) {
+            if (where.isNotEmpty()) where.append(" AND ")
+
+            val fns = arrayOfNulls<Any>(tupleNumbers.size)
+            val versions = arrayOfNulls<Any>(tupleNumbers.size)
+            for (i in tupleNumbers.indices) {
+                fns[i] = tupleNumbers[i].featureNumber
+                versions[i] = tupleNumbers[i].version
+            }
+            val featureNumbersArg = placeholderForArg(fns, PgType.INT64_ARRAY)
+            val versionsArg = placeholderForArg(versions, PgType.INT64_ARRAY)
+            where.append("($FN, $VERSION) IN (SELECT * FROM unnest($featureNumbersArg::int8[], $versionsArg::int8[]))")
+        }
+    }
 //
 //    private fun whereVersion() {
 //        val version = request.version

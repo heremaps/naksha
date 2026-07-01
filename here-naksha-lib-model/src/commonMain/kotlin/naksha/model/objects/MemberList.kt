@@ -129,7 +129,7 @@ open class MemberList() : ListProxy<Member>(Member::class) {
         for (i in 0 until this.size) {
             val member = this[i] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $i is null")
             val memberName = member.name
-            if (INTERNAL_MEMBER.isValidId(memberName)) {
+            if (!INTERNAL_MEMBER.isValidId(memberName)) {
                 throw NakshaException(ILLEGAL_STATE, "Member at index $i has invalid name: $memberName")
             }
             for (j in (i + 1) until this.size) {
