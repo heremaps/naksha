@@ -53,7 +53,7 @@ abstract class PgTestBase(
         get() = assertNotNull(_collection, "Illegal state, no collection used by the test")
 
     init {
-        Naksha.verifyId(defaultName)
+        NakshaIdType.COLLECTION.verify(defaultName)
         useMap(mapId)
         if (collection != null) {
             useCollection(collection)
@@ -79,7 +79,7 @@ abstract class PgTestBase(
         }
 
     @Suppress("DEPRECATION")
-    private fun ensureMapId(mapId: String?): String = Naksha.verifyId(when (mapId) {
+    private fun ensureMapId(mapId: String?): String = NakshaIdType.CATALOG.verify(when (mapId) {
         null -> TEST_MAP_ID
         "" -> defaultName
         else -> mapId
@@ -138,12 +138,12 @@ abstract class PgTestBase(
         if (collection.id == "") {
             collection.id = defaultName
         } else {
-            Naksha.verifyId(collection.id)
+            NakshaIdType.COLLECTION.verify(collection.id)
         }
         if (collection.catalogId == null || collection.catalogId == "") {
             collection.catalogId = map.id
         } else {
-            Naksha.verifyId(collection.catalogId)
+            NakshaIdType.CATALOG.verify(collection.catalogId)
         }
         val mapId = collection.catalogId
         initMap(mapId)

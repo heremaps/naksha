@@ -49,7 +49,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, mapId = "")
     private fun readColumn(collection: NakshaCollection, featureId: String, column: String): Any? {
         storage.adminConnection().use { conn ->
             conn.execute(
-                """SELECT "$column" AS value FROM "${collection.mapId}"."${collection.id}" WHERE id = $1""",
+                """SELECT "$column" AS value FROM "${collection.catalogId}"."${collection.id}" WHERE id = $1""",
                 arrayOf(featureId)
             ).use { cursor ->
                 assertTrue(cursor.next(), "No HEAD row found for feature '$featureId'")
@@ -77,13 +77,13 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, mapId = "")
 
         // When
         executeWrite(WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, first))
-            add(Write().createFeature(collection.mapId, collection.id, second))
+            add(Write().createFeature(collection.catalogId, collection.id, first))
+            add(Write().createFeature(collection.catalogId, collection.id, second))
         })
 
         // Then
-        val labelCol = PgCustomMemberValues.pgColumnName("label")
-        val cityCol = PgCustomMemberValues.pgColumnName("city")
+        val labelCol = PgMemberHelper.pgColumnName("label")
+        val cityCol = PgMemberHelper.pgColumnName("city")
 
         assertEquals("Alice", readColumn(collection, "feature-1", labelCol))
         assertEquals("Berlin", readColumn(collection, "feature-1", cityCol))
@@ -110,12 +110,12 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, mapId = "")
 
         // When
         executeWrite(WriteRequest().apply {
-            add(Write().createFeature(collection.mapId, collection.id, first))
-            add(Write().createFeature(collection.mapId, collection.id, second))
+            add(Write().createFeature(collection.catalogId, collection.id, first))
+            add(Write().createFeature(collection.catalogId, collection.id, second))
         })
 
         // Then
-        val scoreCol = PgCustomMemberValues.pgColumnName("score")
+        val scoreCol = PgMemberHelper.pgColumnName("score")
 
         assertEquals(42L, asLong(readColumn(collection, "typed-1", scoreCol)))
         assertEquals(7L, asLong(readColumn(collection, "typed-2", scoreCol)))

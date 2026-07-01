@@ -3,12 +3,11 @@ package naksha.psql
 import naksha.base.Int64
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StandardMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.model.request.query.AnyOp
-import naksha.model.request.query.MetaColumn
-import naksha.model.request.query.MemberQuery
+import naksha.model.request.ops.IsAnyOf
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -40,18 +39,13 @@ class ReadFeaturesByOtherTns : PgTestBase(
         val updateResp = executeWrite(update)
 
         // And: the shared `next_version` of all updated features (all 5 updates ran in one transaction).
-        val updatedVersion: Int64 = updateResp.features[0]!!.tupleNumber.version.value
+        val updatedVersion: Int64 = updateResp.features[0]!!.properties.xyz.guid!!.tupleNumber.version
 
         // When: querying for features whose `next_version` matches that version
-        val nextVersionQuery = MemberQuery(
-            MetaColumn.nextVersion(),
-            AnyOp.IS_ANY_OF,
-            arrayOf(updatedVersion)
-        )
         val byNextTnResp = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId += collection.id
-            query.members = nextVersionQuery
+            queryMembers = IsAnyOf(StandardMembers.NextVersion, updatedVersion)
             queryHistory = true
         })
 

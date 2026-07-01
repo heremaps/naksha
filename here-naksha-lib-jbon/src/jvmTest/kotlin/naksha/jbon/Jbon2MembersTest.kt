@@ -2,6 +2,7 @@ package naksha.jbon
 
 import naksha.base.AnyObject
 import naksha.base.Binary
+import naksha.base.Int64
 import naksha.base.MapProxy
 import naksha.base.Platform
 import naksha.geo.GeoUtil
@@ -30,6 +31,9 @@ class Jbon2MembersTest {
      /** A minimal read-only [IBook] backed by a [List] of arbitrary values. */
     private class ListDict(private val entries: List<Any?>) : IBook {
         override val id: String? = null
+        override val bookType: BookType = BookType.MEMBER_BOOK
+        override val databaseNumber: Int64? = null
+        override val featureNumber: Int64? = null
         override val length: Int get() = entries.size
         override fun get(index: Int): Any? = entries.getOrNull(index)
         override fun indexOfString(string: String): Int = entries.indexOfFirst { it == string }

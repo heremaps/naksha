@@ -54,7 +54,7 @@ import kotlin.jvm.JvmStatic
 open class Version(@JvmField val number: Int64) : Comparable<Version> {
     // TODO: When we move nack to Java, we can extend Number, so that we're basically like a Long.
     init {
-        if ((number and HEAD.number) != number) {
+        if ((number and Int64(MAX_SAFE_INTEGER)) != number) {
             throw NakshaException(ILLEGAL_ARGUMENT, "$number is not a valid version")
         }
     }
@@ -78,6 +78,12 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
     constructor(value: String) : this(Int64(value.toLong()))
 
     companion object VersionCompanion {
+
+        /**
+         * `2^53 - 1` — the maximum safe integer in an IEEE-754 double (`Number.MAX_SAFE_INTEGER`),
+         * and therefore the largest valid version number.
+         */
+        const val MAX_SAFE_INTEGER: Long = 9_007_199_254_740_991L
 
         /** Maximum year value (15-bit, JS-safe upper bound). */
         private const val YEAR_MAX = 32767
@@ -214,8 +220,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val HEAD = Version(9_007_199_254_740_991L)
-        // = 2^53-1, aka Number.MAX_SAFE_INTEGER
+        val HEAD = Version(MAX_SAFE_INTEGER)
         // 3n + (1073741823n << 2n) + (31n << 32n) + (15n << (32n+5n)) + (4095n << (32n+5n+4n)) = 9007199254740991n
         // bitwise: 0x001f_ffff_ffff_ffff
 

@@ -3,8 +3,9 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Proxy
+import naksha.jbon.BookType
 import naksha.jbon.HeapBook
-import naksha.jbon.JbEncoder
+import naksha.jbon.JbEncoder2
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.FeatureTuple
@@ -457,8 +458,8 @@ class PropertyFilterTest {
     companion object {
         private fun wrapInTuple(featureJson: String): FeatureTuple {
             val feature = Proxy.box(Platform.fromJSON(featureJson), NakshaFeature::class)!!
-            val encoder = JbEncoder()
-            val featureBytes = encoder.buildFeatureFromMap(feature)
+            val encoder = JbEncoder2()
+            val featureBytes = encoder.buildTupleFromMap(feature)
             val storageNumber = Int64(1)
             val mapNumber = 0
             val collectionNumber = 0
@@ -468,20 +469,16 @@ class PropertyFilterTest {
                 mapNumber,
                 collectionNumber,
                 featureNumber(feature.id),
-                version
+                version.number
             )
-            val members = HeapBook()
+            val members = HeapBook(BookType.MEMBER_BOOK)
+            members.put("_tn", tupleNumber)
             members.put("updated_at", Int64(0))
             members.put("id", feature.id)
             members.put("app_id", "")
             members.put("author", null)
             members.put("data_encoding", DataEncoding.JBON.toString())
             val tuple = Tuple(
-                storageNumber = storageNumber,
-                mapNumber = mapNumber,
-                collectionNumber = collectionNumber,
-                featureNumber = featureNumber(feature.id),
-                version = version,
                 membersBook = members,
                 featureBytes = featureBytes
             )

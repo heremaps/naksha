@@ -1,13 +1,13 @@
 package naksha.model
 
 import naksha.model.objects.Index
-import naksha.model.objects.IndexType
 import naksha.model.objects.JsonPath
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
@@ -24,13 +24,13 @@ class MemberTest {
     @Test
     fun effectivePathDefaultsToPropertiesName() {
         val m = Member("age", MemberType.INT32)
-        assertEquals(listOf("properties", "age"), m.effectivePath())
+        assertContentEquals(listOf("properties", "age"), m.path)
     }
 
     @Test
     fun effectivePathUsesExplicitMap() {
         val m = Member("price", MemberType.FLOAT64, JsonPath("properties", "sale", "price"))
-        assertEquals(listOf("properties", "sale", "price"), m.effectivePath())
+        assertContentEquals(listOf("properties", "sale", "price"), m.path)
     }
 
     @Test
@@ -72,18 +72,10 @@ class MemberTest {
     @Test
     fun addIndexRejectsDuplicateName() {
         val c = NakshaCollection("my_coll")
-        c.addIndex(Index("idx1", IndexType.BTREE, "id"))
+        c.addIndex(Index("idx1", "id"))
         assertFailsWith<NakshaException> {
-            c.addIndex(Index("idx1", IndexType.SPATIAL, "geo"))
+            c.addIndex(Index("idx1", "geo"))
         }
-    }
-
-    @Test
-    fun indexTypesExist() {
-        assertNotNull(IndexType.BTREE)
-        assertNotNull(IndexType.SPATIAL)
-        assertNotNull(IndexType.TAG_MAP)
-        assertNotNull(IndexType.TAG_LIST)
     }
 
     @Test
@@ -106,8 +98,8 @@ class MemberTest {
 
     @Test
     fun standardTagsMemberDefaultsToSet() {
-        assertEquals(MemberType.TAG_LIST, naksha.model.objects.StandardMembers.XyzTags.dataType)
-        assertEquals(IndexType.TAG_LIST, naksha.model.objects.XyzIndices.XyzTags.type)
+        assertEquals(MemberType.TAG_LIST, naksha.model.objects.XyzMembers.XyzTags.dataType)
+        assertNotNull(naksha.model.objects.XyzIndices.XyzTags)
     }
 
     @Test

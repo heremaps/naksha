@@ -49,15 +49,14 @@ import naksha.model.TupleNumber;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
+import naksha.model.objects.StandardMembers;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
-import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.MemberQuery;
-import naksha.model.objects.StandardMembers;
+import naksha.model.request.ops.IsAnyOf;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -173,11 +172,10 @@ public class ActivityLogHandler extends AbstractEventHandler {
     for (int i = 0; i < tupleNumbers.size(); i++) {
       versions[i] = tupleNumbers.get(i).version;
     }
-    MemberQuery nextVersionQuery = new MemberQuery(StandardMembers.NextVersion, AnyOp.IS_ANY_OF, versions);
     ReadFeatures requestPredecessors = new ReadFeatures();
     requestPredecessors.setCollectionId(properties.getSpaceId());
     requestPredecessors.setQueryHistory(true);
-    requestPredecessors.getQuery().setMembers(nextVersionQuery);
+    requestPredecessors.setQueryMembers(new IsAnyOf(StandardMembers.NextVersion, versions));
     return requestPredecessors;
   }
 

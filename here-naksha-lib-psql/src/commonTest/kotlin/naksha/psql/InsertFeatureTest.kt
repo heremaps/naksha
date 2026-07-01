@@ -117,7 +117,7 @@ class InsertFeatureTest : PgTestBase() {
         val retrievedFeature = retrievedFeatures.find { it?.id == featureToCreate.id }
         assertNotNull(retrievedFeature, "Missing feature with id: ${featureToCreate.id}")
         assertEquals(Int64(featureNumber), retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
-        assertEquals(Int64(featureNumber), retrievedFeature.featureNumber)
+        assertEquals(Int64(featureNumber), retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
         assertThatFeature(retrievedFeature)
             .isIdenticalTo(
                 other = featureToCreate,
@@ -207,10 +207,10 @@ class InsertFeatureTest : PgTestBase() {
         // And:
         val firstFeature = retrievedFeatures.find { it?.id == firstFeatureToCreate.id }
         assertNotNull(firstFeature)
-        assertEquals(storage.number, firstFeature.storageNumber)
-        assertEquals(map.number, firstFeature.mapNumber)
-        assertEquals(collection.number, firstFeature.collectionNumber)
-        Platform.logger.info("Storage reported guid '${firstFeature.guid}' for first feature")
+        assertEquals(storage.number, firstFeature.properties.xyz.guid?.tupleNumber?.databaseNumber)
+        assertEquals(map.catalogNumber, firstFeature.properties.xyz.guid?.tupleNumber?.catalogNumber)
+        assertEquals(collection.collectionNumber, firstFeature.properties.xyz.guid?.tupleNumber?.collectionNumber)
+        Platform.logger.info("Storage reported guid '${firstFeature.properties.xyz.guid}' for first feature")
         assertEquals(firstFeatureToCreate.id, firstFeature.id)
 
         // And:
@@ -250,7 +250,7 @@ class InsertFeatureTest : PgTestBase() {
         val tupleNumber = assertNotNull(tuples.first()).tupleNumber
         assertNotNull(tupleNumber)
         Platform.logger.info("Expect that the originally returned tuple-number is the same as the one from search")
-        assertEquals(firstFeature.tupleNumber, tupleNumber)
+        assertEquals(firstFeature.properties.xyz.guid?.tupleNumber, tupleNumber)
 
         // This will force the cache to contact the storage, and to load the tuple.
         val features = featuresByIdResponse.features

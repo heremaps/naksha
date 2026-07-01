@@ -19,7 +19,7 @@ class Int8Member() : TypedMember<Int8Member>() {
     constructor(name: String, path: JsonPath? = null) : this() {
         this.name = name
         this.dataType = INT8
-        this.path = path ?: JsonPath(listOf("properties", name))
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 

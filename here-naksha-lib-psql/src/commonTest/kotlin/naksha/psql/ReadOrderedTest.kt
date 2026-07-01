@@ -2,11 +2,11 @@ package naksha.psql
 
 import naksha.model.Action
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
 import naksha.model.request.OrderBy
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
@@ -64,7 +64,7 @@ class ReadOrderedTest : PgTestBase() {
         executeRead(ReadFeatures().apply {
             catalogId = TEST_MAP_ID
             collectionId += collection.id
-            orderBy = OrderBy(MetaColumn.id(), order = SortOrder.ASCENDING)
+            orderBy = OrderBy(StandardMembers.Id, order = SortOrder.ASCENDING)
             limit = ORDER_BY_ID_LIMIT
         }).apply {
             assertEquals(ORDER_BY_ID_LIMIT, features.size)

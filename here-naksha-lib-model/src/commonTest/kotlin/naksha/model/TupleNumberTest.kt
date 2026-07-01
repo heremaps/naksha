@@ -22,7 +22,7 @@ class TupleNumberTest {
      *  action.intValue is the raw 2-bit value (0=CREATED, 1=UPDATED, 2=DELETED). */
     private fun tn(action: Action): TupleNumber {
         val txn = txnBase or Int64(action.intValue.toLong())
-        return TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, Version(txn))
+        return TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, txn)
     }
 
     @Test

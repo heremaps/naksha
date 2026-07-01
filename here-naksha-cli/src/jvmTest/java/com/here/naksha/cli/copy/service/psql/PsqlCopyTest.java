@@ -286,9 +286,7 @@ class PsqlCopyTest {
 
     private ReadFeatures createReadFeaturesRequest(String mapId, String collectionId) {
         ReadFeatures readFeatures = new ReadFeatures();
-        readFeatures.setCollectionId(
-                StringList.of(collectionId)
-        );
+        readFeatures.setCollectionId(collectionId);
         readFeatures.setCatalogId(mapId);
 
         return readFeatures;

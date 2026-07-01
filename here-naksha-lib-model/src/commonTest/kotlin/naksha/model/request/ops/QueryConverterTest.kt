@@ -5,15 +5,10 @@ package naksha.model.request.ops
 import naksha.geo.HereTile
 import naksha.geo.PointCoord
 import naksha.geo.SpPoint
-import naksha.model.NakshaException
-import naksha.model.objects.XyzMembers
 import naksha.model.request.RequestQuery
-import naksha.model.request.query.AnyOp
 import naksha.model.request.query.DoubleOp
-import naksha.model.request.query.MemberQuery
 import naksha.model.request.query.SpIntersects
 import naksha.model.request.query.SpRefInHereTile
-import naksha.model.request.query.StringOp
 import naksha.model.request.query.TagAnd
 import naksha.model.request.query.TagExists
 import naksha.model.request.query.TagNot
@@ -25,7 +20,6 @@ import naksha.model.request.query.TagValueIsString
 import naksha.model.request.query.TagValueMatches
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 
@@ -127,39 +121,6 @@ class QueryConverterTest {
         assertEquals("a", not.child.expect<TagMapHasKey>().key)
     }
 
-    // -----------------------------------------------------------< members >---------------------------------------------------------
-
-    @Test
-    fun memberEqualsBecomesEquals() {
-        val q = RequestQuery().apply { members = MemberQuery(XyzMembers.XyzAppId, StringOp.EQUALS, "app-1") }
-        val op = convert(q)!!.expect<Equals>()
-        assertEquals(XyzMembers.XyzAppId.name, op.at)
-        assertEquals("app-1", op.value)
-    }
-
-    @Test
-    fun memberStartsWithBecomesStartsWith() {
-        val q = RequestQuery().apply { members = MemberQuery(XyzMembers.XyzAuthor, StringOp.STARTS_WITH, "Jo") }
-        val op = convert(q)!!.expect<StartsWith>()
-        assertEquals(XyzMembers.XyzAuthor.name, op.at)
-        assertEquals("Jo", op.value)
-    }
-
-    @Test
-    fun memberIsAnyOfBecomesIsAnyOf() {
-        val q = RequestQuery().apply { members = MemberQuery(XyzMembers.XyzAppId, AnyOp.IS_ANY_OF, arrayOf("a", "b")) }
-        val op = convert(q)!!.expect<IsAnyOf>()
-        assertEquals(2, op.items.size)
-        assertEquals("a", op.items[0])
-        assertEquals("b", op.items[1])
-    }
-
-    @Test
-    fun unsupportedMemberOpThrows() {
-        val q = RequestQuery().apply { members = MemberQuery(XyzMembers.XyzAppId, AnyOp.CONTAINS, "x") }
-        assertFailsWith<NakshaException> { convert(q) }
-    }
-
     // -----------------------------------------------------------< spatial >---------------------------------------------------------
 
     @Test
@@ -210,12 +171,12 @@ class QueryConverterTest {
     fun multipleCategoriesAreAndCombined() {
         val q = RequestQuery().apply {
             tags = TagExists("a")
-            members = MemberQuery(XyzMembers.XyzAppId, StringOp.EQUALS, "app-1")
+            spatial = SpIntersects(SpPoint(PointCoord(1.0, 2.0)))
         }
         val and = convert(q)!!.expect<And>()
         assertEquals(2, and.children.size)
         and.children[0]!!.expect<TagMapHasKey>()
-        and.children[1]!!.expect<Equals>()
+        and.children[1]!!.expect<Intersects>()
     }
 
     @Test

@@ -20,6 +20,7 @@ package com.here.naksha.lib.view;
 
 import naksha.model.Action;
 import naksha.model.IStorage;
+import naksha.model.objects.XyzMembers;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.FeatureTupleList;
 
@@ -30,7 +31,7 @@ public class Sample {
   public static FeatureTupleList sampleXyzResponse(int size, IStorage storage) {
     FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
-      returnList.add(new FeatureTuple(randomFeature(Integer.toString(i))));
+      returnList.add(new FeatureTuple(randomFeature(Integer.toString(i)), XyzMembers.XyzTn));
     }
     return returnList;
   }
@@ -41,7 +42,7 @@ public class Sample {
       returnList.add(new FeatureTuple(randomFeature(Integer.toString(i), (f) -> {
         f.getProperties().getXyz().setRaw("action", action.toString());
         return f;
-      })));
+      }), XyzMembers.XyzTn));
     }
     return returnList;
   }

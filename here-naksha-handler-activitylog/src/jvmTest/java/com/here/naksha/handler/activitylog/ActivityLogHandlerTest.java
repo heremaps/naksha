@@ -7,6 +7,7 @@ import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFea
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -28,8 +29,10 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-
-import naksha.base.*;
+import naksha.base.AnyList;
+import naksha.base.Int64;
+import naksha.base.JvmInt64;
+import naksha.base.Timestamp;
 import naksha.model.Action;
 import naksha.model.Guid;
 import naksha.model.IReadSession;
@@ -41,7 +44,7 @@ import naksha.model.Version;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
-import naksha.model.objects.XyzMembers;
+import naksha.model.objects.StandardMembers;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadCollections;
 import naksha.model.request.ReadFeatures;
@@ -51,9 +54,8 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
-import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.IMemberQuery;
-import naksha.model.request.query.MemberQuery;
+import naksha.model.request.ops.IsAnyOf;
+import naksha.model.request.ops.Op;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -466,27 +468,17 @@ class ActivityLogHandlerTest {
   }
 
   private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
-    IMemberQuery metaQuery = readFeatures.getQuery().getMembers();
-    if (!(metaQuery instanceof MemberQuery mq)) return false;
-    boolean basicCheck = ((Proxy)XyzMembers.XyzNextVersion).equals(mq.getMember())
-                         && mq.getOp().equals(AnyOp.IS_ANY_OF);
-    if (!basicCheck) return false;
-    if (expectedTns.length == 0) return mq.getValue() != null;
-    // next_version is an int8 column — the query value is an Int64[] or AnyList of version values
-    // (NullableProperty may convert a Java array to an AnyList when storing)
-    Object value = mq.getValue();
-    List<Int64> versions;
-    if (value instanceof Int64[] arr) {
-      versions = Arrays.asList(arr);
-    } else if (value instanceof AnyList list) {
-      versions = new java.util.ArrayList<>();
-      for (int i = 0; i < list.getSize(); i++) {
-        Object item = list.get(i);
-        if (item instanceof Int64 v) versions.add(v);
-        else return false;
-      }
-    } else {
-      return false;
+    Op metaQuery = readFeatures.getQueryMembers();
+    if (!(metaQuery instanceof IsAnyOf op)) return false;
+    if (!StandardMembers.NextVersion.getName().equals(op.getAt())) return false;
+    // next_version is an int8 column — the IsAnyOf items hold the Int64 version values.
+    AnyList items = op.getItems();
+    if (expectedTns.length == 0) return items.getSize() > 0;
+    List<Int64> versions = new java.util.ArrayList<>();
+    for (int i = 0; i < items.getSize(); i++) {
+      Object item = items.get(i);
+      if (item instanceof Int64 v) versions.add(v);
+      else return false;
     }
     if (versions.size() != expectedTns.length) return false;
     return Arrays.stream(expectedTns)

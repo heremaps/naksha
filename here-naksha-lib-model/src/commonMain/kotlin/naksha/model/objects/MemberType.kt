@@ -168,6 +168,20 @@ class MemberType : JsEnum() {
          */
         @JvmField
         val TAG_LIST = defIgnoreCase(MemberType::class, "tag_list") { self -> self.sortOrder = 10; self.subtype = TagListMember::class }
+
+        init {
+            // Validate sort orders form a contiguous range [0, N); done here, after all types have loaded.
+            val orders = ArrayList<Int>()
+            val i = iterate(MemberType::class)
+            while (i.hasNext()) orders.add(i.next().sortOrder)
+            orders.sort()
+            for (idx in orders.indices) {
+                if (orders[idx] != idx) throw NakshaException(
+                    INITIALIZATION_FAILED,
+                    "MemberType sort orders must be contiguous starting at 0; expected $idx but found ${orders[idx]} (all sorted: $orders)"
+                )
+            }
+        }
     }
 
     /**
@@ -207,20 +221,6 @@ class MemberType : JsEnum() {
      * @since 3.0
      */
     var sortOrder: Int = -1
-        private set(value) {
-            val it: Iterator<MemberType> = iterate(MemberType::class)
-            var biggestSortOrder = -1
-            while (it.hasNext()) {
-                val memberType = it.next()
-                if (memberType.sortOrder == value) {
-                    throw NakshaException(INITIALIZATION_FAILED, "Found duplicate sortOrder, member $this == $memberType")
-                }
-                if (memberType.sortOrder > biggestSortOrder) biggestSortOrder = memberType.sortOrder
-            }
-            var expected = biggestSortOrder+1
-            if (value != biggestSortOrder) {
-                throw NakshaException(INITIALIZATION_FAILED, "Member $this is expected to have sortOrder $expected, but has $value")
-            }
-            field = value
-        }
+        // Validated in the companion `init` block above; the setter must not call iterate() (re-entrant during init).
+        private set
 }

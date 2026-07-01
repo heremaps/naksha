@@ -58,9 +58,9 @@ class SridTest : PgTestBase() {
 
     private fun selectSrid(mapId: String, collectionName: String, featureId: String): Int {
         val sql = """
-            SELECT ST_SRID(naksha_geometry(${PgColumn.geo})) as srid
+            SELECT ST_SRID(naksha_geometry(${COL_GEOMETRY})) as srid
             FROM $mapId.$collectionName
-            WHERE ${PgColumn.id} = '$featureId'
+            WHERE ${COL_ID} = '$featureId'
         """.trimIndent()
         return storage.adminConnection().use { conn ->
             conn.execute(sql).fetch().use { cursor ->
