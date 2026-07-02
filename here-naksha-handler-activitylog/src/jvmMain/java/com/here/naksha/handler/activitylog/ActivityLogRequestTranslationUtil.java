@@ -24,10 +24,13 @@ import static naksha.model.objects.NakshaFeature.PROPERTIES_KEY;
 import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 
 import java.util.Set;
+
+import naksha.base.Int64;
 import naksha.base.StringList;
 import naksha.model.Guid;
-import naksha.model.GuidList;
+import naksha.model.objects.StandardMembers;
 import naksha.model.request.ReadFeatures;
+import naksha.model.request.ops.IsAnyOf;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
@@ -63,9 +66,16 @@ class ActivityLogRequestTranslationUtil {
     // extract UUIDs from featureIds, reset featureIds
     StringList rawGuids = readFeatures.getFeatureIds();
     if (!rawGuids.isEmpty()) {
-      GuidList guids = new GuidList();
-      rawGuids.forEach(rawGuid -> guids.add(Guid.fromString(rawGuid)));
-      readFeatures.setGuids(guids);
+      final Int64[] versions = new Int64[rawGuids.getSize()];
+      for (int i=0;i<rawGuids.getSize();i++) {
+        String rawGuid = rawGuids.get(i);
+        if (rawGuid != null) {
+          final Guid guid = Guid.fromString(rawGuid);
+          versions[i] = guid.tupleNumber.version;
+        }
+      }
+      IsAnyOf isAnyOf = new IsAnyOf(StandardMembers.Version,versions);
+      readFeatures.setQueryMembers(isAnyOf); //TODO maybe ISession.loadTuples() is better? not for now, because we are disabling the cache
     }
     StringList finalFeatureIds = new StringList();
 
@@ -75,7 +85,7 @@ class ActivityLogRequestTranslationUtil {
         ActivityLogRequestTranslationUtil::isSingleActivityLogIdEqualityQuery
     );
     if (!disabledActivityLogPOps.isEmpty()) {
-      disabledActivityLogPOps.forEach(activityLogOp -> finalFeatureIds.add(activityLogOp.getValue().toString()));
+      disabledActivityLogPOps.forEach(activityLogOp -> finalFeatureIds.add(String.valueOf(activityLogOp.getValue())));
       readFeatures.refreshPropertyFilter();
     }
     readFeatures.setFeatureIds(finalFeatureIds);
@@ -83,6 +93,6 @@ class ActivityLogRequestTranslationUtil {
 
   private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {
     return StringOp.EQUALS.equals(pQuery.getOp())
-            && pQuery.getProperty().getPath().asList().stream().allMatch(s -> java.util.Arrays.asList(ACTIVITY_LOG_ID_PATH).contains(s));
+            && java.util.Arrays.equals(pQuery.getProperty().getPath().toArray(), ACTIVITY_LOG_ID_PATH);
   }
 }
