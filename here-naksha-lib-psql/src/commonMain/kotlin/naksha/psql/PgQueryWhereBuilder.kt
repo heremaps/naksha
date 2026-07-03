@@ -38,10 +38,10 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         if (op == null) op = QueryConverter.convert(request.query)
         if (op == null) return null
         applyOp(op)
-        if (request.featureIds.isNotEmpty()) { // backward compatibility for feature IDs read requests
+        if (request.featureIds.isNotEmpty()) { // TODO backward compatibility for feature IDs read requests, to be removed
             whereFeatureId()
         }
-        if (request.guids.isNotEmpty()) { // backward compatibility for GUIDs read requests
+        if (request.guids.isNotEmpty()) { // TODO backward compatibility for GUIDs read requests, remove if nowhere else is using it
             whereGuids()
         }
         return PgQueryWhereClause(collection, where.toString(), argValues, argTypes)

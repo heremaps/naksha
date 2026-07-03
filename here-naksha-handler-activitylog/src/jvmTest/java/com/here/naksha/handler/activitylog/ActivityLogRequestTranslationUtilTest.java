@@ -4,17 +4,17 @@ import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationU
 import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationUtil.transformOriginalRequest;
 import static com.here.naksha.handler.activitylog.GuidUtil.guid;
 import static com.here.naksha.handler.activitylog.GuidUtil.randomVersion;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 
 import naksha.base.StringList;
 import naksha.model.Guid;
-import naksha.model.GuidList;
 import naksha.model.Version;
+import naksha.model.objects.StandardMembers;
 import naksha.model.request.ReadFeatures;
+import naksha.model.request.ops.IsAnyOf;
+import naksha.model.request.ops.Op;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
@@ -39,24 +39,29 @@ class ActivityLogRequestTranslationUtilTest {
     // Then: request will reach correct collection and history
     verifyAllHistoricalVersionsInCollection(readFeatures);
 
-    // And: no feature ids are passed from original requesy
+    // And: no feature ids are passed from original request
     assertTrue(readFeatures.getFeatureIds().isEmpty());
 
-    // And: there is a single guid passed from original featureId
-    GuidList finalGuids = readFeatures.getGuids();
-    assertEquals(1, finalGuids.getSize());
-    assertEquals(guid, finalGuids.get(0));
+    // And: there is a single Version passed from original featureId
+    Op op = readFeatures.getQueryMembers();
+    assertInstanceOf(IsAnyOf.class, op);
+    var isAnyOf = (IsAnyOf) op;
+    assertEquals(StandardMembers.Version.getName(), isAnyOf.getAt());
+    assertEquals(1, isAnyOf.getItems().getSize());
+    assertEquals(guid.tupleNumber.version, isAnyOf.getItems().get(0));
   }
 
   @Test
   void shouldTranslateMultipleGuidsPassedAsFeatureIds() {
     // Given: multiple GUIDs passed in ReadFeatures
-    GuidList guids = GuidList.of(
-        guid("f1", randomVersion()),
-        guid("f2", randomVersion()),
-        guid("f3", randomVersion())
+    Version version1 = randomVersion();
+    Version version2 = randomVersion();
+    Version version3 = randomVersion();
+    List<String> rawGuids = List.of(
+        guid("f1", version1).toString(),
+        guid("f2", version2).toString(),
+        guid("f3", version3).toString()
     );
-    List<String> rawGuids = guids.stream().map(Guid::toString).toList();
     ReadFeatures readFeatures = new ReadFeatures();
     readFeatures.setFeatureIds(StringList.fromList(rawGuids));
 
@@ -73,9 +78,12 @@ class ActivityLogRequestTranslationUtilTest {
     assertTrue(readFeatures.getFeatureIds().isEmpty());
 
     // And: all guids defined in featureIds were moved to ReadFeatures.guids
-    GuidList finalGuids = readFeatures.getGuids();
-    assertEquals(guids.getSize(), finalGuids.getSize());
-    assertTrue(finalGuids.containsAll(guids));
+    Op op = readFeatures.getQueryMembers();
+    assertInstanceOf(IsAnyOf.class, op);
+    var isAnyOf = (IsAnyOf) op;
+    assertEquals(StandardMembers.Version.getName(), isAnyOf.getAt());
+    assertEquals(rawGuids.size(), isAnyOf.getItems().getSize());
+    assertTrue(isAnyOf.getItems().containsAll(List.of(version1, version2, version3)));
   }
 
   @Test
@@ -104,7 +112,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertNull(readFeatures.getQuery().getProperties());
 
     // And: there are no guids (nothing was declared in original featureIds)
-    assertTrue(readFeatures.getGuids().isEmpty());
+      assertNull(readFeatures.getQueryMembers());
   }
 
   @Test
@@ -134,7 +142,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertNull(readFeatures.getQuery().getProperties());
 
     // And: there are no guids (nothing was declared in original featureIds)
-    assertTrue(readFeatures.getGuids().isEmpty());
+    assertNull(readFeatures.getQueryMembers());
   }
 
   @Test
@@ -163,9 +171,12 @@ class ActivityLogRequestTranslationUtilTest {
     assertEquals(activityLogId, finalFeatureIds.get(0));
 
     // And: guuids are populared from original feature ids
-    GuidList finalGuids = readFeatures.getGuids();
-    assertEquals(1, finalGuids.getSize());
-    assertEquals(guid, finalGuids.get(0));
+    Op op = readFeatures.getQueryMembers();
+    assertInstanceOf(IsAnyOf.class, op);
+    var isAnyOf = (IsAnyOf) op;
+    assertEquals(StandardMembers.Version.getName(), isAnyOf.getAt());
+    assertEquals(1, isAnyOf.getItems().getSize());
+    assertEquals(guid.tupleNumber.version, isAnyOf.getItems().get(0));
   }
 
   private void verifyAllHistoricalVersionsInCollection(ReadFeatures readFeatures) {
