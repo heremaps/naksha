@@ -153,21 +153,23 @@ abstract class PgTable(
      */
     @Suppress("FunctionName")
     protected fun CREATE_TABLE_and_TABLESPACE(): Pair<String, String> {
-        val adminCatalog = collection.catalog.storage.adminCatalog
+        //TODO enabling this will cause a closed loop dependency where PgStorage.setAdminMap() and PgStorage.adminCatalog call each other
+        //TODO but we need to enable it, else storageClass is basically not functioning
+//        val adminCatalog = collection.catalog.storage.adminCatalog
         return when (collection.storageClass) {
             PgStorageClass.Ephemeral -> Pair(
                 "CREATE TABLE IF NOT EXISTS ",
-                if (adminCatalog.ephemeralTableSpace != null) " TABLESPACE ${adminCatalog.ephemeralTableSpace}" else ""
+                if (collection.catalog.storage.adminCatalog.ephemeralTableSpace != null) " TABLESPACE ${collection.catalog.storage.adminCatalog.ephemeralTableSpace}" else ""
             )
 
             PgStorageClass.Brittle -> Pair(
                 "CREATE UNLOGGED TABLE IF NOT EXISTS ",
-                if (adminCatalog.brittleTableSpace != null) " TABLESPACE ${adminCatalog.brittleTableSpace}" else ""
+                if (collection.catalog.storage.adminCatalog.brittleTableSpace != null) " TABLESPACE ${collection.catalog.storage.adminCatalog.brittleTableSpace}" else ""
             )
 
             PgStorageClass.Temporary -> Pair(
                 "CREATE UNLOGGED TABLE IF NOT EXISTS ",
-                if (adminCatalog.tempTableSpace != null) " TABLESPACE ${adminCatalog.tempTableSpace}" else ""
+                if (collection.catalog.storage.adminCatalog.tempTableSpace != null) " TABLESPACE ${collection.catalog.storage.adminCatalog.tempTableSpace}" else ""
             )
 
             else -> Pair("CREATE TABLE IF NOT EXISTS ", "")
