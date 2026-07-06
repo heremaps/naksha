@@ -49,7 +49,7 @@ jobs:
           path: download
       - name: List CodeDeploy artifacts
         run: |
-          ls -lR download/
+          ls -lRa download/
       - name: Preparing S3 artifact name
         id: s3-artifact-name
         run: |

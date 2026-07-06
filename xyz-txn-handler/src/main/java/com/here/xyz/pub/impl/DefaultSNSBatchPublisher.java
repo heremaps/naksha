@@ -26,15 +26,14 @@ public class DefaultSNSBatchPublisher implements IPublisher {
 
     // Convert and publish transactions to desired SNS Topic
     @Override
-    public PublishEntryDTO publishTransactions(final PubConfig pubCfg, final Subscription sub,
+    public void publishTransactions(final PubConfig pubCfg, final Subscription sub,
                                                final List<PubTransactionData> txnList,
-                                               final long lastStoredTxnId, final long lastStoredTxnRecId) throws Exception {
+                                               final PublishEntryDTO pubDTO) throws Exception {
         final String subId = sub.getId();
         final String spaceId = sub.getSource();
         final String snsTopic = PubUtil.getSnsTopicARN(sub);
         final long lotStartTS = System.currentTimeMillis();
         // local counters
-        final PublishEntryDTO pubDTO = new PublishEntryDTO(lastStoredTxnId, lastStoredTxnRecId);
         int publishedRecCnt = 0;
         // Variables for batch publish
         final int TXN_LIST_SIZE = txnList.size();
@@ -64,15 +63,8 @@ public class DefaultSNSBatchPublisher implements IPublisher {
                 final int msgLength = msg.length();
                 final Map<String, MessageAttributeValue> msgAttrMap = populateMessageAttributeMap(txnData, sub, spaceId);
 
-                // Prepare PublishBatchEntry for current message
-                final PublishBatchRequestEntry batchEntry = PublishBatchRequestEntry.builder()
-                        .message(msg)
-                        .messageAttributes(msgAttrMap)
-                        .id(MSG_ID_PREFIX + batchEntryCounter)
-                        .build();
-
-                // publish batch if payload limit reached
-                if (msgLength+aggrBatchPayloadSize > MAX_ALLOWED_PAYLOAD_SIZE && batchEntries.size()>0) {
+                // publish accumulated batch if payload limit reached
+                if (msgLength+aggrBatchPayloadSize > MAX_ALLOWED_PAYLOAD_SIZE && !batchEntries.isEmpty()) {
                     // publish current batch
                     publishBatchEntriesAndCheckResult(batchEntries, snsTopic, snsClient, txnList, subId, publishedRecCnt, MSG_ID_PREFIX, pubCfg, pubDTO);
                     // update batch variables
@@ -82,6 +74,12 @@ public class DefaultSNSBatchPublisher implements IPublisher {
                     batchEntryCounter = 0;
                 }
 
+                // Prepare PublishBatchEntry for current message
+                final PublishBatchRequestEntry batchEntry = PublishBatchRequestEntry.builder()
+                        .message(msg)
+                        .messageAttributes(msgAttrMap)
+                        .id(MSG_ID_PREFIX + batchEntryCounter)
+                        .build();
                 // add current message to the batch
                 batchEntries.add(batchEntry);
                 aggrBatchPayloadSize += msgLength;
@@ -106,8 +104,6 @@ public class DefaultSNSBatchPublisher implements IPublisher {
             logger.info("Transaction publish stats for SNS [{}] [format => eventType,subId,spaceId,msgCount,timeTakenMs,lastTxnId,lastTxnRecId] - {} {} {} {} {} {} {}",
                     snsTopic, PubLogConstants.LOG_EVT_TXN_PUBLISH_STATS, subId, spaceId, publishedRecCnt, lotTimeTaken, pubDTO.getLastTxnId(), pubDTO.getLastTxnRecId());
         }
-
-        return pubDTO;
     }
 
 

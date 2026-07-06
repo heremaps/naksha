@@ -1,6 +1,18 @@
+## Naksha_1.1.5
+
+- Improved DataSource cache refresh handling in txn-handler submodule to gracefully close active DB connections
+
+## Naksha_1.1.4
+
+- Increased header size limit to 24k
+
+## Naksha_1.1.3
+
+- Increased DB Pool size of Naksha Admin DB from 10 to 25 to allow additional sequencer/publisher jobs to run in parallel.
+
 ## Naksha_1.1.2
 
-- Increased header size limit to 24K
+- Fixed batch-size failure issue for SNS publishing where one of the message fails during publish, then we optimize by continuing from that failure instead of re-processing entire batch 
 
 ## Naksha_1.1.1
 

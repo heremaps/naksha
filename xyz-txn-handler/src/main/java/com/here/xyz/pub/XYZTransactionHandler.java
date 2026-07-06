@@ -57,6 +57,7 @@ public class XYZTransactionHandler {
         adminDBConnParams.setDbUrl(pubCfg.STORAGE_DB_URL);
         adminDBConnParams.setUser(pubCfg.STORAGE_DB_USER);
         adminDBConnParams.setPswd(pubCfg.STORAGE_DB_PASSWORD);
+        adminDBConnParams.setMaxPoolSize(25); // keeping higher value to allow parallel seq/publisher jobs
         // Set AWS account access details
         System.setProperty("aws.accessKeyId", (pubCfg.AWS_ACCESS_KEY_ID!=null) ? pubCfg.AWS_ACCESS_KEY_ID : "");
         System.setProperty("aws.secretAccessKey", (pubCfg.AWS_SECRET_ACCESS_KEY!=null) ? pubCfg.AWS_SECRET_ACCESS_KEY : "");
