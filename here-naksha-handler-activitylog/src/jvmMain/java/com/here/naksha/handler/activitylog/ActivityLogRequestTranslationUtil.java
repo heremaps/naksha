@@ -25,12 +25,10 @@ import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 
 import java.util.Set;
 
-import naksha.base.Int64;
 import naksha.base.StringList;
 import naksha.model.Guid;
-import naksha.model.objects.StandardMembers;
+import naksha.model.GuidList;
 import naksha.model.request.ReadFeatures;
-import naksha.model.request.ops.IsAnyOf;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
@@ -65,17 +63,17 @@ class ActivityLogRequestTranslationUtil {
 
     // extract UUIDs from featureIds, reset featureIds
     StringList rawGuids = readFeatures.getFeatureIds();
+    GuidList guidList = new GuidList();
     if (!rawGuids.isEmpty()) {
-      final Int64[] versions = new Int64[rawGuids.getSize()];
       for (int i=0;i<rawGuids.getSize();i++) {
         String rawGuid = rawGuids.get(i);
         if (rawGuid != null) {
           final Guid guid = Guid.fromString(rawGuid);
-          versions[i] = guid.tupleNumber.version;
+          guidList.add(guid);
         }
       }
-      IsAnyOf isAnyOf = new IsAnyOf(StandardMembers.Version,versions);
-      readFeatures.setQueryMembers(isAnyOf); //TODO maybe ISession.loadTuples() is better? not for now, because we are disabling the cache
+      //TODO we prefer ISession.loadTuples(), but that does not make sense for now, because we are disabling cache, and we anyway have to support other form of read requests beside by UUID
+      readFeatures.setGuids(guidList);
     }
     StringList finalFeatureIds = new StringList();
 

@@ -36,27 +36,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import naksha.base.Int64;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.StringList;
-import naksha.model.Action;
-import naksha.model.Naksha;
-import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
-import naksha.model.SessionOptions;
-import naksha.model.TupleNumber;
-import naksha.model.XyzNs;
+import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.StandardMembers;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import naksha.model.request.WriteRequest;
-import naksha.model.request.ops.IsAnyOf;
+import naksha.model.request.*;
+import naksha.model.request.ops.And;
+import naksha.model.request.ops.Equals;
+import naksha.model.request.ops.Or;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -161,21 +149,27 @@ public class ActivityLogHandler extends AbstractEventHandler {
         .toList();
     if (!tnsOfRootsMissingPredecessor.isEmpty()) {
       List<NakshaFeature> missingPredecessorsByNextVersion =
-          fetchFeatures(featuresWhereNextVersionIsOneOf(tnsOfRootsMissingPredecessor), context);
+          fetchFeatures(missingPredecessorFeatures(tnsOfRootsMissingPredecessor), context);
       collectedFeatures.addPredecessors(missingPredecessorsByNextVersion);
     }
   }
 
-  private ReadFeatures featuresWhereNextVersionIsOneOf(List<TupleNumber> tupleNumbers) {
+  private ReadFeatures missingPredecessorFeatures(List<TupleNumber> tupleNumbers) {
     // next_version is a plain int8 column, so we pass an Int64[] of the version values.
-    Int64[] versions = new Int64[tupleNumbers.size()];
-    for (int i = 0; i < tupleNumbers.size(); i++) {
-      versions[i] = tupleNumbers.get(i).version;
-    }
+    Or or = new Or();
+      for (TupleNumber tupleNumber : tupleNumbers) {
+        //TODO very inefficient, but ISession.loadTuples() currently cannot target next version
+          or.getChildren().add(
+                  new And(
+                          new Equals(StandardMembers.NextVersion.getName(), tupleNumber.version),
+                          new Equals(StandardMembers.FeatureNumber.getName(), tupleNumber.featureNumber)
+                  )
+          );
+      }
     ReadFeatures requestPredecessors = new ReadFeatures();
     requestPredecessors.setCollectionId(properties.getSpaceId());
     requestPredecessors.setQueryHistory(true);
-    requestPredecessors.setQueryMembers(new IsAnyOf(StandardMembers.NextVersion, versions));
+    requestPredecessors.setQueryMembers(or);
     return requestPredecessors;
   }
 
