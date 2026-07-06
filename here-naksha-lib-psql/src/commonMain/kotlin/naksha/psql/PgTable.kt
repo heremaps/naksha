@@ -154,7 +154,7 @@ abstract class PgTable(
     @Suppress("FunctionName")
     protected fun CREATE_TABLE_and_TABLESPACE(): Pair<String, String> {
         //TODO enabling this will cause a closed loop dependency where PgStorage.setAdminMap() and PgStorage.adminCatalog call each other
-        //TODO but we need to enable it, else storageClass is basically not functioning
+        //TODO but we need to enable it, for now it is bypassed simply because storageClass is not set
 //        val adminCatalog = collection.catalog.storage.adminCatalog
         return when (collection.storageClass) {
             PgStorageClass.Ephemeral -> Pair(
