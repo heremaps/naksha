@@ -2,8 +2,8 @@
 
 package naksha.model.objects
 
-import naksha.geo.SpGeometry
-import naksha.model.TupleNumber
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzHereTile
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzUpdatedAt
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport

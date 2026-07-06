@@ -56,7 +56,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
         this.name = INTERNAL_MEMBER.verify(name)
         this.dataType = dataType
-        this.path = path ?: JsonPath("properties", name)
+        this.path = path ?: JsonPath("properties", name) //TODO what if ID or other JSON attributes outside "properties"?
         this.path.validate()
     }
 

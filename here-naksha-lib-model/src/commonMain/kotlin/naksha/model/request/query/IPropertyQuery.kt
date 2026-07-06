@@ -12,4 +12,5 @@ import kotlin.js.JsExport
  * @see PQuery
  */
 @JsExport
+@Deprecated("Replaced with op", replaceWith = ReplaceWith("Op"))
 interface IPropertyQuery : IQuery
