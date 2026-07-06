@@ -27,37 +27,38 @@ jobs:
     uses: ./.github/workflows/reusable-build-and-publish.yml
 
 
-
+  ### NOTE - Disabled for Dev branch
   ### Job to Release CodeDeploy artifact to S3 bucket
   # Output
   #   - s3-artifact-path = s3 bucket artifact path to be used for codedeploy (e.g. 1.1.1/deployment.tar.gz)
-  S3-CodeDeploy-Release:
-    needs: Build-and-Publish
-    uses: ./.github/workflows/reusable-s3-codedeploy-release.yml
-    with:
-      aws-region: ${{ vars.AWS_REGION }}
-      pipeline-artifact-name: ${{ needs.Build-and-Publish.outputs.pipeline-artifact-name }}
-      s3-bucket-name: ${{ vars.RELEASE_S3_BUCKET_NAME }}
-      s3-bucket-dir-path: ${{ needs.Build-and-Publish.outputs.app-version }}
-      s3-artifact-version: ${{ needs.Build-and-Publish.outputs.codedeploy-artifact-version }}
-    secrets:
-      aws-key: ${{ secrets.AWS_KEY }}
-      aws-secret: ${{ secrets.AWS_SECRET }}
+  #S3-CodeDeploy-Release:
+  #  needs: Build-and-Publish
+  #  uses: ./.github/workflows/reusable-s3-codedeploy-release.yml
+  #  with:
+  #    aws-region: ${{ vars.AWS_REGION }}
+  #    pipeline-artifact-name: ${{ needs.Build-and-Publish.outputs.pipeline-artifact-name }}
+  #    s3-bucket-name: ${{ vars.RELEASE_S3_BUCKET_NAME }}
+  #    s3-bucket-dir-path: ${{ needs.Build-and-Publish.outputs.app-version }}
+  #    s3-artifact-version: ${{ needs.Build-and-Publish.outputs.codedeploy-artifact-version }}
+  #  secrets:
+  #    aws-key: ${{ secrets.AWS_KEY }}
+  #    aws-secret: ${{ secrets.AWS_SECRET }}
 
 
 
+  ### NOTE - Disabled for Dev branch
   ### Job to Deploy CodeDeploy artifact to Dev environment
-  Dev-Deploy:
-    needs: S3-CodeDeploy-Release
-    uses: ./.github/workflows/reusable-codedeploy-deployment.yml
-    with:
-      aws-region: ${{ vars.AWS_REGION }}
-      codedeploy-app-name: ${{ vars.CODEDEPLOY_APP_NAME }}
-      codedeploy-group-name: ${{ vars.CODEDEPLOY_DEV_GROUP_NAME }}
-      deployment-description: 'Deployment triggered by ${{ github.triggering_actor }} from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
-      s3-bucket-name: ${{ vars.RELEASE_S3_BUCKET_NAME }}
-      s3-artifact-path: ${{ needs.S3-CodeDeploy-Release.outputs.s3-artifact-path }}
-      s3-artifact-type: tgz
-    secrets:
-      aws-key: ${{ secrets.AWS_KEY }}
-      aws-secret: ${{ secrets.AWS_SECRET }}
+  #Dev-Deploy:
+  #  needs: S3-CodeDeploy-Release
+  #  uses: ./.github/workflows/reusable-codedeploy-deployment.yml
+  #  with:
+  #    aws-region: ${{ vars.AWS_REGION }}
+  #    codedeploy-app-name: ${{ vars.CODEDEPLOY_APP_NAME }}
+  #    codedeploy-group-name: ${{ vars.CODEDEPLOY_DEV_GROUP_NAME }}
+  #    deployment-description: 'Deployment triggered by ${{ github.triggering_actor }} from Github repo [${{ github.repository }}], ${{ github.ref_type }} [${{ github.ref_name }}], commit sha [${{ github.sha }}]'
+  #    s3-bucket-name: ${{ vars.RELEASE_S3_BUCKET_NAME }}
+  #    s3-artifact-path: ${{ needs.S3-CodeDeploy-Release.outputs.s3-artifact-path }}
+  #    s3-artifact-type: tgz
+  #  secrets:
+  #    aws-key: ${{ secrets.AWS_KEY }}
+  #    aws-secret: ${{ secrets.AWS_SECRET }}
