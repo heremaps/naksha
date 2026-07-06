@@ -53,7 +53,7 @@ jobs:
         id: save-artifact-name
         run: echo "name=${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}" >> "$GITHUB_OUTPUT"
       - name: Save CodeDeploy artifact content
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ env.GITHUB_CODEDEPLOY_ARTIFACT_NAME }}
           path: ${{ env.CODEDEPLOY_DIR }}
