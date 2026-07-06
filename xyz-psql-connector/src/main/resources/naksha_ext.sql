@@ -563,6 +563,102 @@ BEGIN
 END
 $BODY$;
 
+-- Custom after trigger script for very special scenario where transaction entries (and so SNS event publishing) is to be skipped
+-- for special DMLs.
+CREATE OR REPLACE FUNCTION xyz_config.naksha_space_after_trigger_to_skip_txn()
+ RETURNS trigger
+ LANGUAGE 'plpgsql' VOLATILE
+AS $BODY$
+DECLARE
+author text;
+    app_id text;
+    new_uuid uuid;
+    txn uuid;
+    ts_millis int8;
+    rts_millis int8;
+    i int8;
+    xyz jsonb;
+	newMarkerPresent bool;
+	oldMarkerPresent bool;
+    disable_txn bool;
+
+BEGIN
+	------------------------------------------------------
+	-- Use of this custom script is to support skipping transaction entries (thereby indirectly disabling SNS event publish),
+	-- for special DMLs. It is disabled for those DML operations where either of the following criteria is true:
+	--
+	-- 1) Postgres config parameter "naksha_config.skip_txn" is found to be "true"
+	-- 2) If NEW JSON Feature has xyz.tags with value "disable_event_publish", but OLD JSON Feature doesn't.
+	--    No OLD entry is considered to be absence of tag.
+	--    Check for OLD entry is to ensure event suppression happens only once for that "special" DML and not for subsequent "genuine" DMLs.
+	--
+	-- This is applicable across INSERT/UPDATE/DELETE operation.
+	-- Transaction entry is skipped, but History entry is still made.
+	-- If condition (1) is satisfied, then condition (2) is not checked.
+	------------------------------------------------------
+
+    xyz := OLD.jsondata->'properties'->'@ns:com:here:xyz';
+
+    disable_txn := FALSE;
+	-- Disable Txn INSERT if session level flag 'naksha_config.skip_txn' is 'true'
+    IF coalesce(current_setting('naksha_config.skip_txn', true), '') = 'true' THEN
+        disable_txn := TRUE;
+    END IF;
+	-- (one more check - if it was inconclusive)
+	-- Disable Txn INSERT if NEW tags has marker 'disable_event_publish' BUT OLD tags has not
+	IF (NOT disable_txn) THEN
+		oldMarkerPresent := coalesce(xyz->'tags' ? 'disable_event_publish', false);
+		newMarkerPresent := coalesce(NEW.jsondata->'properties'->'@ns:com:here:xyz'->'tags' ? 'disable_event_publish', false);
+		disable_txn := (NOT oldMarkerPresent AND newMarkerPresent);
+    END IF;
+
+
+    IF (disable_txn) THEN
+        PERFORM xyz_config.naksha_tx_custom_insert(TG_TABLE_SCHEMA, TG_TABLE_NAME);
+    ELSE
+        PERFORM xyz_config.naksha_tx_insert(TG_TABLE_SCHEMA, TG_TABLE_NAME);
+    END IF;
+
+
+    IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+        EXECUTE format('INSERT INTO %s."%s_hst" (jsondata,geo,i) VALUES(%L,%L,%L)',
+            TG_TABLE_SCHEMA, TG_TABLE_NAME,
+            NEW.jsondata, NEW.geo, NEW.i);
+        RETURN NEW;
+    END IF;
+
+    rts_millis := xyz_config.naksha_ts_millis(clock_timestamp());
+    ts_millis := xyz_config.naksha_ts_millis(current_timestamp);
+    txn := xyz_config.naksha_tx_current();
+    i = nextval('"'||TG_TABLE_SCHEMA||'"."'||TG_TABLE_NAME||'_i_seq"');
+    new_uuid := xyz_config.naksha_uuid_feature_number(i, current_timestamp);
+    author := xyz_config.naksha_tx_get_author(OLD.jsondata);
+    app_id := xyz_config.naksha_tx_get_app_id();
+
+    -- We do these updates, because in the "after-trigger" we only write into history.
+    IF xyz IS NULL THEN
+      xyz := '{}'::jsonb;
+    END IF;
+    xyz := jsonb_set(xyz, '{"action"}', ('"DELETE"')::jsonb, true);
+    xyz := jsonb_set(xyz, '{"version"}', coalesce((''||(xyz_config.naksha_json_version(OLD.jsondata)+1::int8)),'1')::jsonb, true);
+    xyz := jsonb_set(xyz, '{"author"}', coalesce(author, 'null')::jsonb, true);
+    xyz := jsonb_set(xyz, '{"appId"}', coalesce(app_id, 'null')::jsonb, true);
+    xyz := jsonb_set(xyz, '{"puuid"}', xyz->'uuid', true);
+    xyz := jsonb_set(xyz, '{"uuid"}', ('"'||((new_uuid)::text)||'"')::jsonb, true);
+    xyz := jsonb_set(xyz, '{"txn"}', ('"'||((txn)::text)||'"')::jsonb, true);
+    -- createdAt and rtcts stay what they are
+    xyz := jsonb_set(xyz, '{"updatedAt"}', (ts_millis::text)::jsonb, true);
+    xyz := jsonb_set(xyz, '{"rtuts"}', (rts_millis::text)::jsonb, true);
+    OLD.jsondata = jsonb_set(OLD.jsondata, '{"properties","@ns:com:here:xyz"}', xyz, true);
+    OLD.i = i;
+    EXECUTE format('INSERT INTO %s."%s_hst" (jsondata,geo,i) VALUES(%L,%L,%L)',
+               TG_TABLE_SCHEMA, TG_TABLE_NAME,
+               OLD.jsondata, OLD.geo, OLD.i);
+    RETURN OLD;
+END
+$BODY$
+;
+
 -- Ensures that the given schema and table exist as storage location for a space.
 CREATE OR REPLACE FUNCTION xyz_config.naksha_space_ensure(_schema text, _table text)
     RETURNS void
