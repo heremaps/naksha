@@ -28,7 +28,13 @@ import java.util.Set;
 import naksha.base.StringList;
 import naksha.model.Guid;
 import naksha.model.GuidList;
+import naksha.model.TupleNumber;
+import naksha.model.objects.StandardMembers;
 import naksha.model.request.ReadFeatures;
+import naksha.model.request.ops.And;
+import naksha.model.request.ops.Equals;
+import naksha.model.request.ops.OpList;
+import naksha.model.request.ops.Or;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
@@ -63,17 +69,24 @@ class ActivityLogRequestTranslationUtil {
 
     // extract UUIDs from featureIds, reset featureIds
     StringList rawGuids = readFeatures.getFeatureIds();
-    GuidList guidList = new GuidList();
+    Or or = new Or();
+    OpList orClauses = or.getChildren();
     if (!rawGuids.isEmpty()) {
       for (int i=0;i<rawGuids.getSize();i++) {
         String rawGuid = rawGuids.get(i);
         if (rawGuid != null) {
-          final Guid guid = Guid.fromString(rawGuid);
-          guidList.add(guid);
+          final TupleNumber tupleNumber = Guid.fromString(rawGuid).tupleNumber;
+          //TODO we prefer ISession.loadTuples(), but that does not make sense for now, because we are disabling cache, and we anyway have to support other form of read requests beside by UUID
+          //TODO and this is less efficient than the deprecated ReadFeatures.setGuids()
+          orClauses.add(
+                  new And(
+                          new Equals(StandardMembers.Version.getName(), tupleNumber.version),
+                          new Equals(StandardMembers.FeatureNumber.getName(), tupleNumber.featureNumber)
+                  )
+          );
         }
       }
-      //TODO we prefer ISession.loadTuples(), but that does not make sense for now, because we are disabling cache, and we anyway have to support other form of read requests beside by UUID
-      readFeatures.setGuids(guidList);
+      readFeatures.setQueryMembers(or);
     }
     StringList finalFeatureIds = new StringList();
 
