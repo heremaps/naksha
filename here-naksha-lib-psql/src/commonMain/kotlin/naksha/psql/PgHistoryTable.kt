@@ -35,8 +35,8 @@ class PgHistoryTable(
     @JvmField
     val partitions: MutableMap<Int, PgHistoryPartition> = mutableMapOf()
 
-    // Constraint names are derived from [tableName] — the caller passes the PARTITION's name so each
-    // partition gets unique constraint names (matching lib_data). The partitioned parent has none.
+    // Constraint names derive from [tableName]; each partition passes its own name so its constraints
+    // stay unique. The partitioned parent has none.
     @Suppress("FunctionName")
     internal fun CONSTRAINT(tableName: String, historyPartition: Int): String {
         val ID = collection.column(Id)

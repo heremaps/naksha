@@ -31,9 +31,8 @@ class PgHeadTable(
         PgDistributionPartition(this, it)
     }
 
-    // Constraint names are derived from [tableName]. For a distribution partition the caller passes
-    // the PARTITION's name so each partition gets unique constraint names (matching lib_data); the
-    // partitioned parent itself carries no constraints (its partition key is an expression).
+    // Constraint names derive from [tableName]; each distribution partition passes its own name so its
+    // constraints stay unique. The partitioned parent has none — its partition key is an expression.
     @Suppress("FunctionName")
     internal fun CONSTRAINT(tableName: String = name): String {
         val ID = collection.column(Id)

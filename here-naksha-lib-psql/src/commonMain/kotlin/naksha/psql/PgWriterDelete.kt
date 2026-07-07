@@ -51,8 +51,9 @@ internal class PgWriterDelete(
     }
 
     private fun plan(conn: PgConnection): PgWriterPlan {
-        // The new version with action bits set to DELETED (2).
-        val deleted_version = "(${tx.version.number}::int8 | 2)"
+        // New version with action bits set to DELETED (2): clear the transaction version's action bits
+        // (VERSION sentinel = 3) before OR-ing in DELETE.
+        val deleted_version = "((${tx.version.number}::int8 & -4) | 2)"
 
         // All input provided by client, `id` and optionally `expected_version`
         val query = """WITH query AS (
@@ -192,7 +193,8 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
             outRows.readAll(cursor)
             for (row in 0 until outRows.size) {
                 val write = pgWrites[row]
-                val fn = outRows.getString(row, "query_fn") ?: throw generalException("Missing 'query_fn' in result")
+                // query_fn is an int8 column, read as Int64; used only for diagnostics below.
+                val fn = outRows.getInt64(row, "query_fn") ?: throw generalException("Missing 'query_fn' in result")
 
                 val tuple = outRows[row]
                 if (tuple != null) write.tuple = tuple

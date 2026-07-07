@@ -276,8 +276,7 @@ open class PgWriter internal constructor(
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
                 WriteOp.DELETE, WriteOp.PURGE -> {
-                    // Deletes carry no tuple-number here: the write loop (execute) groups by the resolved
-                    // catalog/collection, and PgWriterDelete finds the existing HEAD by feature-number.
+                    // Deletes carry no tuple-number; PgWriterDelete resolves the existing HEAD by feature-number.
                     if (pgWrite.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
                 }
                 else -> {
@@ -295,9 +294,8 @@ open class PgWriter internal constructor(
      */
     private fun executeWrite(pgWrites: ArrayList<PgWrite>, start: Int, end: Int) {
         if (start == end) return
-        // All writes in [start, end) share the same catalog and collection (guaranteed by the caller,
-        // which grouped the sorted writes by catalog/collection). Within the run they are ordered by
-        // op (PURGE, DELETE, CREATE, UPSERT, UPDATE); dispatch each contiguous op-block to its writer.
+        // All writes in [start, end) share one catalog and collection (the caller grouped them) and are
+        // ordered by op; dispatch each contiguous op-block to its writer.
         val pgCollection = pgWrites[start].collection
         var s = start
         var e = start

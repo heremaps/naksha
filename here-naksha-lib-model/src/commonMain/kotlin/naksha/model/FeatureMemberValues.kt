@@ -67,6 +67,9 @@ object FeatureMemberValues {
             MemberType.SPATIAL -> coerceSpatial(value, featureId, memberName)
             MemberType.TAG_MAP -> coerceTags(value, featureId, memberName)
             MemberType.TAG_MAP_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
+            // A tag list is stored the same way as a tag array: converted to a flat jsonb map.
+            MemberType.TAG_LIST -> coerceTagsFromArray(value, featureId, memberName)
+            MemberType.TUPLE_NUMBER -> coerceTupleNumber(value, featureId, memberName)
             else -> {
                 warnMismatch(featureId, memberName, type.toString(), value)
                 null
@@ -151,6 +154,16 @@ object FeatureMemberValues {
     private fun coerceByteArray(value: Any, featureId: String, memberName: String): ByteArray? = when (value) {
         is ByteArray -> value
         else -> { warnMismatch(featureId, memberName, "byte_array", value); null }
+    }
+
+    /**
+     * Coerce a tuple-number value: an already-materialized [TupleNumber], or a string/byte-array encoding.
+     */
+    private fun coerceTupleNumber(value: Any, featureId: String, memberName: String): TupleNumber? = when (value) {
+        is TupleNumber -> value
+        is String -> TupleNumber.fromString(value)
+        is ByteArray -> TupleNumber.fromByteArray(value)
+        else -> { warnMismatch(featureId, memberName, "tuple_number", value); null }
     }
 
     /**
