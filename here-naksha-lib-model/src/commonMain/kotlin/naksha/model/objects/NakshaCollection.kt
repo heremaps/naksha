@@ -262,6 +262,7 @@ open class NakshaCollection() : NakshaFeature() {
      * - `tags`: Index above tags, does not allow index-only scans or pre-ordering.
      * - `ref_point`: Index above reference point geometry, does not allow index-only scans or pre-ordering.
      * - `gist_geo` or `spgist_geo`: Index above geometry, does not allow index-only scans or pre-ordering.
+     * - `next_version`: Index above the next tuple number, used for efficient history predecessor lookups.
      * - `ft`: Index above `ft`, includes `id`, `tn`, and `next_tn`.
      * - `cv0`, `cv1`, `cv2`, and `cv3`: Index above `cvX`, includes `id`, `tn`, and `next_tn`, does not index `null` values.
      * - `cs0`, `cs1`, `cs2`, and `cs3`: Index above `csX`, includes `id`, `tn`, and `next_tn`, does not index `null` values.
@@ -432,6 +433,12 @@ open class NakshaCollection() : NakshaFeature() {
          * @since 3.0
          */
         const val SP_GIST_IDX = "spgist_geo"
+
+        /**
+         * Index above the next tuple number, used for efficient history predecessor lookups.
+         * @since 3.0
+         */
+        const val NEXT_VERSION_IDX = "next_version"
 
         /**
          * Index above geometry, does not allow index-only scans or pre-ordering.

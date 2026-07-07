@@ -171,7 +171,7 @@ open class PgMap internal constructor(
             txn.createIndex(conn, PgIndex.id_unique)
             txn.createIndex(conn, PgIndex.txn_unique)
             for (index in indices) {
-                txn.createIndex(conn, index)
+                if (index != PgIndex.next_version) txn.createIndex(conn, index)
             }
 
             // We can have a meta table for transactions, but no history or deleted!
@@ -182,7 +182,7 @@ open class PgMap internal constructor(
                 meta.createIndex(conn, PgIndex.id_unique)
                 meta.createIndex(conn, PgIndex.version)
                 for (index in indices) {
-                    meta.createIndex(conn, index)
+                    if (index != PgIndex.next_version) meta.createIndex(conn, index)
                 }
             }
             return
@@ -194,7 +194,7 @@ open class PgMap internal constructor(
         head.createIndex(conn, PgIndex.id_unique)
         head.createIndex(conn, PgIndex.version)
         for (index in indices) {
-            head.createIndex(conn, index)
+            if (index != PgIndex.next_version) head.createIndex(conn, index)
         }
 
         val deleted = collection.deletedTable
@@ -204,7 +204,7 @@ open class PgMap internal constructor(
             deleted.createIndex(conn, PgIndex.id_unique)
             deleted.createIndex(conn, PgIndex.version)
             for (index in indices) {
-                deleted.createIndex(conn, index)
+                if (index != PgIndex.next_version) deleted.createIndex(conn, index)
             }
         }
 
@@ -215,7 +215,7 @@ open class PgMap internal constructor(
             meta.createIndex(conn, PgIndex.id_unique)
             meta.createIndex(conn, PgIndex.version)
             for (index in indices) {
-                meta.createIndex(conn, index)
+                if (index != PgIndex.next_version) meta.createIndex(conn, index)
             }
         }
 

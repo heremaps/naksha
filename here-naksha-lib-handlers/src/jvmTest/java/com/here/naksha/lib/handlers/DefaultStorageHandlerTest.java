@@ -5,6 +5,7 @@ import static naksha.model.NakshaError.MAP_NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
@@ -225,6 +226,65 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: passed Write Collection request was about creating collection defined in Handler properties
     assertEquals(WriteOp.CREATE, capturedCollectionWrite.getOp());
     assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getId());
+    assertHubSlimIndices(collectionFrom(capturedCollectionWrite));
+    assertNull(handler.properties.getCollection().getIndices(), "Handler collection config must not be mutated");
+  }
+
+  @Test
+  void shouldPreserveExplicitEmptyIndicesWhenCreatingMissingCollection() {
+    // Given: Storage writer failing on feature writes due to missing collection and accepting collection create
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
+    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteFeaturesRequest)))
+        .thenReturn(new ErrorResponse(missingCollectionError));
+    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest)))
+        .thenReturn(new SuccessResponse());
+
+    // And: Handler collection config explicitly disables optional indices
+    DefaultStorageHandlerProperties handlerProperties = handlerProperties();
+    handlerProperties.getCollection().setIndices(new StringList());
+    DefaultStorageHandler handler = storageHandler(handlerProperties);
+
+    // When
+    ignoreExceptionsFrom(
+        () -> handler.processEvent(event(writeRandomFeature())),
+        "The mock for storage writer is configured to fail feature writes after collection creation"
+    );
+
+    // Then
+    ArgumentCaptor<WriteRequest> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession, times(3)).execute(storageWriterRequestCaptor.capture());
+    NakshaCollection createdCollection = collectionFrom(findSingleCreateCollectionWrite(storageWriterRequestCaptor.getAllValues()));
+    assertNotNull(createdCollection.getIndices());
+    assertEquals(0, createdCollection.getIndices().size());
+    assertEquals(0, handlerProperties.getCollection().getIndices().size(), "Handler collection config must not be mutated");
+  }
+
+  @Test
+  void shouldPreserveCustomIndicesWhenCreatingMissingCollection() {
+    // Given: Storage writer failing on feature writes due to missing collection and accepting collection create
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
+    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteFeaturesRequest)))
+        .thenReturn(new ErrorResponse(missingCollectionError));
+    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest)))
+        .thenReturn(new SuccessResponse());
+
+    // And: Handler collection config explicitly requests custom indices
+    DefaultStorageHandlerProperties handlerProperties = handlerProperties();
+    handlerProperties.getCollection().setIndices(StringList.of("tags"));
+    DefaultStorageHandler handler = storageHandler(handlerProperties);
+
+    // When
+    ignoreExceptionsFrom(
+        () -> handler.processEvent(event(writeRandomFeature())),
+        "The mock for storage writer is configured to fail feature writes after collection creation"
+    );
+
+    // Then
+    ArgumentCaptor<WriteRequest> storageWriterRequestCaptor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession, times(3)).execute(storageWriterRequestCaptor.capture());
+    NakshaCollection createdCollection = collectionFrom(findSingleCreateCollectionWrite(storageWriterRequestCaptor.getAllValues()));
+    assertIndices(createdCollection, "tags");
+    assertIndices(handlerProperties.getCollection(), "tags");
   }
 
   @Test
@@ -543,6 +603,21 @@ class DefaultStorageHandlerTest extends AbstractTest {
     List<Write> collectionWrites = getSingularWritesToCollection(writeRequests, Naksha.COLLECTIONS_COL);
     assertEquals(1, collectionWrites.size(), "Expected single collection write");
     return collectionWrites.get(0);
+  }
+
+  private static NakshaCollection collectionFrom(Write write) {
+    assertInstanceOf(NakshaCollection.class, write.getFeature());
+    return (NakshaCollection) write.getFeature();
+  }
+
+  private static void assertHubSlimIndices(NakshaCollection collection) {
+    assertIndices(collection, "id", "tags", "gist_geo", "next_version");
+  }
+
+  private static void assertIndices(NakshaCollection collection, String... expectedIndices) {
+    StringList indices = collection.getIndices();
+    assertNotNull(indices);
+    assertTrue(indices.containsStringsInOrder(expectedIndices));
   }
 
   private static List<Write> getSingularWritesToCollection(List<WriteRequest> writeRequests, String collectionId) {

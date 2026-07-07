@@ -20,12 +20,15 @@ package com.here.naksha.lib.hub;
 
 import static com.here.naksha.lib.common.TestFileLoader.parseJsonFileOrFail;
 import static com.here.naksha.lib.common.TestNakshaContext.newTestNakshaContext;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.hub.mock.MockResult.mockResultWithFeature;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.argThat;
@@ -51,10 +54,12 @@ import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import naksha.base.StringList;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
@@ -104,6 +109,22 @@ class NakshaHubWiringTest extends AbstractTest {
   }
 
   @Test
+  void adminCollectionsUseSlimIndices() {
+    // When
+    WriteRequest request = NakshaHub.upsertAdminCollectionsRequest("admin_map");
+
+    // Then
+    assertEquals(ALL_HUB_INTERNAL_COLLECTIONS.size(), request.getWrites().size());
+    request.getWrites().forEach(write -> {
+      assertInstanceOf(NakshaCollection.class, write.getFeature());
+      NakshaCollection collection = (NakshaCollection) write.getFeature();
+      assertTrue(ALL_HUB_INTERNAL_COLLECTIONS.contains(collection.getId()));
+      assertEquals("admin_map", collection.getMapId());
+      assertSlimIndices(collection);
+    });
+  }
+
+  @Test
   @Order(1)
   void testCreateStorageRequestWiring() {
     // Given: Create Storage request
@@ -136,6 +157,12 @@ class NakshaHubWiringTest extends AbstractTest {
     // Verify: admin storage writer finally gets the write request
     verify(adminStorageWriter, times(1)).execute(reqCaptor.capture());
     assertTrue(reqCaptor.getValue() instanceof WriteRequest);
+  }
+
+  private static void assertSlimIndices(NakshaCollection collection) {
+    StringList indices = collection.getIndices();
+    assertNotNull(indices);
+    assertTrue(indices.containsStringsInOrder("id", "tags", "gist_geo", "next_version"));
   }
 
   @Test
