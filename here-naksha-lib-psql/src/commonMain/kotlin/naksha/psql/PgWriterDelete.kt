@@ -43,7 +43,7 @@ internal class PgWriterDelete(
         var row = 0
         for (i in start until end) {
             val pgWrite = pgWrites[i]
-            inRows.set(row, FN.ident, pgWrite.tupleNumber!!.featureNumber)
+            inRows.set(row, FN.ident, pgWrite.featureNumber)
             inRows.set(row, "expected_version", pgWrite.version?.number)
             row++
         }
@@ -125,8 +125,8 @@ SELECT
     null::int8 AS $NEXT_VERSION,
     ${if (CC!=null) "COALESCE(head_updated.$CC, head_row.$CC + 1) AS $CC," else ""}
     ${pgCollection.joinColumns { col -> if (col eq CC || col eq FN || col eq VERSION || col eq NEXT_VERSION) null else "head_row.$col AS $col" }},
-    ${if (head_to_history.isNotEmpty()) "head_to_history.$VERSION AS head_history_version," else "null AS head_history_version"}
-    ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else "null AS history_version"}
+    ${if (head_to_history.isNotEmpty()) "head_to_history.$VERSION AS head_history_version," else "null AS head_history_version,"}
+    ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else "null AS history_version,"}
     head_select.$FN AS select_fn,
     head_select.$VERSION AS select_version,
     head_row.$VERSION AS head_version,
@@ -138,7 +138,7 @@ LEFT JOIN head_row ON head_row.$FN = query.$FN
 ${if (!purge) "LEFT JOIN head_updated ON head_updated.$FN = query.$FN" else ""}
 ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FN = query.$FN" else ""}
 ${if (history_tombstone.isNotEmpty()) "LEFT JOIN history_tombstone ON history_tombstone.$FN = query.$FN" else ""}
-LEFT JOIN head_select ON head_select.$FN = query.$ID
+LEFT JOIN head_select ON head_select.$FN = query.$FN
 ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
 ;"""
         val typeNames = inRows.typeNames()
