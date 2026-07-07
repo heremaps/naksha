@@ -35,31 +35,32 @@ class PgHistoryTable(
     @JvmField
     val partitions: MutableMap<Int, PgHistoryPartition> = mutableMapOf()
 
+    // Constraint names are derived from [tableName] — the caller passes the PARTITION's name so each
+    // partition gets unique constraint names (matching lib_data). The partitioned parent has none.
     @Suppress("FunctionName")
-    internal fun CONSTRAINT(historyPartition:Int): String {
+    internal fun CONSTRAINT(tableName: String, historyPartition: Int): String {
         val ID = collection.column(Id)
         val NEXT_VERSION = collection.column(NextVersion)
         return """
-  CONSTRAINT ${quoteIdent(name, "\$c_pkey")} PRIMARY KEY ($FN, $VERSION) INCLUDE ($NEXT_VERSION, $ID}),
-  CONSTRAINT ${quoteIdent(name, "\$c_nv")} CHECK ($NEXT_VERSION IS NOT NULL AND $NEXT_VERSION >= $VERSION),
-  CONSTRAINT ${quoteIdent(name, "\$c_nvr")} CHECK ((($NEXT_VERSION >> ${collection.shift})::int4) = $historyPartition),
-  CONSTRAINT ${quoteIdent(name, "\$c_id")} UNIQUE ($ID, $VERSION) INCLUDE ($NEXT_VERSION, $FN}),
-  CONSTRAINT ${quoteIdent(name, "\$c_fn")} CHECK (($FN < 0 AND $ID IS NOT NULL) OR ($FN >= 0 AND $ID IS NULL))"""
+  CONSTRAINT ${quoteIdent(tableName, "\$c_pkey")} PRIMARY KEY ($FN, $VERSION) INCLUDE ($NEXT_VERSION, $ID),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_nv")} CHECK ($NEXT_VERSION IS NOT NULL AND $NEXT_VERSION >= $VERSION),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_nvr")} CHECK ((($NEXT_VERSION >> ${collection.shift})::int4) = $historyPartition),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_id")} UNIQUE ($ID, $VERSION) INCLUDE ($NEXT_VERSION, $FN),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_fn")} CHECK (($FN < 0 AND $ID IS NOT NULL) OR ($FN >= 0 AND $ID IS NULL))"""
     }
 
     @Suppress("FunctionName")
-    internal fun CONSTRAINT(historyPartition:Int, distributionPartition: Int): String {
-        return """${CONSTRAINT(historyPartition)},
-  CONSTRAINT ${quoteIdent(name, "\$c_fnr")} CHECK ((($FN & 65535)::int4 % ${collection.partitions})=$distributionPartition)
+    internal fun CONSTRAINT(tableName: String, historyPartition: Int, distributionPartition: Int): String {
+        return """${CONSTRAINT(tableName, historyPartition)},
+  CONSTRAINT ${quoteIdent(tableName, "\$c_fnr")} CHECK ((($FN & 65535)::int4 % ${collection.partitions})=$distributionPartition)
 """
     }
 
     override fun CREATE_SQL(): String {
         val (CREATE_TABLE, TABLESPACE) = CREATE_TABLE_and_TABLESPACE()
         val NEXT_VERSION = collection.column(NextVersion)
-        return """$CREATE_TABLE $quotedName (${columnDefinitions()}) 
-PARTITION BY RANGE ((($NEXT_VERSION >> ${collection.shift})::int4)) 
-WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target) 
+        return """$CREATE_TABLE $quotedName (${columnDefinitions()})
+PARTITION BY RANGE ((($NEXT_VERSION >> ${collection.shift})::int4))
 $TABLESPACE"""
     }
 

@@ -528,7 +528,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         val outRows = PgRows().withCollection(catalogs)
         val SQL = """SELECT ${outRows.aliases()}
 FROM "naksha~admin".${catalogs.headTable.quotedName}
-WHERE id = $1 AND (version & 3) < 2"""
+WHERE _id = $1 AND (_version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         plan.execute(arrayOf(id)).fetch().use { cursor ->
             if (!outRows.read(cursor)) return null
@@ -559,7 +559,7 @@ WHERE id = $1 AND (version & 3) < 2"""
         val rows = PgRows().withCollection(catalogs)
         val SQL = """SELECT ${rows.aliases()} 
 FROM "naksha~admin".${catalogs.headTable.quotedName} 
-WHERE fn = $1 AND (version & 3) < 2"""
+WHERE _fn = $1 AND (_version & 3) < 2"""
         setSearchPath(conn)
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }

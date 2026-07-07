@@ -102,7 +102,7 @@ open class PgCollection internal constructor(
         val memberType = member.dataType
         return when (memberType) {
             BYTE_ARRAY, TUPLE_NUMBER -> PgColumn(index, memberName, STRING, "STORAGE $EXTENDED")
-            STRING -> PgColumn(index, memberName, STRING, "COLLATE \"C\" STORAGE $MAIN")
+            STRING -> PgColumn(index, memberName, STRING, "STORAGE $MAIN COLLATE \"C\"")
             else -> PgColumn(index, memberName, STRING, "STORAGE $MAIN")
         }
     }

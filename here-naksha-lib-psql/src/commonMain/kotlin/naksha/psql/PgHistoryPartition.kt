@@ -54,17 +54,17 @@ class PgHistoryPartition(
 
         // HISTORY-PARTITION is NOT distribution partitioned.
         if (partitions.isEmpty()) return """$CREATE_TABLE $quotedName 
-PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(partitionIndex)}) 
+PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
 CREATE INDEX ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION, $NEXT_VERSION) INCLUDE ($FN, $ID);"""
 
-        // HISTORY-PARTITION is distribution partitioned.
-        return """$CREATE_TABLE $quotedName 
-PARTITION OF ${parent.quotedName} 
-PARTITION BY RANGE ((($FN & 65535)::int4 % ${collection.partitions}) 
-FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
-WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE"""
+        // HISTORY-PARTITION is distribution partitioned. FOR VALUES must precede PARTITION BY, the
+        // partition-key expr needs its closing paren, and a partitioned parent carries no storage params.
+        return """$CREATE_TABLE $quotedName
+PARTITION OF ${parent.quotedName}
+FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
+PARTITION BY RANGE ((($FN & 65535)::int4 % ${collection.partitions}))$TABLESPACE"""
     }
 
     /**

@@ -58,7 +58,7 @@ data class PgIndex(
     internal fun create(conn: PgConnection, table: PgTable) {
         if (on.isEmpty()) throw illegalArg("Index without target columns: $name")
         val primaryColumn = on.first()
-        val (primaryIndex, primaryDeclaration) = indexAndOpsOf(primaryColumn, name)
+        val (primaryIndex, _) = indexAndOpsOf(primaryColumn, name)
         val secondaries = mutableListOf<Pair<String,String>>()
         for (i in 0 ..< on.size) {
             val pgColumn = on[i]
@@ -77,7 +77,7 @@ data class PgIndex(
         val fillFactor = if (PgTable.isAnyHead(table.name)) "(fillfactor=50)" else "(fillfactor=100)"
         val sql = """CREATE INDEX IF NOT EXISTS $indexIdent 
 ON ${table.quotedName}
-USING $primaryIndex ($primaryDeclaration${secondaries.joinToString(", ") { secondary -> secondary.second }})$includeClause
+USING $primaryIndex (${on.zip(secondaries).joinToString(", ") { (col, sec) -> "${col.ident}${sec.second}" }})$includeClause
 WITH $fillFactor""" //                        like "gin jsonb_ops"
         conn.execute(sql).close()
     }
