@@ -59,8 +59,7 @@ FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
 CREATE INDEX ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION, $NEXT_VERSION) INCLUDE ($FN, $ID);"""
 
-        // HISTORY-PARTITION is distribution partitioned. FOR VALUES must precede PARTITION BY, the
-        // partition-key expr needs its closing paren, and a partitioned parent carries no storage params.
+        // HISTORY-PARTITION is distribution partitioned.
         return """$CREATE_TABLE $quotedName
 PARTITION OF ${parent.quotedName}
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})

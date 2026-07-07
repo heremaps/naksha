@@ -244,6 +244,21 @@ SELECT basics.*, procs.* FROM basics, procs;
             books = PgNakshaBooks(this)
             catalogs = PgNakshaCatalogs(this)
 
+            // Admin collections are constructed fresh (not decoded from storage), so give each a valid
+            // tuple-number: encodeFeature needs the owning collection's tuple-number to write features
+            // into it (e.g. the transaction record persisted on commit). A collection's own feature-number
+            // is its collection-number, and its record lives in `naksha~collections`.
+            val collectionsColNumber = collections.collectionNumber
+            for (adminCol in listOf(collections, transactions, books, catalogs)) {
+                val tn = TupleNumber(
+                    number, catalogNumber, collectionsColNumber,
+                    Int64(adminCol.collectionNumber.toLong()), Int64(1)
+                )
+                // Set the collection's resolved `_tn` member, where encodeFeature reads it back.
+                val col = adminCol.head
+                col.useMember(naksha.model.objects.StandardMembers.Tn).set(col, tn)
+            }
+
             if (admin_schema_oid == null) {
                 if (!doCreate) throw forbidden("Creation of admin-map needed, but forbidden by config")
                 logger.info("Install Naksha admin-map in version $psql_version for storage $id / $number")

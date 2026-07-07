@@ -95,12 +95,15 @@ data class Tuple @JvmOverloads constructor(
             }
             // Read the current tuple-number of the feature; if any.
             val prevTn: TupleNumber? = collection.useMember(StandardMembers.Tn).getTupleNumber(feature)
+            // The transaction version carries the VERSION sentinel (=3) in its low two action bits; each
+            // feature records its OWN action (CREATE/UPDATE/DELETE) there so the row reads as live.
+            val version = (session.useTransaction().version.number and Int64(-4)) or Int64(action.intValue)
             val newTn: TupleNumber
             if (prevTn != null) {
                 if (action != Action.VERSION && action == Action.CREATE) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action CREATE given, the feature exists already (has a uuid)")
                 }
-                newTn = TupleNumber.copy(prevTn, session.useTransaction().version.number)
+                newTn = TupleNumber.copy(prevTn, version)
             } else {
                 if (action != Action.VERSION && action != Action.CREATE) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action $action given, the feature does not exist (missing uuid)")
@@ -114,12 +117,15 @@ data class Tuple @JvmOverloads constructor(
                     colTn.featureNumber.toInt(),
                     // The feature-number of the feature, either the `id` is a feature-number or it is calculated form hashing the `id`.
                     Naksha.featureNumber(feature.id),
-                    // The version is the one of the transaction.
-                    session.useTransaction().version.number
+                    // The transaction version, but with the feature's own action in the lower two bits.
+                    version
                 )
             }
             // Update the feature with its new tuple-number.
             tnMember.set(feature, newTn)
+            // A freshly encoded feature is the current HEAD state, so its next-version is the HEAD
+            // sentinel; history rows get their real next-version from the write SQL.
+            collection.useMember(StandardMembers.NextVersion).set(feature, Version.HEAD.number)
             val globalBookTn: TupleNumber?
             if (globalBook != null) {
                 if (newTn.databaseNumber != globalBook.databaseNumber || globalBook.featureNumber == null) {
@@ -133,13 +139,18 @@ data class Tuple @JvmOverloads constructor(
             // Create the encoder with a custom member encoder.
             val encoder = JbEncoder2(globalBook)
             val membersBook = HeapBook(BookType.MEMBER_BOOK)
+            // Pre-populate the members-book in canonical member order (useMembers()): blob member
+            // references are positional indices into this book, and the reader rebuilds it in the same
+            // order (PgRows.getTuple).
+            for (i in 0 until members.size) { val m = members[i]; if (m != null) membersBook.put(m.name, null) }
             encoder.withMemberEncoder { path: Array<Any?>, pathEnd: Int, value: Any? ->
-                // Build the current path key from the encoder's path.
+                // Find the member whose declared path matches the current position and redirect its
+                // value into the members-book.
                 members@ for (i in 0 until members.size) {
                     val member = members[i] ?: continue
-                    if (StandardMembers.GlobalBookFeatureNumber.isSameAs(member)) {
-                        return@withMemberEncoder if (globalBookTn != null) membersBook.put(member.name, globalBookTn.featureNumber) else -1
-                    }
+                    // GlobalBookFeatureNumber is injected from the global book, not read from the
+                    // feature, so it must not take part in path matching (it is set after encoding).
+                    if (StandardMembers.GlobalBookFeatureNumber.isSameAs(member)) continue
                     val memberName = member.name
                     val memberPath = member.path
                     if (memberPath.size != pathEnd) continue
@@ -165,6 +176,9 @@ data class Tuple @JvmOverloads constructor(
 
             // Encode the feature.
             val raw = encoder.buildTupleFromMap(feature)
+            // The global-book feature-number is not part of the feature itself; inject it into the
+            // members-book when a global book was provided.
+            if (globalBookTn != null) membersBook.put(StandardMembers.GlobalBookFeatureNumber.name, globalBookTn.featureNumber)
 
             // Optionally GZIP.
             if (raw.size >= 1000) {

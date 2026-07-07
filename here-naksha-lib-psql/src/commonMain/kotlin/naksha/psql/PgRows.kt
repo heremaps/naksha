@@ -7,7 +7,10 @@ import naksha.jbon.HeapBook
 import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.MemberType
+import naksha.model.Version
 import naksha.model.objects.StandardMembers.StandardMembers_C.Feature
+import naksha.model.objects.StandardMembers.StandardMembers_C.Id
+import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
 
 /**
  * Helper class to convert rows into arrays of column-data and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
@@ -252,18 +255,31 @@ internal class PgRows {
     fun getTuple(row: Int): Tuple? {
         if (row !in 0..< size) return null
         val collection = this.collection ?: return null
+        // Rebuild the members-book in the same canonical member order as Tuple.encodeFeature
+        // (collection.useMembers()) so the blob's positional member references resolve; the
+        // tuple-number is reconstructed from the split `_fn`/`_version` columns.
+        val members = collection.head.useMembers()
         val membersBook = HeapBook(BookType.MEMBER_BOOK)
         var featureBytes: ByteArray? = null
-        for (column in columns) {
-            val value = column.values[row]
-            if (Feature.name == column.pgColumn.name) {
-                // Special case, root feature.
-                if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
-                featureBytes = value
-            } else {
-                val pgColumn = collection.column(column.pgColumn.name)
-                if (pgColumn != null) membersBook.put(pgColumn.name, value)
-                // else: We have and additional row in the result set that we can ignore for tuple fetching.
+        for (i in 0 until members.size) {
+            // Skip null members exactly like the encoder's pre-population does, so positions stay aligned.
+            val member = members[i] ?: continue
+            when (val name = member.name) {
+                Feature.name -> {
+                    val value = getColumn(name)?.values?.get(row)
+                    if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
+                    featureBytes = value
+                    membersBook.put(name, null)
+                }
+                Tn.name -> {
+                    val fn = getColumn(PgColumn.FN.name)?.values?.get(row) as? Int64
+                    val ver = getColumn(PgColumn.VERSION.name)?.values?.get(row) as? Int64
+                    val db = databaseNumber; val cat = catalogNumber; val col = collectionNumber
+                    val tn = if (fn != null && ver != null && db != null && cat != null && col != null)
+                        TupleNumber(db, cat, col, fn, ver) else null
+                    membersBook.put(name, tn)
+                }
+                else -> membersBook.put(name, getColumn(name)?.values?.get(row))
             }
         }
         if (featureBytes == null) throw NakshaException(ILLEGAL_STATE, "Missing mandatory member '${Feature.name}'!")
@@ -292,6 +308,16 @@ internal class PgRows {
             val value = membersBook[memberName]
             column.values[row] = value
         }
+        // The members-book keeps the tuple-number as a single `_tn` entry; the table splits it into the
+        // `_fn` and `_version` columns, so populate those from the tuple-number.
+        val tn = tuple.tupleNumber
+        getColumn(PgColumn.FN.name)?.let { it.values[row] = tn.featureNumber }
+        getColumn(PgColumn.VERSION.name)?.let { it.values[row] = tn.version }
+        // HEAD rows store next_version as NULL; translate the encoder's HEAD sentinel into NULL.
+        getColumn(PgColumn.NEXT_VERSION.name)?.let { if (it.values[row] == Version.HEAD.number) it.values[row] = null }
+        // `_id` is materialized only when it is not derivable from the feature-number: fn < 0 => hashed
+        // id, fn >= 0 => id equals fn so `_id` stays NULL (a CHECK enforces both cases).
+        getColumn(Id.name)?.let { it.values[row] = if (tn.featureNumber.toLong() < 0L) membersBook[Id.name] else null }
         val featureColumn = getColumn(Feature.name) ?: return
         featureColumn.values[row] = tuple.featureBytes
     }
@@ -304,7 +330,8 @@ internal class PgRows {
      */
     operator fun set(row: Int, cursor: PgCursor) {
         if (!cursor.isRow()) return
-        setMinRows(row)
+        // Grow to hold index `row` (size must be row + 1) so appended read rows are retained.
+        setMinRows(row + 1)
         val columnNames = cursor.columnNames()
         for (columnName in columnNames) {
             val column = getColumn(columnName) ?: continue
@@ -425,9 +452,10 @@ internal class PgRows {
         var placeholders = this.placeholders
         if (placeholders != null) return placeholders
         val sb = StringBuilder()
+        // Postgres bind parameters are 1-based: emit $1, $2, ... $N (not $0 .. $N-1).
         for (i in 0 ..< columns.size) {
             if (!sb.isEmpty()) sb.append(',')
-            sb.append('$').append(i)
+            sb.append('$').append(i + 1)
         }
         placeholders = sb.toString()
         this.placeholders = placeholders

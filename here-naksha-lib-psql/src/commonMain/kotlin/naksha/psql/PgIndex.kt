@@ -38,10 +38,9 @@ data class PgIndex(
 ) {
 
     companion object PgIndex_C {
-        // Returns (index-method, index-element) for a column. The element already contains the column
-        // reference plus any operator class / functional wrapper the method needs, so the caller can
-        // just join the elements — a spatial column becomes `naksha_2d(<col>)`, a tag column becomes
-        // `<col> jsonb_ops`, etc.
+        // Returns (index-method, index-element) for a column. The element includes the column reference
+        // plus any opclass / functional wrapper the method needs (e.g. a spatial column becomes
+        // `naksha_2d(<col>)`), so the caller can just join the elements.
         private fun indexAndOpsOf(column: PgColumn, indexName: String): Pair<String, String> = when (column.memberType) {
             MemberType.INT8,
             MemberType.INT16,
@@ -53,9 +52,10 @@ data class PgIndex(
             MemberType.STRING -> Pair("btree", "${column.ident} COLLATE \"C\" text_pattern_ops")
             // A two-dimensional gist index over the TWKB geometry, via the naksha_2d() helper.
             MemberType.SPATIAL -> Pair("gist", "naksha_2d(${column.ident})")
-            MemberType.TAG_MAP -> Pair("gin", "${column.ident} jsonb_ops")
+            // All tag variants are stored as a jsonb flat map, so they share a gin jsonb_ops index.
+            MemberType.TAG_MAP,
             MemberType.TAG_MAP_FROM_ARRAY,
-            MemberType.TAG_LIST -> Pair("gin", "${column.ident} array_ops")
+            MemberType.TAG_LIST -> Pair("gin", "${column.ident} jsonb_ops")
             else -> throw illegalArg("The member type ${column.memberType} of column '$column' of index '$indexName' is not a valid index target")
         }
     }
