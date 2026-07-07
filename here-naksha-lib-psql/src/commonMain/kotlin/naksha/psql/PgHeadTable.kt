@@ -31,20 +31,23 @@ class PgHeadTable(
         PgDistributionPartition(this, it)
     }
 
+    // Constraint names are derived from [tableName]. For a distribution partition the caller passes
+    // the PARTITION's name so each partition gets unique constraint names (matching lib_data); the
+    // partitioned parent itself carries no constraints (its partition key is an expression).
     @Suppress("FunctionName")
-    internal fun CONSTRAINT(): String {
+    internal fun CONSTRAINT(tableName: String = name): String {
         val ID = collection.column(Id)
         return """
-  CONSTRAINT ${quoteIdent(name, "\$c_pkey")} PRIMARY KEY ($FN) INCLUDE ($VERSION, $ID),
-  CONSTRAINT ${quoteIdent(name, "\$c_fn")} CHECK (($FN < 0 AND $ID IS NOT NULL) OR ($FN >= 0 AND $ID IS NULL)),
-  CONSTRAINT ${quoteIdent(name, "\$c_nv")} CHECK ($NEXT_VERSION IS NULL),
-  CONSTRAINT ${quoteIdent(name, "\$c_id")} UNIQUE ($ID) INCLUDE ($VERSION, $FN})"""
+  CONSTRAINT ${quoteIdent(tableName, "\$c_pkey")} PRIMARY KEY ($FN) INCLUDE ($VERSION, $ID),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_fn")} CHECK (($FN < 0 AND $ID IS NOT NULL) OR ($FN >= 0 AND $ID IS NULL)),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_nv")} CHECK ($NEXT_VERSION IS NULL),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_id")} UNIQUE ($ID) INCLUDE ($VERSION, $FN)"""
     }
 
     @Suppress("FunctionName")
-    internal fun CONSTRAINT(distributionPartition: Int): String {
-        return """${CONSTRAINT()},
-  CONSTRAINT ${quoteIdent(name, "\$c_fnr")} CHECK ((($FN & 65535)::int4 % ${collection.partitions})=$distributionPartition)
+    internal fun CONSTRAINT(tableName: String, distributionPartition: Int): String {
+        return """${CONSTRAINT(tableName)},
+  CONSTRAINT ${quoteIdent(tableName, "\$c_fnr")} CHECK ((($FN & 65535)::int4 % ${collection.partitions})=$distributionPartition)
   """
     }
 
@@ -58,9 +61,8 @@ WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
 CREATE INDEX ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION) INCLUDE ($FN, $ID);"""
 
         // HEAD is distribution partitioned.
-        return """$CREATE_TABLE $quotedName (${columnDefinitions()}) 
-WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target) 
-PARTITION BY RANGE ((($FN & 65535)::int4 % ${collection.partitions})$TABLESPACE;"""
+        return """$CREATE_TABLE $quotedName (${columnDefinitions()})
+PARTITION BY RANGE ((($FN & 65535)::int4 % ${collection.partitions}))$TABLESPACE;"""
     }
 
     /**
