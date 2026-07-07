@@ -11,7 +11,11 @@ import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType.MemberType_C.BYTE_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.INT64
+import naksha.model.objects.MemberType.MemberType_C.SPATIAL
 import naksha.model.objects.MemberType.MemberType_C.STRING
+import naksha.model.objects.MemberType.MemberType_C.TAG_LIST
+import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
+import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardIndices
@@ -99,12 +103,13 @@ open class PgCollection internal constructor(
             Id.name -> return PgColumn(index, memberName, STRING, "STORAGE $PLAIN")
             Feature.name -> return PgColumn(index, memberName, BYTE_ARRAY, "STORAGE $EXTERNAL")
         }
-        // The storage is by default defined by data-type
         val memberType = member.dataType
         return when (memberType) {
             BYTE_ARRAY, TUPLE_NUMBER -> PgColumn(index, memberName, STRING, "STORAGE $EXTENDED")
             STRING -> PgColumn(index, memberName, STRING, "STORAGE $MAIN COLLATE \"C\"")
-            else -> PgColumn(index, memberName, STRING, "STORAGE $MAIN")
+            TAG_MAP, TAG_MAP_FROM_ARRAY, TAG_LIST -> PgColumn(index, memberName, memberType, "STORAGE $MAIN")
+            SPATIAL -> PgColumn(index, memberName, memberType, "STORAGE $EXTERNAL")
+            else -> PgColumn(index, memberName, memberType, "STORAGE $PLAIN")
         }
     }
 

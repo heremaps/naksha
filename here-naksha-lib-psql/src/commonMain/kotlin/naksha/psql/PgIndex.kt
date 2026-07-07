@@ -62,11 +62,11 @@ data class PgIndex(
         val secondaries = mutableListOf<Pair<String,String>>()
         for (i in 0 ..< on.size) {
             val pgColumn = on[i]
-            val secondary = indexAndOpsOf(pgColumn, name)
-            if (secondary.first != "btree" || !primaryIndex.contains(secondary.first)) {
-                throw illegalArg("The member #$i ($pgColumn) can not be used as secondary index element, only primitives are allows")
+            val ops = indexAndOpsOf(pgColumn, name)
+            if (i > 0 && (ops.first != "btree" || !primaryIndex.contains(ops.first))) {
+                throw illegalArg("The member #$i ($pgColumn) can not be used as secondary index element, only primitives are allowed")
             }
-            secondaries.add(secondary)
+            secondaries.add(ops)
         }
         val includeClause = if (includes.isEmpty()) "" else " INCLUDE (${includes.joinToString(", ") { column -> 
             val (index, _) = indexAndOpsOf(column, "include")
@@ -74,11 +74,10 @@ data class PgIndex(
             column.ident
         }})"
         val indexIdent = quoteIdent(table.name, "\$i_", table.name)
-        val fillFactor = if (PgTable.isAnyHead(table.name)) "(fillfactor=50)" else "(fillfactor=100)"
-        val sql = """CREATE INDEX IF NOT EXISTS $indexIdent 
+        val withClause = if (primaryIndex == "gin") "" else " WITH (fillfactor=${if (PgTable.isAnyHead(table.name)) 50 else 100})"
+        val sql = """CREATE INDEX IF NOT EXISTS $indexIdent
 ON ${table.quotedName}
-USING $primaryIndex (${on.zip(secondaries).joinToString(", ") { (col, sec) -> "${col.ident}${sec.second}" }})$includeClause
-WITH $fillFactor""" //                        like "gin jsonb_ops"
+USING $primaryIndex (${on.zip(secondaries).joinToString(", ") { (col, sec) -> "${col.ident}${sec.second}" }})$includeClause$withClause""" // like "gin jsonb_ops"
         conn.execute(sql).close()
     }
 
