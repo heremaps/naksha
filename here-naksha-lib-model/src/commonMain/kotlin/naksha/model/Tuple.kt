@@ -28,6 +28,7 @@ import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StandardMembers
+import naksha.model.objects.XyzMembers
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -70,6 +71,7 @@ data class Tuple @JvmOverloads constructor(
          * @param action the action to apply.
          * @param session the session for which to encode; declares the version.
          * @param globalBook the global book to use for encoding; if any.
+         * @param atomic if atomic, an UPDATE/DELETE requires the feature's uuid to pin the prior version.
          * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
          * @since 3.0
          * @throws NakshaException if any fatal error happens when encoding.
@@ -81,7 +83,8 @@ data class Tuple @JvmOverloads constructor(
             collection: NakshaCollection,
             action: Action,
             session: IWriteSession,
-            globalBook: IBook?
+            globalBook: IBook?,
+            atomic: Boolean = true
         ): Tuple {
             val members = collection.useMembers()
             val processors = session.processors
@@ -105,7 +108,8 @@ data class Tuple @JvmOverloads constructor(
                 }
                 newTn = TupleNumber.copy(prevTn, version)
             } else {
-                if (action != Action.VERSION && action != Action.CREATE) {
+                // No uuid: only an atomic UPDATE/DELETE needs one; others derive the tuple-number from the id.
+                if (action != Action.VERSION && action != Action.CREATE && atomic) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action $action given, the feature does not exist (missing uuid)")
                 }
                 newTn = TupleNumber(
@@ -115,8 +119,12 @@ data class Tuple @JvmOverloads constructor(
                     colTn.catalogNumber,
                     // The feature-number of the collection is the collection-number of the feature we want to store in the collection.
                     colTn.featureNumber.toInt(),
-                    // The feature-number of the feature, either the `id` is a feature-number or it is calculated form hashing the `id`.
-                    Naksha.featureNumber(feature.id),
+                    // Collection/catalog features are keyed by their collection/catalog-number, others by feature-number.
+                    when (collection.id) {
+                        Naksha.COLLECTIONS_COL_ID -> Int64(Naksha.collectionNumber(feature.id))
+                        Naksha.CATALOGS_COL_ID -> Int64(Naksha.catalogNumber(feature.id))
+                        else -> Naksha.featureNumber(feature.id)
+                    },
                     // The transaction version, but with the feature's own action in the lower two bits.
                     version
                 )
@@ -143,6 +151,7 @@ data class Tuple @JvmOverloads constructor(
             // references are positional indices into this book, and the reader rebuilds it in the same
             // order (PgRows.getTuple).
             for (i in 0 until members.size) { val m = members[i]; if (m != null) membersBook.put(m.name, null) }
+            val handledMembers = mutableSetOf<String>()
             encoder.withMemberEncoder { path: Array<Any?>, pathEnd: Int, value: Any? ->
                 // Find the member whose declared path matches the current position and redirect its
                 // value into the members-book.
@@ -166,9 +175,10 @@ data class Tuple @JvmOverloads constructor(
                         }
                     }
                     // Coerce the value to the expected type.
-                    v = FeatureMemberValues.coerce(value, member.dataType, feature.id, memberName)
+                    v = FeatureMemberValues.coerce(v, member.dataType, feature.id, memberName)
 
                     // Store in membersBook.
+                    handledMembers.add(memberName)
                     return@withMemberEncoder membersBook.put(memberName, v)
                 }
                 -1
@@ -176,6 +186,22 @@ data class Tuple @JvmOverloads constructor(
 
             // Encode the feature.
             val raw = encoder.buildTupleFromMap(feature)
+
+            // Stamp session-derived members (app_id, author, timestamps) the client did not supply, which the
+            // encoder callback above skips because their path is absent from the feature.
+            for (i in 0 until members.size) {
+                val member = members[i] ?: continue
+                if (StandardMembers.GlobalBookFeatureNumber.isSameAs(member)) continue
+                val memberName = member.name
+                if (memberName in handledMembers) continue
+                val procs = processors[memberName] ?: continue
+                var v: Any? = null
+                for (proc in procs) {
+                    v = proc.processMember(session, collection, feature, member, v)
+                }
+                v = FeatureMemberValues.coerce(v, member.dataType, feature.id, memberName)
+                membersBook.put(memberName, v)
+            }
             // The global-book feature-number is not part of the feature itself; inject it into the
             // members-book when a global book was provided.
             if (globalBookTn != null) membersBook.put(StandardMembers.GlobalBookFeatureNumber.name, globalBookTn.featureNumber)
@@ -509,5 +535,21 @@ data class Tuple @JvmOverloads constructor(
         val decoder = JbDecoder2(globalBook, membersBook)
         decoder.mapBytes(rawBytes)
         return decoder.toAnyObject().proxy(NakshaFeature::class)
+    }
+
+    /**
+     * Like [decodeFeature], but also overlays the XYZ metadata namespace (`app_id`, `author`, timestamps, …)
+     * and `tags` from the tuple's dedicated columns, which the feature blob does not carry.
+     * @param globalBook the global book to use to decode the [Tuple]; if any.
+     * @return the decoded [NakshaFeature] with its XYZ namespace populated.
+     * @since 3.0
+     */
+    @JvmOverloads
+    fun toNakshaFeature(globalBook: IBook? = null): NakshaFeature {
+        val feature = decodeFeature(globalBook)
+        feature.properties.xyz = XyzNs.fromTuple(this)
+        val tags = getTagList(XyzMembers.XyzTags)
+        if (tags != null) feature.properties.xyz.tags = tags
+        return feature
     }
 }

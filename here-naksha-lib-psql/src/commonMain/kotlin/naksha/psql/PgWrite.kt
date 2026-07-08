@@ -96,7 +96,10 @@ internal data class PgWrite(val original: Write, val i: Int) {
      */
     val version: Version?
         get() = if (original.atomic && op != WriteOp.CREATE && op != WriteOp.UPSERT)
-            original.version ?: Version(original.tupleNumber?.version!!)
+        // Expected prior HEAD version: explicit version/tuple-number, else the one captured at encode time.
+            original.version
+                ?: original.tupleNumber?.let { Version(it.version) }
+                ?: tuple?.previousTupleNumber?.let { Version(it.version) }
         else
             null
 

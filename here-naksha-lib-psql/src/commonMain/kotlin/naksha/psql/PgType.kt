@@ -195,10 +195,9 @@ class PgType : JsEnum() {
             MemberType.FLOAT32 -> FLOAT
             MemberType.FLOAT64 -> DOUBLE
             MemberType.STRING -> STRING
-            // All tag variants are coerced to a jsonb flat map (GIN-indexed), so all three map to jsonb.
             MemberType.TAG_MAP -> JSONB
             MemberType.TAG_MAP_FROM_ARRAY -> JSONB
-            MemberType.TAG_LIST -> JSONB
+            MemberType.TAG_LIST -> STRING_ARRAY
             // MemberType.BYTE_ARRAY -> BYTE_ARRAY
             // MemberType.TUPLE_NUMBER -> BYTE_ARRAY
             // MemberType.SPATIAL -> BYTE_ARRAY (TWKB)

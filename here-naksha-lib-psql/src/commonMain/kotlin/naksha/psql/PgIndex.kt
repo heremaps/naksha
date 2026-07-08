@@ -52,10 +52,9 @@ data class PgIndex(
             MemberType.STRING -> Pair("btree", "${column.ident} COLLATE \"C\" text_pattern_ops")
             // A two-dimensional gist index over the TWKB geometry, via the naksha_2d() helper.
             MemberType.SPATIAL -> Pair("gist", "naksha_2d(${column.ident})")
-            // All tag variants are stored as a jsonb flat map, so they share a gin jsonb_ops index.
             MemberType.TAG_MAP,
-            MemberType.TAG_MAP_FROM_ARRAY,
-            MemberType.TAG_LIST -> Pair("gin", "${column.ident} jsonb_ops")
+            MemberType.TAG_MAP_FROM_ARRAY -> Pair("gin", "${column.ident} jsonb_ops")
+            MemberType.TAG_LIST -> Pair("gin", "${column.ident} array_ops")
             else -> throw illegalArg("The member type ${column.memberType} of column '$column' of index '$indexName' is not a valid index target")
         }
     }

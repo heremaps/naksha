@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.AnyList
 import naksha.base.Int64
 import naksha.geo.SpGeometry
 import naksha.jbon.BookType
@@ -10,6 +11,7 @@ import naksha.model.objects.MemberType
 import naksha.model.Version
 import naksha.model.objects.StandardMembers.StandardMembers_C.Feature
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
+import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
 
 /**
@@ -279,11 +281,30 @@ internal class PgRows {
                         TupleNumber(db, cat, col, fn, ver) else null
                     membersBook.put(name, tn)
                 }
-                else -> membersBook.put(name, getColumn(name)?.values?.get(row))
+                NextVersion.name -> {
+                    val raw = getColumn(name)?.values?.get(row) as? Int64
+                    membersBook.put(name, raw ?: Version.HEAD.number)
+                }
+                else -> {
+                    val raw = getColumn(name)?.values?.get(row)
+                    val value = if (member.dataType == MemberType.TAG_LIST) toAnyListOrNull(raw) else raw
+                    membersBook.put(name, value)
+                }
             }
         }
         if (featureBytes == null) throw NakshaException(ILLEGAL_STATE, "Missing mandatory member '${Feature.name}'!")
         return Tuple(featureBytes = featureBytes, membersBook = membersBook)
+    }
+
+    private fun toAnyListOrNull(raw: Any?): Any? {
+        if (raw == null) return null
+        val list = AnyList()
+        when (raw) {
+            is Array<*> -> for (e in raw) list.add(e)
+            is Iterable<*> -> for (e in raw) list.add(e)
+            else -> return raw
+        }
+        return list
     }
 
     operator fun get(row: Int): Tuple? = getTuple(row)
@@ -478,7 +499,19 @@ internal class PgRows {
      * @return the array type-names of all columns.
      * @since 3.0
      */
-    fun typeNames(): Array<String> = Array(columns.size) { columns[it].pgColumn.pgType.text + "[]" }
+    fun typeNames(): Array<String> = Array(columns.size) {
+        val col = columns[it].pgColumn
+        // A text[] column can't ride the batch UNNEST (would be text[][]); carry it as jsonb, converted back in newRowProjection().
+        if (col.memberType == MemberType.TAG_LIST) PgType.JSONB.text + "[]"
+        else col.pgType.text + "[]"
+    }
+
+    fun newRowProjection(): String = columns.joinToString(", ") {
+        val ident = PgUtil.quoteIdent(it.alias)
+        if (it.pgColumn.memberType == MemberType.TAG_LIST)
+            "CASE WHEN $ident IS NULL THEN NULL ELSE ARRAY(SELECT jsonb_array_elements_text($ident)) END AS $ident"
+        else ident
+    }
 
     /**
      * Returns the values of all columns cast to a type that is supported by [PgPlan.execute], usage:

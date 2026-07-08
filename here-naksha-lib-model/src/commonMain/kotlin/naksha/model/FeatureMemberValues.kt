@@ -4,6 +4,8 @@ package naksha.model
 
 import naksha.base.AnyObject
 import naksha.base.Int64
+import naksha.base.ListProxy
+import naksha.base.PlatformList
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
@@ -67,8 +69,8 @@ object FeatureMemberValues {
             MemberType.SPATIAL -> coerceSpatial(value, featureId, memberName)
             MemberType.TAG_MAP -> coerceTags(value, featureId, memberName)
             MemberType.TAG_MAP_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
-            // A tag list is stored the same way as a tag array: converted to a flat jsonb map.
-            MemberType.TAG_LIST -> coerceTagsFromArray(value, featureId, memberName)
+            // Stored as text[], carried through the batch as a JSON array and converted by the writer.
+            MemberType.TAG_LIST -> coerceTagListToJsonArray(value, featureId, memberName)
             MemberType.TUPLE_NUMBER -> coerceTupleNumber(value, featureId, memberName)
             else -> {
                 warnMismatch(featureId, memberName, type.toString(), value)
@@ -161,7 +163,7 @@ object FeatureMemberValues {
      */
     private fun coerceTupleNumber(value: Any, featureId: String, memberName: String): TupleNumber? = when (value) {
         is TupleNumber -> value
-        is String -> TupleNumber.fromString(value)
+        is String -> TupleNumber.fromStringOrGuid(value)
         is ByteArray -> TupleNumber.fromByteArray(value)
         else -> { warnMismatch(featureId, memberName, "tuple_number", value); null }
     }
@@ -194,6 +196,15 @@ object FeatureMemberValues {
         }
         val tagMap = tagList.toTagMap()
         return try { toJSON(tagMap) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags_from_array", value); null }
+    }
+
+    private fun coerceTagListToJsonArray(value: Any, featureId: String, memberName: String): String? {
+        val list: Any = when (value) {
+            is ListProxy<*> -> value
+            is PlatformList -> value.proxy(TagList::class)
+            else -> { warnMismatch(featureId, memberName, "tag_list", value); return null }
+        }
+        return try { toJSON(list) } catch (_: Exception) { warnMismatch(featureId, memberName, "tag_list", value); null }
     }
 
     private fun numberToLongOrNull(value: Any): Long? = when (value) {

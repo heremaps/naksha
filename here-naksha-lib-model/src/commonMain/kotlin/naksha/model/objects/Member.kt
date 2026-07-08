@@ -242,7 +242,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun getTupleNumber(feature: MapProxy<*,*>): TupleNumber? {
         val raw = feature.getPath(path)
         if (raw is TupleNumber) return raw
-        if (raw is String) return TupleNumber.fromString(raw)
+        if (raw is String) return TupleNumber.fromStringOrGuid(raw)
         if (raw is ByteArray) return TupleNumber.fromByteArray(raw)
         return null
     }
@@ -352,7 +352,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun getTupleNumber(tuple: Tuple): TupleNumber? {
         val raw = tuple.membersBook[this.name] ?: return null
         if (raw is TupleNumber) return raw
-        if (raw is String) return TupleNumber.fromString(raw)
+        if (raw is String) return TupleNumber.fromStringOrGuid(raw)
         if (raw is ByteArray) return TupleNumber.fromByteArray(raw)
         return null
     }

@@ -35,48 +35,42 @@ class XyzProcessors private constructor() {
          * @since 3.0
          */
         @JvmStatic
-        val xyzCreatedAt = fun(session: ISession, collection: NakshaCollection, feature: NakshaFeature, member: Member, value: Any?): Int64 {
-            if (value is Int64) return value
-            if (value is Number) return Int64(value.toLong())
-            return Platform.currentMillis()
-        } as IMemberProcessor
+        val xyzCreatedAt = IMemberProcessor { _, _, _, _, value ->
+            when (value) {
+                is Int64 -> value
+                is Number -> Int64(value.toLong())
+                else -> Platform.currentMillis()
+            }
+        }
 
         /**
          * Ensures that [XyzUpdatedAt][naksha.model.objects.XyzMembers.XyzMembers_C.XyzUpdatedAt] is set correctly.
          * @since 3.0
          */
         @JvmStatic
-        val xyzUpdatedAt = fun(session: ISession, collection: NakshaCollection, feature: NakshaFeature, member: Member, value: Any?): Int64 {
-            return Platform.currentMillis()
-        } as IMemberProcessor
+        val xyzUpdatedAt = IMemberProcessor { _, _, _, _, _ -> Platform.currentMillis() }
 
         /**
          * Ensures that [XyzAppId][naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId] is set correctly.
          * @since 3.0
          */
         @JvmStatic
-        val xyzAppId = fun(session: ISession, collection: NakshaCollection, feature: NakshaFeature, member: Member, value: Any?): String {
-            return session.options.appId
-        } as IMemberProcessor
+        val xyzAppId = IMemberProcessor { session, _, _, _, _ -> session.options.appId }
 
         /**
          * Ensures that [XyzAuthor][naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthor] is set correctly.
          * @since 3.0
          */
         @JvmStatic
-        val xyzAuthor = fun(session: ISession, collection: NakshaCollection, feature: NakshaFeature, member: Member, value: Any?): String? {
-            val author = session.options.author
-            return author ?: value as String?
-        } as IMemberProcessor
+        val xyzAuthor = IMemberProcessor { session, _, _, _, value -> session.options.author ?: value as String? }
 
         /**
          * Ensures that [XyzAuthorTimestamp][naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthorTimestamp] is set correctly.
          * @since 3.0
          */
         @JvmStatic
-        val xyzAuthorTimestamp = fun(session: ISession, collection: NakshaCollection, feature: NakshaFeature, member: Member, value: Any?): Int64? {
-            val author = session.options.author
-            return if (author != null) Platform.currentMillis() else value as Int64?
-        } as IMemberProcessor
+        val xyzAuthorTimestamp = IMemberProcessor { session, _, _, _, value ->
+            if (session.options.author != null) Platform.currentMillis() else value as Int64?
+        }
     }
 }

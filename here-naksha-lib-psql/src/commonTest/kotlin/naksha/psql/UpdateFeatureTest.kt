@@ -94,7 +94,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         Naksha.cache.clear()
         val readResp = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += initialFeature.id
             queryHistory = true
         })
@@ -259,7 +259,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         Naksha.cache.clear()
         val readFeatureResp = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += id
         })
         assertEquals(1, readFeatureResp.length)

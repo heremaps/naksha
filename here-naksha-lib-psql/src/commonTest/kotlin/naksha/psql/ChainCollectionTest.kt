@@ -96,7 +96,7 @@ class ChainCollectionTest : PgTestBase(
         // When: reading all three back by their numeric IDs in one request
         val response = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += headFn.toString()
             featureIds += midFn.toString()
             featureIds += tailFn.toString()
@@ -188,7 +188,7 @@ class ChainCollectionTest : PgTestBase(
         // When: reading all features from this collection (no ID filter)
         val all = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
         })
 
         // Then: find the feature whose right_fn == tailFn (that must be mid)

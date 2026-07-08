@@ -36,8 +36,9 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     fun build(): PgQueryWhereClause? {
         var op: Op? = request.queryMembers
         if (op == null) op = QueryConverter.convert(request.query)
-        if (op == null) return null
-        applyOp(op)
+        // Only read everything when there is no filter at all — featureIds/guids apply even when op is null.
+        if (op == null && request.featureIds.isEmpty() && request.guids.isEmpty()) return null
+        if (op != null) applyOp(op)
         if (request.featureIds.isNotEmpty()) { // TODO backward compatibility for feature IDs read requests, to be removed
             whereFeatureId()
         }
@@ -119,7 +120,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                         where.append(at).append('=').append(placeholder).append(' ')
                 }
             }
-            is Lt -> {
+            is Gt -> {
                 if (negate) // NOT Greater Than
                     where.append(at).append("<=").append(placeholderForArg(op.value)).append(' ')
                 else // Greater Than
@@ -149,7 +150,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             }
             is IsAnyOf -> {
                 if (negate) where.append("NOT ")
-                val placeholder = if (isAction) placeholderForArg(op.items, PgType.INT_ARRAY) else placeholderForArg(op.items)
+                val arrayType = when {
+                    isAction -> PgType.INT_ARRAY
+                    rawAt == StandardMembers.FeatureNumber.name -> PgType.INT64_ARRAY
+                    else -> PgType.STRING_ARRAY
+                }
+                val placeholder = placeholderForArg(op.items, arrayType)
                 where.append(at).append("= ANY(").append(placeholder).append(") ")
             }
             is TagMapHasKey -> {
@@ -226,44 +232,27 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                     .append(", ").append(placeholderForArg(value, pgType)).append(") ")
             }
             is TagListContains -> {
-                val pgType = PgType.ofValue(op.item)
-                    ?: throw illegalArg("The given value is no valid argument for ${op.op}}: ${op.item}")
-                val value = pgType.convertValue(op.item)
-                // [NOT ]foo::jsonb @> $1::jsonb
-                val placeholder = placeholderForArg(value, pgType)
+                // A tag list is stored as text[]; single-element membership: <tag> = ANY(tags)
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb @> ").append(placeholder).append("::jsonb ")
+                where.append("(").append(placeholderForArg(op.item, PgType.STRING))
+                    .append(" = ANY(").append(at).append(")) ")
             }
             is TagListContainsAllOf -> {
-                val pgType = PgType.ofValue(op.items)
-                    ?: throw illegalArg("The given value is no valid argument for ${op.op}}: ${op.items}")
-                val value = pgType.convertValue(op.items)
-                val placeholder = placeholderForArg(toJSON(value), pgType)
+                // tags @> $1::text[]  (the list contains every requested tag)
+                val items = op.items.filterNotNull().toTypedArray()
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb @> ").append(placeholder).append("::jsonb ")
+                where.append(at).append(" @> ").append(placeholderForArg(items, PgType.STRING_ARRAY)).append("::text[] ")
             }
             is TagListContainsAnyOf -> {
-                val items = op.items.filterNotNull()
+                val items = op.items.filterNotNull().toTypedArray()
                 // Any-of over empty set -> false; negated -> true
                 if (items.isEmpty()) {
                     if (negate) where.append("TRUE ") else where.append("FALSE ")
                     return
                 }
-
+                // tags && $1::text[]  (the list overlaps the requested tags)
                 if (negate) where.append("NOT ")
-                // Multiple items: build OR of single-element containment checks
-                where.append('(')
-                val pgType = PgType.ofValue(op.items.first())
-                    ?: throw illegalArg("The given value is no valid argument for ${op.op}}: ${op.items.first()}")
-                var first = true
-                for (item in items) {
-                    if (!first) where.append(" OR ")
-                    first = false
-                    val value = pgType.convertValue(item)
-                    val placeholder = placeholderForArg(value, pgType)
-                    where.append(at).append("::jsonb @> ").append(placeholder).append("::jsonb")
-                }
-                where.append(") ")
+                where.append(at).append(" && ").append(placeholderForArg(items, PgType.STRING_ARRAY)).append("::text[] ")
             }
             is Intersects -> {
                 val geoBytes = Naksha.encodeGeometry(op.value)
@@ -273,7 +262,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 val geometryToCompare =
                     if (transformation.isEmpty()) queryGeometry
                     else resolveTransformation(transformation, queryGeometry)
-                where.append("ST_Intersects(naksha_2d(${StandardMembers.Geometry}), $geometryToCompare)")
+                where.append("ST_Intersects(naksha_2d(${StandardMembers.Geometry.name}), $geometryToCompare)")
             }
             else -> throw illegalArg("Unknown operation: '$op'")
         }

@@ -149,18 +149,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
 
     override fun doExecute(conn: PgConnection) {
         if (pgWrites.isEmpty()) return
-        val outRows = PgRows()
-            .withDatabaseNumber(storageNumber)
-            .withCatalogNumber(catalogNumber)
-            .withCollectionNumber(collectionNumber)
-        outRows.addColumn(FN)
-        outRows.addColumn(VERSION)
-        outRows.addColumn(NEXT_VERSION)
-        if (CC!=null) outRows.addColumn(CC)
-        for (col in pgCollection.columns) {
-            if (col eq CC || col eq FN || col eq VERSION || col eq NEXT_VERSION) continue
-            outRows.addColumn(col)
-        }
+        val outRows = PgRows().withCollection(pgCollection)
         outRows.addColumn("head_history_version", MemberType.INT64)
             .addColumn("history_version", MemberType.INT64)
             .addColumn("select_fn", MemberType.INT64)
@@ -196,16 +185,6 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
                 // query_fn is an int8 column, read as Int64; used only for diagnostics below.
                 val fn = outRows.getInt64(row, "query_fn") ?: throw generalException("Missing 'query_fn' in result")
 
-                val tuple = outRows[row]
-                if (tuple != null) write.tuple = tuple
-
-                val tombstone_fn = outRows.getInt64(row, FN)
-                val tombstone_version = outRows.getInt64(row, VERSION)
-                val tn = if (tombstone_fn != null && tombstone_version != null) {
-                    TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
-                } else null
-                write.tupleNumber = tn
-
                 val select_fn = outRows.getInt64(row, "select_fn")
                 val select_version = outRows.getInt64(row, "select_version")
                 if (select_fn == null || select_version == null) {
@@ -222,6 +201,15 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
                         "The feature '$fn' was expected in version '${write.version}', but found in '${Version(select_version)}'"
                     )
                 }
+
+                val tuple = outRows[row]
+                if (tuple != null) write.tuple = tuple
+
+                val tombstone_fn = outRows.getInt64(row, FN)
+                val tombstone_version = outRows.getInt64(row, VERSION)
+                write.tupleNumber = if (tombstone_fn != null && tombstone_version != null) {
+                    TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
+                } else null
             }
         }
     }

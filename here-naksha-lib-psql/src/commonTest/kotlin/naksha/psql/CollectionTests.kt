@@ -57,7 +57,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // Then: this collection is queryable and empty
         val readAllFromCollection = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
         }
         val collectionContent = executeRead(readAllFromCollection)
         assertEquals(0, collectionContent.features.size)
@@ -65,7 +65,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += Naksha.COLLECTIONS_COL_ID
+            collectionId = Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
         val virtBeforeDelete = executeRead(selectCollectionFromVirt)
@@ -323,7 +323,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
             catalogId = map.id
-            collectionId += Naksha.COLLECTIONS_COL_ID
+            collectionId = Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
         val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection::class)

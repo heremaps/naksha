@@ -7,6 +7,7 @@ import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaTx
+import naksha.model.objects.StandardMembers
 import naksha.model.request.*
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -226,6 +227,9 @@ open class PgWriter internal constructor(
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = pgWrite.feature ?: throw illegalArg("The write #${pgWrite.i} is $op, but the feature is null")
                     nakshaCollection = feature as? NakshaCollection ?: feature.proxy(NakshaCollection::class)
+                    if (nakshaCollection.partitions > 1000) {
+                        throw illegalArg("Invalid partition-count, expect 2 .. 1000, found : ${nakshaCollection.partitions}")
+                    }
                     if (targetCollection == null) {
                         if (op == WriteOp.UPDATE) {
                             throw collectionNotFound(
@@ -265,13 +269,14 @@ open class PgWriter internal constructor(
                 WriteOp.UPSERT -> {
                     // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
                     val f = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, Action.CREATE, session, null)
+                    val action = if (pgCollection.head.useMember(StandardMembers.Tn).getTupleNumber(f) != null) Action.UPDATE else Action.CREATE
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, action, session, null)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
                 WriteOp.UPDATE -> {
                     val f = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, Action.UPDATE, session, null)
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, Action.UPDATE, session, null, pgWrite.original.atomic)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
@@ -363,6 +368,13 @@ open class PgWriter internal constructor(
      */
     protected open fun createPgCollection(collection: PgCollection) {
         collection.catalog.createPgCollection(conn, collection)
+        // Seed the current+next history year-partitions (the catalog can't — it has no version).
+        if (collection.storeHistory) {
+            val history = collection.historyTable
+            val year = collection.historyPartitionNumberOf(tx.version.number)
+            history.createPartition(conn, year)
+            history.createPartition(conn, year + 1)
+        }
     }
 
     /**

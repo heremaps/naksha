@@ -41,12 +41,12 @@ internal class PgWriterUpdate(
     private fun plan(conn: PgConnection): PgWriterPlan {
         // All input provided by client (the updates)
         val query = """WITH new_row AS (
-  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
+  SELECT ${inRows.newRowProjection()} FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
 
         // Select rows from HEAD that we want to update, lock the rows for update
         val existing_rows = """, existing_rows AS (
-  SELECT head.$FN AS $FN, head.$VERSION AS $VERSION,
+  SELECT head.$FN AS $FN, head.$VERSION AS $VERSION
   FROM $headIdent AS head, new_row
   WHERE head.$FN = new_row.$FN
   FOR UPDATE NOWAIT
@@ -62,7 +62,7 @@ internal class PgWriterUpdate(
         // Copy the current HEAD row into HISTORY; set the next version to the version for the history row.
         val head_to_history = if (historyTable != null) """, head_to_history AS (
   INSERT INTO $historyIdent ($NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
-  SELECT new_row.$VERSION AS $NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column" }})
+  SELECT new_row.$VERSION AS $NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.$FN = head_row.$FN
   RETURNING $FN, $VERSION
@@ -77,20 +77,19 @@ internal class PgWriterUpdate(
 
         val inserted = """, inserted AS (
 INSERT INTO $headIdent ($NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
-SELECT NULL AS $NEXT_VERSION, ${pgCollection.joinColumns { column -> 
+SELECT NULL AS $NEXT_VERSION, ${pgCollection.joinColumns { column ->
     if (column eq NEXT_VERSION)
         null
     else if (column.memberType == MemberType.BYTE_ARRAY)
         "CASE WHEN new_row.$column = convert_to('undefined', 'UTF8') THEN head_row.$column ELSE new_row.$column END AS $column"
     else
-        "head_row.$column" 
-}})
+        "new_row.$column"
+}}
 FROM new_row
 LEFT JOIN head_row ON head_row.$FN = new_row.$FN
 RETURNING $FN, $VERSION${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { column ->
-    // We return NULL, when the input contained data, because the client knows this already, no need to send back.
-    // If the client provided `undefined`, we return the actual value so we can build a correct tuple.
-    "CASE WHEN new_row.$column = convert_to('undefined', 'UTF8') THEN $column ELSE null END AS $column"
+    // Return the inserted value (RETURNING can't reference new_row) so the caller can rebuild the tuple.
+    column.ident
   }}" else ""}
 )"""
 

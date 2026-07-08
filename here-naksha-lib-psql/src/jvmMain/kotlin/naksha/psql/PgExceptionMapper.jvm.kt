@@ -58,7 +58,7 @@ actual class PgExceptionMapper {
                     NakshaError(
                         code = EXCEPTION,
                         msg = if (sql != null) "Exception while executing SQL query '$sql'" else
-                              throwable.message ?: "Exception without message",
+                              throwable.message ?: "${throwable::class.simpleName} (no message)",
                         cause = throwable
                     )
                 )

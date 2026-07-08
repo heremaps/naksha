@@ -224,7 +224,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
     private fun executeTagsQuery(tagQuery: ITagQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection!!.id
+            collectionId = collection!!.id
             query.tags = tagQuery
         })
     }

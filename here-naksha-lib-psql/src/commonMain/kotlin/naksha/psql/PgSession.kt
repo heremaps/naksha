@@ -13,6 +13,8 @@ import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.XyzMembers
+import naksha.model.objects.XyzProcessors
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
@@ -346,9 +348,17 @@ open class PgSession(
     /**
      * Registered member processors, keyed by member name.
      * Processors are invoked in the order in which they were added.
+     *
+     * The XYZ metadata processors are registered by default so every write stamps the session-derived members
+     * (app_id, author, timestamps); they only fire for collections that declare these members.
      * @since 3.0
      */
     override val processors = MemberProcessorMap()
+        .addProcessor(XyzMembers.XyzCreatedAt, XyzProcessors.xyzCreatedAt)
+        .addProcessor(XyzMembers.XyzUpdatedAt, XyzProcessors.xyzUpdatedAt)
+        .addProcessor(XyzMembers.XyzAppId, XyzProcessors.xyzAppId)
+        .addProcessor(XyzMembers.XyzAuthor, XyzProcessors.xyzAuthor)
+        .addProcessor(XyzMembers.XyzAuthorTimestamp, XyzProcessors.xyzAuthorTimestamp)
 
     override fun isClosed(): Boolean = _closed
 
@@ -438,20 +448,23 @@ WITH lookup AS (
         ((get_byte(b, 13) & 255)::bigint << 16)|
         ((get_byte(b, 14) & 255)::bigint << 8) |
         (get_byte(b, 15) & 255)::bigint        AS version
-    FROM unnest($1::bytea[]) AS t(b)
+    FROM (
+        SELECT substring($1::bytea FROM g * 16 + 1 FOR 16) AS b
+        FROM generate_series(0, octet_length($1::bytea) / 16 - 1) AS g
+    ) AS t
 ), from_head AS (
-    SELECT head.* FROM $HEAD_TABLE head 
-    JOIN lookup l ON (head.fn, head.version) = (l.fn, l.version)
+    SELECT head.* FROM $HEAD_TABLE head
+    JOIN lookup l ON (head._fn, head._version) = (l.fn, l.version)
 ), from_hst AS (
-    SELECT hst.* FROM $HISTORY_TABLE hst 
-    JOIN lookup l ON (hst.fn, hst.version) = (l.fn, l.version)
+    SELECT hst.* FROM $HISTORY_TABLE hst
+    JOIN lookup l ON (hst._fn, hst._version) = (l.fn, l.version)
 )
 SELECT * FROM from_head 
 UNION ALL 
 SELECT * FROM from_hst"""
         collection.catalog.setSearchPath(conn)
         val rows = PgRows().withCollection(collection)
-        conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY_ARRAY.text)).use { plan ->
+        conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY.text)).use { plan ->
             plan.execute(arrayOf(fn_version_bytes)).fetch().use { cursor ->
                 rows.readAll(cursor)
             }
@@ -471,7 +484,7 @@ SELECT * FROM from_hst"""
                 //       We can simply say that the global books need to be committed, before they can be used.
                 //       Additionally, they are immutable, onces stored, they can not be deleted nor mutated.
                 //       Therefore, if a
-                val feature: NakshaFeature = tuple.decodeFeature(null)
+                val feature: NakshaFeature = tuple.toNakshaFeature()
                 featureTuple.feature = feature
                 if (featureTuple.id != feature.id) {
                     // This must not happen!
