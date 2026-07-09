@@ -106,7 +106,7 @@ resillience4j_retry = "io.github.resilience4j:resilience4j-retry:2.0.0"
 otel = "io.opentelemetry:opentelemetry-api:1.28.0"
 cytodynamics = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
 kotlinx_datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.6.2"
-lz4_java = "org.lz4:lz4-java:1.8.0"
+lz4_java = "at.yawk.lz4:lz4-java:1.10.4"
 
 picocli = { module = "info.picocli:picocli", version = "4.7.7" }
 
