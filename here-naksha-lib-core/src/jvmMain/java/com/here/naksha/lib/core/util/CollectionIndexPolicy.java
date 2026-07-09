@@ -18,11 +18,7 @@
  */
 package com.here.naksha.lib.core.util;
 
-import java.util.Objects;
-import naksha.base.JvmJsonUtil;
-import naksha.base.Platform;
 import naksha.base.StringList;
-import naksha.base.ToJsonOptions;
 import naksha.model.objects.NakshaCollection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -45,18 +41,12 @@ public final class CollectionIndexPolicy {
       final @Nullable NakshaCollection collection,
       final @NotNull String collectionId,
       final @NotNull String mapId) {
-    final NakshaCollection normalized = collection == null ? new NakshaCollection() : copyOf(collection);
+    final NakshaCollection normalized = collection == null ? new NakshaCollection() : collection.copy(true);
     normalized.setId(collectionId);
     normalized.setMapId(mapId);
     if (normalized.getIndices() == null) {
       normalized.setIndices(hubSlimIndices());
     }
     return normalized;
-  }
-
-  private static @NotNull NakshaCollection copyOf(final @NotNull NakshaCollection collection) {
-    return Objects.requireNonNull(
-        JvmJsonUtil.readJsonAs(Platform.toJSON(collection, ToJsonOptions.DEFAULT), NakshaCollection.class),
-        "Unable to clone NakshaCollection");
   }
 }
