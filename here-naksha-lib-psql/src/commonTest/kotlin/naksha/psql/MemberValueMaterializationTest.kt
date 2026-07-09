@@ -49,7 +49,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, mapId = "")
     private fun readColumn(collection: NakshaCollection, featureId: String, column: String): Any? {
         storage.adminConnection().use { conn ->
             conn.execute(
-                """SELECT "$column" AS value FROM "${collection.catalogId}"."${collection.id}" WHERE id = $1""",
+                """SELECT "$column" AS value FROM "${collection.catalogId}"."${collection.id}" WHERE _id = $1""",
                 arrayOf(featureId)
             ).use { cursor ->
                 assertTrue(cursor.next(), "No HEAD row found for feature '$featureId'")

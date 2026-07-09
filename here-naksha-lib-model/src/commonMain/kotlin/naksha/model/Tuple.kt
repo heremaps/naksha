@@ -108,7 +108,6 @@ data class Tuple @JvmOverloads constructor(
                 }
                 newTn = TupleNumber.copy(prevTn, version)
             } else {
-                // No uuid: only an atomic UPDATE/DELETE needs one; others derive the tuple-number from the id.
                 if (action != Action.VERSION && action != Action.CREATE && atomic) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action $action given, the feature does not exist (missing uuid)")
                 }
@@ -119,7 +118,6 @@ data class Tuple @JvmOverloads constructor(
                     colTn.catalogNumber,
                     // The feature-number of the collection is the collection-number of the feature we want to store in the collection.
                     colTn.featureNumber.toInt(),
-                    // Collection/catalog features are keyed by their collection/catalog-number, others by feature-number.
                     when (collection.id) {
                         Naksha.COLLECTIONS_COL_ID -> Int64(Naksha.collectionNumber(feature.id))
                         Naksha.CATALOGS_COL_ID -> Int64(Naksha.catalogNumber(feature.id))
@@ -187,8 +185,6 @@ data class Tuple @JvmOverloads constructor(
             // Encode the feature.
             val raw = encoder.buildTupleFromMap(feature)
 
-            // Stamp session-derived members (app_id, author, timestamps) the client did not supply, which the
-            // encoder callback above skips because their path is absent from the feature.
             for (i in 0 until members.size) {
                 val member = members[i] ?: continue
                 if (StandardMembers.GlobalBookFeatureNumber.isSameAs(member)) continue
@@ -201,6 +197,13 @@ data class Tuple @JvmOverloads constructor(
                 }
                 v = FeatureMemberValues.coerce(v, member.dataType, feature.id, memberName)
                 membersBook.put(memberName, v)
+            }
+            for (i in 0 until members.size) {
+                val member = members[i] ?: continue
+                if (StandardMembers.ChangeCount.isSameAs(member)) {
+                    membersBook.put(member.name, feature.properties.xyz.changeCount + 1)
+                    break
+                }
             }
             // The global-book feature-number is not part of the feature itself; inject it into the
             // members-book when a global book was provided.

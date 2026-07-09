@@ -69,7 +69,6 @@ object FeatureMemberValues {
             MemberType.SPATIAL -> coerceSpatial(value, featureId, memberName)
             MemberType.TAG_MAP -> coerceTags(value, featureId, memberName)
             MemberType.TAG_MAP_FROM_ARRAY -> coerceTagsFromArray(value, featureId, memberName)
-            // Stored as text[], carried through the batch as a JSON array and converted by the writer.
             MemberType.TAG_LIST -> coerceTagListToJsonArray(value, featureId, memberName)
             MemberType.TUPLE_NUMBER -> coerceTupleNumber(value, featureId, memberName)
             else -> {

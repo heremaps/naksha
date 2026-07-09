@@ -445,7 +445,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 arrayOf(map.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             for (index in XyzIndices.ALL) {
-                assertTrue( index.name in indexNames,"Expected index '${index.name}' to be present, found: $indexNames")
+                val expected = "${collection.id}\$ci_${index.name}"
+                assertTrue(expected in indexNames, "Expected index '$expected' to be present, found: $indexNames")
             }
         }
     }
@@ -546,7 +547,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 "SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
                 arrayOf(map.id, collection.id, PgMemberHelper.pgColumnName("labels"))
             ).use { cursor -> if (cursor.next()) dataType = cursor["data_type"] }
-            assertEquals("jsonb", dataType, "SET member 'labels' must be materialized as jsonb")
+            assertEquals("ARRAY", dataType, "TAG_LIST member 'labels' must be materialized as a text[] array")
 
             // Index: GIN index over the jsonb column.
             val customIndexId = "${collection.id}\$ci_idx_labels"
@@ -562,13 +563,15 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     }
 
     /**
-     * A [IndexType.TAG_LIST] index must be rejected when it targets a member that is not a [MemberType.TAG_LIST].
+     * fix1 has no index types; the index access method is inferred from the target member's [MemberType]
+     * ([PgIndex.indexAndOpsOf]). An index on a non-indexable member type (e.g. [MemberType.BOOLEAN]) must
+     * therefore be rejected when the collection is created.
      */
     @Test
-    fun membersSet_indexOnNonTagListMemberShouldFail() {
+    fun membersSet_indexOnNonIndexableMemberShouldFail() {
         val collection = NakshaCollection("members_set_invalid_test", map.id).apply {
-            addMember(Member("score", MemberType.INT64))
-            addIndex(Index("idx_tag_list_score", "score"))
+            addMember(Member("flag", MemberType.BOOLEAN))
+            addIndex(Index("idx_flag", "flag"))
         }
         executeWriteErrorResponse(WriteRequest().add(Write().createCollection(collection)))
     }

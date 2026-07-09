@@ -81,7 +81,6 @@ class QueryConverter private constructor() {
                 TagListContains(XyzMembers.XyzTags, element)
             }
 
-            // Tags are stored as text[] of full tag strings, so "exists" is exact-element membership.
             is TagExists -> TagListContains(XyzMembers.XyzTags, query.name)
 
             // TagValueIsNull tests that the key exists and is explicitly assigned the value `null`.

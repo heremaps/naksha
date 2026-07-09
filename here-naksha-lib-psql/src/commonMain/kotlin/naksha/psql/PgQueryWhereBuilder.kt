@@ -152,7 +152,9 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 val arrayType = when {
                     isAction -> PgType.INT_ARRAY
-                    rawAt == StandardMembers.FeatureNumber.name -> PgType.INT64_ARRAY
+                    rawAt == StandardMembers.FeatureNumber.name ||
+                        rawAt == StandardMembers.NextVersion.name ||
+                        rawAt == StandardMembers.Version.name -> PgType.INT64_ARRAY
                     else -> PgType.STRING_ARRAY
                 }
                 val placeholder = placeholderForArg(op.items, arrayType)

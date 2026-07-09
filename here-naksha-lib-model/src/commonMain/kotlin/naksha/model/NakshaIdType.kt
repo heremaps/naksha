@@ -203,6 +203,7 @@ private fun _member(internal: Boolean = false): Map<Char, Boolean> {
 private fun _container(internal: Boolean = false): Map<Char, Boolean> {
     val map = mutableMapOf<Char, Boolean>()
     for (c in 'a' .. 'z') map[c] = true
+    for (c in '0' .. '9') map[c] = true
     map['_'] = true
     map['-'] = true
     map[':'] = true

@@ -391,7 +391,8 @@ open class PgSession(
                 val byCollection: MutableMap<PgCollection, FeatureTupleList> = mutableMapOf()
                 for (featureTuple in missing) {
                     val tn = featureTuple.tupleNumber
-                    val collection: PgCollection = adminCatalog.getPgCollectionByNumber(conn, tn.collectionNumber) ?: continue
+                    val catalog = adminCatalog.getPgCatalogByNumber(conn, tn.catalogNumber) ?: continue
+                    val collection: PgCollection = catalog.getPgCollectionByNumber(conn, tn.collectionNumber) ?: continue
                     var list = byCollection[collection]
                     if (list == null) {
                         list = FeatureTupleList()
@@ -477,23 +478,9 @@ SELECT * FROM from_hst"""
         var found = 0
         for (i in 0..< featureTuples.size) {
             val featureTuple = featureTuples[i] ?: throw NakshaException(INTERNAL_ERROR, "featureTuples[$i] is null")
-            val tn = featureTuple.tupleNumber
-            val tuple = Naksha.cache[tn]
+            val tuple = Naksha.cache[featureTuple.tupleNumber]
             if (tuple != null) {
-                // TODO: We need a cache for global books!
-                //       We can simply say that the global books need to be committed, before they can be used.
-                //       Additionally, they are immutable, onces stored, they can not be deleted nor mutated.
-                //       Therefore, if a
-                val feature: NakshaFeature = tuple.toNakshaFeature()
-                featureTuple.feature = feature
-                if (featureTuple.id != feature.id) {
-                    // This must not happen!
-                    val tn = featureTuple.tupleNumber
-                    throw NakshaException(
-                        INTERNAL_ERROR,
-                        "The `id` of feature-tuple '${feature.id}' does not match that of the loaded tuple: ${feature.id}, feature-number: '${tn.featureNumber}', version: ${tn.version}, collection: ${collection.id}"
-                    )
-                }
+                featureTuple.tuple = tuple
                 found++
             }
         }

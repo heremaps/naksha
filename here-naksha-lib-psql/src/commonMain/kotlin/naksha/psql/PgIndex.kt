@@ -77,7 +77,7 @@ data class PgIndex(
             if (index != "btree") throw illegalArg("The include of column $column is not possible, because it is no primitive")
             column.ident
         }})"
-        val indexIdent = quoteIdent(table.name, "\$i_", table.name)
+        val indexIdent = quoteIdent(table.name, "\$ci_", name)
         val withClause = if (primaryIndex == "gin") "" else " WITH (fillfactor=${if (PgTable.isAnyHead(table.name)) 50 else 100})"
         val sql = """CREATE INDEX IF NOT EXISTS $indexIdent
 ON ${table.quotedName}
@@ -86,7 +86,7 @@ USING $primaryIndex (${elements.joinToString(", ")})$includeClause$withClause"""
     }
 
     internal fun drop(conn: PgConnection, tableName: String) {
-        val indexName = quoteIdent(tableName, "\$i_", tableName)
+        val indexName = quoteIdent(tableName, "\$ci_", name)
         conn.execute("DROP INDEX IF EXISTS $indexName CASCADE").close()
     }
 

@@ -58,7 +58,8 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                     var exit = 10
                     while (orderBy != null && exit >= 0) {
                         val memberName = orderBy.member ?: throw illegalArg("Missing member in orderBy")
-                        val sortOrder = orderBy.sortOrder.text
+                        // ANY resolves to DESC (latest-first); only explicit ASCENDING gives ASC.
+                        val sortOrder = if (orderBy.sortOrder == SortOrder.ASCENDING) "ASC" else "DESC"
                         order_by.add(Pair(memberName, sortOrder))
                         orderBy = orderBy.next
                         exit--
@@ -103,27 +104,31 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         }
         val where = if (WHERE.isEmpty()) "" else " WHERE $WHERE"
 
+        val baseCols = listOf(FN.toString(), VERSION.toString())
+        val extraCols = order_by?.map { it.first }?.filter { it !in baseCols }?.distinct() ?: emptyList()
+        val selectCols = (baseCols + extraCols).joinToString(", ")
+
         // The query starts with select all tuple-numbers of matching tuple.
         val query = if (readHistory) """query AS
-( SELECT $FN, $VERSION FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$where
+( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$where
   UNION ALL
-  SELECT $FN, $VERSION FROM ${pgCatalog.quotedId}.${pgCollection.historyTable.quotedName}$where )""" else """query AS
-( SELECT $FN, $VERSION FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$where )"""
+  SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.historyTable.quotedName}$where )""" else """query AS
+( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$where )"""
 
         // If history is queried, and only a certain amount of versions should be returned,
         // or we want only the latest version, but no specific version target is given, then
         // we need to partition the result, so that we can select the requested amount of latest versions.
-        val all = if (readHistory && (versions > 1 || version == null)) """, query_partitioned AS
-(SELECT $FN, $VERSION, ROW_NUMBER() OVER (PARTITION BY $FN ORDER BY $VERSION DESC) AS v FROM query)
+        val all = if (readHistory && versions > 1) """, query_partitioned AS
+(SELECT $selectCols, ROW_NUMBER() OVER (PARTITION BY $FN ORDER BY $VERSION DESC) AS v FROM query)
 , all_versions AS
-(SELECT $FN, $VERSION FROM query_partitioned WHERE v <= $versions)""" else ""
+(SELECT $selectCols FROM query_partitioned WHERE v <= $versions)""" else ""
 
         // `order_by` may be empty, if no custom ordering was requested.
         val order_by_string = order_by?.joinToString(", ") { "${it.first} ${it.second}" } ?: ""
 
         // apply limit and order, if given
         val limited = """, limited AS
-(SELECT $FN, $VERSION FROM ${if (all.isNotEmpty()) "all_versions" else "query"} ${if (order_by_string.isNotEmpty()) "ORDER BY $order_by_string "
+(SELECT $selectCols FROM ${if (all.isNotEmpty()) "all_versions" else "query"} ${if (order_by_string.isNotEmpty()) "ORDER BY $order_by_string "
 else if (all.isNotEmpty()) "ORDER BY $FN ASC, $VERSION DESC " else ""}LIMIT $REQ_LIMIT)"""
 
         // The final SQL query.

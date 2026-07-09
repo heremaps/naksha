@@ -199,7 +199,8 @@ class Plv8PerfTest : PgTestBase(
     }
 
     private fun featureCopy(feature: NakshaFeature): NakshaFeature {
-        val copyF = feature.copy<NakshaFeature>()
+        // Deep copy: a shallow copy shares `properties`, which encode mutates (writes xyz.uuid).
+        val copyF = feature.copy<NakshaFeature>(recursive = true)
         copyF.id = PlatformUtil.randomString(20)
         return copyF
     }

@@ -184,8 +184,6 @@ LEFT JOIN inserted ON inserted.$FN = new_row.$FN
                 val tuple = pgWrite.tuple ?: throw generalException("Missing tuple for feature '${pgWrite.id}}'")
                 val memberBook = tuple.membersBook
                 val updatedMembersBook = HeapBook.copyOf(memberBook)
-                // TODO: Fix change-count !
-                // if (CC != null) updatedMembersBook.put(CC.name, change_count)
                 updatedMembersBook.put(StandardMembers.Tn.name, newTn)
                 // Update all BYTE_ARRAY members that have been updated.
                 for (column in byteArrayCols) {

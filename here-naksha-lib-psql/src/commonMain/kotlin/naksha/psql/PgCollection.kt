@@ -6,6 +6,7 @@ import naksha.model.*
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
+import naksha.model.objects.Index
 import naksha.model.objects.IndexList
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
@@ -25,6 +26,7 @@ import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
 import naksha.model.objects.StoreMode
+import naksha.model.objects.XyzIndices
 import naksha.psql.PgColumn.PgColumn_C.EXTENDED
 import naksha.psql.PgColumn.PgColumn_C.EXTERNAL
 import naksha.psql.PgColumn.PgColumn_C.MAIN
@@ -78,6 +80,8 @@ open class PgCollection internal constructor(
     @JvmField
     val shift: Int = nakshaCollection.shift
 
+    private val defaultXyz: Boolean = nakshaCollection.members == null
+
     /**
      * Returns the partition index of the [PgHistoryPartition] in which features can be found, that are modified in the given version.
      * @param version the version in which features are modified.
@@ -100,7 +104,7 @@ open class PgCollection internal constructor(
         // These mandatory members get special storage handling.
         when (memberName) {
             GlobalBookFeatureNumber.name -> return PgColumn(index, memberName, INT64, "STORAGE $PLAIN")
-            Id.name -> return PgColumn(index, memberName, STRING, "STORAGE $PLAIN")
+            Id.name -> return PgColumn(index, memberName, STRING, "STORAGE $PLAIN COLLATE \"C\"")
             Feature.name -> return PgColumn(index, memberName, BYTE_ARRAY, "STORAGE $EXTERNAL")
         }
         val memberType = member.dataType
@@ -176,14 +180,17 @@ open class PgCollection internal constructor(
     }
 
     private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
-        return Array(nakshaCollection.indices?.size ?: 0) { i ->
-            val indices = IndexList(StandardIndices.MANDATORY)
-            // We know that when this method is called, indices must not be null!
-            for (requestedIndex in nakshaCollection.indices!!) {
-                if ((requestedIndex != null) && (!indices.contains(requestedIndex))) {
-                    indices.add(requestedIndex)
-                }
-            }
+        val indices = IndexList(StandardIndices.MANDATORY)
+        val declared: IndexList? = nakshaCollection.indices
+        val requested: List<Index> = when {
+            declared != null -> List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
+            defaultXyz -> XyzIndices.ALL
+            else -> emptyList()
+        }
+        for (requestedIndex in requested) {
+            if (!indices.contains(requestedIndex)) indices.add(requestedIndex)
+        }
+        return Array(indices.size) { i ->
             val index = indices[i] ?: throw NakshaException(ILLEGAL_STATE, "Index #$i must not be null")
             val indexName = index.name
 

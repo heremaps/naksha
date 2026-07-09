@@ -350,6 +350,16 @@ open class PgWriter internal constructor(
      */
     protected open fun createPgCatalog(catalog: PgCatalog) {
         storage.adminCatalog.createPgCatalog(conn, catalog)
+        seedHistoryPartitions(catalog.collections)
+    }
+
+    // createPartition is not idempotent, so only call on fresh tables.
+    private fun seedHistoryPartitions(collection: PgCollection) {
+        if (!collection.storeHistory) return
+        val history = collection.historyTable
+        val year = collection.historyPartitionNumberOf(tx.version.number)
+        history.createPartition(conn, year)
+        history.createPartition(conn, year + 1)
     }
 
     /**
@@ -368,13 +378,7 @@ open class PgWriter internal constructor(
      */
     protected open fun createPgCollection(collection: PgCollection) {
         collection.catalog.createPgCollection(conn, collection)
-        // Seed the current+next history year-partitions (the catalog can't — it has no version).
-        if (collection.storeHistory) {
-            val history = collection.historyTable
-            val year = collection.historyPartitionNumberOf(tx.version.number)
-            history.createPartition(conn, year)
-            history.createPartition(conn, year + 1)
-        }
+        seedHistoryPartitions(collection)
     }
 
     /**
