@@ -14,6 +14,7 @@ import naksha.model.objects.MemberType.MemberType_C.INT64
 import naksha.model.objects.MemberType.MemberType_C.STRING
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StandardIndices
 import naksha.model.objects.StandardMembers.StandardMembers_C.Feature
 import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
@@ -102,7 +103,7 @@ open class PgCollection internal constructor(
         val memberType = member.dataType
         return when (memberType) {
             BYTE_ARRAY, TUPLE_NUMBER -> PgColumn(index, memberName, STRING, "STORAGE $EXTENDED")
-            STRING -> PgColumn(index, memberName, STRING, "COLLATE \"C\" STORAGE $MAIN")
+            STRING -> PgColumn(index, memberName, STRING, "STORAGE $MAIN COLLATE \"C\"")
             else -> PgColumn(index, memberName, STRING, "STORAGE $MAIN")
         }
     }
@@ -171,8 +172,13 @@ open class PgCollection internal constructor(
 
     private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
         return Array(nakshaCollection.indices?.size ?: 0) { i ->
+            val indices = IndexList(StandardIndices.MANDATORY)
             // We know that when this method is called, indices must not be null!
-            val indices: IndexList = nakshaCollection.indices!!
+            for (requestedIndex in nakshaCollection.indices!!) {
+                if ((requestedIndex != null) && (!indices.contains(requestedIndex))) {
+                    indices.add(requestedIndex)
+                }
+            }
             val index = indices[i] ?: throw NakshaException(ILLEGAL_STATE, "Index #$i must not be null")
             val indexName = index.name
 

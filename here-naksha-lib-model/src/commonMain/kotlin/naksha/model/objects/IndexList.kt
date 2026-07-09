@@ -37,4 +37,16 @@ open class IndexList() : ListProxy<Index>(Index::class) {
         fun of(vararg indexes: Index): IndexList =
             IndexList().apply { addAll(indexes.toList()) }
     }
+
+    /**
+     * Check if the list contains the given [element] by comparing the `name` property only, disregarding all other settings.
+     * Should only be used by e.g. [StandardIndices] and [XyzIndices], to add other custom indices into existing prioritized index lists.
+     */
+    override fun contains(element: Index?): Boolean {
+        if (element == null) return false
+        for (i in this) {
+            if (i?.name == element.name) return true
+        }
+        return false
+    }
 }
