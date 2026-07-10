@@ -3,26 +3,9 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.base.StringList
 import naksha.model.Naksha
 import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.APP_ID_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.AUTHOR_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS0_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS1_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS2_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS3_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV0_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV1_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV2_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV3_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.FEATURE_TYPE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.REF_POINT_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.objects.Index
@@ -113,40 +96,20 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     @Test
     fun collectionShouldHaveIndices() {
         val collection = NakshaCollection("check_db_indices_test", map.id)
-        val indices = StringList(
-            ID_IDX,
-            HERE_TILE_IDX,
-            APP_ID_IDX,
-            AUTHOR_IDX,
-            TAGS_IDX,
-            REF_POINT_IDX,
-            GIST_IDX,
-            FEATURE_TYPE_IDX,
-            CV0_IDX,
-            CV1_IDX,
-            CV2_IDX,
-            CV3_IDX,
-            CS0_IDX,
-            CS1_IDX,
-            CS2_IDX,
-            CS3_IDX,
-        )
-        // The closed-enum opt-in list was removed; PgMap.createPgCollection always applies PgIndex.DEFAULT_INDICES.
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
         val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
-        checkIndicesCreatedForTable(collection.id, indices)
-        checkIndicesCreatedForTable("${collection.id}\$meta", indices)
-        // Note: $del table no longer exists; deleted rows are kept in HEAD with (version & 3) == 2.
-        checkIndicesCreatedForTable("${collection.id}\$hst\$$currentYear", indices)
-        checkIndicesCreatedForTable("${collection.id}\$hst\$${currentYear + 1}", indices)
-        checkIndicesCreatedForTable("${collection.id}\$meta", indices)
+        checkIndicesCreatedForTable(collection.id)
+        // fix1 removed the META/DELETED tables: metadata is materialized as member columns and
+        // tombstones remain in HEAD. Optional indices still belong on every history year partition.
+        checkIndicesCreatedForTable("${collection.id}\$hst\$$currentYear")
+        checkIndicesCreatedForTable("${collection.id}\$hst\$${currentYear + 1}")
     }
 
-    private fun checkIndicesCreatedForTable(tableName: String, indices: StringList) {
+    private fun checkIndicesCreatedForTable(tableName: String) {
         storage.adminConnection().use { conn ->
             conn.execute(
                 sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
@@ -154,10 +117,11 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             ).use { cursor ->
                 val existingIndices = mutableListOf<String>()
                 while (cursor.next()) existingIndices.add(cursor["indexname"])
-                check(indices.size <= existingIndices.size) { "Too few indices" }
                 XyzIndices.ALL.forEach { index ->
-                    val existingName = existingIndices.find { index.name == it }
-                    check(existingName != null) { "Index ${index.name} not found" }
+                    val expectedName = "${tableName}\$ci_${index.name}"
+                    check(expectedName in existingIndices) {
+                        "Index $expectedName not found; existing indices: $existingIndices"
+                    }
                 }
             }
         }

@@ -359,6 +359,8 @@ open class PgSession(
         .addProcessor(XyzMembers.XyzAppId, XyzProcessors.xyzAppId)
         .addProcessor(XyzMembers.XyzAuthor, XyzProcessors.xyzAuthor)
         .addProcessor(XyzMembers.XyzAuthorTimestamp, XyzProcessors.xyzAuthorTimestamp)
+        .addProcessor(XyzMembers.XyzHereTile, XyzProcessors.xyzHereTile)
+        .addProcessor(XyzMembers.XyzHash, XyzProcessors.xyzHash)
 
     override fun isClosed(): Boolean = _closed
 

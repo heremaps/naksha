@@ -54,7 +54,7 @@ internal class PgWriterUpsert(
          ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.$FN = head_row.$FN
-  WHERE (head_row.$VERSION & -4) < 2 -- action = CREATE or UPDATE
+  WHERE (head_row.$VERSION & 3) < 2 -- action = CREATE or UPDATE
   RETURNING $FN, $VERSION
 )""" else ""
 
@@ -67,7 +67,7 @@ internal class PgWriterUpsert(
          ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.$FN = head_row.$FN
-  WHERE (head_row.$VERSION & -4) = 2 -- action = DELETE
+  WHERE (head_row.$VERSION & 3) = 2 -- action = DELETE
   RETURNING $FN, $VERSION
 )""" else ""
 
@@ -102,6 +102,7 @@ internal class PgWriterUpsert(
   }} FROM new_row
   LEFT JOIN head_row ON new_row.$FN = head_row.$FN
   WHERE new_row.$FN IN (SELECT $FN FROM head_to_history)
+    AND new_row.$FN IN (SELECT $FN FROM head_deleted)
   RETURNING $FN, $VERSION${if (CC != null) ", $CC" else ""}${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { it.ident }}" else ""}
 )""" // Note: head_to_history contains all existing HEAD row in CREATE or UPDATE action.
 
@@ -195,8 +196,10 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 if (updated_fn != null && updated_version != null) {
                     // UPDATE was executed.
                     val pgWrite = writeByFn[updated_fn] ?: throw generalException("Received _updated_fn '$updated_fn', but found no matching PgWrite")
+                    val previousVersion = outRows.getInt64(row, "_head_row_version")
+                        ?: throw generalException("Missing previous HEAD version for updated feature '${pgWrite.id}'")
                     val updatedTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
-                    val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
+                    val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, previousVersion)
                     // If an update was done, we need the following values to be available:
                     val change_count: Int = if (CC!=null) {
                         outRows.getInt(row, CC) ?: throw generalException("Missing '$CC' in update result for feature '${pgWrite.id}'")
@@ -219,6 +222,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     )
                     pgWrite.tuple = updatedTuple
                     pgWrite.tupleNumber = updatedTupleNumber
+                    pgWrite.action = Action.UPDATE
                 } // else INSERT executed, that means the tuple was inserted as given.
 //                val fn = outRows.getInt64(row, FN) ?: throw generalException("Missing 'fn' in SQL result")
 //                val new_version = outRows.getInt64(row, VERSION) ?: throw generalException("Missing 'version' in SQL result")

@@ -1,7 +1,10 @@
 package naksha.model.objects
 
+import naksha.base.Fnv1a32
 import naksha.base.Int64
 import naksha.base.Platform
+import naksha.geo.HereTile
+import naksha.model.Action
 import naksha.model.IMemberProcessor
 import naksha.model.ISession
 import kotlin.jvm.JvmStatic
@@ -35,11 +38,14 @@ class XyzProcessors private constructor() {
          * @since 3.0
          */
         @JvmStatic
-        val xyzCreatedAt = IMemberProcessor { _, _, _, _, value ->
+        val xyzCreatedAt = IMemberProcessor { _, collection, feature, _, value ->
             when (value) {
                 is Int64 -> value
                 is Number -> Int64(value.toLong())
-                else -> Platform.currentMillis()
+                else -> {
+                    val action = collection.useMember(StandardMembers.Tn).getTupleNumber(feature)?.action
+                    if (action == Action.CREATE) null else feature.properties.xyz.createdAt
+                }
             }
         }
 
@@ -72,5 +78,23 @@ class XyzProcessors private constructor() {
         val xyzAuthorTimestamp = IMemberProcessor { session, _, _, _, value ->
             if (session.options.author != null) Platform.currentMillis() else value as Int64?
         }
+
+        /**
+         * Computes [XyzHereTile][naksha.model.objects.XyzMembers.XyzMembers_C.XyzHereTile] from the feature's
+         * reference-point (or geometry centroid), falling back to the id hash when there is no geometry.
+         * @since 3.0
+         */
+        @JvmStatic
+        val xyzHereTile = IMemberProcessor { _, _, feature, _, _ ->
+            val point = feature.referencePoint ?: feature.geometry?.calculateCentroid()
+            if (point != null) HereTile(point.latitude, point.longitude).intKey else Fnv1a32.string(0, feature.id)
+        }
+
+        /**
+         * Computes [XyzHash][naksha.model.objects.XyzMembers.XyzMembers_C.XyzHash] for the feature.
+         * @since 3.0
+         */
+        @JvmStatic
+        val xyzHash = IMemberProcessor { _, _, feature, _, _ -> Fnv1a32.string(0, feature.id) }
     }
 }

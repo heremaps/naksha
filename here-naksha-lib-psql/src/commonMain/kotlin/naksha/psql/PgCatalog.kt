@@ -192,10 +192,13 @@ open class PgCatalog internal constructor(
         headTable.create(conn)
         for (index in collection.headIndices) headTable.createIndex(conn, index)
 
-        val history = collection.historyTable
-        history.create(conn)
-        // History year-partitions are seeded by PgWriter (needs the version); createPartition is not idempotent.
-        // for (index in collection.historyIndices) headTable.createIndex(conn, index)
+        if (collection.storeHistory) {
+            val history = collection.historyTable
+            history.create(conn)
+            // Register optional indices before PgWriter seeds the year partitions. New partitions inherit
+            // every index registered on the history root.
+            for (index in collection.historyIndices) history.addIndex(index)
+        }
 
         // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
         invalidateCollection(collection)

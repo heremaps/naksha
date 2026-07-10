@@ -57,7 +57,7 @@ class PgHistoryPartition(
 PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION, $NEXT_VERSION) INCLUDE ($FN, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION, $NEXT_VERSION) INCLUDE ($FN, $ID);"""
 
         // HISTORY-PARTITION is distribution partitioned.
         return """$CREATE_TABLE $quotedName

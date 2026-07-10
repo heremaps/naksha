@@ -7,6 +7,7 @@ import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.MapProxy
+import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.gzipDeflate
 import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.PlatformList
@@ -350,11 +351,27 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun hasMember(member: Member, dataType: MemberType? = null): Boolean {
+        val isVirtual = member.name == StandardMembers.FeatureNumber.name ||
+            member.name == StandardMembers.Version.name ||
+            member.name == StandardMembers.Action.name
+        if (isVirtual) {
+            val value = rawMember(member) ?: return false
+            return dataType == null || dataType.isInstance(value)
+        }
         val index = membersBook.indexOfName(member.name)
         if (index < 0) return false
-        if (dataType == null) return true
-        val value = membersBook.get(index)
-        return dataType.isInstance(value)
+        return dataType == null || dataType.isInstance(membersBook.get(index))
+    }
+
+    /**
+     * Resolve a physically stored member or one of the virtual tuple-number members.
+     * Virtual members are deliberately not duplicated in [membersBook].
+     */
+    private fun rawMember(member: Member): Any? = when (member.name) {
+        StandardMembers.FeatureNumber.name -> tupleNumber.featureNumber
+        StandardMembers.Version.name -> tupleNumber.version
+        StandardMembers.Action.name -> tupleNumber.action.intValue
+        else -> membersBook[member.name]
     }
 
     /**
@@ -363,7 +380,7 @@ data class Tuple @JvmOverloads constructor(
      * @return the value from the [membersBook] book or `null`, if the member is missing, the value is `null`, or not the requested type.
      * @since 3.0
      */
-    fun getString(member: Member): String? = membersBook[member.name] as? String
+    fun getString(member: Member): String? = rawMember(member) as? String
 
     /**
      * Get a long member.
@@ -374,7 +391,7 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun getLong(member: Member, alt: Int64 = Int64(0L)): Int64 =
-        membersBook[member.name]?.let { v ->
+        rawMember(member)?.let { v ->
             when (v) {
                 is Int64 -> v
                 is Long -> Int64(v)
@@ -392,7 +409,7 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun getInt(member: Member, alt: Int = 0): Int =
-        membersBook[member.name]?.let { v ->
+        rawMember(member)?.let { v ->
             when (v) {
                 is Int -> v
                 is Number -> v.toInt()
@@ -434,7 +451,7 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     fun getMember(member: Member): Any? {
-        return when (val raw = membersBook[member.name]) {
+        return when (val raw = rawMember(member)) {
             is String -> raw
             is Int64 -> raw
             is Byte -> Int64(raw.toInt())
@@ -444,6 +461,7 @@ data class Tuple @JvmOverloads constructor(
             is Float -> raw.toDouble()
             is Double -> raw
             is ByteArray -> raw
+            is TupleNumber -> raw
             is SpGeometry -> raw
             is TagMap -> raw
             is TagList -> raw
@@ -510,6 +528,10 @@ data class Tuple @JvmOverloads constructor(
         val raw = membersBook[member.name]
         if (raw is TagList) return raw
         if (raw is PlatformList) return raw.proxy(TagList::class)
+        if (raw is String) {
+            val decoded = try { fromJSON(raw) } catch (_: Exception) { null }
+            if (decoded is PlatformList) return decoded.proxy(TagList::class)
+        }
         return null
     }
 
@@ -550,6 +572,7 @@ data class Tuple @JvmOverloads constructor(
     @JvmOverloads
     fun toNakshaFeature(globalBook: IBook? = null): NakshaFeature {
         val feature = decodeFeature(globalBook)
+        if (feature.getAs("id", String::class) == null) feature.id = id
         feature.properties.xyz = XyzNs.fromTuple(this)
         val tags = getTagList(XyzMembers.XyzTags)
         if (tags != null) feature.properties.xyz.tags = tags

@@ -222,6 +222,7 @@ class XyzNs : AnyObject() {
             return AnyObject().apply {
                 setRaw(UUID, guid.toString())
                 if (nextTn != null) setRaw(NUUID, Guid(id, nextTn).toString())
+                else if (tn.action == Action.DELETE) setRaw(NUUID, guid.toString())
                 setRaw(UPDATED_AT, updatedAt)
                 if (createdAt != updatedAt) setRaw(CREATED_AT, createdAt)
                 if (authorTs != updatedAt) setRaw(AUTHOR_TS, authorTs)

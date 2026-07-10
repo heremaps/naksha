@@ -75,7 +75,6 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         // TODO: We want to use placeholders!
 
         val WHERE = StringBuilder()
-        if (!req.queryDeleted) WHERE.append("($VERSION_NAME & 3) < 2 ")
         var version = req.version
         if (version != null) {
             version = version or Int64(3)
@@ -103,6 +102,13 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             WHERE.append(whereQuery)
         }
         val where = if (WHERE.isEmpty()) "" else " WHERE $WHERE"
+        // The live-only filter applies to HEAD only; history queries must still return archived DELETE rows.
+        val headWhere = if (req.queryDeleted) where else {
+            val hw = StringBuilder(WHERE)
+            if (hw.isNotEmpty()) hw.append(" AND ")
+            hw.append("($VERSION_NAME & 3) < 2 ")
+            " WHERE $hw"
+        }
 
         val baseCols = listOf(FN.toString(), VERSION.toString())
         val extraCols = order_by?.map { it.first }?.filter { it !in baseCols }?.distinct() ?: emptyList()
@@ -110,10 +116,10 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
 
         // The query starts with select all tuple-numbers of matching tuple.
         val query = if (readHistory) """query AS
-( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$where
+( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere
   UNION ALL
   SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.historyTable.quotedName}$where )""" else """query AS
-( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$where )"""
+( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere )"""
 
         // If history is queried, and only a certain amount of versions should be returned,
         // or we want only the latest version, but no specific version target is given, then

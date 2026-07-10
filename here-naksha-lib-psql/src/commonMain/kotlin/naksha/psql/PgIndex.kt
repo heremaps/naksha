@@ -97,7 +97,7 @@ USING $primaryIndex (${elements.joinToString(", ")})$includeClause$withClause"""
         other as PgIndex
         if (name != other.name) return false
         if (!on.contentEquals(other.on)) return false
-        if (!includes.contentEquals(other.on)) return false
+        if (!includes.contentEquals(other.includes)) return false
         return true
     }
 

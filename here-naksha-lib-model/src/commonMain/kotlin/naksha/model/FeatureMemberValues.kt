@@ -5,6 +5,7 @@ package naksha.model
 import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.base.ListProxy
+import naksha.base.MapProxy
 import naksha.base.PlatformList
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
@@ -176,6 +177,7 @@ object FeatureMemberValues {
     private fun coerceSpatial(value: Any, featureId: String, memberName: String): ByteArray? = when (value) {
         is SpGeometry -> toTWKB(value)
         is ByteArray -> value
+        is MapProxy<*, *> -> toTWKB(value.proxy(SpGeometry::class))
         else -> { warnMismatch(featureId, memberName, "spatial", value); null }
     }
 

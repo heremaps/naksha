@@ -99,7 +99,7 @@ open class PgWriter internal constructor(
                 if (catalogDiff != 0) return@sortWith catalogDiff
                 val collectionDiff = a.collection.collectionNumber - b.collection.collectionNumber
                 if (collectionDiff != 0) return@sortWith collectionDiff
-                val partitionDiff = a.partitionNumber - b.partitionNumber
+                val partitionDiff = a.partition - b.partition
                 if (partitionDiff != 0) return@sortWith partitionDiff
                 val opDiff = a.op.order - b.op.order
                 if (opDiff != 0) return@sortWith opDiff
@@ -117,7 +117,8 @@ open class PgWriter internal constructor(
             for (i in 1..pgWrites.size) {
                 if (i == pgWrites.size ||
                     pgWrites[i].catalog.catalogNumber != pgWrites[start].catalog.catalogNumber ||
-                    pgWrites[i].collection.collectionNumber != pgWrites[start].collection.collectionNumber)
+                    pgWrites[i].collection.collectionNumber != pgWrites[start].collection.collectionNumber ||
+                    pgWrites[i].partition != pgWrites[start].partition)
                 {
                     executeWrite(pgWrites, start, i)
                     start = i

@@ -109,7 +109,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // Then
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)
         assertEquals(createdTuple.getLong(naksha.model.objects.StandardMembers.NextVersion), updatedTuple.tupleNumber.version)
-        assertNull(updatedTuple.getLong(naksha.model.objects.StandardMembers.NextVersion, Int64(-1L)).let { if (it == Int64(-1L)) null else it })
+        assertNull(updatedTuple.nextTupleNumber)
         assertEquals(1, createdTuple.getInt(naksha.model.objects.XyzMembers.XyzChangeCount))
         assertEquals(2, updatedTuple.getInt(naksha.model.objects.XyzMembers.XyzChangeCount))
         assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry))

@@ -179,7 +179,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
 
         // Given:
         val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
-            type = "quite_unusual_type"
+            featureType = "quite_unusual_type"
         }
 
         // When:

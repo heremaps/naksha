@@ -8,6 +8,7 @@ import naksha.model.NakshaError
 import naksha.model.NakshaException
 import naksha.model.illegalArg
 import naksha.model.objects.StandardMembers
+import naksha.model.objects.XyzMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ops.*
 import naksha.psql.PgColumn.PgColumn_C.FN
@@ -88,7 +89,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         val rawAt: String = op.at ?: throw illegalArg("Missing member name for operation $opName")
         // The action is virtual: resolve it to the version bit-mask instead of a physical column.
         val isAction = rawAt == StandardMembers.Action.name
-        val at: String = if (isAction) "(${PgColumn.VERSION.name} & 3)::int4" else rawAt
+        val at: String = when {
+            isAction -> "(${PgColumn.VERSION.name} & 3)::int4"
+            rawAt == XyzMembers.XyzCreatedAt.name || rawAt == XyzMembers.XyzAuthorTimestamp.name ->
+                "COALESCE($rawAt, ${XyzMembers.XyzUpdatedAt.name})"
+            else -> rawAt
+        }
         when (op) {
            is IsNull -> {
                 if (negate)

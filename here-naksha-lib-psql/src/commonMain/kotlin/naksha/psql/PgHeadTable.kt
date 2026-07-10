@@ -57,7 +57,7 @@ class PgHeadTable(
         // HEAD is NOT distribution partitioned.
         if (partitions.isEmpty()) return """$CREATE_TABLE $quotedName (${columnDefinitions()}, ${CONSTRAINT()})
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION) INCLUDE ($FN, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION) INCLUDE ($FN, $ID);"""
 
         // HEAD is distribution partitioned.
         return """$CREATE_TABLE $quotedName (${columnDefinitions()})

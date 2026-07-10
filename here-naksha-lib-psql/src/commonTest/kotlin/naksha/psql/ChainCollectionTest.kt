@@ -67,14 +67,10 @@ class ChainCollectionTest : PgTestBase(
     @Test
     fun allMembersShouldHaveAnEffectivePath() {
         val members = assertNotNull(collection.members)
-        assertEquals(2, members.size)
-        assertEquals("left_fn", assertNotNull(members[0]).name)
-        assertContentEquals(listOf("properties", "left_fn"), assertNotNull(members[0]).path)
-        assertNull(assertNotNull(members[0]).path)
-
-        assertEquals("right_fn", assertNotNull(members[1]).name)
-        assertContentEquals(listOf("properties", "right_fn"), assertNotNull(members[1]).path)
-        assertNull(assertNotNull(members[1]).path)
+        val leftFn = assertNotNull(members.find { it?.name == "left_fn" })
+        assertContentEquals(listOf("properties", "left_fn"), leftFn.path)
+        val rightFn = assertNotNull(members.find { it?.name == "right_fn" })
+        assertContentEquals(listOf("properties", "right_fn"), rightFn.path)
     }
 
     @Test

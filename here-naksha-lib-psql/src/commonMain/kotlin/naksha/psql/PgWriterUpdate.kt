@@ -100,7 +100,7 @@ SELECT
     existing_rows.$FN AS _existing_fn,
     existing_rows.$VERSION AS _existing_version,
     ${if (byteArrayCols.isNotEmpty()) byteArrayCols.joinToString(",\n    ") { column -> "inserted.$column AS $column" } + ",\n    " else ""}
-    ${if (head_to_history.isNotEmpty()) "head_to_history.$FN AS _history_fn," else "NULL AS _history_fn"}
+    ${if (head_to_history.isNotEmpty()) "head_to_history.$FN AS _history_fn," else "NULL AS _history_fn,"}
     head_deleted.$FN AS _head_deleted_fn,
     inserted.$FN AS _inserted_fn
 FROM new_row

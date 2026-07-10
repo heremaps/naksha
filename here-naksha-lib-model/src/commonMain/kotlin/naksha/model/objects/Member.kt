@@ -391,7 +391,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getInt64FromTuple")
     fun getInt64(tuple: Tuple): Int64? {
-        val raw = tuple.membersBook[this.name]
+        val raw = tuple.getMember(this)
         if (raw is Int64) return raw
         if (raw is Long) return Int64(raw)
         if (raw is Number) return Int64(raw.toLong())
