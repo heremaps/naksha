@@ -271,7 +271,7 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     var nextVersion: Int64
-        get() = membersBook[StandardMembers.NextVersion.name] as Int64
+        get() = membersBook[StandardMembers.NextVersion.name] as Int64? ?: Version.HEAD.number
         set(version: Int64) {
             val members = this.membersBook
             if (members is HeapBook) {
