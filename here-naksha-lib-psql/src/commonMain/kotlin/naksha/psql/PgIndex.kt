@@ -169,6 +169,30 @@ ${if (where==null) "" else "WHERE $where"};"""
         }
 
         /**
+         * A non-unique index above the next tuple-number, used to find a history row by the tuple-number of the state that replaced it.
+         *
+         * - Only added to [HISTORY][PgHistory] tables when explicitly requested.
+         * - Must not be added to [HEAD][PgHead], [DELETED][PgDeleted], [META][PgMeta], or [TRANSACTIONS][PgTransactions].
+         * @see [PgAdminMap.createPgCollection]
+         */
+        @JvmField
+        @JsStatic
+        val next_version = def(PgIndex::class, "nxv") { self ->
+            self.name = "next_version"
+            self.columns = listOf(c_tn_next)
+            self.naturalOrder = listOf(DESCENDING)
+            self.includes = listOf(c_tn, c_id)
+            self.createFn = Fx2 { conn, table ->
+                conn.execute(
+                    self.sql(
+                        """btree ($c_tn_next DESC) INCLUDE ($c_tn, $c_id)""",
+                        table, unique = false, addFillFactor = true, where = "$c_tn_next IS NOT NULL"
+                    )
+                ).close()
+            }
+        }.alias<PgIndex>("next_tn").alias<PgIndex>("txn_next")
+
+        /**
          * A unique index above the transaction-number _(aka version)_, including [id][PgColumn.id], [tuple-number][PgColumn.tn] and [next_tn][PgColumn.next_tn] column.
          *
          * - Automatically added to all [TRANSACTIONS][PgTransactions] tables.

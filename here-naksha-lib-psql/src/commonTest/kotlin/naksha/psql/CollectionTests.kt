@@ -21,7 +21,9 @@ import naksha.model.objects.NakshaCollection.NakshaCollection_C.FEATURE_TYPE_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.NEXT_VERSION_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.REF_POINT_IDX
+import naksha.model.objects.NakshaCollection.NakshaCollection_C.SP_GIST_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
@@ -161,6 +163,87 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    @Test
+    fun collectionShouldCreateSlimIndicesWithHistoryNextVersionOnly() {
+        val collection = NakshaCollection("check_slim_indices_test", map.id)
+        collection.withIndices(ID_IDX, TAGS_IDX, GIST_IDX, NEXT_VERSION_IDX)
+        executeWrite(
+            WriteRequest().add(
+                Write().createCollection(collection)
+            )
+        )
+
+        assertSame(PgIndex.next_version, PgIndex.of(NEXT_VERSION_IDX))
+        assertSame(PgIndex.next_version, PgIndex.of("next_tn"))
+        assertSame(PgIndex.next_version, PgIndex.of("txn_next"))
+
+        val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
+        assertSlimHeadLikeIndices(collection.id)
+        assertSlimHeadLikeIndices("${collection.id}\$meta")
+        assertSlimHeadLikeIndices("${collection.id}\$del")
+        assertSlimHistoryIndices("${collection.id}\$hst\$y$currentYear")
+        assertSlimHistoryIndices("${collection.id}\$hst\$y${currentYear + 1}")
+    }
+
+    private fun assertSlimHeadLikeIndices(tableName: String) {
+        val indices = indexNamesForTable(tableName)
+        assertContains(indices, PgIndex.tn_pkey.id(tableName))
+        assertContains(indices, PgIndex.id_unique.id(tableName))
+        assertContains(indices, PgIndex.version.id(tableName))
+        assertContains(indices, PgIndex.tags.id(tableName))
+        assertContains(indices, PgIndex.gist_geo.id(tableName))
+        assertFalse(indices.contains(PgIndex.id.id(tableName)))
+        assertFalse(indices.contains(PgIndex.next_version.id(tableName)))
+        assertUnwantedOptionalIndicesAbsent(tableName, indices)
+    }
+
+    private fun assertSlimHistoryIndices(tableName: String) {
+        val indices = indexNamesForTable(tableName)
+        assertContains(indices, PgIndex.tn_pkey.id(tableName))
+        assertContains(indices, PgIndex.id.id(tableName))
+        assertContains(indices, PgIndex.version.id(tableName))
+        assertContains(indices, PgIndex.tags.id(tableName))
+        assertContains(indices, PgIndex.gist_geo.id(tableName))
+        assertContains(indices, PgIndex.next_version.id(tableName))
+        assertFalse(indices.contains(PgIndex.id_unique.id(tableName)))
+        assertUnwantedOptionalIndicesAbsent(tableName, indices)
+    }
+
+    private fun assertUnwantedOptionalIndicesAbsent(tableName: String, indices: Set<String>) {
+        listOf(
+            HERE_TILE_IDX,
+            APP_ID_IDX,
+            AUTHOR_IDX,
+            FEATURE_TYPE_IDX,
+            CV0_IDX,
+            CV1_IDX,
+            CV2_IDX,
+            CV3_IDX,
+            CS0_IDX,
+            CS1_IDX,
+            CS2_IDX,
+            CS3_IDX,
+            REF_POINT_IDX,
+            SP_GIST_IDX,
+        ).forEach { indexName ->
+            val pgIndex = assertNotNull(PgIndex.of(indexName))
+            assertFalse(indices.contains(pgIndex.id(tableName)), "Unexpected index $indexName on $tableName")
+        }
+    }
+
+    private fun indexNamesForTable(tableName: String): Set<String> {
+        storage.adminConnection().use { conn ->
+            conn.execute(
+                sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
+                args = arrayOf(tableName)
+            ).use { cursor ->
+                val addedIndices = mutableSetOf<String>()
+                while (cursor.next()) addedIndices.add(cursor["indexname"])
+                return addedIndices
             }
         }
     }

@@ -27,6 +27,15 @@ import kotlin.jvm.JvmField
 /**
  * A map stores collections.
  */
+private enum class RequestedIndexTarget {
+    HEAD,
+    DELETED,
+    META,
+    HISTORY,
+    TRANSACTIONS,
+    TRANSACTIONS_META,
+}
+
 @JsExport
 open class PgMap internal constructor(
     /**
@@ -170,9 +179,7 @@ open class PgMap internal constructor(
             //txn.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
             txn.createIndex(conn, PgIndex.id_unique)
             txn.createIndex(conn, PgIndex.txn_unique)
-            for (index in indices) {
-                txn.createIndex(conn, index)
-            }
+            createRequestedIndices(conn, txn, indices, RequestedIndexTarget.TRANSACTIONS)
 
             // We can have a meta table for transactions, but no history or deleted!
             if (collection.metaTable != null) {
@@ -181,9 +188,7 @@ open class PgMap internal constructor(
                 //meta.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
                 meta.createIndex(conn, PgIndex.id_unique)
                 meta.createIndex(conn, PgIndex.version)
-                for (index in indices) {
-                    meta.createIndex(conn, index)
-                }
+                createRequestedIndices(conn, meta, indices, RequestedIndexTarget.TRANSACTIONS_META)
             }
             return
         }
@@ -193,9 +198,7 @@ open class PgMap internal constructor(
         //head.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
         head.createIndex(conn, PgIndex.id_unique)
         head.createIndex(conn, PgIndex.version)
-        for (index in indices) {
-            head.createIndex(conn, index)
-        }
+        createRequestedIndices(conn, head, indices, RequestedIndexTarget.HEAD)
 
         val deleted = collection.deletedTable
         if (deleted != null) {
@@ -203,9 +206,7 @@ open class PgMap internal constructor(
             //deleted.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
             deleted.createIndex(conn, PgIndex.id_unique)
             deleted.createIndex(conn, PgIndex.version)
-            for (index in indices) {
-                deleted.createIndex(conn, index)
-            }
+            createRequestedIndices(conn, deleted, indices, RequestedIndexTarget.DELETED)
         }
 
         val meta = collection.metaTable
@@ -214,9 +215,7 @@ open class PgMap internal constructor(
             //meta.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
             meta.createIndex(conn, PgIndex.id_unique)
             meta.createIndex(conn, PgIndex.version)
-            for (index in indices) {
-                meta.createIndex(conn, index)
-            }
+            createRequestedIndices(conn, meta, indices, RequestedIndexTarget.META)
         }
 
         val history = collection.historyTable
@@ -227,12 +226,29 @@ open class PgMap internal constructor(
             //history.createIndex(conn, PgIndex.tn_pkey) // PRIMARY KEY
             history.createIndex(conn, PgIndex.id)
             history.createIndex(conn, PgIndex.version)
-            for (index in indices) {
-                history.createIndex(conn, index)
-            }
+            createRequestedIndices(conn, history, indices, RequestedIndexTarget.HISTORY)
         }
         invalidateCollection(collection)
     }
+
+    private fun createRequestedIndices(
+        conn: PgConnection,
+        table: PgTable,
+        indices: List<PgIndex>,
+        target: RequestedIndexTarget,
+    ) {
+        for (index in indices) {
+            if (isRequestedIndexAllowed(index, target)) {
+                table.createIndex(conn, index)
+            }
+        }
+    }
+
+    private fun isRequestedIndexAllowed(index: PgIndex, target: RequestedIndexTarget): Boolean =
+        when {
+            index == PgIndex.next_version -> target == RequestedIndexTarget.HISTORY
+            else -> true
+        }
 
     /**
      * Refresh the cached information of this collection, mainly updates the history tables.

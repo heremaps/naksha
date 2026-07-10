@@ -40,6 +40,7 @@ import com.here.naksha.lib.core.models.ExtensionConfig;
 import com.here.naksha.lib.core.models.features.Extension;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.util.IoHelp;
+import com.here.naksha.lib.core.util.CollectionIndexPolicy;
 import com.here.naksha.lib.extmanager.ExtensionManager;
 import com.here.naksha.lib.extmanager.FileClient;
 import com.here.naksha.lib.extmanager.IExtensionManager;
@@ -253,10 +254,10 @@ public class NakshaHub implements INaksha {
     });
   }
 
-  private static WriteRequest upsertAdminCollectionsRequest(@NotNull String adminMapId) {
+  static WriteRequest upsertAdminCollectionsRequest(@NotNull String adminMapId) {
     final WriteRequest writeRequest = new WriteRequest();
     for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
-      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, adminMapId)));
+      writeRequest.add(new Write().upsertCollection(CollectionIndexPolicy.hubSlimCollection(adminCollectionId, adminMapId)));
     }
     return writeRequest;
   }
