@@ -44,6 +44,7 @@ import naksha.model.objects.StandardMembers;
 import naksha.model.request.*;
 import naksha.model.request.ops.And;
 import naksha.model.request.ops.Equals;
+import naksha.model.request.ops.OpList;
 import naksha.model.request.ops.Or;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -156,10 +157,11 @@ public class ActivityLogHandler extends AbstractEventHandler {
 
   private ReadFeatures missingPredecessorFeatures(List<TupleNumber> tupleNumbers) {
     // next_version is a plain int8 column, so we pass an Int64[] of the version values.
-    Or or = new Or();
+    final Or or = new Or();
+    final OpList orClauses = or.getChildren();
       for (TupleNumber tupleNumber : tupleNumbers) {
         //TODO very inefficient, but ISession.loadTuples() currently cannot target next version
-          or.getChildren().add(
+          orClauses.add(
                   new And(
                           new Equals(StandardMembers.NextVersion.getName(), tupleNumber.version),
                           new Equals(StandardMembers.FeatureNumber.getName(), tupleNumber.featureNumber)
