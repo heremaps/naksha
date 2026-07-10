@@ -73,6 +73,7 @@ data class Tuple @JvmOverloads constructor(
          * @param session the session for which to encode; declares the version.
          * @param globalBook the global book to use for encoding; if any.
          * @param atomic if atomic, an UPDATE/DELETE requires the feature's uuid to pin the prior version.
+         * TODO: `atomic` is write-path-specific; reconsider moving it out of this general encoder.
          * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
          * @since 3.0
          * @throws NakshaException if any fatal error happens when encoding.
