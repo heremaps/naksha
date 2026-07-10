@@ -9,6 +9,7 @@ import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.StoreMode;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.FeatureTupleList;
@@ -56,7 +57,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     request.add(new Write().createCollection(COLLECTION_0_FEATURE));
     request.add(new Write().createCollection(COLLECTION_1_FEATURE));
     SuccessResponse response = executeWrite(request);
-    assertNotNull(response.getFeatureTupleList());
+    assertNotNull(response.getFeatures());
   }
 
   @Test
@@ -106,12 +107,12 @@ public class ViewWriteSessionTests extends PsqlTests {
       writeRequest.add(new Write().updateFeature(COLLECTION_0_FEATURE, feature, false));
     });
     SuccessResponse response1 = (SuccessResponse) writeSession.execute(writeRequest);
-    assertNotNull(response1.getFeatureTupleList().get(0));
+    assertNotNull(response1.getFeatures().get(0));
     NakshaFeature feature = response1.getFeatures().get(0);
     assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
     assertTrue(feature.getProperties().containsKey("testProperty"));
     assertEquals("test", feature.getProperties().getPath("testProperty").toString());
-    assertSame(Action.UPDATE, response1.getFeatureTupleList().get(0).tuple.tupleNumber.getAction());
+    assertSame(Action.UPDATE, response1.getFeatures().get(0).getProperties().getXyz().getAction());
 
     writeSession.commit();
 
@@ -152,8 +153,8 @@ public class ViewWriteSessionTests extends PsqlTests {
     //WHEN Because UPDATE is changed to UPSERT, this should create the feature
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
     //THEN
-    assertNotNull(response.getFeatureTupleList().get(0));
-    assertSame(Action.CREATE, response.getFeatureTupleList().get(0).tuple.tupleNumber.getAction());
+    assertNotNull(response.getFeatures().get(0));
+    assertSame(Action.CREATE, response.getFeatures().get(0).getProperties().getXyz().getAction());
     writeSession.commit();
 
     //GIVEN Verify the feature was actually created in the top layer (collection_0)
@@ -207,8 +208,8 @@ public class ViewWriteSessionTests extends PsqlTests {
     writeRequest.add(new Write().createFeature(COLLECTION_1_FEATURE, feature));
 
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
-    assertNotNull(response.getFeatureTupleList().get(0));
-    assertSame(Action.CREATE, response.getFeatureTupleList().get(0).tuple.tupleNumber.getAction());
+    assertNotNull(response.getFeatures().get(0));
+    assertSame(Action.CREATE, response.getFeatures().get(0).getProperties().getXyz().getAction());
     writeSession.commit();
 
     //check if the newly added feature found on layer
@@ -239,19 +240,12 @@ public class ViewWriteSessionTests extends PsqlTests {
     @NotNull SuccessResponse ok = assertInstanceOf(SuccessResponse.class, response);
     assertEquals(1, ok.getLength());
 
-    @NotNull FeatureTupleList featureTupleList = ok.getFeatureTupleList();
-    assertEquals(1, featureTupleList.size());
-    // TODO: We need replace this code with: writeSession.loadTuples(featureTupleList);
+    @NotNull NakshaFeatureList featureList = ok.getFeatures();
+    assertEquals(1, featureList.getSize());
     writeSession.commit();
-    Naksha.cache.load(featureTupleList);
-    // TODO: End of code to replace
-    FeatureTuple featureTuple = featureTupleList.get(0);
-    assertNotNull(featureTuple);
-    Tuple tuple = featureTuple.tuple;
-    assertNotNull(tuple);
 
-    assertSame(Action.DELETE, tuple.tupleNumber.getAction());
-    assertEquals("feature_id_view1", featureTuple.getId());
+    assertSame(Action.DELETE, featureList.get(0).getProperties().getXyz().getAction());
+    assertEquals("feature_id_view1", featureList.get(0).getId());
 
     // TODO: Ones we have the loadTuples available, do:
     // writeSession.commit();

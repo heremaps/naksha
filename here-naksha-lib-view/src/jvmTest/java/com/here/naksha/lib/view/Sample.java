@@ -20,29 +20,32 @@ package com.here.naksha.lib.view;
 
 import naksha.model.Action;
 import naksha.model.IStorage;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.XyzMembers;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.FeatureTupleList;
+
+import java.util.List;
 
 import static naksha.model.RandomFeatures.randomFeature;
 
 public class Sample {
 
-  public static FeatureTupleList sampleXyzResponse(int size, IStorage storage) {
-    FeatureTupleList returnList = new FeatureTupleList();
+  public static NakshaFeatureList sampleXyzResponse(int size, IStorage storage) {
+    NakshaFeatureList returnList = new NakshaFeatureList();
     for (int i = 0; i < size; i++) {
-      returnList.add(new FeatureTuple(randomFeature(Integer.toString(i)), XyzMembers.XyzTn));
+      returnList.add(randomFeature(Integer.toString(i)));
     }
     return returnList;
   }
 
-  public static FeatureTupleList sampleXyzWriteResponse(int size, Action action) {
-    final FeatureTupleList returnList = new FeatureTupleList();
+  public static NakshaFeatureList sampleXyzWriteResponse(int size, Action action) {
+    final NakshaFeatureList returnList = new NakshaFeatureList();
     for (int i = 0; i < size; i++) {
-      returnList.add(new FeatureTuple(randomFeature(Integer.toString(i), (f) -> {
+      returnList.add(randomFeature(Integer.toString(i), (f) -> {
         f.getProperties().getXyz().setRaw("action", action.toString());
         return f;
-      }), XyzMembers.XyzTn));
+      }));
     }
     return returnList;
   }

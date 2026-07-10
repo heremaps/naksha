@@ -8,7 +8,7 @@
   ],
   "properties": {
     "collection": {
-      "id": "um-mod-dev:activity_history_test_collection_regular",
+      "id": "um-mod-dev:activity_test_collection_regular",
       "type": "NakshaCollection"
     }
   }
