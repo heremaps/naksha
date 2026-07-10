@@ -36,7 +36,7 @@ internal class PgWriterUpsert(
     private fun plan(conn: PgConnection): PgWriterPlan {
         // This is what we should INSERT or UPDATE.
         val new_row = """WITH new_row AS (
-  SELECT * FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
+  SELECT ${inRows.newRowProjection()} FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
 
         // Select existing.
@@ -54,12 +54,8 @@ internal class PgWriterUpsert(
          ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.$FN = head_row.$FN
-  WHERE (head_row.$VERSION & -4) < 2 -- action = CREATE or UPDATE
-  RETURNING $FN, $VERSION${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { column ->
-    // We return NULL, when the input contained data, because the client knows this already, no need to send back.
-    // If the client provided `undefined`, we return the actual value so we can build a correct tuple.
-    "CASE WHEN new_row.$column = convert_to('undefined', 'UTF8') THEN $column ELSE null END AS $column"
-  }}" else ""}
+  WHERE (head_row.$VERSION & 3) < 2 -- action = CREATE or UPDATE
+  RETURNING $FN, $VERSION
 )""" else ""
 
         // Copy all current head row's into history that are in DELETE action.
@@ -71,7 +67,7 @@ internal class PgWriterUpsert(
          ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
   FROM head_row
   LEFT JOIN new_row ON new_row.$FN = head_row.$FN
-  WHERE (head_row.$VERSION & -4) == 2 -- action = DELETE
+  WHERE (head_row.$VERSION & 3) = 2 -- action = DELETE
   RETURNING $FN, $VERSION
 )""" else ""
 
@@ -94,18 +90,20 @@ internal class PgWriterUpsert(
     val ident = PgUtil.quoteIdent(colWithValue.alias)
     val pgColumn = colWithValue.pgColumn
     if (pgColumn eq CC) {
-        "(head_to_history.$CC + 1) AS $CC" // Increment Change-Count
+        "(head_row.$CC + 1) AS $CC" // Increment Change-Count
     } else if (pgColumn eq VERSION){
         "((new_row.$VERSION & -4) | 1) AS $VERSION" // Set lower 2 bit to UPDATE (1)
     } else if (pgColumn eq NEXT_VERSION){
         "NULL AS $NEXT_VERSION" // in HEAD, next version must always be NULL
     } else if (pgColumn.memberType == MemberType.BYTE_ARRAY) {
-        "CASE WHEN $ident = convert_to('undefined', 'UTF8') THEN head_to_history.$ident ELSE new_row.$ident END AS $ident"
-    } else ident
+        // Keep the existing HEAD value when the client sent the `undefined` sentinel, else take the new value.
+        "CASE WHEN new_row.$ident = convert_to('undefined', 'UTF8') THEN head_row.$ident ELSE new_row.$ident END AS $ident"
+    } else "new_row.$ident"
   }} FROM new_row
-  LEFT JOIN head_to_history ON new_row.$FN = head_to_history.$FN
+  LEFT JOIN head_row ON new_row.$FN = head_row.$FN
   WHERE new_row.$FN IN (SELECT $FN FROM head_to_history)
-  RETURNING $FN, $VERSION
+    AND new_row.$FN IN (SELECT $FN FROM head_deleted)
+  RETURNING $FN, $VERSION${if (CC != null) ", $CC" else ""}${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { it.ident }}" else ""}
 )""" // Note: head_to_history contains all existing HEAD row in CREATE or UPDATE action.
 
         // ------------------------------------------ DO INSERT --------------------------------------------------------
@@ -198,8 +196,10 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 if (updated_fn != null && updated_version != null) {
                     // UPDATE was executed.
                     val pgWrite = writeByFn[updated_fn] ?: throw generalException("Received _updated_fn '$updated_fn', but found no matching PgWrite")
+                    val previousVersion = outRows.getInt64(row, "_head_row_version")
+                        ?: throw generalException("Missing previous HEAD version for updated feature '${pgWrite.id}'")
                     val updatedTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
-                    val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
+                    val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, previousVersion)
                     // If an update was done, we need the following values to be available:
                     val change_count: Int = if (CC!=null) {
                         outRows.getInt(row, CC) ?: throw generalException("Missing '$CC' in update result for feature '${pgWrite.id}'")
@@ -222,6 +222,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     )
                     pgWrite.tuple = updatedTuple
                     pgWrite.tupleNumber = updatedTupleNumber
+                    pgWrite.action = Action.UPDATE
                 } // else INSERT executed, that means the tuple was inserted as given.
 //                val fn = outRows.getInt64(row, FN) ?: throw generalException("Missing 'fn' in SQL result")
 //                val new_version = outRows.getInt64(row, VERSION) ?: throw generalException("Missing 'version' in SQL result")

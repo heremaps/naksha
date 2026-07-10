@@ -382,7 +382,8 @@ open class NakshaCollection() : NakshaFeature() {
             if (found != null) {
                 mandatory.asSame(found, comparePath = false)
             } else {
-                list.add(mandatory)
+                // Collection Tn lives at xyz.uuid (the tupleNumber accessor), so backfill XyzTn not the generic Tn.
+                list.add(if (mandatory === StandardMembers.Tn) XyzMembers.XyzTn else mandatory)
                 write = true
             }
         }

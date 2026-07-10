@@ -26,15 +26,16 @@ import naksha.model.MemberProcessorMap;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MockReadSession implements IReadSession {
 
-  FeatureTupleList results;
+  NakshaFeatureList results;
 
-  public MockReadSession(FeatureTupleList results) {
+  public MockReadSession(NakshaFeatureList results) {
     this.results = results;
   }
 

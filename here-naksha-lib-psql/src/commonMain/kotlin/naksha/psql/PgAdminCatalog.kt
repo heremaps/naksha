@@ -244,6 +244,21 @@ SELECT basics.*, procs.* FROM basics, procs;
             books = PgNakshaBooks(this)
             catalogs = PgNakshaCatalogs(this)
 
+            // Admin collections are constructed fresh (not decoded from storage), so give each a valid
+            // tuple-number: encodeFeature needs the owning collection's tuple-number to write features
+            // into it (e.g. the transaction record persisted on commit). A collection's own feature-number
+            // is its collection-number, and its record lives in `naksha~collections`.
+            val collectionsColNumber = collections.collectionNumber
+            for (adminCol in listOf(collections, transactions, books, catalogs)) {
+                val tn = TupleNumber(
+                    number, catalogNumber, collectionsColNumber,
+                    Int64(adminCol.collectionNumber.toLong()), Int64(1)
+                )
+                // Set the collection's resolved `_tn` member, where encodeFeature reads it back.
+                val col = adminCol.head
+                col.useMember(naksha.model.objects.StandardMembers.Tn).set(col, tn)
+            }
+
             if (admin_schema_oid == null) {
                 if (!doCreate) throw forbidden("Creation of admin-map needed, but forbidden by config")
                 logger.info("Install Naksha admin-map in version $psql_version for storage $id / $number")
@@ -528,7 +543,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         val outRows = PgRows().withCollection(catalogs)
         val SQL = """SELECT ${outRows.aliases()}
 FROM "naksha~admin".${catalogs.headTable.quotedName}
-WHERE id = $1 AND (version & 3) < 2"""
+WHERE _id = $1 AND (_version & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         plan.execute(arrayOf(id)).fetch().use { cursor ->
             if (!outRows.read(cursor)) return null
@@ -559,7 +574,7 @@ WHERE id = $1 AND (version & 3) < 2"""
         val rows = PgRows().withCollection(catalogs)
         val SQL = """SELECT ${rows.aliases()} 
 FROM "naksha~admin".${catalogs.headTable.quotedName} 
-WHERE fn = $1 AND (version & 3) < 2"""
+WHERE _fn = $1 AND (_version & 3) < 2"""
         setSearchPath(conn)
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }

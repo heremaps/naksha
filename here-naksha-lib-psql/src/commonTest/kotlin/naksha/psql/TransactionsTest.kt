@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.model.Naksha
+import naksha.model.Version
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaTx
@@ -29,13 +30,14 @@ class TransactionsTest : PgTestBase() {
         val writtenVersion = assertNotNull(writtenFeature.properties.xyz.version)
         assertEquals("f1", writtenFeature.id)
 
-        // Read the transaction.
-        val readTxRequest = ReadTransactions().readVersion(writtenVersion)
+        // Transactions are keyed by the VERSION-sentinel form of the version.
+        val txVersion = Version(Version.asVersion(writtenVersion.number))
+        val readTxRequest = ReadTransactions().readVersion(txVersion)
         val readTxResponse = executeRead(readTxRequest)
         val transactions = assertNotNull(readTxResponse.features)
         assertEquals(1, transactions.size)
         val transaction = assertNotNull(transactions.first()).proxy(NakshaTx::class)
-        assertEquals(writtenVersion.toString(), transaction.id)
+        assertEquals(txVersion.toString(), transaction.id)
         assertEquals(writtenVersion, transaction.properties.xyz.version)
     }
 

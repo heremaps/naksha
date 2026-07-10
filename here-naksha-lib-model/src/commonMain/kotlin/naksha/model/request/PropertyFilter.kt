@@ -10,6 +10,7 @@ import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
 import naksha.base.PlatformMap
 import naksha.base.PlatformMapApi
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.PlatformUtil
 import naksha.base.Proxy
@@ -58,7 +59,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             if (key == null) return UNDEFINED
             current = when (current) {
                 is AnyList -> {
-                    val index: Int = (key as Number?)?.toInt() ?: return UNDEFINED
+                    val index: Int = keyToListIndex(key) ?: return UNDEFINED
                     if (index < 0 || index >= current.size) return UNDEFINED
                     current[index]
                 }
@@ -68,12 +69,13 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
                 }
                 is AnyObject -> if (current.containsKey(key)) current[key] else return UNDEFINED
                 is PlatformList -> {
-                    val index: Int = (key as Number?)?.toInt() ?: return UNDEFINED
+                    val index: Int = keyToListIndex(key) ?: return UNDEFINED
                     if (index < 0 || index >= array_get_length(current)) return UNDEFINED
                     array_get(current, index)
                 }
                 is PlatformMap -> {
                     if (key !is String) return UNDEFINED
+                    if (!map_contains_key(current, key)) return UNDEFINED
                     map_get(current, key)
                 }
                 else -> return UNDEFINED
@@ -82,6 +84,13 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         if (current is PlatformList) return current.proxy(AnyList::class)
         if (current is PlatformMap) return current.proxy(AnyObject::class)
         return current
+    }
+
+    /** A list index from a numeric path segment: a [Number], or a numeric [String] like `"2"`; else `null`. */
+    private fun keyToListIndex(key: Any?): Int? = when (key) {
+        is Number -> key.toInt()
+        is String -> key.toIntOrNull()
+        else -> null
     }
 
     private fun resolveEachOp(op: AnyOp, featureProperty: Any?, queryProperty: Any?) : Boolean {

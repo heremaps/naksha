@@ -101,6 +101,11 @@ open class PgCatalog internal constructor(
                     .withXyzMembers()
                     .withXyzIndices()
                 c = PgCollection(this, nakshaCollection)
+                val collectionsColNumber = c.collectionNumber
+                nakshaCollection.tupleNumber = TupleNumber(
+                    storage.number, catalogNumber, collectionsColNumber,
+                    Int64(collectionsColNumber.toLong()), Int64(1)
+                )
                 _collections = c
             }
             return c
@@ -187,12 +192,13 @@ open class PgCatalog internal constructor(
         headTable.create(conn)
         for (index in collection.headIndices) headTable.createIndex(conn, index)
 
-        val history = collection.historyTable
-        history.create(conn)
-        // Note: We do not create history partitions, because doing so would require a session.
-        //       The reason is, that we need to know the version to know which history partition the HEAD will be moved into.
-        // history.createPartition(conn, collection.historyPartitionNumberOf(tx.version.number))
-        // for (index in collection.historyIndices) headTable.createIndex(conn, index)
+        if (collection.storeHistory) {
+            val history = collection.historyTable
+            history.create(conn)
+            // Register optional indices before PgWriter seeds the year partitions. New partitions inherit
+            // every index registered on the history root.
+            for (index in collection.historyIndices) history.addIndex(index)
+        }
 
         // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
         invalidateCollection(collection)
@@ -268,6 +274,7 @@ open class PgCatalog internal constructor(
         val tuple = rows[0] ?: return null
         Naksha.cache.store(tuple)
         val nakshaCollection = tuple.decodeFeature(null).proxy(NakshaCollection::class)
+        nakshaCollection.tupleNumber = tuple.tupleNumber
         val pgCollection = PgCollection(this, nakshaCollection)
         // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
         cacheCollection(pgCollection)
@@ -306,6 +313,7 @@ open class PgCatalog internal constructor(
         val tuple = rows[0] ?: return null
         Naksha.cache.store(tuple)
         val nakshaCollection = tuple.decodeFeature(null).proxy(NakshaCollection::class)
+        nakshaCollection.tupleNumber = tuple.tupleNumber
         val pgCollection = PgCollection(this, nakshaCollection)
         // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
         cacheCollection(pgCollection)

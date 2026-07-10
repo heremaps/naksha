@@ -38,6 +38,9 @@ data class PgIndex(
 ) {
 
     companion object PgIndex_C {
+        // Returns (index-method, index-element) for a column. The element includes the column reference
+        // plus any opclass / functional wrapper the method needs (e.g. a spatial column becomes
+        // `naksha_2d(<col>)`), so the caller can just join the elements.
         private fun indexAndOpsOf(column: PgColumn, indexName: String): Pair<String, String> = when (column.memberType) {
             MemberType.INT8,
             MemberType.INT16,
@@ -45,45 +48,45 @@ data class PgIndex(
             MemberType.INT64,
             MemberType.FLOAT32,
             MemberType.FLOAT64,
-            MemberType.BYTE_ARRAY -> Pair("btree", "")
-            MemberType.STRING -> Pair("btree", " COLLATE \"C\" text_pattern_ops")
-            MemberType.SPATIAL -> Pair("gist_btree", " gist_geometry_ops_2d")
-            MemberType.TAG_MAP -> Pair("gin", " jsonb_ops")
-            MemberType.TAG_MAP_FROM_ARRAY,
-            MemberType.TAG_LIST -> Pair("gin", " array_ops")
+            MemberType.BYTE_ARRAY -> Pair("btree", column.ident)
+            MemberType.STRING -> Pair("btree", "${column.ident} COLLATE \"C\" text_pattern_ops")
+            // A two-dimensional gist index over the TWKB geometry, via the naksha_2d() helper.
+            MemberType.SPATIAL -> Pair("gist", "naksha_2d(${column.ident})")
+            MemberType.TAG_MAP,
+            MemberType.TAG_MAP_FROM_ARRAY -> Pair("gin", "${column.ident} jsonb_ops")
+            MemberType.TAG_LIST -> Pair("gin", "${column.ident} array_ops")
             else -> throw illegalArg("The member type ${column.memberType} of column '$column' of index '$indexName' is not a valid index target")
         }
     }
 
     internal fun create(conn: PgConnection, table: PgTable) {
         if (on.isEmpty()) throw illegalArg("Index without target columns: $name")
-        val primaryColumn = on.first()
-        val (primaryIndex, primaryDeclaration) = indexAndOpsOf(primaryColumn, name)
-        val secondaries = mutableListOf<Pair<String,String>>()
+        val (primaryIndex, _) = indexAndOpsOf(on.first(), name)
+        val elements = ArrayList<String>(on.size)
         for (i in 0 ..< on.size) {
-            val pgColumn = on[i]
-            val secondary = indexAndOpsOf(pgColumn, name)
-            if (secondary.first != "btree" || !primaryIndex.contains(secondary.first)) {
-                throw illegalArg("The member #$i ($pgColumn) can not be used as secondary index element, only primitives are allows")
+            val (method, element) = indexAndOpsOf(on[i], name)
+            // The first column selects the index method (btree/gin/gist); any further columns must be
+            // plain btree-type columns (valid as extra btree columns, or via btree_gist inside a gist).
+            if (i > 0 && method != "btree") {
+                throw illegalArg("The member #$i (${on[i]}) can not be used as secondary index element, only primitives are allowed")
             }
-            secondaries.add(secondary)
+            elements.add(element)
         }
         val includeClause = if (includes.isEmpty()) "" else " INCLUDE (${includes.joinToString(", ") { column -> 
             val (index, _) = indexAndOpsOf(column, "include")
             if (index != "btree") throw illegalArg("The include of column $column is not possible, because it is no primitive")
             column.ident
         }})"
-        val indexIdent = quoteIdent(table.name, "\$i_", table.name)
-        val fillFactor = if (PgTable.isAnyHead(table.name)) "(fillfactor=50)" else "(fillfactor=100)"
-        val sql = """CREATE INDEX IF NOT EXISTS $indexIdent 
+        val indexIdent = quoteIdent(table.name, "\$ci_", name)
+        val withClause = if (primaryIndex == "gin") "" else " WITH (fillfactor=${if (PgTable.isAnyHead(table.name)) 50 else 100})"
+        val sql = """CREATE INDEX IF NOT EXISTS $indexIdent
 ON ${table.quotedName}
-USING $primaryIndex ($primaryDeclaration${secondaries.joinToString(", ") { secondary -> secondary.second }})$includeClause
-WITH $fillFactor""" //                        like "gin jsonb_ops"
+USING $primaryIndex (${elements.joinToString(", ")})$includeClause$withClause"""
         conn.execute(sql).close()
     }
 
     internal fun drop(conn: PgConnection, tableName: String) {
-        val indexName = quoteIdent(tableName, "\$i_", tableName)
+        val indexName = quoteIdent(tableName, "\$ci_", name)
         conn.execute("DROP INDEX IF EXISTS $indexName CASCADE").close()
     }
 
@@ -94,7 +97,7 @@ WITH $fillFactor""" //                        like "gin jsonb_ops"
         other as PgIndex
         if (name != other.name) return false
         if (!on.contentEquals(other.on)) return false
-        if (!includes.contentEquals(other.on)) return false
+        if (!includes.contentEquals(other.includes)) return false
         return true
     }
 

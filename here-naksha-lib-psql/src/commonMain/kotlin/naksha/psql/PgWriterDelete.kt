@@ -43,7 +43,7 @@ internal class PgWriterDelete(
         var row = 0
         for (i in start until end) {
             val pgWrite = pgWrites[i]
-            inRows.set(row, FN.ident, pgWrite.tupleNumber!!.featureNumber)
+            inRows.set(row, FN.ident, pgWrite.featureNumber)
             inRows.set(row, "expected_version", pgWrite.version?.number)
             row++
         }
@@ -51,8 +51,9 @@ internal class PgWriterDelete(
     }
 
     private fun plan(conn: PgConnection): PgWriterPlan {
-        // The new version with action bits set to DELETED (2).
-        val deleted_version = "(${tx.version.number}::int8 | 2)"
+        // New version with action bits set to DELETED (2): clear the transaction version's action bits
+        // (VERSION sentinel = 3) before OR-ing in DELETE.
+        val deleted_version = "((${tx.version.number}::int8 & -4) | 2)"
 
         // All input provided by client, `id` and optionally `expected_version`
         val query = """WITH query AS (
@@ -125,8 +126,8 @@ SELECT
     null::int8 AS $NEXT_VERSION,
     ${if (CC!=null) "COALESCE(head_updated.$CC, head_row.$CC + 1) AS $CC," else ""}
     ${pgCollection.joinColumns { col -> if (col eq CC || col eq FN || col eq VERSION || col eq NEXT_VERSION) null else "head_row.$col AS $col" }},
-    ${if (head_to_history.isNotEmpty()) "head_to_history.$VERSION AS head_history_version," else "null AS head_history_version"}
-    ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else "null AS history_version"}
+    ${if (head_to_history.isNotEmpty()) "head_to_history.$VERSION AS head_history_version," else "null AS head_history_version,"}
+    ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else "null AS history_version,"}
     head_select.$FN AS select_fn,
     head_select.$VERSION AS select_version,
     head_row.$VERSION AS head_version,
@@ -138,7 +139,7 @@ LEFT JOIN head_row ON head_row.$FN = query.$FN
 ${if (!purge) "LEFT JOIN head_updated ON head_updated.$FN = query.$FN" else ""}
 ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FN = query.$FN" else ""}
 ${if (history_tombstone.isNotEmpty()) "LEFT JOIN history_tombstone ON history_tombstone.$FN = query.$FN" else ""}
-LEFT JOIN head_select ON head_select.$FN = query.$ID
+LEFT JOIN head_select ON head_select.$FN = query.$FN
 ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
 ;"""
         val typeNames = inRows.typeNames()
@@ -148,18 +149,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
 
     override fun doExecute(conn: PgConnection) {
         if (pgWrites.isEmpty()) return
-        val outRows = PgRows()
-            .withDatabaseNumber(storageNumber)
-            .withCatalogNumber(catalogNumber)
-            .withCollectionNumber(collectionNumber)
-        outRows.addColumn(FN)
-        outRows.addColumn(VERSION)
-        outRows.addColumn(NEXT_VERSION)
-        if (CC!=null) outRows.addColumn(CC)
-        for (col in pgCollection.columns) {
-            if (col eq CC || col eq FN || col eq VERSION || col eq NEXT_VERSION) continue
-            outRows.addColumn(col)
-        }
+        val outRows = PgRows().withCollection(pgCollection)
         outRows.addColumn("head_history_version", MemberType.INT64)
             .addColumn("history_version", MemberType.INT64)
             .addColumn("select_fn", MemberType.INT64)
@@ -192,17 +182,8 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
             outRows.readAll(cursor)
             for (row in 0 until outRows.size) {
                 val write = pgWrites[row]
-                val fn = outRows.getString(row, "query_fn") ?: throw generalException("Missing 'query_fn' in result")
-
-                val tuple = outRows[row]
-                if (tuple != null) write.tuple = tuple
-
-                val tombstone_fn = outRows.getInt64(row, FN)
-                val tombstone_version = outRows.getInt64(row, VERSION)
-                val tn = if (tombstone_fn != null && tombstone_version != null) {
-                    TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
-                } else null
-                write.tupleNumber = tn
+                // query_fn is an int8 column, read as Int64; used only for diagnostics below.
+                val fn = outRows.getInt64(row, "query_fn") ?: throw generalException("Missing 'query_fn' in result")
 
                 val select_fn = outRows.getInt64(row, "select_fn")
                 val select_version = outRows.getInt64(row, "select_version")
@@ -220,6 +201,15 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
                         "The feature '$fn' was expected in version '${write.version}', but found in '${Version(select_version)}'"
                     )
                 }
+
+                val tuple = outRows[row]
+                if (tuple != null) write.tuple = tuple
+
+                val tombstone_fn = outRows.getInt64(row, FN)
+                val tombstone_version = outRows.getInt64(row, VERSION)
+                write.tupleNumber = if (tombstone_fn != null && tombstone_version != null) {
+                    TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
+                } else null
             }
         }
     }

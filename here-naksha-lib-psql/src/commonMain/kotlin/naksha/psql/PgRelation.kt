@@ -70,13 +70,9 @@ data class PgRelation(
      * @return the distribution partition of this relation or -1, when this is not distribution partitioned.
      */
     fun distributionPartition(): Int {
-        //             0    1      2          3          = 4
-        // HISTORY: {name}$hst${shifted}${distribution}
-        if (parts.size == 4 && parts[1] == "hst") return parts[3].toInt()
-
-        //         0         1          =  2
-        // HEAD: {name}${distribution}
-        if (parts.size == 2 && parts[2] != "hst") return parts[1].toInt()
+        // The distribution partition is the trailing `$p<NNN>` segment.
+        val last = parts.last()
+        if (parts.size >= 2 && last.length > 1 && last[0] == 'p') return last.substring(1).toIntOrNull() ?: -1
         return -1
     }
 

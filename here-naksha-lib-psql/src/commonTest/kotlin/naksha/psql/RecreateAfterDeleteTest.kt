@@ -41,7 +41,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         Naksha.cache.clear()
         val updated = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += featureId
         }).features.first()!!
         assertEquals(featureId, updated.id)
@@ -55,7 +55,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         Naksha.cache.clear()
         val deleted = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += featureId
             queryDeleted = true
         }).features.first()!!
@@ -66,7 +66,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         Naksha.cache.clear()
         val notFound = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += featureId
         })
         assertEquals(0, notFound.features.size)
@@ -86,7 +86,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         Naksha.cache.clear()
         val found = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += featureId
         })
         assertEquals(1, found.features.size)
@@ -97,7 +97,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         // Total = 1 (HEAD) + 3 (history) = 4, in descending version order.
         val historyOnly = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += featureId
             queryHistory = true
             versions = 10
@@ -112,7 +112,7 @@ class RecreateAfterDeleteTest : PgTestBase() {
         // so queryDeleted=true adds nothing here.
         val full = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += featureId
             queryHistory = true
             queryDeleted = true

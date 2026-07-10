@@ -8,6 +8,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardIndices
 import naksha.model.objects.StandardMembers
 import naksha.model.objects.StoreMode
+import naksha.model.objects.XyzMembers
 import kotlin.js.JsExport
 
 /**
@@ -38,6 +39,7 @@ class PgNakshaTransactions internal constructor(adminCatalog: PgAdminCatalog) : 
         StandardMembers.PublishNumber,
         StandardMembers.PublishTime,
         StandardMembers.GlobalVersion,
+        XyzMembers.XyzTags,
     )
     .withIndices(
         StandardIndices.PublishNumber,

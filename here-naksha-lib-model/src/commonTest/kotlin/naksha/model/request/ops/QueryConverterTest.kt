@@ -49,10 +49,10 @@ class QueryConverterTest {
     // ------------------------------------------------------------< tags >-----------------------------------------------------------
 
     @Test
-    fun tagExistsBecomesTagMapHasKey() {
-        val op = tagQuery(TagExists("sample")).expect<TagMapHasKey>()
+    fun tagExistsBecomesTagListContains() {
+        val op = tagQuery(TagExists("sample")).expect<TagListContains>()
         assertEquals(TAGS, op.at)
-        assertEquals("sample", op.key)
+        assertEquals("sample", op.item)
     }
 
     @Test
@@ -111,14 +111,14 @@ class QueryConverterTest {
     fun tagAndBecomesAndWithConvertedChildren() {
         val and = tagQuery(TagAnd(TagExists("a"), TagExists("b"))).expect<And>()
         assertEquals(2, and.children.size)
-        assertEquals("a", and.children[0]!!.expect<TagMapHasKey>().key)
-        assertEquals("b", and.children[1]!!.expect<TagMapHasKey>().key)
+        assertEquals("a", and.children[0]!!.expect<TagListContains>().item)
+        assertEquals("b", and.children[1]!!.expect<TagListContains>().item)
     }
 
     @Test
     fun tagNotBecomesNot() {
         val not = tagQuery(TagNot(TagExists("a"))).expect<Not>()
-        assertEquals("a", not.child.expect<TagMapHasKey>().key)
+        assertEquals("a", not.child.expect<TagListContains>().item)
     }
 
     // -----------------------------------------------------------< spatial >---------------------------------------------------------
@@ -175,7 +175,7 @@ class QueryConverterTest {
         }
         val and = convert(q)!!.expect<And>()
         assertEquals(2, and.children.size)
-        and.children[0]!!.expect<TagMapHasKey>()
+        and.children[0]!!.expect<TagListContains>()
         and.children[1]!!.expect<Intersects>()
     }
 

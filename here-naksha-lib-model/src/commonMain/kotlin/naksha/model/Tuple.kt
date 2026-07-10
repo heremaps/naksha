@@ -7,6 +7,7 @@ import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.MapProxy
+import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.gzipDeflate
 import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.PlatformList
@@ -28,6 +29,7 @@ import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StandardMembers
+import naksha.model.objects.XyzMembers
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -70,6 +72,8 @@ data class Tuple @JvmOverloads constructor(
          * @param action the action to apply.
          * @param session the session for which to encode; declares the version.
          * @param globalBook the global book to use for encoding; if any.
+         * @param atomic if atomic, an UPDATE/DELETE requires the feature's uuid to pin the prior version.
+         * TODO: `atomic` is write-path-specific; reconsider moving it out of this general encoder.
          * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
          * @since 3.0
          * @throws NakshaException if any fatal error happens when encoding.
@@ -81,7 +85,8 @@ data class Tuple @JvmOverloads constructor(
             collection: NakshaCollection,
             action: Action,
             session: IWriteSession,
-            globalBook: IBook?
+            globalBook: IBook?,
+            atomic: Boolean = true
         ): Tuple {
             val members = collection.useMembers()
             val processors = session.processors
@@ -95,14 +100,17 @@ data class Tuple @JvmOverloads constructor(
             }
             // Read the current tuple-number of the feature; if any.
             val prevTn: TupleNumber? = collection.useMember(StandardMembers.Tn).getTupleNumber(feature)
+            // The transaction version carries the VERSION sentinel (=3) in its low two action bits; each
+            // feature records its OWN action (CREATE/UPDATE/DELETE) there so the row reads as live.
+            val version = (session.useTransaction().version.number and Int64(-4)) or Int64(action.intValue)
             val newTn: TupleNumber
             if (prevTn != null) {
                 if (action != Action.VERSION && action == Action.CREATE) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action CREATE given, the feature exists already (has a uuid)")
                 }
-                newTn = TupleNumber.copy(prevTn, session.useTransaction().version.number)
+                newTn = TupleNumber.copy(prevTn, version)
             } else {
-                if (action != Action.VERSION && action != Action.CREATE) {
+                if (action != Action.VERSION && action != Action.CREATE && atomic) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action $action given, the feature does not exist (missing uuid)")
                 }
                 newTn = TupleNumber(
@@ -112,14 +120,20 @@ data class Tuple @JvmOverloads constructor(
                     colTn.catalogNumber,
                     // The feature-number of the collection is the collection-number of the feature we want to store in the collection.
                     colTn.featureNumber.toInt(),
-                    // The feature-number of the feature, either the `id` is a feature-number or it is calculated form hashing the `id`.
-                    Naksha.featureNumber(feature.id),
-                    // The version is the one of the transaction.
-                    session.useTransaction().version.number
+                    when (collection.id) {
+                        Naksha.COLLECTIONS_COL_ID -> Int64(Naksha.collectionNumber(feature.id))
+                        Naksha.CATALOGS_COL_ID -> Int64(Naksha.catalogNumber(feature.id))
+                        else -> Naksha.featureNumber(feature.id)
+                    },
+                    // The transaction version, but with the feature's own action in the lower two bits.
+                    version
                 )
             }
             // Update the feature with its new tuple-number.
             tnMember.set(feature, newTn)
+            // A freshly encoded feature is the current HEAD state, so its next-version is the HEAD
+            // sentinel; history rows get their real next-version from the write SQL.
+            collection.useMember(StandardMembers.NextVersion).set(feature, Version.HEAD.number)
             val globalBookTn: TupleNumber?
             if (globalBook != null) {
                 if (newTn.databaseNumber != globalBook.databaseNumber || globalBook.featureNumber == null) {
@@ -133,13 +147,19 @@ data class Tuple @JvmOverloads constructor(
             // Create the encoder with a custom member encoder.
             val encoder = JbEncoder2(globalBook)
             val membersBook = HeapBook(BookType.MEMBER_BOOK)
+            // Pre-populate the members-book in canonical member order (useMembers()): blob member
+            // references are positional indices into this book, and the reader rebuilds it in the same
+            // order (PgRows.getTuple).
+            for (i in 0 until members.size) { val m = members[i]; if (m != null) membersBook.put(m.name, null) }
+            val handledMembers = mutableSetOf<String>()
             encoder.withMemberEncoder { path: Array<Any?>, pathEnd: Int, value: Any? ->
-                // Build the current path key from the encoder's path.
+                // Find the member whose declared path matches the current position and redirect its
+                // value into the members-book.
                 members@ for (i in 0 until members.size) {
                     val member = members[i] ?: continue
-                    if (StandardMembers.GlobalBookFeatureNumber.isSameAs(member)) {
-                        return@withMemberEncoder if (globalBookTn != null) membersBook.put(member.name, globalBookTn.featureNumber) else -1
-                    }
+                    // GlobalBookFeatureNumber is injected from the global book, not read from the
+                    // feature, so it must not take part in path matching (it is set after encoding).
+                    if (StandardMembers.GlobalBookFeatureNumber.isSameAs(member)) continue
                     val memberName = member.name
                     val memberPath = member.path
                     if (memberPath.size != pathEnd) continue
@@ -155,9 +175,10 @@ data class Tuple @JvmOverloads constructor(
                         }
                     }
                     // Coerce the value to the expected type.
-                    v = FeatureMemberValues.coerce(value, member.dataType, feature.id, memberName)
+                    v = FeatureMemberValues.coerce(v, member.dataType, feature.id, memberName)
 
                     // Store in membersBook.
+                    handledMembers.add(memberName)
                     return@withMemberEncoder membersBook.put(memberName, v)
                 }
                 -1
@@ -165,6 +186,30 @@ data class Tuple @JvmOverloads constructor(
 
             // Encode the feature.
             val raw = encoder.buildTupleFromMap(feature)
+
+            for (i in 0 until members.size) {
+                val member = members[i] ?: continue
+                if (StandardMembers.GlobalBookFeatureNumber.isSameAs(member)) continue
+                val memberName = member.name
+                if (memberName in handledMembers) continue
+                val procs = processors[memberName] ?: continue
+                var v: Any? = null
+                for (proc in procs) {
+                    v = proc.processMember(session, collection, feature, member, v)
+                }
+                v = FeatureMemberValues.coerce(v, member.dataType, feature.id, memberName)
+                membersBook.put(memberName, v)
+            }
+            for (i in 0 until members.size) {
+                val member = members[i] ?: continue
+                if (StandardMembers.ChangeCount.isSameAs(member)) {
+                    membersBook.put(member.name, feature.properties.xyz.changeCount + 1)
+                    break
+                }
+            }
+            // The global-book feature-number is not part of the feature itself; inject it into the
+            // members-book when a global book was provided.
+            if (globalBookTn != null) membersBook.put(StandardMembers.GlobalBookFeatureNumber.name, globalBookTn.featureNumber)
 
             // Optionally GZIP.
             if (raw.size >= 1000) {
@@ -227,7 +272,7 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     var nextVersion: Int64
-        get() = membersBook[StandardMembers.NextVersion.name] as Int64
+        get() = membersBook[StandardMembers.NextVersion.name] as Int64? ?: Version.HEAD.number
         set(version: Int64) {
             val members = this.membersBook
             if (members is HeapBook) {
@@ -307,11 +352,27 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun hasMember(member: Member, dataType: MemberType? = null): Boolean {
+        val isVirtual = member.name == StandardMembers.FeatureNumber.name ||
+            member.name == StandardMembers.Version.name ||
+            member.name == StandardMembers.Action.name
+        if (isVirtual) {
+            val value = rawMember(member) ?: return false
+            return dataType == null || dataType.isInstance(value)
+        }
         val index = membersBook.indexOfName(member.name)
         if (index < 0) return false
-        if (dataType == null) return true
-        val value = membersBook.get(index)
-        return dataType.isInstance(value)
+        return dataType == null || dataType.isInstance(membersBook.get(index))
+    }
+
+    /**
+     * Resolve a physically stored member or one of the virtual tuple-number members.
+     * Virtual members are deliberately not duplicated in [membersBook].
+     */
+    private fun rawMember(member: Member): Any? = when (member.name) {
+        StandardMembers.FeatureNumber.name -> tupleNumber.featureNumber
+        StandardMembers.Version.name -> tupleNumber.version
+        StandardMembers.Action.name -> tupleNumber.action.intValue
+        else -> membersBook[member.name]
     }
 
     /**
@@ -320,7 +381,7 @@ data class Tuple @JvmOverloads constructor(
      * @return the value from the [membersBook] book or `null`, if the member is missing, the value is `null`, or not the requested type.
      * @since 3.0
      */
-    fun getString(member: Member): String? = membersBook[member.name] as? String
+    fun getString(member: Member): String? = rawMember(member) as? String
 
     /**
      * Get a long member.
@@ -331,7 +392,7 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun getLong(member: Member, alt: Int64 = Int64(0L)): Int64 =
-        membersBook[member.name]?.let { v ->
+        rawMember(member)?.let { v ->
             when (v) {
                 is Int64 -> v
                 is Long -> Int64(v)
@@ -349,7 +410,7 @@ data class Tuple @JvmOverloads constructor(
      */
     @JvmOverloads
     fun getInt(member: Member, alt: Int = 0): Int =
-        membersBook[member.name]?.let { v ->
+        rawMember(member)?.let { v ->
             when (v) {
                 is Int -> v
                 is Number -> v.toInt()
@@ -391,7 +452,7 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     fun getMember(member: Member): Any? {
-        return when (val raw = membersBook[member.name]) {
+        return when (val raw = rawMember(member)) {
             is String -> raw
             is Int64 -> raw
             is Byte -> Int64(raw.toInt())
@@ -401,6 +462,7 @@ data class Tuple @JvmOverloads constructor(
             is Float -> raw.toDouble()
             is Double -> raw
             is ByteArray -> raw
+            is TupleNumber -> raw
             is SpGeometry -> raw
             is TagMap -> raw
             is TagList -> raw
@@ -467,6 +529,10 @@ data class Tuple @JvmOverloads constructor(
         val raw = membersBook[member.name]
         if (raw is TagList) return raw
         if (raw is PlatformList) return raw.proxy(TagList::class)
+        if (raw is String) {
+            val decoded = try { fromJSON(raw) } catch (_: Exception) { null }
+            if (decoded is PlatformList) return decoded.proxy(TagList::class)
+        }
         return null
     }
 
@@ -495,5 +561,22 @@ data class Tuple @JvmOverloads constructor(
         val decoder = JbDecoder2(globalBook, membersBook)
         decoder.mapBytes(rawBytes)
         return decoder.toAnyObject().proxy(NakshaFeature::class)
+    }
+
+    /**
+     * Like [decodeFeature], but also overlays the XYZ metadata namespace (`app_id`, `author`, timestamps, …)
+     * and `tags` from the tuple's dedicated columns, which the feature blob does not carry.
+     * @param globalBook the global book to use to decode the [Tuple]; if any.
+     * @return the decoded [NakshaFeature] with its XYZ namespace populated.
+     * @since 3.0
+     */
+    @JvmOverloads
+    fun toNakshaFeature(globalBook: IBook? = null): NakshaFeature {
+        val feature = decodeFeature(globalBook)
+        if (feature.getAs("id", String::class) == null) feature.id = id
+        feature.properties.xyz = XyzNs.fromTuple(this)
+        val tags = getTagList(XyzMembers.XyzTags)
+        if (tags != null) feature.properties.xyz.tags = tags
+        return feature
     }
 }

@@ -81,8 +81,7 @@ class QueryConverter private constructor() {
                 TagListContains(XyzMembers.XyzTags, element)
             }
 
-            // TagExists just tests for the existence of the key/element, ignoring the value.
-            is TagExists -> TagMapHasKey(XyzMembers.XyzTags, query.name)
+            is TagExists -> TagListContains(XyzMembers.XyzTags, query.name)
 
             // TagValueIsNull tests that the key exists and is explicitly assigned the value `null`.
             is TagValueIsNull -> TagIsNull(XyzMembers.XyzTags, query.name)

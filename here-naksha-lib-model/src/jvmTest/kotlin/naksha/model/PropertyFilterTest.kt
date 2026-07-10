@@ -474,7 +474,7 @@ class PropertyFilterTest {
             val members = HeapBook(BookType.MEMBER_BOOK)
             members.put("_tn", tupleNumber)
             members.put("updated_at", Int64(0))
-            members.put("id", feature.id)
+            members.put("_id", feature.id)
             members.put("app_id", "")
             members.put("author", null)
             members.put("data_encoding", DataEncoding.JBON.toString())

@@ -67,14 +67,10 @@ class ChainCollectionTest : PgTestBase(
     @Test
     fun allMembersShouldHaveAnEffectivePath() {
         val members = assertNotNull(collection.members)
-        assertEquals(2, members.size)
-        assertEquals("left_fn", assertNotNull(members[0]).name)
-        assertContentEquals(listOf("properties", "left_fn"), assertNotNull(members[0]).path)
-        assertNull(assertNotNull(members[0]).path)
-
-        assertEquals("right_fn", assertNotNull(members[1]).name)
-        assertContentEquals(listOf("properties", "right_fn"), assertNotNull(members[1]).path)
-        assertNull(assertNotNull(members[1]).path)
+        val leftFn = assertNotNull(members.find { it?.name == "left_fn" })
+        assertContentEquals(listOf("properties", "left_fn"), leftFn.path)
+        val rightFn = assertNotNull(members.find { it?.name == "right_fn" })
+        assertContentEquals(listOf("properties", "right_fn"), rightFn.path)
     }
 
     @Test
@@ -96,7 +92,7 @@ class ChainCollectionTest : PgTestBase(
         // When: reading all three back by their numeric IDs in one request
         val response = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             featureIds += headFn.toString()
             featureIds += midFn.toString()
             featureIds += tailFn.toString()
@@ -188,7 +184,7 @@ class ChainCollectionTest : PgTestBase(
         // When: reading all features from this collection (no ID filter)
         val all = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
         })
 
         // Then: find the feature whose right_fn == tailFn (that must be mid)

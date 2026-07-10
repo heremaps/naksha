@@ -44,7 +44,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
         // When: querying for features whose `next_version` matches that version
         val byNextTnResp = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             queryMembers = IsAnyOf(StandardMembers.NextVersion, updatedVersion)
             queryHistory = true
         })

@@ -3,26 +3,9 @@ package naksha.psql
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.base.StringList
 import naksha.model.Naksha
 import naksha.model.NakshaError
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.APP_ID_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.AUTHOR_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS0_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS1_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS2_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CS3_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV0_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV1_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV2_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.CV3_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.FEATURE_TYPE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.REF_POINT_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.objects.Index
@@ -57,7 +40,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // Then: this collection is queryable and empty
         val readAllFromCollection = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
         }
         val collectionContent = executeRead(readAllFromCollection)
         assertEquals(0, collectionContent.features.size)
@@ -65,7 +48,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // And: Virtual Collections contain the created collection
         val selectCollectionFromVirt = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += Naksha.COLLECTIONS_COL_ID
+            collectionId = Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
         val virtBeforeDelete = executeRead(selectCollectionFromVirt)
@@ -113,40 +96,20 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     @Test
     fun collectionShouldHaveIndices() {
         val collection = NakshaCollection("check_db_indices_test", map.id)
-        val indices = StringList(
-            ID_IDX,
-            HERE_TILE_IDX,
-            APP_ID_IDX,
-            AUTHOR_IDX,
-            TAGS_IDX,
-            REF_POINT_IDX,
-            GIST_IDX,
-            FEATURE_TYPE_IDX,
-            CV0_IDX,
-            CV1_IDX,
-            CV2_IDX,
-            CV3_IDX,
-            CS0_IDX,
-            CS1_IDX,
-            CS2_IDX,
-            CS3_IDX,
-        )
-        // The closed-enum opt-in list was removed; PgMap.createPgCollection always applies PgIndex.DEFAULT_INDICES.
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
         val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
-        checkIndicesCreatedForTable(collection.id, indices)
-        checkIndicesCreatedForTable("${collection.id}\$meta", indices)
-        // Note: $del table no longer exists; deleted rows are kept in HEAD with (version & 3) == 2.
-        checkIndicesCreatedForTable("${collection.id}\$hst\$$currentYear", indices)
-        checkIndicesCreatedForTable("${collection.id}\$hst\$${currentYear + 1}", indices)
-        checkIndicesCreatedForTable("${collection.id}\$meta", indices)
+        checkIndicesCreatedForTable(collection.id)
+        // fix1 removed the META/DELETED tables: metadata is materialized as member columns and
+        // tombstones remain in HEAD. Optional indices still belong on every history year partition.
+        checkIndicesCreatedForTable("${collection.id}\$hst\$$currentYear")
+        checkIndicesCreatedForTable("${collection.id}\$hst\$${currentYear + 1}")
     }
 
-    private fun checkIndicesCreatedForTable(tableName: String, indices: StringList) {
+    private fun checkIndicesCreatedForTable(tableName: String) {
         storage.adminConnection().use { conn ->
             conn.execute(
                 sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
@@ -154,10 +117,11 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             ).use { cursor ->
                 val existingIndices = mutableListOf<String>()
                 while (cursor.next()) existingIndices.add(cursor["indexname"])
-                check(indices.size <= existingIndices.size) { "Too few indices" }
                 XyzIndices.ALL.forEach { index ->
-                    val existingName = existingIndices.find { index.name == it }
-                    check(existingName != null) { "Index ${index.name} not found" }
+                    val expectedName = "${tableName}\$ci_${index.name}"
+                    check(expectedName in existingIndices) {
+                        "Index $expectedName not found; existing indices: $existingIndices"
+                    }
                 }
             }
         }
@@ -323,7 +287,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
             catalogId = map.id
-            collectionId += Naksha.COLLECTIONS_COL_ID
+            collectionId = Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
         val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection::class)
@@ -445,7 +409,8 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 arrayOf(map.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             for (index in XyzIndices.ALL) {
-                assertTrue( index.name in indexNames,"Expected index '${index.name}' to be present, found: $indexNames")
+                val expected = "${collection.id}\$ci_${index.name}"
+                assertTrue(expected in indexNames, "Expected index '$expected' to be present, found: $indexNames")
             }
         }
     }
@@ -546,7 +511,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
                 "SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
                 arrayOf(map.id, collection.id, PgMemberHelper.pgColumnName("labels"))
             ).use { cursor -> if (cursor.next()) dataType = cursor["data_type"] }
-            assertEquals("jsonb", dataType, "SET member 'labels' must be materialized as jsonb")
+            assertEquals("ARRAY", dataType, "TAG_LIST member 'labels' must be materialized as a text[] array")
 
             // Index: GIN index over the jsonb column.
             val customIndexId = "${collection.id}\$ci_idx_labels"
@@ -562,13 +527,15 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     }
 
     /**
-     * A [IndexType.TAG_LIST] index must be rejected when it targets a member that is not a [MemberType.TAG_LIST].
+     * fix1 has no index types; the index access method is inferred from the target member's [MemberType]
+     * ([PgIndex.indexAndOpsOf]). An index on a non-indexable member type (e.g. [MemberType.BOOLEAN]) must
+     * therefore be rejected when the collection is created.
      */
     @Test
-    fun membersSet_indexOnNonTagListMemberShouldFail() {
+    fun membersSet_indexOnNonIndexableMemberShouldFail() {
         val collection = NakshaCollection("members_set_invalid_test", map.id).apply {
-            addMember(Member("score", MemberType.INT64))
-            addIndex(Index("idx_tag_list_score", "score"))
+            addMember(Member("flag", MemberType.BOOLEAN))
+            addIndex(Index("idx_flag", "flag"))
         }
         executeWriteErrorResponse(WriteRequest().add(Write().createCollection(collection)))
     }

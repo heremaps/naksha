@@ -157,7 +157,9 @@ data class PgColumn(
          */
         @JvmField
         @JsStatic
-        val NEXT_VERSION = PgColumn(2, NEXT_VERSION_NAME, INT64, "STORAGE $PLAIN NOT NULL")
+        // Nullable on purpose: HEAD rows carry NULL, history rows a real value; each table enforces the
+        // right nullability via its own `$c_nv` CHECK (HEAD: IS NULL, history: IS NOT NULL).
+        val NEXT_VERSION = PgColumn(2, NEXT_VERSION_NAME, INT64, "STORAGE $PLAIN")
     }
 
     /**

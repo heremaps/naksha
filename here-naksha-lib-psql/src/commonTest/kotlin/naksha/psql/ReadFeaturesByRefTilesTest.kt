@@ -47,7 +47,7 @@ class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
         // Given:
         val getFeaturesFromZagrebAndPrague = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection!!.id
+            collectionId = collection!!.id
             query.refTiles += listOf(zagrebTileLv12.intKey, pragueTileLv12.intKey)
         }
 
@@ -68,7 +68,7 @@ class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
         // Given:
         val getFeaturesFromBologna = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             query.refTiles += bolognaTileLv12.intKey
         }
 

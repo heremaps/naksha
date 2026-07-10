@@ -7,6 +7,7 @@ import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaTx
+import naksha.model.objects.StandardMembers
 import naksha.model.request.*
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -98,7 +99,7 @@ open class PgWriter internal constructor(
                 if (catalogDiff != 0) return@sortWith catalogDiff
                 val collectionDiff = a.collection.collectionNumber - b.collection.collectionNumber
                 if (collectionDiff != 0) return@sortWith collectionDiff
-                val partitionDiff = a.partitionNumber - b.partitionNumber
+                val partitionDiff = a.partition - b.partition
                 if (partitionDiff != 0) return@sortWith partitionDiff
                 val opDiff = a.op.order - b.op.order
                 if (opDiff != 0) return@sortWith opDiff
@@ -112,27 +113,15 @@ open class PgWriter internal constructor(
             // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
             conn = this.conn
             if (useSavepoint) conn.execute("SAVEPOINT \"$savepointId\"").close()
-            var start = 1
-            var startTupleNumber: TupleNumber = pgWrites.first().tupleNumber ?: throw illegalState("PgWrite[0] without tuple-number")
-            val LAST = pgWrites.size - 1
-            for (i in 1.. LAST) {
-                val pgWrite = pgWrites[i]
-                val tupleNumber = pgWrite.tupleNumber ?: throw illegalState("PgWrite[$i] without tuple-number")
-                if (start == i) {
-                    startTupleNumber = tupleNumber
-                    continue
-                }
-                if (i == LAST ||
-                    startTupleNumber.catalogNumber != tupleNumber.catalogNumber ||
-                    startTupleNumber.collectionNumber != tupleNumber.collectionNumber)
+            var start = 0
+            for (i in 1..pgWrites.size) {
+                if (i == pgWrites.size ||
+                    pgWrites[i].catalog.catalogNumber != pgWrites[start].catalog.catalogNumber ||
+                    pgWrites[i].collection.collectionNumber != pgWrites[start].collection.collectionNumber ||
+                    pgWrites[i].partition != pgWrites[start].partition)
                 {
-                    // Either `i` is a different catalog/collection, then write what we have.
-                    // Or we are at the last write, then write as well what we have.
-                    // Note: We need to split by collection, because every collection has its own columns!
                     executeWrite(pgWrites, start, i)
-                    // Continue from where we ended, if this was LAST.
                     start = i
-                    startTupleNumber = tupleNumber
                 }
             }
             // If everything worked out as expected, we can drop the savepoint, if there is any.
@@ -239,6 +228,9 @@ open class PgWriter internal constructor(
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = pgWrite.feature ?: throw illegalArg("The write #${pgWrite.i} is $op, but the feature is null")
                     nakshaCollection = feature as? NakshaCollection ?: feature.proxy(NakshaCollection::class)
+                    if (nakshaCollection.partitions > 1000) {
+                        throw illegalArg("Invalid partition-count, expect 2 .. 1000, found : ${nakshaCollection.partitions}")
+                    }
                     if (targetCollection == null) {
                         if (op == WriteOp.UPDATE) {
                             throw collectionNotFound(
@@ -278,18 +270,19 @@ open class PgWriter internal constructor(
                 WriteOp.UPSERT -> {
                     // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
                     val f = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, Action.CREATE, session, null)
+                    val action = if (pgCollection.head.useMember(StandardMembers.Tn).getTupleNumber(f) != null) Action.UPDATE else Action.CREATE
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, action, session, null)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
                 WriteOp.UPDATE -> {
                     val f = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, Action.UPDATE, session, null)
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, Action.UPDATE, session, null, pgWrite.original.atomic)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
                 WriteOp.DELETE, WriteOp.PURGE -> {
-                    // TODO: For DELETE we want to support new states, so providing a feature!
+                    // Deletes carry no tuple-number; PgWriterDelete resolves the existing HEAD by feature-number.
                     if (pgWrite.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
                 }
                 else -> {
@@ -307,85 +300,48 @@ open class PgWriter internal constructor(
      */
     private fun executeWrite(pgWrites: ArrayList<PgWrite>, start: Int, end: Int) {
         if (start == end) return
-        // We expect that all writes go into the same catalog and collection.
-        val first = pgWrites[start]
-        val pgCatalog = first.catalog
-        val pgCollection = first.collection
+        // All writes in [start, end) share one catalog and collection (the caller grouped them) and are
+        // ordered by op; dispatch each contiguous op-block to its writer.
+        val pgCollection = pgWrites[start].collection
         var s = start
         var e = start
 
         // -------------------------------- DELETE ------------------------------------------------------------------------
-        while (e < end) {
-            val pgWrite = pgWrites[e]
-            check(pgWrite.catalog.catalogNumber != pgCatalog.catalogNumber)
-            check(pgWrite.collection.collectionNumber != pgCollection.collectionNumber)
-            if (pgWrite.op != WriteOp.DELETE) break
-            e++
-        }
+        while (e < end && pgWrites[e].op == WriteOp.DELETE) e++
         if (e > s) {
-            val tupleWriter = PgWriterDelete(this, pgCollection, pgWrites, s, e, purge = false)
-            tupleWriter.execute(conn)
+            PgWriterDelete(this, pgCollection, pgWrites, s, e, purge = false).execute(conn)
             s = e
         }
 
         // -------------------------------- PURGE ------------------------------------------------------------------------
-        while (e < end) {
-            val pgWrite = pgWrites[e]
-            check(pgWrite.catalog.catalogNumber != pgCatalog.catalogNumber)
-            check(pgWrite.collection.collectionNumber != pgCollection.collectionNumber)
-            if (pgWrite.op != WriteOp.PURGE) break
-            e++
-        }
-        //
+        while (e < end && pgWrites[e].op == WriteOp.PURGE) e++
         if (e > s) {
-            val tupleWriter = PgWriterDelete(this, pgCollection, pgWrites, s, e, purge = true)
-            tupleWriter.execute(conn)
-            e = s
+            PgWriterDelete(this, pgCollection, pgWrites, s, e, purge = true).execute(conn)
+            s = e
         }
 
         // -------------------------------- CREATE ------------------------------------------------------------------------
-        while (e < end) {
-            val pgWrite = pgWrites[e]
-            check(pgWrite.catalog.catalogNumber != pgCatalog.catalogNumber)
-            check(pgWrite.collection.collectionNumber != pgCollection.collectionNumber)
-            if (pgWrite.op != WriteOp.CREATE) break
-            e++
-        }
+        while (e < end && pgWrites[e].op == WriteOp.CREATE) e++
         if (e > s) {
-            val tupleWriter = PgWriterInsert(this, pgCollection, pgWrites, s, e)
-            tupleWriter.execute(conn)
-            e = s
+            PgWriterInsert(this, pgCollection, pgWrites, s, e).execute(conn)
+            s = e
         }
 
         // -------------------------------- UPSERT ------------------------------------------------------------------------
-        while (e < end) {
-            val pgWrite = pgWrites[e]
-            check(pgWrite.catalog.catalogNumber != pgCatalog.catalogNumber)
-            check(pgWrite.collection.collectionNumber != pgCollection.collectionNumber)
-            if (pgWrite.op != WriteOp.UPSERT) break
-            e++
-        }
+        while (e < end && pgWrites[e].op == WriteOp.UPSERT) e++
         if (e > s) {
-            val tupleWriter = PgWriterUpsert(this, pgCollection, pgWrites, s, e)
-            tupleWriter.execute(conn)
-            e = s
+            PgWriterUpsert(this, pgCollection, pgWrites, s, e).execute(conn)
+            s = e
         }
 
         // -------------------------------- UPDATE ------------------------------------------------------------------------
-        while (e < end) {
-            val pgWrite = pgWrites[e]
-            check(pgWrite.catalog.catalogNumber != pgCatalog.catalogNumber)
-            check(pgWrite.collection.collectionNumber != pgCollection.collectionNumber)
-            if (pgWrite.op != WriteOp.UPDATE) break
-            e++
-        }
+        while (e < end && pgWrites[e].op == WriteOp.UPDATE) e++
         if (e > s) {
-            val tupleWriter = PgWriterUpdate(this, pgCollection, pgWrites, s, e)
-            tupleWriter.execute(conn)
-            e = s
+            PgWriterUpdate(this, pgCollection, pgWrites, s, e).execute(conn)
+            s = e
         }
 
-        if (e != s) throw illegalState("We missed some writes beyond $s in the ordered write-operation list")
+        if (e != end) throw illegalState("We missed some writes beyond $s in the ordered write-operation list")
     }
 
     /**
@@ -395,6 +351,16 @@ open class PgWriter internal constructor(
      */
     protected open fun createPgCatalog(catalog: PgCatalog) {
         storage.adminCatalog.createPgCatalog(conn, catalog)
+        seedHistoryPartitions(catalog.collections)
+    }
+
+    // createPartition is not idempotent, so only call on fresh tables.
+    private fun seedHistoryPartitions(collection: PgCollection) {
+        if (!collection.storeHistory) return
+        val history = collection.historyTable
+        val year = collection.historyPartitionNumberOf(tx.version.number)
+        history.createPartition(conn, year)
+        history.createPartition(conn, year + 1)
     }
 
     /**
@@ -413,6 +379,7 @@ open class PgWriter internal constructor(
      */
     protected open fun createPgCollection(collection: PgCollection) {
         collection.catalog.createPgCollection(conn, collection)
+        seedHistoryPartitions(collection)
     }
 
     /**

@@ -26,7 +26,7 @@ class ReadFeaturesByGuuidTest :
         // When
         val readByGuid = ReadFeatures().apply {
             catalogId = collection.catalogId
-            collectionId += collection.id
+            collectionId = collection.id
             guids = GuidList().apply {
                 add(guuidById[inputFeature1.id])
                 add(guuidById[inputFeature3.id])

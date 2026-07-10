@@ -62,6 +62,7 @@ import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.FeatureTuple;
@@ -119,7 +120,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, result);
 
     // then
-    List<FeatureTuple> allFeatures = ((SuccessResponse) result).getFeatureTupleList();
+    List<NakshaFeature> allFeatures = ((SuccessResponse) result).getFeatures();
     assertEquals(3, allFeatures.size());
     assertTrue(allFeatures.containsAll(results));
   }
@@ -152,7 +153,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
-    assertEquals(Action.CREATE, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
+    assertEquals(Action.CREATE, successResponse.getFeatures().get(0).getProperties().getXyz().getAction());
     writeSession.commit();
   }
 
@@ -177,8 +178,8 @@ public class ViewTest {
     Response response = writeSession.execute(request);
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
-    assertEquals(feature.getId(), successResponse.getFeatureTupleList().get(0).getId());
-    assertEquals(Action.DELETE, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
+    assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
+    assertEquals(Action.DELETE, successResponse.getFeatures().get(0).getProperties().getXyz().getAction());
     writeSession.commit();
   }
 
@@ -379,7 +380,7 @@ public class ViewTest {
   private static IStorage mockStorageFor(NakshaStorage config) {
     IStorage storage = mock(IStorage.class);
     when(storage.getConfig()).thenReturn(config);
-    when(storage.newReadSession(any())).thenReturn(new MockReadSession(new FeatureTupleList()));
+    when(storage.newReadSession(any())).thenReturn(new MockReadSession(new NakshaFeatureList()));
     return storage;
   }
 

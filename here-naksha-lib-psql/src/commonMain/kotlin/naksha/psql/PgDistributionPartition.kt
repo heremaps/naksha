@@ -55,19 +55,19 @@ class PgDistributionPartition private constructor(
 
         // partition of HEAD.
         if (parent is PgHeadTable) return """$CREATE_TABLE $quotedName 
-PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(partitionIndex)}) 
+PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION) INCLUDE ($FN, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION) INCLUDE ($FN, $ID);"""
 
         // partition of HISTORY-PARTITION.
         if (parent is PgHistoryPartition) {
             val root = parent.parent as PgHistoryTable
             return """$CREATE_TABLE $quotedName 
-PARTITION OF ${parent.quotedName} (${root.CONSTRAINT(parent.partitionIndex, partitionIndex)}) 
+PARTITION OF ${parent.quotedName} (${root.CONSTRAINT(name, parent.partitionIndex, partitionIndex)})
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION, $NEXT_VERSION) INCLUDE ($FN, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION, $NEXT_VERSION) INCLUDE ($FN, $ID);"""
         }
 
         throw NakshaException(INTERNAL_ERROR, "The distribution partition must have PgHeadTable or PgHistoryPartition as parent")

@@ -421,6 +421,19 @@ data class TupleNumber(
         }
 
         /**
+         * Like [fromString], but also accepts a full GUID URN (`urn:naksha:guid:...`) and extracts the embedded
+         * tuple-number — tuple-number members are often stored as the feature's GUID (e.g. the XYZ `uuid`).
+         * @param string the bare tuple-number string or a GUID URN.
+         * @return the deserialized [TupleNumber].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun fromStringOrGuid(string: String): TupleNumber =
+            if (string.startsWith("urn:naksha:guid:")) Guid.fromString(string).tupleNumber
+            else fromString(string)
+
+        /**
          * Restore a [TupleNumber] from the given [URN](https://datatracker.ietf.org/doc/html/rfc8141), generated via [toUrn].
          * @param urn the [URN](https://datatracker.ietf.org/doc/html/rfc8141) from which to deserialize the [TupleNumber].
          * @return the deserialized [TupleNumber].

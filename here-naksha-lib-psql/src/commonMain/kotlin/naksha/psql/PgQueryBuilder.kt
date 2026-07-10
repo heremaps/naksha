@@ -58,7 +58,8 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                     var exit = 10
                     while (orderBy != null && exit >= 0) {
                         val memberName = orderBy.member ?: throw illegalArg("Missing member in orderBy")
-                        val sortOrder = orderBy.sortOrder.text
+                        // ANY resolves to DESC (latest-first); only explicit ASCENDING gives ASC.
+                        val sortOrder = if (orderBy.sortOrder == SortOrder.ASCENDING) "ASC" else "DESC"
                         order_by.add(Pair(memberName, sortOrder))
                         orderBy = orderBy.next
                         exit--
@@ -74,7 +75,6 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         // TODO: We want to use placeholders!
 
         val WHERE = StringBuilder()
-        if (!req.queryDeleted) WHERE.append("($VERSION_NAME & 3) < 2 ")
         var version = req.version
         if (version != null) {
             version = version or Int64(3)
@@ -97,36 +97,51 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             if (WHERE.isNotEmpty()) WHERE.append(" AND ")
             WHERE.append("($NEXT_VERSION_NAME > ").append(version).append(" OR $NEXT_VERSION_NAME IS NULL) ")
         }
-        val where = if (whereQuery.isEmpty()) "" else "WHERE $WHERE "
+        if (whereQuery.isNotEmpty()) {
+            if (WHERE.isNotEmpty()) WHERE.append(" AND ")
+            WHERE.append(whereQuery)
+        }
+        val where = if (WHERE.isEmpty()) "" else " WHERE $WHERE"
+        // The live-only filter applies to HEAD only; history queries must still return archived DELETE rows.
+        val headWhere = if (req.queryDeleted) where else {
+            val hw = StringBuilder(WHERE)
+            if (hw.isNotEmpty()) hw.append(" AND ")
+            hw.append("($VERSION_NAME & 3) < 2 ")
+            " WHERE $hw"
+        }
+
+        val baseCols = listOf(FN.toString(), VERSION.toString())
+        val extraCols = order_by?.map { it.first }?.filter { it !in baseCols }?.distinct() ?: emptyList()
+        val selectCols = (baseCols + extraCols).joinToString(", ")
 
         // The query starts with select all tuple-numbers of matching tuple.
         val query = if (readHistory) """query AS
-( SELECT $FN, $VERSION FROM ${pgCollection.headTable.quotedName}$where
+( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere
   UNION ALL
-  SELECT $FN, $VERSION FROM ${pgCollection.historyTable.quotedName}$where )""" else """query AS
-( SELECT $FN, $VERSION FROM ${pgCollection.headTable.quotedName}$where )"""
+  SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.historyTable.quotedName}$where )""" else """query AS
+( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere )"""
 
         // If history is queried, and only a certain amount of versions should be returned,
         // or we want only the latest version, but no specific version target is given, then
         // we need to partition the result, so that we can select the requested amount of latest versions.
-        val all = if (readHistory && (versions > 1 || version == null)) """, query_partitioned AS
-(SELECT $FN, $VERSION, ROW_NUMBER() OVER (PARTITION BY fn ORDER BY version DESC) AS v FROM query)
-, all AS
-(SELECT $FN, $VERSION FROM query_partitioned WHERE v <= $versions)""" else ""
+        val all = if (readHistory && versions > 1) """, query_partitioned AS
+(SELECT $selectCols, ROW_NUMBER() OVER (PARTITION BY $FN ORDER BY $VERSION DESC) AS v FROM query)
+, all_versions AS
+(SELECT $selectCols FROM query_partitioned WHERE v <= $versions)""" else ""
 
         // `order_by` may be empty, if no custom ordering was requested.
         val order_by_string = order_by?.joinToString(", ") { "${it.first} ${it.second}" } ?: ""
 
         // apply limit and order, if given
         val limited = """, limited AS
-(SELECT $FN, $VERSION FROM ${if (all.isNotEmpty()) "all" else "query"} ${if (order_by_string.isNotEmpty()) "ORDER BY $order_by_string "
+(SELECT $selectCols FROM ${if (all.isNotEmpty()) "all_versions" else "query"} ${if (order_by_string.isNotEmpty()) "ORDER BY $order_by_string "
 else if (all.isNotEmpty()) "ORDER BY $FN ASC, $VERSION DESC " else ""}LIMIT $REQ_LIMIT)"""
 
         // The final SQL query.
         // We only need `col_num`, `fn`, and `version`; the additional columns in limit were only for sorting.
         // If we only select from a single collection (thePgCollection != null), `col_num` is implicit.
         val SQL = """WITH $query$all$limited
-SELECT $FN, $VERSION FROM limited"""
+SELECT $FN AS fn, $VERSION AS version FROM limited"""
         return PgQuery(
             sql = SQL,
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),

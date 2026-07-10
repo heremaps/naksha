@@ -67,7 +67,11 @@ internal data class PgWrite(val original: Write, val i: Int) {
      * This is the authoritative routing key for physical partition assignment.
      * @since 3.0
      */
-    val featureNumber: naksha.base.Int64 = Naksha.featureNumber(id)
+    val featureNumber: naksha.base.Int64 = when (original.collectionId) {
+        Naksha.COLLECTIONS_COL_ID -> naksha.base.Int64(Naksha.collectionNumber(id))
+        Naksha.CATALOGS_COL_ID -> naksha.base.Int64(Naksha.catalogNumber(id))
+        else -> Naksha.featureNumber(id)
+    }
 
     /**
      * The partition-number for this feature, derived from the lower 16 bits of [featureNumber].
@@ -96,7 +100,10 @@ internal data class PgWrite(val original: Write, val i: Int) {
      */
     val version: Version?
         get() = if (original.atomic && op != WriteOp.CREATE && op != WriteOp.UPSERT)
-            original.version ?: Version(original.tupleNumber?.version!!)
+        // Expected prior HEAD version: explicit version/tuple-number, else the one captured at encode time.
+            original.version
+                ?: original.tupleNumber?.let { Version(it.version) }
+                ?: tuple?.previousTupleNumber?.let { Version(it.version) }
         else
             null
 

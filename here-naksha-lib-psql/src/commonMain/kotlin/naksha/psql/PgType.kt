@@ -196,7 +196,7 @@ class PgType : JsEnum() {
             MemberType.FLOAT64 -> DOUBLE
             MemberType.STRING -> STRING
             MemberType.TAG_MAP -> JSONB
-            MemberType.TAG_MAP_FROM_ARRAY -> STRING_ARRAY
+            MemberType.TAG_MAP_FROM_ARRAY -> JSONB
             MemberType.TAG_LIST -> STRING_ARRAY
             // MemberType.BYTE_ARRAY -> BYTE_ARRAY
             // MemberType.TUPLE_NUMBER -> BYTE_ARRAY
