@@ -12,7 +12,8 @@ import kotlin.test.assertTrue
 
 class PartitioningTest : PgTestBase() {
 
-    // TODO: If testing is successful, adjust this!
+    // TODO: Adjust this test to change the partition naming (low priority for now)
+    // Naming changes from "feature_partitioned$hst$y2025$p001" to "feature_partitioned$hst$2025$1", similar "feature_partitioned$p001" -> "feature_partitioned$1" (etc.)
     @Ignore
     @Test
     fun createCollectionWithPartitions() {
