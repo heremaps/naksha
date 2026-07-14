@@ -16,29 +16,7 @@ kotlin {
             freeCompilerArgs = listOf("-Xjvm-default=all")
         }
     }
-
-    js(IR) {
-        outputModuleName = "naksha_model"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            target.set("es2015")
-        }
-        nodejs {
-            compilerOptions {
-                moduleKind = JsModuleKind.MODULE_ES
-                moduleName = "naksha_model"
-                sourceMap = true
-                useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-            }
-            generateTypeScriptDefinitions()
-            binaries.library()
-            binaries.executable()
-        }
-    }
-
+    js { }
     sourceSets {
         commonMain {
             dependencies {
@@ -85,23 +63,6 @@ kotlin {
 								api(project(":here-naksha-lib-auth"))
             }
         }
-    }
-}
-
-tasks {
-    getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
-    }
-    // Release
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn("jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
-    }
-    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
-    // Test
-    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
-    getByName<Test>("jvmTest") {
-        useJUnitPlatform()
-        maxHeapSize = "8g"
     }
 }
 

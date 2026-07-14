@@ -1,8 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
-import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
-import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
-
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
@@ -10,30 +5,8 @@ plugins {
 description = gatherDescription()
 
 kotlin {
-    jvm {
-    }
-    js(IR) {
-        outputModuleName = "naksha_auth"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            target.set("es2015")
-        }
-        nodejs {
-            compilerOptions {
-                moduleKind = JsModuleKind.MODULE_ES
-                moduleName = "naksha_auth"
-                sourceMap = true
-                useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-            }
-            generateTypeScriptDefinitions()
-            binaries.library()
-            binaries.executable()
-        }
-    }
-
+    jvm { }
+    js { }
     sourceSets {
         commonMain {
             dependencies {
@@ -65,20 +38,4 @@ kotlin {
     }
 }
 
-tasks {
-    getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
-    }
-    // Release
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn("jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
-    }
-    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
-    // Test
-    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
-    getByName<Test>("jvmTest") {
-        useJUnitPlatform()
-        maxHeapSize = "8g"
-    }
-}
 setOverallCoverage(0.0) // only increasing allowed!

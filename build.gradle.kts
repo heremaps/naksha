@@ -1,6 +1,9 @@
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.gradle.jvm.toolchain.JavaToolchainSpec
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import java.net.URI
@@ -76,6 +79,76 @@ enum class PublishModule {
     // configure the module for publication, but do not publish
     CONFIG_ONLY
 }
+
+// Modules that compile to JavaScript. The JS target configuration is centralized here.
+@Suppress("ArrayInDataClass")
+data class JsModuleConfig(
+    val _moduleName: String,
+    val _enableTests: Boolean = false,
+    val _dependencies: Array<String> = emptyArray()
+) {
+    fun configure(project: Project, kotlin: KotlinMultiplatformExtension) {
+        kotlin.jvm { }
+        kotlin.js {
+            outputModuleName = _moduleName
+            useEsModules()
+            @OptIn(ExperimentalKotlinGradlePluginApi::class)
+            compilerOptions {
+                target = "es2015"
+                freeCompilerArgs.add("-Xes-long-as-bigint")
+                freeCompilerArgs.add("-XXLanguage:+JsAllowLongInExportedDeclarations")
+            }
+            nodejs {
+                compilerOptions {
+                    moduleKind = JsModuleKind.MODULE_ES
+                    moduleName = _moduleName
+                    sourceMap = true
+                    useEsClasses = true
+                    sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                    sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
+                }
+                generateTypeScriptDefinitions()
+                binaries.library()
+                binaries.executable()
+            }
+        }
+        // We patch the build so that the JavaScript files are included into the JAR!
+        project.tasks {
+            getByName<Task>("jsNodeProductionLibraryDistribution") {
+                dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
+            }
+            // Release
+            getByName<ProcessResources>("jvmProcessResources") {
+                dependsOn(_dependencies + "jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
+            }
+            getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+            // Test
+            getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
+            getByName<Test>("jvmTest") {
+                useJUnitPlatform()
+                maxHeapSize = "8g"
+                val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+                if (dbUrl != null) environment("NAKSHA_TEST_PSQL_DB_URL", dbUrl)
+            }
+        }
+        project.tasks.matching { it.name == "jsNodeTest" }.configureEach {
+            enabled = _enableTests
+        }
+    }
+}
+val jsModules = mapOf(
+    Pair("here-naksha-lib-base", JsModuleConfig("naksha_base")),
+    Pair("here-naksha-lib-auth", JsModuleConfig("naksha_auth")),
+    Pair("here-naksha-lib-geo", JsModuleConfig("naksha_geo")),
+    Pair("here-naksha-lib-jbon", JsModuleConfig("naksha_jbon")),
+    Pair("here-naksha-lib-model", JsModuleConfig("naksha_model")),
+    Pair("here-naksha-lib-psql", JsModuleConfig("naksha_psql", _dependencies = arrayOf(
+        ":here-naksha-lib-base:jsNodeProductionLibraryDistribution",
+        ":here-naksha-lib-geo:jsNodeProductionLibraryDistribution",
+        ":here-naksha-lib-jbon:jsNodeProductionLibraryDistribution",
+        ":here-naksha-lib-model:jsNodeProductionLibraryDistribution"))),
+    Pair("here-naksha-lib-diff", JsModuleConfig("naksha_diff", _enableTests = true)),
+)
 
 val allModules = mapOf(
     Pair("naksha", Pair(CleanAndTest.OFF, PublishModule.CONFIG_ONLY)),
@@ -228,6 +301,17 @@ subprojects {
             "Please choose a supported version (e.g., 21, 17, 11)."
         )
         compilerOptions.jvmTarget.set(target)
+    }
+
+    val jsNoduleConfig = jsModules[name]
+    if (jsNoduleConfig != null) {
+        println("Configure $name for JavaScript")
+        val project = this
+        pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+            extensions.configure<KotlinMultiplatformExtension> {
+                jsNoduleConfig.configure(project, this)
+            }
+        }
     }
 
     if(allModules[name]?.first == CleanAndTest.KOTLIN) {

@@ -10,8 +10,8 @@ plugins {
 description = gatherDescription()
 
 kotlin {
-    jvm {
-    }
+    jvm { }
+    js { }
     sourceSets {
         commonMain {
             dependencies {
@@ -55,44 +55,6 @@ kotlin {
             }
         }
     }
-
-    js(IR) {
-        outputModuleName = "naksha_geo"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            target.set("es2015")
-        }
-        nodejs {
-            compilerOptions {
-                moduleKind = JsModuleKind.MODULE_ES
-                moduleName = "naksha_geo"
-                sourceMap = true
-                useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-            }
-            generateTypeScriptDefinitions()
-            binaries.library()
-            binaries.executable()
-        }
-    }
 }
 
-tasks {
-    getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
-    }
-    // Release
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn("jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
-    }
-    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
-    // Test
-    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
-    getByName<Test>("jvmTest") {
-        useJUnitPlatform()
-        maxHeapSize = "8g"
-    }
-}
 setOverallCoverage(0.0) // only increasing allowed!

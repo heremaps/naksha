@@ -7,7 +7,7 @@ description = gatherDescription()
 kotlin {
     jvm {
     }
-    js(IR) {
+    js {
         nodejs()
     }
 }

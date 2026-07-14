@@ -3,7 +3,6 @@
 
 package naksha.psql
 
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.AtomicMap
@@ -21,6 +20,7 @@ import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.model.objects.NakshaCatalog
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.time.Instant
 
 /**
  * The admin-map of the storage, requires a platform specific implementation.
