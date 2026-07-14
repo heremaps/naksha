@@ -237,14 +237,21 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
 
   @Override
   public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
-    final @NotNull ViewLayerCollection viewCollection = view.getViewCollection();
-    // TODO: We need to group the tuples by layer using:
-    //       viewCollection.getByTupleNumber()
-    //       Then we can query for the tuples.
-    //       The reason for all the effort is that the view allows a postponed commit,
-    //       which means we can't load tuple modified features, because the changes are
-    //       not yet visible outside the session!
-    throw new UnsupportedOperationException("loadTuples");
+    final ViewLayerCollection viewCollection = view.getViewCollection();
+    final Map<ViewLayer, List<FeatureTuple>> byLayer = new LinkedHashMap<>();
+    for (int i = from; i < to; i++) {
+      final FeatureTuple featureTuple = featureTuples.get(i);
+      if (featureTuple == null) {
+        continue;
+      }
+      final ViewLayer layer = viewCollection.getByTupleNumber(featureTuple.tupleNumber);
+      byLayer.computeIfAbsent(layer, k -> new ArrayList<>()).add(featureTuple);
+    }
+    // Sub-sessions read committed data, so features written in this session load only after commit.
+    for (final Map.Entry<ViewLayer, List<FeatureTuple>> entry : byLayer.entrySet()) {
+      final List<FeatureTuple> group = entry.getValue();
+      subSessions.get(entry.getKey()).loadTuples(group, 0, group.size());
+    }
   }
 
   @Override

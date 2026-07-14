@@ -18,34 +18,43 @@
  */
 package com.here.naksha.lib.view;
 
+import static naksha.base.LibBaseKt.Int64;
+import static naksha.model.RandomFeatures.randomFeature;
+
 import naksha.model.Action;
 import naksha.model.IStorage;
-import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.XyzMembers;
+import naksha.model.Naksha;
+import naksha.model.Tuple;
+import naksha.model.TupleNumber;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.FeatureTupleList;
 
-import java.util.List;
-
-import static naksha.model.RandomFeatures.randomFeature;
-
 public class Sample {
 
-  public static NakshaFeatureList sampleXyzResponse(int size, IStorage storage) {
-    NakshaFeatureList returnList = new NakshaFeatureList();
+  public static FeatureTuple featureTuple(NakshaFeature feature) {
+    TupleNumber tupleNumber = new TupleNumber(Int64(1), 0, 0, Naksha.featureNumber(feature.getId()), Int64(1));
+    feature.getProperties().getXyz().setRaw("uuid", tupleNumber.toString());
+    FeatureTuple featureTuple = new FeatureTuple(tupleNumber, (Tuple) null);
+    featureTuple.setFeature(feature);
+    return featureTuple;
+  }
+
+  public static FeatureTupleList sampleXyzResponse(int size, IStorage storage) {
+    FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
-      returnList.add(randomFeature(Integer.toString(i)));
+      returnList.add(featureTuple(randomFeature(Integer.toString(i))));
     }
     return returnList;
   }
 
-  public static NakshaFeatureList sampleXyzWriteResponse(int size, Action action) {
-    final NakshaFeatureList returnList = new NakshaFeatureList();
+  public static FeatureTupleList sampleXyzWriteResponse(int size, Action action) {
+    final FeatureTupleList returnList = new FeatureTupleList();
     for (int i = 0; i < size; i++) {
-      returnList.add(randomFeature(Integer.toString(i), (f) -> {
+      returnList.add(featureTuple(randomFeature(Integer.toString(i), (f) -> {
         f.getProperties().getXyz().setRaw("action", action.toString());
         return f;
-      }));
+      })));
     }
     return returnList;
   }
