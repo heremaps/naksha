@@ -1,4 +1,7 @@
-import com.vanniktech.maven.publish.SonatypeHost
+import org.gradle.api.plugins.JavaPlugin
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.jvm.toolchain.JavaToolchainSpec
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import java.net.URI
 
@@ -6,7 +9,7 @@ plugins {
     // Shared plugins
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.kotlin.js.plain.objects) apply false
-    alias(libs.plugins.foojay) apply false
+    // foojay resolver applied in settings.gradle.kts
     alias(libs.plugins.vanniktechMavenPublish)
 
     // Only need within root
@@ -125,8 +128,8 @@ fun Project.configureVanniktechMavenPublish() {
     mavenPublishing {
         if (sign != null && portal != null) {
             println("\tAdd 'MavenCentral' repository, ${portal.user}:***@${portal.url}")
-            println("\tConfigure mavenPublishing for 'local' and '${SonatypeHost.CENTRAL_PORTAL}'")
-            publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, true)
+            println("\tConfigure mavenPublishing for 'local' and 'CENTRAL_PORTAL'")
+            publishToMavenCentral()
             signAllPublications()
         } else {
             println("\tConfigure mavenPublishing for 'local'")
@@ -208,6 +211,25 @@ jacoco {
 }
 
 subprojects {
+    plugins.withType<JavaPlugin> {
+        extensions.configure<JavaPluginExtension> {
+            val jvmVersion = getJvmTargetVersion(this@subprojects)
+            toolchain { languageVersion.set(JavaLanguageVersion.of(jvmVersion.toInt())) }
+            sourceCompatibility = JavaVersion.toVersion(jvmVersion)
+            targetCompatibility = JavaVersion.toVersion(jvmVersion)
+        }
+    }
+
+    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+        val jvmTargetName = getJvmTargetName(this@subprojects)
+        val target = JvmTarget.entries.find { it.name == jvmTargetName } ?: throw IllegalStateException(
+            "Invalid JVM target version '${getJvmTargetVersion(this@subprojects)}' defined in gradle.properties " +
+            "(property 'jvm.target'). The Kotlin compiler does not provide a constant for '$jvmTargetName'. " +
+            "Please choose a supported version (e.g., 21, 17, 11)."
+        )
+        compilerOptions.jvmTarget.set(target)
+    }
+
     if(allModules[name]?.first == CleanAndTest.KOTLIN) {
         apply(plugin = "jacoco")
 
@@ -217,7 +239,7 @@ subprojects {
         }
 
         tasks {
-            val jacocoTestReport by registering(JacocoReport::class) {
+            val jacocoTestReport = register<JacocoReport>("jacocoTestReport") {
                 group = "jacoco"
 
                 dependsOn("jvmTest")
@@ -227,7 +249,7 @@ subprojects {
                 }
             }
 
-            val jacocoTestCoverageVerification by registering(JacocoCoverageVerification::class) {
+            val jacocoTestCoverageVerification = register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
                 group = "jacoco"
                 dependsOn(jacocoTestReport)
                 val reportTask = jacocoTestReport.get()

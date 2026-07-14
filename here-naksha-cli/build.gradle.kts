@@ -21,19 +21,12 @@ configurations.all {
     exclude(group = "org.slf4j", module = "slf4j-simple")
 }
 
-java {
-    setSourceCompatibility(23)
-    setTargetCompatibility(23)
-}
-
 kotlin {
 
     jvm {
+        @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
         mainRun {
             mainClass.set(mainCliClass)
-        }
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_23)
         }
     }
 
