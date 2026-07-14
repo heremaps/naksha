@@ -1,8 +1,8 @@
 package com.here.naksha.lib.view.merge;
 
+import com.here.naksha.lib.view.Sample;
 import com.here.naksha.lib.view.ViewLayerFeature;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.XyzMembers;
 import naksha.model.request.FeatureTuple;
 import org.junit.jupiter.api.Test;
 
@@ -27,9 +27,9 @@ public class MergeByStoragePriorityTest {
     NakshaFeature f2 = new NakshaFeature();
     NakshaFeature f3 = new NakshaFeature();
 
-    FeatureTuple t1 = new FeatureTuple(f1, XyzMembers.XyzTn);
-    FeatureTuple t2 = new FeatureTuple(f2, XyzMembers.XyzTn);
-    FeatureTuple t3 = new FeatureTuple(f3, XyzMembers.XyzTn);
+    FeatureTuple t1 = Sample.featureTuple(f1);
+    FeatureTuple t2 = Sample.featureTuple(f2);
+    FeatureTuple t3 = Sample.featureTuple(f3);
 
     singleRowFeatures.add(new ViewLayerFeature(t1, 1, null));
     singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));
@@ -51,9 +51,9 @@ public class MergeByStoragePriorityTest {
     NakshaFeature f2 = new NakshaFeature();
     NakshaFeature f3 = new NakshaFeature();
 
-    FeatureTuple t1 = new FeatureTuple(f1, XyzMembers.XyzTn);
-    FeatureTuple t2 = new FeatureTuple(f2, XyzMembers.XyzTn);
-    FeatureTuple t3 = new FeatureTuple(f3, XyzMembers.XyzTn);
+    FeatureTuple t1 = Sample.featureTuple(f1);
+    FeatureTuple t2 = Sample.featureTuple(f2);
+    FeatureTuple t3 = Sample.featureTuple(f3);
 
     singleRowFeatures.add(new ViewLayerFeature(t1, 0, null));
     singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));

@@ -2,10 +2,10 @@ package com.here.naksha.lib.view.missing;
 
 import naksha.model.*;
 import com.here.naksha.lib.view.MissingIdResolver;
+import com.here.naksha.lib.view.Sample;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerFeature;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.XyzMembers;
 import naksha.model.request.FeatureTuple;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
@@ -32,7 +32,7 @@ public class ObligatoryLayersResolverTest {
     ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     ViewLayer otherLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     final NakshaFeature feature = new NakshaFeature();
-    final FeatureTuple featureTuple = new FeatureTuple(feature, XyzMembers.XyzTn);
+    final FeatureTuple featureTuple = Sample.featureTuple(feature);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
     singleRowFeatures.add(new ViewLayerFeature(featureTuple, 0, otherLayer));
@@ -54,7 +54,7 @@ public class ObligatoryLayersResolverTest {
     IStorage storage = mock(IStorage.class);
     ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     final NakshaFeature feature = new NakshaFeature();
-    final FeatureTuple featureTuple = new FeatureTuple(feature, XyzMembers.XyzTn);
+    final FeatureTuple featureTuple = Sample.featureTuple(feature);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
     singleRowFeatures.add(new ViewLayerFeature(featureTuple, 0, obligatoryLayer));

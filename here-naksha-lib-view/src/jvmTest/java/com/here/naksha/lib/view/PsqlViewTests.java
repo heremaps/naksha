@@ -227,11 +227,13 @@ class PsqlViewTests extends PsqlTests {
     final WriteRequest requestTest2 = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature(String.valueOf(threadLocalRandom.nextInt()));
     feature.setGeometry(new SpPoint(new PointCoord(11d, 11d)));
-    requestTest1.add(new Write().createFeature(COLLECTION_1_FEATURE, feature));
-    executeWrite(requestTest1);
 
     NakshaFeature featureEdited2 = feature.copy(true);
     featureEdited2.setGeometry(new SpPoint(new PointCoord(22d, 22d)));
+
+    requestTest1.add(new Write().createFeature(COLLECTION_1_FEATURE, feature));
+    executeWrite(requestTest1);
+
     requestTest2.add(new Write().createFeature(COLLECTION_2_FEATURE, featureEdited2));
     executeWrite(requestTest2);
 
