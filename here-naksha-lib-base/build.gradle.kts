@@ -51,6 +51,13 @@ kotlin {
             }
             resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
+        jvmTest {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation(libs.kotlintest.runner.junit5)
+                runtimeOnly(libs.junit.jupiter.engine)
+            }
+        }
         jsMain {
             dependencies {
                 api(kotlin("stdlib-js"))
