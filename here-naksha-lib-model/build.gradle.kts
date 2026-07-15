@@ -50,7 +50,10 @@ kotlin {
         }
         jvmTest {
             dependencies {
+                implementation(kotlin("test"))
+                implementation(libs.kotlintest.runner.junit5)
                 implementation(libs.mockito)
+                runtimeOnly(libs.junit.jupiter.engine)
                 runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }
         }
