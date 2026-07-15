@@ -1,6 +1,5 @@
 package naksha.psql
 
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.model.Action
@@ -13,6 +12,7 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.RandomFeatures
 import kotlin.test.*
+import kotlin.time.Clock
 
 class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
 
