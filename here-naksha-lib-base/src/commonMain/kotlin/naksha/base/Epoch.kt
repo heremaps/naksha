@@ -1,10 +1,10 @@
 package naksha.base
 
-import kotlinx.datetime.Instant
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
+import kotlin.time.Instant
 
 /**
  * A helper to split epoch millis into its parts.

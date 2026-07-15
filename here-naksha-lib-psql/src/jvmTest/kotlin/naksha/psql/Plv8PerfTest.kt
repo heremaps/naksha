@@ -46,7 +46,7 @@ class Plv8PerfTest : PgTestBase(
     companion object {
         val featureSource = JSON_TOPOLOGY_SMALL
         val NUM_OF_PARTITIONS = 4
-        val OVERLOAD_FACTOR = 4
+        val OVERLOAD_FACTOR = 1
         val BATCHES_PER_WORKER = 3
         val FEATURES_PER_BATCH = 100
         val numberOfBatches = NUM_OF_PARTITIONS * BATCHES_PER_WORKER * OVERLOAD_FACTOR

@@ -9,17 +9,11 @@ description = gatherDescription()
 val mainApiClass = "com.here.naksha.app.service.NakshaApp"
 val fatJarBaseName = "naksha-app-service"
 
-java {
-    setSourceCompatibility(23)
-    setTargetCompatibility(23)
-}
 kotlin {
     jvm {
+        @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
         mainRun {
             this.mainClass.set(mainApiClass)
-        }
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_23)
         }
     }
     sourceSets {

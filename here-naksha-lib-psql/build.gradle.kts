@@ -10,39 +10,9 @@ plugins {
 
 description = gatherDescription()
 
-java {
-    setSourceCompatibility(11)
-    setTargetCompatibility(11)
-}
-
 kotlin {
-    jvm {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
-    js(IR) {
-        outputModuleName = "naksha_psql"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            target.set("es2015")
-        }
-        nodejs {
-            compilerOptions {
-                moduleKind = JsModuleKind.MODULE_ES
-                moduleName = "naksha_psql"
-                sourceMap = true
-                useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-            }
-            generateTypeScriptDefinitions()
-            binaries.library()
-            binaries.executable()
-        }
-    }
-
+    jvm { }
+    js { }
     sourceSets {
         commonMain {
             dependencies {
@@ -121,36 +91,6 @@ kotlin {
                 //implementation(npm("postgres", "3.4.4"))
             }
         }
-    }
-}
-
-configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
-tasks {
-    getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
-    }
-    // Release
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn(
-            ":here-naksha-lib-base:jsNodeProductionLibraryDistribution",
-            ":here-naksha-lib-geo:jsNodeProductionLibraryDistribution",
-            ":here-naksha-lib-jbon:jsNodeProductionLibraryDistribution",
-            ":here-naksha-lib-model:jsNodeProductionLibraryDistribution",
-            "jsNodeProductionLibraryDistribution"
-        )
-    }
-    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
-    // Test
-    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
-    getByName<Test>("jvmTest") {
-        useJUnitPlatform()
-        maxHeapSize = "8g"
-        val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
-        if (dbUrl != null) environment("NAKSHA_TEST_PSQL_DB_URL", dbUrl)
     }
 }
 setOverallCoverage(0.0) // only increasing allowed!

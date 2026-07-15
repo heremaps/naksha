@@ -30,7 +30,6 @@ const val ACTION_DELETE = 2
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_STORAGE = Int64(200) * MILLISECOND * MILLIS_TO_MICROS
 
 /**
@@ -38,7 +37,6 @@ val LATENCY_STORAGE = Int64(200) * MILLISECOND * MILLIS_TO_MICROS
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_S3 = Int64(100) * MILLISECOND * MILLIS_TO_MICROS
 
 /**
@@ -46,7 +44,6 @@ val LATENCY_S3 = Int64(100) * MILLISECOND * MILLIS_TO_MICROS
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_REDIS_REMOTE = Int64(10) * MILLISECOND * MILLIS_TO_MICROS
 
 /**
@@ -54,7 +51,6 @@ val LATENCY_REDIS_REMOTE = Int64(10) * MILLISECOND * MILLIS_TO_MICROS
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_REDIS_LOCAL = Int64(1) * MILLISECOND * MILLIS_TO_MICROS
 
 /**
@@ -62,7 +58,6 @@ val LATENCY_REDIS_LOCAL = Int64(1) * MILLISECOND * MILLIS_TO_MICROS
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_MEMORY = Int64(0)
 
 /**
@@ -73,7 +68,6 @@ val LATENCY_MEMORY = Int64(0)
     replaceWith = ReplaceWith("Naksha.DEFAULT_DATA_ENCODING"),
     level = DeprecationLevel.WARNING)
 @JvmField
-@JsStatic
 val DEFAULT_DATA_ENCODING = Naksha.DEFAULT_DATA_ENCODING
 
 /**

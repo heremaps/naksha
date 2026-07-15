@@ -1,6 +1,5 @@
 package naksha.psql
 
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.model.Naksha
@@ -22,6 +21,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.*
+import kotlin.time.Clock
 
 class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
