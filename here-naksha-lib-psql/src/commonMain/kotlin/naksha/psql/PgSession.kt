@@ -472,15 +472,16 @@ SELECT * FROM from_hst"""
                 rows.readAll(cursor)
             }
         }
-        // Copy tuples into cache, which allows us in the next loop to read the tuple back from the cache.
+        val byTupleNumber = HashMap<TupleNumber, Tuple>(rows.size)
         for (i in 0 until rows.size) {
             val tuple = rows[i] ?: continue
             Naksha.cache.store(tuple)
+            byTupleNumber[tuple.tupleNumber] = tuple
         }
         var found = 0
         for (i in 0..< featureTuples.size) {
             val featureTuple = featureTuples[i] ?: throw NakshaException(INTERNAL_ERROR, "featureTuples[$i] is null")
-            val tuple = Naksha.cache[featureTuple.tupleNumber]
+            val tuple = byTupleNumber[featureTuple.tupleNumber] ?: Naksha.cache[featureTuple.tupleNumber]
             if (tuple != null) {
                 featureTuple.tuple = tuple
                 found++

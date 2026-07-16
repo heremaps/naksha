@@ -1,6 +1,5 @@
 package naksha.psql
 
-import kotlinx.coroutines.runBlocking
 import naksha.base.JvmMap
 import naksha.base.Platform
 import naksha.base.PlatformUtil
@@ -19,22 +18,16 @@ import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
-import org.openjdk.jmh.annotations.BenchmarkMode
-import org.openjdk.jmh.annotations.Mode
-import org.openjdk.jmh.annotations.OutputTimeUnit
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertIs
 
 @Suppress("HasPlatformType", "MayBeConstant")
-@BenchmarkMode(Mode.AverageTime) // Measures average execution time
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
 class Plv8PerfTest : PgTestBase(
     NakshaCollection(
         id = "",
@@ -171,7 +164,7 @@ class Plv8PerfTest : PgTestBase(
         }
     }
 
-    private fun executeParallel(concurrency: Int, batchRequests: List<WriteRequest>) = runBlocking {
+    private fun executeParallel(concurrency: Int, batchRequests: List<WriteRequest>) {
         val stats = Collections.synchronizedList(mutableListOf<Stats>())
         val threadPool = Executors.newFixedThreadPool(concurrency)
         val context = NakshaContext.currentContext()

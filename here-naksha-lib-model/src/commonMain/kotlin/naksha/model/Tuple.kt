@@ -103,31 +103,43 @@ data class Tuple @JvmOverloads constructor(
             // The transaction version carries the VERSION sentinel (=3) in its low two action bits; each
             // feature records its OWN action (CREATE/UPDATE/DELETE) there so the row reads as live.
             val version = (session.useTransaction().version.number and Int64(-4)) or Int64(action.intValue)
+            // Tuple-number a brand-new feature (no prior version) receives in this collection.
+            fun freshTupleNumber(): TupleNumber = TupleNumber(
+                colTn.databaseNumber,
+                colTn.catalogNumber,
+                colTn.featureNumber.toInt(),
+                when (collection.id) {
+                    Naksha.COLLECTIONS_COL_ID -> Int64(Naksha.collectionNumber(feature.id))
+                    Naksha.CATALOGS_COL_ID -> Int64(Naksha.catalogNumber(feature.id))
+                    else -> Naksha.featureNumber(feature.id)
+                },
+                version
+            )
             val newTn: TupleNumber
+            var isFork = false
             if (prevTn != null) {
-                if (action != Action.VERSION && action == Action.CREATE) {
-                    throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action CREATE given, the feature exists already (has a uuid)")
+                if (action == Action.CREATE) {
+                    val target = freshTupleNumber()
+                    val sameLocation = prevTn.databaseNumber == target.databaseNumber
+                            && prevTn.catalogNumber == target.catalogNumber
+                            && prevTn.collectionNumber == target.collectionNumber
+                            && prevTn.featureNumber == target.featureNumber
+                    if (sameLocation) {
+                        throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action CREATE given, the feature exists already (has a uuid)")
+                    }
+                    // Fork: preserve lineage in `origin`, then create freshly in the target collection.
+                    isFork = true
+                    val originUuid = feature.properties.xyz.uuid
+                    if (originUuid != null) feature.properties.xyz.setRaw(XyzNs.ORIGIN, originUuid)
+                    newTn = target
+                } else {
+                    newTn = TupleNumber.copy(prevTn, version)
                 }
-                newTn = TupleNumber.copy(prevTn, version)
             } else {
                 if (action != Action.VERSION && action != Action.CREATE && atomic) {
                     throw NakshaException(ILLEGAL_ARGUMENT, "Invalid action $action given, the feature does not exist (missing uuid)")
                 }
-                newTn = TupleNumber(
-                    // The feature is stored in the same database as the collection it is inserted into.
-                    colTn.databaseNumber,
-                    // The feature is stored in the same catalog as the collection it is inserted into.
-                    colTn.catalogNumber,
-                    // The feature-number of the collection is the collection-number of the feature we want to store in the collection.
-                    colTn.featureNumber.toInt(),
-                    when (collection.id) {
-                        Naksha.COLLECTIONS_COL_ID -> Int64(Naksha.collectionNumber(feature.id))
-                        Naksha.CATALOGS_COL_ID -> Int64(Naksha.catalogNumber(feature.id))
-                        else -> Naksha.featureNumber(feature.id)
-                    },
-                    // The transaction version, but with the feature's own action in the lower two bits.
-                    version
-                )
+                newTn = freshTupleNumber()
             }
             // Update the feature with its new tuple-number.
             tnMember.set(feature, newTn)
@@ -211,14 +223,16 @@ data class Tuple @JvmOverloads constructor(
             // members-book when a global book was provided.
             if (globalBookTn != null) membersBook.put(StandardMembers.GlobalBookFeatureNumber.name, globalBookTn.featureNumber)
 
+            // A fork has no previous version in the target collection.
+            val encodedPreviousTn = if (isFork) null else prevTn
             // Optionally GZIP.
             if (raw.size >= 1000) {
                 val compressed = gzipDeflate(raw)
                 if (compressed.size < raw.size) {
-                    return Tuple(compressed, membersBook, prevTn)
+                    return Tuple(compressed, membersBook, encodedPreviousTn)
                 }
             }
-            return Tuple(raw, membersBook, prevTn)
+            return Tuple(raw, membersBook, encodedPreviousTn)
         }
 
         private fun isGzipped(bytes: ByteArray): Boolean =
