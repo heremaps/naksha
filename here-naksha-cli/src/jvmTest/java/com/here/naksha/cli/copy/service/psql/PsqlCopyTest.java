@@ -166,12 +166,16 @@ class PsqlCopyTest {
     }
 
     private CopyElement createCopyElementWithNoExistingMapAndCollection(IStorage storage) {
-        String mapId = UUID.randomUUID().toString();
-        String collectionId = UUID.randomUUID().toString();
+        String mapId = uniqueId("map");
+        String collectionId = uniqueId("col");
         return new CopyElement.Builder(storage.getConfig())
                 .setMapId(mapId)
                 .setCollectionId(collectionId)
                 .build();
+    }
+
+    private static String uniqueId(String prefix) {
+        return prefix + "-" + UUID.randomUUID();
     }
 
     private CopyElement copyElementForGeneratingStorage(IStorage storage) {
@@ -305,7 +309,7 @@ class PsqlCopyTest {
     }
 
     private String createUniqueMap(IStorage storage, SessionOptions sessionOptions) {
-        String mapId = UUID.randomUUID().toString();
+        String mapId = uniqueId("map");
         addMapToTheStorage(storage, mapId, sessionOptions);
         return mapId;
     }
