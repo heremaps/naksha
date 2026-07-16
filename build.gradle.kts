@@ -154,7 +154,6 @@ val allModules = mapOf(
     Pair("naksha", Pair(CleanAndTest.OFF, PublishModule.CONFIG_ONLY)),
     Pair("here-naksha-app-service", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-common-http", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
-    Pair("here-naksha-common-test", Pair(CleanAndTest.OFF, PublishModule.YES)),
     Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-auth", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-base", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
@@ -270,9 +269,90 @@ allprojects {
         mavenLocal()
     }
 
-    println("Configure $name ---------> $group:$name:$version")
-    val info = allModules[name]
+    println("[$name] --> $group:$name:$version")
+    val _name = name
+    if (project !== rootProject) {
+        plugins.withType<JavaPlugin> {
+            extensions.configure<JavaPluginExtension> {
+                val jvmVersion = getJvmTargetVersion(this@allprojects)
+                println("[$_name] --> Configure JavaPlugin to JDK $jvmVersion")
+                toolchain { languageVersion.set(JavaLanguageVersion.of(jvmVersion.toInt())) }
+                sourceCompatibility = JavaVersion.toVersion(jvmVersion)
+                targetCompatibility = JavaVersion.toVersion(jvmVersion)
+            }
+        }
+        tasks.withType<Jar> {
+            from(rootProject.file("HERE_NOTICE"))
+            into("")
+            from(rootProject.file("LICENSE"))
+            into("")
+        }
+        println("[$_name] --> Apply KMP plugin")
+        apply(plugin = "org.jetbrains.kotlin.multiplatform")
+
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            val jvmTargetName = getJvmTargetName(this@allprojects)
+            println("[$_name] --> Configure Kotlin to $jvmTargetName")
+            val target = JvmTarget.entries.find { it.name == jvmTargetName } ?: throw IllegalStateException(
+                "Invalid JVM target version '${getJvmTargetVersion(this@allprojects)}' defined in gradle.properties " +
+                        "(property 'jvm.target'). The Kotlin compiler does not provide a constant for '$jvmTargetName'. " +
+                        "Please choose a supported version (e.g., 21, 17, 11)."
+            )
+            compilerOptions.jvmTarget.set(target)
+        }
+
+        val jsNoduleConfig = jsModules[_name]
+        if (jsNoduleConfig != null) {
+            println("[$_name] --> Configure JavaScript, moduleName=${jsNoduleConfig._moduleName}, run tests=${jsNoduleConfig._enableTests}")
+            val project = this
+            pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+                extensions.configure<KotlinMultiplatformExtension> {
+                    jsNoduleConfig.configure(project, this)
+                }
+            }
+        }
+
+        if(allModules[_name]?.first == CleanAndTest.KOTLIN) {
+            println("[$_name] --> Configure Kotlin tests, including Jacoco reports")
+            apply(plugin = "jacoco")
+
+            jacoco {
+                toolVersion = rootProject.libs.versions.jacoco.get()
+                reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
+            }
+
+            tasks {
+                val jacocoTestReport = register<JacocoReport>("jacocoTestReport") {
+                    group = "jacoco"
+
+                    dependsOn("jvmTest")
+                    configureJacocoForKmp(project)
+                    reports {
+                        xml.required = true
+                    }
+                }
+                register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+                    group = "jacoco"
+                    dependsOn(jacocoTestReport)
+                    val reportTask = jacocoTestReport.get()
+                    sourceDirectories.setFrom(reportTask.sourceDirectories)
+                    classDirectories.setFrom(reportTask.classDirectories)
+                    executionData.setFrom(reportTask.executionData)
+                    violationRules {
+                        rule {
+                            limit {
+                                minimum = getOverallCoverage().toBigDecimal()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val info = allModules[_name]
     if (info != null && info.second == PublishModule.YES) {
+        println("[$_name] --> Configure publication")
         apply(plugin = "com.vanniktech.maven.publish")
         configureVanniktechMavenPublish()
     }
@@ -281,75 +361,6 @@ allprojects {
 jacoco {
     toolVersion = rootProject.libs.versions.jacoco.get()
     reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
-}
-
-subprojects {
-    plugins.withType<JavaPlugin> {
-        extensions.configure<JavaPluginExtension> {
-            val jvmVersion = getJvmTargetVersion(this@subprojects)
-            toolchain { languageVersion.set(JavaLanguageVersion.of(jvmVersion.toInt())) }
-            sourceCompatibility = JavaVersion.toVersion(jvmVersion)
-            targetCompatibility = JavaVersion.toVersion(jvmVersion)
-        }
-    }
-
-    tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-        val jvmTargetName = getJvmTargetName(this@subprojects)
-        val target = JvmTarget.entries.find { it.name == jvmTargetName } ?: throw IllegalStateException(
-            "Invalid JVM target version '${getJvmTargetVersion(this@subprojects)}' defined in gradle.properties " +
-            "(property 'jvm.target'). The Kotlin compiler does not provide a constant for '$jvmTargetName'. " +
-            "Please choose a supported version (e.g., 21, 17, 11)."
-        )
-        compilerOptions.jvmTarget.set(target)
-    }
-
-    val jsNoduleConfig = jsModules[name]
-    if (jsNoduleConfig != null) {
-        println("Configure $name for JavaScript")
-        val project = this
-        pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
-            extensions.configure<KotlinMultiplatformExtension> {
-                jsNoduleConfig.configure(project, this)
-            }
-        }
-    }
-
-    if(allModules[name]?.first == CleanAndTest.KOTLIN) {
-        apply(plugin = "jacoco")
-
-        jacoco {
-            toolVersion = rootProject.libs.versions.jacoco.get()
-            reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
-        }
-
-        tasks {
-            val jacocoTestReport = register<JacocoReport>("jacocoTestReport") {
-                group = "jacoco"
-
-                dependsOn("jvmTest")
-                configureJacocoForKmp(project)
-                reports {
-                    xml.required = true
-                }
-            }
-
-            val jacocoTestCoverageVerification = register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
-                group = "jacoco"
-                dependsOn(jacocoTestReport)
-                val reportTask = jacocoTestReport.get()
-                sourceDirectories.setFrom(reportTask.sourceDirectories)
-                classDirectories.setFrom(reportTask.classDirectories)
-                executionData.setFrom(reportTask.executionData)
-                violationRules {
-                    rule {
-                        limit {
-                            minimum = getOverallCoverage().toBigDecimal()
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 // Helper, run as `gradle cleanAndTestAll`

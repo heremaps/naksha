@@ -20,7 +20,6 @@ package com.here.naksha.lib.view.merge;
 
 import com.here.naksha.lib.view.MergeOperation;
 import com.here.naksha.lib.view.ViewLayerFeature;
-import java.util.Comparator;
 import java.util.List;
 import naksha.model.request.FeatureTuple;
 import org.jetbrains.annotations.NotNull;

@@ -95,7 +95,8 @@ class ActivityLogHandlerTest {
     doCallRealMethod().when(spaceStorage).useWriteSession(any(), any());
     doCallRealMethod().when(spaceStorage).runInWriteSession(any(), any());
     handler = handlerForSpaceId(SPACE_ID);
-    NakshaContext.currentContext().withAppId("test-app");
+    final String test_app = "test-app";
+    NakshaContext.currentContext().withAppId(test_app);
   }
 
   @AfterEach

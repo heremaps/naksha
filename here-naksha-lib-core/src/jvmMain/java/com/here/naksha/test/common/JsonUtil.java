@@ -40,21 +40,17 @@ import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 
 import naksha.base.*;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Assertions;
 
 public class JsonUtil {
 
   private JsonUtil() {}
 
   public static <T extends AnyObject> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
-    T obj = null;
     try {
-      obj = JvmBoxingUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
-    } catch (Exception ex) {
-      Assertions.fail("Unable to parse jsonStr " + jsonStr, ex);
-      return null;
+      return JvmBoxingUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
+    } catch (Exception e) {
+      throw unchecked(e);
     }
-    return obj;
   }
 
   public static String toJson(final @NotNull Object obj) {
