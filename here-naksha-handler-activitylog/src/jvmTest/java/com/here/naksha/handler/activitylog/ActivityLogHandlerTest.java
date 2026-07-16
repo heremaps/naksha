@@ -261,6 +261,7 @@ class ActivityLogHandlerTest {
   @Test
   void shouldNotCalculateDiffAfterDeletion() throws Exception {
     // Given
+    //TODO is this still relevant? Are deleted features still stored?
     String featureId = "featureId";
     Timestamp ts0 = Timestamp.fromMillis(T0);
     Timestamp ts1 = Timestamp.fromMillis(T1);
@@ -282,6 +283,7 @@ class ActivityLogHandlerTest {
         requestForMissingPredecessorsReturns(List.of(
             nakshaFeature("featureId")
                 .withUuid(createdGuid.toString())
+                .withNuuid(deletedGuid.toString())
                 .withAction(Action.CREATE)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T0)
