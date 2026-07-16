@@ -528,6 +528,7 @@ data class Tuple @JvmOverloads constructor(
     fun getTagList(member: Member): TagList? {
         val raw = membersBook[member.name]
         if (raw is TagList) return raw
+        if (raw is ListProxy<*>) return raw.proxy(TagList::class)
         if (raw is PlatformList) return raw.proxy(TagList::class)
         if (raw is String) {
             val decoded = try { fromJSON(raw) } catch (_: Exception) { null }

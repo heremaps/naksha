@@ -424,7 +424,7 @@ SET search_path FROM CURRENT
 AS $$
   SELECT naksha_jbon2_feature_to_json(jbon)::jsonb
 $$;
-
+-- TODO change or create this feature to also take member input (other DB columns) to obtain back jsonb feature, in use case where ad hoc admin task needs to be done in DB admin tool like DBeaver
 CREATE OR REPLACE FUNCTION naksha_feature(feature bytea) RETURNS jsonb
 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
