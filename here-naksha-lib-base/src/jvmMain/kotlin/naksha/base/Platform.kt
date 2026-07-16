@@ -879,6 +879,7 @@ actual class Platform {
             initialize()
         }
 
+        @JvmStatic
         actual fun getTestStorageId(): String {
             val id = System.getenv("NAKSHA_TEST_STORAGE_ID");
             return if(id.isNullOrEmpty()) "local_psql_test_storage" else id
