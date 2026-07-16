@@ -5,10 +5,7 @@
       "id": "tc_1101_feature",
       "type": "Feature",
       "properties": {
-        "speedLimit": "60",
-        "@ns:com:here:xyz": {
-          "uuid": "612918C7-F7FD-48E5-A93D-25A5C05145A8"
-        }
+        "speedLimit": "60"
       },
       "geometry": {
         "type": "Point",
@@ -23,10 +20,7 @@
       "id": "tc_1101_feature",
       "type": "Feature",
       "properties": {
-        "speedLimit": "70",
-        "@ns:com:here:xyz": {
-          "uuid": "612918C7-F7FD-48E5-A93D-25A5C05145A8"
-        }
+        "speedLimit": "70"
       },
       "geometry": {
         "type": "Point",

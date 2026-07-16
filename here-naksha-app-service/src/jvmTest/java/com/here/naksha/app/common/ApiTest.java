@@ -19,6 +19,9 @@
 package com.here.naksha.app.common;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import naksha.base.Int64;
+import naksha.model.Naksha;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
@@ -47,11 +50,27 @@ public abstract class ApiTest {
     return nakshaClient;
   }
 
+  /** The identifier of the storage. */
+  protected static String databaseId;
+
+  /** The number of the storage. */
+  protected static Int64 databaseNumber;
+
+  /** The identifier of the data catalog. */
+  protected static String catalogId;
+
+  /** The number of the data catalog. */
+  protected static int catalogNumber;
+
   @BeforeAll
   public static void setupStorage(){
     if(storageInitialized.compareAndSet(false, true)){
       logger.info("Common storage not yet set, delegating initialization...");
-      CommonApiTestSetup.setupCommonStorage(new NakshaTestWebClient());
+      final var storageAndCatalog = CommonApiTestSetup.setupCommonStorage(new NakshaTestWebClient());
+      databaseId = storageAndCatalog.getFirst();
+      databaseNumber = Naksha.databaseNumber(databaseId);
+      catalogId = storageAndCatalog.getSecond();
+      catalogNumber = Naksha.catalogNumber(catalogId);
     }
   }
 }

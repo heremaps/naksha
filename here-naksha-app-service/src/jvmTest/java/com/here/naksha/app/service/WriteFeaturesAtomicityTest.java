@@ -31,6 +31,7 @@ import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
+import naksha.model.Naksha;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -45,12 +46,18 @@ class WriteFeaturesAtomicityTest extends ApiTest {
 
   @BeforeAll
   static void prepareEnv() {
-    setupHandlerAndSpace(nakshaClient, "WriteFeaturesAtomicity/setup");
+    collectionId = setupHandlerAndSpace(nakshaClient, "WriteFeaturesAtomicity/setup");
+    collectionNumber = Naksha.collectionNumber(collectionId);
   }
+
+  private static String collectionId;
+  private static int collectionNumber;
 
   @Test
   void tc_1101_duplicatedCreateShouldFail() throws URISyntaxException, IOException, InterruptedException {
     // Given: multiple features to save, some of which are invalid
+    // The uuid values in the fixture must be well-formed tuple-numbers belonging to the actual
+    // storage/map/collection the test space is backed by, so sample real ones from the server first.
     String createFeaturesJson = loadFileOrFail("WriteFeaturesAtomicity/TC1101_duplicatedCreateShouldFail/create_features.json");
 
     // When: saving these features
