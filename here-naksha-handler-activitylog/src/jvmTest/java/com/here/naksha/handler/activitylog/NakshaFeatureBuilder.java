@@ -39,6 +39,11 @@ class NakshaFeatureBuilder {
     return this;
   }
 
+  /**
+   * `puuid` is no longer populated by Naksha {@code lib-psql}, it will just be a custom JSON attribute assigned by users.
+   * @deprecated since 3.0.0-beta.41
+   */
+  @Deprecated(since = "3.0.0-beta.41")
   NakshaFeatureBuilder withPuuid(String puuid) {
     feature.getProperties().getXyz().put(PUUID, puuid);
     return this;

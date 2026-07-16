@@ -2,9 +2,12 @@ package com.here.naksha.handler.activitylog;
 
 import java.util.Random;
 import naksha.base.JvmInt64;
+import naksha.model.Action;
 import naksha.model.Guid;
 import naksha.model.TupleNumber;
 import naksha.model.Version;
+
+import static naksha.base.LibBaseKt.Int64;
 
 public final class GuidUtil {
   private static final Random random = new Random();
@@ -12,9 +15,7 @@ public final class GuidUtil {
   private GuidUtil(){}
 
   public static Version randomVersion() {
-    // Version uses only the lower 56 bits; the upper 8 bits must be 0 so that
-    // the value survives the toString()/fromString() round-trip intact.
-    return new Version(random.nextLong() & 0x00FF_FFFF_FFFF_FFFFL);
+    return Version.now(Int64(random.nextLong() & Version.SEQ_MAX.toLong()), Action.VERSION);
   }
 
   public static Guid guid(String featureId, Version version) {

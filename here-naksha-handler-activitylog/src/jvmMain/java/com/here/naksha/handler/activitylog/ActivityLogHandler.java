@@ -41,6 +41,7 @@ import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.StandardMembers;
+import naksha.model.objects.XyzMembers;
 import naksha.model.request.*;
 import naksha.model.request.ops.And;
 import naksha.model.request.ops.Equals;
@@ -145,8 +146,8 @@ public class ActivityLogHandler extends AbstractEventHandler {
 
   private void collectMissingPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
     List<TupleNumber> tnsOfRootsMissingPredecessor = collectedFeatures.activityLogRoots.stream()
-        .filter(f -> !collectedFeatures.allByNuuid.containsKey(f.getId()))
-        .map(f -> StandardMembers.Tn.getTupleNumber(f))
+        .filter(f -> !collectedFeatures.allByNuuid.containsKey(f.getProperties().getXyz().getUuid()))
+        .map(XyzMembers.XyzTn::getTupleNumber)
         .toList();
     if (!tnsOfRootsMissingPredecessor.isEmpty()) {
       List<NakshaFeature> missingPredecessorsByNextVersion =
