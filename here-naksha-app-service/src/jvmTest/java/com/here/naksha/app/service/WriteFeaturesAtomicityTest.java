@@ -47,7 +47,7 @@ class WriteFeaturesAtomicityTest extends ApiTest {
   @BeforeAll
   static void prepareEnv() {
     collectionId = setupHandlerAndSpace(nakshaClient, "WriteFeaturesAtomicity/setup");
-    collectionNumber = Naksha.collectionNumber(collectionId);
+    collectionNumber = collectionId != null ? Naksha.collectionNumber(collectionId) : 0;
   }
 
   private static String collectionId;

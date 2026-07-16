@@ -2,6 +2,7 @@ package com.here.naksha.app.common;
 
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static naksha.base.PlatformMapApi.map_get;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
@@ -18,6 +19,7 @@ import naksha.base.PlatformMap;
 import naksha.base.PlatformMapApi;
 import naksha.model.objects.NakshaCollection;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,7 +40,7 @@ public class CommonApiTestSetup {
    * @param nakshaClient web client that will send REST request
    * @return the identifier of the storage and the catalog.
    */
-  public static @NotNull Pair<@NotNull String, @NotNull String> setupCommonStorage(NakshaTestWebClient nakshaClient) {
+  public static @NotNull Pair<@NotNull String, @Nullable String> setupCommonStorage(NakshaTestWebClient nakshaClient) {
     try {
       logger.info("Setting up common storage from file: '{}'", COMMON_STORAGE_JSON);
       return createStorage(nakshaClient, COMMON_STORAGE_JSON);
@@ -54,9 +56,9 @@ public class CommonApiTestSetup {
    *
    * @param nakshaClient Naksha http client used for creating resource via REST API
    * @param setupDir     subdirectory of 'src/jvmTest/resources/unit_test_data/' that contains resource definition in json format
-   * @return the identifier of the underlying collection of the created space.
+   * @return the identifier of the underlying collection of the created space, if the space has an underlying collection.
    */
-  public static @NotNull String setupHandlerAndSpace(NakshaTestWebClient nakshaClient, String setupDir) {
+  public static @Nullable String setupHandlerAndSpace(NakshaTestWebClient nakshaClient, String setupDir) {
     try {
       createHandler(nakshaClient, setupDir + "/" + CREATE_HANDLER_JSON);
       return createSpace(nakshaClient, setupDir + "/" + CREATE_SPACE_JSON);
@@ -65,8 +67,8 @@ public class CommonApiTestSetup {
     }
   }
 
-  /** Creates a new space and returns the identifier of the underlying collection of the space. */
-  public static @NotNull String createSpace(NakshaTestWebClient nakshaClient, String spaceJsonFilePath)
+  /** Creates a new space and returns the identifier of the underlying collection of the space, if the sapce has any. */
+  public static @Nullable String createSpace(NakshaTestWebClient nakshaClient, String spaceJsonFilePath)
       throws URISyntaxException, IOException, InterruptedException {
     final var requestString = loadFileOrFail(spaceJsonFilePath);
     final var responseString = createAdminEntity(nakshaClient, "hub/spaces", requestString);
@@ -76,26 +78,35 @@ public class CommonApiTestSetup {
     final SpaceProperties spaceProperties = space.getProperties();
     assertNotNull(spaceProperties);
     final NakshaCollection collection = spaceProperties.getCollection();
-    assertNotNull(collection);
-    final String id = collection.getId();
-    assertNotNull(id);
-    return id;
+    return collection != null ? collection.getId() : null;
   }
 
   /** Creates a new storage and returns the identifier of the storage and the catalog. */
-  public static @NotNull Pair<@NotNull String, @NotNull String> createStorage(NakshaTestWebClient nakshaClient, String storageJsonFilePath)
+  public static @NotNull Pair<@NotNull String, @Nullable String> createStorage(NakshaTestWebClient nakshaClient, String storageJsonFilePath)
       throws URISyntaxException, IOException, InterruptedException {
     final var requestString = loadFileOrFail(storageJsonFilePath);
     final var responseString = createAdminEntity(nakshaClient, "hub/storages", requestString);
     final PlatformMap storage = assertInstanceOf(PlatformMap.class, Platform.fromJSON(responseString));
 
-    final String storageId = assertInstanceOf(String.class, PlatformMapApi.map_get(storage, "id"));
-    assertNotNull(storageId);
+    final String storageId = assertInstanceOf(String.class, map_get(storage, "id"));
+    assertNotNull("Missing 'id' property in response", storageId);
 
-    final PlatformMap properties = assertInstanceOf(PlatformMap.class, PlatformMapApi.map_get(storage, "properties"));
-    final String catalogId = assertInstanceOf(String.class, PlatformMapApi.map_get(properties, "schema"));
-    assertNotNull(catalogId);
-
+    final PlatformMap properties = assertInstanceOf(PlatformMap.class, map_get(storage, "properties"));
+    String catalogId = null;
+    // Note: Views configure the schema/catalog in `properties.dbConfig.schema`
+    Object raw = map_get(properties, "dbConfig");
+    if (raw instanceof PlatformMap dbConfig) {
+      raw =  map_get(dbConfig, "schema");
+      if (raw instanceof String s) catalogId = s;
+    }
+    // Note: Spaces configure the schema/catalog in `properties.schema`
+    if (catalogId == null) {
+      raw = map_get(properties, "schema");
+      if (raw instanceof String s) catalogId = s;
+    }
+    // Note: There are situations in which we simply have no clue what the underlying schema/catalog is.
+    //       This is really suboptimal for test cases, but technically not an issue as a space has
+    //       generally nothing to do with a storage, it can be fully independent of a storage!
     return new Pair<>(storageId, catalogId);
   }
 
@@ -105,7 +116,7 @@ public class CommonApiTestSetup {
     final var requestString = loadFileOrFail(handlerJsonFilePath);
     final var responseString = createAdminEntity(nakshaClient, "hub/handlers", requestString);
     final PlatformMap map = assertInstanceOf(PlatformMap.class, Platform.fromJSON(responseString));
-    final String id = assertInstanceOf(String.class, PlatformMapApi.map_get(map, "id"));
+    final String id = assertInstanceOf(String.class, map_get(map, "id"));
     assertNotNull(id);
     return id;
   }

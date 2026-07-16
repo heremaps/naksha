@@ -67,10 +67,12 @@ public abstract class ApiTest {
     if(storageInitialized.compareAndSet(false, true)){
       logger.info("Common storage not yet set, delegating initialization...");
       final var storageAndCatalog = CommonApiTestSetup.setupCommonStorage(new NakshaTestWebClient());
-      databaseId = storageAndCatalog.getFirst();
-      databaseNumber = Naksha.databaseNumber(databaseId);
-      catalogId = storageAndCatalog.getSecond();
-      catalogNumber = Naksha.catalogNumber(catalogId);
+      final String storage_id = storageAndCatalog.getFirst();
+      final String catalog_id = storageAndCatalog.getSecond();
+      databaseId = storage_id;
+      databaseNumber = Naksha.databaseNumber(storage_id);
+      catalogId = catalog_id;
+      catalogNumber = catalog_id != null ? Naksha.catalogNumber(catalog_id) : 0;
     }
   }
 }
