@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.common.test.CommonTestConstants;
 import naksha.base.Platform;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
@@ -98,7 +97,7 @@ abstract class PsqlTests {
       NakshaStorage.fromJSON(
         String.format(
           "{\"id\":\"%s\",\"className\":\"naksha.psql.PsqlTestStorage\"}",
-          CommonTestConstants.getTestStorageId())
+          Platform.getTestStorageId())
         )
     );
     assertNotNull(storage);
