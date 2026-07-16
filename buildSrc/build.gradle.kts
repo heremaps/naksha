@@ -12,6 +12,7 @@ java {
         ?.substringAfter("=")
         ?.trim()
         ?: throw Error("Missing 'jvm.target' property in root gradle.properties")
+    println("Use jvmVersion: $jvmVersion ------------------------------------------------------------")
     toolchain { languageVersion.set(JavaLanguageVersion.of(jvmVersion.toInt())) }
 }
 

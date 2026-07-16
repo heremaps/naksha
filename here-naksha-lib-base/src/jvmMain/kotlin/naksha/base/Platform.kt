@@ -209,6 +209,7 @@ actual class Platform {
             unsafeConstructor.isAccessible = true
             unsafe = unsafeConstructor.newInstance()
             val someByteArray = ByteArray(8)
+            @Suppress("removal")
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
             nonArgsConstuctorsCache = AtomicMap()
 
@@ -876,6 +877,11 @@ actual class Platform {
 
         init {
             initialize()
+        }
+
+        actual fun getTestStorageId(): String {
+            val id = System.getenv("NAKSHA_TEST_STORAGE_ID");
+            return if(id.isNullOrEmpty()) "local_psql_test_storage" else id
         }
     }
 }

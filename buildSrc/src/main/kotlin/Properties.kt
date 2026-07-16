@@ -24,15 +24,3 @@ fun Project.getRequiredPropertyFromRootProject(propertyKey: String): String {
         """.trimIndent()
     )
 }
-
-fun Project.configureNakshaJava() {
-    tasks.withType<Jar> {
-        from(rootProject.file("HERE_NOTICE"))
-        into("")
-        from(rootProject.file("LICENSE"))
-        into("")
-    }
-    apply(plugin = "java-test-fixtures")
-    apply(plugin = "jacoco")
-    apply(plugin = "org.jetbrains.kotlin.multiplatform")
-}

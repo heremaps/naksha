@@ -13,7 +13,6 @@ kotlin {
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))
                 api(project(":here-naksha-lib-model"))
-                api(libs.jetbrains.annotations)
 
                 // Can we get rid of this?
                 implementation(libs.google.guava)
@@ -22,13 +21,11 @@ kotlin {
                 implementation(libs.google.flatbuffers)
                 implementation(libs.bundles.spatial)
                 implementation(libs.bundles.jackson)
-
-                // This is required for testFixtures
-                api(libs.junit.jupiter.api)
             }
         }
         jvmTest {
             dependencies {
+                implementation(kotlin("test-junit5"))
                 implementation(libs.bundles.testing)
                 runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }

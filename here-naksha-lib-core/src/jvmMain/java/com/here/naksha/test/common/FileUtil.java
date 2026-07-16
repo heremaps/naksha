@@ -36,6 +36,7 @@ package com.here.naksha.test.common;
  * License-Filename: LICENSE
  */
 
+import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static com.here.naksha.test.common.JsonUtil.parseJson;
 
 import java.io.IOException;
@@ -43,7 +44,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import naksha.base.AnyObject;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Assertions;
 
 public class FileUtil {
 
@@ -54,11 +54,9 @@ public class FileUtil {
   public static String loadFileOrFail(final @NotNull String rootPath, final @NotNull String fileName) {
     final String filePath = rootPath + fileName;
     try {
-      String json = new String(Files.readAllBytes(Paths.get(filePath)));
-      return json;
+      return new String(Files.readAllBytes(Paths.get(filePath)));
     } catch (IOException e) {
-      Assertions.fail("Unable to read test file " + filePath, e);
-      return null;
+      throw unchecked(e);
     }
   }
 

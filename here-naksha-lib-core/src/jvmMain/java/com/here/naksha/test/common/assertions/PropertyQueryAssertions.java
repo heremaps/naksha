@@ -18,9 +18,8 @@
  */
 package com.here.naksha.test.common.assertions;
 
-import static org.junit.jupiter.api.Assertions.*;
-
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 import naksha.model.request.query.*;
 
@@ -36,28 +35,28 @@ public class PropertyQueryAssertions {
   }
 
   public static PropertyQueryAssertions assertThatPropertyQuery(IPropertyQuery subject) {
-    assertNotNull(subject);
+    if (subject == null) throw new AssertionError("subject is null");
     return new PropertyQueryAssertions(subject);
   }
 
   public PropertyQueryAssertions hasOp(AnyOp expectedOpType) {
-    assertInstanceOf(PQuery.class, subject);
-    assertEquals(expectedOpType, ((PQuery) subject).getOp());
+    if (!(subject instanceof PQuery)) throw new AssertionError("subject is not of type PQuery");
+    if (!Objects.equals(expectedOpType, ((PQuery) subject).getOp())) throw new AssertionError("op is not of type PQuery");
     return this;
   }
 
   public PropertyQueryAssertions isPOr() {
-    assertInstanceOf(POr.class, subject);
+    if (!(subject instanceof POr)) throw new AssertionError("subject is not of type POr");
     return this;
   }
 
   public PropertyQueryAssertions isPNot() {
-    assertInstanceOf(PNot.class, subject);
+    if (!(subject instanceof PNot)) throw new AssertionError("subject is not of type PNot");
     return this;
   }
 
   public PropertyQueryAssertions isPQuery(){
-    assertInstanceOf(PQuery.class, subject);
+    if (!(subject instanceof PQuery)) throw new AssertionError("subject is not of type PQuery");
     return this;
   }
 
@@ -70,27 +69,35 @@ public class PropertyQueryAssertions {
   }
 
   public PropertyQueryAssertions hasProperty(List<String> expected) {
-    assertNotNull(expected);
-    assertInstanceOf(PQuery.class, subject);
-    assertEquals(expected, ((PQuery) subject).getProperty().getPath());
+    if (expected == null) throw new AssertionError("expected is null");
+    if (!(subject instanceof PQuery)) throw new AssertionError("subject is not of type PQuery");
+    if (!Objects.equals(expected, ((PQuery) subject).getProperty().getPath())) throw new AssertionError("expected is not of type PQuery");
     return this;
   }
 
+  private <T> void assertArrayEquals(T[] a, T[] b) {
+    if (a == b) return;
+    if (a.length != b.length) throw new AssertionError("array lengths are not equal");
+    for (int i = 0; i < a.length; i++) {
+      if (!Objects.equals(a[i], b[i])) throw new AssertionError("array elements are not equal");
+    }
+  }
+
   public PropertyQueryAssertions hasPropertyWithPath(String... path) {
-    assertInstanceOf(PQuery.class, subject);
+    if (!(subject instanceof PQuery)) throw new AssertionError("subject is not of type PQuery");
     assertArrayEquals(path, ((PQuery) subject).getProperty().getPath().toArray());
     return this;
   }
 
   public PropertyQueryAssertions hasValue(Number value) {
-    assertInstanceOf(PQuery.class, subject);
-    assertEquals(value, ((PQuery) subject).getValue());
+    if (!(subject instanceof PQuery)) throw new AssertionError("subject is not of type PQuery");
+    if (!Objects.equals(value, ((PQuery) subject).getValue())) throw new AssertionError("value is not equal to subject.getValue()");
     return this;
   }
 
   public PropertyQueryAssertions hasValue(String value) {
-    assertInstanceOf(PQuery.class, subject);
-    assertEquals(value, ((PQuery) subject).getValue());
+    if (!(subject instanceof PQuery)) throw new AssertionError("subject is not of type PQuery");
+    if (!Objects.equals(value, ((PQuery) subject).getValue())) throw new AssertionError("value is not equal to subject.getValue()");
     return this;
   }
 
@@ -98,16 +105,20 @@ public class PropertyQueryAssertions {
   public final PropertyQueryAssertions hasChildrenThat(Consumer<PropertyQueryAssertions>... childrenAssertions) {
     if(subject instanceof PNot) {
       PNot pNotSubject = (PNot) subject;
-      assertEquals(1, childrenAssertions.length, "PNot can only have one child");
+      if (1 != childrenAssertions.length) throw new AssertionError("PNot can only have one child");
       PropertyQueryAssertions childAssertion = new PropertyQueryAssertions(pNotSubject.getQuery());
       childrenAssertions[0].accept(childAssertion);
     } else if(subject instanceof List) {
       List subjects = (List) subject;
-      assertEquals(subjects.size(), childrenAssertions.length, "Expecting single assertion per property query");
+      if (subjects.size() != childrenAssertions.length) throw new AssertionError("Expecting single assertion per property query");
       for (int i = 0; i < subjects.size(); i++) {
-        assertInstanceOf(IPropertyQuery.class, subjects.get(i));
-        PropertyQueryAssertions childAssertion = new PropertyQueryAssertions((IPropertyQuery) subjects.get(i));
-        childrenAssertions[i].accept(childAssertion);
+        try {
+          final var subject = (IPropertyQuery) subjects.get(i);
+          PropertyQueryAssertions childAssertion = new PropertyQueryAssertions(subject);
+          childrenAssertions[i].accept(childAssertion);
+        } catch (ClassCastException|NullPointerException e) {
+          throw new AssertionError("subject["+i+"] is not of type IPropertyQuery");
+        }
       }
     }
     return this;

@@ -635,5 +635,12 @@ expect class Platform {
          * @return new normalized string
          */
         fun normalize(value: String, form: NormalizerForm): String
+
+        /**
+         * Returns the identifier of the test storage, either read from environment variable `NAKSHA_TEST_STORAGE_ID` or a default value.
+         * @return the identifier of the test storage.
+         * @since 3.0
+         */
+        fun getTestStorageId(): String
     }
 }

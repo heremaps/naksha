@@ -835,5 +835,7 @@ return obj;
         actual fun fromJSON(utf8: ByteArray): Any? {
             TODO("Not yet implemented")
         }
+
+        actual fun getTestStorageId(): String = "local_psql_test_storage"
     }
 }

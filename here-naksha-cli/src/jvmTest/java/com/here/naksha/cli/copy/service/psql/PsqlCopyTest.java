@@ -24,8 +24,9 @@ import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+
+import naksha.base.Platform;
 import naksha.base.StringList;
-import naksha.common.test.CommonTestConstants;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
@@ -57,7 +58,7 @@ class PsqlCopyTest {
         "id": "%s",
         "className": "naksha.psql.PsqlTestStorage"
         }
-        """.formatted(CommonTestConstants.getTestStorageId()));
+        """.formatted(Platform.getTestStorageId()));
     private IStorage psqlStorage;
 
     @BeforeEach

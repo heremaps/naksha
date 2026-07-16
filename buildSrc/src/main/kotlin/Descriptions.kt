@@ -6,7 +6,6 @@ import org.gradle.api.Project
 private val Descriptions = mapOf(
     "here-naksha-app-service" to "TBD",
     "here-naksha-common-http" to "TBD",
-    "here-naksha-common-test" to "TBD",
     "here-naksha-handler-activitylog" to "Naksha handler, adds downward compatibility to XYZ-Hub activity-log.",
     //"here-naksha-handler-http" to "TBD",
     "here-naksha-lib-auth" to "Naksha library, provides helper classes to perform authorization against Wikvaya UPM (User Permission Management) authorization matrix.",
@@ -20,7 +19,6 @@ private val Descriptions = mapOf(
     //"here-naksha-lib-heapcache" to "TBD",
     "here-naksha-lib-hub" to "TBD",
     "here-naksha-lib-jbon" to "Naksha library, adding support to encode and decode JBON (Java Binary Object Notation).",
-    "here-naksha-lib-json" to "Naksha library, adding support to encode and decode JSON.",
     "here-naksha-lib-model" to "Naksha library, adding the Storage-Abstraction-Layer of Naksha, this is the base of all Naksha storage operations. It defines interfaces, helper classes, abstract base classes, and more, needed to use storage implementations or assisting in making new storage implementations.",
     "here-naksha-lib-psql" to "Naksha library, implementation of the Naksha Storage-Abstraction-Layer.",
     "here-naksha-lib-view" to "Naksha library, adding capabilities to combine multiple storages, maps, collections into a single virtual view.",
