@@ -8,7 +8,6 @@ import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import org.junit.jupiter.api.BeforeAll;
@@ -773,7 +772,7 @@ class CopyServiceTest {
         when(storage.newReadSession(sessionOptions)).thenReturn(readSession);
         when(readSession.execute(any())).thenReturn(
                 new SuccessResponse(
-                        NakshaFeatureList.fromList(features)
+                        nakshaFeatureListToFeatureTupleList(features)
                 )
         );
         return readSession;
