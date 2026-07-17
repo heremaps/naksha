@@ -1,6 +1,7 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.base.TupleNumber
 import naksha.geo.GeoUtil
 import naksha.geo.SpGeometry
 import kotlin.js.*
@@ -870,6 +871,13 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
             is Float -> encodeFloat32(value)
             is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
             is SpGeometry -> encodeGeometry(value)
+            is TupleNumber -> encodeTupleNumber(
+                value.databaseNumber,
+                value.catalogNumber,
+                value.collectionNumber,
+                value.featureNumber,
+                value.version
+            )
             is ByteArray -> if (value.isNotEmpty()) encodeByteArray(value) else encodeNull()
             is MapProxy<*, *> -> if (value::class.simpleName == "TagMap") encodeTagMap(value as MapProxy<String, *>) else encodeObject(value as MapProxy<String, *>)
             is ListProxy<*> -> if (value::class.simpleName == "TagList") encodeTagList(value) else encodeList(value)
