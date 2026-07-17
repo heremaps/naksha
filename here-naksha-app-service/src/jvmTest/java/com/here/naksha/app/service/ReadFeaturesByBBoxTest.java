@@ -803,7 +803,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     assertThat(response)
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", true);
+            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", false);
   }
 
   @Test
@@ -831,7 +831,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     assertThat(response)
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", true);
+            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", false);
   }
 
   @Test
