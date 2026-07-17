@@ -146,8 +146,9 @@ public class DefaultViewHandler extends AbstractEventHandler {
             final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
             resolver = new ObligatoryLayersResolver(obligatoryLayers);
         }
-        return view.useReadSession(SessionOptions.from(ctx),
-                readSession -> ((ViewReadSession) readSession).executeReadFeatures(rf, new MergeByStoragePriority(), resolver));
+        try (final var session = (ViewReadSession) view.newReadSession(SessionOptions.from(ctx))) {
+          return session.executeReadFeatures(rf, new MergeByStoragePriority(), resolver);
+        }
     }
 
     private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> spaceIds) {
