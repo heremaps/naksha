@@ -51,16 +51,16 @@ public abstract class ApiTest {
   }
 
   /** The identifier of the storage. */
-  protected static String databaseId;
+  public static String databaseId;
 
   /** The number of the storage. */
-  protected static Int64 databaseNumber;
+  public static Int64 databaseNumber;
 
   /** The identifier of the data catalog. */
-  protected static String catalogId;
+  public static String catalogId;
 
   /** The number of the data catalog. */
-  protected static int catalogNumber;
+  public static int catalogNumber;
 
   @BeforeAll
   public static void setupStorage(){
