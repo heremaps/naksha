@@ -249,6 +249,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * If [StoreMode.OFF] the storage will not retain deleted states of features from this collection, which boosts performance in certain operations, but impacts views as provided by `lib-view`.
      */
+    //TODO cleanup
     var storeDeleted by STORE_DELETED
 
     /**

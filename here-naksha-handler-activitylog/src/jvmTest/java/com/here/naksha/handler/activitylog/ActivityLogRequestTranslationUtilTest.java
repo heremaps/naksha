@@ -6,6 +6,7 @@ import static com.here.naksha.handler.activitylog.GuidUtil.guid;
 import static com.here.naksha.handler.activitylog.GuidUtil.randomVersion;
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import naksha.base.StringList;
@@ -13,8 +14,7 @@ import naksha.model.Guid;
 import naksha.model.Version;
 import naksha.model.objects.StandardMembers;
 import naksha.model.request.ReadFeatures;
-import naksha.model.request.ops.IsAnyOf;
-import naksha.model.request.ops.Op;
+import naksha.model.request.ops.*;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.POr;
 import naksha.model.request.query.PQuery;
@@ -42,13 +42,37 @@ class ActivityLogRequestTranslationUtilTest {
     // And: no feature ids are passed from original request
     assertTrue(readFeatures.getFeatureIds().isEmpty());
 
-    // And: there is a single Version passed from original featureId
+    // And: there is a single requested FeatureNumber + Version combo passed from original featureId
     Op op = readFeatures.getQueryMembers();
-    assertInstanceOf(IsAnyOf.class, op);
-    var isAnyOf = (IsAnyOf) op;
-    assertEquals(StandardMembers.Version.getName(), isAnyOf.getAt());
-    assertEquals(1, isAnyOf.getItems().getSize());
-    assertEquals(guid.tupleNumber.version, isAnyOf.getItems().get(0));
+    checkOpIsUuidRequest(op, List.of(guid.tupleNumber.version));
+  }
+
+  private void checkOpIsUuidRequest(final Op op, final List<Object> versions) {
+    assertInstanceOf(Or.class, op);
+    OpList orChildren = ((Or) op).getChildren();
+    assertEquals(versions.size(), orChildren.getSize());
+    List<Object> versionsFromOr = new ArrayList<>();
+    for (int i = 0; i < orChildren.getSize(); i++) {
+      Object child = orChildren.get(i);
+      assertInstanceOf(And.class, child);
+      And and = (And) child;
+      OpList andChildren = and.getChildren();
+      assertEquals(2, andChildren.getSize());
+
+      Object a = andChildren.get(0);
+      Object b = andChildren.get(1);
+      assertTrue(a instanceof Equals && b instanceof Equals);
+      Equals eqA = (Equals) a;
+      Equals eqB = (Equals) b;
+
+      // The two Equals may appear in either order; pick the one that targets Version
+      Equals versionEq = null;
+      if (StandardMembers.Version.getName().equals(eqA.getAt())) versionEq = eqA;
+      else if (StandardMembers.Version.getName().equals(eqB.getAt())) versionEq = eqB;
+      else fail("No Version equals in And clause");
+      versionsFromOr.add(versionEq.getValue());
+    }
+    assertEquals(versions, versionsFromOr);
   }
 
   @Test
@@ -79,11 +103,7 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And: all guids defined in featureIds were moved to ReadFeatures.guids
     Op op = readFeatures.getQueryMembers();
-    assertInstanceOf(IsAnyOf.class, op);
-    var isAnyOf = (IsAnyOf) op;
-    assertEquals(StandardMembers.Version.getName(), isAnyOf.getAt());
-    assertEquals(rawGuids.size(), isAnyOf.getItems().getSize());
-    assertTrue(isAnyOf.getItems().containsAll(List.of(version1, version2, version3)));
+    checkOpIsUuidRequest(op, List.of(version1, version2, version3));
   }
 
   @Test
@@ -170,13 +190,9 @@ class ActivityLogRequestTranslationUtilTest {
     assertEquals(1, finalFeatureIds.getSize());
     assertEquals(activityLogId, finalFeatureIds.get(0));
 
-    // And: guuids are populared from original feature ids
+    // And: guuids are populated from original feature ids
     Op op = readFeatures.getQueryMembers();
-    assertInstanceOf(IsAnyOf.class, op);
-    var isAnyOf = (IsAnyOf) op;
-    assertEquals(StandardMembers.Version.getName(), isAnyOf.getAt());
-    assertEquals(1, isAnyOf.getItems().getSize());
-    assertEquals(guid.tupleNumber.version, isAnyOf.getItems().get(0));
+    checkOpIsUuidRequest(op, List.of(version));
   }
 
   private void verifyAllHistoricalVersionsInCollection(ReadFeatures readFeatures) {

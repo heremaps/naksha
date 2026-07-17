@@ -27,7 +27,6 @@ import java.util.Set;
 
 import naksha.base.StringList;
 import naksha.model.Guid;
-import naksha.model.GuidList;
 import naksha.model.TupleNumber;
 import naksha.model.objects.StandardMembers;
 import naksha.model.request.ReadFeatures;
@@ -42,6 +41,11 @@ import naksha.model.request.query.StringOp;
 class ActivityLogRequestTranslationUtil {
 
   static final String UUID = "uuid";
+  /**
+   * `puuid` is no longer populated by Naksha {@code lib-psql}, it will just be a custom JSON attribute assigned by users.
+   * @deprecated since 3.0.0-beta.41
+   */
+  @Deprecated(since = "3.0.0-beta.41")
   static final String PUUID = "puuid";
   static final String ACTION = "action";
   static final String CREATED_AT = "createdAt";

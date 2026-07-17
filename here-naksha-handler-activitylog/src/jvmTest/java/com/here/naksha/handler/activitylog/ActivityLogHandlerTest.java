@@ -7,7 +7,6 @@ import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFea
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -54,8 +53,7 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
-import naksha.model.request.ops.IsAnyOf;
-import naksha.model.request.ops.Op;
+import naksha.model.request.ops.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -168,7 +166,6 @@ class ActivityLogHandlerTest {
     // And: old version of feature
     NakshaFeature oldFeature = nakshaFeature(featureId)
         .withUuid(initialUuid.toString())
-        .withPuuid(null)
         .withNuuid(newUuid.toString())
         .withAction(Action.CREATE)
         .withCustomProperties(
@@ -181,7 +178,6 @@ class ActivityLogHandlerTest {
     // And: new version of feature
     NakshaFeature newFeature = nakshaFeature(featureId)
         .withUuid(newUuid.toString())
-        .withPuuid(initialUuid.toString())
         .withNuuid(null)
         .withAction(Action.UPDATE)
         .withCustomProperties(Map.of(
@@ -243,7 +239,6 @@ class ActivityLogHandlerTest {
         initialHistoryAwareRequestReturns(List.of(
             nakshaFeature(featureId)
                 .withUuid(createdGuid.toString())
-                .withPuuid(null)
                 .withAction(Action.CREATE)
                 .build())
         ),
@@ -266,6 +261,7 @@ class ActivityLogHandlerTest {
   @Test
   void shouldNotCalculateDiffAfterDeletion() throws Exception {
     // Given
+    //TODO is this still relevant? Are deleted features still stored?
     String featureId = "featureId";
     Timestamp ts0 = Timestamp.fromMillis(T0);
     Timestamp ts1 = Timestamp.fromMillis(T1);
@@ -279,7 +275,6 @@ class ActivityLogHandlerTest {
         initialHistoryAwareRequestReturns(List.of(
             nakshaFeature(featureId)
                 .withUuid(deletedGuid.toString())
-                .withPuuid(createdGuid.toString())
                 .withAction(Action.DELETE)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T1)
@@ -288,7 +283,7 @@ class ActivityLogHandlerTest {
         requestForMissingPredecessorsReturns(List.of(
             nakshaFeature("featureId")
                 .withUuid(createdGuid.toString())
-                .withPuuid(null)
+                .withNuuid(deletedGuid.toString())
                 .withAction(Action.CREATE)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T0)
@@ -470,6 +465,43 @@ class ActivityLogHandlerTest {
 
   private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
     Op metaQuery = readFeatures.getQueryMembers();
+    if (metaQuery instanceof Or or) {
+      OpList orChildren = or.getChildren();
+      List<Int64> versions = new java.util.ArrayList<>();
+      if (orChildren.getSize() == 0) return false;
+      for (int i = 0; i < orChildren.getSize(); i++) {
+        Object child = orChildren.get(i);
+        if (!(child instanceof And and)) return false;
+        OpList andChildren = and.getChildren();
+        if (andChildren.getSize() != 2) return false;
+
+        Object first = andChildren.get(0);
+        Object second = andChildren.get(1);
+        if (!(first instanceof Equals eqA) || !(second instanceof Equals eqB)) return false;
+
+        // Determine which Equals is NextVersion and which is FeatureNumber (order may vary)
+        Equals nextEq;
+        if (StandardMembers.NextVersion.getName().equals(eqA.getAt())
+                && StandardMembers.FeatureNumber.getName().equals(eqB.getAt())) {
+          nextEq = eqA;
+        } else if (StandardMembers.NextVersion.getName().equals(eqB.getAt())
+                && StandardMembers.FeatureNumber.getName().equals(eqA.getAt())) {
+          nextEq = eqB;
+        } else {
+          return false;
+        }
+
+        Object val = nextEq.getValue();
+        if (!(val instanceof Int64 v)) return false;
+        versions.add(v);
+      }
+
+      if (expectedTns.length == 0) return versions.size() > 0;
+      if (versions.size() != expectedTns.length) return false;
+      return Arrays.stream(expectedTns)
+              .map(tn -> tn.version)
+              .allMatch(expected -> versions.stream().anyMatch(expected::equals));
+    }
     if (!(metaQuery instanceof IsAnyOf op)) return false;
     if (!StandardMembers.NextVersion.getName().equals(op.getAt())) return false;
     // next_version is an int8 column — the IsAnyOf items hold the Int64 version values.
