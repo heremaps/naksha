@@ -1,19 +1,9 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.model
+package naksha.base
 
-import naksha.base.Binary
-import naksha.base.Int64
-import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B256
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -22,16 +12,16 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * The in-memory representation of the unique address of a [Tuple].
+ * The in-memory representation of the unique address of a [naksha.model.Tuple].
  *
- * The full qualified [Tuple] address is a 256-bit value _(32 byte)_, persisting out of the database-number, catalog-number, collection-number, feature-number, and version. Note that the lower two bits of version encode the [action][Action].
+ * The full qualified [naksha.model.Tuple] address is a 256-bit value _(32 byte)_, persisting out of the database-number, catalog-number, collection-number, feature-number, and version. Note that the lower two bits of version encode the [action][Action].
  *
  * The tuple-number is stringified either into URN:
  * ```
  * urn:naksha:tn:{database-number}:{catalog-number}:{collection-number}:{feature-number}:{version}
  * ```
  *
- * There are no two [tuple][Tuple] with the same [tuple-number][TupleNumber]; world-wide.
+ * There are no two [tuple][naksha.model.Tuple] with the same [tuple-number][TupleNumber]; world-wide.
  * @since 3.0
  */
 @JsExport
@@ -57,12 +47,11 @@ data class TupleNumber(
     /**
      * The feature-number.
      * @since 3.0
-     * @see [Naksha.featureNumber]
      */
     @JvmField val featureNumber: Int64,
 
     /**
-     * The version _(transaction)_ of which the [Tuple] is part of.
+     * The version _(transaction)_ of which the [naksha.model.Tuple] is part of.
      * The lower 2 bits of [Version.number] encode the [Action].
      * @since 3.0
      * @see [Version.HEAD]
@@ -70,14 +59,14 @@ data class TupleNumber(
     @JvmField val version: Int64,
 ) : Comparable<TupleNumber> {
     /**
-     * The partition-number of the [Tuple], a value between `0` and `65536` _(exclusive)_.
+     * The partition-number of the [naksha.model.Tuple], a value between `0` and `65536` _(exclusive)_.
      * @since 3.0
      */
     val partitionNumber: Int
         get() = featureNumber.toInt() and 0xffff
 
     /**
-     * The [Action] applied to generate the [Tuple] referred by this [TupleNumber].
+     * The [Action] applied to generate the [naksha.model.Tuple] referred by this [TupleNumber].
      * Decoded from the lower 2 bits of [version].
      * @since 3.0
      */
@@ -85,7 +74,7 @@ data class TupleNumber(
         get() = Action.fromValue(version.toInt() and 3)
 
     /**
-     * Calculates the distribution partition-index where this [Tuple] will be located.
+     * Calculates the distribution partition-index where this [naksha.model.Tuple] will be located.
      *
      * If the given partitions are less than `2`, the method always returns `-1`. If the number is bigger than `65536` the result will be mapped back into the range between `0` and `65536` _(exclusive)_.
      * @param partitions the number of partitions
@@ -145,25 +134,6 @@ data class TupleNumber(
         return _string
     }
 
-    /**
-     * Returns an alternative tuple-number, if this tuple-number causes a conflict in the auto-generated `feature-number`.
-     *
-     * This only happens when new features are created, and another feature, with a different **feature-id**, results in the same **feature-number**, because the lower 63-bit of their [MD5](https://en.wikipedia.org/wiki/MD5) hash collide. It deterministically calculates a new alternative **feature-number** and creates a new [TupleNumber] from it, that has just a new feature-number (no other changes). When this fails gain due to another conflict, the step can be repeated using this same function on the new, failing again, [TupleNumber] to generated yet another one, aso.
-     *
-     * ### Warning
-     * The function returns deterministically always the same [TupleNumber], therefore, for more derivations it is necessary to call this function on the returned [TupleNumber] number, not again on the origin!
-     *
-     * - Throws [ILLEGAL_STATE] if the [featureNumber] is greater than `-1`, so not auto-generated.
-     * @return an alternative[TupleNumber]
-     * @since 3.0
-     */
-    fun resolveFeatureNumberConflict(): TupleNumber {
-        val fn = this.featureNumber
-        if (fn >= 0) throw NakshaException(ILLEGAL_STATE, "The feature-number is not auto-generated, failed to calculate alternative")
-        val new_fn = Naksha.alternativeInt64(fn)
-        return TupleNumber(databaseNumber, catalogNumber, collectionNumber, new_fn, version)
-    }
-
     private var _urn: String? = null
 
     /**
@@ -195,7 +165,7 @@ data class TupleNumber(
      * - `txn` _(aka [Version])_
      * @since 3.0
      */
-    fun toB64(): ByteArray = toByteArray(B64)
+    fun toB64(): ByteArray = toByteArray(TupleNumberVariant.B64)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
@@ -203,7 +173,7 @@ data class TupleNumber(
      * - `txn` _(aka [Version])_
      * @since 3.0
      */
-    fun toB128(): ByteArray = toByteArray(B128)
+    fun toB128(): ByteArray = toByteArray(TupleNumberVariant.B128)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
@@ -212,7 +182,7 @@ data class TupleNumber(
      * - `txn` _(aka [Version])_
      * @since 3.0
      */
-    fun toB160(): ByteArray = toByteArray(B160)
+    fun toB160(): ByteArray = toByteArray(TupleNumberVariant.B160)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
@@ -222,7 +192,7 @@ data class TupleNumber(
      * - `txn` _(aka [Version])_
      * @since 3.0
      */
-    fun toB192(): ByteArray = toByteArray(B192)
+    fun toB192(): ByteArray = toByteArray(TupleNumberVariant.B192)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront, encodes:
@@ -233,7 +203,7 @@ data class TupleNumber(
      * - `txn` _(aka [Version])_
      * @since 3.0
      */
-    fun toB256(): ByteArray = toByteArray(B256)
+    fun toB256(): ByteArray = toByteArray(TupleNumberVariant.B256)
 
     /**
      * Encode this [tuple-number][TupleNumber] into its binary representation, not storing the binary header upfront.
@@ -243,8 +213,6 @@ data class TupleNumber(
      * @param variant the [TupleNumberVariant] to use for the encoding.
      * @return the binary encoded [tuple-number][TupleNumber].
      * @since 3.0
-     * @see [naksha.model.request.query.MetaColumn.TUPLE_NUMBER]
-     * @see [naksha.model.request.query.MetaColumn.BASE_TUPLE_NUMBER]
      */
     fun toByteArray(variant: TupleNumberVariant): ByteArray {
         val byteArray = ByteArray(variant.encodingBytes)
@@ -316,7 +284,7 @@ data class TupleNumber(
         /**
          * The _HEAD_ [TupleNumber], to be used when a [tuple-number][TupleNumber] is not yet available.
          *
-         * This happens for various reasons, for example when a [Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a valid tuple-number.
+         * This happens for various reasons, for example when a [naksha.model.Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a valid tuple-number.
          * @since 3.0
          */
         val HEAD = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD.number)
@@ -339,25 +307,25 @@ data class TupleNumber(
         ): TupleNumber = fromBinary(Binary(bytes, offset), variant, tn.databaseNumber, tn.catalogNumber, tn.collectionNumber, tn.featureNumber)
 
         fun fromB256(bytes: ByteArray)
-                = fromByteArray(bytes, 0, B256)
+                = fromByteArray(bytes, 0, TupleNumberVariant.B256)
         fun fromB192(bytes: ByteArray, storageNumber: Int64)
-                = fromByteArray(bytes, 0, B192, storageNumber)
+                = fromByteArray(bytes, 0, TupleNumberVariant.B192, storageNumber)
         fun fromB160(bytes: ByteArray, storageNumber: Int64, mapNumber: Int)
-                = fromByteArray(bytes, 0, B160, storageNumber, mapNumber)
+                = fromByteArray(bytes, 0, TupleNumberVariant.B160, storageNumber, mapNumber)
         fun fromB128(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int)
-                = fromByteArray(bytes, 0, B128, storageNumber, mapNumber, collectionNumber)
+                = fromByteArray(bytes, 0, TupleNumberVariant.B128, storageNumber, mapNumber, collectionNumber)
         fun fromB64(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int, featureNumber: Int64)
-                = fromByteArray(bytes, 0, B64, storageNumber, mapNumber, collectionNumber, featureNumber)
+                = fromByteArray(bytes, 0, TupleNumberVariant.B64, storageNumber, mapNumber, collectionNumber, featureNumber)
 
         /**
          * Restore a [TupleNumber] from a binary encoding.
          * @param bytes the binary to read.
          * @param offset the index of the first byte to read.
          * @param variant the variant to read, if omitted, the value is auto-detected by the byte-array size.
-         * @param storageNumber if the binary does not encode the storage-number _(anything other than [B256])_, so variant is [B64], [B128], [B160], or [B192].
-         * @param mapNumber if the binary does not encode the map-number, so variant is [B64], [B128], or [B160].
-         * @param collectionNumber if the binary does not encode the collection-number, so variant is [B64] or [B128].
-         * @param featureNumber if the binary does not encode the feature-number, so variant is [B64].
+         * @param storageNumber if the binary does not encode the storage-number _(anything other than [TupleNumberVariant.TupleNumberVariant_C.B256])_, so variant is [TupleNumberVariant.TupleNumberVariant_C.B64], [TupleNumberVariant.TupleNumberVariant_C.B128], [TupleNumberVariant.TupleNumberVariant_C.B160], or [TupleNumberVariant.TupleNumberVariant_C.B192].
+         * @param mapNumber if the binary does not encode the map-number, so variant is [TupleNumberVariant.TupleNumberVariant_C.B64], [TupleNumberVariant.TupleNumberVariant_C.B128], or [TupleNumberVariant.TupleNumberVariant_C.B160].
+         * @param collectionNumber if the binary does not encode the collection-number, so variant is [TupleNumberVariant.TupleNumberVariant_C.B64] or [TupleNumberVariant.TupleNumberVariant_C.B128].
+         * @param featureNumber if the binary does not encode the feature-number, so variant is [TupleNumberVariant.TupleNumberVariant_C.B64].
          */
         @JsStatic
         @JvmStatic
@@ -377,10 +345,10 @@ data class TupleNumber(
          *
          * @param binary the binary to read.
          * @param variant the variant to read.
-         * @param storageNumber if the binary does not encode the storage-number _(anything other than [B256])_, so variant is [B64], [B128], [B160], or [B192].
-         * @param mapNumber if the binary does not encode the map-number, so variant is [B64], [B128], or [B160].
-         * @param collectionNumber if the binary does not encode the collection-number, so variant is [B64] or [B128].
-         * @param featureNumber if the binary does not encode the feature-number, so variant is [B64].
+         * @param storageNumber if the binary does not encode the storage-number _(anything other than [TupleNumberVariant.TupleNumberVariant_C.B256])_, so variant is [TupleNumberVariant.TupleNumberVariant_C.B64], [TupleNumberVariant.TupleNumberVariant_C.B128], [TupleNumberVariant.TupleNumberVariant_C.B160], or [TupleNumberVariant.TupleNumberVariant_C.B192].
+         * @param mapNumber if the binary does not encode the map-number, so variant is [TupleNumberVariant.TupleNumberVariant_C.B64], [TupleNumberVariant.TupleNumberVariant_C.B128], or [TupleNumberVariant.TupleNumberVariant_C.B160].
+         * @param collectionNumber if the binary does not encode the collection-number, so variant is [TupleNumberVariant.TupleNumberVariant_C.B64] or [TupleNumberVariant.TupleNumberVariant_C.B128].
+         * @param featureNumber if the binary does not encode the feature-number, so variant is [TupleNumberVariant.TupleNumberVariant_C.B64].
          */
         @JsStatic
         @JvmStatic
@@ -415,7 +383,7 @@ data class TupleNumber(
         fun fromString(string: String): TupleNumber {
             val parts = string.split(':')
             if (parts.size != ALL_PARTS) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "Invalid tuple-number string, require $ALL_PARTS parts: $string")
+                throw IllegalArgumentException("Invalid tuple-number string, require $ALL_PARTS parts: $string")
             }
             return fromParts(parts)
         }
@@ -437,6 +405,7 @@ data class TupleNumber(
          * Restore a [TupleNumber] from the given [URN](https://datatracker.ietf.org/doc/html/rfc8141), generated via [toUrn].
          * @param urn the [URN](https://datatracker.ietf.org/doc/html/rfc8141) from which to deserialize the [TupleNumber].
          * @return the deserialized [TupleNumber].
+         * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the given string is invalid.
          * @since 3.0
          */
         @JsStatic
@@ -447,7 +416,7 @@ data class TupleNumber(
                 || parts[URN] != "urn"
                 || parts[NAKSHA] != "naksha"
                 || parts[TN] != "tn") {
-                throw NakshaException(ILLEGAL_ARGUMENT, "Invalid tuple-number URN: $urn")
+                throw illegalArg("Invalid tuple-number URN: $urn")
             }
             return fromParts(parts, URN_STORAGE_NUMBER_OFFSET)
         }
@@ -464,13 +433,14 @@ data class TupleNumber(
          * @param parts the string parts of the tuple-number.
          * @param offset the index in the given list where the `storage-number` is located, defaults to `0`.
          * @return the deserialized [TupleNumber].
+         * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the given parts are invalid.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
         fun fromParts(parts: List<String>, offset:Int = 0): TupleNumber {
             if (offset < 0 || (offset + ALL_PARTS) > parts.size) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "Invalid tuple-number: $parts")
+                throw illegalArg("Invalid tuple-number: $parts")
             }
             val storageNumber = Int64(parts[offset + STORAGE_NUMBER].toLong(10))
             val mapNumber = parts[offset + MAP_NUMBER].toInt(10)

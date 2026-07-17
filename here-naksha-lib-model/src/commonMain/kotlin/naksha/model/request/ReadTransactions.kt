@@ -3,7 +3,7 @@
 package naksha.model.request
 
 import naksha.model.Naksha
-import naksha.model.Version
+import naksha.base.Version
 import kotlin.js.JsExport
 
 /**

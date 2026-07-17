@@ -3,8 +3,8 @@
 package naksha.model.request
 
 import naksha.base.NotNullProperty
-import naksha.model.NakshaError
-import naksha.model.NakshaException
+import naksha.base.NakshaError
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads

@@ -6,6 +6,8 @@ import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorInf
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;

@@ -342,7 +342,7 @@ open class SuccessResponse() : Response() {
     }
 
     /**
-     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.model.TupleNumber] read from the [TupleNumberBinaryArray], encoded in the given [ByteArray]. Basically, this will automatically wrap the given [ByteArray] into an [TupleNumberBinaryArray], and then convert it into a [FeatureTupleList].
+     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.base.TupleNumber] read from the [TupleNumberBinaryArray], encoded in the given [ByteArray]. Basically, this will automatically wrap the given [ByteArray] into an [TupleNumberBinaryArray], and then convert it into a [FeatureTupleList].
      *
      * @since 3.0
      * @see [featureTupleList]
@@ -353,7 +353,7 @@ open class SuccessResponse() : Response() {
     }
 
     /**
-     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.model.TupleNumber] read from the given [TupleNumberBinaryArray].
+     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.base.TupleNumber] read from the given [TupleNumberBinaryArray].
      *
      * This constructor will convert the binary-array into a [FeatureTupleList].
      *

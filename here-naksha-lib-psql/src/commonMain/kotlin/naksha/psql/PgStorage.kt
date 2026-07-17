@@ -4,7 +4,8 @@ package naksha.psql
 
 import naksha.base.fn.Fx2
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 
 // TODO: Create "naksha~admin" map with map-number 0
@@ -50,7 +51,7 @@ import kotlin.js.JsExport
  * ```SQL
  * SELECT naksha_init_session('id', 12345678, 'appName', 'appId', 'author');
  * ```
- * This creates a [PgStorage] singleton in the global context (`globalThis.naksha.storage`), a session singleton (`globalThis.naksha.session`), and the `NakshaContext` (`globalThis.naksha.context`). The _session_ is the one that is currently being used, and normally an [IWriteSession], even when execute on a read-replica, as the internal PLV8 code does not know that this instance is a read-replica. This is necessary for all other Naksha SQL functions to work. The storage only support a single [PgSession], which is already exposed via `naksha.session`, trying to acquire another session will always fail with [NakshaError.ILLEGAL_STATE]. Actually, within PLV8 each `plv8` session is always bound to a single connection/session. Usage example:
+ * This creates a [PgStorage] singleton in the global context (`globalThis.naksha.storage`), a session singleton (`globalThis.naksha.session`), and the `NakshaContext` (`globalThis.naksha.context`). The _session_ is the one that is currently being used, and normally an [IWriteSession], even when execute on a read-replica, as the internal PLV8 code does not know that this instance is a read-replica. This is necessary for all other Naksha SQL functions to work. The storage only support a single [PgSession], which is already exposed via `naksha.session`, trying to acquire another session will always fail with [naksha.base.NakshaError.ILLEGAL_STATE]. Actually, within PLV8 each `plv8` session is always bound to a single connection/session. Usage example:
  * ```
  * SELECT naksha_init_session('id', 12345678, 'appName', 'appId', 'author');
  * DO $$
@@ -121,11 +122,11 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      * A connection received through this method will not really close when [PgConnection.close] is invoked, but the wrapper returns the underlying JDBC connection to the connection pool of the instance it received it from. If really necessary, [PgConnection.terminate] can be used for this case (for example to ensure advisory locks are released).
      *
      * If this is the [PLV8 engine](https://plv8.github.io/), then there is only one connection available, so calling this before closing
-     * a previously acquired connection will always cause an [NakshaError.TOO_MANY_CONNECTIONS].
+     * a previously acquired connection will always cause an [naksha.base.NakshaError.TOO_MANY_CONNECTIONS].
      *
      * The returned connection normally, unless a special [init] function was provided, initializes the search-path so that all naksha function are available, and the admin schema is at the top of the search-path (recommended setup).
      *
-     * - Throws [naksha.model.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
+     * - Throws [naksha.base.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
      * @param options the options for the connection.
      * @param readOnly if the connection should be read-only.
      * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.

@@ -1,5 +1,6 @@
 package naksha.model
 
+import naksha.base.NakshaException
 import naksha.model.objects.Index
 import naksha.model.objects.JsonPath
 import naksha.model.objects.Member

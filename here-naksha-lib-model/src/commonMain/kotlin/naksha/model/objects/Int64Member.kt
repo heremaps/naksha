@@ -2,8 +2,8 @@ package naksha.model.objects
 
 import naksha.base.Int64
 import naksha.model.Tuple
-import naksha.model.illegalArg
-import naksha.model.illegalState
+import naksha.base.illegalArg
+import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.INT64
 import kotlin.js.JsName
 

@@ -3,9 +3,9 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.fn.Fn1
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.objects.Index
 import naksha.model.objects.IndexList
 import naksha.model.objects.Member

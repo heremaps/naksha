@@ -1,7 +1,5 @@
-package naksha.model
+package naksha.base
 
-import naksha.base.Int64
-import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -144,3 +142,4 @@ class Action : JsEnum() {
     var shortId: String = VERSION_SHORT
         private set
 }
+

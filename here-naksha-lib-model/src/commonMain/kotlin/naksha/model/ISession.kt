@@ -6,8 +6,6 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
 import naksha.model.request.*
 import kotlin.js.JsExport
-import kotlin.js.JsName
-import kotlin.jvm.JvmOverloads
 
 /**
  * When a session is opened, it is bound to the context in which the session shall operate.
@@ -72,7 +70,7 @@ interface ISession : AutoCloseable {
     /**
      * Execute the given [Request].
      *
-     * The read-only session will only be able to execute [ReadRequest]'s and throw an [NakshaError.UNSUPPORTED_OPERATION], when a [WriteRequest] is provided.
+     * The read-only session will only be able to execute [ReadRequest]'s and throw an [naksha.base.NakshaError.UNSUPPORTED_OPERATION], when a [WriteRequest] is provided.
      * @param request the request to execute.
      * @return the response.
      * @since 2.0.7

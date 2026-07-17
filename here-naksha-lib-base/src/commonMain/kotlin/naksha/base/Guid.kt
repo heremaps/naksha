@@ -1,13 +1,10 @@
 @file:Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate")
 
-package naksha.model
+package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.decodeURIComponent
 import naksha.base.Platform.PlatformCompanion.encodeURIComponent
-import naksha.model.objects.NakshaFeature
-import naksha.model.objects.StandardMembers
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -19,7 +16,7 @@ import kotlin.jvm.JvmStatic
  *
  * `urn:naksha:guid:{feature-id}:{database-number}:{catalog-number}:{collection-number}:{feature-number}:{version}`
  *
- * The [Guid] is exposed through the [XYZ namespace][XyzNs] in the [uuid][XyzNs.uuid] property.
+ * The [Guid] is exposed through the XYZ namespace in the `uuid` property.
  * @since 3.0.0
  */
 @JsExport
@@ -79,16 +76,6 @@ data class Guid(
         fun headOf(id: String) = Guid(id, TupleNumber.HEAD)
 
         /**
-         * Create a _HEAD_ [Guid] for the given feature.
-         * @param feature the feature.
-         * @return the _HEAD_ [Guid].
-         */
-        @JsName("headOfFeature")
-        @JsStatic
-        @JvmStatic
-        fun headOf(feature: NakshaFeature) = Guid(feature.id, TupleNumber.HEAD)
-
-        /**
          * Restore a [Guid] from the given URN (string).
          * @param urn the URN from which to deserialize the [Guid].
          * @return the deserialized [Guid].
@@ -110,15 +97,5 @@ data class Guid(
             }
             return Guid(featureId, tupleNumber)
         }
-
-        /**
-         * Create a [Guid] from the given [Tuple].
-         * @param tuple the [Tuple] for which to generate a [Guid].
-         * @return the created [Guid].
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun fromTuple(tuple: Tuple): Guid = Guid(tuple.id, tuple.tupleNumber)
     }
 }

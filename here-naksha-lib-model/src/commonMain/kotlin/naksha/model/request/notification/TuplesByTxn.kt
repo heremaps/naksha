@@ -4,7 +4,7 @@ package naksha.model.request.notification
 
 import naksha.base.Int64
 import naksha.base.MapProxy
-import naksha.model.Version
+import naksha.base.Version
 import naksha.model.request.FeatureTuple
 import naksha.model.request.FeatureTupleList
 import kotlin.js.JsExport

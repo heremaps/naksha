@@ -2,8 +2,8 @@ package naksha.model.objects
 
 import naksha.geo.SpGeometry
 import naksha.model.Tuple
-import naksha.model.illegalArg
-import naksha.model.illegalState
+import naksha.base.illegalArg
+import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.SPATIAL
 import kotlin.js.JsName
 

@@ -2,24 +2,12 @@
 
 package naksha.psql
 
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaException
-import naksha.model.objects.Member
 import naksha.model.objects.MemberType
-import naksha.model.objects.MemberType.MemberType_C.BYTE_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.INT64
-import naksha.model.objects.MemberType.MemberType_C.STRING
-import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
-import naksha.model.objects.StandardMembers.StandardMembers_C.Feature
-import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
-import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
-import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmStatic
 
 /**
  * A column descriptor for database columns.
@@ -138,7 +126,7 @@ data class PgColumn(
         /**
          * The version (with action in the lower 2 bits) of this tuple.
          *
-         * Together with [FN], forms the primary identification of a tuple within a collection. See [naksha.model.Version] for the layout.
+         * Together with [FN], forms the primary identification of a tuple within a collection. See [naksha.base.Version] for the layout.
          * @since 3.0
          */
         @JvmField

@@ -28,7 +28,7 @@ import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
 import com.here.naksha.lib.handlers.TagFilterHandler;
 import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;

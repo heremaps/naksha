@@ -3,6 +3,8 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Proxy
+import naksha.base.TupleNumber
+import naksha.base.Version
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
 import naksha.jbon.JbEncoder2

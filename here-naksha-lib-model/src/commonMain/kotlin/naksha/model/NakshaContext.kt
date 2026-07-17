@@ -6,7 +6,7 @@ import naksha.auth.UserRightsMatrix
 import naksha.base.*
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn3
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName

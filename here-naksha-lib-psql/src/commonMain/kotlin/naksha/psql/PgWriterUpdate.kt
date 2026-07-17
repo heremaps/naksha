@@ -4,8 +4,12 @@ import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
+import naksha.base.TupleNumber
+import naksha.base.conflict
+import naksha.base.featureNotFound
+import naksha.base.generalException
+import naksha.base.illegalState
 import naksha.jbon.HeapBook
-import naksha.model.*
 import naksha.model.objects.MemberType
 import naksha.model.objects.StandardMembers
 import naksha.psql.PgColumn.PgColumn_C.FN
@@ -175,7 +179,7 @@ LEFT JOIN inserted ON inserted.$FN = new_row.$FN
                 val inserted_fn = outRows.getInt64(row, "_inserted_fn") ?: {
                     // The only defined reason is that the expected version did not match.
                     if (expected_version != null && (expected_version and Int64(-4)) != (existing_version and Int64(-4))) {
-                        throw conflict("Atomic update failed, feature '${pgWrite.id}' was expected in version $existing_version, but found to be in $existing_version" )
+                        throw conflict("Atomic update failed, feature '${pgWrite.id}' was expected in version $existing_version, but found to be in $existing_version")
                     }
                     // Otherwise, there is an internal error.
                     throw generalException("Internal error, failed to update feature '${pgWrite.id}', update was skipped for unknown reason")

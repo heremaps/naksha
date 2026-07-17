@@ -1,10 +1,7 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.model
+package naksha.base
 
-import naksha.base.Int64
-import naksha.base.Timestamp
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -48,14 +45,14 @@ import kotlin.jvm.JvmStatic
  * `{year}:{month}:{day}:{seqWithAction}` form for backward-compatibility.
  *
  * @property number the raw 53-bit version number (upper 11 bits are always zero).
+ * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the given version number is invalid.
  * @since 3.0
  */
 @JsExport
 open class Version(@JvmField val number: Int64) : Comparable<Version> {
-    // TODO: When we move nack to Java, we can extend Number, so that we're basically like a Long.
     init {
         if ((number and Int64(MAX_SAFE_INTEGER)) != number) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "$number is not a valid version")
+            throw illegalArg("$number is not a valid version")
         }
     }
 
@@ -112,9 +109,9 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          * - A pure decimal encoding of the 64-bit [number] value.
          * - The human-readable form `{year}:{month}:{day}:{seq}` (seq is the 30-bit sequence, no action bits).
          *
-         * Throws [NakshaError.ILLEGAL_ARGUMENT] if the string is invalid.
          * @param s the string representation.
          * @since 3.0
+         * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT]  if the given string is no valid version.
          */
         @JsStatic
         @JvmStatic
@@ -122,33 +119,29 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
             try {
                 return Version(Int64(s.toLong()))
             } catch (_: Exception) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "Invalid version string: $s")
+                throw illegalArg("Invalid version string: $s")
             }
         }
 
         /**
          * Constructs a **dated** version from its components.
          *
-         * Validates all arguments against their allowed ranges and throws [IllegalArgumentException] if any
-         * value is out of range.
-         *
          * @param year  calendar year; must be in 16..32767.
          * @param month month of the year; must be in 1..12.
          * @param day   day of the month; must be in 1..31.
          * @param seq   30-bit sequence number within the day; must be in 0..1073741823 (0x3FFF_FFFF).
          * @param action the [Action] to encode in the lower 2 bits.
+         * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if any value is out of range.
          * @since 3.0
          */
         @JvmStatic
         @JsStatic
         fun auto(year: Int, month: Int, day: Int, seq: Int64, action: Action): Version {
-            require(year in YEAR_MIN..YEAR_MAX) {
-                "year must be in $YEAR_MIN..$YEAR_MAX, got $year"
-            }
-            require(month in 1..12) { "month must be in 1..12, got $month" }
-            require(day in 1..31)   { "day must be in 1..31, got $day" }
-            require(seq >= Int64(0) && seq <= SEQ_30_MASK) {
-                "seq must be in 0..${SEQ_30_MASK.toLong()} (30-bit), got $seq"
+            if (year !in YEAR_MIN..YEAR_MAX) throw illegalArg("year must be in $YEAR_MIN..$YEAR_MAX, got $year")
+            if (month !in 1..12) throw illegalArg("month must be in 1..12, got $month")
+            if (day !in 1..31) throw illegalArg("day must be in 1..31, got $day")
+            if (!((seq >= Int64(0) && seq <= SEQ_30_MASK))) {
+                throw illegalArg("seq must be in 0..${SEQ_30_MASK.toLong()} (30-bit), got $seq")
             }
             val txn = (Int64(year) shl 41) or
                       (Int64(month) shl 37) or
@@ -165,17 +158,16 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          * value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since
          * the lower 2 bits are reserved for [action].
          *
-         * Throws [IllegalArgumentException] if [seq] is out of range.
-         *
          * @param seq    41-bit sequence value; must be in 0..0x1FF_FFFF_FFFF.
          * @param action the [Action] to encode in the lower 2 bits.
          * @since 3.0
+         * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if [seq] is out of range..
          */
         @JvmStatic
         @JsStatic
         fun manual(seq: Int64, action: Action): Version {
-            require(seq >= Int64(0) && seq <= MANUAL_SEQ_MASK) {
-                "seq for a manual version must be in 0..${MANUAL_SEQ_MASK.toLong()} (41-bit), got $seq"
+            if (!(seq >= Int64(0) && seq <= MANUAL_SEQ_MASK)) {
+                throw illegalArg("seq for a manual version must be in 0..${MANUAL_SEQ_MASK.toLong()} (41-bit), got $seq")
             }
             return Version((seq shl 2) or Int64(action.intValue))
         }
@@ -199,7 +191,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          *
          * @param version the version to turn into a version.
          * @return the given version with the lowest two bit set.
-         * @throws NakshaException with error [ILLEGAL_ARGUMENT], if the given version is no valid version.
+         * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the given version is no valid version.
          * @since 3.0
          */
         @JvmStatic
@@ -215,7 +207,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         /**
          * The _HEAD_ sentinel version _(`9_007_199_254_740_991` aka `2^53-1`)_. Can be used as well to mask version to ensure valid version number, like `version & Version.HEAD`.
          *
-         * When a [Tuple] is the _HEAD_ state its next-version is synthesized as this value or as `null`, which has by definition the same meaning.
+         * When a `Tuple` is the _HEAD_ state its next-version is synthesized as this value or as `null`, which has by definition the same meaning.
          * @since 3.0
          */
         @JvmField

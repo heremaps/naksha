@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.Action
+import naksha.base.Action
 import naksha.model.SessionOptions
 import naksha.model.XyzNs
 import naksha.model.objects.NakshaFeature
@@ -8,7 +8,6 @@ import naksha.model.objects.StandardMembers
 import naksha.model.objects.XyzMembers
 import naksha.model.request.*
 import naksha.model.request.ops.*
-import naksha.model.request.query.*
 import naksha.model.RandomFeatures
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*

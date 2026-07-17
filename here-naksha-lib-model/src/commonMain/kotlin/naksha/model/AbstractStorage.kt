@@ -3,8 +3,9 @@ package naksha.model
 import naksha.base.AtomicRef
 import naksha.base.Int64
 import naksha.base.Platform
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
+import naksha.base.NakshaException
 import naksha.model.objects.NakshaStorage
 import kotlin.reflect.KClass
 
@@ -48,19 +49,22 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
 
     override var hardCap: Int = 16777216
         set(value) {
-            if (value > 16777216) throw NakshaException(ILLEGAL_ARGUMENT, "The maximum hard-cap supported is 16777216, but $value was requested")
+            if (value > 16777216) throw NakshaException(
+                ILLEGAL_ARGUMENT,
+                "The maximum hard-cap supported is 16777216, but $value was requested"
+            )
             field = if (value <= 0) 16777216 else value
         }
 
     /**
      * Initializes the storage, invoked by [Naksha].
      *
-     * If necessary, this method will create the storage structures to store transactions, install needed scripts, extensions, and do all other initialization works. If the storage is already initialized, the given storage-identifier, and storage-number, must match the existing ones, otherwise an [NakshaError.STORAGE_ID_MISMATCH] exception is raised. Setting up a new storage requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights, if this is not the case, an [NakshaError.FORBIDDEN] exception is raised.
+     * If necessary, this method will create the storage structures to store transactions, install needed scripts, extensions, and do all other initialization works. If the storage is already initialized, the given storage-identifier, and storage-number, must match the existing ones, otherwise an [naksha.base.NakshaError.STORAGE_ID_MISMATCH] exception is raised. Setting up a new storage requires that the current [context][NakshaContext] has the [superuser][NakshaContext.su] rights, if this is not the case, an [naksha.base.NakshaError.FORBIDDEN] exception is raised.
      *
-     * - Throws [NakshaError.FORBIDDEN], if not called as super-user, but super-user rights are necessary.
-     * - Throws [NakshaError.INITIALIZATION_FAILED], if the initialization failed.
-     * - Throws [NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given ones in the configuration.
-     * - Throws [NakshaError.ILLEGAL_ARGUMENT], if any configuration entry is invalid, for example [NakshaStorage.hardCap] too large.
+     * - Throws [naksha.base.NakshaError.FORBIDDEN], if not called as super-user, but super-user rights are necessary.
+     * - Throws [naksha.base.NakshaError.INITIALIZATION_FAILED], if the initialization failed.
+     * - Throws [naksha.base.NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given ones in the configuration.
+     * - Throws [naksha.base.NakshaError.ILLEGAL_ARGUMENT], if any configuration entry is invalid, for example [NakshaStorage.hardCap] too large.
      * @param config the storage configuration as required.
      * @param create if not _null_, overrides [NakshaStorage.create].
      * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].
@@ -117,7 +121,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
     }
 
     /**
-     * Ensures that the storage is initialized, otherwise throws an [NakshaError.UNINITIALIZED], to be used like `storage.useInitialized().id`.
+     * Ensures that the storage is initialized, otherwise throws an [naksha.base.NakshaError.UNINITIALIZED], to be used like `storage.useInitialized().id`.
      * @return this.
      * @since 3.0
      */

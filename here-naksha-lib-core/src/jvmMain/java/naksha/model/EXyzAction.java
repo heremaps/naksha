@@ -20,6 +20,7 @@ package naksha.model;
 
 import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.util.json.JsonEnum;
+import naksha.base.Action;
 
 /** The actions that are supported by Naksha.
  * @deprecated use {@link Action} instead

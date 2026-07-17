@@ -2,11 +2,11 @@ package naksha.psql
 
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.model.Action
+import naksha.base.Action
 import naksha.model.Naksha
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.model.Version
+import naksha.base.Version
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest

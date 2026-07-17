@@ -6,6 +6,7 @@ import naksha.base.AtomicBool
 import naksha.base.AtomicInt64
 import naksha.base.AtomicRef
 import naksha.base.Int64
+import naksha.base.TupleNumber
 import naksha.base.fn.Fn1
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
@@ -110,7 +111,7 @@ class TupleCache internal constructor() {
     /**
      * Read a single tuple from cache with zero latency.
      *
-     * @param tupleNumber the [TupleNumber] of the [Tuple] to read.
+     * @param tupleNumber the [naksha.base.TupleNumber] of the [Tuple] to read.
      * @return the [Tuple], if it is in the cache, `null` otherwise.
      * @since 3.0
      * @see [getAll]

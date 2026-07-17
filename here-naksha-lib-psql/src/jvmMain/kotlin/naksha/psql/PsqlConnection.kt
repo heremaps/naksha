@@ -1,11 +1,10 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 import naksha.model.SessionOptions
 import java.lang.ref.WeakReference
-import java.sql.SQLException
 
 /**
  * A thin wrapper around a JDBC PostgresQL connection, which implements the [PgConnection] interface.

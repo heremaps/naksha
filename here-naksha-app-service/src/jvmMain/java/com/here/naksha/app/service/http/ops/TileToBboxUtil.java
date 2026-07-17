@@ -22,8 +22,8 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE_QUADKEY;
 
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import naksha.geo.SpPolygon;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import org.jetbrains.annotations.NotNull;
 
 public class TileToBboxUtil {

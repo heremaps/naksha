@@ -3,9 +3,6 @@ package naksha.psql
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
-import naksha.model.illegalState
-import naksha.model.objects.StandardMembers
-import naksha.model.objects.StoreMode
 import naksha.psql.PgColumn.PgColumn_C.FN
 import naksha.psql.PgColumn.PgColumn_C.NEXT_VERSION
 import naksha.psql.PgColumn.PgColumn_C.VERSION

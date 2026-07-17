@@ -8,7 +8,9 @@ import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaException
+import naksha.base.TupleNumber
 import naksha.model.request.FeatureTupleList
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -18,7 +20,7 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * A helper that allows reading a binary encoded array of [TupleNumber]'s.
+ * A helper that allows reading a binary encoded array of [naksha.base.TupleNumber]'s.
  *
  * This binary can be serialized technically, but just using the [Platform.toJSON][naksha.base.Platform.toJSON] method, because it requires a binary encoding, which means serialization and deserialization into a [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data), which is normally not supported out of the box by standard JSON parsers/serializers, it is a proprietary extension to the JSON standard, the same way that 64-bit integers are handled as special [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data) by [Platform.toJSON][naksha.base.Platform.toJSON].
  *

@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.Action
 import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Int64
@@ -23,8 +24,11 @@ import naksha.jbon.HeapBook
 import naksha.jbon.JB2_MAGIC
 import naksha.jbon.JbDecoder2
 import naksha.jbon.JbEncoder2
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
+import naksha.base.TupleNumber
+import naksha.base.Version
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -55,7 +59,7 @@ data class Tuple @JvmOverloads constructor(
     @JvmField val membersBook: IBook,
 
     /**
-     * After encoding a [NakshaFeature] into a [Tuple] using [encodeFeature] method, the [previousTupleNumber] will be set by the encoder to the [TupleNumber] of the given feature; if it had any.
+     * After encoding a [NakshaFeature] into a [Tuple] using [encodeFeature] method, the [previousTupleNumber] will be set by the encoder to the [naksha.base.TupleNumber] of the given feature; if it had any.
      *
      * This is metadata, it can as well be set manually, when a tuple is read from a storage.
      * @since 3.0
@@ -76,7 +80,7 @@ data class Tuple @JvmOverloads constructor(
          * TODO: `atomic` is write-path-specific; reconsider moving it out of this general encoder.
          * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
          * @since 3.0
-         * @throws NakshaException if any fatal error happens when encoding.
+         * @throws naksha.base.NakshaException if any fatal error happens when encoding.
          */
         @JsStatic
         @JvmStatic

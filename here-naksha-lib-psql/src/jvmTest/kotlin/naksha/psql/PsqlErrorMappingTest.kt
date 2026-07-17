@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.NakshaError
+import naksha.base.NakshaError
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ErrorResponse
 import naksha.model.request.Write

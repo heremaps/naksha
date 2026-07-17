@@ -6,8 +6,8 @@ import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.geo.SpGeometry
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads

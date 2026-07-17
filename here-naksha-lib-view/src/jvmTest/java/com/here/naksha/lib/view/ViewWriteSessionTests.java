@@ -3,7 +3,7 @@ package com.here.naksha.lib.view;
 import naksha.base.StringList;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
-import naksha.model.Action;
+import naksha.base.Action;
 import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.objects.NakshaCollection;

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core;
 
-import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.base.NakshaError.EXCEPTION;
 
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.feature.LoadFeaturesEvent;
@@ -26,7 +26,7 @@ import com.here.naksha.lib.core.models.payload.events.feature.ModifyFeaturesEven
 import java.util.ArrayList;
 import java.util.List;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.XyzResponseType;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;

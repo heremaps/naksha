@@ -1,8 +1,8 @@
 package naksha.model.objects
 
 import naksha.model.Tuple
-import naksha.model.illegalArg
-import naksha.model.illegalState
+import naksha.base.illegalArg
+import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.FLOAT32
 import kotlin.js.JsName
 

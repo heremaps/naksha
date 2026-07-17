@@ -1,5 +1,7 @@
 package com.here.naksha.cli.storages;
 
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.*;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;

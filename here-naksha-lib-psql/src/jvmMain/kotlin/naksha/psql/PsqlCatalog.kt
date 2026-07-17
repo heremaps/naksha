@@ -2,7 +2,7 @@ package naksha.psql
 
 import com.github.benmanes.caffeine.cache.*
 import naksha.base.*
-import naksha.model.illegalArg
+import naksha.base.illegalArg
 import java.util.concurrent.TimeUnit
 
 /**

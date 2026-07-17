@@ -128,7 +128,7 @@ class OrderBy() : AnyObject() {
     }
 
     /**
-     * Optionally next order, so after ordering by this [Member], order those that are equal by the given next one. If `null`, the order will switch to just be deterministic, when the [Member] values are equal so far _(internally storages are recommended to use the [TupleNumber][naksha.model.TupleNumber] to the final ordering)_.
+     * Optionally next order, so after ordering by this [Member], order those that are equal by the given next one. If `null`, the order will switch to just be deterministic, when the [Member] values are equal so far _(internally storages are recommended to use the [TupleNumber][naksha.base.TupleNumber] to the final ordering)_.
      * @since 3.0
      */
     var next by NEXT_OR_NULL

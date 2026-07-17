@@ -27,7 +27,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import java.util.stream.Collectors;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;

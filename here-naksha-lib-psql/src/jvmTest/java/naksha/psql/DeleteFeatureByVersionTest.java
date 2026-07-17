@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import naksha.base.StringList;
-import naksha.model.NakshaError;
-import naksha.model.Version;
+import naksha.base.NakshaError;
+import naksha.base.Version;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;

@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.illegalId
 import naksha.model.Naksha.NakshaCompanion.MAX_ID_LENGTH
 import naksha.model.Naksha.NakshaCompanion.MAX_INTERNAL_ID_LENGTH
 import kotlin.js.JsExport
@@ -117,7 +118,7 @@ enum class NakshaIdType(
      * - `FEATURE` - no limit
      *
      * @return the given identifier, if it is valid; otherwise throws an exception.
-     * @throws NakshaException with [ILLEGAL_ID][naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID], when `throwOnError` is _true_ and the identifier is not valid for the selected purpose (`idType`).
+     * @throws naksha.base.NakshaException with [ILLEGAL_ID][naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ID], when `throwOnError` is _true_ and the identifier is not valid for the selected purpose (`idType`).
      * @since 3.0
      * @see [isValidId]
      */
@@ -141,7 +142,7 @@ enum class NakshaIdType(
      * @param id the identifier to test.
      * @param throwOnError if an exception should be thrown, when the verification failed.
      * @return _true_ if the identifier is valid; _false_ otherwise.
-     * @throws NakshaException with [ILLEGAL_ID][naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID], when `throwOnError` is _true_ and the identifier is not valid for the selected purpose (`idType`).
+     * @throws naksha.base.NakshaException with [ILLEGAL_ID][naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ID], when `throwOnError` is _true_ and the identifier is not valid for the selected purpose (`idType`).
      * @since 3.0
      * @see [verify]
      */

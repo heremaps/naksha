@@ -22,7 +22,7 @@ import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;

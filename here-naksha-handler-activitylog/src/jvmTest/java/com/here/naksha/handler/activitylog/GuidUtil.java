@@ -2,10 +2,10 @@ package com.here.naksha.handler.activitylog;
 
 import java.util.Random;
 import naksha.base.JvmInt64;
-import naksha.model.Action;
-import naksha.model.Guid;
-import naksha.model.TupleNumber;
-import naksha.model.Version;
+import naksha.base.Action;
+import naksha.base.Guid;
+import naksha.base.TupleNumber;
+import naksha.base.Version;
 
 import static naksha.base.LibBaseKt.Int64;
 

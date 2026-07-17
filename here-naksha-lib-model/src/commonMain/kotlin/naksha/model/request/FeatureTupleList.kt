@@ -4,7 +4,9 @@ package naksha.model.request
 
 import naksha.base.ListProxy
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
+import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic

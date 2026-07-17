@@ -2,15 +2,11 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.IntMutable
-import naksha.base.fn.Fn1
-import naksha.base.fn.Fx1
-import naksha.base.fn.Fx2
 import naksha.base.fn.Fx3
 import naksha.model.Tuple
-import naksha.model.TupleNumber
-import naksha.model.Version
-import naksha.model.illegalArg
-import naksha.model.illegalState
+import naksha.base.Version
+import naksha.base.illegalArg
+import naksha.base.illegalState
 import naksha.model.objects.NakshaTx
 import naksha.model.objects.StandardMembers
 import kotlin.collections.mutableMapOf

@@ -6,12 +6,9 @@ import naksha.base.*
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.NakshaContext
 import naksha.model.Naksha
-import naksha.model.NakshaError
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaException
-import naksha.model.TupleNumber
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaException
 import kotlin.js.*
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic

@@ -7,8 +7,8 @@ import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.GuidList
-import naksha.model.Version
-import naksha.model.illegalArg
+import naksha.base.Version
+import naksha.base.illegalArg
 import naksha.model.request.ops.Op
 import naksha.model.request.query.IPropertyQuery
 import naksha.model.request.query.ITagQuery
@@ -192,7 +192,7 @@ open class ReadFeatures : ReadRequest() {
     }
 
     /**
-     * Limit the read to states at or before the given maximum version, `null` if no limit _([HEAD][naksha.model.Version.VersionCompanion.HEAD])_.
+     * Limit the read to states at or before the given maximum version, `null` if no limit _([HEAD][Version.VersionCompanion.HEAD])_.
      *
      * This effectively requests a specific historical snapshot, when no [minVersion] is set and [versions] is `1`, which is the default for both parameters.
      *
@@ -244,7 +244,7 @@ open class ReadFeatures : ReadRequest() {
     var featureIds: StringList by STRING_LIST
 
     /**
-     * Add all features that match the given [GUIDs][naksha.model.Guid] into the result-set.
+     * Add all features that match the given [GUIDs][naksha.base.Guid] into the result-set.
      *
      * This can be used to load features in specific states.
      * @since 3.0.0

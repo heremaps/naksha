@@ -5,8 +5,8 @@ package naksha.model.request.ops
 import naksha.base.IntList
 import naksha.base.JsEnum
 import naksha.geo.HereTile
-import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import naksha.base.NakshaException
 import naksha.model.objects.XyzMembers
 import naksha.model.request.RequestQuery
 import naksha.model.request.query.DoubleOp

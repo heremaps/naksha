@@ -11,7 +11,7 @@ import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaDictionary
@@ -190,7 +190,7 @@ open class Write : AnyObject() {
     /**
      * The expected version that should be modified.
      *
-     * If not `null` and [atomic] is `true`, then the operation is atomic and expects that the existing _HEAD_ state is in the given [version][naksha.model.Version].
+     * If not `null` and [atomic] is `true`, then the operation is atomic and expects that the existing _HEAD_ state is in the given [version][Version].
      *
      * If not explicitly set, defaults to `feature.properties.xyz.guid.tupleNumber.version`.
      * @since 3.0
@@ -234,7 +234,7 @@ open class Write : AnyObject() {
     /**
      * The expected version that should be modified.
      *
-     * If not `null` and [atomic] is `true`, then the operation is atomic and expects that the existing _HEAD_ state is in the given [version][naksha.model.Version].
+     * If not `null` and [atomic] is `true`, then the operation is atomic and expects that the existing _HEAD_ state is in the given [version][Version].
      *
      * If not explicitly set, defaults to `feature.properties.xyz.guid.tupleNumber`.
      * @since 3.0

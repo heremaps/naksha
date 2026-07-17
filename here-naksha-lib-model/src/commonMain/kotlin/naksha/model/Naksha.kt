@@ -9,15 +9,14 @@ import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
 import naksha.model.NakshaVersion.Companion.CURRENT
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**

@@ -85,7 +85,7 @@ interface IResultSet {
     /**
      * Force the storage to validate more tuples.
      *
-     * If the result-set is [incomplete][isIncomplete], the method will throw an [NakshaError.ILLEGAL_STATE] error.
+     * If the result-set is [incomplete][isIncomplete], the method will throw an [naksha.base.NakshaError.ILLEGAL_STATE] error.
      * @param end the offset of the first tuple **not** to validate, if `tuples().size` is given, the result-set will become [complete][fetchAll].
      */
     fun validateTill(end: Int)
@@ -112,8 +112,8 @@ interface IResultSet {
     /**
      * Creates a handle into the result-set, requires that the result-set is either [complete][fetchAll] or [partially complete][isPartial], and that is valid until the given [end].
      *
-     * - If the given [end] is larger than [IResultSet.validationEnd], the method will throw an [NakshaError.ILLEGAL_STATE] error.
-     * - If the result-set is [incomplete][isIncomplete], the method will throw an [NakshaError.ILLEGAL_STATE] error.
+     * - If the given [end] is larger than [IResultSet.validationEnd], the method will throw an [naksha.base.NakshaError.ILLEGAL_STATE] error.
+     * - If the result-set is [incomplete][isIncomplete], the method will throw an [naksha.base.NakshaError.ILLEGAL_STATE] error.
      * @param start the offset of the first tuples to include.
      * @param end the offset of the first tuples to exclude.
      * @return returns a handle that allows to read results between the given [offset], and the given [end], or _null_, if there are no more results (the new result-set would be empty).

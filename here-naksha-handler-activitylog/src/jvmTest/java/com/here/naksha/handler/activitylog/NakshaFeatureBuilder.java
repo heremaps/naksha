@@ -9,7 +9,7 @@ import static naksha.model.XyzNs.NUUID;
 
 import java.util.Map;
 import naksha.base.JvmInt64;
-import naksha.model.Action;
+import naksha.base.Action;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
