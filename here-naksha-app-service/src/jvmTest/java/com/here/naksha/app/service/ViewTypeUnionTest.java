@@ -10,7 +10,10 @@ import static com.github.tomakehurst.wiremock.client.WireMock.verify;
 import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
@@ -20,6 +23,10 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+
+import com.here.naksha.app.service.util.TupleInfo;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -34,6 +41,8 @@ public class ViewTypeUnionTest extends ApiTest {
 
     private static final String ENDPOINT = "/view_union/test/bbox";
 
+    static private NakshaFeature feature1234;
+    static private NakshaFeature feature5678;
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
@@ -50,6 +59,19 @@ public class ViewTypeUnionTest extends ApiTest {
         final String initialFeaturesJson2 = loadFileOrFail("ViewUnion/setup/psql_storage_space/create_features.json");
         final HttpResponse<String> response2 = nakshaClient.post("hub/spaces/" + PSQL_SPACE_ID + "/features", initialFeaturesJson2, UUID.randomUUID().toString());
         assertThat(response2).hasStatus(200);
+        final var features = parseJson(response2.body(), XyzFeatureCollection.class).getFeatures();
+        assertEquals(2, features.size());
+        final NakshaFeature f1 = features.get(0);
+        assertNotNull(f1);
+        final NakshaFeature f2 = features.get(1);
+        assertNotNull(f2);
+        if ("1234".equals(f1.getId())) {
+          feature1234 = f1;
+          feature5678 = f2;
+        } else {
+          feature1234 = f2;
+          feature5678 = f1;
+        }
     }
 
     @Test
@@ -59,10 +81,12 @@ public class ViewTypeUnionTest extends ApiTest {
 
         // Given: Features By BBox request (against view space)
         final String bboxQueryParam = "west=12.79&south=53.59&east=12.82&north=53.62";
-        final String httpStorageMockResponse =
-                loadFileOrFail("ViewUnion/ByBBox/http_storage_response.json");
-        final String expectedViewResponse =
-                loadFileOrFail("ViewUnion/ByBBox/feature_response_part.json");
+        final String httpStorageMockResponse = loadFileOrFail("ViewUnion/ByBBox/http_storage_response.json")
+            .replace("${uuid1234}", feature1234.getProperties().getXyz().getUuid())
+            .replace("${uuid5678}", feature5678.getProperties().getXyz().getUuid());
+        final String expectedViewResponse = loadFileOrFail("ViewUnion/ByBBox/feature_response_part.json")
+            .replace("${uuid1234}", feature1234.getProperties().getXyz().getUuid())
+            .replace("${uuid5678}", feature5678.getProperties().getXyz().getUuid());
         String streamId = UUID.randomUUID().toString();
 
         final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);

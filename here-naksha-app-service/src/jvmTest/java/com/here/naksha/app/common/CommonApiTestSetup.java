@@ -81,7 +81,12 @@ public class CommonApiTestSetup {
     return collection != null ? collection.getId() : null;
   }
 
-  /** Creates a new storage and returns the identifier of the storage and the catalog. */
+  /**
+   * Creates a new storage and returns the identifier of the storage and the catalog.
+   * @param nakshaClient the client to use.
+   * @param storageJsonFilePath the file-path of the request.
+   * @return the database-id <i>(aka the storage-id)</i> and the optional catalog-id <i>(aka map-id)</i>, if the storage request sets up a default catalog <i>(does not always happen for view storages)</i>.
+   */
   public static @NotNull Pair<@NotNull String, @Nullable String> createStorage(NakshaTestWebClient nakshaClient, String storageJsonFilePath)
       throws URISyntaxException, IOException, InterruptedException {
     final var requestString = loadFileOrFail(storageJsonFilePath);
