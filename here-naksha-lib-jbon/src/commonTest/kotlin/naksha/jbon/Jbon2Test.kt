@@ -1,6 +1,8 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.base.TupleNumber
+import naksha.base.Version
 import kotlin.math.PI
 import kotlin.test.*
 
@@ -785,6 +787,99 @@ class Jbon2Test {
         assertEquals("hello", p["a"])
         assertEquals("hello", p["b"])
         assertEquals("world", p["c"])
+    }
+
+    // -----------------------------------------------------------------------
+    // TupleNumber — 33 bytes (lead-in 0000_1111 + 8+4+4+8+8 payload)
+    // -----------------------------------------------------------------------
+
+    @Test
+    fun testTupleNumberHead() {
+        val tn = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD.number)
+        val enc = singleEncode(tn)
+        assertEquals(33, enc.end, "TupleNumber must be exactly 33 bytes")
+        assertEquals(JB2_TUPLE_NUMBER.toByte(), enc.getInt8(0), "lead-in must be TUPLE_NUMBER")
+        val decoded = singleDecode(enc) as TupleNumber
+        assertEquals(tn.databaseNumber, decoded.databaseNumber)
+        assertEquals(tn.catalogNumber, decoded.catalogNumber)
+        assertEquals(tn.collectionNumber, decoded.collectionNumber)
+        assertEquals(tn.featureNumber, decoded.featureNumber)
+        assertEquals(tn.version, decoded.version)
+    }
+
+    @Test
+    fun testTupleNumberRealisticValues() {
+        // Simulate realistic values: large Int64 storage number, negative catalog/collection from MD5 hash
+        val tn = TupleNumber(
+            databaseNumber = Int64(0x8000000012345678UL.toLong()),
+            catalogNumber = -1234567890,
+            collectionNumber = -987654321,
+            featureNumber = Int64(0x80000000ABCDEF00UL.toLong()),
+            version = Int64(42)
+        )
+        val enc = singleEncode(tn)
+        assertEquals(33, enc.end)
+        assertEquals(JB2_TUPLE_NUMBER.toByte(), enc.getInt8(0))
+        val decoded = singleDecode(enc) as TupleNumber
+        assertEquals(tn.databaseNumber, decoded.databaseNumber)
+        assertEquals(tn.catalogNumber, decoded.catalogNumber)
+        assertEquals(tn.collectionNumber, decoded.collectionNumber)
+        assertEquals(tn.featureNumber, decoded.featureNumber)
+        assertEquals(tn.version, decoded.version)
+    }
+
+    @Test
+    fun testTupleNumberAllExtremes() {
+        val tn = TupleNumber(
+            databaseNumber = Int64(Long.MIN_VALUE),
+            catalogNumber = Int.MIN_VALUE,
+            collectionNumber = Int.MAX_VALUE,
+            featureNumber = Int64(Long.MAX_VALUE),
+            version = Int64(Long.MIN_VALUE)
+        )
+        val enc = singleEncode(tn)
+        assertEquals(33, enc.end)
+        val decoded = singleDecode(enc) as TupleNumber
+        assertEquals(tn.databaseNumber, decoded.databaseNumber)
+        assertEquals(tn.catalogNumber, decoded.catalogNumber)
+        assertEquals(tn.collectionNumber, decoded.collectionNumber)
+        assertEquals(tn.featureNumber, decoded.featureNumber)
+        assertEquals(tn.version, decoded.version)
+    }
+
+    @Test
+    fun testTupleNumberUnitSize() {
+        // Verify that JbDecoder2.unitSize() correctly reports 33 bytes for TUPLE_NUMBER
+        val tn = TupleNumber(Int64(1), 2, 3, Int64(4), Int64(5))
+        val enc = singleEncode(tn)
+        val dec = JbDecoder2()
+        val bin = Binary()
+        bin.view = Platform.newDataView(ByteArray(enc.end) { enc.getInt8(it) })
+        bin.end = enc.end
+        dec.view = bin
+        dec.end = enc.end
+        assertEquals(33, dec.unitSize(0), "unitSize of TUPLE_NUMBER must be 33")
+    }
+
+    @Test
+    fun testTupleNumberExplicitEncodeDecode() {
+        // Test the low-level encodeTupleNumber/decode path directly, bypassing encodeValue
+        val db = Int64(100)
+        val cat = -200
+        val col = 300
+        val feat = Int64(-400)
+        val ver = Int64(500)
+
+        val enc = JbEncoder2()
+        enc.encodeTupleNumber(db, cat, col, feat, ver)
+        assertEquals(33, enc.end, "encodeTupleNumber must produce 33 bytes")
+
+        val decoded = singleDecode(enc) as TupleNumber
+        assertEquals(db, decoded.databaseNumber)
+        assertEquals(cat, decoded.catalogNumber)
+        assertEquals(col, decoded.collectionNumber)
+        assertEquals(feat, decoded.featureNumber)
+        assertEquals(ver, decoded.version)
     }
 
     @Test

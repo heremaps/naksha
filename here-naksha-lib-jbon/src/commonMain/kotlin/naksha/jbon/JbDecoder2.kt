@@ -1,6 +1,7 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.base.TupleNumber
 import naksha.geo.GeoUtil
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -282,6 +283,15 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
             JB2_FLOAT64 -> view.getFloat64(at + 1)
             JB2_TIMESTAMP, JB2_UINT56 -> view.getInt64(at) and Platform.toInt64(JB2_MASK_56_LOW)
             JB2_UINT24 -> view.getInt32(at) and JB2_MASK_24_LOW
+            JB2_TUPLE_NUMBER -> {
+                // lead-in at `at`, data starts at `at + 1`: 8 + 4 + 4 + 8 + 8 = 32 bytes
+                val db = view.getInt64(at + 1)
+                val cat = view.getInt32(at + 9)
+                val col = view.getInt32(at + 13)
+                val feat = view.getInt64(at + 17)
+                val ver = view.getInt64(at + 25)
+                TupleNumber(db, cat, col, feat, ver)
+            }
             else -> throw IllegalStateException("Unsupported mixed lead-in for decode: ${lead.toString(2)}")
         }
     }
