@@ -2,11 +2,10 @@ package com.here.naksha.app.service.util;
 
 import com.here.naksha.app.common.ApiTest;
 import naksha.base.Int64;
-import naksha.base.Platform;
-import naksha.model.Action;
+import naksha.base.Action;
 import naksha.model.Naksha;
-import naksha.model.TupleNumber;
-import naksha.model.Version;
+import naksha.base.TupleNumber;
+import naksha.base.Version;
 import org.jetbrains.annotations.NotNull;
 
 import static naksha.base.Platform.longToInt64;

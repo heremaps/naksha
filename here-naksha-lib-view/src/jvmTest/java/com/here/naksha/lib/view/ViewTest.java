@@ -55,7 +55,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
 import naksha.base.MapProxy;
-import naksha.model.Action;
+import naksha.base.Action;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;

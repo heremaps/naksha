@@ -22,7 +22,7 @@ import static com.here.naksha.handler.activitylog.ReversePatchUtil.reversePatch;
 import static com.here.naksha.handler.activitylog.ReversePatchUtil.toJsonNode;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import naksha.model.Action;
+import naksha.base.Action;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;

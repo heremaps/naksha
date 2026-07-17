@@ -6,9 +6,11 @@ import naksha.geo.SpGeometry
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
+import naksha.base.TupleNumber
 import naksha.model.objects.MemberType
-import naksha.model.Version
+import naksha.base.Version
 import naksha.model.objects.StandardMembers.StandardMembers_C.Feature
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion

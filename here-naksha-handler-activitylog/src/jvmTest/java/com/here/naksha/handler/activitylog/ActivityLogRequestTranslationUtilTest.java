@@ -10,8 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import naksha.base.StringList;
-import naksha.model.Guid;
-import naksha.model.Version;
+import naksha.base.Guid;
+import naksha.base.Version;
 import naksha.model.objects.StandardMembers;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.ops.*;

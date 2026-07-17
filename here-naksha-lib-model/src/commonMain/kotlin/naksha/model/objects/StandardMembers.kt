@@ -23,7 +23,7 @@ class StandardMembers private constructor() {
         // -------------------------------------------------------------------------
 
         /**
-         * `_tn` — **Tuple-Number**. The [naksha.model.TupleNumber] of this feature. This persists out of:
+         * `_tn` — **Tuple-Number**. The [naksha.base.TupleNumber] of this feature. This persists out of:
          * - `database-number: long` - The database in which the feature is stored.
          * - `catalog-number: int` - The catalog in which the feature is stored.
          * - `collection-number: int` - The collection in which the feature is stored.
@@ -51,7 +51,7 @@ class StandardMembers private constructor() {
         val Version = Int64Member("_version", null).withMandatory().withVirtual()
 
         /**
-         * Virtual, query-only member for the [action][naksha.model.Action] (the lower two bits of the
+         * Virtual, query-only member for the [action][naksha.base.Action] (the lower two bits of the
          * version); resolved to `(version & 3)` by the storage, not stored as a column.
          * @since 3.0
          */
@@ -59,7 +59,7 @@ class StandardMembers private constructor() {
         val Action = Int32Member("_action", null).withMandatory().withVirtual()
 
         /**
-         * `_nv` — **next-version** (`INT64`). The version at which this tuple was superseded by the next state. Present only in _HISTORY_; in _HEAD_ the value is intrinsically the current [HEAD version][naksha.model.Version.HEAD].
+         * `_nv` — **next-version** (`INT64`). The version at which this tuple was superseded by the next state. Present only in _HISTORY_; in _HEAD_ the value is intrinsically the current [HEAD version][naksha.base.Version.HEAD].
          * @since 3.0
          */
         @JvmField @JsStatic

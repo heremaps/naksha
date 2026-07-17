@@ -3,16 +3,12 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.geo.SpGeometry
-import naksha.jbon.*
-import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
 import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.objects.NakshaFeature
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
 import kotlin.js.JsExport

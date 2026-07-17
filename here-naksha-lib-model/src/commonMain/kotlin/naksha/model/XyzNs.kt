@@ -204,6 +204,17 @@ class XyzNs : AnyObject() {
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
         private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
 
+
+        /**
+         * Create a [Guid] from the given [Tuple].
+         * @param tuple the [Tuple] for which to generate a [Guid].
+         * @return the created [Guid].
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun guidFromTuple(tuple: Tuple): Guid = Guid(tuple.id, tuple.tupleNumber)
+
         /**
          * Create the XYZ-namespace from the given [Tuple].
          * @param tuple the [Tuple]
@@ -214,7 +225,7 @@ class XyzNs : AnyObject() {
         fun fromTuple(tuple: Tuple): XyzNs {
             val tn = tuple.tupleNumber
             val id = tuple.id
-            val guid = Guid.fromTuple(tuple)
+            val guid = guidFromTuple(tuple)
             val updatedAt = tuple.getLong(XyzUpdatedAt, Platform.currentMillis())
             val createdAt = tuple.getLong(XyzCreatedAt, updatedAt)
             val authorTs = tuple.getLong(XyzAuthorTimestamp,updatedAt)

@@ -14,14 +14,14 @@ import naksha.base.PlatformList
 import naksha.base.PlatformMap
 import naksha.base.Proxy
 import naksha.geo.SpGeometry
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import naksha.model.TagList
 import naksha.model.TagMap
 import naksha.model.Tuple
-import naksha.model.TupleNumber
+import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 

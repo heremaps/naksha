@@ -1,9 +1,9 @@
 package naksha.model.objects
 
 import naksha.model.Tuple
-import naksha.model.TupleNumber
-import naksha.model.illegalArg
-import naksha.model.illegalState
+import naksha.base.TupleNumber
+import naksha.base.illegalArg
+import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import kotlin.js.JsName
 

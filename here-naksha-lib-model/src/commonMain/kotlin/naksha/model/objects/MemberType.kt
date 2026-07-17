@@ -5,10 +5,10 @@ package naksha.model.objects
 import naksha.base.Int64
 import naksha.base.JsEnum
 import naksha.geo.SpGeometry
-import naksha.model.NakshaError.NakshaErrorCompanion.INITIALIZATION_FAILED
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.INITIALIZATION_FAILED
+import naksha.base.NakshaException
 import naksha.model.TagMap
-import naksha.model.TupleNumber
+import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 import kotlin.reflect.KClass

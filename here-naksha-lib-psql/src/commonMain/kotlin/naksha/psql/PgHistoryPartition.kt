@@ -4,8 +4,8 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.model.Naksha
-import naksha.model.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
+import naksha.base.NakshaException
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.psql.PgColumn.PgColumn_C.FN

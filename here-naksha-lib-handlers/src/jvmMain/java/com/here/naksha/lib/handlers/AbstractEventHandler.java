@@ -22,7 +22,7 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.StreamInfo;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Request;

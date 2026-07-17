@@ -7,13 +7,16 @@ import naksha.base.ListProxy
 import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
+import naksha.base.TupleNumber
+import naksha.base.TupleNumberVariant
 import naksha.model.BinaryUtil.BinaryUtil_C.TYPE_TUPLE_NUMBER_ARRAY
 import naksha.model.BinaryUtil.BinaryUtil_C.writeSimpleHeader
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B128
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B160
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B192
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B256
-import naksha.model.TupleNumberVariant.TupleNumberVariant_C.B64
+import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B128
+import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B160
+import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B192
+import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B256
+import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B64
+import naksha.base.illegalState
 import naksha.model.request.FeatureTuple
 import naksha.model.request.FeatureTupleList
 import kotlin.js.JsExport
@@ -22,7 +25,7 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * A list of [tuple-numbers][TupleNumber].
+ * A list of [tuple-numbers][naksha.base.TupleNumber].
  * @since 3.0.0
  */
 @JsExport

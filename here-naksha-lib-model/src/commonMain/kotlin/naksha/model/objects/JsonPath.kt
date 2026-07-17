@@ -3,9 +3,8 @@
 package naksha.model.objects
 
 import naksha.base.AnyList
-import naksha.model.NakshaError
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 

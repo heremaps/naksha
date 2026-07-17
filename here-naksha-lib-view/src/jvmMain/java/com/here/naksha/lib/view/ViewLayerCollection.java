@@ -19,7 +19,7 @@
 package com.here.naksha.lib.view;
 
 import naksha.model.Naksha;
-import naksha.model.TupleNumber;
+import naksha.base.TupleNumber;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;

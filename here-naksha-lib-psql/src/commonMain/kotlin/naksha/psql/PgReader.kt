@@ -1,7 +1,8 @@
 package naksha.psql
 
 import naksha.base.PlatformUtil
-import naksha.model.*
+import naksha.base.TupleNumber
+import naksha.base.Version
 import naksha.model.request.*
 import kotlin.jvm.JvmField
 

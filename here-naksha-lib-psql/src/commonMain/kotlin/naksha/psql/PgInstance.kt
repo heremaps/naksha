@@ -61,8 +61,8 @@ interface PgInstance {
      * Returns a connection from the connection pool or opens a new connection. When the returned connection is closed, it will be
      * returned to the connection pool of the instance.
      *
-     * - Throws [naksha.model.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
-     * - Throws [naksha.model.NakshaError.ILLEGAL_ARGUMENT], if the instance is read-only (read-replica). and a write-connection is requested.
+     * - Throws [naksha.base.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
+     * - Throws [naksha.base.NakshaError.ILLEGAL_ARGUMENT], if the instance is read-only (read-replica). and a write-connection is requested.
      * @param options the connection options.
      * @param readOnly if the connection should be read-only.
      * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.

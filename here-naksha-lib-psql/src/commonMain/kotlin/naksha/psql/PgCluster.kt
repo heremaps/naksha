@@ -30,7 +30,7 @@ interface PgCluster {
     /**
      * Get a new PostgresQL connection from the connection pool of either [master], or a random [replica][replicas], dependent on the [options] given. This method is normally called from [PgStorage].
      *
-     * - Throws [naksha.model.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
+     * - Throws [naksha.base.NakshaError.TOO_MANY_CONNECTIONS], if no more connections are available.
      * @param options the session options.
      * @param readOnly if the connection should be read-only; only if being _true_, read-replica are contacted, except [SessionOptions.useMaster] is explicit set.
      * @param init an optional initialization function, if given, then it will be called with the string to be used to initialize the connection. It may just use this string, perform arbitrary additional work, or suppress initialization completely.

@@ -1,5 +1,8 @@
 package naksha.psql
 
+import naksha.base.Action
+import naksha.base.TupleNumber
+import naksha.base.Version
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -41,7 +44,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.op
 
     /**
-     * After the feature has been persisted, this shows the final [Action] that has been performed, initially the value is guessed.
+     * After the feature has been persisted, this shows the final [naksha.base.Action] that has been performed, initially the value is guessed.
      * @since 3.0
      */
     var action: Action = when (original.op) {
@@ -159,9 +162,9 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = asNakshaMap ?: asNakshaCollection ?: original.feature
 
     /**
-     * If the operation was performed, this will be the [TupleNumber] of the new state.
+     * If the operation was performed, this will be the [naksha.base.TupleNumber] of the new state.
      *
-     * For [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE] this will be `null`, if the feature did not exist, and no atomic delete was request, otherwise it will be the [TupleNumber] of the tombstone state; deleting a feature does actually produce a new tombstone state.
+     * For [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE] this will be `null`, if the feature did not exist, and no atomic delete was request, otherwise it will be the [naksha.base.TupleNumber] of the tombstone state; deleting a feature does actually produce a new tombstone state.
      * @since 3.0
      */
     var tupleNumber: TupleNumber? = null

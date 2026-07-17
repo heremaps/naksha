@@ -3,7 +3,7 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.model.Version
+import naksha.base.Version
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 

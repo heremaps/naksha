@@ -2,9 +2,9 @@
 
 package naksha.psql
 
-import naksha.model.NakshaError
-import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.model.NakshaException
+import naksha.base.NakshaError
+import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.base.NakshaException
 import org.postgresql.util.PSQLException
 import java.sql.BatchUpdateException
 import java.sql.SQLException

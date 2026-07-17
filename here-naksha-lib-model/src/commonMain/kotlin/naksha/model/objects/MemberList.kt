@@ -3,11 +3,9 @@
 package naksha.model.objects
 
 import naksha.base.ListProxy
-import naksha.model.Naksha
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
-import naksha.model.NakshaException
-import naksha.model.NakshaIdType
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
+import naksha.base.NakshaException
 import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import kotlin.js.JsExport
 import kotlin.js.JsName

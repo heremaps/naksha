@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.illegalArg
+import naksha.base.illegalArg
 import naksha.model.objects.Index
 import naksha.model.objects.MemberType
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent

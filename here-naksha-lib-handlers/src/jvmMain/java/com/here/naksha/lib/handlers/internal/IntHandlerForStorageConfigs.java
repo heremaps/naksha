@@ -24,7 +24,7 @@ import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
@@ -44,8 +44,8 @@ import java.util.stream.Collectors;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.handlers.internal.HttpStorageValidation.validateConfigForHttpStorage;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
-import static naksha.model.NakshaError.CONFLICT;
-import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.base.NakshaError.CONFLICT;
+import static naksha.base.NakshaError.EXCEPTION;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
 public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<NakshaStorage> {

@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.NakshaError
+import naksha.base.NakshaError
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.request.ErrorResponse
 import naksha.model.request.FeatureTuple

@@ -25,7 +25,7 @@ import naksha.model.IReadSession;
 import naksha.model.MemberProcessorMap;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
@@ -37,8 +37,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-
-import static naksha.model.LibModelKt.FETCH_ALL;
 
 public class HttpStorageReadSession implements IReadSession {
 

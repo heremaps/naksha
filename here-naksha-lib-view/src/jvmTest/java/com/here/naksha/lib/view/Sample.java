@@ -21,11 +21,11 @@ package com.here.naksha.lib.view;
 import static naksha.base.LibBaseKt.Int64;
 import static naksha.model.RandomFeatures.randomFeature;
 
-import naksha.model.Action;
+import naksha.base.Action;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.Tuple;
-import naksha.model.TupleNumber;
+import naksha.base.TupleNumber;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.FeatureTupleList;

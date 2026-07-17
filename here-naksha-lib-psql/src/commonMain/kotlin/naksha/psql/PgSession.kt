@@ -8,11 +8,10 @@ import naksha.base.Platform.PlatformCompanion.longToInt64
 import naksha.base.Platform.PlatformCompanion.newAtomicInt64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
-import naksha.model.objects.NakshaFeature
 import naksha.model.objects.XyzMembers
 import naksha.model.objects.XyzProcessors
 import naksha.model.request.*

@@ -4,6 +4,8 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.MapProxy
+import naksha.base.NakshaError
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 

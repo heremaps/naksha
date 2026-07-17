@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.Version
 import naksha.jbon.IDictReader
 import naksha.model.objects.*
 import kotlin.js.JsExport
@@ -36,9 +37,9 @@ open class PgTx private constructor(
     /**
      * The unique version of the transaction. This value **should be** unique to this transaction.
      * @since 3.0
-     * @see [Version.auto]
-     * @see [Version.manual]
-     * @see [Version.now]
+     * @see [naksha.base.Version.auto]
+     * @see [naksha.base.Version.manual]
+     * @see [naksha.base.Version.now]
      */
     val version: Version,
 

@@ -3,15 +3,14 @@
 package naksha.model.objects
 
 import naksha.base.AnyList
-import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.jbon.JbDictionary
 import naksha.jbon.JbEncoder
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 

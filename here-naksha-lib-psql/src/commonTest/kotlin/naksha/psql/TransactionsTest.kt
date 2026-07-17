@@ -1,12 +1,10 @@
 package naksha.psql
 
 import naksha.model.Naksha
-import naksha.model.Version
-import naksha.model.objects.NakshaCollection
+import naksha.base.Version
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaTx
 import naksha.model.request.*
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.*
 
 class TransactionsTest : PgTestBase() {

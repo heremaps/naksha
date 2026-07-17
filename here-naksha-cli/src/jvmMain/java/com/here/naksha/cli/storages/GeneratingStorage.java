@@ -11,6 +11,8 @@ import java.util.Optional;
 
 import com.here.naksha.cli.utils.JsonParserException;
 import kotlin.reflect.KClass;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.model.*;

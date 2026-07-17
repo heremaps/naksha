@@ -26,8 +26,8 @@ import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 import java.util.Set;
 
 import naksha.base.StringList;
-import naksha.model.Guid;
-import naksha.model.TupleNumber;
+import naksha.base.Guid;
+import naksha.base.TupleNumber;
 import naksha.model.objects.StandardMembers;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.ops.And;

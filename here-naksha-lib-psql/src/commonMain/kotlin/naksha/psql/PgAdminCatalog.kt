@@ -5,6 +5,7 @@ package naksha.psql
 
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import naksha.base.Action
 import naksha.base.AtomicMap
 import naksha.base.Int64
 import naksha.model.NakshaVersion
@@ -14,9 +15,14 @@ import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_FN
-import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
+import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
+import naksha.base.NakshaException
+import naksha.base.TupleNumber
+import naksha.base.Version
+import naksha.base.forbidden
+import naksha.base.illegalState
 import naksha.model.objects.NakshaCatalog
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -284,7 +290,10 @@ SELECT basics.*, procs.* FROM basics, procs;
                         installed_storage_id = cursor["id"]
                         installed_storage_number = cursor["n"]
                     } catch (pe: Exception) {
-                        throw illegalState("The storage '$id' does have an admin schema, but it is broken, because reading storage version, id, and/or number failed", pe)
+                        throw illegalState(
+                            "The storage '$id' does have an admin schema, but it is broken, because reading storage version, id, and/or number failed",
+                            pe
+                        )
                     }
                 }
                 if (installed_storage_id != id) {
@@ -495,7 +504,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * Does not commit the given connection, therefore the catalog _(aka schema)_ is not yet persisted, but can be used through the given connection. The method neither creates the corresponding entry in the collection's collection of the admin-catalog, it only creates the schema.
      * @param conn the connection to use to access the database.
      * @param catalog the catalog to create.
-     * @throws NakshaException with [NakshaError.CATALOG_EXISTS] if a catalog with the same `id` exists, or if a catalog with a different `id`, but same feature-number exists _(hash collision)_.
+     * @throws NakshaException with [naksha.base.NakshaError.CATALOG_EXISTS] if a catalog with the same `id` exists, or if a catalog with a different `id`, but same feature-number exists _(hash collision)_.
      * @since 3.0.0
      */
     fun createPgCatalog(conn: PgConnection, catalog: PgCatalog) {

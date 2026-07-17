@@ -7,12 +7,11 @@ import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
 import naksha.model.Naksha
-import naksha.model.NakshaError
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 import naksha.model.NakshaIdType
-import naksha.model.TupleNumber
+import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -496,7 +495,7 @@ open class NakshaCollection() : NakshaFeature() {
         }
         for (existing in list) {
             if (existing != null && existing.name == value.name) {
-                throw NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Duplicate index name: '${value.name}'")
+                throw NakshaException(ILLEGAL_ARGUMENT, "Duplicate index name: '${value.name}'")
             }
         }
         list.add(value)

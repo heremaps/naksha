@@ -1,20 +1,20 @@
 @file:Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 
-package naksha.model
+package naksha.base
 
-import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_EXISTS
-import naksha.model.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.CONFLICT
-import naksha.model.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_EXISTS
-import naksha.model.NakshaError.NakshaErrorCompanion.FEATURE_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.FORBIDDEN
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaError.NakshaErrorCompanion.CATALOG_EXISTS
-import naksha.model.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
-import naksha.model.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import naksha.base.NakshaError.NakshaErrorCompanion.COLLECTION_EXISTS
+import naksha.base.NakshaError.NakshaErrorCompanion.COLLECTION_NOT_FOUND
+import naksha.base.NakshaError.NakshaErrorCompanion.CONFLICT
+import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
+import naksha.base.NakshaError.NakshaErrorCompanion.FEATURE_EXISTS
+import naksha.base.NakshaError.NakshaErrorCompanion.FEATURE_NOT_FOUND
+import naksha.base.NakshaError.NakshaErrorCompanion.FORBIDDEN
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.CATALOG_EXISTS
+import naksha.base.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 
 /**
  * A Naksha exception.
@@ -38,14 +38,14 @@ expect class NakshaException : RuntimeException {
     /**
      * Create an exception based upon individual values, which will be assembled to an [NakshaError].
      * @param code the error code, put into [NakshaError.code].
-     * @param msg the human-readable error message, put into [Exception.message] and into [NakshaError.msg].
+     * @param msg the human-readable error message, put into [message] and into [NakshaError.msg].
      */
     constructor(code: String, msg: String)
 
     /**
      * Create an exception based upon individual values, which will be assembled to an [NakshaError].
      * @param code the error code, put into [NakshaError.code].
-     * @param msg the human-readable error message, put into [Exception.message] and into [NakshaError.msg].
+     * @param msg the human-readable error message, put into [message] and into [NakshaError.msg].
      * @param cause the optional cause of this error, put into [Exception.cause].
      */
     constructor(code: String, msg: String, cause: Throwable? = null)
@@ -164,3 +164,4 @@ fun conflict(msg: String): NakshaException = NakshaException(CONFLICT, msg)
  * @since 3.0
  */
 fun unsupportedOp(msg: String): NakshaException = NakshaException(UNSUPPORTED_OPERATION, msg)
+

@@ -4,6 +4,9 @@ import com.here.naksha.cli.utils.JsonParser;
 import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.base.StringList;
 import naksha.geo.SpBoundingBox;
 import naksha.model.*;

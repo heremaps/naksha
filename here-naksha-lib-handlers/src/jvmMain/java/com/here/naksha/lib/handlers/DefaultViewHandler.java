@@ -35,7 +35,7 @@ import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;

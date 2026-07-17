@@ -19,8 +19,8 @@
 package com.here.naksha.lib.core;
 
 import static com.here.naksha.lib.core.NakshaLogger.currentLogger;
-import static naksha.model.NakshaError.EXCEPTION;
-import static naksha.model.NakshaError.NOT_IMPLEMENTED;
+import static naksha.base.NakshaError.EXCEPTION;
+import static naksha.base.NakshaError.NOT_IMPLEMENTED;
 
 import com.here.naksha.lib.core.models.payload.Event;
 import com.here.naksha.lib.core.models.payload.events.admin.ModifySubscriptionEvent;
@@ -40,7 +40,7 @@ import com.here.naksha.lib.core.models.payload.events.info.GetStorageStatisticsE
 import com.here.naksha.lib.core.models.payload.events.info.HealthCheckEvent;
 import com.here.naksha.lib.core.models.payload.events.space.ModifySpaceEvent;
 import javax.annotation.Nonnull;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;

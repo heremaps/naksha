@@ -1,8 +1,7 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.model
+package naksha.base
 
-import naksha.base.*
 import naksha.base.fn.Fx2
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -233,7 +232,7 @@ open class NakshaError() : AnyObject() {
         const val DICT_MANAGER_NOT_FOUND = "DictManagerNotFound"
 
         /**
-         * A [IStorage] does not exist, but is expected to exist.
+         * A [naksha.model.IStorage] does not exist, but is expected to exist.
          *
          * @since 3.0.0
          */
@@ -310,3 +309,4 @@ open class NakshaError() : AnyObject() {
         printer.get()?.call(this, logger)
     }
 }
+

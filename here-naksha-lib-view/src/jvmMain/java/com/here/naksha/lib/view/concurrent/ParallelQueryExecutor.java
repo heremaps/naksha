@@ -20,24 +20,21 @@ package com.here.naksha.lib.view.concurrent;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.util.stream.Collectors.groupingBy;
-import static java.util.stream.Collectors.toList;
 import static naksha.base.Platform.longToInt64;
-import static naksha.model.NakshaError.EXCEPTION;
-import static naksha.model.NakshaError.INTERNAL_ERROR;
+import static naksha.base.NakshaError.EXCEPTION;
+import static naksha.base.NakshaError.INTERNAL_ERROR;
 
 import com.here.naksha.lib.view.View;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerFeature;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Stream;
 
 import naksha.base.Int64;
-import naksha.base.StringList;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.*;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;

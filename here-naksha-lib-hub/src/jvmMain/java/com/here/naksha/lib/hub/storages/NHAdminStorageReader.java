@@ -22,8 +22,8 @@ import java.util.List;
 
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;

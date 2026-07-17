@@ -2,8 +2,8 @@
 
 package naksha.psql
 
-import naksha.model.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
+import naksha.base.NakshaException
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.psql.PgColumn.PgColumn_C.FN

@@ -4,7 +4,9 @@ package naksha.model.request
 
 import naksha.base.Platform
 import naksha.model.*
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaException
+import naksha.base.TupleNumber
 import naksha.model.objects.Member
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -16,7 +18,7 @@ import kotlin.jvm.JvmField
 /**
  * A feature tuple is a wrapper for a [Tuple], and its in-memory representation, the [NakshaFeature]. It allows to lazy load the data of the [Tuple], to cache the [NakshaFeature], and is part of the cache subsystem. A feature tuple is not thread-safe, it is for thread local processing.
  *
- * Assume for example, there are 500,000 tuples part of a bounding box query result. It is most often not useful to load all of them into memory, but we need at least the identifiers of them, the [tuple-numbers][TupleNumber], to know that they are part of the result-set. Then we can process step-wise through the result-set, and stop, when enough have been processed, for example after 1,000. Actually, loading [Tuple] by [Tuple] from the cache does not make sense either, we should load in chunks, because of this, the [caches][ITupleCache] do only allow loading of multiple [FeatureTuple].
+ * Assume for example, there are 500,000 tuples part of a bounding box query result. It is most often not useful to load all of them into memory, but we need at least the identifiers of them, the [tuple-numbers][naksha.base.TupleNumber], to know that they are part of the result-set. Then we can process step-wise through the result-set, and stop, when enough have been processed, for example after 1,000. Actually, loading [Tuple] by [Tuple] from the cache does not make sense either, we should load in chunks, because of this, the [caches][ITupleCache] do only allow loading of multiple [FeatureTuple].
  * @since 3.0
  */
 @JsExport

@@ -9,6 +9,7 @@ import naksha.base.MapProxy
 import naksha.base.PlatformList
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.TupleNumber
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
 import naksha.model.objects.MemberType
@@ -159,7 +160,7 @@ object FeatureMemberValues {
     }
 
     /**
-     * Coerce a tuple-number value: an already-materialized [TupleNumber], or a string/byte-array encoding.
+     * Coerce a tuple-number value: an already-materialized [naksha.base.TupleNumber], or a string/byte-array encoding.
      */
     private fun coerceTupleNumber(value: Any, featureId: String, memberName: String): TupleNumber? = when (value) {
         is TupleNumber -> value

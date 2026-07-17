@@ -1,8 +1,7 @@
 @file:Suppress("OPT_IN_USAGE")
 
-package naksha.model
+package naksha.base
 
-import naksha.base.JsEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -159,14 +158,14 @@ class TupleNumberVariant internal constructor() : JsEnum() {
         )
 
         /**
-         * Helper to parse a string into an [Action].
+         * Helper to parse a string into an [TupleNumberVariant].
          */
         @JsStatic
         @JvmStatic
         fun fromString(s: String): TupleNumberVariant = FROM_STRING[s] ?: UNDEFINED
 
         /**
-         * Helper to parse a string into an [Action].
+         * Helper to parse a string into an [TupleNumberVariant].
          */
         @JsStatic
         @JvmStatic
@@ -174,7 +173,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
     }
 
     /**
-     * The subtype, when encoded in a [TupleNumberBinaryArray].
+     * The subtype, when encoded in a [naksha.model.TupleNumberBinaryArray].
      * @since 3.0
      */
     var subType: Int = -1
@@ -190,15 +189,6 @@ class TupleNumberVariant internal constructor() : JsEnum() {
     /**
      * The number of bytes that are shared in the header of a tuple-number-array for tuple-number's of this variant.
      * @since 3.0
-     * @see [BinaryUtil.writeSimpleHeader]
-     * @see [sharedStorageNumber]
-     * @see [encodeStorageNumber]
-     * @see [sharedMapNumber]
-     * @see [encodeMapNumber]
-     * @see [sharedCollectionNumber]
-     * @see [encodeCollectionNumber]
-     * @see [sharedFeatureNumber]
-     * @see [encodeFeatureNumber]
      */
     var sharedBytes: Int = -1
         private set

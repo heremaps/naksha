@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.Action
+import naksha.base.Action
 import naksha.model.Naksha
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
