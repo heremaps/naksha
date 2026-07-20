@@ -330,15 +330,20 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       NakshaFeature correspondingExistingFeature = (NakshaFeature) existingFeaturesById.getPath(featureFromRequest.getId());
       if (correspondingExistingFeature == null) {
         // Feature not yet persisted - just insert
-        //TODO if given UUID then return conflict
+        //TODO IFF given UUID in request denotes correct db+catalog+collection+fn but wrong version, then return conflict (someone deleted it)
         // UUID describes the state of the object modified by the client, so we can detect things like a feature that was cloned over from another collection, or an existing object in this same collection was renamed and rewritten into the collection.
         // But for now we allow these, to align with existing REST API definition. As long as a feature has a unique ID, regardless of its origin, we treat it as a new and distinguished feature.
+
+        //TODO this is added to make sure lib-psql behaves correctly, but is this needed? And if we do this, is there a need to record the origin of this feature from this given UUID anywhere else?
+        featureFromRequest.getProperties().getXyz().setRaw("uuid",null);
+
         preProcessor.preProcess(featureFromRequest);
         insertsAndUpdates.add(new Write().createFeature(null, spaceId, featureFromRequest));
       } else {
         // Feature exists - prepare patch for update (atomic == true, we want version validation)
         // that means, if no UUID in feature JSON in request, currently always accept the request, regardless of concurrency issue
         final var requestedUuid = featureFromRequest.getProperties().getXyz().getUuid();
+        //TODO a discussion was held about this check only needing UUID to specify the same feature (db+catalog+col+fn), but shouldn't the version (hence the total state identifier) also be considered for atomicity to be guaranteed (like it is currently below)?
         if ((requestedUuid != null) &&(!requestedUuid.equals(correspondingExistingFeature.getProperties().getXyz().getUuid()))) {
           // TODO CASL-1198 Should we get failed features IDs in naskha errors.
           return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.CONFLICT, "Error encountered while writing the patched features to storage"));
