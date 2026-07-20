@@ -5,8 +5,7 @@ plugins {
 description = gatherDescription()
 
 kotlin {
-    jvm {
-    }
+    jvm { }
     sourceSets {
         jvmMain {
             dependencies {

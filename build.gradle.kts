@@ -1,5 +1,6 @@
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.gradle.kotlin.dsl.assign
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
@@ -86,56 +87,7 @@ data class JsModuleConfig(
     val _moduleName: String,
     val _enableTests: Boolean = false,
     val _dependencies: Array<String> = emptyArray()
-) {
-    fun configure(project: Project, kotlin: KotlinMultiplatformExtension) {
-        kotlin.jvm { }
-        kotlin.js {
-            outputModuleName = _moduleName
-            useEsModules()
-            @OptIn(ExperimentalKotlinGradlePluginApi::class)
-            compilerOptions {
-                target = "es2015"
-                freeCompilerArgs.add("-Xes-long-as-bigint")
-                freeCompilerArgs.add("-XXLanguage:+JsAllowLongInExportedDeclarations")
-            }
-            nodejs {
-                compilerOptions {
-                    moduleKind = JsModuleKind.MODULE_ES
-                    moduleName = _moduleName
-                    sourceMap = true
-                    useEsClasses = true
-                    sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                    sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-                }
-                generateTypeScriptDefinitions()
-                binaries.library()
-                binaries.executable()
-            }
-        }
-        // We patch the build so that the JavaScript files are included into the JAR!
-        project.tasks {
-            getByName<Task>("jsNodeProductionLibraryDistribution") {
-                dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
-            }
-            // Release
-            getByName<ProcessResources>("jvmProcessResources") {
-                dependsOn(_dependencies + "jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
-            }
-            getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
-            // Test
-            getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
-            getByName<Test>("jvmTest") {
-                useJUnitPlatform()
-                maxHeapSize = "8g"
-                val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
-                if (dbUrl != null) environment("NAKSHA_TEST_PSQL_DB_URL", dbUrl)
-            }
-        }
-        project.tasks.matching { it.name == "jsNodeTest" }.configureEach {
-            enabled = _enableTests
-        }
-    }
-}
+)
 val jsModules = mapOf(
     Pair("here-naksha-lib-base", JsModuleConfig("naksha_base")),
     Pair("here-naksha-lib-auth", JsModuleConfig("naksha_auth")),
@@ -173,7 +125,7 @@ val allModules = mapOf(
 )
 
 fun Project.configureVanniktechMavenPublish() {
-    println("\tConfigure publishing")
+    println("[$name] --> Configure publishing")
 //    val keyId = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKeyId")
 //    val key = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKey")
 //    val keyPwd = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKeyPassword")
@@ -183,7 +135,7 @@ fun Project.configureVanniktechMavenPublish() {
     val projectRepoURI = "github.com/heremaps/naksha"
     val here = getMvnInfo("here")
     if (here != null) {
-        println("\tAdd 'HereMaven' repository, ${here.user}:***@${here.url}")
+        println("[$name] --> Add 'HereMaven' repository, ${here.user}:***@${here.url}")
         publishing {
             repositories {
                 maven {
@@ -199,12 +151,12 @@ fun Project.configureVanniktechMavenPublish() {
     val portal = getMavenCentralInfo()
     mavenPublishing {
         if (sign != null && portal != null) {
-            println("\tAdd 'MavenCentral' repository, ${portal.user}:***@${portal.url}")
-            println("\tConfigure mavenPublishing for 'local' and 'CENTRAL_PORTAL'")
+            println("[$name] --> Add 'MavenCentral' repository, ${portal.user}:***@${portal.url}")
+            println("[$name] --> Configure mavenPublishing for 'local' and 'CENTRAL_PORTAL'")
             publishToMavenCentral()
             signAllPublications()
         } else {
-            println("\tConfigure mavenPublishing for 'local'")
+            println("[$name] --> Configure mavenPublishing for 'local'")
         }
         coordinates(group.toString(), name, version.toString())
         pom {
@@ -272,21 +224,6 @@ allprojects {
     println("[$name] --> $group:$name:$version")
     val _name = name
     if (project !== rootProject) {
-        plugins.withType<JavaPlugin> {
-            extensions.configure<JavaPluginExtension> {
-                val jvmVersion = getJvmTargetVersion(this@allprojects)
-                println("[$_name] --> Configure JavaPlugin to JDK $jvmVersion")
-                toolchain { languageVersion.set(JavaLanguageVersion.of(jvmVersion.toInt())) }
-                sourceCompatibility = JavaVersion.toVersion(jvmVersion)
-                targetCompatibility = JavaVersion.toVersion(jvmVersion)
-            }
-        }
-        tasks.withType<Jar> {
-            from(rootProject.file("HERE_NOTICE"))
-            into("")
-            from(rootProject.file("LICENSE"))
-            into("")
-        }
         println("[$_name] --> Apply KMP plugin")
         apply(plugin = "org.jetbrains.kotlin.multiplatform")
 
@@ -300,14 +237,82 @@ allprojects {
             )
             compilerOptions.jvmTarget.set(target)
         }
-
+        val jvmVersion: String = getJvmTargetVersion(this@allprojects)
+        plugins.withType<JavaPlugin> {
+            extensions.configure<JavaPluginExtension> {
+                println("[$_name] --> Configure JavaPlugin to JDK $jvmVersion")
+                toolchain { languageVersion.set(JavaLanguageVersion.of(jvmVersion.toInt())) }
+                sourceCompatibility = JavaVersion.toVersion(jvmVersion)
+                targetCompatibility = JavaVersion.toVersion(jvmVersion)
+            }
+        }
+        tasks.withType<Jar> {
+            from(rootProject.file("HERE_NOTICE"))
+            into("")
+            from(rootProject.file("LICENSE"))
+            into("")
+        }
         val jsNoduleConfig = jsModules[_name]
-        if (jsNoduleConfig != null) {
-            println("[$_name] --> Configure JavaScript, moduleName=${jsNoduleConfig._moduleName}, run tests=${jsNoduleConfig._enableTests}")
-            val project = this
-            pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
-                extensions.configure<KotlinMultiplatformExtension> {
-                    jsNoduleConfig.configure(project, this)
+        pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+            extensions.configure<KotlinMultiplatformExtension> {
+                jvm {}
+                jvmToolchain(jvmVersion.toInt())
+                if (jsNoduleConfig != null) {
+                    val _moduleName = jsNoduleConfig._moduleName
+                    println("[$_name] --> Configure JavaScript, moduleName=${_moduleName}")
+                    js {
+                        outputModuleName = _moduleName
+                        useEsModules()
+                        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+                        compilerOptions {
+                            target = "es2015"
+                            freeCompilerArgs.add("-Xes-long-as-bigint")
+                            freeCompilerArgs.add("-XXLanguage:+JsAllowLongInExportedDeclarations")
+                        }
+                        nodejs {
+                            compilerOptions {
+                                moduleKind = JsModuleKind.MODULE_ES
+                                moduleName = _moduleName
+                                sourceMap = true
+                                useEsClasses = true
+                                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
+                            }
+                            generateTypeScriptDefinitions()
+                            binaries.library()
+                            binaries.executable()
+                        }
+                    }
+                }
+                project.tasks {
+                    getByName<Test>("jvmTest") {
+                        useJUnitPlatform()
+                        maxHeapSize = "8g"
+                        val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+                        if (dbUrl != null) environment("NAKSHA_TEST_PSQL_DB_URL", dbUrl)
+                    }
+                }
+
+                // We patch the build so that the JavaScript files are included into the JAR!
+                if (jsNoduleConfig != null) {
+                    val _dependencies = jsNoduleConfig._dependencies
+                    val _enableTests = jsNoduleConfig._enableTests
+                    println("[$_name] --> Configure JavaScript dependencies: ${_dependencies.contentToString()} and tests: $_enableTests")
+                    project.tasks {
+                        getByName<Task>("jsNodeProductionLibraryDistribution") {
+                            dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
+                        }
+                        // Release
+                        getByName<ProcessResources>("jvmProcessResources") {
+                            dependsOn(_dependencies + "jsNodeProductionLibraryDistribution") // "jsBrowserDistribution"
+                        }
+                        getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+                        // Test
+                        getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
+                    }
+                    project.tasks.matching { it.name == "jsNodeTest" }.configureEach {
+                        enabled = _enableTests
+                    }
                 }
             }
         }
