@@ -13,6 +13,7 @@
                     "sourceId": "COM_1000001_20240301"
                 },
                 "@ns:com:here:xyz": {
+                    "uuid": "urn:naksha:guid:my-custom-id-04",
                     "action": "CREATE",
                     "tags": [
                         "xyz_source_id_COM_1000001_20240301"
