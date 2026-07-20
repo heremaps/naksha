@@ -226,6 +226,31 @@ open class PgSession(
     internal var tx: PgTx? = null
         private set
 
+    private val preparedPartitions = mutableMapOf<PgCollection, MutableSet<Int>>()
+
+    internal fun isPartitionPrepared(collection: PgCollection, partitionNumber: Int): Boolean =
+        preparedPartitions[collection]?.contains(partitionNumber) == true
+
+    internal fun markPartitionPrepared(collection: PgCollection, partitionNumber: Int) {
+        preparedPartitions.getOrPut(collection) { mutableSetOf() }.add(partitionNumber)
+    }
+
+    internal fun snapshotPreparedPartitions(): Map<PgCollection, Set<Int>> =
+        preparedPartitions.mapValues { it.value.toSet() }
+
+    internal fun restorePreparedPartitions(snapshot: Map<PgCollection, Set<Int>>) {
+        preparedPartitions.clear()
+        for ((collection, set) in snapshot) preparedPartitions[collection] = set.toMutableSet()
+    }
+
+    private fun promotePreparedPartitions() {
+        if (preparedPartitions.isEmpty()) return
+        for ((collection, set) in preparedPartitions) {
+            val historyTable = collection.historyTable
+            for (partitionNumber in set) historyTable.addPartition(partitionNumber)
+        }
+    }
+
     /**
      * Return the current transaction, if no transaction started yet, starts a new one.
      * @return the current transaction.
@@ -292,6 +317,7 @@ open class PgSession(
     private fun clear() {
         error = null
         tx = null
+        preparedPartitions.clear()
         try {
             pgConnection?.close()
         } catch (ignore: Throwable) {
@@ -326,6 +352,7 @@ open class PgSession(
             } catch (t: Throwable) {
                 throw generalException("Failed to commit transaction", cause = t)
             }
+            promotePreparedPartitions()
             clear()
         }
     }

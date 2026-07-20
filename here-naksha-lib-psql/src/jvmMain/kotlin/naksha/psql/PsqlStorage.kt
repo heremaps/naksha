@@ -55,7 +55,6 @@ open class PsqlStorage : PgStorage(), IStorage {
             _cluster = c
         }
         setAdminMap(newAdminMap(config, create, upgrade))
-        adminCatalog.seedAdminHistoryPartitions()
         adminCatalog.start()
     }
 

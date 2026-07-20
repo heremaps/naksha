@@ -90,6 +90,7 @@ open class PgWriter internal constructor(
         for (i in 0 ..< writes.size) pgWrites.add(PgWrite(writes[i], i))
         val savepointId = PlatformUtil.randomString()
         var conn: PgConnection? = null
+        var partitionSnapshot: Map<PgCollection, Set<Int>>? = null
         try {
             // This can be time-consuming, unless the connection is already open, try not to open it before we do this!
             prepareWrite(pgWrites)
@@ -120,7 +121,10 @@ open class PgWriter internal constructor(
             // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
             // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
             conn = this.conn
-            if (useSavepoint) conn.execute("SAVEPOINT \"$savepointId\"").close()
+            if (useSavepoint) {
+                conn.execute("SAVEPOINT \"$savepointId\"").close()
+                partitionSnapshot = session.snapshotPreparedPartitions()
+            }
             var start = 0
             for (i in 1..pgWrites.size) {
                 if (i == pgWrites.size ||
@@ -135,7 +139,10 @@ open class PgWriter internal constructor(
             // If everything worked out as expected, we can drop the savepoint, if there is any.
             if (useSavepoint) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
         } catch (t: Throwable) {
-            if (conn != null && useSavepoint) conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
+            if (conn != null && useSavepoint) {
+                conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
+                if (partitionSnapshot != null) session.restorePreparedPartitions(partitionSnapshot)
+            }
             throw PgExceptionMapper.map(t)
         }
 
@@ -311,6 +318,7 @@ open class PgWriter internal constructor(
         // All writes in [start, end) share one catalog and collection (the caller grouped them) and are
         // ordered by op; dispatch each contiguous op-block to its writer.
         val pgCollection = pgWrites[start].collection
+        pgCollection.prepareWrite(conn, tx.version.number, session)
         var s = start
         var e = start
 
@@ -362,13 +370,11 @@ open class PgWriter internal constructor(
         seedHistoryPartitions(catalog.collections)
     }
 
-    // createPartition is not idempotent, so only call on fresh tables.
     private fun seedHistoryPartitions(collection: PgCollection) {
         if (!collection.storeHistory) return
-        val history = collection.historyTable
         val year = collection.historyPartitionNumberOf(tx.version.number)
-        history.createPartition(conn, year)
-        history.createPartition(conn, year + 1)
+        collection.ensureHistoryPartition(conn, year, session)
+        collection.ensureHistoryPartition(conn, year + 1, session)
     }
 
     /**

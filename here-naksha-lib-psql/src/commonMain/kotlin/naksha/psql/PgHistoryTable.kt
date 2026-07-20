@@ -91,11 +91,7 @@ $TABLESPACE"""
      * @see [PgCollection.historyPartitionNumberOf]
      */
     fun createPartition(conn: PgConnection, partitionNumber: Int): PgHistoryPartition {
-        var partition = partitions[partitionNumber]
-        if (partition == null) {
-            partition = PgHistoryPartition(this, partitionNumber)
-            partitions[partitionNumber] = partition
-        }
+        val partition = partitions[partitionNumber] ?: PgHistoryPartition(this, partitionNumber)
         partition.create(conn)
         for (index in indices) {
             partition.createIndex(conn, index)
