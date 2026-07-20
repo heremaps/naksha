@@ -331,8 +331,8 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       if (correspondingExistingFeature == null) {
         // Feature not yet persisted - just insert
         //TODO if given UUID then return conflict
-        // UUID describes the state of the object modified by the client, so we can detect things like a feature that was cloned over from another collection, or an existing object in this same collection was renamed and rewritten into the collection
-        // but for now we allow these. As long as a feature has a unique ID, regardless of its origin, we treat it as a new and distinguished feature.
+        // UUID describes the state of the object modified by the client, so we can detect things like a feature that was cloned over from another collection, or an existing object in this same collection was renamed and rewritten into the collection.
+        // But for now we allow these, to align with existing REST API definition. As long as a feature has a unique ID, regardless of its origin, we treat it as a new and distinguished feature.
         preProcessor.preProcess(featureFromRequest);
         insertsAndUpdates.add(new Write().createFeature(null, spaceId, featureFromRequest));
       } else {
