@@ -8,6 +8,9 @@
         "speedLimit": "60",
         "length": 10,
         "isBidirectional": true,
+        "@ns:com:here:xyz": {
+          "uuid": "urn:naksha:guid:my-custom-id-700-6"
+        },
         "references": [
           {
             "id": "urn:here::here:Topology:1",
@@ -46,6 +49,9 @@
         "length": 10.5,
         "direction": "A to B",
         "isBidirectional": false,
+        "@ns:com:here:xyz": {
+          "uuid": "urn:naksha:guid:my-custom-id-700-7"
+        },
         "references": [
           {
             "id": "urn:here::here:Topology:2",
@@ -84,6 +90,9 @@
         "length": 11,
         "direction": "B to A",
         "isBidirectional": false,
+        "@ns:com:here:xyz": {
+          "uuid": "urn:naksha:guid:my-custom-id-700-8"
+        },
         "references": [
           {
             "id": "urn:here::here:Topology:3",
