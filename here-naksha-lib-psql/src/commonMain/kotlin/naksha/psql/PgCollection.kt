@@ -352,14 +352,23 @@ open class PgCollection internal constructor(
 
     /**
      * Ensures that the [PgHistoryPartition] for the given version exists.
-     *
-     * **Note**: If the current cache does not confirm that the corresponding history table exists, we can simply create it with `IF EXISTS` clause. It will not harm, when it exists already, but prevent yet another roundtrip. As we _(for now)_ have decided that columns and indices are immutable, we do not need to update old partition tables, and we can cache only the latest history table. This may change over time, because ones we start adding the feature that data can be imported, we may need to manage history partitions that are older than the latest _(current)_ table that we normally only write into. However, until that is done, this function can be kept simple .
+     * @param conn the connection to use to create the partition, if needed.
      * @param version the version to be written.
+     * @param session the write session.
      * @since 3.0
      */
-    fun prepareWrite(version: Int64) {
-        val partitionNumber = version shr shift
-        // TODO: Check if this partition exists, if not, create it, cache it, and initiate the write.
+    fun prepareWrite(conn: PgConnection, version: Int64, session: PgSession) {
+        if (!storeHistory) return
+        ensureHistoryPartition(conn, historyPartitionNumberOf(version), session)
+    }
+
+    fun ensureHistoryPartition(conn: PgConnection, partitionNumber: Int, session: PgSession) {
+        if (!storeHistory) return
+        if (historyTable.partitions.containsKey(partitionNumber)) return
+        if (session.isPartitionPrepared(this, partitionNumber)) return
+        catalog.setSearchPath(conn)
+        historyTable.createPartition(conn, partitionNumber)
+        session.markPartitionPrepared(this, partitionNumber)
     }
 
     /**
