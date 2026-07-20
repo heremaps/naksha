@@ -31,10 +31,14 @@ import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+
+import com.here.naksha.lib.extmanager.helpers.FileHelper;
+import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Named;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -55,7 +59,8 @@ class ReadFeaturesByTileTest extends ApiTest {
   static void setup() throws URISyntaxException, IOException, InterruptedException {
     setupHandlerAndSpace(nakshaClient, "ReadFeatures/ByTile/setup");
     String initialFeaturesJson = loadFileOrFail("ReadFeatures/ByTile/setup/create_features.json");
-    nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
+    final var response = nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
+    assertThat(response).hasStatus(200);
   }
 
   private static Stream<Arguments> standardTestParams() {
@@ -132,19 +137,6 @@ class ReadFeaturesByTileTest extends ApiTest {
                 "tags=four+five"
             ),
             "ReadFeatures/ByTile/TC0805_TagAndOrAndCondition/feature_response_part.json",
-            200,
-            false
-        ),
-        standardTestSpec(
-            // for given Tile and limit
-            "tc0806_testGetByTileWithLimit",
-            TYPE_QUADKEY,
-            "1",
-            List.of(
-                "tags=one",
-                "limit=2"
-            ),
-            "ReadFeatures/ByTile/TC0806_WithLimit/feature_response_part.json",
             200,
             false
         ),
@@ -458,6 +450,27 @@ class ReadFeaturesByTileTest extends ApiTest {
         .hasStatus(expectedResCode)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(expectedBodyPart, "Response body doesn't match", strictChecking);
+  }
+
+  @Test
+  void tc0806_testGetByTileWithLimit() throws Exception {
+    // Features with tags=one in the setup data:
+    // my-custom-id-800-1, 800-2, 800-3, 800-4, 800-5, 800-6
+    // Without orderBy, the DB may return any of them, so we
+    // only verify limit count and that all returned IDs are valid.
+    final String streamId = UUID.randomUUID().toString();
+    final HttpResponse<String> response = nakshaClient
+        .get("hub/spaces/" + SPACE_ID + "/tile/" + TYPE_QUADKEY + "/1?tags=one&limit=2", streamId);
+
+    assertThat(response)
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasFeatureCount(2)
+        .hasFeatureIdsAmongst(List.of(
+            "my-custom-id-800-1", "my-custom-id-800-2",
+            "my-custom-id-800-3", "my-custom-id-800-4",
+            "my-custom-id-800-5", "my-custom-id-800-6"
+        ));
   }
 
 }
