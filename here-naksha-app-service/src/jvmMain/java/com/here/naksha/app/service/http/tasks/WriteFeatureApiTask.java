@@ -330,10 +330,19 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       NakshaFeature correspondingExistingFeature = (NakshaFeature) existingFeaturesById.getPath(featureFromRequest.getId());
       if (correspondingExistingFeature == null) {
         // Feature not yet persisted - just insert
+        //TODO if given UUID then return conflict
+        // UUID describes the state of the object modified by the client, so we can detect things like a feature that was cloned over from another collection, or an existing object in this same collection was renamed and rewritten into the collection
+        // but for now we allow these. As long as a feature has a unique ID, regardless of its origin, we treat it as a new and distinguished feature.
         preProcessor.preProcess(featureFromRequest);
         insertsAndUpdates.add(new Write().createFeature(null, spaceId, featureFromRequest));
       } else {
         // Feature exists - prepare patch for update (atomic == true, we want version validation)
+        // that means, if no UUID in feature JSON in request, currently always accept the request, regardless of concurrency issue
+        final var requestedUuid = featureFromRequest.getProperties().getXyz().getUuid();
+        if ((requestedUuid != null) &&(!requestedUuid.equals(correspondingExistingFeature.getProperties().getXyz().getUuid()))) {
+          // TODO CASL-1198 Should we get failed features IDs in naskha errors.
+          return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.CONFLICT, "Error encountered while writing the patched features to storage"));
+        }
         NakshaFeature patchedFeature = patchedFeature(featureFromRequest, correspondingExistingFeature);
         preProcessor.preProcess(featureFromRequest);
         insertsAndUpdates.add(new Write().updateFeature(null, spaceId, patchedFeature, true));
