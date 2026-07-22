@@ -7,7 +7,6 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
-import naksha.model.objects.StandardMembers
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.BeforeTest
@@ -47,14 +46,14 @@ class SridTest : PgTestBase() {
         executeWrite(
             WriteRequest().add(
                 Write().createFeature(
-                    mapId = map.id,
+                    mapId = catalog.id,
                     collectionId = COLLECTION_ID,
                     feature = feature
                 )
             )
         )
 
-        val srid = selectSrid(map.id, COLLECTION_ID, feature.id)
+        val srid = selectSrid(catalog.id, COLLECTION_ID, feature.id)
         assertEquals(EXPECTED_SRID, srid)
     }
 

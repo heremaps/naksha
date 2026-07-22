@@ -11,7 +11,7 @@ import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyOb
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
-class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
+class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun shouldReturnSavedGeometry() {

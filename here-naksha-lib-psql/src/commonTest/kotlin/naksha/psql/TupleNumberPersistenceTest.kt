@@ -14,7 +14,7 @@ import naksha.model.RandomFeatures
 import kotlin.test.*
 import kotlin.time.Clock
 
-class TupleNumberPersistenceTest : PgTestBase(collection = null, mapId = "") {
+class TupleNumberPersistenceTest : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun shouldSaveCorrectTxn() {

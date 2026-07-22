@@ -14,7 +14,7 @@ import kotlin.jvm.JvmStatic
  *
  * When [toString] is invoked, it is serialized into a [URN](https://datatracker.ietf.org/doc/html/rfc8141). It can be restored from a [URN](https://datatracker.ietf.org/doc/html/rfc8141) using the static helper [fromString]. The format of the URN is:
  *
- * `urn:naksha:guid:{feature-id}:{database-number}:{catalog-number}:{collection-number}:{feature-number}:{version}`
+ * `urn:naksha:guid:{feature-id}[:{database-number}:{catalog-number}:{collection-number}:{feature-number}:{version}]`
  *
  * The [Guid] is exposed through the XYZ namespace in the `uuid` property.
  * @since 3.0.0

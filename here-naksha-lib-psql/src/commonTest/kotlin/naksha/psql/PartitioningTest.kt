@@ -21,7 +21,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 8
         val partitionedCollection = NakshaCollection(
             id = "feature_partitioned",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -64,7 +64,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 2
         val partitionedCollection = NakshaCollection(
             id = "feature_partitioned_insert_check",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -103,7 +103,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 0
         val partitionedCollection = NakshaCollection(
             id = "zero_partitions",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -122,7 +122,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 1
         val partitionedCollection = NakshaCollection(
             id = "one_partitions",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -141,7 +141,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 65536
         val partitionedCollection = NakshaCollection(
             id = "to_many_partitions",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -158,7 +158,7 @@ class PartitioningTest : PgTestBase() {
     private fun queryForTablePartitions(table: String): List<String> {
         storage.newConnection(SessionOptions.from(null), true).use { pgConnection ->
             pgConnection.execute("""
-SET search_path TO "${map.id}", "naksha~admin", topology, hint_plan, public;
+SET search_path TO "${catalog.id}", "naksha~admin", topology, hint_plan, public;
 SELECT inhrelid::regclass AS partitioned_table FROM pg_inherits WHERE inhparent = $1::regclass ORDER BY partitioned_table;
 """,
                 arrayOf(table)

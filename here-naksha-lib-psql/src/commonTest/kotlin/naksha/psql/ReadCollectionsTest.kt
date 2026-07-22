@@ -3,8 +3,6 @@ package naksha.psql
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StoreMode.StoreMode_C.ON
 import naksha.model.request.ReadCollections
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
-import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -20,7 +18,7 @@ class ReadCollectionsTest : PgTestBase(collection = NakshaCollection(
     fun shouldReadCollectionMeta() {
         // When
         val retrievedCollectionMeta = executeRead(ReadCollections().apply {
-            mapId = map.id
+            mapId = catalog.id
             collectionIds += collection.id
         })
 

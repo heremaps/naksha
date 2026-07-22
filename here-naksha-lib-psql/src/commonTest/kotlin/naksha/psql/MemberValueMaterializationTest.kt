@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
  * Tests that custom [Member] values are actually materialized into their physical Postgres column
  * when features are written.
  */
-class MemberValueMaterializationTest : PgTestBase(collection = null, mapId = "") {
+class MemberValueMaterializationTest : PgTestBase(collection = null, catalogId = "") {
 
     private fun featureJson(id: String, name: String, city: String, score: Long): String = """
         {
@@ -66,7 +66,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, mapId = "")
     @Test
     fun shouldMaterializeMembersOnInsert() {
         // Given: a collection with two members
-        val collection = NakshaCollection("member_materialization_test", map.id).apply {
+        val collection = NakshaCollection("member_materialization_test", catalog.id).apply {
             addMember(Member("label", MemberType.STRING, JsonPath("properties", "name")))
             addMember(Member("city", MemberType.STRING, JsonPath("properties", "address", "city")))
         }
@@ -100,7 +100,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, mapId = "")
     @Test
     fun shouldMaterializeTypedMemberOnInsert() {
         // Given: a collection with a numeric member on properties.score
-        val collection = NakshaCollection("member_typed_materialization_test", map.id).apply {
+        val collection = NakshaCollection("member_typed_materialization_test", catalog.id).apply {
             addMember(Member("score", MemberType.INT64, JsonPath("properties", "score")))
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))

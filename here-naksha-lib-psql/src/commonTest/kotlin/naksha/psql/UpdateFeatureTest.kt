@@ -5,13 +5,14 @@ import naksha.base.Guid
 import naksha.base.Int64
 import naksha.base.NakshaError
 import naksha.base.TupleNumber
+import naksha.base.Version
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.*
 
-class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
+class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {
@@ -151,9 +152,10 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         testWithCollection("atomicUpdateNotExistingWithFakeUuid")
 
         val featureId = "feature_not_existing"
+        val fakeUUID = TupleNumber(storage.number, catalog.catalogNumber, collection.collectionNumber, Naksha.featureNumber(featureId), Version.now(Int64(1), Action.CREATE).number)
         val feature = NakshaFeature().apply {
             id = featureId
-            properties.xyz.setRaw("uuid", Guid(featureId, TupleNumber.HEAD).toString())
+            properties.xyz.setRaw("uuid", fakeUUID)
         }
         val updateFeatureResponse = executeWriteErrorResponse(
             WriteRequest().add(
