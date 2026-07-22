@@ -179,8 +179,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull StopWatch storageTimer) {
     if (operationData.getRequest() instanceof ReadFeatures) {
       return forwardReadFeatures(operationData, currentAttempt, storageTimer);
-    } else if (operationData.getRequest() instanceof WriteRequest) {
-      WriteRequest wr = (WriteRequest) operationData.getRequest();
+    } else if (operationData.getRequest() instanceof WriteRequest wr) {
       if (isOnlyWriteCollections(wr)) {
         return forwardWriteCollections(operationData, currentAttempt, storageTimer);
       } else {
@@ -275,8 +274,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull StopWatch storageTimer) {
     Response response = measuredStorageSupplier(
         () -> performAtomicWriteFeatures(operationData.getSessionOptions(), operationData.getStorageImpl(), (WriteRequest) operationData.getRequest()), storageTimer);
-    if (response instanceof ErrorResponse) {
-      ErrorResponse errorResponse = (ErrorResponse) response;
+    if (response instanceof ErrorResponse errorResponse) {
       return reattempt.call(errorResponse);
     } else {
       return response;

@@ -148,7 +148,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
   private void collectMissingPredecessors(CollectedFeatures collectedFeatures, NakshaContext context) {
     List<TupleNumber> tnsOfRootsMissingPredecessor = collectedFeatures.activityLogRoots.stream()
         .filter(f -> !collectedFeatures.allByNuuid.containsKey(f.getProperties().getXyz().getUuid()))
-        .map(XyzMembers.XyzTn::getTupleNumber)
+        .map(XyzMembers.XyzTn::readTupleNumber)
         .toList();
     if (!tnsOfRootsMissingPredecessor.isEmpty()) {
       List<NakshaFeature> missingPredecessorsByNextVersion =

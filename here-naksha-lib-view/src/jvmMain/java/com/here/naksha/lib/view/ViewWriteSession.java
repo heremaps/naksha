@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.base.StringList;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
@@ -52,8 +51,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   @Override
   public @NotNull Response execute(@NotNull Request request) {
     ensureSessionInitialized();
-    if (request instanceof WriteRequest) {
-      final WriteRequest writeRequest = (WriteRequest) request;
+    if (request instanceof WriteRequest writeRequest) {
       for (Write write : writeRequest.getWrites()) {
         if(write.getOp().equals(WriteOp.UPDATE)){
           write.withOp(WriteOp.UPSERT);

@@ -33,14 +33,14 @@ class ByteArrayMember() : TypedMember<ByteArrayMember>() {
     }
 
     /** Retrieves the byte array value of this member from the given feature. */
-    fun get(feature: NakshaFeature): ByteArray? = getByteArray(feature)
+    fun get(feature: NakshaFeature): ByteArray? = readByteArray(feature)
 
     /**
      * Retrieves the byte array value of this member from the given tuple.
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getFromTuple")
-    fun get(tuple: Tuple): ByteArray? = getByteArray(tuple)
+    fun get(tuple: Tuple): ByteArray? = readByteArray(tuple)
 
     /** Sets the byte array value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: ByteArray): Any? = setPath(feature, path, value)

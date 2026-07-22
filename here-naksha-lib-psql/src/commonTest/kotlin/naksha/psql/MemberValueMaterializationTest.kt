@@ -6,6 +6,7 @@ import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.Test
@@ -49,7 +50,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, mapId = "")
     private fun readColumn(collection: NakshaCollection, featureId: String, column: String): Any? {
         storage.adminConnection().use { conn ->
             conn.execute(
-                """SELECT "$column" AS value FROM "${collection.catalogId}"."${collection.id}" WHERE _id = $1""",
+                """SELECT "$column" AS value FROM "${collection.catalogId}"."${collection.id}" WHERE $Id = $1""",
                 arrayOf(featureId)
             ).use { cursor ->
                 assertTrue(cursor.next(), "No HEAD row found for feature '$featureId'")

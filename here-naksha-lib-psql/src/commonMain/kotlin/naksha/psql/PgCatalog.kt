@@ -20,7 +20,7 @@ import naksha.base.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
-import naksha.psql.PgColumn.PgColumn_C.FN
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -301,7 +301,7 @@ open class PgCatalog internal constructor(
         // Read from database
         setSearchPath(conn)
         val TABLE = collections.headTable.quotedName
-        val SQL = "SELECT * FROM $TABLE WHERE $FN = $1"
+        val SQL = "SELECT * FROM $TABLE WHERE $FnColumn = $1"
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         val rows = PgRows().withCollection(collections)
         plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }

@@ -45,14 +45,14 @@ class StandardIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Id = Index("id", StandardMembers.Id.name, StandardMembers.FeatureNumber.name, StandardMembers.Version.name).withInternal(true)
+        val Id = Index("id", StandardMembers.Id.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name).withInternal(true)
 
         /**
          * `version` — non-unique index on `version`. Present in all tables. Mandatory.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Version = Index("version", StandardMembers.Version.name).withInternal(true)
+        val Version = Index("version", StandardMembers.FeatureVersion.name).withInternal(true)
 
         /**
          * `gbn` — conditional non-unique index on `gbn` WHERE `gbn IS NOT NULL`. Used by the sequencer

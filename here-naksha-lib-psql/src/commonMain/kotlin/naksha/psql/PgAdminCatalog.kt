@@ -24,6 +24,8 @@ import naksha.base.Version
 import naksha.base.forbidden
 import naksha.base.illegalState
 import naksha.model.objects.NakshaCatalog
+import naksha.model.objects.StandardMembers
+import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.time.Instant
@@ -262,7 +264,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                 )
                 // Set the collection's resolved `_tn` member, where encodeFeature reads it back.
                 val col = adminCol.head
-                col.useMember(naksha.model.objects.StandardMembers.Tn).set(col, tn)
+                col.useMember(naksha.model.objects.StandardMembers.Tn).write(col, tn)
             }
 
             if (admin_schema_oid == null) {
@@ -552,7 +554,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         val outRows = PgRows().withCollection(catalogs)
         val SQL = """SELECT ${outRows.aliases()}
 FROM "naksha~admin".${catalogs.headTable.quotedName}
-WHERE _id = $1 AND (_version & 3) < 2"""
+WHERE $Id = $1 AND (${StandardMembers.FeatureVersion} & 3) < 2"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         plan.execute(arrayOf(id)).fetch().use { cursor ->
             if (!outRows.read(cursor)) return null
@@ -583,7 +585,7 @@ WHERE _id = $1 AND (_version & 3) < 2"""
         val rows = PgRows().withCollection(catalogs)
         val SQL = """SELECT ${rows.aliases()} 
 FROM "naksha~admin".${catalogs.headTable.quotedName} 
-WHERE _fn = $1 AND (_version & 3) < 2"""
+WHERE ${StandardMembers.FeatureNumber} = $1 AND (${StandardMembers.FeatureVersion} & 3) < 2"""
         setSearchPath(conn)
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }

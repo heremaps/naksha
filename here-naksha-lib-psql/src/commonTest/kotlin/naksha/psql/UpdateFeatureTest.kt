@@ -107,8 +107,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertNotNull(retrievedTuples)
         assertEquals(2, retrievedTuples.size)
 
-        val createdTuple = retrievedTuples.first { Action.fromValue((it.getLong(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1) == Action.CREATE }
-        val updatedTuple = retrievedTuples.first { Action.fromValue((it.getLong(naksha.model.objects.StandardMembers.Version).toInt() and 3) ?: -1) == Action.UPDATE }
+        val createdTuple = retrievedTuples.first { Action.fromValue((it.getLong(naksha.model.objects.StandardMembers.FeatureVersion).toInt() and 3) ?: -1) == Action.CREATE }
+        val updatedTuple = retrievedTuples.first { Action.fromValue((it.getLong(naksha.model.objects.StandardMembers.FeatureVersion).toInt() and 3) ?: -1) == Action.UPDATE }
 
         // Then
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)

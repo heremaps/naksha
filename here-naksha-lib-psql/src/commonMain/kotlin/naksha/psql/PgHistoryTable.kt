@@ -5,14 +5,14 @@ package naksha.psql
 import naksha.base.Int64
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.VERSION
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
+import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
- * The _HISTORY_ table of a collection , partitioned by [next_version][PgColumn.NEXT_VERSION].
+ * The _HISTORY_ table of a collection , partitioned by [next_version][PgColumn.NextVersionColumn].
  *
  * Features are moved into the history table when new states _([tuple][naksha.model.Tuple])_ are created in _HEAD_. In that case the previous [tuple][naksha.model.Tuple] is moved from _HEAD_ into _HISTORY_. When moving the [tuple][naksha.model.Tuple], its next-version property is set to the version of the new _head_ [tuple][naksha.model.Tuple], that replaces it. Within the history table the features are partitioned by this [next-version][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion]. With the default [shift][naksha.model.objects.NakshaCollection.shift] of 41 the partitioning effectively is done by calendar year of when the [tuple][naksha.model.Tuple] has become obsolete and was moved into _HISTORY_.
  * @since 3.0
@@ -42,17 +42,17 @@ class PgHistoryTable(
         val ID = collection.column(Id)
         val NEXT_VERSION = collection.column(NextVersion)
         return """
-  CONSTRAINT ${quoteIdent(tableName, "\$c_pkey")} PRIMARY KEY ($FN, $VERSION) INCLUDE ($NEXT_VERSION, $ID),
-  CONSTRAINT ${quoteIdent(tableName, "\$c_nv")} CHECK ($NEXT_VERSION IS NOT NULL AND $NEXT_VERSION >= $VERSION),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_pkey")} PRIMARY KEY ($FnColumn, $VersionColumn) INCLUDE ($NEXT_VERSION, $ID),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_nv")} CHECK ($NEXT_VERSION IS NOT NULL AND $NEXT_VERSION >= $VersionColumn),
   CONSTRAINT ${quoteIdent(tableName, "\$c_nvr")} CHECK ((($NEXT_VERSION >> ${collection.shift})::int4) = $historyPartition),
-  CONSTRAINT ${quoteIdent(tableName, "\$c_id")} UNIQUE ($ID, $VERSION) INCLUDE ($NEXT_VERSION, $FN),
-  CONSTRAINT ${quoteIdent(tableName, "\$c_fn")} CHECK (($FN < 0 AND $ID IS NOT NULL) OR ($FN >= 0 AND $ID IS NULL))"""
+  CONSTRAINT ${quoteIdent(tableName, "\$c_id")} UNIQUE ($ID, $VersionColumn) INCLUDE ($NEXT_VERSION, $FnColumn),
+  CONSTRAINT ${quoteIdent(tableName, "\$c_fn")} CHECK (($FnColumn < 0 AND $ID IS NOT NULL) OR ($FnColumn >= 0 AND $ID IS NULL))"""
     }
 
     @Suppress("FunctionName")
     internal fun CONSTRAINT(tableName: String, historyPartition: Int, distributionPartition: Int): String {
         return """${CONSTRAINT(tableName, historyPartition)},
-  CONSTRAINT ${quoteIdent(tableName, "\$c_fnr")} CHECK ((($FN & 65535)::int4 % ${collection.partitions})=$distributionPartition)
+  CONSTRAINT ${quoteIdent(tableName, "\$c_fnr")} CHECK ((($FnColumn & 65535)::int4 % ${collection.partitions})=$distributionPartition)
 """
     }
 

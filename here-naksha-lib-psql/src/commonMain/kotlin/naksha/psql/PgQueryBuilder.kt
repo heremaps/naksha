@@ -7,12 +7,11 @@ import naksha.base.illegalArg
 import naksha.base.mapNotFound
 import naksha.base.unsupportedOp
 import naksha.model.Naksha.NakshaCompanion.HARD_TUPLE_LIMIT
+import naksha.model.objects.StandardMembers.StandardMembers_C.FN
+import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
+import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
 import naksha.model.request.*
 import naksha.model.request.query.SortOrder
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.NEXT_VERSION_NAME
-import naksha.psql.PgColumn.PgColumn_C.VERSION
-import naksha.psql.PgColumn.PgColumn_C.VERSION_NAME
 import kotlin.math.max
 import kotlin.math.min
 
@@ -70,8 +69,8 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                     }
                     if (exit < 0) throw illegalArg("Too many orders in orderBy")
                 } else { // deterministic ordering is by `feature-number ASC, version DESC`
-                    order_by.add(Pair(FN.toString(), SortOrder.ASCENDING.toString()))
-                    order_by.add(Pair(VERSION.toString(), SortOrder.DESCENDING.toString()))
+                    order_by.add(Pair(FN, SortOrder.ASCENDING.toString()))
+                    order_by.add(Pair(VERSION, SortOrder.DESCENDING.toString()))
                 }
             }
         } while(false)
@@ -86,20 +85,20 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                 version = null // HEAD
             } else {
                 if (WHERE.isNotEmpty()) WHERE.append(" AND ")
-                WHERE.append("($VERSION_NAME <= ").append(version).append(")")
+                WHERE.append("($VERSION <= ").append(version).append(")")
             }
         }
         var minVersion = req.minVersion
         if (minVersion != null) {
             minVersion = minVersion or Int64(3)
             if (WHERE.isNotEmpty()) WHERE.append(" AND ")
-            WHERE.append("($VERSION_NAME >= ").append(minVersion).append(")")
+            WHERE.append("($VERSION >= ").append(minVersion).append(")")
         }
         val readHistory = req.queryHistory && pgCollection.storeHistory
         val versions = req.versions
         if (readHistory && versions == 1 && version != null) { // Return latest version only, but involve history.
             if (WHERE.isNotEmpty()) WHERE.append(" AND ")
-            WHERE.append("($NEXT_VERSION_NAME > ").append(version).append(" OR $NEXT_VERSION_NAME IS NULL) ")
+            WHERE.append("($NEXT_VERSION > ").append(version).append(" OR $NEXT_VERSION IS NULL) ")
         }
         if (whereQuery.isNotEmpty()) {
             if (WHERE.isNotEmpty()) WHERE.append(" AND ")
@@ -110,11 +109,11 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val headWhere = if (req.queryDeleted) where else {
             val hw = StringBuilder(WHERE)
             if (hw.isNotEmpty()) hw.append(" AND ")
-            hw.append("($VERSION_NAME & 3) < 2 ")
+            hw.append("($VERSION & 3) < 2 ")
             " WHERE $hw"
         }
 
-        val baseCols = listOf(FN.toString(), VERSION.toString())
+        val baseCols = listOf(FN, VERSION)
         val extraCols = order_by?.map { it.first }?.filter { it !in baseCols }?.distinct() ?: emptyList()
         val selectCols = (baseCols + extraCols).joinToString(", ")
 

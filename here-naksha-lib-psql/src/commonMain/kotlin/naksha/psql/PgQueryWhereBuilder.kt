@@ -10,8 +10,8 @@ import naksha.model.objects.StandardMembers
 import naksha.model.objects.XyzMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ops.*
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.VERSION
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
+import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 
 /**
  * Helper to convert a [ReadFeatures] request into a sql `WHERE` query.
@@ -89,7 +89,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         // The action is virtual: resolve it to the version bit-mask instead of a physical column.
         val isAction = rawAt == StandardMembers.Action.name
         val at: String = when {
-            isAction -> "(${PgColumn.VERSION.name} & 3)::int4"
+            isAction -> "(${PgColumn.VersionColumn.name} & 3)::int4"
             rawAt == XyzMembers.XyzCreatedAt.name || rawAt == XyzMembers.XyzAuthorTimestamp.name ->
                 "COALESCE($rawAt, ${XyzMembers.XyzUpdatedAt.name})"
             else -> rawAt
@@ -159,7 +159,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                     isAction -> PgType.INT_ARRAY
                     rawAt == StandardMembers.FeatureNumber.name ||
                         rawAt == StandardMembers.NextVersion.name ||
-                        rawAt == StandardMembers.Version.name -> PgType.INT64_ARRAY
+                        rawAt == StandardMembers.FeatureVersion.name -> PgType.INT64_ARRAY
                     else -> PgType.STRING_ARRAY
                 }
                 val placeholder = placeholderForArg(op.items, arrayType)
@@ -423,7 +423,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             }
             val featureNumbersArg = placeholderForArg(fns, PgType.INT64_ARRAY)
             val versionsArg = placeholderForArg(versions, PgType.INT64_ARRAY)
-            where.append("($FN, $VERSION) IN (SELECT * FROM unnest($featureNumbersArg::int8[], $versionsArg::int8[]))")
+            where.append("($FnColumn, $VersionColumn) IN (SELECT * FROM unnest($featureNumbersArg::int8[], $versionsArg::int8[]))")
         }
     }
 //

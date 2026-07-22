@@ -2,6 +2,9 @@
   "type": "Feature",
   "id": "my-custom-id-01",
   "properties": {
+    "@ns:com:here:xyz": {
+      "uuid": "${uuid1}"
+    },
     "@ns:com:here:mom:meta": {
       "sourceId": "COM_1000001_20240301"
     }

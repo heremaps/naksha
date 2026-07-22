@@ -2,7 +2,6 @@
 
 package naksha.model.objects
 
-import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.base.ListProxy
@@ -17,6 +16,7 @@ import naksha.geo.SpGeometry
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
+import naksha.base.Platform.PlatformCompanion.UNDEFINED
 import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import naksha.model.TagList
 import naksha.model.TagMap
@@ -37,7 +37,7 @@ import kotlin.js.JsName
  * - [NextVersion][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion]
  * - [GlobalBookFeatureNumber][naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber]
  * - [Id][naksha.model.objects.StandardMembers.StandardMembers_C.Id]
- * - [Feature][naksha.model.objects.StandardMembers.StandardMembers_C.Feature]
+ * - [Feature][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes]
  *
  * If [path] is not explicitly set, the implicit path defaults to `["properties", <name>]`.
  * @since 3.0
@@ -56,7 +56,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
         this.name = INTERNAL_MEMBER.verify(name)
         this.dataType = dataType
-        this.path = path ?: JsonPath("properties", name) //TODO what if ID or other JSON attributes outside "properties"?
+        this.path = path ?: JsonPath("properties", name)
         this.path.validate()
     }
 
@@ -239,7 +239,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getTupleNumber(feature: MapProxy<*,*>): TupleNumber? {
+    fun readTupleNumber(feature: MapProxy<*,*>): TupleNumber? {
         val raw = feature.getPath(path)
         if (raw is TupleNumber) return raw
         if (raw is String) return TupleNumber.fromStringOrGuid(raw)
@@ -252,7 +252,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getBoolean(feature: MapProxy<*,*>): Boolean? {
+    fun readBoolean(feature: MapProxy<*,*>): Boolean? {
         val raw = feature.getPath(path)
         if (raw is Boolean) return raw
         return null
@@ -263,7 +263,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getString(feature: MapProxy<*,*>): String? {
+    fun readString(feature: MapProxy<*,*>): String? {
         val raw = feature.getPath(path)
         if (raw is String) return raw
         return null
@@ -274,7 +274,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getInt64(feature: MapProxy<*,*>): Int64? {
+    fun readInt64(feature: MapProxy<*,*>): Int64? {
         val raw = feature.getPath(path)
         if (raw is Int64) return raw
         if (raw is Long) return Int64(raw)
@@ -287,7 +287,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getDouble(feature: MapProxy<*,*>): Double? {
+    fun readDouble(feature: MapProxy<*,*>): Double? {
         val raw = feature.getPath(path)
         if (raw is Double) return raw
         if (raw is Number) return raw.toDouble()
@@ -299,7 +299,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getGeometry(feature: MapProxy<*,*>): SpGeometry? {
+    fun readGeometry(feature: MapProxy<*,*>): SpGeometry? {
         val raw = feature.getPath(path)
         if (raw is SpGeometry) return raw
         return null
@@ -310,7 +310,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getByteArray(feature: MapProxy<*,*>): ByteArray? {
+    fun readByteArray(feature: MapProxy<*,*>): ByteArray? {
         val raw = feature.getPath(path)
         if (raw is ByteArray) return raw
         return null
@@ -321,7 +321,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getTagMap(feature: MapProxy<*,*>): TagMap? {
+    fun readTagMap(feature: MapProxy<*,*>): TagMap? {
         val raw = feature.getPath(path)
         if (raw is TagMap) return raw
         if (raw is MapProxy<*,*>) return raw.proxy(TagMap::class)
@@ -334,7 +334,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun getTagList(feature: MapProxy<*,*>): TagList? {
+    fun readTagList(feature: MapProxy<*,*>): TagList? {
         val raw = feature.getPath(path)
         if (raw is TagList) return raw
         if (raw is ListProxy<*>) return raw.proxy(TagList::class)
@@ -349,7 +349,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getTupleNumberFromTuple")
-    fun getTupleNumber(tuple: Tuple): TupleNumber? {
+    fun readTupleNumber(tuple: Tuple): TupleNumber? {
         val raw = tuple.membersBook[this.name] ?: return null
         if (raw is TupleNumber) return raw
         if (raw is String) return TupleNumber.fromStringOrGuid(raw)
@@ -364,7 +364,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getBooleanFromTuple")
-    fun getBoolean(tuple: Tuple): Boolean? {
+    fun readBoolean(tuple: Tuple): Boolean? {
         val raw = tuple.membersBook[this.name]
         if (raw is Boolean) return raw
         return null
@@ -377,7 +377,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getStringFromTuple")
-    fun getString(tuple: Tuple): String? {
+    fun readString(tuple: Tuple): String? {
         val raw = tuple.membersBook[this.name]
         if (raw is String) return raw
         return null
@@ -390,7 +390,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getInt64FromTuple")
-    fun getInt64(tuple: Tuple): Int64? {
+    fun readInt64(tuple: Tuple): Int64? {
         val raw = tuple.getMember(this)
         if (raw is Int64) return raw
         if (raw is Long) return Int64(raw)
@@ -405,7 +405,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getDoubleFromTuple")
-    fun getDouble(tuple: Tuple): Double? {
+    fun readDouble(tuple: Tuple): Double? {
         val raw = tuple.membersBook[this.name]
         if (raw is Double) return raw
         if (raw is Number) return raw.toDouble()
@@ -419,7 +419,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getGeometryFromTuple")
-    fun getGeometry(tuple: Tuple): SpGeometry? {
+    fun readGeometry(tuple: Tuple): SpGeometry? {
         val raw = tuple.membersBook[this.name]
         if (raw is SpGeometry) return raw
         return null
@@ -432,7 +432,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getByteArrayFromTuple")
-    fun getByteArray(tuple: Tuple): ByteArray? {
+    fun readByteArray(tuple: Tuple): ByteArray? {
         val raw = tuple.membersBook[this.name]
         if (raw is ByteArray) return raw
         return null
@@ -445,7 +445,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getTagMapFromTuple")
-    fun getTagMap(tuple: Tuple): TagMap? {
+    fun readTagMap(tuple: Tuple): TagMap? {
         val raw = tuple.membersBook[this.name]
         if (raw is TagMap) return raw
         if (raw is MapProxy<*,*>) return raw.proxy(TagMap::class)
@@ -460,7 +460,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getTagListFromTuple")
-    fun getTagList(tuple: Tuple): TagList? {
+    fun readTagList(tuple: Tuple): TagList? {
         val raw = tuple.membersBook[this.name]
         if (raw is TagList) return raw
         if (raw is ListProxy<*>) return raw.proxy(TagList::class)
@@ -472,40 +472,17 @@ open class Member() : AnyObject(), Comparator<Member> {
      * Helper to write a member value to the given feature.
      * @param feature The feature to write to.
      * @return the previous value.
-     * Helper to read a set from the given feature.
-     * @param feature The feature to read from.
-     * @return the read value or `null`, if the feature does not store a valid value at the member path.
-     */
-    fun getSet(feature: MapProxy<*,*>): AnyList? {
-        val raw = feature.getPath(path)
-        if (raw is AnyList) return raw
-        if (raw is ListProxy<*>) return raw.proxy(AnyList::class)
-        if (raw is PlatformList) return raw.proxy(AnyList::class)
-        return null
-    }
-
-    /**
-     * Helper to read a set from the given tuple.
-     * @param tuple The tuple to read from.
-     * @return the read value or `null`, if the tuple does not store a valid value for this member.
-     * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
-     */
-    @JsName("getSetFromTuple")
-    fun getSet(tuple: Tuple): AnyList? {
-        val raw = tuple.membersBook[this.name]
-        if (raw is AnyList) return raw
-        if (raw is ListProxy<*>) return raw.proxy(AnyList::class)
-        if (raw is PlatformList) return raw.proxy(AnyList::class)
-        return null
-    }
-
-    /**
-     * Helper to write a member value to the given feature.
-     * @param feature The feature to write to.
-     * @return the previous value.
      * @throws RuntimeException If the given feature has a broken path, so the path requires an array, but an object exists already.
      */
-    fun set(feature: MapProxy<*,*>, value: Any?): Any? = feature.setPath(value, path)
+    fun write(feature: MapProxy<*,*>, value: Any?): Any? = feature.setPath(value, path)
+
+    /**
+     * Helper to delete a member from the given feature.
+     * @param feature The feature to modify.
+     * @return the value that has been removed.
+     * @throws RuntimeException If the given feature has a broken path, so the path requires an array, but an object exists already.
+     */
+    fun delete(feature: MapProxy<*,*>): Any? = feature.setPath(UNDEFINED, path)
 
     override fun compare(a: Member, b: Member): Int = a.dataType.sortOrder - b.dataType.sortOrder
 
@@ -537,23 +514,25 @@ open class Member() : AnyObject(), Comparator<Member> {
             MemberType.BYTE_ARRAY -> proxy(ByteArrayMember::class)
             MemberType.TUPLE_NUMBER -> proxy(TupleNumberMember::class)
             MemberType.SPATIAL -> proxy(SpatialMember::class)
-            MemberType.TAG_MAP, MemberType.TAG_MAP_FROM_ARRAY -> proxy(TagsMember::class)
+            MemberType.TAG_MAP, MemberType.TAG_MAP_FROM_ARRAY -> proxy(TagMapMember::class)
             MemberType.TAG_LIST -> proxy(TagListMember::class)
         }
         return this
     }
 
-    fun asBool(): BoolMember = proxy(BoolMember::class)
-    fun asInt8(): Int8Member = proxy(Int8Member::class)
-    fun asInt16(): Int16Member = proxy(Int16Member::class)
-    fun asInt32(): Int32Member = proxy(Int32Member::class)
-    fun asInt64(): Int64Member = proxy(Int64Member::class)
-    fun asFloat32(): Float32Member = proxy(Float32Member::class)
-    fun asFloat64(): Float64Member = proxy(Float64Member::class)
-    fun asString(): StringMember = proxy(StringMember::class)
-    fun asByteArray(): ByteArrayMember = proxy(ByteArrayMember::class)
-    fun asTupleNumber(): TupleNumberMember = proxy(TupleNumberMember::class)
-    fun asSpatial(): SpatialMember = proxy(SpatialMember::class)
-    fun asTags(): TagsMember = proxy(TagsMember::class)
-    fun asTagList(): TagListMember = proxy(TagListMember::class)
+    fun asBoolMember(): BoolMember = proxy(BoolMember::class)
+    fun asInt8Member(): Int8Member = proxy(Int8Member::class)
+    fun asInt16Member(): Int16Member = proxy(Int16Member::class)
+    fun asInt32Member(): Int32Member = proxy(Int32Member::class)
+    fun asInt64Member(): Int64Member = proxy(Int64Member::class)
+    fun asFloat32Member(): Float32Member = proxy(Float32Member::class)
+    fun asFloat64Member(): Float64Member = proxy(Float64Member::class)
+    fun asStringMember(): StringMember = proxy(StringMember::class)
+    fun asByteArrayMember(): ByteArrayMember = proxy(ByteArrayMember::class)
+    fun asTupleNumberMember(): TupleNumberMember = proxy(TupleNumberMember::class)
+    fun asSpatialMember(): SpatialMember = proxy(SpatialMember::class)
+    fun asTagMapMember(): TagMapMember = proxy(TagMapMember::class)
+    fun asTagListMember(): TagListMember = proxy(TagListMember::class)
+
+    override fun toString(): String = name
 }

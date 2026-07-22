@@ -12,9 +12,9 @@ import naksha.base.illegalState
 import naksha.jbon.HeapBook
 import naksha.model.objects.MemberType
 import naksha.model.objects.StandardMembers
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.NEXT_VERSION
-import naksha.psql.PgColumn.PgColumn_C.VERSION
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
+import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
+import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 
 /**
  * Execute a [UPDATE][naksha.model.request.WriteOp.UPDATE].
@@ -50,9 +50,9 @@ internal class PgWriterUpdate(
 
         // Select rows from HEAD that we want to update, lock the rows for update
         val existing_rows = """, existing_rows AS (
-  SELECT head.$FN AS $FN, head.$VERSION AS $VERSION
+  SELECT head.$FnColumn AS $FnColumn, head.$VersionColumn AS $VersionColumn
   FROM $headIdent AS head, new_row
-  WHERE head.$FN = new_row.$FN
+  WHERE head.$FnColumn = new_row.$FnColumn
   FOR UPDATE NOWAIT
 )"""
 
@@ -60,29 +60,29 @@ internal class PgWriterUpdate(
         val head_row = """, head_row AS (
   SELECT ${pgCollection.joinColumns { column -> "head.$column" }}
   FROM $headIdent AS head, new_row
-  WHERE head.$FN = new_row.$FN AND (new_row.expected_version IS NULL OR (new_row.expected_version & -4) = (head.$VERSION & -4))
+  WHERE head.$FnColumn = new_row.$FnColumn AND (new_row.expected_version IS NULL OR (new_row.expected_version & -4) = (head.$VersionColumn & -4))
 )"""
 
         // Copy the current HEAD row into HISTORY; set the next version to the version for the history row.
         val head_to_history = if (historyTable != null) """, head_to_history AS (
-  INSERT INTO $historyIdent ($NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
-  SELECT new_row.$VERSION AS $NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
+  INSERT INTO $historyIdent ($NextVersionColumn, ${pgCollection.joinColumns { column -> if (column eq NextVersionColumn) null else column.ident }})
+  SELECT new_row.$VersionColumn AS $NextVersionColumn, ${pgCollection.joinColumns { column -> if (column eq NextVersionColumn) null else "head_row.$column AS $column" }}
   FROM head_row
-  LEFT JOIN new_row ON new_row.$FN = head_row.$FN
-  RETURNING $FN, $VERSION
+  LEFT JOIN new_row ON new_row.$FnColumn = head_row.$FnColumn
+  RETURNING $FnColumn, $VersionColumn
 )""" else ""
 
         // Delete HEAD rows that have been copied into history.
         val head_deleted = """, head_deleted AS (
   DELETE FROM $headIdent
-  WHERE $FN IN (SELECT $FN FROM head_row)
-  RETURNING $FN, $VERSION
+  WHERE $FnColumn IN (SELECT $FnColumn FROM head_row)
+  RETURNING $FnColumn, $VersionColumn
 )"""
 
         val inserted = """, inserted AS (
-INSERT INTO $headIdent ($NEXT_VERSION, ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
-SELECT NULL AS $NEXT_VERSION, ${pgCollection.joinColumns { column ->
-    if (column eq NEXT_VERSION)
+INSERT INTO $headIdent ($NextVersionColumn, ${pgCollection.joinColumns { column -> if (column eq NextVersionColumn) null else column.ident }})
+SELECT NULL AS $NextVersionColumn, ${pgCollection.joinColumns { column ->
+    if (column eq NextVersionColumn)
         null
     else if (column.memberType == MemberType.BYTE_ARRAY)
         "CASE WHEN new_row.$column = convert_to('undefined', 'UTF8') THEN head_row.$column ELSE new_row.$column END AS $column"
@@ -90,8 +90,8 @@ SELECT NULL AS $NEXT_VERSION, ${pgCollection.joinColumns { column ->
         "new_row.$column"
 }}
 FROM new_row
-LEFT JOIN head_row ON head_row.$FN = new_row.$FN
-RETURNING $FN, $VERSION${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { column ->
+LEFT JOIN head_row ON head_row.$FnColumn = new_row.$FnColumn
+RETURNING $FnColumn, $VersionColumn${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { column ->
     // Return the inserted value (RETURNING can't reference new_row) so the caller can rebuild the tuple.
     column.ident
   }}" else ""}
@@ -99,20 +99,20 @@ RETURNING $FN, $VERSION${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.join
 
         val SQL = """$query$existing_rows$head_row$head_to_history$head_deleted$inserted
 SELECT
-    new_row.$FN AS $FN,
-    new_row.$VERSION AS $VERSION,
-    existing_rows.$FN AS _existing_fn,
-    existing_rows.$VERSION AS _existing_version,
+    new_row.$FnColumn AS $FnColumn,
+    new_row.$VersionColumn AS $VersionColumn,
+    existing_rows.$FnColumn AS _existing_fn,
+    existing_rows.$VersionColumn AS _existing_version,
     ${if (byteArrayCols.isNotEmpty()) byteArrayCols.joinToString(",\n    ") { column -> "inserted.$column AS $column" } + ",\n    " else ""}
-    ${if (head_to_history.isNotEmpty()) "head_to_history.$FN AS _history_fn," else "NULL AS _history_fn,"}
-    head_deleted.$FN AS _head_deleted_fn,
-    inserted.$FN AS _inserted_fn
+    ${if (head_to_history.isNotEmpty()) "head_to_history.$FnColumn AS _history_fn," else "NULL AS _history_fn,"}
+    head_deleted.$FnColumn AS _head_deleted_fn,
+    inserted.$FnColumn AS _inserted_fn
 FROM new_row
-LEFT JOIN existing_rows ON existing_rows.$FN = new_row.$FN
-LEFT JOIN head_row ON head_row.$FN = new_row.$FN
-${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FN = new_row.$FN" else ""}
-LEFT JOIN head_deleted ON head_deleted.$FN = new_row.$FN
-LEFT JOIN inserted ON inserted.$FN = new_row.$FN
+LEFT JOIN existing_rows ON existing_rows.$FnColumn = new_row.$FnColumn
+LEFT JOIN head_row ON head_row.$FnColumn = new_row.$FnColumn
+${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FnColumn = new_row.$FnColumn" else ""}
+LEFT JOIN head_deleted ON head_deleted.$FnColumn = new_row.$FnColumn
+LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
 ;"""
         val typeNames = inRows.typeNames()
         val pgPlan = conn.prepare(SQL, typeNames)
@@ -127,8 +127,8 @@ LEFT JOIN inserted ON inserted.$FN = new_row.$FN
             .withDatabaseNumber(storageNumber)
             .withCatalogNumber(catalogNumber)
             .withCollectionNumber(collectionNumber)
-        outRows.addColumn(FN)
-            .addColumn(VERSION)
+        outRows.addColumn(FnColumn)
+            .addColumn(VersionColumn)
             .addColumn("_existing_fn", MemberType.INT64)
             .addColumn("_existing_version", MemberType.INT64)
         for (column in byteArrayCols) outRows.addColumn(column)
@@ -157,8 +157,8 @@ LEFT JOIN inserted ON inserted.$FN = new_row.$FN
         cursor.fetch().use {
             outRows.readAll(cursor)
             for (row in 0 until outRows.size) {
-                val fn = outRows.getInt64(row, FN) ?: throw illegalState("Column '$FN' in result must not be null")
-                val version = outRows.getInt64(row, VERSION) ?: throw illegalState("Column '$VERSION' in result must not be null")
+                val fn = outRows.getInt64(row, FnColumn) ?: throw illegalState("Column '$FnColumn' in result must not be null")
+                val version = outRows.getInt64(row, VersionColumn) ?: throw illegalState("Column '$VersionColumn' in result must not be null")
                 val newTn = TupleNumber(storageNumber, catalogNumber, collectionNumber, fn, version)
                 val pgWrite = writeByFn[fn] ?: throw illegalState("Missing write record for feature-number: $fn")
                 val expected_version: Int64? = pgWrite.version?.number

@@ -9,9 +9,9 @@ import naksha.base.conflict
 import naksha.base.featureNotFound
 import naksha.base.generalException
 import naksha.model.objects.MemberType
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.NEXT_VERSION
-import naksha.psql.PgColumn.PgColumn_C.VERSION
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
+import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
+import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE] or PURGE.
@@ -40,12 +40,12 @@ internal class PgWriterDelete(
     val purge: Boolean = false
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
     init {
-        inRows.addColumn(FN.ident, MemberType.INT64)
+        inRows.addColumn(FnColumn.ident, MemberType.INT64)
         inRows.addColumn("expected_version", MemberType.INT64)
         var row = 0
         for (i in start until end) {
             val pgWrite = pgWrites[i]
-            inRows.set(row, FN.ident, pgWrite.featureNumber)
+            inRows.set(row, FnColumn.ident, pgWrite.featureNumber)
             inRows.set(row, "expected_version", pgWrite.version?.number)
             row++
         }
@@ -59,14 +59,14 @@ internal class PgWriterDelete(
 
         // All input provided by client, `id` and optionally `expected_version`
         val query = """WITH query AS (
-  SELECT * FROM UNNEST($1, $2) AS t($FN, expected_version)
+  SELECT * FROM UNNEST($1, $2) AS t($FnColumn, expected_version)
 )"""
 
         // Select id and version of all rows matching query.id — used for conflict detection.
         val head_select = """, head_select AS (
-  SELECT head.$FN AS $FN, head.$VERSION AS $VERSION
+  SELECT head.$FnColumn AS $FnColumn, head.$VersionColumn AS $VersionColumn
   FROM $headIdent AS head, query
-  WHERE head.$FN = query.$FN
+  WHERE head.$FnColumn = query.$FnColumn
 )"""
 
         // Select the HEAD rows to act on:
@@ -75,74 +75,74 @@ internal class PgWriterDelete(
         val head_row = """, head_row AS (
   SELECT ${pgCollection.joinColumns { column -> "head.$column AS $column" }}
   FROM $headIdent AS head, query
-  WHERE head.$FN = query.$FN
-    AND (query.expected_version IS NULL OR (query.expected_version & -4) = (head.$VERSION & -4))
-    AND (head.$VERSION & 3) < 2
+  WHERE head.$FnColumn = query.$FnColumn
+    AND (query.expected_version IS NULL OR (query.expected_version & -4) = (head.$VersionColumn & -4))
+    AND (head.$VersionColumn & 3) < 2
 )"""
 
         // Archive the current HEAD row into history (identical to how UPDATE does it).
         // next_version = the new deleted version, signaling "succeeded by a deletion".
         val head_to_history = if (historyTable != null) """, head_to_history AS (
-  INSERT INTO $historyIdent ($NEXT_VERSION, ${pgCollection.joinColumns { if (it.name != NEXT_VERSION.name) it.ident else null }})
-  SELECT $deleted_version AS $NEXT_VERSION,
-         ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
+  INSERT INTO $historyIdent ($NextVersionColumn, ${pgCollection.joinColumns { if (it.name != NextVersionColumn.name) it.ident else null }})
+  SELECT $deleted_version AS $NextVersionColumn,
+         ${pgCollection.joinColumns { column -> if (column eq NextVersionColumn) null else "head_row.$column AS $column" }}
   FROM head_row
-  RETURNING $FN, $VERSION
+  RETURNING $FnColumn, $VersionColumn
 )""" else ""
 
         // For DELETE: UPDATE version (action bits = DELETED) and cc in HEAD.
         // Only these two control-columns change; all data columns remain identical.
         val head_updated = if (!purge) """, head_updated AS (
   UPDATE $headIdent
-  SET $VERSION = $deleted_version${if (CC!=null) ", $CC = $headIdent.$CC + 1" else ""}
+  SET $VersionColumn = $deleted_version${if (CC!=null) ", $CC = $headIdent.$CC + 1" else ""}
   FROM head_row
-  WHERE $headIdent.$FN = head_row.$FN
-  RETURNING $headIdent.$FN, $headIdent.$VERSION${if (CC!=null) ", $headIdent.$CC" else ""}
+  WHERE $headIdent.$FnColumn = head_row.$FnColumn
+  RETURNING $headIdent.$FnColumn, $headIdent.$VersionColumn${if (CC!=null) ", $headIdent.$CC" else ""}
 )""" else ""
 
         // For PURGE: DELETE the HEAD row entirely.
         val head_deleted = if (purge) """, head_deleted AS (
   DELETE FROM $headIdent
-  WHERE ($FN, $VERSION) IN (SELECT $FN, $VERSION FROM head_row)
-  RETURNING $FN, $VERSION
+  WHERE ($FnColumn, $VersionColumn) IN (SELECT $FnColumn, $VersionColumn FROM head_row)
+  RETURNING $FnColumn, $VersionColumn
 )""" else ""
 
         // For PURGE only: also write a tombstone record into history to explicitly mark
         // end-of-lifetime. The tombstone's next_version == version (closed interval).
         val history_tombstone = if (purge && historyTable != null) """, history_tombstone AS (
   INSERT INTO ${historyTable.quotedName}
-        ($VERSION, $NEXT_VERSION, 
-         ${pgCollection.joinColumns { if (VERSION eq it || NEXT_VERSION eq it) null else it.ident }})
-  SELECT $deleted_version AS $VERSION, $deleted_version AS $NEXT_VERSION, 
-         ${pgCollection.joinColumns { column -> if (VERSION eq column || NEXT_VERSION eq column) null else "head_row.$column AS $column" }}
+        ($VersionColumn, $NextVersionColumn, 
+         ${pgCollection.joinColumns { if (VersionColumn eq it || NextVersionColumn eq it) null else it.ident }})
+  SELECT $deleted_version AS $VersionColumn, $deleted_version AS $NextVersionColumn, 
+         ${pgCollection.joinColumns { column -> if (VersionColumn eq column || NextVersionColumn eq column) null else "head_row.$column AS $column" }}
   FROM head_row
-  RETURNING $FN, $VERSION
+  RETURNING $FnColumn, $VersionColumn
 )""" else ""
 
         // The returned row for DELETE is the updated HEAD row (same data, new version/cc).
         // We reconstruct it from head_row overriding the two changed columns.
         val SQL = """$query$head_select$head_row$head_to_history$head_updated$head_deleted$history_tombstone
 SELECT
-    head_row.$FN AS $FN,
-    $deleted_version AS $VERSION,
-    null::int8 AS $NEXT_VERSION,
+    head_row.$FnColumn AS $FnColumn,
+    $deleted_version AS $VersionColumn,
+    null::int8 AS $NextVersionColumn,
     ${if (CC!=null) "COALESCE(head_updated.$CC, head_row.$CC + 1) AS $CC," else ""}
-    ${pgCollection.joinColumns { col -> if (col eq CC || col eq FN || col eq VERSION || col eq NEXT_VERSION) null else "head_row.$col AS $col" }},
-    ${if (head_to_history.isNotEmpty()) "head_to_history.$VERSION AS head_history_version," else "null AS head_history_version,"}
+    ${pgCollection.joinColumns { col -> if (col eq CC || col eq FnColumn || col eq VersionColumn || col eq NextVersionColumn) null else "head_row.$col AS $col" }},
+    ${if (head_to_history.isNotEmpty()) "head_to_history.$VersionColumn AS head_history_version," else "null AS head_history_version,"}
     ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else "null AS history_version,"}
-    head_select.$FN AS select_fn,
-    head_select.$VERSION AS select_version,
-    head_row.$VERSION AS head_version,
-    ${if (!purge) "head_updated.$VERSION AS deleted_version," else "head_deleted.$VERSION AS deleted_version,"}
-    query.$FN AS query_fn,
+    head_select.$FnColumn AS select_fn,
+    head_select.$VersionColumn AS select_version,
+    head_row.$VersionColumn AS head_version,
+    ${if (!purge) "head_updated.$VersionColumn AS deleted_version," else "head_deleted.$VersionColumn AS deleted_version,"}
+    query.$FnColumn AS query_fn,
     query.expected_version AS query_expected_version
 FROM query
-LEFT JOIN head_row ON head_row.$FN = query.$FN
-${if (!purge) "LEFT JOIN head_updated ON head_updated.$FN = query.$FN" else ""}
-${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FN = query.$FN" else ""}
-${if (history_tombstone.isNotEmpty()) "LEFT JOIN history_tombstone ON history_tombstone.$FN = query.$FN" else ""}
-LEFT JOIN head_select ON head_select.$FN = query.$FN
-${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
+LEFT JOIN head_row ON head_row.$FnColumn = query.$FnColumn
+${if (!purge) "LEFT JOIN head_updated ON head_updated.$FnColumn = query.$FnColumn" else ""}
+${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FnColumn = query.$FnColumn" else ""}
+${if (history_tombstone.isNotEmpty()) "LEFT JOIN history_tombstone ON history_tombstone.$FnColumn = query.$FnColumn" else ""}
+LEFT JOIN head_select ON head_select.$FnColumn = query.$FnColumn
+${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn" else ""}
 ;"""
         val typeNames = inRows.typeNames()
         val pgPlan = conn.prepare(SQL, typeNames)
@@ -207,8 +207,8 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FN = query.$FN" else ""}
                 val tuple = outRows[row]
                 if (tuple != null) write.tuple = tuple
 
-                val tombstone_fn = outRows.getInt64(row, FN)
-                val tombstone_version = outRows.getInt64(row, VERSION)
+                val tombstone_fn = outRows.getInt64(row, FnColumn)
+                val tombstone_version = outRows.getInt64(row, VersionColumn)
                 write.tupleNumber = if (tombstone_fn != null && tombstone_version != null) {
                     TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
                 } else null

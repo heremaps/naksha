@@ -30,6 +30,8 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.Platform.javaProxy;
+
 @AvailableSince(NakshaVersion.v2_0_12)
 public class DefaultViewHandlerProperties extends NakshaProperties {
 
@@ -51,10 +53,10 @@ public class DefaultViewHandlerProperties extends NakshaProperties {
   }
 
   public @Nullable List<String> getSpaceIds() {
-    return JvmBoxingUtil.box(getPath(SPACE_IDS), StringList.class);
+    return javaProxy(getPath(SPACE_IDS), StringList.class);
   }
 
-  public void setSpaceIds(@Nullable List<String> spaceIds) {
+  public void setSpaceIds(@NotNull List<@NotNull String> spaceIds) {
     setRaw(SPACE_IDS, StringList.fromList(spaceIds));
   }
 

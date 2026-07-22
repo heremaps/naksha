@@ -8,8 +8,8 @@ import naksha.base.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
 import naksha.base.NakshaException
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.VERSION
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
+import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -57,18 +57,18 @@ class PgHistoryPartition(
 PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION, $NEXT_VERSION) INCLUDE ($FN, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn, $NEXT_VERSION) INCLUDE ($FnColumn, $ID);"""
 
         // HISTORY-PARTITION is distribution partitioned.
         return """$CREATE_TABLE $quotedName
 PARTITION OF ${parent.quotedName}
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
-PARTITION BY RANGE ((($FN & 65535)::int4 % ${collection.partitions}))$TABLESPACE"""
+PARTITION BY RANGE ((($FnColumn & 65535)::int4 % ${collection.partitions}))$TABLESPACE"""
     }
 
     /**
-     * Calculates the partition-number from the given [feature-number][FN].
-     * @param featureNumber the [feature-number][FN] from which to calculate the partition-number.
+     * Calculates the partition-number from the given [feature-number][FnColumn].
+     * @param featureNumber the [feature-number][FnColumn] from which to calculate the partition-number.
      * @return the calculated partition-number.
      * @since 3.0
      */

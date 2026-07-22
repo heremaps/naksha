@@ -42,7 +42,7 @@ class XyzProcessors private constructor() {
                 is Int64 -> value
                 is Number -> Int64(value.toLong())
                 else -> {
-                    val action = collection.useMember(StandardMembers.Tn).getTupleNumber(feature)?.action
+                    val action = collection.useMember(StandardMembers.Tn).readTupleNumber(feature)?.action
                     if (action == Action.CREATE) null else feature.properties.xyz.createdAt
                 }
             }

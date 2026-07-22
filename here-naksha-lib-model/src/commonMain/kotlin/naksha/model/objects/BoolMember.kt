@@ -33,14 +33,14 @@ class BoolMember() : TypedMember<BoolMember>() {
     }
 
     /** Retrieves the boolean value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Boolean? = getBoolean(feature)
+    fun get(feature: NakshaFeature): Boolean? = readBoolean(feature)
 
     /**
      * Retrieves the boolean value of this member from the given tuple.
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getFromTuple")
-    fun get(tuple: Tuple): Boolean? = getBoolean(tuple)
+    fun get(tuple: Tuple): Boolean? = readBoolean(tuple)
 
     /** Sets the boolean value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Boolean): Boolean? = setPath(feature, path, value) as Boolean?

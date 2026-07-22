@@ -606,7 +606,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     private fun expectedOrderedColumnNames(collection: NakshaCollection): List<String> {
         val members = collection.useMembers()
         if (!members.isSortedByIndex()) members.sortByDataTypeAndAssignIndex()
-        val names = mutableListOf(PgColumn.FN.name, PgColumn.VERSION.name, PgColumn.NEXT_VERSION.name)
+        val names = mutableListOf(PgColumn.FnColumn.name, PgColumn.VersionColumn.name, PgColumn.NextVersionColumn.name)
         for (member in members) {
             if (member == null) continue
             val name = member.name

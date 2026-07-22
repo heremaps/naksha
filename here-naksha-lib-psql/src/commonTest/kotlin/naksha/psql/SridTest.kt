@@ -7,6 +7,8 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
+import naksha.model.objects.StandardMembers
+import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -60,7 +62,7 @@ class SridTest : PgTestBase() {
         val sql = """
             SELECT ST_SRID(naksha_geometry(${COL_GEOMETRY})) as srid
             FROM $mapId.$collectionName
-            WHERE _id = '$featureId'
+            WHERE $Id = '$featureId'
         """.trimIndent()
         return storage.adminConnection().use { conn ->
             conn.execute(sql).fetch().use { cursor ->

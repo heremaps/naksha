@@ -54,7 +54,7 @@ open class FeatureTuple(
     @JsName("fromFeatureAndMember")
     @Suppress("LeakingThis")
     constructor(feature: NakshaFeature, tupleNumberMember: Member) :
-    this(tupleNumberMember.getTupleNumber(feature) ?: throw NakshaException(ILLEGAL_ARGUMENT, "Failed to get tuple-number of feature"))
+    this(tupleNumberMember.readTupleNumber(feature) ?: throw NakshaException(ILLEGAL_ARGUMENT, "Failed to get tuple-number of feature"))
     {
         this.feature = feature
     }

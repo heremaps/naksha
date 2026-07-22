@@ -68,7 +68,7 @@ class OrderBy() : AnyObject() {
          */
         @JsStatic
         @JvmStatic
-        fun version(): OrderBy = OrderBy(StandardMembers.Version)
+        fun version(): OrderBy = OrderBy(StandardMembers.FeatureVersion)
 
         /**
          * Supported ordering by `tuple-number` _(so by storage, map, collection, feature, version, uid).

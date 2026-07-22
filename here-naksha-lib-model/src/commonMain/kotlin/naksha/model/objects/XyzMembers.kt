@@ -2,8 +2,6 @@
 
 package naksha.model.objects
 
-import naksha.model.objects.XyzMembers.XyzMembers_C.XyzHereTile
-import naksha.model.objects.XyzMembers.XyzMembers_C.XyzUpdatedAt
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
@@ -44,14 +42,14 @@ class XyzMembers private constructor() {
         val XyzGlobalBookFeatureNumber = Int64Member(StandardMembers.GlobalBookFeatureNumber, JsonPath("properties", "@ns:com:here:xyz", "globalBookFn"))
 
         /**
-         * The same as [StandardMembers.Feature].
+         * The same as [StandardMembers.FeatureBytes].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeature = ByteArrayMember(StandardMembers.Feature, JsonPath())
+        val XyzFeatureBytes = ByteArrayMember(StandardMembers.FeatureBytes, JsonPath())
 
         /**
-         * The same as [StandardMembers.Feature].
+         * The same as [StandardMembers.FeatureBytes].
          * @since 3.0
          */
         @JvmField @JsStatic
@@ -143,7 +141,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzOrigin = StringMember("origin", JsonPath("properties", "@ns:com:here:xyz", "origin"))
+        val XyzOrigin = StringMember(StandardMembers.Origin, JsonPath("properties", "@ns:com:here:xyz", "origin"))
 
         /**
          * `target` — stringified reference to the feature into which this feature was joined.
@@ -243,7 +241,7 @@ class XyzMembers private constructor() {
          */
         @JvmField @JsStatic
         val ALL: List<Member> = listOf(
-            XyzTn, XyzNextVersion, XyzGlobalBookFeatureNumber, XyzFeature, XyzId, XyzGeometry,
+            XyzTn, XyzNextVersion, XyzGlobalBookFeatureNumber, XyzFeatureBytes, XyzId, XyzGeometry,
             // Optional members
             XyzUpdatedAt, XyzCreatedAt, XyzAuthorTimestamp,
             XyzHash, XyzHereTile, XyzChangeCount, XyzBaseTn,

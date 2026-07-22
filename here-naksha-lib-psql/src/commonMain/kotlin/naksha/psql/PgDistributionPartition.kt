@@ -6,8 +6,8 @@ import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.base.NakshaException
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.VERSION
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
+import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -58,7 +58,7 @@ class PgDistributionPartition private constructor(
 PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION) INCLUDE ($FN, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn) INCLUDE ($FnColumn, $ID);"""
 
         // partition of HISTORY-PARTITION.
         if (parent is PgHistoryPartition) {
@@ -67,7 +67,7 @@ CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USI
 PARTITION OF ${parent.quotedName} (${root.CONSTRAINT(name, parent.partitionIndex, partitionIndex)})
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VERSION, $NEXT_VERSION) INCLUDE ($FN, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn, $NEXT_VERSION) INCLUDE ($FnColumn, $ID);"""
         }
 
         throw NakshaException(INTERNAL_ERROR, "The distribution partition must have PgHeadTable or PgHistoryPartition as parent")

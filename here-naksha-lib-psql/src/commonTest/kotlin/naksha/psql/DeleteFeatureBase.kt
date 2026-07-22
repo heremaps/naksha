@@ -69,7 +69,7 @@ abstract class DeleteFeatureBase(
         }).apply { // this = SuccessResponse
             assertEquals(1, features.size)
             val firstTuple = featureTupleList[0]?.tuple
-            assertSame(Action.CREATE, Action.fromValue((firstTuple?.getLong(naksha.model.objects.StandardMembers.Version)?.toInt() ?: -1) and 3))
+            assertSame(Action.CREATE, Action.fromValue((firstTuple?.getLong(naksha.model.objects.StandardMembers.FeatureVersion)?.toInt() ?: -1) and 3))
         }
 
         // verify if delete table contains element

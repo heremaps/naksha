@@ -35,14 +35,14 @@ class TagListMember() : TypedMember<TagListMember>() {
     }
 
     /** Retrieves the tag list value of this member from the given feature. */
-    fun get(feature: NakshaFeature): TagList? = getTagList(feature)
+    fun get(feature: NakshaFeature): TagList? = readTagList(feature)
 
     /**
      * Retrieves the tag list value of this member from the given tuple.
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getFromTuple")
-    fun get(tuple: Tuple): TagList? = getTagList(tuple)
+    fun get(tuple: Tuple): TagList? = readTagList(tuple)
 
     /** Sets the tag list value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: ListProxy<*>): Any? = setPath(feature, path, value)

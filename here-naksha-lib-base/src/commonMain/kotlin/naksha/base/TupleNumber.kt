@@ -144,6 +144,17 @@ data class TupleNumber(
     fun isHead(): Boolean = this == HEAD
 
     /**
+     * Tests if the given tuple-number is the same feature, just potentially in a different state _(version)_.
+     * @param other the other [TupleNumber].
+     * @return true if this [TupleNumber] is the same feature, so has the same database-, catalog-, collection-, and feature-number; false otherwise _(ignores only version)_.
+     */
+    fun isSameFeature(other: TupleNumber?): Boolean = other != null &&
+        this.databaseNumber == other.databaseNumber &&
+        this.catalogNumber == other.catalogNumber &&
+        this.collectionNumber == other.collectionNumber &&
+        this.featureNumber == other.featureNumber
+
+    /**
      * Convert this [TupleNumber] into a [URN](https://datatracker.ietf.org/doc/html/rfc8141), the exact format will be:
      * ```
      * urn:naksha:tn:{storage-number}:{map-number}:{collection-number}:{feature-number}:{version}

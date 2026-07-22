@@ -67,8 +67,8 @@ class ActivityLogRequestTranslationUtilTest {
 
       // The two Equals may appear in either order; pick the one that targets Version
       Equals versionEq = null;
-      if (StandardMembers.Version.getName().equals(eqA.getAt())) versionEq = eqA;
-      else if (StandardMembers.Version.getName().equals(eqB.getAt())) versionEq = eqB;
+      if (StandardMembers.FeatureVersion.getName().equals(eqA.getAt())) versionEq = eqA;
+      else if (StandardMembers.FeatureVersion.getName().equals(eqB.getAt())) versionEq = eqB;
       else fail("No Version equals in And clause");
       versionsFromOr.add(versionEq.getValue());
     }

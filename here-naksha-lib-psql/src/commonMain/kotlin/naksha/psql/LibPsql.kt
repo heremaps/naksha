@@ -60,12 +60,12 @@ internal const val PG_IDX = "${PG_S}i"
 internal const val PG_CONSTRAINT = "${PG_S}c"
 
 /**
- * `$c_nv`: The postfix of the history-constraint above [next_version][PgColumn.NEXT_VERSION] _(shifted partition)_.
+ * `$c_nv`: The postfix of the history-constraint above [next_version][PgColumn.NextVersionColumn] _(shifted partition)_.
  */
 internal const val PG_HISTORY_CONSTRAINT = "${PG_CONSTRAINT}nv"
 
 /**
- * `$c_fn`: The postfix of the distribution-constraint above [feature-number][PgColumn.FN].
+ * `$c_fn`: The postfix of the distribution-constraint above [feature-number][PgColumn.FnColumn].
  */
 internal const val PG_DIST_CONSTRAINT = "${PG_CONSTRAINT}fn"
 

@@ -11,7 +11,6 @@ import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.Naksha.NakshaCompanion.partitionNumber
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaDictionary
@@ -58,7 +57,7 @@ open class Write : AnyObject() {
          * A special byte-array instance that represents `undefined`.
          * @since 3.0
          */
-        val UNDEFINED = "undefined".encodeToByteArray()
+        private val UNDEFINED_BYTES = "undefined".encodeToByteArray()
 
         private fun compareMapIds(a: String, b: String): Int {
             if (a == b) return 0
@@ -356,8 +355,8 @@ open class Write : AnyObject() {
             val feature = this.feature
             var fn: Int64? = null
             if (feature != null) {
-                fn = XyzMembers.XyzTn.getTupleNumber(feature)?.featureNumber
-                if (fn == null) fn = StandardMembers.Tn.getTupleNumber(feature)?.featureNumber
+                fn = XyzMembers.XyzTn.readTupleNumber(feature)?.featureNumber
+                if (fn == null) fn = StandardMembers.Tn.readTupleNumber(feature)?.featureNumber
             }
             if (fn != null) return fn
             // TODO: Eventually this boils down to how we handle collisions. In practise we rarely ever encountered a collision.

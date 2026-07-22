@@ -17,6 +17,8 @@ import naksha.model.objects.XyzProcessors
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
+import naksha.model.objects.StandardMembers.StandardMembers_C.FN
+import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -467,7 +469,7 @@ WITH lookup AS (
         ((get_byte(b, 4) & 255)::bigint << 24) |
         ((get_byte(b, 5) & 255)::bigint << 16) |
         ((get_byte(b, 6) & 255)::bigint << 8)  |
-        (get_byte(b, 7) & 255)::bigint        AS fn,
+        (get_byte(b, 7) & 255)::bigint        AS $FN,
         
         ((get_byte(b, 8) & 255)::bigint << 56) |
         ((get_byte(b, 9) & 255)::bigint << 48) |
@@ -476,17 +478,17 @@ WITH lookup AS (
         ((get_byte(b, 12) & 255)::bigint << 24)|
         ((get_byte(b, 13) & 255)::bigint << 16)|
         ((get_byte(b, 14) & 255)::bigint << 8) |
-        (get_byte(b, 15) & 255)::bigint        AS version
+        (get_byte(b, 15) & 255)::bigint        AS $VERSION
     FROM (
         SELECT substring($1::bytea FROM g * 16 + 1 FOR 16) AS b
         FROM generate_series(0, octet_length($1::bytea) / 16 - 1) AS g
     ) AS t
 ), from_head AS (
     SELECT head.* FROM $HEAD_TABLE head
-    JOIN lookup l ON (head._fn, head._version) = (l.fn, l.version)
+    JOIN lookup l ON (head.$FN, head.$VERSION) = (l.$FN, l.$VERSION)
 ), from_hst AS (
     SELECT hst.* FROM $HISTORY_TABLE hst
-    JOIN lookup l ON (hst._fn, hst._version) = (l.fn, l.version)
+    JOIN lookup l ON (hst.$FN, hst.$VERSION) = (l.$FN, l.$VERSION)
 )
 SELECT * FROM from_head 
 UNION ALL 

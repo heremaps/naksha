@@ -21,7 +21,7 @@ import kotlin.js.JsName
  * @see ITagQuery
  */
 @JsExport
-open class Property() : Member(StandardMembers.Feature.name, MemberType.STRING, JsonPath()) {
+open class Property() : Member(StandardMembers.FeatureBytes.name, MemberType.STRING, JsonPath()) {
 
     /**
      * Create a property from a path given as variable argument list.

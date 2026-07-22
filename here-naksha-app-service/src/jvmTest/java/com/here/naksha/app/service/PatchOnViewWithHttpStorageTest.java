@@ -11,7 +11,10 @@ import static com.here.naksha.app.common.CommonApiTestSetup.createHandler;
 import static com.here.naksha.app.common.CommonApiTestSetup.createStorage;
 import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
+import static naksha.base.Platform.javaProxy;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
 import com.github.tomakehurst.wiremock.matching.UrlPattern;
@@ -21,6 +24,10 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+
+import naksha.geo.SpFeatureCollection;
+import naksha.model.objects.NakshaFeature;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -49,7 +56,22 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
         final String initialFeaturesJson = loadFileOrFail(TEST_DIR_SETUP_PATH + "psql_storage_space/create_features.json");
         final HttpResponse<String> response = nakshaClient.post("hub/spaces/" + PSQL_SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
         assertThat(response).hasStatus(200);
+        final var body = response.body();
+        final var features = parseJson(body, SpFeatureCollection.class).getFeatures();
+        for (var feature : features) {
+          assertNotNull(feature, "Result contains null feature");
+          final String id = feature.getId();
+          assertNotNull(id, "Result contains feature without 'id' property");
+          if ("my-custom-id-01".equals(id)) {
+            final var f = javaProxy(feature, NakshaFeature.class);
+            assertNotNull(f, "Failed to cast feature to NakshaFeature");
+            uuid1 = f.getProperties().getXyz().getUuid();
+            assertNotNull(f, "Feature does not contain 'properties->@ns:com:here:xyz->uuid' property'");
+          }
+        }
     }
+
+    private static String uuid1;
 
     @Test
     void tc01_testPatchForFeatureOnlyInBase() throws Exception {
@@ -63,8 +85,7 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
         final String expectedBodyPart = loadFileOrFail("PatchOnViewWithHttpStorage/TC01_patchFeatureOnlyInBase/response_body_part.json");
 
         // Given: Mock Http Response from Base space
-        final String baseMockResponse =
-                loadFileOrFail("PatchOnViewWithHttpStorage/TC01_patchFeatureOnlyInBase/base_mock_response.json");
+        final String baseMockResponse = loadFileOrFail("PatchOnViewWithHttpStorage/TC01_patchFeatureOnlyInBase/base_mock_response.json");
         final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
         stubFor(get(endpointPath)
                 .withQueryParam("id" , equalTo("my-custom-id-04"))
@@ -92,12 +113,12 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
         // Given: input patch feature request and final expected response body
         final String streamId = UUID.randomUUID().toString();
         final String featureId = "my-custom-id-01";
-        final String patchRequestJson = loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/patch_request.json");
+        final String patchRequestJson = loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/patch_request.json")
+            .replace("${uuid1}", uuid1);
         final String expectedBodyPart = loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/response_body_part.json");
 
         // Given: Mock Http Response from Base space (no record found)
-        final String baseMockResponse =
-                loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/base_mock_response.json");
+        final String baseMockResponse = loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/base_mock_response.json");
         final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);
         stubFor(get(endpointPath)
                 .withQueryParam("id" , equalTo(featureId))

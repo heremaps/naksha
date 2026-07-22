@@ -29,6 +29,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
+import static naksha.base.Platform.javaProxy;
+
 
 public class ReadFeaturesProxyWrapper extends ReadFeatures {
 
@@ -68,7 +70,7 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   }
 
   public Map<String, Object> getQueryParameters() {
-    return JvmBoxingUtil.box(getPath(QUERY_PARAMETERS), QueryParameterMap.class);
+    return javaProxy(getPath(QUERY_PARAMETERS), QueryParameterMap.class);
   }
 
   public <T> T getQueryParameter(String key) throws ClassCastException {
@@ -126,6 +128,6 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   }
 
   public static ReadFeaturesProxyWrapper proxyWrapperOf(@NotNull ReadFeatures readFeatures){
-    return JvmBoxingUtil.box(readFeatures, ReadFeaturesProxyWrapper.class);
+    return javaProxy(readFeatures, ReadFeaturesProxyWrapper.class);
   }
 }

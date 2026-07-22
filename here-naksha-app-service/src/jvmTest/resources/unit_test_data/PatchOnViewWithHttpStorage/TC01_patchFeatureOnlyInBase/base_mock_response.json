@@ -6,7 +6,10 @@
       "type": "Feature",
       "properties": {
         "speedLimit": "30",
-        "layer": "base"
+        "layer": "base",
+        "@ns:com:here:xyz": {
+          "uuid": "urn:naksha:guid:my-custom-id-03"
+        }
       },
       "geometry": {
         "type":"Point",
@@ -18,7 +21,10 @@
       "type": "Feature",
       "properties": {
         "speedLimit": "40",
-        "layer": "base"
+        "layer": "base",
+        "@ns:com:here:xyz": {
+          "uuid": "urn:naksha:guid:my-custom-id-04"
+        }
       },
       "geometry": {
         "type":"Point",
@@ -30,7 +36,10 @@
       "type": "Feature",
       "properties": {
         "speedLimit": "50",
-        "layer": "base"
+        "layer": "base",
+        "@ns:com:here:xyz": {
+          "uuid": "urn:naksha:guid:my-custom-id-05"
+        }
       },
       "geometry": {
         "type":"Point",

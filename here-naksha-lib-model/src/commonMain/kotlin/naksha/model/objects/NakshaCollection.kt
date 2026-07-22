@@ -70,9 +70,9 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0
      */
     var tupleNumber: TupleNumber?
-        get() = XyzMembers.XyzTn.getTupleNumber(this)
+        get() = XyzMembers.XyzTn.readTupleNumber(this)
         set(value) {
-            XyzMembers.XyzTn.set(this, value)
+            XyzMembers.XyzTn.write(this, value)
         }
 
     /**

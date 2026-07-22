@@ -136,7 +136,7 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val TAG_MAP = defIgnoreCase(MemberType::class, "tag_map") { self -> self.sortOrder = 8; self.subtype = TagsMember::class }
+        val TAG_MAP = defIgnoreCase(MemberType::class, "tag_map") { self -> self.sortOrder = 8; self.subtype = TagMapMember::class }
 
         /**
          * A string-array using Naksha tag syntax that is expanded into a [TAG_MAP] map at write time.
@@ -150,7 +150,7 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val TAG_MAP_FROM_ARRAY = defIgnoreCase(MemberType::class, "tag_map_from_array") { self -> self.sortOrder = 9; self.subtype = TagsMember::class }
+        val TAG_MAP_FROM_ARRAY = defIgnoreCase(MemberType::class, "tag_map_from_array") { self -> self.sortOrder = 9; self.subtype = TagMapMember::class }
 
         /**
          * A list of unique primitive values (booleans, numbers, strings), following the JBON2

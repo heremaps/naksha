@@ -13,6 +13,7 @@ import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ID
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaError.NakshaErrorCompanion.CATALOG_EXISTS
+import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.base.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 
@@ -83,6 +84,15 @@ fun illegalState(msg: String): NakshaException = NakshaException(ILLEGAL_STATE, 
  * @since 3.0
  */
 fun illegalState(msg: String, reason: Exception): NakshaException = NakshaException(ILLEGAL_STATE, msg, reason)
+
+/**
+ * Create [INTERNAL_ERROR] exception.
+ * @param msg the message.
+ * @param reason the exception that caused this exception, if nay.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun internalError(msg: String, reason: Exception? = null): NakshaException = NakshaException(INTERNAL_ERROR, msg, reason)
 
 /**
  * Create [FORBIDDEN] exception.

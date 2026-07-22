@@ -7,8 +7,8 @@ import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
 import kotlin.js.JsName
 
-class TagsMember() : TypedMember<TagsMember>() {
-    override fun verify(): TagsMember {
+class TagMapMember() : TypedMember<TagMapMember>() {
+    override fun verify(): TagMapMember {
         if (dataType != TAG_MAP) {
             throw illegalState("The member was illegally cast, expected subtype: $TAG_MAP, found: $dataType")
         }
@@ -34,14 +34,14 @@ class TagsMember() : TypedMember<TagsMember>() {
     }
 
     /** Retrieves the tag map value of this member from the given feature. */
-    fun get(feature: NakshaFeature): TagMap? = getTagMap(feature)
+    fun get(feature: NakshaFeature): TagMap? = readTagMap(feature)
 
     /**
      * Retrieves the tag map value of this member from the given tuple.
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getFromTuple")
-    fun get(tuple: Tuple): TagMap? = getTagMap(tuple)
+    fun get(tuple: Tuple): TagMap? = readTagMap(tuple)
 
     /** Sets the tag map value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: TagMap): Any? = setPath(feature, path, value)

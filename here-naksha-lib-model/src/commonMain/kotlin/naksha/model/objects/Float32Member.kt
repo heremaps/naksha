@@ -33,14 +33,14 @@ class Float32Member() : TypedMember<Float32Member>() {
     }
 
     /** Retrieves the float32 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Float? = getDouble(feature)?.toFloat()
+    fun get(feature: NakshaFeature): Float? = readDouble(feature)?.toFloat()
 
     /**
      * Retrieves the float32 value of this member from the given tuple.
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getFromTuple")
-    fun get(tuple: Tuple): Float? = getDouble(tuple)?.toFloat()
+    fun get(tuple: Tuple): Float? = readDouble(tuple)?.toFloat()
 
     /** Sets the float32 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Float): Any? = setPath(feature, path, value)

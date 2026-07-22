@@ -278,15 +278,19 @@ actual class Platform {
 
         /**
          * Java specific helper, that accepts a Java class to proxy.
+         * @param any Any object that implements [PlatformObject] interface.
          * @param javaClass The Java class.
          * @return the proxy.
          * @see [proxy]
          * @see [Proxy.proxy]
+         * @throws NakshaException with error [NakshaError.ILLEGAL_ARGUMENT] if the given object does not implement [PlatformObject].
          */
         @JvmStatic
-        fun <T : Proxy> javaProxy(any: PlatformObject?, javaClass: Class<T>): T? {
+        fun <T : Proxy> javaProxy(any: Any?, javaClass: Class<T>): T? {
             if (any == null) return null
-            return any.proxy(javaClass.kotlin)
+            if (javaClass.isInstance(any)) return javaClass.cast(any)
+            if (any is PlatformObject) return proxy(any, javaClass.kotlin)
+            throw illegalArg("The given object is no PlatformObject, failed to attach proxy")
         }
 
         /**

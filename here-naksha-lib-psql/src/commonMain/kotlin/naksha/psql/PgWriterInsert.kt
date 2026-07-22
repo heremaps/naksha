@@ -3,9 +3,9 @@ package naksha.psql
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.NEXT_VERSION
-import naksha.psql.PgColumn.PgColumn_C.VERSION
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
+import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
+import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 
 /**
  * Execute an **INSERT** _(aka [CREATE][naksha.model.request.WriteOp.CREATE])_ into a collection.
@@ -40,47 +40,47 @@ internal class PgWriterInsert(
         val head_tombstone = """, head_tombstone AS (
   SELECT ${pgCollection.joinColumns { column -> "head.$column AS $column" }}
   FROM $headIdent AS head
-  JOIN new_row ON head.$FN = new_row.$FN
-  WHERE (head.$VERSION & 3) >= 2
+  JOIN new_row ON head.$FnColumn = new_row.$FnColumn
+  WHERE (head.$VersionColumn & 3) >= 2
 )"""
 
         // Archive the tombstone into history so the deletion is preserved in the audit trail.
         // next_version = new feature's version (the tombstone is succeeded by the new creation).
         val tombstone_to_history = if (historyTable != null) """, tombstone_to_history AS (
-  INSERT INTO $historyIdent ($NEXT_VERSION, ${pgCollection.joinColumns { column -> if (NEXT_VERSION eq column) null else column.ident }})
-  SELECT new_row.$VERSION AS $NEXT_VERSION,
-         ${pgCollection.joinColumns { column -> if (NEXT_VERSION eq column) null else "head_tombstone.$column" }}
+  INSERT INTO $historyIdent ($NextVersionColumn, ${pgCollection.joinColumns { column -> if (NextVersionColumn eq column) null else column.ident }})
+  SELECT new_row.$VersionColumn AS $NextVersionColumn,
+         ${pgCollection.joinColumns { column -> if (NextVersionColumn eq column) null else "head_tombstone.$column" }}
   FROM head_tombstone
-  JOIN new_row ON new_row.$FN = head_tombstone.$FN
-  RETURNING $FN, $VERSION
+  JOIN new_row ON new_row.$FnColumn = head_tombstone.$FnColumn
+  RETURNING $FnColumn, $VersionColumn
 )""" else ""
 
         // Overwrite the tombstone in HEAD (except for fn) with the new feature (UPDATE in-place).
         // All columns are replaced; cc resets to 1 for the new lifecycle.
         val head_overwrite = """, head_overwrite AS (
   UPDATE $headIdent
-  SET ${pgCollection.joinColumns { column -> if (column eq FN) null else "$column = new_row.$column" }}
+  SET ${pgCollection.joinColumns { column -> if (column eq FnColumn) null else "$column = new_row.$column" }}
   FROM new_row
-  JOIN head_tombstone ON head_tombstone.$FN = new_row.$FN
-  WHERE $headIdent.$FN = head_tombstone.$FN
-  RETURNING $headIdent.$FN, $headIdent.$VERSION
+  JOIN head_tombstone ON head_tombstone.$FnColumn = new_row.$FnColumn
+  WHERE $headIdent.$FnColumn = head_tombstone.$FnColumn
+  RETURNING $headIdent.$FnColumn, $headIdent.$VersionColumn
 )"""
 
         // Plain INSERT for features that have no tombstone in HEAD (the normal case).
         val head_inserted = """, head_inserted AS (
   INSERT INTO $headIdent (${inRows.aliases()})
   SELECT * FROM new_row
-  WHERE new_row.$FN NOT IN (SELECT $FN FROM head_tombstone)
-  RETURNING $FN, $VERSION
+  WHERE new_row.$FnColumn NOT IN (SELECT $FnColumn FROM head_tombstone)
+  RETURNING $FnColumn, $VersionColumn
 )"""
 
         val SQL = """$new_row$head_tombstone${tombstone_to_history}$head_overwrite$head_inserted
 SELECT
-    COALESCE(head_overwrite.$FN, head_inserted.$FN) AS $FN,
-    COALESCE(head_overwrite.$VERSION, head_inserted.$VERSION) AS $VERSION
+    COALESCE(head_overwrite.$FnColumn, head_inserted.$FnColumn) AS $FnColumn,
+    COALESCE(head_overwrite.$VersionColumn, head_inserted.$VersionColumn) AS $VersionColumn
 FROM new_row
-LEFT JOIN head_overwrite ON head_overwrite.$FN = new_row.$FN
-LEFT JOIN head_inserted ON head_inserted.$FN = new_row.$FN
+LEFT JOIN head_overwrite ON head_overwrite.$FnColumn = new_row.$FnColumn
+LEFT JOIN head_inserted ON head_inserted.$FnColumn = new_row.$FnColumn
 """
         val typeNames = inRows.typeNames()
         val pgPlan = conn.prepare(SQL, typeNames)

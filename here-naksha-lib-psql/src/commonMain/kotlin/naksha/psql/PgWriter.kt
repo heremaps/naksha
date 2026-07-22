@@ -3,9 +3,11 @@
 package naksha.psql
 
 import naksha.base.Action
+import naksha.base.Platform.PlatformCompanion.UNDEFINED
 import naksha.base.PlatformUtil
 import naksha.base.collectionExists
 import naksha.base.collectionNotFound
+import naksha.base.conflict
 import naksha.base.forbidden
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -14,6 +16,7 @@ import naksha.base.mapNotFound
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
+import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaTx
 import naksha.model.objects.StandardMembers
 import naksha.model.request.*
@@ -273,26 +276,31 @@ open class PgWriter internal constructor(
                 pgWrite.asPgCollection = targetCollection
                 pgWrite.asNakshaCollection = nakshaCollection
             }
-
             when (op) {
                 WriteOp.CREATE -> {
-                    val f = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    // In a CREATE case, UNDEFINED means the same as `null`
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, Action.CREATE, session, null)
-                    pgWrite.tuple = tuple
-                    pgWrite.tupleNumber = tuple.tupleNumber
-                }
-                WriteOp.UPSERT -> {
-                    // Note: We first try an INSERT, then, when that fails, we do an on-conflict UPDATE!
-                    val f = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val action = if (pgCollection.head.useMember(StandardMembers.Tn).getTupleNumber(f) != null) Action.UPDATE else Action.CREATE
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, action, session, null)
+                    val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, Action.CREATE)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
                 WriteOp.UPDATE -> {
-                    val f = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, Action.UPDATE, session, null, pgWrite.original.atomic)
+                    val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, Action.UPDATE)
+                    pgWrite.tuple = tuple
+                    pgWrite.tupleNumber = tuple.tupleNumber
+                }
+                WriteOp.UPSERT -> {
+                    // Note:
+                    // - If the client has not provided a UUID or a UUID of a foreign feature, this results in CREATE.
+                    // - If the client provide a UUID, this becomes an atomic UPDATE.
+                    //
+                    // To stay downward compatible, we therefore remove (as a hack) the UUID, so we ensure that we get a CREATE.
+                    // TODO: Remove this hack and remove UPSERT completely from storage.
+                    val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val nakshaCollection = pgWrite.collection.head
+                    val uuidMember = nakshaCollection.useMember(StandardMembers.Tn)
+                    uuidMember.delete(f)
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, Action.CREATE)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }

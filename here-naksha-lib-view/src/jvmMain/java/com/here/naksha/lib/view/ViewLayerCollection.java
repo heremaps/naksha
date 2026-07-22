@@ -52,8 +52,8 @@ public class ViewLayerCollection {
     return layers.indexOf(layer);
   }
 
-  public ViewLayer getTopPriorityLayer() {
-    return layers.get(0);
+  public @NotNull ViewLayer getTopPriorityLayer() {
+    return layers.getFirst();
   }
 
   public ViewLayer getByTupleNumber(@NotNull TupleNumber tupleNumber) {

@@ -303,12 +303,13 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     if (existingFeaturesResp instanceof SuccessResponse successResponse) {
       existingFeaturesById = ResultHelper.extractAndGroupAllFeaturesById(successResponse, NakshaFeature.class);
     } else if (existingFeaturesResp instanceof ErrorResponse errorResponse) {
-      logger.error("Error encountered while reading features from storage. Feature ids: {}, error: {}", requestFeaturesIds,
-          errorResponse.getError());
+      logger.error("Error encountered while reading features from storage. Feature ids: {}, error: {}", requestFeaturesIds, errorResponse.getError());
       return verticle.sendErrorResponse(routingContext, errorResponse.getError());
     } else {
-      logger.error("Unexpected response while reading features from storage. Feature ids: {}, unknown response: {}", requestFeaturesIds,
-          existingFeaturesResp);
+      logger.error("Unexpected response while reading features from storage. Feature ids: {}, unknown response: {}",
+          requestFeaturesIds,
+          existingFeaturesResp
+      );
       return verticle.sendErrorResponse(routingContext,
           new NakshaError(NakshaError.EXCEPTION, "Unexpected response while reading features from storage: " + existingFeaturesResp));
     }

@@ -10,9 +10,9 @@ import naksha.base.generalException
 import naksha.jbon.HeapBook
 import naksha.model.objects.MemberType
 import naksha.model.objects.StandardMembers
-import naksha.psql.PgColumn.PgColumn_C.FN
-import naksha.psql.PgColumn.PgColumn_C.NEXT_VERSION
-import naksha.psql.PgColumn.PgColumn_C.VERSION
+import naksha.psql.PgColumn.PgColumn_C.FnColumn
+import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
+import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 
 /**
  * Execute [UPSERT][naksha.model.request.WriteOp.UPSERT] into a collection.
@@ -44,40 +44,40 @@ internal class PgWriterUpsert(
         // Select existing.
         val head_row = """, head_row AS (
   SELECT * FROM $headIdent
-  WHERE $FN IN (SELECT $FN FROM new_row)
+  WHERE $FnColumn IN (SELECT $FnColumn FROM new_row)
 )"""
 
         // Copy all current head row's into history that are in CREATE or UPDATE action.
         // We need to set `next_version` to the new tuple's version, which is new row's version plus action UPDATE.
         val head_to_history = if (historyTable != null) """, head_to_history AS (
-  INSERT INTO $historyIdent ($NEXT_VERSION, 
-         ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
-  SELECT ((new_row.$VERSION & -4) | 1) AS $NEXT_VERSION,
-         ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
+  INSERT INTO $historyIdent ($NextVersionColumn, 
+         ${pgCollection.joinColumns { column -> if (column eq NextVersionColumn) null else column.ident }})
+  SELECT ((new_row.$VersionColumn & -4) | 1) AS $NextVersionColumn,
+         ${pgCollection.joinColumns { column -> if (column eq NextVersionColumn) null else "head_row.$column AS $column" }}
   FROM head_row
-  LEFT JOIN new_row ON new_row.$FN = head_row.$FN
-  WHERE (head_row.$VERSION & 3) < 2 -- action = CREATE or UPDATE
-  RETURNING $FN, $VERSION
+  LEFT JOIN new_row ON new_row.$FnColumn = head_row.$FnColumn
+  WHERE (head_row.$VersionColumn & 3) < 2 -- action = CREATE or UPDATE
+  RETURNING $FnColumn, $VersionColumn
 )""" else ""
 
         // Copy all current head row's into history that are in DELETE action.
         // In this case, we need to set `next_version` to the old tuple's version to signal end of lifetime.
         val tombstone_to_history = if (historyTable != null) """, tombstone_to_history AS (
-  INSERT INTO $historyIdent ($NEXT_VERSION, 
-         ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else column.ident }})
-  SELECT head_row.$VERSION AS $NEXT_VERSION,
-         ${pgCollection.joinColumns { column -> if (column eq NEXT_VERSION) null else "head_row.$column AS $column" }}
+  INSERT INTO $historyIdent ($NextVersionColumn, 
+         ${pgCollection.joinColumns { column -> if (column eq NextVersionColumn) null else column.ident }})
+  SELECT head_row.$VersionColumn AS $NextVersionColumn,
+         ${pgCollection.joinColumns { column -> if (column eq NextVersionColumn) null else "head_row.$column AS $column" }}
   FROM head_row
-  LEFT JOIN new_row ON new_row.$FN = head_row.$FN
-  WHERE (head_row.$VERSION & 3) = 2 -- action = DELETE
-  RETURNING $FN, $VERSION
+  LEFT JOIN new_row ON new_row.$FnColumn = head_row.$FnColumn
+  WHERE (head_row.$VersionColumn & 3) = 2 -- action = DELETE
+  RETURNING $FnColumn, $VersionColumn
 )""" else ""
 
         // Delete `head_row` from HEAD.
         val head_deleted = """, head_deleted AS (
   DELETE FROM $headIdent
-  WHERE $FN IN (SELECT $FN FROM head_row)
-  RETURNING $FN, $VERSION
+  WHERE $FnColumn IN (SELECT $FnColumn FROM head_row)
+  RETURNING $FnColumn, $VersionColumn
 )"""
 
         // Copy new rows for which there was no existing HEAD version or HEAD was in action DELETE.
@@ -93,19 +93,19 @@ internal class PgWriterUpsert(
     val pgColumn = colWithValue.pgColumn
     if (pgColumn eq CC) {
         "(head_row.$CC + 1) AS $CC" // Increment Change-Count
-    } else if (pgColumn eq VERSION){
-        "((new_row.$VERSION & -4) | 1) AS $VERSION" // Set lower 2 bit to UPDATE (1)
-    } else if (pgColumn eq NEXT_VERSION){
-        "NULL AS $NEXT_VERSION" // in HEAD, next version must always be NULL
+    } else if (pgColumn eq VersionColumn){
+        "((new_row.$VersionColumn & -4) | 1) AS $VersionColumn" // Set lower 2 bit to UPDATE (1)
+    } else if (pgColumn eq NextVersionColumn){
+        "NULL AS $NextVersionColumn" // in HEAD, next version must always be NULL
     } else if (pgColumn.memberType == MemberType.BYTE_ARRAY) {
         // Keep the existing HEAD value when the client sent the `undefined` sentinel, else take the new value.
         "CASE WHEN new_row.$ident = convert_to('undefined', 'UTF8') THEN head_row.$ident ELSE new_row.$ident END AS $ident"
     } else "new_row.$ident"
   }} FROM new_row
-  LEFT JOIN head_row ON new_row.$FN = head_row.$FN
-  WHERE new_row.$FN IN (SELECT $FN FROM head_to_history)
-    AND new_row.$FN IN (SELECT $FN FROM head_deleted)
-  RETURNING $FN, $VERSION${if (CC != null) ", $CC" else ""}${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { it.ident }}" else ""}
+  LEFT JOIN head_row ON new_row.$FnColumn = head_row.$FnColumn
+  WHERE new_row.$FnColumn IN (SELECT $FnColumn FROM head_to_history)
+    AND new_row.$FnColumn IN (SELECT $FnColumn FROM head_deleted)
+  RETURNING $FnColumn, $VersionColumn${if (CC != null) ", $CC" else ""}${if (byteArrayCols.isNotEmpty()) ", ${byteArrayCols.joinToString(", ") { it.ident }}" else ""}
 )""" // Note: head_to_history contains all existing HEAD row in CREATE or UPDATE action.
 
         // ------------------------------------------ DO INSERT --------------------------------------------------------
@@ -116,36 +116,36 @@ internal class PgWriterUpsert(
     val pgColumn = colWithValue.pgColumn
     if (pgColumn eq CC) {
         "1 AS $CC" // Change-Count = 1
-    } else if (pgColumn eq VERSION){
-        "($VERSION & -4) AS $VERSION" // Clear lower 2 bit to set action = CREATE (0)
-    } else if (pgColumn eq NEXT_VERSION){
-        "NULL AS $NEXT_VERSION" // in HEAD, next version must always be NULL
+    } else if (pgColumn eq VersionColumn){
+        "($VersionColumn & -4) AS $VersionColumn" // Clear lower 2 bit to set action = CREATE (0)
+    } else if (pgColumn eq NextVersionColumn){
+        "NULL AS $NextVersionColumn" // in HEAD, next version must always be NULL
     } else if (pgColumn.memberType == MemberType.BYTE_ARRAY) {
         "CASE WHEN $ident = convert_to('undefined', 'UTF8') THEN null ELSE $ident END AS $ident"
     } else ident
 }} FROM new_row
-  WHERE new_row.$FN NOT IN (SELECT $FN FROM head_updated)
-  RETURNING $FN, $VERSION
+  WHERE new_row.$FnColumn NOT IN (SELECT $FnColumn FROM head_updated)
+  RETURNING $FnColumn, $VersionColumn
 )""" // Note: for the real inserts, we do not need to return byte-array columns, because we send them, so its clear what the content will be.
 
         val SQL = """$new_row$head_row$head_to_history$tombstone_to_history$head_deleted$head_updated$head_inserted
 SELECT
-    new_row.$FN AS $FN,
-    new_row.$VERSION AS $VERSION,
+    new_row.$FnColumn AS $FnColumn,
+    new_row.$VersionColumn AS $VersionColumn,
     ${if (byteArrayCols.isNotEmpty()) byteArrayCols.joinToString(",\n    ") { column -> "head_updated.$column AS $column" } + ",\n    " else ""}
     ${if (CC!=null) "head_updated.$CC AS $CC," else "null::int4 AS $CC,"}
-    head_updated.$FN AS _updated_fn,
-    head_updated.$VERSION AS _updated_version,
-    head_row.$VERSION AS _head_row_version,
-    head_deleted.$VERSION AS _head_deleted_version,
-    head_inserted.$VERSION AS _head_inserted_version,
-    ${if (head_to_history.isNotEmpty()) "head_to_history.$VERSION AS _head_to_history_version" else "null AS _head_to_history_version"}
+    head_updated.$FnColumn AS _updated_fn,
+    head_updated.$VersionColumn AS _updated_version,
+    head_row.$VersionColumn AS _head_row_version,
+    head_deleted.$VersionColumn AS _head_deleted_version,
+    head_inserted.$VersionColumn AS _head_inserted_version,
+    ${if (head_to_history.isNotEmpty()) "head_to_history.$VersionColumn AS _head_to_history_version" else "null AS _head_to_history_version"}
 FROM new_row
-LEFT JOIN head_updated ON head_updated.$FN = new_row.$FN
-LEFT JOIN head_row ON head_row.$FN = new_row.$FN
-LEFT JOIN head_deleted ON head_deleted.$FN = new_row.$FN
-LEFT JOIN head_inserted ON head_inserted.$FN = new_row.$FN
-${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FN = new_row.$FN" else ""}
+LEFT JOIN head_updated ON head_updated.$FnColumn = new_row.$FnColumn
+LEFT JOIN head_row ON head_row.$FnColumn = new_row.$FnColumn
+LEFT JOIN head_deleted ON head_deleted.$FnColumn = new_row.$FnColumn
+LEFT JOIN head_inserted ON head_inserted.$FnColumn = new_row.$FnColumn
+${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FnColumn = new_row.$FnColumn" else ""}
 ;"""
         // Notes:
         // head_updated contains all rows that have been executed an UPDATE, all others performed an INSERT
@@ -159,8 +159,8 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
             .withDatabaseNumber(storageNumber)
             .withCatalogNumber(catalogNumber)
             .withCollectionNumber(collectionNumber)
-        outRows.addColumn(FN)
-               .addColumn(VERSION)
+        outRows.addColumn(FnColumn)
+               .addColumn(VersionColumn)
         for (column in byteArrayCols) outRows.addColumn(column)
         if (CC!=null) outRows.addColumn(CC)
         outRows.addColumn("_updated_fn", MemberType.INT64)

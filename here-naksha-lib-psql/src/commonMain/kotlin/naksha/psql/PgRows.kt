@@ -11,7 +11,7 @@ import naksha.base.NakshaException
 import naksha.base.TupleNumber
 import naksha.model.objects.MemberType
 import naksha.base.Version
-import naksha.model.objects.StandardMembers.StandardMembers_C.Feature
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
@@ -269,15 +269,15 @@ internal class PgRows {
             // Skip null members exactly like the encoder's pre-population does, so positions stay aligned.
             val member = members[i] ?: continue
             when (val name = member.name) {
-                Feature.name -> {
+                FeatureBytes.name -> {
                     val value = getColumn(name)?.values?.get(row)
                     if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
                     featureBytes = value
                     membersBook.put(name, null)
                 }
                 Tn.name -> {
-                    val fn = getColumn(PgColumn.FN.name)?.values?.get(row) as? Int64
-                    val ver = getColumn(PgColumn.VERSION.name)?.values?.get(row) as? Int64
+                    val fn = getColumn(PgColumn.FnColumn.name)?.values?.get(row) as? Int64
+                    val ver = getColumn(PgColumn.VersionColumn.name)?.values?.get(row) as? Int64
                     val db = databaseNumber; val cat = catalogNumber; val col = collectionNumber
                     val tn = if (fn != null && ver != null && db != null && cat != null && col != null)
                         TupleNumber(db, cat, col, fn, ver) else null
@@ -294,7 +294,7 @@ internal class PgRows {
                 }
             }
         }
-        if (featureBytes == null) throw NakshaException(ILLEGAL_STATE, "Missing mandatory member '${Feature.name}'!")
+        if (featureBytes == null) throw NakshaException(ILLEGAL_STATE, "Missing mandatory member '${FeatureBytes.name}'!")
         return Tuple(featureBytes = featureBytes, membersBook = membersBook)
     }
 
@@ -334,14 +334,14 @@ internal class PgRows {
         // The members-book keeps the tuple-number as a single `_tn` entry; the table splits it into the
         // `_fn` and `_version` columns, so populate those from the tuple-number.
         val tn = tuple.tupleNumber
-        getColumn(PgColumn.FN.name)?.let { it.values[row] = tn.featureNumber }
-        getColumn(PgColumn.VERSION.name)?.let { it.values[row] = tn.version }
+        getColumn(PgColumn.FnColumn.name)?.let { it.values[row] = tn.featureNumber }
+        getColumn(PgColumn.VersionColumn.name)?.let { it.values[row] = tn.version }
         // HEAD rows store next_version as NULL; translate the encoder's HEAD sentinel into NULL.
-        getColumn(PgColumn.NEXT_VERSION.name)?.let { if (it.values[row] == Version.HEAD.number) it.values[row] = null }
+        getColumn(PgColumn.NextVersionColumn.name)?.let { if (it.values[row] == Version.HEAD.number) it.values[row] = null }
         // `_id` is materialized only when it is not derivable from the feature-number: fn < 0 => hashed
         // id, fn >= 0 => id equals fn so `_id` stays NULL (a CHECK enforces both cases).
         getColumn(Id.name)?.let { it.values[row] = if (tn.featureNumber.toLong() < 0L) membersBook[Id.name] else null }
-        val featureColumn = getColumn(Feature.name) ?: return
+        val featureColumn = getColumn(FeatureBytes.name) ?: return
         featureColumn.values[row] = tuple.featureBytes
     }
 

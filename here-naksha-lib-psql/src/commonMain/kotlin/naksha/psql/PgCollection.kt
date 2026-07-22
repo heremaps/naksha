@@ -20,7 +20,7 @@ import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardIndices
-import naksha.model.objects.StandardMembers.StandardMembers_C.Feature
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
@@ -73,7 +73,7 @@ open class PgCollection internal constructor(
     val collectionNumber: Int = Naksha.collectionNumber(id)
 
     /**
-     * The amount of bit the [next-version][PgColumn.NEXT_VERSION] should be shifted right to calculate the history-partition.
+     * The amount of bit the [next-version][PgColumn.NextVersionColumn] should be shifted right to calculate the history-partition.
      * @since 3.0
      * @see [PgHistoryTable]
      */
@@ -105,7 +105,7 @@ open class PgCollection internal constructor(
         when (memberName) {
             GlobalBookFeatureNumber.name -> return PgColumn(index, memberName, INT64, "STORAGE $PLAIN")
             Id.name -> return PgColumn(index, memberName, STRING, "STORAGE $PLAIN COLLATE \"C\"")
-            Feature.name -> return PgColumn(index, memberName, BYTE_ARRAY, "STORAGE $EXTERNAL")
+            FeatureBytes.name -> return PgColumn(index, memberName, BYTE_ARRAY, "STORAGE $EXTERNAL")
         }
         val memberType = member.dataType
         return when (memberType) {
@@ -132,9 +132,9 @@ open class PgCollection internal constructor(
         return Array(members.size + 1) {
             when (it) {
                 // The first three members are fixed to:
-                0 -> PgColumn.FN
-                1 -> PgColumn.VERSION
-                2 -> PgColumn.NEXT_VERSION
+                0 -> PgColumn.FnColumn
+                1 -> PgColumn.VersionColumn
+                2 -> PgColumn.NextVersionColumn
                 else -> {
                     val col: PgColumn
                     var member = members[i++] ?: throw NakshaException(ILLEGAL_STATE, "Member #${i-1} is null")
@@ -300,7 +300,7 @@ open class PgCollection internal constructor(
     /**
      * The `HEAD` table, so where to store features into.
      *
-     * If this is an ordinary table, that can be partitioned using [PgPlatform.partitionNumber] above the [feature-number][PgColumn.FN].
+     * If this is an ordinary table, that can be partitioned using [PgPlatform.partitionNumber] above the [feature-number][PgColumn.FnColumn].
      *
      * Writing directly into partitions, or reading from them, is discouraged, but in some cases necessary to improve performance drastically. In AWS the speed of every [single-flow](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html) connection is limited to 5 Gbps (10 Gbps when being in the same [cluster placement group](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html#placement-groups-cluster)), but still always limited. When the PostgresQL database and the client both have higher bandwidth, then multiple parallel connection need to be used, for example to saturate the HERE temporary or consistent store bandwidth of 200 Gbps, between 20 and 40 connections are needed.
      *
@@ -314,7 +314,7 @@ open class PgCollection internal constructor(
     /**
      * The history table of the collection.
      *
-     * The history table is always partitioned by the [next-version][PgColumn.NEXT_VERSION], which is shifted right by a [shift]. Each [history partition][PgHistoryPartition] is partitioned again the same way that [HEAD][headTable] is partitioned. Not doing this would create a bottleneck when modifying features in parallel, because then the parallel connections would have a congestion in the history, when moving old data into history. The history is therefore managed the same way as [HEAD][headTable], so using the [PgPlatform.partitionNumber] above the [feature-number][PgColumn.FN].
+     * The history table is always partitioned by the [next-version][PgColumn.NextVersionColumn], which is shifted right by a [shift]. Each [history partition][PgHistoryPartition] is partitioned again the same way that [HEAD][headTable] is partitioned. Not doing this would create a bottleneck when modifying features in parallel, because then the parallel connections would have a congestion in the history, when moving old data into history. The history is therefore managed the same way as [HEAD][headTable], so using the [PgPlatform.partitionNumber] above the [feature-number][PgColumn.FnColumn].
      */
     @JvmField
     val historyTable: PgHistoryTable = PgHistoryTable(this)

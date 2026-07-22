@@ -2,7 +2,7 @@
   "type": "FeatureCollection",
   "features": [
     {
-      "id": "tc_1102_feature_1",
+      "id": "tc_1102_feature",
       "type": "Feature",
       "properties": {
         "speedLimit": "160",
@@ -20,7 +20,7 @@
       }
     },
     {
-      "id": "tc_1102_feature_1",
+      "id": "tc_1102_feature",
       "type": "Feature",
       "properties": {
         "speedLimit": "280",

@@ -4,6 +4,10 @@ package naksha.psql
 
 import naksha.model.objects.MemberType
 import naksha.model.objects.MemberType.MemberType_C.INT64
+import naksha.model.objects.StandardMembers
+import naksha.model.objects.StandardMembers.StandardMembers_C.FN
+import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
+import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -107,37 +111,25 @@ data class PgColumn(
          */
         const val MAIN = "MAIN"
 
-        /** Constant for the name of the feature-number column. */
-        const val FN_NAME = "_fn"
-
         /**
          * The feature-number.
          *
-         * Together with [VERSION], forms the primary identification of a tuple within a collection. The lower 16 bits of this value are used as the partition key for distribution partitioning (see [naksha.model.Naksha.featureNumber]).
+         * Together with [VersionColumn], forms the primary identification of a tuple within a collection. The lower 16 bits of this value are used as the partition key for distribution partitioning (see [naksha.model.Naksha.featureNumber]).
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val FN = PgColumn(0, FN_NAME, INT64, "STORAGE $PLAIN NOT NULL")
-
-        /** Constant for the name of the version column. */
-        const val VERSION_NAME = "_version"
+        val FnColumn = PgColumn(0, FN, INT64, "STORAGE $PLAIN NOT NULL")
 
         /**
          * The version (with action in the lower 2 bits) of this tuple.
          *
-         * Together with [FN], forms the primary identification of a tuple within a collection. See [naksha.base.Version] for the layout.
+         * Together with [FnColumn], forms the primary identification of a tuple within a collection. See [naksha.base.Version] for the layout.
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        val VERSION = PgColumn(1, VERSION_NAME, INT64, "STORAGE $PLAIN NOT NULL")
-
-        /**
-         * Constant for the name of the next-version column.
-         * @see [naksha.model.objects.StandardMembers.NextVersion]
-         */
-        const val NEXT_VERSION_NAME = "_nv"
+        val VersionColumn = PgColumn(1, VERSION, INT64, "STORAGE $PLAIN NOT NULL")
 
         /**
          * The next-version (with action in the lower 2 bits) of this tuple, only available in the history.
@@ -147,7 +139,7 @@ data class PgColumn(
         @JsStatic
         // Nullable on purpose: HEAD rows carry NULL, history rows a real value; each table enforces the
         // right nullability via its own `$c_nv` CHECK (HEAD: IS NULL, history: IS NOT NULL).
-        val NEXT_VERSION = PgColumn(2, NEXT_VERSION_NAME, INT64, "STORAGE $PLAIN")
+        val NextVersionColumn = PgColumn(2, NEXT_VERSION, INT64, "STORAGE $PLAIN")
     }
 
     /**

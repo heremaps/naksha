@@ -2,17 +2,22 @@
 
 package naksha.base
 
+import naksha.base.Platform.PlatformCompanion.UNDEFINED
 import naksha.base.Platform.PlatformCompanion.isNil
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_delete
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_remove
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
 import naksha.base.fn.Fn0
 import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
+import kotlin.math.min
 import kotlin.reflect.KClass
 
 /**
@@ -240,9 +245,11 @@ abstract class Proxy : PlatformObject {
      * @since 3.0
      */
     @JsName("getPathByList")
-    fun getPath(path: List<Any?>): Any? {
+    @JvmOverloads
+    fun getPath(path: List<Any?>, end: Int = path.size): Any? {
         var current: Any? = this.platformObject()
-        for (key in path) {
+        for (i in 0 until min(path.size, end)) {
+            val key = path[i]
             if (key is String) {
                 if (current !is PlatformMap) return null
                 current = map_get(current, key)
@@ -265,20 +272,28 @@ abstract class Proxy : PlatformObject {
     /**
      * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
      *
-     * @param value the value to set.
+     * @param value the value to set; if [Platform.UNDEFINED], the value will be removed.
      * @param path the JSON path to mutate.
+     * @param end the optional end in the JSON path, defaults to max _(used to select a zero-copy sub-path)_.
      * @return the previous value.
      * @since 3.0
+     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [Platform.UNDEFINED].
      */
     @JsName("setPathByList")
-    fun setPath(value: Any?, path: List<Any?>): Any? {
-        val pathEnd = path.size
+    @JvmOverloads
+    fun setPath(value: Any?, path: List<Any?>, end: Int = path.size): Any? {
+        val isRemove = value == UNDEFINED
+        val pathEnd = min(path.size, end)
+        if (pathEnd == 0 && isRemove) return UNDEFINED
         val pathLast = pathEnd - 1
         var current: Any = this.platformObject()
         for (i in 0 until pathLast) {
             val key = path[i]
             if (key is String) {
-                if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+                if (current !is PlatformMap) {
+                    if (isRemove) return null
+                    throw illegalArg("Invalid value at key '$key', expected object")
+                }
                 // --- current is PlatformMap ---
                 val value = map_get(current, key)
                 if (value == null) {
@@ -297,13 +312,17 @@ abstract class Proxy : PlatformObject {
                         continue
                     }
                     // The next key is invalid
-                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                    if (isRemove) return null
+                    throw illegalArg("Invalid key in path: '$next_key' at position ${i+1}")
                 }
                 current = value
                 continue
             }
             if (key is Number) {
-                if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+                if (current !is PlatformList) {
+                    if (isRemove) return null
+                    throw illegalArg("Invalid value at key '$key', expected array")
+                }
                 // --- current is PlatformList ---
                 val index: Int = key.toInt()
                 val value = array_get(current, index)
@@ -323,28 +342,37 @@ abstract class Proxy : PlatformObject {
                         continue
                     }
                     // The next key is invalid
-                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                    if (isRemove) return null
+                    throw illegalArg("Invalid key in path: '$next_key' at position ${i+1}")
                 }
                 current = value
                 continue
             }
-            throw RuntimeException("Invalid key in path: '$key' at position $i")
+            if (isRemove) return null
+            throw illegalArg("Invalid key in path: '$key' at position $i")
         }
         val key = path[pathLast]
         if (key is String) {
-            if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+            if (current !is PlatformMap) {
+                if (isRemove) return null
+                throw illegalArg("Invalid value at key '$key', expected object")
+            }
             val oldValue = map_get(current, key)
-            map_set(current, key, value)
+            if (value == UNDEFINED) map_remove(current, key) else map_set(current, key, value)
             return oldValue
         }
         if (key is Number) {
-            if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+            if (current !is PlatformList) {
+                if (isRemove) return null
+                throw illegalArg("Invalid value at key '$key', expected array")
+            }
             val index = key.toInt()
             val oldValue = array_get(current, index)
-            array_set(current, index, value)
+            if (value == UNDEFINED) array_delete(current, index) else array_set(current, index, value)
             return oldValue
         }
-        throw RuntimeException("Invalid key in path: '$key' at position $pathLast")
+        if (isRemove) return null
+        throw illegalArg("Invalid key in path: '$key' at position $pathLast")
     }
 
     /**
@@ -382,19 +410,27 @@ abstract class Proxy : PlatformObject {
     /**
      * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
      *
-     * @param value the value to set.
+     * @param value the value to set; if [Platform.UNDEFINED], the value will be removed.
      * @param path the JSON path to mutate.
+     * @param end the optional end in the JSON path, defaults to max _(used to select a zero-copy sub-path)_.
      * @return the previous value.
      * @since 3.0
+     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [Platform.UNDEFINED].
      */
     @JsName("setPathByArray")
-    fun setPath(value: Any?, path: Array<Any?>, pathEnd: Int = path.size): Any? {
+    fun setPath(value: Any?, path: Array<Any?>, end: Int = path.size): Any? {
+        val isRemove = value == UNDEFINED
+        val pathEnd = min(path.size, end)
+        if (pathEnd == 0 && isRemove) return UNDEFINED
         val pathLast = pathEnd - 1
         var current: Any = this.platformObject()
         for (i in 0 until pathLast) {
             val key = path[i]
             if (key is String) {
-                if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+                if (current !is PlatformMap) {
+                    if (isRemove) return null
+                    throw illegalArg("Invalid value at key '$key', expected object")
+                }
                 // --- current is PlatformMap ---
                 val value = map_get(current, key)
                 if (value == null) {
@@ -413,13 +449,17 @@ abstract class Proxy : PlatformObject {
                         continue
                     }
                     // The next key is invalid
-                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                    if (isRemove) return null
+                    throw illegalArg("Invalid key in path: '$next_key' at position ${i+1}")
                 }
                 current = value
                 continue
             }
             if (key is Number) {
-                if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+                if (current !is PlatformList) {
+                    if (isRemove) return null
+                    throw illegalArg("Invalid value at key '$key', expected array")
+                }
                 // --- current is PlatformList ---
                 val index: Int = key.toInt()
                 val value = array_get(current, index)
@@ -439,28 +479,37 @@ abstract class Proxy : PlatformObject {
                         continue
                     }
                     // The next key is invalid
-                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                    if (isRemove) return null
+                    throw illegalArg("Invalid key in path: '$next_key' at position ${i+1}")
                 }
                 current = value
                 continue
             }
-            throw RuntimeException("Invalid key in path: '$key' at position $i")
+            if (isRemove) return null
+            throw illegalArg("Invalid key in path: '$key' at position $i")
         }
         val key = path[pathLast]
         if (key is String) {
-            if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+            if (current !is PlatformMap) {
+                if (isRemove) return null
+                throw illegalArg("Invalid value at key '$key', expected object")
+            }
             val oldValue = map_get(current, key)
             map_set(current, key, value)
             return oldValue
         }
         if (key is Number) {
-            if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+            if (current !is PlatformList) {
+                if (isRemove) return null
+                throw illegalArg("Invalid value at key '$key', expected array")
+            }
             val index = key.toInt()
             val oldValue = array_get(current, index)
             array_set(current, index, value)
             return oldValue
         }
-        throw RuntimeException("Invalid key in path: '$key' at position $pathLast")
+        if (isRemove) return null
+        throw illegalArg("Invalid key in path: '$key' at position $pathLast")
     }
 
     /**
@@ -495,19 +544,25 @@ abstract class Proxy : PlatformObject {
     /**
      * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
      *
-     * @param value the value to set.
+     * @param value the value to set; if [Platform.UNDEFINED], the value will be removed.
      * @param path the JSON path to mutate.
      * @return the previous value.
      * @since 3.0
+     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [Platform.UNDEFINED].
      */
     fun setPath(value: Any?, vararg path: Any): Any? {
+        val isRemove = value == UNDEFINED
         val pathEnd = path.size
+        if (pathEnd == 0 && isRemove) return UNDEFINED
         val pathLast = pathEnd - 1
         var current: Any = this.platformObject()
         for (i in 0 until pathLast) {
             val key = path[i]
             if (key is String) {
-                if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+                if (current !is PlatformMap) {
+                    if (isRemove) return UNDEFINED
+                    throw illegalArg("Invalid value at key '$key', expected object")
+                }
                 // --- current is PlatformMap ---
                 val value = map_get(current, key)
                 if (value == null) {
@@ -526,13 +581,17 @@ abstract class Proxy : PlatformObject {
                         continue
                     }
                     // The next key is invalid
-                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                    if (isRemove) return UNDEFINED
+                    throw illegalArg("Invalid key in path: '$next_key' at position ${i+1}")
                 }
                 current = value
                 continue
             }
             if (key is Number) {
-                if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+                if (current !is PlatformList) {
+                    if (isRemove) return UNDEFINED
+                    throw illegalArg("Invalid value at key '$key', expected array")
+                }
                 // --- current is PlatformList ---
                 val index: Int = key.toInt()
                 val value = array_get(current, index)
@@ -552,27 +611,36 @@ abstract class Proxy : PlatformObject {
                         continue
                     }
                     // The next key is invalid
-                    throw RuntimeException("Invalid key in path: '$next_key' at position ${i+1}")
+                    if (isRemove) return UNDEFINED
+                    throw illegalArg("Invalid key in path: '$next_key' at position ${i+1}")
                 }
                 current = value
                 continue
             }
-            throw RuntimeException("Invalid key in path: '$key' at position $i")
+            if (isRemove) return UNDEFINED
+            throw illegalArg("Invalid key in path: '$key' at position $i")
         }
         val key = path[pathLast]
         if (key is String) {
-            if (current !is PlatformMap) throw RuntimeException("Invalid value at key '$key', expected object")
+            if (current !is PlatformMap) {
+                if (isRemove) return UNDEFINED
+                throw illegalArg("Invalid value at key '$key', expected object")
+            }
             val oldValue = map_get(current, key)
             map_set(current, key, value)
             return oldValue
         }
         if (key is Number) {
-            if (current !is PlatformList) throw RuntimeException("Invalid value at key '$key', expected array")
+            if (current !is PlatformList) {
+                if (isRemove) return UNDEFINED
+                throw illegalArg("Invalid value at key '$key', expected array")
+            }
             val index = key.toInt()
             val oldValue = array_get(current, index)
             array_set(current, index, value)
             return oldValue
         }
-        throw RuntimeException("Invalid key in path: '$key' at position $pathLast")
+        if (isRemove) return UNDEFINED
+        throw illegalArg("Invalid key in path: '$key' at position $pathLast")
     }
 }

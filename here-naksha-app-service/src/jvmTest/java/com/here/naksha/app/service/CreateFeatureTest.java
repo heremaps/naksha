@@ -292,43 +292,39 @@ class CreateFeatureTest extends ApiTest {
 
     // Given: new Features in Space
     final String bodyJson = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/create_features.json");
-    final HttpResponse<String> response =
-        getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
-    assertEquals(200, response.statusCode(), "ResCode mismatch");
+    final var createResponse = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", bodyJson, streamId);
+    assertEquals(200, createResponse.statusCode(), "ResCode mismatch");
 
     // Given: existing feature is fetched
-    final HttpResponse<String> getResponse =
-        getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/my-custom-id-309-1", streamId);
+    final var getResponse = getNakshaClient().get("hub/spaces/" + SPACE_ID + "/features/my-custom-id-309-1", streamId);
     final NakshaFeature feature = parseJson(getResponse.body(), NakshaFeature.class);
     Assertions.assertNotNull(feature);
-    final NakshaProperties newPropsOldUuid = feature.getProperties();
-    final NakshaProperties newPropsOutdatedUuid = newPropsOldUuid.copy(true);
-    final NakshaProperties nullUuidProps = new NakshaProperties();
 
     // And: first set of new properties with UUID that points to current feature state (head)
-    newPropsOldUuid.put("speedLimit", "30");
-    newPropsOldUuid.put("newProperty", "was patched in");
-    newPropsOldUuid.remove("existingProperty");
+    final NakshaProperties updatedProperties = feature.getProperties().copy(true);
+    updatedProperties.put("speedLimit", "30");
+    updatedProperties.put("newProperty", "was patched in");
+    updatedProperties.remove("existingProperty");
 
-    // And: second set of new properties that are correct and point to currentl feature state (head)
-    // Note: this `outdatedUuid` will should outdated after first patch (UUID of head state should change)
-    newPropsOutdatedUuid.put("speedLimit", "120");
+    // And: second set of new properties that are correct and point to currently feature state (head)
+    // Note: this `outdatedProperties` will should outdated after first properties have been written (head state should change)
+    final NakshaProperties outdatedProperties = feature.getProperties().copy(true);
+    outdatedProperties.put("speedLimit", "120");
 
-    // And: set ofm properties with Null UUID
-    nullUuidProps.put("uuid", null);
-    nullUuidProps.put("patchedWithNullUUID", "yesyesyes");
+    // And: set of properties with `uuid` being `null` (not atomic update)
+    final NakshaProperties propertiesWithoutUuid = new NakshaProperties();
+    propertiesWithoutUuid.put("uuid", null);
+    propertiesWithoutUuid.put("patchedWithNullUUID", "yesyesyes");
 
     // When: execute request with first set of properties with correct UUID, should success
-    feature.setProperties(newPropsOldUuid);
-    final HttpResponse<String> responsePatchSuccess = getNakshaClient()
-        .post(
-            "hub/spaces/" + SPACE_ID + "/features",
-            """
-                {
-                "type": "FeatureCollection",
-                "features": [
-                """ + Platform.toJSON(feature) + "]}",
-            streamId);
+    feature.setProperties(updatedProperties);
+    final HttpResponse<String> responsePatchSuccess = getNakshaClient().post(
+      "hub/spaces/" + SPACE_ID + "/features",
+      """
+          {
+          "type": "FeatureCollection",
+          "features": [
+          """ + Platform.toJSON(feature) + "]}", streamId);
 
     // Then: first patch succeeded
     final String firstResponse = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/first_response.json");
@@ -338,7 +334,7 @@ class CreateFeatureTest extends ApiTest {
         .hasJsonBody(firstResponse);
 
     // When: execute request with now outdated UUID, should fail
-    feature.setProperties(newPropsOutdatedUuid);
+    feature.setProperties(outdatedProperties);
     final HttpResponse<String> responseUpdateFail = getNakshaClient()
         .post(
             "hub/spaces/" + SPACE_ID + "/features",
@@ -353,16 +349,14 @@ class CreateFeatureTest extends ApiTest {
     assertEquals(409, responseUpdateFail.statusCode(), "ResCode mismatch");
 
     // When: executing request with null UUID, should success with overriding
-    feature.setProperties(nullUuidProps);
-    final HttpResponse<String> responseSuccessNoUuidGiven = getNakshaClient()
-        .post(
-            "hub/spaces/" + SPACE_ID + "/features",
-            """
-                {
-                "type": "FeatureCollection",
-                "features": [
-                """ + Platform.toJSON(feature) + "]}",
-            streamId);
+    feature.setProperties(propertiesWithoutUuid);
+    final HttpResponse<String> responseSuccessNoUuidGiven = getNakshaClient().post(
+      "hub/spaces/" + SPACE_ID + "/features",
+      """
+          {
+          "type": "FeatureCollection",
+          "features": [
+          """ + Platform.toJSON(feature) + "]}", streamId);
 
     // Then: third patch should succeed
     final String thirdResponse = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/third_response.json");

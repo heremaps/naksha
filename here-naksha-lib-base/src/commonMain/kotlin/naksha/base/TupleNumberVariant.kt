@@ -111,7 +111,7 @@ class TupleNumberVariant internal constructor() : JsEnum() {
          */
         @JsStatic
         @JvmField
-        val UNDEFINED = def(TupleNumberVariant::class, "undefined")
+        val UNKNOWN = def(TupleNumberVariant::class, "undefined")
 
         private val FROM_STRING = mapOf(
             Pair(B256.subType.toString(), B256),
@@ -162,14 +162,14 @@ class TupleNumberVariant internal constructor() : JsEnum() {
          */
         @JsStatic
         @JvmStatic
-        fun fromString(s: String): TupleNumberVariant = FROM_STRING[s] ?: UNDEFINED
+        fun fromString(s: String): TupleNumberVariant = FROM_STRING[s] ?: UNKNOWN
 
         /**
          * Helper to parse a string into an [TupleNumberVariant].
          */
         @JsStatic
         @JvmStatic
-        fun fromValue(value: Int): TupleNumberVariant = FROM_VALUE[value] ?: UNDEFINED
+        fun fromValue(value: Int): TupleNumberVariant = FROM_VALUE[value] ?: UNKNOWN
     }
 
     /**

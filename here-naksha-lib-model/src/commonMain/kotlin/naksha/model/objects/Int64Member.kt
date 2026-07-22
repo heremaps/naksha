@@ -34,14 +34,14 @@ class Int64Member() : TypedMember<Int64Member>() {
     }
 
     /** Retrieves the int64 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Int64? = getInt64(feature)
+    fun get(feature: NakshaFeature): Int64? = readInt64(feature)
 
     /**
      * Retrieves the int64 value of this member from the given tuple.
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getFromTuple")
-    fun get(tuple: Tuple): Int64? = getInt64(tuple)
+    fun get(tuple: Tuple): Int64? = readInt64(tuple)
 
     /** Sets the int64 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Int64): Any? = setPath(feature, path, value)
