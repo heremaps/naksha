@@ -148,12 +148,15 @@ data class Tuple @JvmOverloads constructor(
                     action = when (requestedAction) {
                         Action.CREATE-> Action.CREATE
                         Action.UPDATE -> throw illegalArg("Requested action UPDATE, but client provided a foreign state as 'uuid'")
-                        Action.DELETE -> if (atomic != true) Action.DELETE else throw illegalArg("Requested atomic action DELETE, but client did provide a foreign state as 'uuid'")
+                        Action.DELETE -> Action.DELETE
                         else -> Action.CREATE
                     }
                 } else { // Client modified an existing state.
                     action = when (requestedAction) {
-                        Action.CREATE-> throw illegalArg("Requested ${if(atomic!=true)"" else "atomic "} action CREATE, but client provided the expected state as 'uuid'")
+                        Action.CREATE-> {
+                            if (prevTn.action != Action.DELETE) throw illegalArg("Requested ${if(atomic!=true)"" else "atomic "} action CREATE, but client provided the expected state as 'uuid'")
+                            Action.CREATE
+                        }
                         Action.UPDATE -> Action.UPDATE
                         Action.DELETE -> Action.DELETE
                         else -> Action.UPDATE
@@ -163,7 +166,7 @@ data class Tuple @JvmOverloads constructor(
                 action = when (requestedAction) {
                     Action.CREATE-> Action.CREATE
                     Action.UPDATE -> if (atomic != true) Action.UPDATE else throw illegalArg("Requested atomic action UPDATE, but client did not provide a 'uuid' (expected state)")
-                    Action.DELETE -> if (atomic != true) Action.DELETE else throw illegalArg("Requested atomic action DELETE, but client did not provide a 'uuid' (expected state)")
+                    Action.DELETE -> Action.DELETE
                     else -> Action.CREATE // When not decided, we assume CREATE
                 }
             }
