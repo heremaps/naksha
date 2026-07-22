@@ -165,9 +165,9 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
-     * True if this member is a virtual member. There are only
+     * True if this member is a virtual member.
      */
-    fun isVirtual(): Boolean = mandatory
+    fun isVirtual(): Boolean = virtual
 
     /** Remove [mandatory] from the underlying map; returns this for chaining. */
     internal fun removeMandatory(): Member {
