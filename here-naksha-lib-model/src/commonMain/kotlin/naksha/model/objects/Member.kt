@@ -158,7 +158,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     /** True if this member is mandatory. */
     fun isMandatory(): Boolean = mandatory
 
-    internal var virtual: Boolean = false
+    private var virtual: Boolean by VIRTUAL
     internal fun withVirtual(): Member {
         this.virtual = true
         return this
@@ -492,6 +492,7 @@ open class Member() : AnyObject(), Comparator<Member> {
         private val INDEX = NullableProperty<Member, Int>(Int::class)
         private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath("properties", self.name) }
         private val MANDATORY = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
+        private val VIRTUAL = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
     }
 
     /**
