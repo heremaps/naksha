@@ -12,7 +12,7 @@ import naksha.model.RandomFeatures
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
-class ReadFeaturesByMetadataTest : PgTestBase(collection = null, mapId = "") {
+class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "") {
     
     companion object {
         private const val TEST_FEATURE_ID = "read_by_meta_test_feature"

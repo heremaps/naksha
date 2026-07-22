@@ -527,6 +527,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
+    // TODO: Rename to createCatalog!
     fun createMap(map: NakshaCatalog): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
@@ -542,6 +543,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
+    // TODO: Rename to updateCatalog!
     fun updateMap(map: NakshaCatalog, atomic: Boolean): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
@@ -558,6 +560,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
+    // TODO: Rename to upsertCatalog!
     fun upsertMap(map: NakshaCatalog, atomic: Boolean): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
@@ -574,6 +577,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
+    // TODO: Rename to deleteCatalog!
     fun deleteMap(map: NakshaCatalog, atomic: Boolean): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
@@ -590,6 +594,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
+    // TODO: Rename to deleteCatalogById!
     @JvmOverloads
     fun deleteMapById(id: String, version: Version? = null): Write {
         this.catalogId = ADMIN_CATALOG_ID

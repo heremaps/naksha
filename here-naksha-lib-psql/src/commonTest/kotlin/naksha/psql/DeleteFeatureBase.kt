@@ -155,7 +155,7 @@ abstract class DeleteFeatureBase(
         // Create special test collection.
         val createCollectionReq = WriteRequest().add(
             Write().createCollection(
-                NakshaCollection("delete_no_history_but_shadow", map.id)
+                NakshaCollection("delete_no_history_but_shadow", catalog.id)
                     .withStoreDeleted(StoreMode.ON)
                     .withStoreMeta(StoreMode.OFF)
                     .withStoreHistory(StoreMode.OFF)
@@ -165,7 +165,7 @@ abstract class DeleteFeatureBase(
         assertEquals(1, createCollectionResp.length)
         assertEquals(1, createCollectionResp.features.size)
         val collection = assertNotNull(createCollectionResp.features[0]).proxy(NakshaCollection::class)
-        assertEquals(map.id, collection.catalogId)
+        assertEquals(catalog.id, collection.catalogId)
         assertEquals("delete_no_history_but_shadow", collection.id)
 
         // Create feature.

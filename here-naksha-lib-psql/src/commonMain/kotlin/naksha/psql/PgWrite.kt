@@ -55,6 +55,12 @@ internal data class PgWrite(val original: Write, val i: Int) {
     }
 
     /**
+     * If the operation should be performed atomic.
+     * @since 3.0
+     */
+    var atomic: Boolean = original.atomic
+
+    /**
      * The identifier of the feature to modify.
      * @since 3.0
      */

@@ -23,12 +23,12 @@ import naksha.model.request.WriteRequest
 import kotlin.test.*
 import kotlin.time.Clock
 
-class CollectionTests : PgTestBase(collection = null, mapId = "") {
+class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun shouldDropCollection() {
         // Given: collection that will be tested
-        val collection = NakshaCollection("drop_collection_test", map.id)
+        val collection = NakshaCollection("drop_collection_test", catalog.id)
 
         // When: creating empty collection
         executeWrite(
@@ -73,7 +73,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
     @Test
     fun collectionShouldHaveAllColumns() {
-        val collection = NakshaCollection("check_db_columns_test", map.id)
+        val collection = NakshaCollection("check_db_columns_test", catalog.id)
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -95,7 +95,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
     @Test
     fun collectionShouldHaveIndices() {
-        val collection = NakshaCollection("check_db_indices_test", map.id)
+        val collection = NakshaCollection("check_db_indices_test", catalog.id)
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -132,7 +132,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         val collectionName = "check_no_hst_table_test"
         val collection = NakshaCollection(
             id = collectionName,
-            mapId = map.id,
+            mapId = catalog.id,
             storeHistory = StoreMode.OFF
         )
         executeWrite(
@@ -163,7 +163,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
 
 
         val readFeatureRequest = ReadFeatures()
-        readFeatureRequest.catalogId = map.id
+        readFeatureRequest.catalogId = catalog.id
         readFeatureRequest.collectionId = collectionName
         readFeatureRequest.featureIds.add(feature.id)
         val readFeaturesResponse = executeRead(readFeatureRequest)
@@ -203,7 +203,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         val collectionId = "check_no_del_table_test"
         var collection = NakshaCollection(
             id = collectionId,
-            mapId = map.id,
+            mapId = catalog.id,
             storeDeleted = StoreMode.OFF
         )
 
@@ -236,7 +236,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         feature = featureCreateResponse.features[0]!!
 
         val readFeature = ReadFeatures()
-        readFeature.catalogId = map.id
+        readFeature.catalogId = catalog.id
         readFeature.collectionId= collectionId
         readFeature.featureIds.add(feature.id)
         val readFeatureResponse = executeRead(readFeature)
@@ -266,7 +266,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     @Test
     fun updateCollection() {
         val collectionName = "update_collection_test"
-        var collection = NakshaCollection(id = collectionName, mapId = map.id)
+        var collection = NakshaCollection(id = collectionName, mapId = catalog.id)
         val createResponse = executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -286,7 +286,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
-            catalogId = map.id
+            catalogId = catalog.id
             collectionId = Naksha.COLLECTIONS_COL_ID
             featureIds += collection.id
         }
@@ -297,7 +297,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     @Test
     fun updateNotExistingCollection() {
         val collectionName = "not_existing_collection_test"
-        val collection = NakshaCollection(id = collectionName, mapId = map.id)
+        val collection = NakshaCollection(id = collectionName, mapId = catalog.id)
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
         val response = executeWriteErrorResponse(
@@ -312,7 +312,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     @Test
     fun shouldUpsertCollection() {
         val collectionName = "upsert_collection_test"
-        val collection = NakshaCollection(id = collectionName, mapId = map.id)
+        val collection = NakshaCollection(id = collectionName, mapId = catalog.id)
         // create collection using upsert
         val response = executeWrite(
             WriteRequest().add(
@@ -340,7 +340,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         // when
         val response = executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(collectionId = collectionName, mapId = map.id)
+                Write().deleteCollectionById(collectionId = collectionName, mapId = catalog.id)
             )
         )
 
@@ -356,7 +356,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         val collectionId = "test_create_existing_collection"
         executeWrite(
             WriteRequest().add(
-                Write().createCollection(NakshaCollection(collectionId, map.id))
+                Write().createCollection(NakshaCollection(collectionId, catalog.id))
             )
         )
 
@@ -364,7 +364,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
         val response = storage.newWriteSession(newSessionOptions()).use { session ->
             session.execute(
                 WriteRequest().add(
-                    Write().createCollection(NakshaCollection(collectionId, map.id))
+                    Write().createCollection(NakshaCollection(collectionId, catalog.id))
                 )
             )
         }
@@ -384,7 +384,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
      */
     @Test
     fun membersUndefined_shouldCreateAllColumnsAndDefaultIndices() {
-        val collection = NakshaCollection("members_null_test", map.id)
+        val collection = NakshaCollection("members_null_test", catalog.id)
         // members are null by default — do NOT set them, then they will automatically become XyzMember.ALL!
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -393,7 +393,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(map.id, collection.id)
+                arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             // Note: `lib-psql` does split `tn` into `fn` and `version` columns, so we have one more column than members!
             assertEquals(
@@ -406,7 +406,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(map.id, collection.id)
+                arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             for (index in XyzIndices.ALL) {
                 val expected = "${collection.id}\$ci_${index.name}"
@@ -422,7 +422,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
      */
     @Test
     fun membersEmpty_shouldCreateOnlyMandatoryColumnsAndNoDefaultIndices() {
-        val collection = NakshaCollection("members_empty_test", map.id).apply {
+        val collection = NakshaCollection("members_empty_test", catalog.id).apply {
             members = MemberList() // explicitly empty
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
@@ -432,7 +432,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(map.id, collection.id)
+                arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             val expectedColumns = expectedHeadColumnNames(collection)
             assertEquals(
@@ -445,7 +445,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(map.id, collection.id)
+                arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             assertNoOptionalIndices(indexNames, collection.id)
         }
@@ -458,7 +458,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
      */
     @Test
     fun membersNonEmpty_shouldCreateMandatoryPlusCustomColumnsAndCustomIndicesOnly() {
-        val collection = NakshaCollection("members_custom_test", map.id).apply {
+        val collection = NakshaCollection("members_custom_test", catalog.id).apply {
             addMember(Member("score", MemberType.INT64))
             addIndex(Index("idx_score", "score"))
         }
@@ -469,7 +469,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(map.id, collection.id)
+                arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             val expectedColumns = expectedHeadColumnNames(collection) // mandatory head columns + score
             assertEquals(expectedColumns.size, columns.size,
@@ -482,7 +482,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(map.id, collection.id)
+                arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             assertNoOptionalIndices(indexNames, collection.id)
             // Custom index must be present.
@@ -498,7 +498,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
      */
     @Test
     fun membersSet_shouldCreateJsonbColumnAndGinIndex() {
-        val collection = NakshaCollection("members_set_test", map.id).apply {
+        val collection = NakshaCollection("members_set_test", catalog.id).apply {
             addMember(Member("labels", MemberType.TAG_LIST))
             addIndex(Index("idx_labels", "labels"))
         }
@@ -509,7 +509,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             var dataType: String? = null
             conn.execute(
                 "SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
-                arrayOf(map.id, collection.id, PgMemberHelper.pgColumnName("labels"))
+                arrayOf(catalog.id, collection.id, PgMemberHelper.pgColumnName("labels"))
             ).use { cursor -> if (cursor.next()) dataType = cursor["data_type"] }
             assertEquals("ARRAY", dataType, "TAG_LIST member 'labels' must be materialized as a text[] array")
 
@@ -518,7 +518,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             var indexDef: String? = null
             conn.execute(
                 "SELECT indexdef FROM pg_indexes WHERE schemaname = $1 AND tablename = $2 AND indexname = $3",
-                arrayOf(map.id, collection.id, customIndexId)
+                arrayOf(catalog.id, collection.id, customIndexId)
             ).use { cursor -> if (cursor.next()) indexDef = cursor["indexdef"] }
             assertNotNull(indexDef, "SET index '$customIndexId' not found")
             assertTrue(indexDef!!.contains("USING gin", ignoreCase = true),
@@ -533,7 +533,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
      */
     @Test
     fun membersSet_indexOnNonIndexableMemberShouldFail() {
-        val collection = NakshaCollection("members_set_invalid_test", map.id).apply {
+        val collection = NakshaCollection("members_set_invalid_test", catalog.id).apply {
             addMember(Member("flag", MemberType.BOOLEAN))
             addIndex(Index("idx_flag", "flag"))
         }
@@ -543,7 +543,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
     /** Verifies the physical column order matches PgCollection.generateColumns (HEAD and HISTORY identical). */
     @Test
     fun membersCustom_shouldOrderColumnsForMinimalPadding() {
-        val collection = NakshaCollection("members_order_test", map.id).apply {
+        val collection = NakshaCollection("members_order_test", catalog.id).apply {
             // Add one member of every type (deliberately in wrong order to prove sorting works).
             addMember(Member("z_str",   MemberType.STRING))
             addMember(Member("a_i32",   MemberType.INT32))
@@ -565,7 +565,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
             storage.adminConnection().use { conn ->
                 conn.execute(
                     "SELECT column_name FROM information_schema.columns WHERE table_schema = \$1 AND table_name = \$2 ORDER BY ordinal_position",
-                    arrayOf(map.id, tableName)
+                    arrayOf(catalog.id, tableName)
                 ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             }
             assertTrue(columns.isNotEmpty(), "No columns found for table '$tableName'")
@@ -582,7 +582,7 @@ class CollectionTests : PgTestBase(collection = null, mapId = "") {
      */
     @Test
     fun createCollection_shouldFailWhenIndexReferencesUnknownMember() {
-        val collection = NakshaCollection("members_bad_index_test", map.id).apply {
+        val collection = NakshaCollection("members_bad_index_test", catalog.id).apply {
             // Declare one real custom member ...
             addMember(Member("score", MemberType.INT64))
             // ... but index a name that does not exist as a member.

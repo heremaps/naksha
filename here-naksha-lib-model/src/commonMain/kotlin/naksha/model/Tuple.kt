@@ -86,8 +86,9 @@ data class Tuple @JvmOverloads constructor(
          * @param feature the feature to encode.
          * @param collection the collection for which to encode the feature; declares the members.
          * @param session the session for which to encode; declares the version.
-         * @param requestedAction an action the client wants to perform; if `null` auto-decided.
          * @param globalBook the global book to use for encoding; if any.
+         * @param requestedAction an action the client wants to perform; if `null`, auto-decided.
+         * @param atomic a hint if the operation **must** be atomic; if `null`, auto-decided.
          * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
          * @since 3.0
          * @throws NakshaException if any error happens when encoding.
@@ -99,8 +100,9 @@ data class Tuple @JvmOverloads constructor(
             feature: NakshaFeature,
             collection: NakshaCollection,
             session: IWriteSession,
+            globalBook: IBook? = null,
             requestedAction: Action? = null,
-            globalBook: IBook? = null
+            atomic: Boolean? = null
         ): Tuple {
             val members = collection.useMembers()
             val processors = session.processors
@@ -146,12 +148,12 @@ data class Tuple @JvmOverloads constructor(
                     action = when (requestedAction) {
                         Action.CREATE-> Action.CREATE
                         Action.UPDATE -> throw illegalArg("Requested action UPDATE, but client provided a foreign state as 'uuid'")
-                        Action.DELETE -> Action.DELETE
+                        Action.DELETE -> if (atomic != true) Action.DELETE else throw illegalArg("Requested atomic action DELETE, but client did provide a foreign state as 'uuid'")
                         else -> Action.CREATE
                     }
                 } else { // Client modified an existing state.
                     action = when (requestedAction) {
-                        Action.CREATE-> throw illegalArg("Requested action CREATE, but client provided the expected state as 'uuid'")
+                        Action.CREATE-> throw illegalArg("Requested ${if(atomic!=true)"" else "atomic "} action CREATE, but client provided the expected state as 'uuid'")
                         Action.UPDATE -> Action.UPDATE
                         Action.DELETE -> Action.DELETE
                         else -> Action.UPDATE
@@ -160,8 +162,8 @@ data class Tuple @JvmOverloads constructor(
             } else {
                 action = when (requestedAction) {
                     Action.CREATE-> Action.CREATE
-                    Action.UPDATE -> Action.UPDATE // None atomic UPDATE
-                    Action.DELETE -> Action.DELETE
+                    Action.UPDATE -> if (atomic != true) Action.UPDATE else throw illegalArg("Requested atomic action UPDATE, but client did not provide a 'uuid' (expected state)")
+                    Action.DELETE -> if (atomic != true) Action.DELETE else throw illegalArg("Requested atomic action DELETE, but client did not provide a 'uuid' (expected state)")
                     else -> Action.CREATE // When not decided, we assume CREATE
                 }
             }

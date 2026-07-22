@@ -17,7 +17,7 @@ class PsqlErrorMappingTest : PgTestBase() {
     fun shouldReturnMissingCollectionError() {
         // Given
         val writeFeatureToMissingCollection = WriteRequest().add(
-            Write().createFeature(map.id, "missing_collection", randomFeature())
+            Write().createFeature(catalog.id, "missing_collection", randomFeature())
         )
 
         // When
