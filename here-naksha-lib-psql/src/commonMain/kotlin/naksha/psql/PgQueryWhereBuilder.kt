@@ -408,6 +408,28 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         where.append(")")
     }
 
+    // TODO: Do we need this, and if so, how do we integrate into changed code?
+    private fun whereRefTiles() {
+        val hereTiles = request.query.refTiles
+            .filterNotNull()
+            .map { HereTile(it) }
+        if (hereTiles.isNotEmpty()) {
+            if (where.isNotEmpty()) {
+                where.append(" AND (")
+            } else {
+                where.append(" (")
+            }
+            where.append(refPointInAnyOfTiles(hereTiles))
+            where.append(")")
+        }
+    }
+
+    private fun refPointInAnyOfTiles(hereTiles: List<HereTile>): String {
+        return hereTiles.joinToString(separator = " OR ") { hereTile ->
+            refPointInTile(hereTile)
+        }
+    }
+
     // --------------------------------------------------------< OLD CODE >-------------------------------------------------------------
 //
     private fun whereGuids() {
@@ -421,6 +443,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 fns[i] = tupleNumbers[i].featureNumber
                 versions[i] = tupleNumbers[i].version
             }
+            where.append("($tagsAsJsonb IS NOT NULL) AND ")
             val featureNumbersArg = placeholderForArg(fns, PgType.INT64_ARRAY)
             val versionsArg = placeholderForArg(versions, PgType.INT64_ARRAY)
             where.append("($FnColumn, $VersionColumn) IN (SELECT * FROM unnest($featureNumbersArg::int8[], $versionsArg::int8[]))")
