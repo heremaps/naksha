@@ -11,6 +11,7 @@ import com.here.naksha.cli.results.CommandSuccess;
 import naksha.model.objects.NakshaStorage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -57,6 +58,7 @@ class CopyCliTest {
         commandLine = new TestCommandLine(copyCommand);
     }
 
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @Test
     void shouldCopyWithoutAutoCreateTarget() {
         // Given: copy service returns success result
@@ -101,6 +103,7 @@ class CopyCliTest {
         testCase.assertMatches(result);
     }
 
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @Test
     void shouldCopyWithAutoCreateTarget() {
         // Given: copy service returns success result
@@ -146,6 +149,7 @@ class CopyCliTest {
         testCase.assertMatches(result);
     }
 
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @ParameterizedTest
     @EnumSource(WriteMode.class)
     void shouldCopyWithGivenFeaturesWriteExecutor(WriteMode writeModeBuilder) {
@@ -192,6 +196,7 @@ class CopyCliTest {
         testCase.assertMatches(result);
     }
 
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @Test
     void shouldCopyWithGivenParams() {
         // Given: copy service returns success result

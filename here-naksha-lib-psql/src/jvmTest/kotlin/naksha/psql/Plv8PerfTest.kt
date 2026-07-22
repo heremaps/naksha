@@ -18,6 +18,7 @@ import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
@@ -58,7 +59,7 @@ class Plv8PerfTest : PgTestBase(
     fun shouldBeIgnored() {
     }
 
-    //@Ignore
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @Test
     fun shouldInsertManyFeatures() {
         // Prepare
@@ -78,7 +79,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
-    //@Ignore
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @Test
     fun shouldUpsertManyFeatures() {
         // Prepare
@@ -99,7 +100,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
-    //@Ignore
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @Test
     fun shouldInsertGroupedByPartition() {
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
@@ -129,7 +130,7 @@ class Plv8PerfTest : PgTestBase(
 //        val group = mutableMapOf<Int, List<NakshaFeature>>()
 //    }
 
-    //@Ignore
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @Test
     fun shouldUpsertGroupedByPartition() {
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS

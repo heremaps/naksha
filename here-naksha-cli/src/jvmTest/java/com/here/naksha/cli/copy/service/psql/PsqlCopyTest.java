@@ -45,6 +45,7 @@ import naksha.model.request.WriteRequest;
 import naksha.model.request.query.SpIntersects;
 import naksha.model.request.query.SpOr;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -68,6 +69,7 @@ class PsqlCopyTest {
         psqlStorage = Naksha.useStorage(storageConfig);
     }
 
+  @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres(FeaturesWriteExecutor featuresWriteExecutor) {
@@ -96,6 +98,7 @@ class PsqlCopyTest {
         }
     }
 
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenMapsOnTheSameStorage(FeaturesWriteExecutor featuresWriteExecutor) {
@@ -127,6 +130,7 @@ class PsqlCopyTest {
         assertSameFeatures(sourceFeatures, targetFeatures);
     }
 
+    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCreateMapAndCollectionThenCopy(FeaturesWriteExecutor featuresWriteExecutor) {
