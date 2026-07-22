@@ -277,13 +277,13 @@ open class PgWriter internal constructor(
             when (op) {
                 WriteOp.CREATE -> {
                     val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, Action.CREATE)
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.CREATE, pgWrite.atomic)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
                 WriteOp.UPDATE -> {
                     val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, Action.UPDATE)
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.UPDATE, pgWrite.atomic)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
@@ -298,7 +298,7 @@ open class PgWriter internal constructor(
                     val nakshaCollection = pgWrite.collection.head
                     val uuidMember = nakshaCollection.useMember(StandardMembers.Tn)
                     uuidMember.delete(f)
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, Action.CREATE)
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.CREATE, null)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
