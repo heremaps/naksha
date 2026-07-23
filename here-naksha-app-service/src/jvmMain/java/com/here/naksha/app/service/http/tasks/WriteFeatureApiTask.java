@@ -30,6 +30,7 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.FEATURE_IDS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.REMOVE_TAGS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.SPACE_ID;
 import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.proxyWrapperOf;
+import static naksha.model.request.WriteOp.*;
 import static naksha.model.util.RequestHelper.atomicUpdateFeatureRequest;
 import static naksha.model.util.RequestHelper.nonAtomicUpdateFeatureRequest;
 
@@ -57,12 +58,7 @@ import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import naksha.model.request.Write;
-import naksha.model.request.WriteRequest;
+import naksha.model.request.*;
 import naksha.model.util.RequestHelper;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
@@ -169,10 +165,10 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       preProcessor.preProcess(feature);
       if (hasSpecifiedVersion(feature)) {
         // version defined - perform atomic update including version validation
-        wrRequest.add(new Write().updateFeature(null, spaceId, feature, true));
+        wrRequest.add(new Write().withOp(UPDATE).withCollectionId(spaceId).withFeature(feature).withAtomic(true));
       } else {
         // no version - overwrite the feature, regardless whether it exists or not (forceful upsert)
-        wrRequest.add(new Write().upsertFeature(null, spaceId, feature));
+        wrRequest.add(new Write().withOp(UPSERT).withCollectionId(spaceId).withFeature(feature));
       }
     }
 
@@ -339,7 +335,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
         featureFromRequest.getProperties().getXyz().setRaw("uuid",null);
 
         preProcessor.preProcess(featureFromRequest);
-        insertsAndUpdates.add(new Write().createFeature(null, spaceId, featureFromRequest));
+        insertsAndUpdates.add(new Write().withOp(CREATE).withCollectionId(spaceId).withFeature(featureFromRequest));
       } else {
         // Feature exists - prepare patch for update (atomic == true, we want version validation)
         // that means, if no UUID in feature JSON in request, currently always accept the request, regardless of concurrency issue
@@ -350,36 +346,32 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
         }
         NakshaFeature patchedFeature = patchedFeature(featureFromRequest, correspondingExistingFeature);
         preProcessor.preProcess(featureFromRequest);
-        insertsAndUpdates.add(new Write().updateFeature(null, spaceId, patchedFeature, true));
+        insertsAndUpdates.add(new Write().withOp(UPDATE).withCollectionId(spaceId).withFeature(patchedFeature).withAtomic(true));
       }
     }
 
     // Forward request to NH Space Storage writer instance
     return naksha().getSpaceStorage().useWriteSession(SessionOptions.from(context(), true), writer -> {
       final Response wrResponse = writer.execute(insertsAndUpdates);
-      if (wrResponse == null) {
-        // unexpected null response
+      if (wrResponse instanceof ErrorResponse er) {
         writer.rollback();
         writer.close();
-        return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.EXCEPTION, "Unexpected null result."));
-      } else if (wrResponse instanceof ErrorResponse er) {
-        writer.rollback();
-        writer.close();
-        // If the error was due to CONFLICT we assume concurrent modification and retry
-        if (NakshaError.CONFLICT.equals(er.getError())) {
-          if (retry >= MAX_RETRY_ATTEMPT) {
-            NakshaError error = er.getError();
-            String msg = "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: " + error;
-            logger.error(msg, er.getError().getCause());
-            return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.EXCEPTION, msg));
+        final NakshaError error = er.getError();
+        logger.error("Received error response: {}", er);
+        if (NakshaError.CONFLICT.equals(error.getCode())) {
+          // If the error was due to CONFLICT.
+          if (error.getMsg().contains("duplicate key")) {
+            logger.info("Conflict due to duplicate key, not repeatable!");
+          } else if (retry >= MAX_RETRY_ATTEMPT) {
+            logger.warn("Max retry attempt for PATCH REST API reached, too many concurrent modification, error: {}", error, error.getCause());
+          } else {
+            // We assume concurrent modification and retry the operation.
+            logger.info("Conflict #{} detected, retry, reason: {}", retry + 1, error.getMsg());
+            return patchAndPreProcess(spaceId, featuresFromRequest, responseType, preProcessor, retry + 1);
           }
-          return patchAndPreProcess(spaceId, featuresFromRequest, responseType, preProcessor, retry + 1);
-        } else {
-          logger.error("Received error result {}", er);
-          // TODO CASL-1198 Should we get failed features IDs in naskha errors.
-          return verticle.sendErrorResponse(routingContext, new NakshaError(er.getError().getCode(),
-              "Error encountered while writing the patched features to storage"));
         }
+        // TODO CASL-1198 Should we get failed features IDs in naskha errors.
+        return verticle.sendErrorResponse(routingContext, new NakshaError(error.getCode(), "Error encountered while writing the patched features to storage"));
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
           return transformResponseToXyzFeatureResponse(wrResponse, NakshaFeature.class, NoElementsStrategy.FAIL_ON_NO_ELEMENTS);
