@@ -7,7 +7,8 @@ jts = "1.20.0"
 geotools = "35.0"
 slf4j = "2.0.17"
 log4j = "2.26.0"
-junit = "6.1.1"
+junit = "5.14.4"
+junit_platform = "1.14.4"
 test_containers = "1.21.3"
 kotlin = "2.4.10"
 jacoco = "0.8.15"
@@ -86,7 +87,7 @@ awaitility                  = "org.awaitility:awaitility:4.3.0"
 
 junit_bom                   = { module = "org.junit:junit-bom", version.ref = "junit" }
 junit_params                = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
-junit_platform_launcher     = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }
+junit_platform_launcher     = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit_platform" }
 junit_vintage_engine        = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit" }
 junit_jupiter_engine        = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
 junit_jupiter_api           = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
