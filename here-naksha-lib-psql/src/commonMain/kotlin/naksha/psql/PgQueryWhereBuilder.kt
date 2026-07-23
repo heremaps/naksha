@@ -239,16 +239,15 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                     .append(", ").append(placeholderForArg(value, pgType)).append(") ")
             }
             is TagListContains -> {
-                // A tag list is stored as text[]; single-element membership: <tag> = ANY(tags)
+                // A tag list is stored as text[]; single-element membership: <tag> = ANY(tags) does not use GIN; tags @> ARRAY[<tags>] does use GIN
                 if (negate) where.append("NOT ")
-                where.append("(").append(placeholderForArg(op.item, PgType.STRING))
-                    .append(" = ANY(").append(at).append(")) ")
+                where.append("(").append(at).append(" @> ").append(placeholderForArg(Array(1){op.item}, PgType.STRING_ARRAY)).append("::text[]) ")
             }
             is TagListContainsAllOf -> {
                 // tags @> $1::text[]  (the list contains every requested tag)
                 val items = op.items.filterNotNull().toTypedArray()
                 if (negate) where.append("NOT ")
-                where.append(at).append(" @> ").append(placeholderForArg(items, PgType.STRING_ARRAY)).append("::text[] ")
+                where.append("(").append(at).append(" @> ").append(placeholderForArg(items, PgType.STRING_ARRAY)).append("::text[]) ")
             }
             is TagListContainsAnyOf -> {
                 val items = op.items.filterNotNull().toTypedArray()
@@ -259,7 +258,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 }
                 // tags && $1::text[]  (the list overlaps the requested tags)
                 if (negate) where.append("NOT ")
-                where.append(at).append(" && ").append(placeholderForArg(items, PgType.STRING_ARRAY)).append("::text[] ")
+                where.append("(").append(at).append(" && ").append(placeholderForArg(items, PgType.STRING_ARRAY)).append("::text[]) ")
             }
             is Intersects -> {
                 val geoBytes = Naksha.encodeGeometry(op.value)
