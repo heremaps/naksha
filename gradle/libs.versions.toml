@@ -1,6 +1,6 @@
 [versions]
 vertx = "4.5.14"
-netty = "4.1.121.Final"
+netty = "4.2.16.Final"
 jackson = "2.19.0"
 aws = "2.46.7"
 jts = "1.20.0"
