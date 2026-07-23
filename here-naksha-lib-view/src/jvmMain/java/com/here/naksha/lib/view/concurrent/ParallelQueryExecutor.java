@@ -80,7 +80,7 @@ public class ParallelQueryExecutor {
         for (final ViewLayerFeature feature : features) {
           final FeatureTuple tuple = feature.getFeatureTuple();
           final String id = tuple.getId();
-          var versions = result.computeIfAbsent(id, _ -> new ArrayList<>());
+          var versions = result.computeIfAbsent(id, v -> new ArrayList<>());
           versions.add(feature);
         }
       }
@@ -129,7 +129,8 @@ public class ParallelQueryExecutor {
   }
 
   private static @NotNull FeatureTupleList getFeatureTuples(@NotNull Response response) {
-    if (response instanceof SuccessResponse success) {
+    if (response instanceof SuccessResponse) {
+      final var success = (SuccessResponse) response;
       try {
         return success.getFeatureTupleList();
       } catch (NakshaException e) {

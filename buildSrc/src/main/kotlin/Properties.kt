@@ -4,7 +4,15 @@ import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.withType
 
 fun getJvmTargetVersion(project: Project): String {
-    return project.rootProject.findProperty("jvm.target") as? String ?: throw Error("Missing 'jvm.target' property, add it into gradle.properties")
+    var jmvTargetVersion = project.rootProject.findProperty("jvm.${project.name.replace('-', '_')}") as? String?
+    if (jmvTargetVersion == null) jmvTargetVersion = project.rootProject.findProperty("jvm.target") as? String
+    if (jmvTargetVersion == null) throw Error("Missing 'jvm.target' property, add it into gradle.properties")
+    return jmvTargetVersion
+}
+
+fun getJvmToolchainVersion(project: Project): String {
+    return project.rootProject
+        .findProperty("jvm.toolchain") as? String ?: throw Error("Missing 'jvm.toolchain' property, add it into gradle.properties")
 }
 
 fun getJvmTargetName(project: Project): String {

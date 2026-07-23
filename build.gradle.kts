@@ -1,6 +1,5 @@
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.gradle.kotlin.dsl.assign
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
@@ -237,14 +236,18 @@ allprojects {
             )
             compilerOptions.jvmTarget.set(target)
         }
-        val jvmVersion: String = getJvmTargetVersion(this@allprojects)
+        val jvmTargetVersion: String = getJvmTargetVersion(this@allprojects)
+        val jvmToolchainVersion: String = getJvmToolchainVersion( this@allprojects )
         plugins.withType<JavaPlugin> {
             extensions.configure<JavaPluginExtension> {
-                println("[$_name] --> Configure JavaPlugin to JDK $jvmVersion")
-                toolchain { languageVersion.set(JavaLanguageVersion.of(jvmVersion.toInt())) }
-                sourceCompatibility = JavaVersion.toVersion(jvmVersion)
-                targetCompatibility = JavaVersion.toVersion(jvmVersion)
+                println("[$_name] --> Configure JavaPlugin to JDK $jvmTargetVersion")
+                toolchain { languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion.toInt())) }
+                sourceCompatibility = JavaVersion.toVersion(jvmTargetVersion)
+                targetCompatibility = JavaVersion.toVersion(jvmTargetVersion)
             }
+        }
+        tasks.withType<JavaCompile>().configureEach {
+            options.release.set(jvmTargetVersion.toInt())
         }
         tasks.withType<Jar> {
             from(rootProject.file("HERE_NOTICE"))
@@ -256,7 +259,7 @@ allprojects {
         pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
             extensions.configure<KotlinMultiplatformExtension> {
                 jvm {}
-                jvmToolchain(jvmVersion.toInt())
+                jvmToolchain(jvmToolchainVersion.toInt())
                 if (jsNoduleConfig != null) {
                     val _moduleName = jsNoduleConfig._moduleName
                     println("[$_name] --> Configure JavaScript, moduleName=${_moduleName}")

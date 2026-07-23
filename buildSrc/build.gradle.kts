@@ -6,14 +6,14 @@ java {
     // buildSrc is a subproject, navigate to the actual root project's gradle.properties
     val gradleProps = gradle.rootProject.projectDir.parentFile?.resolve("gradle.properties")
         ?: throw Error("Cannot locate root gradle.properties")
-    val jvmVersion = gradleProps.readText()
+    val jvmToolchainVersion = gradleProps.readText()
         .split("\n")
-        .find { it.trim().startsWith("jvm.target") }
+        .find { it.trim().startsWith("jvm.toolchain") }
         ?.substringAfter("=")
         ?.trim()
         ?: throw Error("Missing 'jvm.target' property in root gradle.properties")
-    println("Use jvmVersion: $jvmVersion ------------------------------------------------------------")
-    toolchain { languageVersion.set(JavaLanguageVersion.of(jvmVersion.toInt())) }
+    println("--------> Use JVM toolchain: $jvmToolchainVersion")
+    toolchain { languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion.toInt())) }
 }
 
 group = rootProject.group

@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.config.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
@@ -5,8 +7,7 @@ plugins {
 description = gatherDescription()
 
 kotlin {
-    jvm {
-    }
+    jvm { }
     sourceSets {
         jvmMain {
             dependencies {

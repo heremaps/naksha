@@ -53,7 +53,7 @@ public class ViewLayerCollection {
   }
 
   public @NotNull ViewLayer getTopPriorityLayer() {
-    return layers.getFirst();
+    return layers.get(0);
   }
 
   public ViewLayer getByTupleNumber(@NotNull TupleNumber tupleNumber) {

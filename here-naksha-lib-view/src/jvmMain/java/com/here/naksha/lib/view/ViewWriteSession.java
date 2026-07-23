@@ -51,7 +51,8 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   @Override
   public @NotNull Response execute(@NotNull Request request) {
     ensureSessionInitialized();
-    if (request instanceof WriteRequest writeRequest) {
+    if (request instanceof WriteRequest) {
+      final var writeRequest = (WriteRequest) request;
       for (Write write : writeRequest.getWrites()) {
         if(write.getOp().equals(WriteOp.UPDATE)){
           write.withOp(WriteOp.UPSERT);

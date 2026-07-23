@@ -103,7 +103,8 @@ public class DefaultViewHandler extends AbstractEventHandler {
         final IStorage storageImpl = nakshaHub().getStorageById(storageId);
         logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
-        if (storageImpl instanceof IView view) {
+        if (storageImpl instanceof IView) {
+          final IView view = (IView) storageImpl;
           final var spaceIds = properties.getSpaceIds();
           if (spaceIds == null || spaceIds.isEmpty()) {
                 logger.error("No spaces present in view's properties - unable to process this request");
@@ -120,9 +121,11 @@ public class DefaultViewHandler extends AbstractEventHandler {
     }
 
     private Response processRequest(NakshaContext ctx, IView view, Request request) {
-        if (request instanceof ReadFeatures rf) {
+        if (request instanceof ReadFeatures) {
+          final ReadFeatures rf = (ReadFeatures) request;
           return forwardReadFeatures(ctx, view, rf);
-        } else if (request instanceof WriteRequest wr) {
+        } else if (request instanceof WriteRequest) {
+          final WriteRequest wr = (WriteRequest) request;
           return forwardWriteFeatures(ctx, view, wr);
         } else {
           return notImplemented(request);
