@@ -46,7 +46,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeatureBytes = ByteArrayMember(StandardMembers.FeatureBytes, JsonPath())
+        val XyzFeatureBytes = ByteArrayMember(StandardMembers.FeatureBytes, JsonPath()).withMandatory().withVirtual()
 
         /**
          * The same as [StandardMembers.FeatureBytes].
