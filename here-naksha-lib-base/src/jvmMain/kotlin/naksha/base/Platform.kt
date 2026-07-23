@@ -277,21 +277,29 @@ actual class Platform {
         fun <T : Any> klassFor(javaClass: Class<T>): KClass<T> = javaClass.kotlin
 
         /**
-         * Java specific helper, that accepts a Java class to proxy.
+         * Create a proxy or return the existing proxy.
          * @param any Any object that implements [PlatformObject] interface.
          * @param javaClass The Java class.
          * @return the proxy.
-         * @see [proxy]
-         * @see [Proxy.proxy]
          * @throws NakshaException with error [NakshaError.ILLEGAL_ARGUMENT] if the given object does not implement [PlatformObject].
          */
         @JvmStatic
-        fun <T : Proxy> javaProxy(any: Any?, javaClass: Class<T>): T? {
+        fun <T : Proxy> proxy(any: Any?, javaClass: Class<T>): T? {
             if (any == null) return null
             if (javaClass.isInstance(any)) return javaClass.cast(any)
             if (any is PlatformObject) return proxy(any, javaClass.kotlin)
             throw illegalArg("The given object is no PlatformObject, failed to attach proxy")
         }
+
+        /**
+         * Create a proxy or return the existing proxy.
+         * @param any Any object that implements [PlatformObject] interface.
+         * @param javaClass The Java class.
+         * @return the proxy.
+         * @throws NakshaException with error [NakshaError.ILLEGAL_ARGUMENT] if the given object does not implement [PlatformObject].
+         */
+        @JvmStatic
+        fun <T : Proxy> javaProxy(any: Any?, javaClass: Class<T>): T? = proxy(any, javaClass)
 
         /**
          * Returns the Java class of the given Kotlin class.
