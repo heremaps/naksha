@@ -1,3 +1,22 @@
+pluginManagement {
+	val internalMavenRepoUrl = providers.gradleProperty("internalMavenRepoUrl").orNull?.takeIf { it.isNotBlank() }
+	val internalPluginRepoUrl = providers.gradleProperty("internalPluginRepoUrl").orNull?.takeIf { it.isNotBlank() }
+
+	repositories {
+		if (internalPluginRepoUrl != null) {
+			maven(internalPluginRepoUrl)
+		} else {
+			gradlePluginPortal()
+		}
+
+		if (internalMavenRepoUrl != null) {
+			maven(internalMavenRepoUrl)
+		} else {
+			mavenCentral()
+		}
+	}
+}
+
 rootProject.name = "naksha"
 
 include(":here-naksha-lib-core")
