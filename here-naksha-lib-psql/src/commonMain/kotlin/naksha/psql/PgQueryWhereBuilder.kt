@@ -60,7 +60,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 for (child in children) {
                     if (child == null) continue
                     if (first) first = false else where.append(" AND ")
-                    // TODO optimization if only TagMapHasKey
                     applyOp(child)
                 }
                 if (children.size > 1) where.append(") ") else where.append(" ")
@@ -74,7 +73,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 for (child in children) {
                     if (child == null) continue
                     if (first) first = false else where.append(" OR ")
-                    // TODO optimization if only TagMapHasKey
                     applyOp(child)
                 }
                 if (children.size > 1) where.append(") ") else where.append(" ")
