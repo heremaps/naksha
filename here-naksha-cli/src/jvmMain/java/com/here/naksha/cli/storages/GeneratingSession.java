@@ -111,25 +111,25 @@ final class GeneratingSession implements IReadSession {
 
     @Nullable
     @Override
-    public NakshaCatalog getCatalogById(@NotNull String mapId) {
+    public NakshaCatalog getCatalogById(@NotNull String mapId, boolean allowTombstone) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
     @Nullable
     @Override
-    public NakshaCatalog getCatalogByNumber(int catalogNumber) {
+    public NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
     @Nullable
     @Override
-    public NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId) {
+    public NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 
     @Nullable
     @Override
-    public NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
+    public NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber, boolean allowTombstone) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 

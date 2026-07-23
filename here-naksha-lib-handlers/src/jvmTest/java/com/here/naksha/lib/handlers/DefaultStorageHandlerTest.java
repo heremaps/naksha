@@ -159,7 +159,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
     WriteRequest writeXyzFeatures = new WriteRequest()
-        .add(new Write().createFeature("different_collection", featureToCreate));
+        .add(new Write().createFeatureDeprecated("different_collection", featureToCreate));
 
     // And: Handler with autoCreateCollection enabled to test
     DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
@@ -205,7 +205,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
     String collectionId = handler.properties.getCollection().getId();
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature(collectionId, featureToCreate));
+    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeatureDeprecated(collectionId, featureToCreate));
 
     // When: Processing write features
     ignoreExceptionsFrom(
@@ -235,7 +235,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeature("different_collection", featureToCreate));
+    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeatureDeprecated("different_collection", featureToCreate));
 
     // And: Handler with autoCreateCollection disabled to test
     DefaultStorageHandler handler = storageHandler();
@@ -669,7 +669,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
   private static Request writeRandomFeature() {
     return new WriteRequest()
-        .add(new Write().createFeature(
+        .add(new Write().createFeatureDeprecated(
             "random_collection_" + RandomUtils.nextInt(),
             new NakshaFeature("random_feature_" + RandomUtils.nextInt())
         ));

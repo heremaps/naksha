@@ -57,7 +57,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
         if(write.getOp().equals(WriteOp.UPDATE)){
           write.withOp(WriteOp.UPSERT);
         }
-        write.withMapId(writeLayer.getMapId());
+        write.withCatalogId(writeLayer.getMapId());
         write.withCollectionId(writeLayer.getCollectionId());
       }
     } else if (request instanceof ReadFeatures) {

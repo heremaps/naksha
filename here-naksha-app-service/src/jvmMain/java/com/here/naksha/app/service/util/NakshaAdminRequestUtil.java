@@ -73,7 +73,7 @@ public class NakshaAdminRequestUtil {
 
   private static WriteRequest deleteAdminResourceRequest(INaksha naksha, String resourceCollection, String resourceId){
     WriteRequest writeRequest = new WriteRequest();
-    writeRequest.add(new Write().deleteFeatureById(naksha.getAdminMapId(), resourceCollection, resourceId));
+    writeRequest.add(new Write().deleteFeature(naksha.getAdminMapId(), resourceCollection, resourceId));
     return writeRequest;
   }
 }

@@ -280,7 +280,7 @@ abstract class PgTestBase(
         val map = initializedMaps[mapId]
         val collection = map?.collections?.get(collectionId)
         val deleteCollectionRequest = WriteRequest().add(
-            Write().deleteCollectionById(mapId, collectionId)
+            Write().deleteCollection(mapId, collectionId)
         )
         storage.newWriteSession(options).use { session ->
             val response = session.execute(deleteCollectionRequest)

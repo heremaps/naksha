@@ -8,6 +8,10 @@ import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
+import naksha.geo.SpBoundingBox
+import naksha.geo.SpGeometry
+import naksha.geo.SpPoint
+import naksha.model.objects.NakshaProperties
 import naksha.model.objects.NakshaStorage
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -22,6 +26,17 @@ import kotlin.js.JsName
 class PgConfig() : NakshaStorage() {
 
     override fun defaultClassName(): String = "naksha.psql.PsqlStorage"
+    override fun withCreate(create: Boolean): PgConfig = super.withCreate(create) as PgConfig
+    override fun withClassName(className: String): PgConfig = super.withClassName(className) as PgConfig
+    override fun withUpgrade(upgrade: Boolean): PgConfig = super.withUpgrade(upgrade) as PgConfig
+    override fun withId(value: String): PgConfig = super.withId(value) as PgConfig
+    override fun withType(value: String): PgConfig = super.withType(value) as PgConfig
+    override fun withFeatureType(value: String): PgConfig = super.withFeatureType(value) as PgConfig
+    override fun withBbox(value: SpBoundingBox?): PgConfig = super.withBbox(value) as PgConfig
+    override fun withGeometry(value: SpGeometry?): PgConfig = super.withGeometry(value) as PgConfig
+    override fun withReferencePoint(value: SpPoint?): PgConfig = super.withReferencePoint(value) as PgConfig
+    override fun withProperties(value: NakshaProperties): PgConfig = super.withProperties(value) as PgConfig
+    override fun withMomType(value: String?): PgConfig = super.withMomType(value) as PgConfig
 
     /**
      * Create a default PostgresQL configuration.
@@ -122,7 +137,7 @@ class PgConfig() : NakshaStorage() {
      * Can be set to _true_ to force the storage to reinstall the admin-map, even when the existing installed version of Naksha code is up-to-date (matches the code coming together with the library).
      * @since 3.0
      */
-    val override by BOOLEAN_FALSE
+    var override by BOOLEAN_FALSE
 
     /**
      * Special parameter to force `lib-psql` to install the admin-map in this [version][naksha.model.NakshaVersion]. This is only for debugging purpose, and should not be used in any productive environment, normally the correct version is set, which is [adminVersion].
@@ -130,25 +145,25 @@ class PgConfig() : NakshaStorage() {
      * **Warning**: This does not change the actual code that is installed, which will be always what is in the resources of the library, rather it modifies the version number that this code stores, so that the next time an upgrade will be executed. This option is really for debugging purpose only, use with care!
      * @since 3.0
      */
-    val version by STRING_NULL
+    var version by STRING_NULL
 
     /**
      * Change the name of the tablespace in which to store [temporary][PgStorageClass.Temporary] collections, if they should be stored in a special tablespace.
      * @since 3.0
      */
-    val temp_tablespace by STRING_NULL
+    var temp_tablespace by STRING_NULL
 
     /**
      * Change the name of the tablespace in which to store [brittle][PgStorageClass.Brittle] collections, if they should be stored in a special tablespace.
      * @since 3.0
      */
-    val brittle_tablespace by STRING_NULL
+    var brittle_tablespace by STRING_NULL
 
     /**
      * Change the name of the tablespace in which to store [ephemeral][PgStorageClass.Ephemeral] collections, if they should be stored in a special tablespace.
      * @since 3.0
      */
-    val ephemeral_tablespace by STRING_NULL
+    var ephemeral_tablespace by STRING_NULL
 
     override fun configEquals(other: NakshaStorage): Boolean {
         val otherConfig = other.proxy(this::class)

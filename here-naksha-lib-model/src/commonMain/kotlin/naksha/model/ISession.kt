@@ -6,6 +6,8 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
 import naksha.model.request.*
 import kotlin.js.JsExport
+import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 /**
  * When a session is opened, it is bound to the context in which the session shall operate.
@@ -110,45 +112,95 @@ interface ISession : AutoCloseable {
      * Returns the map for the given identifier.
      *
      * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return catalogs that were created in the current session, but beware that these catalogs may eventually fail to commit.
-     * @param catalogId the catalog-id for which to return the latest HEAD state.
+     * @param catalogId the catalog-id for which to return the latest _HEAD_ state.
      * @return the catalog; _null_ if no such catalog exists.
      * @since 3.0
      */
-    fun getCatalogById(catalogId: String): NakshaCatalog?
+    @JsName("getExistingCatalogById")
+    fun getCatalogById(catalogId: String): NakshaCatalog? = getCatalogById(catalogId, false)
+
+    /**
+     * Returns the map for the given identifier.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return catalogs that were created in the current session, but beware that these catalogs may eventually fail to commit.
+     * @param catalogId the catalog-id for which to return the latest _HEAD_ state.
+     * @param allowTombstone if tombstones are returned, so _HEAD_ states indicating that the catalog was deleted.
+     * @return the catalog; _null_ if no such catalog exists.
+     * @since 3.0
+     */
+    fun getCatalogById(catalogId: String, allowTombstone: Boolean): NakshaCatalog?
 
     /**
      * Returns the catalog for the given number.
      *
      * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return catalogs that were created in the current session, but beware that these catalogs may eventually fail to commit.
-     * @param catalogNumber the catalog-number for which to return the latest HEAD state.
+     * @param catalogNumber the catalog-number for which to return the latest _HEAD_ state.
      * @return the catalog; _null_ if no such catalog exists.
      * @since 3.0
      */
-    fun getCatalogByNumber(catalogNumber: Int): NakshaCatalog?
+    @JsName("getExistingCatalogByNumber")
+    fun getCatalogByNumber(catalogNumber: Int): NakshaCatalog? = getCatalogByNumber(catalogNumber, false)
+
+    /**
+     * Returns the catalog for the given number.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return catalogs that were created in the current session, but beware that these catalogs may eventually fail to commit.
+     * @param catalogNumber the catalog-number for which to return the latest _HEAD_ state.
+     * @param allowTombstone if tombstones are returned, so _HEAD_ states indicating that the catalog was deleted.
+     * @return the catalog; _null_ if no such catalog exists.
+     * @since 3.0
+     */
+    fun getCatalogByNumber(catalogNumber: Int, allowTombstone: Boolean): NakshaCatalog?
 
     /**
      * Returns the collection for the given identifier.
      *
      * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return collections that were created in the current session, but beware that these collections may eventually fail to commit.
      * @param catalog the catalog to query.
-     * @param collectionId the collection-id for which to return the latest HEAD state.
+     * @param collectionId the collection-id for which to return the latest _HEAD_ state.
      * @return the collection; _null_ if no such collection exists.
      * @since 3.0
      */
-    fun getCollectionById(catalog: NakshaCatalog, collectionId: String): NakshaCollection?
+    @JsName("getExistingCollectionById")
+    fun getCollectionById(catalog: NakshaCatalog, collectionId: String): NakshaCollection? = getCollectionById(catalog, collectionId, false)
+
+    /**
+     * Returns the collection for the given identifier.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return collections that were created in the current session, but beware that these collections may eventually fail to commit.
+     * @param catalog the catalog to query.
+     * @param collectionId the collection-id for which to return the latest _HEAD_ state.
+     * @param allowTombstone if tombstones are returned, so _HEAD_ states indicating that the collection was deleted.
+     * @return the collection; _null_ if no such collection exists.
+     * @since 3.0
+     */
+    fun getCollectionById(catalog: NakshaCatalog, collectionId: String, allowTombstone: Boolean): NakshaCollection?
 
     /**
      * Returns the collection for the given number.
      *
      * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return collections that were created in the current session, but beware that these collections may eventually fail to commit.
      * @param catalog the catalog to query.
-     * @param collectionNumber the collection-number for which to return the latest HEAD state.
+     * @param collectionNumber the collection-number for which to return the latest _HEAD_ state.
      * @return the collection; _null_ if no such collection exists.
      * @since 3.0
      */
-    fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int): NakshaCollection?
+    @JsName("getExistingCollectionByNumber")
+    fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int): NakshaCollection? = getCollectionByNumber(catalog, collectionNumber, false)
 
-     /**
+    /**
+     * Returns the collection for the given number.
+     *
+     * This method does only access the internal caching, and may not be up-to-date. If invoked on a [write session][IWriteSession] before committing changes, it will return collections that were created in the current session, but beware that these collections may eventually fail to commit.
+     * @param catalog the catalog to query.
+     * @param collectionNumber the collection-number for which to return the latest _HEAD_ state.
+     * @param allowTombstone if tombstones are returned, so _HEAD_ states indicating that the collection was deleted.
+     * @return the collection; _null_ if no such collection exists.
+     * @since 3.0
+     */
+    fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int, allowTombstone: Boolean): NakshaCollection?
+
+    /**
      * Load all tuples into the given [feature-tuples][FeatureTuple].
      *
      * [Tuple] that can't be fetched will still be `null` after the method returns. The method should query the [Naksha.cache] before actually loading the [Tuple] from the storage _(without asking the cache to load from storage, otherwise this would be a recursion)_ .

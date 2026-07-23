@@ -33,11 +33,16 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Write;
 import naksha.model.request.WriteList;
+import naksha.model.request.WriteOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static java.util.Objects.requireNonNull;
+import static naksha.base.Platform.proxy;
+import static naksha.model.request.WriteOp.UPDATE;
 
 public final class HandlerUtil {
 
@@ -80,10 +85,11 @@ public final class HandlerUtil {
 
     // Add features in the request
     for (int i = 0; i < features.size(); i++) {
-      final NakshaFeature feature =
-          checkInstanceOf(features.get(i), NakshaFeature.class, "Unsupported feature type");
-      final Write write = new Write()
-          .updateFeature(collectionIds.get(Math.min(i, collectionIds.size()-1)), feature, false);
+      final NakshaFeature feature = checkInstanceOf(features.get(i), NakshaFeature.class, "Unsupported feature type");
+      final String collectionId = collectionIds.get(Math.min(i, collectionIds.size()-1));
+      // TODO: We should set `catalogId` here; it seems that the `catalogId` is postponed to DefaultStorageHandler.applyMapIdAndCollectionId!
+      //       The method does not enforce catalogId to be not null, but eventually it must not be null!
+      final Write write = new Write().withOp(UPDATE).withCollectionId(collectionId).withFeature(feature).withAtomic(false);
       cwf.add(write);
     }
     // add context to write request
@@ -200,7 +206,7 @@ public final class HandlerUtil {
     deltaNs.setReviewState(reviewState.getText());
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);
-    TagList tagList = JvmBoxingUtil.box(tags, TagList.class);
+    TagList tagList = requireNonNull(proxy(tags, TagList.class));
     xyzNs.setTags(tagList, false);
   }
   public static void initializeDeltaDefaults(final @NotNull MomDeltaNs deltaNs) {

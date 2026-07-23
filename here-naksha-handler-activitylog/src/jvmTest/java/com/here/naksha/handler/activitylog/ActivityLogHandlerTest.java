@@ -6,6 +6,9 @@ import static com.here.naksha.handler.activitylog.GuidUtil.randomVersion;
 import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFeature;
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static java.util.Collections.emptyList;
+import static naksha.model.Naksha.COLLECTIONS_COL_ID;
+import static naksha.model.request.WriteOp.CREATE;
+import static naksha.model.request.WriteOp.DELETE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,25 +37,14 @@ import naksha.base.JvmInt64;
 import naksha.base.Timestamp;
 import naksha.base.Action;
 import naksha.base.Guid;
-import naksha.model.IReadSession;
-import naksha.model.IStorage;
-import naksha.model.NakshaContext;
+import naksha.model.*;
 import naksha.base.NakshaError;
 import naksha.base.TupleNumber;
 import naksha.base.Version;
-import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.objects.StandardMembers;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.ReadCollections;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.ReadRequest;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import naksha.model.request.Write;
-import naksha.model.request.WriteRequest;
+import naksha.model.request.*;
 import naksha.model.request.ops.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
@@ -140,7 +132,7 @@ class ActivityLogHandlerTest {
   @Test
   void shouldImmediatelySucceedOnWriteCollection() {
     // Given: event bearing some WriteCollections request
-    IEvent event = eventWith(new WriteRequest().add(new Write().deleteCollectionById(null, "some_collection")));
+    IEvent event = eventWith(new WriteRequest().add(new Write().withOp(DELETE).withCollectionId(COLLECTIONS_COL_ID).withId("some_collection")));
 
     // When: handler tries to process such event
     Response result = handler.processEvent(event);
@@ -585,7 +577,7 @@ class ActivityLogHandlerTest {
 
   private static Stream<Request> unhandledRequests() {
     return Stream.of(
-        new WriteRequest().add(new Write().createFeature(null, "some_collection", new NakshaFeature("some_feature"))),
+        new WriteRequest().add(new Write().withOp(CREATE).withCollectionId("some_collection").withFeature(new NakshaFeature("some_feature"))),
         new ReadCollections()
     );
   }

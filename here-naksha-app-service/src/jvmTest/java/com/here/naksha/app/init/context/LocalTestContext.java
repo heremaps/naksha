@@ -38,7 +38,7 @@ public class LocalTestContext extends TestContext {
       log.info("Removing map (schema) {} for db with url: {}", STORAGE_CONFIG.mapId(), MASTER_URL);
       SessionOptions sessionOptions = SessionOptions.from(nakshaContext, true);
       Response response = Naksha.useStorage(STORAGE_CONFIG.pgConfig()).useWriteSession(sessionOptions,
-          writer -> writer.execute(new WriteRequest().add(new Write().deleteMapById(STORAGE_CONFIG.mapId()))));
+          writer -> writer.execute(new WriteRequest().add(new Write().deleteCatalog(STORAGE_CONFIG.mapId()))));
       if(response instanceof SuccessResponse){
         log.info("Removed map (which should drop schema of the same name): {}", STORAGE_CONFIG.mapId());
       } else {

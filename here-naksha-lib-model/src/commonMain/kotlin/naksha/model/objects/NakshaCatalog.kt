@@ -66,6 +66,16 @@ open class NakshaCatalog() : NakshaFeature() {
         }
 
     /**
+     * Tests if this catalog is a tombstone, so deleted.
+     * @return `true` if this catalog is a tombstone; `false` otherwise.
+     * @since 3.0
+     */
+    fun isDeleted(): Boolean {
+        val tn = this.tupleNumber
+        return tn != null && tn.isDeleted()
+    }
+
+    /**
      * The database-number of the catalog; the catalog-feature itself is stored in the same database as the catalog it describes.
      * @since 3.0
      * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].

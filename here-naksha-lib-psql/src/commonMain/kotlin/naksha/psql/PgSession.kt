@@ -522,7 +522,11 @@ SELECT * FROM from_hst"""
         return found
     }
 
-    override fun getCatalogById(catalogId: String): NakshaCatalog? = getPgCatalogById(catalogId)?.head
+    override fun getCatalogById(catalogId: String, allowTombstone: Boolean): NakshaCatalog? {
+        val catalog = getPgCatalogById(catalogId)?.head
+        if (allowTombstone || catalog == null) return catalog
+        return if (catalog.isDeleted()) null else catalog
+    }
 
     /**
      * Returns the [PgCatalog] for the given id.
@@ -539,7 +543,11 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getCatalogByNumber(catalogNumber: Int): NakshaCatalog? = getPgCatalogByNumber(catalogNumber)?.head
+    override fun getCatalogByNumber(catalogNumber: Int, allowTombstone: Boolean): NakshaCatalog? {
+        val catalog = getPgCatalogByNumber(catalogNumber)?.head
+        if (allowTombstone || catalog == null) return catalog
+        return if (catalog.isDeleted()) null else catalog
+    }
 
     /**
      * Returns the [PgCatalog] for the given number.
@@ -556,9 +564,11 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getCollectionById(catalog: NakshaCatalog, collectionId: String): NakshaCollection? {
+    override fun getCollectionById(catalog: NakshaCatalog, collectionId: String, allowTombstone: Boolean): NakshaCollection? {
         val pgCatalog = getPgCatalogById(catalog.id) ?: return null
-        return getPgCollectionById(pgCatalog, collectionId)?.head
+        val collection = getPgCollectionById(pgCatalog, collectionId)?.head
+        if (allowTombstone || collection == null) return collection
+        return if (collection.isDeleted()) null else collection
     }
 
     /**
@@ -576,9 +586,11 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int): NakshaCollection? {
+    override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int, allowTombstone: Boolean): NakshaCollection? {
         val pgCatalog = getPgCatalogById(catalog.id) ?: return null
-        return getPgCollectionByNumber(pgCatalog, collectionNumber)?.head
+        val collection = getPgCollectionByNumber(pgCatalog, collectionNumber)?.head
+        if (allowTombstone || collection == null) return collection
+        return if (collection.isDeleted()) null else collection
     }
 
     /**

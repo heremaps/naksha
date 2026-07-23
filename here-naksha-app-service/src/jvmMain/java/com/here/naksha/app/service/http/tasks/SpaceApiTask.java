@@ -105,7 +105,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private XyzResponse executeDeleteSpace() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(naksha().getAdminMapId(), SPACES, spaceId));
+    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeature(naksha().getAdminMapId(), SPACES, spaceId));
 
     Response response = executeWriteRequestFromSpaceStorage(wr);
     return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NOT_FOUND_ON_NO_ELEMENTS);

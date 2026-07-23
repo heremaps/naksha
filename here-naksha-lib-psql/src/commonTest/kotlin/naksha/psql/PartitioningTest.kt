@@ -21,7 +21,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 8
         val partitionedCollection = NakshaCollection(
             id = "feature_partitioned",
-            mapId = catalog.id,
+            catalogId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -64,7 +64,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 2
         val partitionedCollection = NakshaCollection(
             id = "feature_partitioned_insert_check",
-            mapId = catalog.id,
+            catalogId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -103,7 +103,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 0
         val partitionedCollection = NakshaCollection(
             id = "zero_partitions",
-            mapId = catalog.id,
+            catalogId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -122,7 +122,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 1
         val partitionedCollection = NakshaCollection(
             id = "one_partitions",
-            mapId = catalog.id,
+            catalogId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -141,7 +141,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 65536
         val partitionedCollection = NakshaCollection(
             id = "to_many_partitions",
-            mapId = catalog.id,
+            catalogId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)

@@ -125,7 +125,7 @@ internal data class PgWrite(val original: Write, val i: Int) {
     var tuple: Tuple? = null
 
     val isCatalogModification: Boolean
-        get() = original.isMapModification()
+        get() = original.isCatalogModification()
     val isCollectionModification: Boolean
         get() = original.isCollectionModification()
     val isTransactionModification: Boolean

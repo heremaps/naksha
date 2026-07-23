@@ -16,6 +16,8 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.util.Objects.requireNonNull;
+
 public final class CopyService {
     private final FeaturesWriteExecutor featuresWriteExecutor;
     private final Logger logger = LoggerFactory.getLogger(CopyService.class);
@@ -223,15 +225,14 @@ public final class CopyService {
     private WriteRequest buildCreateMapRequest(String mapId) {
         WriteRequest writeRequest = new WriteRequest();
         NakshaCatalog map = new NakshaCatalog(mapId);
-        Write write = new Write().createMap(map);
+        Write write = new Write().createCatalog(map);
         writeRequest.add(write);
         return writeRequest;
     }
 
     private WriteRequest buildCreateCollectionRequest(CopyElement target) {
         WriteRequest writeRequest = new WriteRequest();
-        NakshaCollection collection = new NakshaCollection(target.getCollectionId())
-                .withCatalogId(target.getMapId());
+        NakshaCollection collection = new NakshaCollection(requireNonNull(target.getCollectionId()), target.getMapId());
         Write write = new Write().createCollection(collection);
         writeRequest.add(write);
         return writeRequest;

@@ -62,8 +62,9 @@ import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttemp
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.ATTEMPT_AFTER_STORAGE_INITIALIZATION;
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static naksha.base.Platform.longToInt64;
+import static naksha.base.Platform.*;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
@@ -81,8 +82,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     super(hub);
     this.eventHandlerConfig = eventHandlerConfig;
     this.eventTarget = eventTarget;
-    this.properties = Objects.requireNonNull(
-        JvmBoxingUtil.box(eventHandlerConfig.getProperties(), DefaultStorageHandlerProperties.class));
+    this.properties = requireNonNull(proxy(eventHandlerConfig.getProperties(), DefaultStorageHandlerProperties.class));
   }
 
   @Override
@@ -133,7 +133,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private String extractMapIdFromStorageProps(@NotNull IStorage storage) {
     NakshaStorage storageConfig = storage.getConfig();
-    if(storageConfig == null) {
+    //noinspection ConstantValue
+    if (storageConfig == null) {
       throw new NakshaException(NakshaError.ILLEGAL_STATE,
           "Unable to determine 'mapId' for handler '" + eventHandlerConfig.getId() + "', storage '" + storage.getId() + "' has no config.");
     }
@@ -142,9 +143,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
     StreamInfo streamInfo = ctx.getStreamInfo();
-    if (streamInfo != null) {
-      streamInfo.addTimeInStorage(longToInt64(NANOSECONDS.toMillis(storageTimer.getNanoTime())));
-    }
+    streamInfo.addTimeInStorage(longToInt64(NANOSECONDS.toMillis(storageTimer.getNanoTime())));
   }
 
   private <T> T measuredStorageSupplier(Supplier<T> operation, StopWatch stopWatch) {
@@ -256,14 +255,18 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   private boolean isDeleteCollectionRequest(@NotNull WriteRequest wc) {
-    return isOnlyWriteCollections(wc)
-           && wc.getWrites().size() == 1
-           && WriteOp.DELETE.equals(wc.getWrites().get(0).getOp());
+    if (!isOnlyWriteCollections(wc)) return false;
+    if (wc.getWrites().size() != 1) return false;
+    final Write write = wc.getWrites().get(0);
+    if (write == null) return false;
+    return WriteOp.DELETE.equals(write.getOp());
   }
 
   private boolean isUpdateCollectionRequest(@NotNull WriteRequest wc) {
     if (isOnlyWriteCollections(wc) && wc.getWrites().size() == 1) {
-      final WriteOp op = wc.getWrites().get(0).getOp();
+      final Write write = wc.getWrites().get(0);
+      if (write == null) return false;
+      final WriteOp op = write.getOp();
       return WriteOp.UPDATE.equals(op) || WriteOp.UPSERT.equals(op);
     }
     return false;
@@ -454,7 +457,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull SessionOptions sessionOptions,
       @NotNull IStorage storageImpl,
       @NotNull String mapId) {
-    WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaCatalog(mapId)));
+    WriteRequest createMapRequest = new WriteRequest().add(new Write().createCatalog(new NakshaCatalog(mapId)));
     return singleWrite(sessionOptions, storageImpl, createMapRequest);
   }
 
@@ -571,11 +574,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         WriteRequest wc = (WriteRequest) request;
         // use newly provided collection in the Update request itself
         // to make sure that the newer collection id (if it has been changed) is used
-        collectionDefinedInSpace =
-            (NakshaCollection) wc.getWrites().get(0).getFeature();
+        collectionDefinedInSpace = (NakshaCollection) requireNonNull(wc.getWrites().get(0)).getFeature();
       } else {
         // use existing Space collection (as it is not an Update request)
-        final SpaceProperties spaceProperties = JvmBoxingUtil.box(s.getProperties(), SpaceProperties.class);
+        final SpaceProperties spaceProperties = requireNonNull(proxy(s.getProperties(), SpaceProperties.class));
         collectionDefinedInSpace = spaceProperties.getCollection();
       }
       if (collectionDefinedInSpace != null) {

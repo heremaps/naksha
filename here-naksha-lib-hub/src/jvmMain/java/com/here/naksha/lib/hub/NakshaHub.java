@@ -200,7 +200,7 @@ public class NakshaHub implements INaksha {
 
   private NakshaContext setupMapAndContext(String mapId) {
     NakshaCatalog map = new NakshaCatalog().withId(mapId);
-    Write createMap = new Write().upsertMap(map, false);
+    Write createMap = new Write().upsertCatalog(map, false);
     NakshaContext initialContext = NakshaContext.currentContext().withAuthor(NakshaHubConfig.defaultAppName());
     psqlStorage.runInWriteSession(SessionOptions.from(initialContext), writer -> {
       Response response = writer.execute(new WriteRequest().add(createMap));

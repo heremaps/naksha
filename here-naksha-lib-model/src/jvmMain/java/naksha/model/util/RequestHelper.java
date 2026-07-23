@@ -23,9 +23,12 @@ import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Write;
+import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import static naksha.model.request.WriteOp.*;
 
 public class RequestHelper {
 
@@ -115,7 +118,14 @@ public class RequestHelper {
       final @Nullable String collectionId,
       final @NotNull FEATURE feature
   ) {
-    final Write write = new Write().updateFeature(mapId, collectionId, feature, false);
+    // TODO: We should not allow null values for catalogId and collectionId !
+    // final Write write = new Write().updateFeature(mapId, collectionId, feature, false);
+    final Write write = new Write()
+      .withOp(UPDATE)
+      .withCatalogId(mapId)
+      .withCollectionId(collectionId)
+      .withFeature(feature)
+      .withAtomic(false);
     return new WriteRequest().add(write);
   }
 
@@ -133,7 +143,14 @@ public class RequestHelper {
       final @Nullable String collectionId,
       final @NotNull FEATURE feature
   ) {
-    final Write write = new Write().updateFeature(mapId, collectionId, feature, true);
+    // TODO: We should not allow null values for catalogId and collectionId !
+    // final Write write = new Write().updateFeature(mapId, collectionId, feature, true);
+    final Write write = new Write()
+      .withOp(UPDATE)
+      .withCatalogId(mapId)
+      .withCollectionId(collectionId)
+      .withFeature(feature)
+      .withAtomic(true);
     return new WriteRequest().add(write);
   }
 
@@ -146,7 +163,9 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest atomicUpdateFeaturesRequest(
-      final @NotNull NakshaCollection collection, final @NotNull List<FEATURE> features) {
+      final @NotNull NakshaCollection collection,
+      final @NotNull List<FEATURE> features
+  ) {
     final WriteRequest request = new WriteRequest();
     for (FEATURE feature : features) {
       request.add(new Write().updateFeature(collection, feature, true));
@@ -168,7 +187,14 @@ public class RequestHelper {
       final @Nullable String collectionId,
       FEATURE feature) {
     final WriteRequest request = new WriteRequest();
-    request.add(new Write().upsertFeature(mapId, collectionId, feature));
+    // TODO: We should not allow null values for catalogId and collectionId !
+    // final Write write = new Write().upsertFeature(mapId, collectionId, feature)
+    final Write write = new Write()
+      .withOp(UPSERT)
+      .withCatalogId(mapId)
+      .withCollectionId(collectionId)
+      .withFeature(feature);
+    request.add(write);
     return request;
   }
 
@@ -187,7 +213,11 @@ public class RequestHelper {
   ) {
     final WriteRequest request = new WriteRequest();
     for (FEATURE feature : features) {
-      request.add(new Write().upsertFeature(mapId, collectionId, feature));
+      request.add(
+          // TODO: We should not allow null values for catalogId and collectionId !
+          // new Write().upsertFeature(mapId, collectionId, feature)
+          new Write().withOp(UPSERT).withCatalogId(mapId).withCollectionId(collectionId).withFeature(feature)
+      );
     }
     return request;
   }
@@ -203,7 +233,11 @@ public class RequestHelper {
       final @Nullable String mapId,
       final @Nullable String collectionId,
       final @NotNull List<String> ids) {
-    return deleteFeaturesByIdsRequest(new NakshaCollection(collectionId, mapId), ids);
+    // TODO: We should not allow null values for catalogId and collectionId !
+    final var collection = new NakshaCollection();
+    collection.setId(collectionId);
+    collection.setCatalogId(mapId);
+    return deleteFeaturesByIdsRequest(collection, ids);
   }
 
   /**
@@ -219,7 +253,7 @@ public class RequestHelper {
   ) {
     final WriteRequest request = new WriteRequest();
     for (String id : ids) {
-      request.add(new Write().deleteFeatureById(collection, id));
+      request.add(new Write().deleteFeature(collection, id));
     }
     return request;
   }
@@ -236,7 +270,9 @@ public class RequestHelper {
       final @Nullable String collectionId,
       final @NotNull String id
   ) {
-    final Write write = new Write().deleteFeatureById(mapId, collectionId, id);
+    // TODO: We should not allow null values for catalogId and collectionId !
+    // final Write write = new Write().deleteFeatureById(mapId, collectionId, id);
+    final Write write = new Write().withOp(DELETE).withCatalogId(mapId).withCollectionId(collectionId).withId(id);
     return new WriteRequest().add(write);
   }
 
@@ -255,7 +291,8 @@ public class RequestHelper {
     final WriteRequest request = new WriteRequest();
     for (final NakshaFeature feature : featureList) {
       assert feature != null;
-      request.add(new Write().createFeature(mapId, collectionId, feature));
+      // TODO: We should not allow null values for catalogId and collectionId !
+      request.add(new Write().withOp(CREATE).withCatalogId(mapId).withCollectionId(collectionId).withFeature(feature));
     }
     return request;
   }

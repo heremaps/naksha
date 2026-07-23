@@ -322,7 +322,7 @@ class PsqlCopyTest {
         WriteRequest writeRequest = new WriteRequest();
 
         NakshaCatalog map = new NakshaCatalog().withId(mapId);
-        Write createMap = new Write().createMap(map);
+        Write createMap = new Write().createCatalog(map);
         writeRequest.add(createMap);
 
         makeWriteRequest(storage, writeRequest, sessionOptions);

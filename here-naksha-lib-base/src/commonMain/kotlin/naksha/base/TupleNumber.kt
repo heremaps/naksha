@@ -74,6 +74,12 @@ data class TupleNumber(
         get() = Action.fromValue(version.toInt() and 3)
 
     /**
+     * Tests if the `Tuple` is a tombstone, so a deleted state.
+     * @since 3.0
+     */
+    fun isDeleted(): Boolean = action == Action.DELETE
+
+    /**
      * Calculates the distribution partition-index where this [naksha.model.Tuple] will be located.
      *
      * If the given partitions are less than `2`, the method always returns `-1`. If the number is bigger than `65536` the result will be mapped back into the range between `0` and `65536` _(exclusive)_.

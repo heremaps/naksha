@@ -111,8 +111,8 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
-    return session.getCatalogById(catalogId);
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
+    return session.getCatalogById(catalogId, allowTombstone);
   }
 
   @Override
@@ -121,13 +121,13 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber) {
-    return session.getCatalogByNumber(catalogNumber);
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
+    return session.getCatalogByNumber(catalogNumber, allowTombstone);
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId) {
-    return session.getCollectionById(map, collectionId);
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
+    return session.getCollectionById(map, collectionId, allowTombstone);
   }
 
   @Override
@@ -136,7 +136,7 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
-    return session.getCollectionByNumber(catalog, collectionNumber);
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber, boolean allowTombstone) {
+    return session.getCollectionByNumber(catalog, collectionNumber, allowTombstone);
   }
 }

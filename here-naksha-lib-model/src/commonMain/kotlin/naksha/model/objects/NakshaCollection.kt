@@ -28,18 +28,18 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Create a Naksha collection with settings.
      * @param id the collection-identifier.
-     * @param mapId the map-identifier of the map in which the collection should be created
-     * @param partitions the partitions to create; defaults to `1`
-     * @param storageClass the [storage-class][storageClass] to create; defaults to `null`
-     * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON]
-     * @param storeHistory if [historic states should be stored][storeHistory], defaults to [StoreMode.ON]
-     * @param storeMeta if [statistics should be stored][storeMeta], defaults to [StoreMode.ON]
+     * @param catalogId the catalog-identifier of the catalog in which the collection should be created.
+     * @param partitions the partitions to create; defaults to `1`.
+     * @param storageClass the [storage-class][storageClass] to create; defaults to `null`.
+     * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON].
+     * @param storeHistory if [historic states should be stored][storeHistory], defaults to [StoreMode.ON].
+     * @param storeMeta if [statistics should be stored][storeMeta], defaults to [StoreMode.ON].
      */
     @JsName("of")
     @JvmOverloads
     constructor(
         id: String,
-        mapId: String? = null,
+        catalogId: String?, // TODO: We need a catalogId, we should not allow null values here!
         partitions: Int = 1,
         storageClass: String? = null,
         storeDeleted: StoreMode = StoreMode.ON,
@@ -47,7 +47,7 @@ open class NakshaCollection() : NakshaFeature() {
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
-        this.catalogId = mapId
+        this.catalogId = catalogId
         this.storageClass = storageClass
         this.partitions = partitions
         this.storeDeleted = storeDeleted
@@ -74,6 +74,16 @@ open class NakshaCollection() : NakshaFeature() {
         set(value) {
             XyzMembers.XyzTn.write(this, value)
         }
+
+    /**
+     * Tests if this collection is a tombstone, so deleted.
+     * @return `true` if this collection is a tombstone; `false` otherwise.
+     * @since 3.0
+     */
+    fun isDeleted(): Boolean {
+        val tn = this.tupleNumber
+        return tn != null && tn.isDeleted()
+    }
 
     /**
      * The database-number of the collection; the collection-feature itself is stored in the same database as the collection it describes.
@@ -422,6 +432,14 @@ open class NakshaCollection() : NakshaFeature() {
         if (member.isSameAs(found, comparePath)) return found
         return null
     }
+
+    /**
+     * Helper to return the [TupleNumber] of the given feature; if there is any.
+     * @param feature the feature to extract the [TupleNumber] aka `uuid` from.
+     * @return the [TupleNumber] or `null`, if the given `feature` does not have a state identifier _(the feature is not yet persisted)_.
+     * @since 3.0
+     */
+    fun tupleNumberOf(feature: NakshaFeature): TupleNumber? = useMember(StandardMembers.Tn).readTupleNumber(feature)
 
     /**
      * The indices to maintain on this collection.

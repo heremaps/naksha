@@ -57,7 +57,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         // When: Collection gets deleted
         executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(collection.catalogId, collection.id)
+                Write().deleteCollection(collection.catalogId, collection.id)
             )
         )
 
@@ -132,7 +132,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         val collectionName = "check_no_hst_table_test"
         val collection = NakshaCollection(
             id = collectionName,
-            mapId = catalog.id,
+            catalogId = catalog.id,
             storeHistory = StoreMode.OFF
         )
         executeWrite(
@@ -203,7 +203,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         val collectionId = "check_no_del_table_test"
         var collection = NakshaCollection(
             id = collectionId,
-            mapId = catalog.id,
+            catalogId = catalog.id,
             storeDeleted = StoreMode.OFF
         )
 
@@ -266,7 +266,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     @Test
     fun updateCollection() {
         val collectionName = "update_collection_test"
-        var collection = NakshaCollection(id = collectionName, mapId = catalog.id)
+        var collection = NakshaCollection(id = collectionName, catalogId = catalog.id)
         val createResponse = executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -297,7 +297,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     @Test
     fun updateNotExistingCollection() {
         val collectionName = "not_existing_collection_test"
-        val collection = NakshaCollection(id = collectionName, mapId = catalog.id)
+        val collection = NakshaCollection(id = collectionName, catalogId = catalog.id)
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
         val response = executeWriteErrorResponse(
@@ -312,7 +312,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     @Test
     fun shouldUpsertCollection() {
         val collectionName = "upsert_collection_test"
-        val collection = NakshaCollection(id = collectionName, mapId = catalog.id)
+        val collection = NakshaCollection(id = collectionName, catalogId = catalog.id)
         // create collection using upsert
         val response = executeWrite(
             WriteRequest().add(
@@ -340,7 +340,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         // when
         val response = executeWrite(
             WriteRequest().add(
-                Write().deleteCollectionById(collectionId = collectionName, mapId = catalog.id)
+                Write().deleteCollection(id = collectionName, catalogId = catalog.id)
             )
         )
 

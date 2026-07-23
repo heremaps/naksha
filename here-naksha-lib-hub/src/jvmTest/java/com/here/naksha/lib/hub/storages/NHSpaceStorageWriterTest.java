@@ -3,6 +3,7 @@ package com.here.naksha.lib.hub.storages;
 
 import static com.here.naksha.lib.common.assertions.WriteRequestAssertions.assertThatWriteRequest;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static naksha.model.request.WriteOp.DELETE;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -79,7 +80,8 @@ class NHSpaceStorageWriterTest extends AbstractTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
+        new Write().withOp(DELETE).withCollectionId(SPACES).withId(CUSTOM_SPACE)
+    );
 
     // When: executing delete space request
     Response result = writer.execute(deleteSpaceRequest);
@@ -91,7 +93,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     // And: the first request was about deleting (purging) underlying collection
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
-            .hasOp(WriteOp.DELETE)
+            .hasOp(DELETE)
             .hasCollectionId(Naksha.COLLECTIONS_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
@@ -99,7 +101,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     // And: the seoncd request was about deleting space entry
     assertThatWriteRequest(requestsPassedToPipeline.get(1))
         .hasSingleWriteThat(write -> write
-            .hasOp(WriteOp.DELETE)
+            .hasOp(DELETE)
             .hasCollectionId(SPACES)
             .hasId(CUSTOM_SPACE)
         );
@@ -116,7 +118,8 @@ class NHSpaceStorageWriterTest extends AbstractTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
+        new Write().withOp(DELETE).withCollectionId(SPACES).withId(CUSTOM_SPACE)
+    );
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -128,7 +131,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     // And: that request was about deleting (purging) collection
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
-            .hasOp(WriteOp.DELETE)
+            .hasOp(DELETE)
             .hasCollectionId(Naksha.COLLECTIONS_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
@@ -146,7 +149,8 @@ class NHSpaceStorageWriterTest extends AbstractTest {
 
     // And: delete space request
     WriteRequest deleteSpaceRequest = new WriteRequest().add(
-        new Write().deleteFeatureById(null, SPACES, CUSTOM_SPACE));
+        new Write().withOp(DELETE).withCollectionId(SPACES).withId(CUSTOM_SPACE)
+    );
 
     // When: executing delete space request
     Response response = writer.execute(deleteSpaceRequest);
@@ -158,7 +162,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     // And: the first request was about deleting (purging) underlying collection
     assertThatWriteRequest(requestsPassedToPipeline.get(0))
         .hasSingleWriteThat(write -> write
-            .hasOp(WriteOp.DELETE)
+            .hasOp(DELETE)
             .hasCollectionId(Naksha.COLLECTIONS_COL_ID)
             .hasId(CUSTOM_SPACE)
         );
@@ -166,7 +170,7 @@ class NHSpaceStorageWriterTest extends AbstractTest {
     // And: the second request was about deleting space entry
     assertThatWriteRequest(requestsPassedToPipeline.get(1))
         .hasSingleWriteThat(write -> write
-            .hasOp(WriteOp.DELETE)
+            .hasOp(DELETE)
             .hasCollectionId(SPACES)
             .hasId(CUSTOM_SPACE)
         );

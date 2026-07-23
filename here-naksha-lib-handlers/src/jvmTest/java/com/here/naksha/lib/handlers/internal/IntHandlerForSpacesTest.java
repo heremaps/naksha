@@ -130,7 +130,7 @@ class IntHandlerForSpacesTest {
         named("PUT Space without description", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutDescription))),
         named("UPDATE Space without description",
             new WriteRequest().add(new Write().updateFeature(SPACES, spaceWithoutDescription, false))),
-        named("CREATE Space without description", new WriteRequest().add(new Write().createFeature(SPACES, spaceWithoutDescription)))
+        named("CREATE Space without description", new WriteRequest().add(new Write().createFeatureDeprecated(SPACES, spaceWithoutDescription)))
     );
   }
 
@@ -142,7 +142,7 @@ class IntHandlerForSpacesTest {
     return Stream.of(
         named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
         named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(SPACES, space, false))),
-        named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeature(SPACES, space)))
+        named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeatureDeprecated(SPACES, space)))
     );
   }
 

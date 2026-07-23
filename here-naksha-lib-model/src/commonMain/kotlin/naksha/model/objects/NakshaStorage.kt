@@ -103,7 +103,7 @@ open class NakshaStorage() : NakshaFeature() {
      * @return this.
      * @since 3.0
      */
-    fun withClassName(className: String): NakshaStorage {
+    open fun withClassName(className: String): NakshaStorage {
         this.className = className
         return this
     }
@@ -120,7 +120,7 @@ open class NakshaStorage() : NakshaFeature() {
      * @return this.
      * @since 3.0
      */
-    fun withCreate(create: Boolean): NakshaStorage {
+    open fun withCreate(create: Boolean): NakshaStorage {
         this.create = create
         return this
     }
@@ -137,7 +137,7 @@ open class NakshaStorage() : NakshaFeature() {
      * @return this.
      * @since 3.0
      */
-    fun withUpgrade(upgrade: Boolean): NakshaStorage {
+    open fun withUpgrade(upgrade: Boolean): NakshaStorage {
         this.upgrade = upgrade
         return this
     }

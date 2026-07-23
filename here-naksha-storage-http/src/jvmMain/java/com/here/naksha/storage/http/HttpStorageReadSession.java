@@ -131,12 +131,12 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
     return null;
   }
 
@@ -146,7 +146,7 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber, boolean allowTombstone) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 
@@ -161,7 +161,7 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId) {
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
     // TODO: Technically, this translates into creating an ReadCollections query!
     throw new NotImplementedException("Not supported by HTTP storage");
   }
