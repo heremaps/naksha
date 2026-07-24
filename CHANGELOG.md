@@ -1,3 +1,6 @@
+## Naksha_2.2.22
+- Configure Gradle builds to resolve dependencies and plugins through optional custom artifactory urls.
+
 ## Naksha_2.2.21
 - Introduced post-processing for `mom10` violations.
 
