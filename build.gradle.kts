@@ -5,9 +5,16 @@ import java.net.URI
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
+val internalMavenRepoUrl = providers.gradleProperty("internalMavenRepoUrl").orNull?.takeIf { it.isNotBlank() }
+val internalPluginRepoUrl = providers.gradleProperty("internalPluginRepoUrl").orNull?.takeIf { it.isNotBlank() }
+
 repositories {
-    maven {
-        url = uri("https://plugins.gradle.org/m2/")
+    if (internalPluginRepoUrl != null) {
+        maven(uri(internalPluginRepoUrl))
+    } else {
+        maven {
+            url = uri("https://plugins.gradle.org/m2/")
+        }
     }
 }
 
@@ -146,8 +153,12 @@ subprojects {
     apply(plugin = "jacoco")
 
     repositories {
-        maven(uri("https://repo.osgeo.org/repository/release/"))
-        mavenCentral()
+        if (internalMavenRepoUrl != null) {
+            maven(uri(internalMavenRepoUrl))
+        } else {
+            maven(uri("https://repo.osgeo.org/repository/release/"))
+            mavenCentral()
+        }
     }
 
     // https://github.com/diffplug/spotless/tree/main/plugin-gradle
