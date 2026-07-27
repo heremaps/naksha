@@ -6,6 +6,8 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.SuccessResponse
 import naksha.model.request.query.*
 import naksha.model.RandomFeatures
+import naksha.model.objects.XyzMembers
+import naksha.model.request.ops.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -226,6 +228,167 @@ class ReadFeaturesByTagsTest : PgTestBase() {
             catalogId = collection.catalogId
             collectionId = collection!!.id
             query.tags = tagQuery
+        })
+    }
+
+    // ---------- duplicate tests using Op-based tag queries ----------
+
+    @Test
+    fun shouldReturnFeaturesWithExistingTag_usingOp() {
+        val inputFeature = randomFeatureWithTags("sample1")
+        insertFeature(feature = inputFeature)
+
+        val featuresWithFooTag = executeTagsQuery(
+            TagListContains(XyzMembers.XyzTags, "sample1")
+        ).features
+
+        assertEquals(1, featuresWithFooTag.size)
+        assertEquals(inputFeature.id, featuresWithFooTag[0]!!.id)
+    }
+
+    @Test
+    fun shouldNotReturnFeaturesWithMissingTag_usingOp() {
+        val inputFeature = randomFeatureWithTags("existing1")
+        insertFeature(feature = inputFeature)
+
+        val featuresWithFooTag = executeTagsQuery(
+            TagListContains(XyzMembers.XyzTags, "non-existing")
+        ).features
+
+        assertEquals(0, featuresWithFooTag.size)
+    }
+
+    @Test
+    fun shouldMatchOnlyFullElements_usingOp() {
+        val inputFeature = randomFeatureWithTags("fullelem=bar1")
+        insertFeature(feature = inputFeature)
+
+        val byFullElement = executeTagsQuery(TagListContains(XyzMembers.XyzTags, "fullelem=bar1")).features
+        assertEquals(1, byFullElement.size)
+        assertEquals(inputFeature.id, byFullElement[0]!!.id)
+
+        // key alone does not match
+        assertTrue(executeTagsQuery(TagListContains(XyzMembers.XyzTags, "fullelem")).features.isEmpty())
+    }
+
+    @Test
+    fun shouldReturnFeaturesBySetContainment_usingOp() {
+        val enabledFeatureA = randomFeatureWithTags("flag1:=true")
+        val enabledFeatureB = randomFeatureWithTags("flag1:=true")
+        val disabledFeature = randomFeatureWithTags("flag1:=false")
+
+        insertFeatures(enabledFeatureA, enabledFeatureB, disabledFeature)
+
+        val enabledFeatures = executeTagsQuery(
+            TagListContains(XyzMembers.XyzTags, "flag1:=true")
+        ).features
+
+        assertEquals(2, enabledFeatures.size)
+        val fetchedIds = enabledFeatures.map { it!!.id }
+        assertTrue(fetchedIds.containsAll(listOf(enabledFeatureA.id, enabledFeatureB.id)))
+    }
+
+    @Test
+    fun shouldPreserveTagOrderOnReadBack_usingOp() {
+        val inputFeature = randomFeatureWithTags("zulu1", "alpha1", "mike1", "bravo1")
+        insertFeature(feature = inputFeature)
+
+        val readFeatures = executeTagsQuery(TagListContains(XyzMembers.XyzTags, "zulu1")).features
+
+        assertEquals(1, readFeatures.size)
+        val readTags = readFeatures[0]!!.properties.xyz.tags
+        assertEquals(listOf("zulu1", "alpha1", "mike1", "bravo1"), readTags.filterNotNull())
+    }
+
+    @Test
+    fun shouldReturnFeaturesForComposedTagQuery_usingOp() {
+        val activeJohn = randomFeatureWithTags(
+            "username1=john_doe",
+            "is_active1:=true",
+        )
+        val activeNick = randomFeatureWithTags(
+            "username1=nick_foo",
+            "is_active1:=true",
+        )
+        val inactiveJohn = randomFeatureWithTags(
+            "username1=john_doe",
+            "is_active1:=false",
+        )
+        val oldAdmin = randomFeatureWithTags(
+            "username1=some_admin",
+            "role1=admin"
+        )
+        val invalidUserWithoutId = randomFeatureWithTags("is_active1:=true")
+
+        insertFeatures(activeJohn, activeNick, inactiveJohn, oldAdmin, invalidUserWithoutId)
+
+        val activeJohnOrAdmin = Or(
+            TagListContainsAllOf(
+                XyzMembers.XyzTags,
+                "username1=john_doe", "is_active1:=true")
+            ,
+            TagListContains(XyzMembers.XyzTags, "role1=admin")
+        )
+        val features = executeTagsQuery(activeJohnOrAdmin).features
+
+        assertEquals(2, features.size)
+        val featureIds = features.map { it!!.id }
+        assertTrue(featureIds.containsAll(listOf(activeJohn.id, oldAdmin.id)))
+    }
+
+    @Test
+    fun shouldReturnFeaturesForAllOfTagSet_usingOp() {
+        val taggedBoth = randomFeatureWithTags("seta1", "setb1")
+        val taggedFoo = randomFeatureWithTags("seta1")
+        val taggedBar = randomFeatureWithTags("setb1")
+
+        insertFeatures(taggedBoth, taggedFoo, taggedBar)
+
+        val withBoth = executeTagsQuery(
+            And(TagListContainsAllOf(XyzMembers.XyzTags, "seta1", "setb1"))
+        ).features
+
+        assertEquals(1, withBoth.size)
+        assertEquals(taggedBoth.id, withBoth[0]!!.id)
+
+        val withAny = executeTagsQuery(
+            TagListContainsAnyOf(XyzMembers.XyzTags, "seta1", "setb1")
+        ).features
+
+        assertEquals(3, withAny.size)
+    }
+
+    @Test
+    fun shouldTreatRefAsValueless_usingOp() {
+        val feature = randomFeatureWithTags("ref_lorem1=ipsum")
+        insertFeatures(feature)
+
+        val byTagName = executeTagsQuery(TagListContains(XyzMembers.XyzTags, "ref_lorem1")).features
+        assertTrue(byTagName.isEmpty())
+
+        val byFullTag = executeTagsQuery(TagListContains(XyzMembers.XyzTags, "ref_lorem1=ipsum")).features
+        assertEquals(1, byFullTag.size)
+        assertEquals(feature.id, byFullTag[0]!!.id)
+    }
+
+    @Test
+    fun shouldTreatSourceIDAsValueless_usingOp() {
+        val feature = randomFeatureWithTags("sourceID:=1234")
+        insertFeatures(feature)
+
+        val byTagName = executeTagsQuery(TagListContains(XyzMembers.XyzTags, "sourceID")).features
+        assertTrue(byTagName.isEmpty())
+
+        val byFullTag = executeTagsQuery(TagListContains(XyzMembers.XyzTags, "sourceID:=1234")).features
+        assertEquals(1, byFullTag.size)
+        assertEquals(feature.id, byFullTag[0]!!.id)
+    }
+
+    private fun executeTagsQuery(tagQuery: Op): SuccessResponse {
+        return executeRead(ReadFeatures().apply {
+            catalogId = collection.catalogId
+            collectionId = collection!!.id
+            queryMembers = tagQuery
         })
     }
 }
