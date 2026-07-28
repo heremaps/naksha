@@ -206,12 +206,7 @@ data class Tuple @JvmOverloads constructor(
             members@ for (i in 0 until members.size) {
                 val member = members[i] ?: throw illegalState("Member must not be null")
                 val memberName = member.name
-                if (member.isVirtual()) {
-                    // Virtual members carry no value in the members book, but must still occupy
-                    // their positional slot: the reader reserves the same null slot for every member.
-                    membersBook.put(memberName, null)
-                    continue
-                }
+                if (member.isVirtual()) continue
                 var memberValue: Any? = when (memberName) {
                     TN -> newTn
                     NEXT_VERSION -> null

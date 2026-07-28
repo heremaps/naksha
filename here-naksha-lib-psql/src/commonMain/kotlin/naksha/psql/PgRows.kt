@@ -266,15 +266,15 @@ internal class PgRows {
         val membersBook = HeapBook(BookType.MEMBER_BOOK)
         var featureBytes: ByteArray? = null
         for (i in 0 until members.size) {
-            // Skip null members exactly like the encoder's pre-population does, so positions stay aligned.
             val member = members[i] ?: continue
-            when (val name = member.name) {
-                FeatureBytes.name -> {
-                    val value = getColumn(name)?.values?.get(row)
-                    if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
-                    featureBytes = value
-                    membersBook.put(name, null)
-                }
+            val name = member.name
+            if (name == FeatureBytes.name) {
+                val value = getColumn(name)?.values?.get(row)
+                if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
+                featureBytes = value
+            }
+            if (member.isVirtual()) continue
+            when (name) {
                 Tn.name -> {
                     val fn = getColumn(PgColumn.FnColumn.name)?.values?.get(row) as? Int64
                     val ver = getColumn(PgColumn.VersionColumn.name)?.values?.get(row) as? Int64
