@@ -73,9 +73,9 @@ class ActivityLogRequestTranslationUtil {
 
     // extract UUIDs from featureIds, reset featureIds
     StringList rawGuids = readFeatures.getFeatureIds();
-    Or or = new Or();
-    OpList orClauses = or.getChildren();
     if (!rawGuids.isEmpty()) {
+      Or or = new Or();
+      OpList orClauses = or.getChildren();
       for (int i=0;i<rawGuids.getSize();i++) {
         String rawGuid = rawGuids.get(i);
         if (rawGuid != null) {
