@@ -7,6 +7,8 @@ import naksha.model.objects.StandardMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.model.request.ops.And
+import naksha.model.request.ops.Equals
 import naksha.model.request.ops.IsAnyOf
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.Test
@@ -60,5 +62,32 @@ class ReadFeaturesByOtherTns : PgTestBase(
                 assertNotNull(initialFeatures.find { it!!.id == fetchedPredecessor.id })
             assertThatFeature(fetchedPredecessor).isIdenticalTo(initialState)
         }
+    }
+
+    @Test
+    fun shouldGetOnePredecessorByFeatureNumberAndNextVersion() {
+        val initialFeatures = insertFeatures(randomFeatures(5)).features.filterNotNull()
+        val update = WriteRequest()
+        initialFeatures.forEach { feature ->
+            update.add(Write().updateFeature(collection, feature.apply { title = "updated_$id" }, atomic = true))
+        }
+        val updateResponse = executeWrite(update)
+        val target = initialFeatures.first()
+        val targetSuccessorTn = updateResponse.features.first()!!.properties.xyz.guid!!.tupleNumber
+        val successorVersion = targetSuccessorTn.version
+        val targetFeatureNumber = targetSuccessorTn.featureNumber
+
+        val response = executeRead(ReadFeatures().apply {
+            catalogId = collection.catalogId
+            collectionId = collection.id
+            queryMembers = And(
+                Equals(StandardMembers.NextVersion.name, successorVersion),
+                Equals(StandardMembers.FeatureNumber.name, targetFeatureNumber),
+            )
+            queryHistory = true
+        })
+
+        assertEquals(1, response.features.size)
+        assertEquals(target.id, response.features.first()!!.id)
     }
 }

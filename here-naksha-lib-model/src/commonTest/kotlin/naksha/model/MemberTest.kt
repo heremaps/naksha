@@ -7,6 +7,9 @@ import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StandardIndices
+import naksha.model.objects.StandardMembers
+import naksha.model.objects.XyzIndices
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -101,6 +104,24 @@ class MemberTest {
     fun standardTagsMemberDefaultsToSet() {
         assertEquals(MemberType.TAG_LIST, naksha.model.objects.XyzMembers.XyzTags.dataType)
         assertNotNull(naksha.model.objects.XyzIndices.XyzTags)
+    }
+
+    @Test
+    fun nextVersionIndexHasHistoryPredecessorShape() {
+        val index = StandardIndices.NextVersion
+
+        assertEquals("next_version", index.name)
+        assertEquals(
+            listOf(StandardMembers.NextVersion.name, StandardMembers.FeatureNumber.name),
+            index.on.filterNotNull(),
+        )
+        assertEquals(
+            listOf(StandardMembers.FeatureVersion.name, StandardMembers.Id.name),
+            assertNotNull(index.include).filterNotNull(),
+        )
+        assertEquals(false, index.isUnique())
+        assertEquals(false, index.isInternal())
+        assertEquals(false, XyzIndices.ALL.any { it.name == index.name })
     }
 
     @Test
