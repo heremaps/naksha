@@ -59,7 +59,7 @@ class Plv8PerfTest : PgTestBase(
     fun shouldBeIgnored() {
     }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldInsertManyFeatures() {
         // Prepare
@@ -79,7 +79,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldUpsertManyFeatures() {
         // Prepare
@@ -100,7 +100,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldInsertGroupedByPartition() {
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
@@ -130,7 +130,7 @@ class Plv8PerfTest : PgTestBase(
 //        val group = mutableMapOf<Int, List<NakshaFeature>>()
 //    }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldUpsertGroupedByPartition() {
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS

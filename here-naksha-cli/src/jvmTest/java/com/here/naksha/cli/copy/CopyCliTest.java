@@ -58,7 +58,7 @@ class CopyCliTest {
         commandLine = new TestCommandLine(copyCommand);
     }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     void shouldCopyWithoutAutoCreateTarget() {
         // Given: copy service returns success result
@@ -103,7 +103,7 @@ class CopyCliTest {
         testCase.assertMatches(result);
     }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     void shouldCopyWithAutoCreateTarget() {
         // Given: copy service returns success result
@@ -196,7 +196,7 @@ class CopyCliTest {
         testCase.assertMatches(result);
     }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     void shouldCopyWithGivenParams() {
         // Given: copy service returns success result
