@@ -109,6 +109,60 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         checkIndicesCreatedForTable("${collection.id}\$hst\$${currentYear + 1}")
     }
 
+    @Test
+    fun slimIndicesShouldPlaceNextVersionOnlyOnHistory() {
+        val collection = NakshaCollection("slim_indices_test", catalog.id).withIndices(
+            XyzIndices.XyzTags,
+            StandardIndices.Geometry,
+            StandardIndices.NextVersion,
+        )
+        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+
+        val indexes = catalogIndices(collection.id)
+        val headNames = indexes.filter { it.tableName == collection.id }.map { it.indexName }.toSet()
+        assertContains(headNames, "${collection.id}\$ci_tags")
+        assertContains(headNames, "${collection.id}\$ci_geo")
+        assertFalse(headNames.contains("${collection.id}\$ci_next_version"))
+        assertUnrequestedXyzIndicesAbsent(collection.id, headNames)
+
+        val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
+        for (year in listOf(currentYear, currentYear + 1)) {
+            val tableName = "${collection.id}\$hst\$$year"
+            val tableIndexes = indexes.filter { it.tableName == tableName }
+            val names = tableIndexes.map { it.indexName }.toSet()
+            assertContains(names, "$tableName\$ci_tags")
+            assertContains(names, "$tableName\$ci_geo")
+            assertContains(names, "$tableName\$ci_next_version")
+            assertUnrequestedXyzIndicesAbsent(tableName, names)
+
+            val nextVersionDefinition = assertNotNull(
+                tableIndexes.singleOrNull { it.indexName == "$tableName\$ci_next_version" }
+            ).indexDefinition
+            assertTrue(
+                nextVersionDefinition.contains("(nv, fn) INCLUDE (version, id)"),
+                "Unexpected next_version definition: $nextVersionDefinition",
+            )
+        }
+    }
+
+    @Test
+    fun nextVersionIndexShouldBeIgnoredWhenHistoryIsDisabled() {
+        val collection = NakshaCollection(
+            id = "slim_indices_no_history_test",
+            mapId = catalog.id,
+            storeHistory = StoreMode.OFF,
+        ).withIndices(
+            XyzIndices.XyzTags,
+            StandardIndices.Geometry,
+            StandardIndices.NextVersion,
+        )
+        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+
+        val indexes = catalogIndices(collection.id)
+        assertTrue(indexes.none { it.indexName.contains("\$ci_next_version") })
+        assertTrue(indexes.none { it.tableName.contains("\$hst") })
+    }
+
     private fun checkIndicesCreatedForTable(tableName: String) {
         storage.adminConnection().use { conn ->
             conn.execute(
@@ -598,6 +652,48 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             assertTrue(forms.none { it in indexNames }, "Unexpected optional index '${idx.name}', found: $indexNames")
         }
     }
+
+    private fun assertUnrequestedXyzIndicesAbsent(tableName: String, indexNames: Set<String>) {
+        val allowed = setOf(XyzIndices.XyzTags.name, StandardIndices.Geometry.name)
+        for (index in XyzIndices.ALL) {
+            if (index.name !in allowed) {
+                assertFalse(
+                    indexNames.contains("$tableName\$ci_${index.name}"),
+                    "Unexpected optional index '${index.name}' on '$tableName': $indexNames",
+                )
+            }
+        }
+    }
+
+    private fun catalogIndices(collectionId: String): List<CatalogIndex> =
+        storage.adminConnection().use { conn ->
+            conn.execute(
+                sql = """
+                    SELECT tablename, indexname, indexdef
+                    FROM pg_indexes
+                    WHERE schemaname = $1
+                      AND tablename LIKE $2
+                    ORDER BY tablename, indexname
+                """.trimIndent(),
+                args = arrayOf(catalog.id, "$collectionId%"),
+            ).use { cursor ->
+                val result = mutableListOf<CatalogIndex>()
+                while (cursor.next()) {
+                    result += CatalogIndex(
+                        tableName = cursor["tablename"],
+                        indexName = cursor["indexname"],
+                        indexDefinition = cursor["indexdef"],
+                    )
+                }
+                result
+            }
+        }
+
+    private data class CatalogIndex(
+        val tableName: String,
+        val indexName: String,
+        val indexDefinition: String,
+    )
 
     private fun expectedHeadColumnNames(collection: NakshaCollection): Set<String> =
         expectedOrderedColumnNames(collection).toSet()
