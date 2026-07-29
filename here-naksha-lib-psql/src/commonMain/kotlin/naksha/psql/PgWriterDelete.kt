@@ -183,7 +183,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
         cursor.fetch().use { cursor ->
             outRows.readAll(cursor)
             for (row in 0 until outRows.size) {
-                val write = pgWrites[row]
+                val write = pgWrites[this.start + row]
                 // query_fn is an int8 column, read as Int64; used only for diagnostics below.
                 val fn = outRows.getInt64(row, "query_fn") ?: throw generalException("Missing 'query_fn' in result")
 
