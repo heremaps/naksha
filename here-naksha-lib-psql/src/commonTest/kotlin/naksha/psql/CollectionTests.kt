@@ -139,7 +139,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
                 tableIndexes.singleOrNull { it.indexName == "$tableName\$ci_next_version" }
             ).indexDefinition
             assertTrue(
-                nextVersionDefinition.contains("(nv, fn) INCLUDE (version, id)"),
+                nextVersionDefinition.contains("(nv, fn) INCLUDE (version)"),
                 "Unexpected next_version definition: $nextVersionDefinition",
             )
         }

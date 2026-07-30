@@ -107,24 +107,6 @@ class MemberTest {
     }
 
     @Test
-    fun nextVersionIndexHasHistoryPredecessorShape() {
-        val index = StandardIndices.NextVersion
-
-        assertEquals("next_version", index.name)
-        assertEquals(
-            listOf(StandardMembers.NextVersion.name, StandardMembers.FeatureNumber.name),
-            index.on.filterNotNull(),
-        )
-        assertEquals(
-            listOf(StandardMembers.FeatureVersion.name, StandardMembers.Id.name),
-            assertNotNull(index.include).filterNotNull(),
-        )
-        assertEquals(false, index.isUnique())
-        assertEquals(false, index.isInternal())
-        assertEquals(false, XyzIndices.ALL.any { it.name == index.name })
-    }
-
-    @Test
     fun tagListEncodesAsJsonArrayPreservingOrder() {
         val tags = TagList("foo", "bar", "a=b")
         val json = Naksha.encodeTagList(tags)

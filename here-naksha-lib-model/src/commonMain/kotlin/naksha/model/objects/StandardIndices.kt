@@ -95,7 +95,7 @@ class StandardIndices private constructor() {
          * `next_version` — history-only lookup index on the successor version and feature number.
          *
          * This supports resolving one exact predecessor from the `(next_version, feature-number)` pair.
-         * The current tuple version and ID are included so the initial tuple lookup can be index-only.
+         * The current tuple version is included so the initial tuple-number lookup can be index-only.
          * @since 3.0
          */
         @JvmField @JsStatic
@@ -105,7 +105,6 @@ class StandardIndices private constructor() {
             StandardMembers.FeatureNumber.name,
         ).withInclude(StringList(
             StandardMembers.FeatureVersion.name,
-            StandardMembers.Id.name,
         ))
 
         // -------------------------------------------------------------------------

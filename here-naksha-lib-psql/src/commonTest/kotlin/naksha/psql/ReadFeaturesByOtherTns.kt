@@ -66,17 +66,21 @@ class ReadFeaturesByOtherTns : PgTestBase(
 
     @Test
     fun shouldGetOnePredecessorByFeatureNumberAndNextVersion() {
+        // Given: five features that will be updated in one transaction
         val initialFeatures = insertFeatures(randomFeatures(5)).features.filterNotNull()
         val update = WriteRequest()
         initialFeatures.forEach { feature ->
             update.add(Write().updateFeature(collection, feature.apply { title = "updated_$id" }, atomic = true))
         }
         val updateResponse = executeWrite(update)
+
+        // And: one target's feature number and the successor version shared by the transaction
         val target = initialFeatures.first()
         val targetSuccessorTn = updateResponse.features.first()!!.properties.xyz.guid!!.tupleNumber
         val successorVersion = targetSuccessorTn.version
         val targetFeatureNumber = targetSuccessorTn.featureNumber
 
+        // When: querying history by the pair used for ActivityLog predecessor lookup
         val response = executeRead(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
@@ -87,6 +91,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
             queryHistory = true
         })
 
+        // Then: we get one searched feature decided by next version and feature number
         assertEquals(1, response.features.size)
         assertEquals(target.id, response.features.first()!!.id)
     }
