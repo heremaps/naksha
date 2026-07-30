@@ -52,6 +52,7 @@ kotlin {
                 implementation(libs.test.containers.postgres)
                 implementation(libs.postgres)
                 implementation(libs.spatial4j)
+                implementation(libs.jackson.core.databind)
             }
         }
     }
