@@ -7,9 +7,6 @@ import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.StandardIndices
-import naksha.model.objects.StandardMembers
-import naksha.model.objects.XyzIndices
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
