@@ -100,7 +100,7 @@ open class PgWriter internal constructor(
             // - catalog-number ASC
             // - collection-number ASC
             // - partition-number ASC
-            // - PURGE, DELETE, CREATE, UPSERT, UPDATE
+            // - DELETE, PURGE, CREATE, UPSERT, UPDATE
             // - feature-number ASC.
             //
             // The ordering is very important, because otherwise there can be deadlocks in the database at row-level locking!

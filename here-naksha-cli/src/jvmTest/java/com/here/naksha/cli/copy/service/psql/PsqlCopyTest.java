@@ -69,7 +69,7 @@ class PsqlCopyTest {
         psqlStorage = Naksha.useStorage(storageConfig);
     }
 
-  @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+  @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres(FeaturesWriteExecutor featuresWriteExecutor) {
@@ -98,7 +98,7 @@ class PsqlCopyTest {
         }
     }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenMapsOnTheSameStorage(FeaturesWriteExecutor featuresWriteExecutor) {
@@ -130,7 +130,7 @@ class PsqlCopyTest {
         assertSameFeatures(sourceFeatures, targetFeatures);
     }
 
-    @DisabledIfEnvironmentVariable(named = "CICD", matches = "true")
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCreateMapAndCollectionThenCopy(FeaturesWriteExecutor featuresWriteExecutor) {
