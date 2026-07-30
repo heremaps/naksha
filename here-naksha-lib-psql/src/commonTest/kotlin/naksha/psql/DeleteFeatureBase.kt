@@ -5,10 +5,12 @@ import naksha.base.Int64
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
 import naksha.model.objects.StoreMode
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.model.request.ops.Equals
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -187,5 +189,70 @@ abstract class DeleteFeatureBase(
         assertEquals(1, deleteFeatureResp.features.size)
         val deleteFeature = assertNotNull(deleteFeatureResp.features[0])
         assertEquals(feature.id, deleteFeature.id)
+    }
+
+    @Test
+    fun writeRequestWithTwoWritesDifferentCollectionsExecutedCorrectly() {
+        //create another collection
+        val otherCollectionId = "delete_two_collections"
+        val createCollectionReq =
+            WriteRequest().add(Write().createCollection(NakshaCollection(otherCollectionId, catalog.id)))
+        val createCollectionResp =
+            executeWrite(createCollectionReq)
+        assertEquals(1, createCollectionResp.length)
+        val otherCollection = assertNotNull(createCollectionResp.features[0]).proxy(NakshaCollection::class)
+
+        //create 2 features, each in a different collection
+        val id1 = "feature_in_default"
+        executeWrite(WriteRequest().add(Write().createFeature(collection, NakshaFeature(id1))))
+        val id2 = "feature_in_other"
+        executeWrite(WriteRequest().add(Write().createFeature(otherCollection, NakshaFeature(id2))))
+
+        //delete both features in the same WriteRequest
+        val deleteReq = WriteRequest()
+            .add(Write().deleteFeatureById(collection, id1))
+            .add(Write().deleteFeatureById(otherCollection, id2))
+
+        val deleteResp = executeWrite(deleteReq)
+        assertEquals(2, deleteResp.length)
+        val deletedFeatures = assertNotNull(deleteResp.features)
+        assertEquals(2, deletedFeatures.size)
+        //currently the order of the features appearing in the request must be preserved in the response
+        assertEquals(id1, assertNotNull(deletedFeatures[0]).id)
+        assertEquals(id2, assertNotNull(deletedFeatures[1]).id)
+        //make sure the 2 features are gone from DB
+        Naksha.cache.clear()
+        executeRead(ReadFeatures().apply {
+            catalogId = collection.catalogId
+            collectionId = collection.id
+            queryMembers = Equals(StandardMembers.Id,id1)
+            queryDeleted = false    })
+            .apply {
+                assertEquals(0, features.size)
+            }
+        executeRead(ReadFeatures().apply {
+            catalogId = otherCollection.catalogId
+            collectionId = otherCollection.id
+            queryMembers = Equals(StandardMembers.Id,id2)
+            queryDeleted = false    })
+            .apply {
+                assertEquals(0, features.size)
+            }
+        executeRead(ReadFeatures().apply {
+            catalogId = collection.catalogId
+            collectionId = collection.id
+            queryMembers = Equals(StandardMembers.Id,id1)
+            queryDeleted = true
+        }).apply {
+            assertEquals(1, features.size)
+        }
+        executeRead(ReadFeatures().apply {
+            catalogId = otherCollection.catalogId
+            collectionId = otherCollection.id
+            queryMembers = Equals(StandardMembers.Id,id2)
+            queryDeleted = true
+        }).apply {
+            assertEquals(1, features.size)
+        }
     }
 }

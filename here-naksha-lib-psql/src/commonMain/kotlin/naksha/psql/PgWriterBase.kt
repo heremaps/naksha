@@ -116,7 +116,7 @@ internal abstract class PgWriterBase protected constructor(
         get() {
             val partitions = pgCollection.partitions
             val partIndices = mutableMapOf<Int, IntMutable>()
-            for (i in 0 ..< pgWrites.size) {
+            for (i in start ..< end) {
                 val write = pgWrites[i]
                 val partIndex = write.tupleNumber?.partitionIndex(partitions) ?: -1
                 val existing = partIndices[partIndex]
@@ -140,7 +140,7 @@ internal abstract class PgWriterBase protected constructor(
     val featureCountByPartitionJoined: String
         get() {
             val partitions = pgCollection.head.partitions
-            return if (partitions <= 1) "-1: ${pgWrites.size}"
+            return if (partitions <= 1) "-1: ${end - start}"
             else featureCountByPartition.entries.joinToString(", ") { "${it.key}=${it.value.value}" }
         }
 
