@@ -19,7 +19,7 @@ import naksha.psql.PgType.Companion.STRING
  * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
  * @since 3.0
  */
-val minAdminVersion = NakshaVersion.of("3.0.0-beta.24")
+val minAdminVersion = NakshaVersion.of("3.0.0-beta.44")
 
 /**
  * The `naksha~admin` version.
