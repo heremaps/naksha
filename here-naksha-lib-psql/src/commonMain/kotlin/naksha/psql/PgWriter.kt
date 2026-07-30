@@ -277,14 +277,16 @@ open class PgWriter internal constructor(
             when (op) {
                 WriteOp.CREATE -> {
                     //TODO fix this hack (cloning feature) at the source i.e. Tuple.encodeFeature(), the intention is not to mutate the input
-                    val f: NakshaFeature = pgWrite.feature?.copy(true) ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val original: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val f = original.copy<NakshaFeature>(true)
                     val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.CREATE, pgWrite.atomic)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
                 WriteOp.UPDATE -> {
                     //TODO fix this hack (cloning feature) at the source i.e. Tuple.encodeFeature(), the intention is not to mutate the input
-                    val f: NakshaFeature = pgWrite.feature?.copy(true) ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val original: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val f = original.copy<NakshaFeature>(true)
                     val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.UPDATE, pgWrite.atomic)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
@@ -297,7 +299,8 @@ open class PgWriter internal constructor(
                     // To stay downward compatible, we therefore remove (as a hack) the UUID, so we ensure that we get a CREATE.
                     // TODO: Remove this hack and remove UPSERT completely from storage.
                     //TODO fix this hack (cloning feature) at the source i.e. Tuple.encodeFeature(), the intention is not to mutate the input
-                    val f: NakshaFeature = pgWrite.feature?.copy(true) ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val original: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
+                    val f = original.copy<NakshaFeature>(true)
                     val nakshaCollection = pgWrite.collection.head
                     val uuidMember = nakshaCollection.useMember(StandardMembers.Tn)
                     uuidMember.delete(f)
