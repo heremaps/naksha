@@ -5,6 +5,7 @@ import static naksha.base.NakshaError.MAP_NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
@@ -22,6 +23,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import com.here.naksha.lib.core.util.CollectionIndexPolicy;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerTest.CollectionPriorityTestCase.ValidCollectionSource;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.List;
@@ -42,6 +44,9 @@ import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.Index;
 import naksha.model.objects.IndexList;
+import naksha.model.objects.JsonPath;
+import naksha.model.objects.Member;
+import naksha.model.objects.MemberType;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
@@ -276,6 +281,48 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertIndexNames(created, "custom");
     assertIndexNames(handlerProperties.getCollection(), "custom");
     assertNotSameIndex(created, handlerProperties.getCollection());
+  }
+
+  @Test
+  void shouldPreserveCustomMembersPathsAndIndicesFromHandlerWhenCreatingMissingCollection() {
+    configureMissingCollectionThenSuccessfulCreation();
+    NakshaCollection handlerCollection = customMemberCollection("handler_custom_collection", "handler_score");
+    NakshaCollection spaceCollection = customMemberCollection("space_custom_collection", "space_score");
+    DefaultStorageHandlerProperties properties = handlerProperties();
+    properties.setCollection(handlerCollection);
+    SpaceProperties spaceProperties = new SpaceProperties();
+    spaceProperties.setCollection(spaceCollection);
+    DefaultStorageHandler handler = storageHandler(properties, space("custom_member_space", spaceProperties));
+
+    ignoreExceptionsFrom(
+        () -> handler.processEvent(event(writeRandomFeature())),
+        "The feature retry is configured to fail after collection creation");
+
+    NakshaCollection created = capturedCreatedCollection();
+    assertCustomMemberDefinition(created, "handler_score");
+    assertNull(created.getMembers().get("space_score"));
+    assertCustomCollectionWasDeepCopied(handlerCollection, created, "handler_score");
+    assertCustomMemberDefinition(handlerCollection, "handler_score");
+  }
+
+  @Test
+  void shouldPreserveCustomMembersPathsAndIndicesFromSpaceWhenHandlerCollectionIsUndefined() {
+    configureMissingCollectionThenSuccessfulCreation();
+    NakshaCollection spaceCollection = customMemberCollection("space_custom_collection", "space_score");
+    DefaultStorageHandlerProperties properties = handlerProperties();
+    properties.setCollection(null);
+    SpaceProperties spaceProperties = new SpaceProperties();
+    spaceProperties.setCollection(spaceCollection);
+    DefaultStorageHandler handler = storageHandler(properties, space("custom_member_space", spaceProperties));
+
+    ignoreExceptionsFrom(
+        () -> handler.processEvent(event(writeRandomFeature())),
+        "The feature retry is configured to fail after collection creation");
+
+    NakshaCollection created = capturedCreatedCollection();
+    assertCustomMemberDefinition(created, "space_score");
+    assertCustomCollectionWasDeepCopied(spaceCollection, created, "space_score");
+    assertCustomMemberDefinition(spaceCollection, "space_score");
   }
 
   @Test
@@ -612,6 +659,58 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
   private static void assertNotSameIndex(NakshaCollection first, NakshaCollection second) {
     assertTrue(first.getIndices().get(0) != second.getIndices().get(0));
+  }
+
+  private void configureMissingCollectionThenSuccessfulCreation() {
+    NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
+    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteFeaturesRequest)))
+        .thenReturn(new ErrorResponse(missingCollectionError));
+    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest)))
+        .thenReturn(new SuccessResponse());
+  }
+
+  private NakshaCollection capturedCreatedCollection() {
+    ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(storageWriteSession, times(3)).execute(captor.capture());
+    return collectionFrom(findSingleCreateCollectionWrite(captor.getAllValues()));
+  }
+
+  private static NakshaCollection customMemberCollection(String collectionId, String memberName) {
+    NakshaCollection collection = new NakshaCollection(collectionId).withXyzMembers();
+    collection.addMember(new Member(
+        memberName,
+        MemberType.INT64,
+        new JsonPath("properties", "measurements", 1, "score")));
+    IndexList indices = CollectionIndexPolicy.hubSlimIndices();
+    indices.add(new Index(memberName + "_idx", memberName));
+    collection.setIndices(indices);
+    return collection;
+  }
+
+  private static void assertCustomMemberDefinition(NakshaCollection collection, String memberName) {
+    Member member = collection.getMembers().get(memberName);
+    assertNotNull(member);
+    assertEquals(MemberType.INT64, member.getDataType());
+    assertEquals(4, member.getPath().size());
+    assertEquals("properties", member.getPath().get(0));
+    assertEquals("measurements", member.getPath().get(1));
+    assertEquals(1, member.getPath().get(2));
+    assertEquals("score", member.getPath().get(3));
+    assertIndexNames(collection, "tags", "geo", "next_version", memberName + "_idx");
+    assertEquals(memberName, collection.getIndices().get(3).getOn().get(0));
+  }
+
+  private static void assertCustomCollectionWasDeepCopied(
+      NakshaCollection source,
+      NakshaCollection created,
+      String memberName) {
+    assertNotSame(source, created);
+    assertNotSame(source.getMembers(), created.getMembers());
+    assertNotSame(source.getMembers().get(memberName), created.getMembers().get(memberName));
+    assertNotSame(source.getIndices(), created.getIndices());
+    assertNotSame(source.getIndices().get(3), created.getIndices().get(3));
+    assertNull(source.getCatalogId(), "Normalization must not set the catalog on the source collection");
+    assertEquals("test_map_id", created.getCatalogId());
   }
 
   private static List<Write> getSingularWritesToCollection(List<WriteRequest> writeRequests, String collectionId) {
