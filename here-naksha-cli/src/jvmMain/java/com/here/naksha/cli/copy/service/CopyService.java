@@ -11,12 +11,16 @@ import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
+import naksha.model.objects.NakshaDatabase;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static java.util.Objects.requireNonNull;
+import static naksha.base.NakshaExceptionKt.illegalState;
+import static naksha.base.NakshaExceptionKt.internalError;
 
 public final class CopyService {
     private final FeaturesWriteExecutor featuresWriteExecutor;
@@ -138,104 +142,81 @@ public final class CopyService {
         }
     }
 
-    private void createTarget(IStorage storage, CopyElement target) throws CopyServiceException {
+    private void createTarget(@NotNull IStorage storage, @NotNull CopyElement target) throws CopyServiceException {
         if (target.getMapId() == null) {
             throw new CopyServiceException("Target's mapId should not be null!");
         }
         if (target.getCollectionId() == null) {
             throw new CopyServiceException("Target's collectionId should not be null!");
         }
-        createMapIfAbsent(storage, target.getMapId());
+        createMapIfAbsent(storage, target);
         createCollectionIfAbsent(storage, target);
     }
 
-    private void createMapIfAbsent(IStorage storage, String mapId) throws CopyServiceException {
-        Response response = performCreateMapRequest(storage, mapId);
-        switch (response) {
-            case SuccessResponse _ -> logger.info(
-                    "Map(id: \"{}\") was successfully created on storage(id: \"{}\")!", mapId, storage.getId()
-            );
-            case ErrorResponse errorResponse -> {
-                NakshaError nakshaError = errorResponse.getError();
-                if (!nakshaError.getCode().equals(NakshaError.CATALOG_EXISTS)) {
-                    throw new CopyServiceException("Problem with creating map!", new NakshaException(nakshaError));
-                }
-                logger.info("Map(id: \"{}\") is already present on storage(id: \"{}\")!", mapId, storage.getId());
-            }
-            default -> throw new CopyServiceException("Unexpected response while creating map!");
-        }
-    }
-
-    private void createCollectionIfAbsent(IStorage storage, CopyElement target) throws CopyServiceException {
-        Response response = performCreateCollectionRequest(storage, target);
-        switch (response) {
-            case SuccessResponse _ -> logger.info(
-                    "Collection(id: \"{}\") was successfully created in map(id: \"{}\") on storage(id: \"{}\")!",
-                    target.getCollectionId(),
-                    target.getMapId(),
-                    storage.getId()
-            );
-            case ErrorResponse errorResponse -> {
-                NakshaError nakshaError = errorResponse.getError();
-                if (!nakshaError.getCode().equals(NakshaError.COLLECTION_EXISTS)) {
-                    throw new CopyServiceException("Problem with creating collection!", new NakshaException(nakshaError));
-                }
-                logger.info(
-                        "Collection(id: \"{}\") is already present in map(id: \"{}\") on storage(id: \"{}\")!",
-                        target.getCollectionId(),
-                        target.getMapId(),
-                        storage.getId()
-                );
-            }
-            default -> throw new CopyServiceException("Unexpected response while creating collection!");
-        }
-    }
-
-    private Response performCreateMapRequest(IStorage storage, String mapId) throws CopyServiceException {
-        WriteRequest createMapRequest = buildCreateMapRequest(mapId);
-        return performWriteRequest(storage, createMapRequest);
-    }
-
-    private Response performCreateCollectionRequest(IStorage storage, CopyElement target) throws CopyServiceException {
-        WriteRequest createCollectionRequest = buildCreateCollectionRequest(target);
-        return performWriteRequest(storage, createCollectionRequest);
-    }
-
-    private Response performWriteRequest(
-            IStorage storage,
-            WriteRequest writeRequest
+    private void createMapIfAbsent(
+        @NotNull IStorage storage,
+        @NotNull CopyElement target
     ) throws CopyServiceException {
-        try {
-            return storage.useWriteSession(
-                    sessionOptions,
-                    writer -> {
-                        Response r = writer.execute(writeRequest);
-                        if (r instanceof SuccessResponse) {
-                            writer.commit();
-                        } else {
-                            writer.rollback();
-                        }
-                        return r;
-                    });
-        } catch (Exception e) {
-            throw new CopyServiceException("Problem while writing features to target!", e);
+      final var mapId = target.getMapId();
+      try (final var session = storage.newWriteSession(sessionOptions)) {
+        final var req = new WriteRequest().add(new Write().createCatalog(new NakshaCatalog(mapId, new NakshaDatabase(storage))));
+        final var response = session.execute(req);
+        if (response instanceof SuccessResponse) {
+          session.commit();
+          logger.info("Map(id: \"{}\") was successfully created on storage(id: \"{}\")!", mapId, storage.getId());
+        } else if (response instanceof ErrorResponse errorResponse) {
+          final var err = errorResponse.getError();
+          if (!err.getCode().equals(NakshaError.CATALOG_EXISTS)) {
+            throw new NakshaException(err);
+          }
+          logger.info("Map(id: \"{}\") is already present on storage(id: \"{}\")!", mapId, storage.getId());
+        } else {
+          throw internalError("Unexpected response while creating map");
         }
+        final var catalog = session.getCatalogById(target.getMapId());
+        if (catalog == null) throw illegalState("The session does not return the map");
+        target.catalog = catalog;
+      } catch (Exception e) {
+        throw new CopyServiceException("Failed to create map: " + mapId, e);
+      }
     }
 
-    private WriteRequest buildCreateMapRequest(String mapId) {
-        WriteRequest writeRequest = new WriteRequest();
-        NakshaCatalog map = new NakshaCatalog(mapId);
-        Write write = new Write().createCatalog(map);
-        writeRequest.add(write);
-        return writeRequest;
-    }
-
-    private WriteRequest buildCreateCollectionRequest(CopyElement target) {
-        WriteRequest writeRequest = new WriteRequest();
-        NakshaCollection collection = new NakshaCollection(requireNonNull(target.getCollectionId()), target.getMapId());
-        Write write = new Write().createCollection(collection);
-        writeRequest.add(write);
-        return writeRequest;
+    private void createCollectionIfAbsent(
+        @NotNull IStorage storage,
+        @NotNull CopyElement target
+    ) throws CopyServiceException {
+      final var collectionId = target.getCollectionId();
+      try (final var session = storage.newWriteSession(sessionOptions)) {
+        final var req = new WriteRequest().add(new Write().createCollection(new NakshaCollection(collectionId, target.catalog())));
+        final var response = session.execute(req);
+        if (response instanceof SuccessResponse) {
+          session.commit();
+          logger.info("Collection(id: \"{}\") was successfully created in map(id: \"{}\") on storage(id: \"{}\")!",
+              target.getCollectionId(),
+              target.getMapId(),
+              storage.getId()
+          );
+        } else if (response instanceof ErrorResponse errorResponse) {
+          session.rollback();
+          NakshaError nakshaError = errorResponse.getError();
+          if (!nakshaError.getCode().equals(NakshaError.COLLECTION_EXISTS)) {
+            throw new NakshaException(nakshaError);
+          }
+          logger.info(
+              "Collection(id: \"{}\") is already present in map(id: \"{}\") on storage(id: \"{}\")!",
+              target.getCollectionId(),
+              target.getMapId(),
+              storage.getId()
+          );
+        } else {
+          throw internalError("Unexpected response while creating collection!");
+        }
+        final var collection = session.getCollectionById(target.catalog(), collectionId);
+        if (collection == null) throw illegalState("The session does not return the collection");
+        target.collection = collection;
+      } catch (Exception e) {
+        throw new CopyServiceException("Failed to create collection: "+collectionId, e);
+      }
     }
 
     private CopyServiceSuccessResultPayload buildSuccessResultPayload(FeaturesWriteExecutorInfo featuresWriteExecutorInfo) {

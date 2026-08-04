@@ -2,9 +2,9 @@
 
 package naksha.model.request.ops
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
 @JsExport
-class SpTransformationList : ListProxy<SpTransformation>(SpTransformation::class)
+class SpTransformationList : PTypedArray<SpTransformation>(SpTransformation::class)

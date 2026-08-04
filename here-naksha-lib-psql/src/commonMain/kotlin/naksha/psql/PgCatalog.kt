@@ -3,23 +3,19 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Base.BaseCompanion.logger
 import naksha.base.Action
-import naksha.model.Naksha
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_FN
-import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
-import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_FN
-import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
-import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_FN
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_FN
+import naksha.base.Id.Id_C.BOOKS_COL_ID
+import naksha.base.Id.Id_C.CATALOGS_COL_ID
+import naksha.base.Id.Id_C.COLLECTIONS_COL_ID
+import naksha.base.Id.Id_C.TRANSACTIONS_COL_ID
+import naksha.base.NakshaConst.IdConst_C.ADMIN_CATALOG_QUOTED
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
+import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -42,25 +38,19 @@ open class PgCatalog internal constructor(
      * @since 3.0.0
      */
     nakshaCatalog: NakshaCatalog,
-
-    /**
-     * The custom catalog-identifier.
-     * @since 3.0
-     */
-    val id: String = nakshaCatalog.id,
-
-    /**
-     * The catalog-number of the catalog, actually the same as the feature-number of the [NakshaCatalog] feature.
-     * @since 3.0
-     */
-    val catalogNumber: Int = Naksha.catalogNumber(id),
 ) {
+    /**
+     * The catalog-identifier.
+     * @since 3.0
+     */
+    val id: Id = nakshaCatalog.id
+
     /**
      * The map-identifier quoted optionally in double quotes.
      * @since 3.0
      */
     @JvmField
-    val quotedId = quoteIdent(id)
+    val quotedId = quoteIdent(id.text)
 
     /**
      * The _HEAD_ state of the map.
@@ -70,6 +60,14 @@ open class PgCatalog internal constructor(
      * @since 3.0
      */
     val headRef = AtomicNonNullRef(nakshaCatalog)
+
+    // TODO: We need a PgDatabase
+
+    /**
+     * The database in which the catalog is located.
+     * @since 3.0
+     */
+    val databaseId: Id = nakshaCatalog.databaseId
 
     /**
      * Reads [headRef].
@@ -85,7 +83,6 @@ open class PgCatalog internal constructor(
      * The collection's collection of the map _(`naksha~collections` aka `0`)_.
      * @since 3.0
      * @see [createPgCollection]
-     * @see [getPgCollectionById]
      * @see [getPgCollectionByNumber]
      * @see [deletePgCollection]
      */
@@ -93,14 +90,16 @@ open class PgCatalog internal constructor(
         get() {
             var c = _collections
             if (c == null) {
-                val nakshaCollection = NakshaCollection(COLLECTIONS_COL_ID, id)
+                val nakshaCollection = NakshaCollection(COLLECTIONS_COL_ID, head)
                     .withXyzMembers()
                     .withXyzIndices()
                 c = PgCollection(this, nakshaCollection)
-                val collectionsColNumber = c.collectionNumber
                 nakshaCollection.tupleNumber = TupleNumber(
-                    storage.number, catalogNumber, collectionsColNumber,
-                    Int64(collectionsColNumber.toLong()), Int64(1)
+                    storage.defaultDatabaseId.number,
+                    id.intValue,
+                    COLLECTIONS_COL_ID.intValue,
+                    COLLECTIONS_COL_ID.number,
+                    1L
                 )
                 _collections = c
             }
@@ -118,29 +117,29 @@ open class PgCatalog internal constructor(
         do {
             val id = collection.id
             val newCollection = collection.head
-            val collectionNumber = newCollection.collectionNumber
+            val intNumber = newCollection.id.intValue
             val newVersion = newCollection.tupleNumber?.version ?: throw NakshaException(
                 ILLEGAL_STATE,
                 "Cannot store collection '$id' in cache, missing `tupleNumber`"
             )
 
-            val existing = collectionCache[collectionNumber]
+            val existing = collectionCache[intNumber]
             val existingTn = existing?.head?.tupleNumber
-            val existingVersion: Int64? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
+            val existingVersion: Long? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
             if (existingVersion != null && existingVersion > newVersion) {
                 logger.debug("Do not update collection '$id', the existing version ($existingVersion) is newer than the new ($newVersion)")
                 break
             }
             if (existing != null) {
-                if (collectionCache.replace(collectionNumber, existing, collection)) break
+                if (collectionCache.replace(intNumber, existing, collection)) break
             } else {
-                if (collectionCache.putIfAbsent(collectionNumber, collection) == null) break
+                if (collectionCache.putIfAbsent(intNumber, collection) == null) break
             }
         } while (true)
     }
 
     internal fun invalidateCollection(collection: PgCollection) {
-        collectionCache.remove(collection.head.collectionNumber, collection)
+        collectionCache.remove(collection.head.id.intValue, collection)
     }
 
     /**
@@ -166,7 +165,9 @@ open class PgCatalog internal constructor(
      * @see [searchPath]
      */
     fun setSearchPath(conn: PgConnection) {
-        conn.execute("SET search_path = ${searchPath()}").close()
+        val search_path = searchPath()
+        // logger.info("SET search_path = {}", search_path)
+        conn.execute("SET search_path = $search_path").close()
     }
 
     /**
@@ -228,53 +229,10 @@ open class PgCatalog internal constructor(
 
         val SQL = builder.toString()
         conn.execute(SQL).close()
-        logger.info("Dropped collection '{}' with collection-number {}", collection.id, collection.head.collectionNumber)
+        logger.info("Dropped collection '{}' with number {}", collection.id, collection.head.id.number)
 
         // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
         invalidateCollection(collection)
-    }
-
-    /**
-     * Returns the existing collection with the given identifier; if any.
-     * @param conn the connection to use to access the database.
-     * @param id the collection-id to query.
-     * @return the collection, if it exists; _null_ otherwise.
-     * @since 3.0.0
-     */
-    fun getPgCollectionById(conn: PgConnection?, id: String): PgCollection? {
-        if (this is PgAdminCatalog) {
-            return when (id) {
-                COLLECTIONS_COL_ID -> collections
-                TRANSACTIONS_COL_ID -> transactions
-                CATALOGS_COL_ID -> catalogs
-                BOOKS_COL_ID -> books
-                else -> null
-            }
-        }
-        if (id == COLLECTIONS_COL_ID) return collections
-        val collectionNumber = Naksha.collectionNumber(id)
-        val existing = collectionCache[collectionNumber]
-        if (existing != null || conn == null) return existing
-
-        // Read from database
-        setSearchPath(conn)
-        val TABLE = collections.headTable.quotedName
-        val ID = collections.column(Id)
-        val SQL = "SELECT * FROM $TABLE WHERE $ID = $1"
-        val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
-        val rows = PgRows().withCollection(collections)
-        plan.execute(arrayOf(id)).fetch().use {
-            rows.readAll(cursor = it)
-        }
-        if (rows.size == 0) return null
-        val tuple = rows[0] ?: return null
-        Naksha.cache.store(tuple)
-        val nakshaCollection = tuple.decodeFeature(null).proxy(NakshaCollection::class)
-        nakshaCollection.tupleNumber = tuple.tupleNumber
-        val pgCollection = PgCollection(this, nakshaCollection)
-        // TODO: Fix cache by adding 2nd level cache in session, we only want to update in 2nd level cache and move to 1rst level when committed!
-        cacheCollection(pgCollection)
-        return pgCollection
     }
 
     /**
@@ -287,23 +245,22 @@ open class PgCatalog internal constructor(
     fun getPgCollectionByNumber(conn: PgConnection?, number: Int): PgCollection? {
         if (this is PgAdminCatalog) {
             return when (number) {
-                COLLECTIONS_COL_FN -> collections
-                TRANSACTIONS_COL_FN -> transactions
-                CATALOGS_COL_FN -> catalogs
-                BOOKS_COL_FN -> books
+                COLLECTIONS_COL_ID.intValue -> collections
+                TRANSACTIONS_COL_ID.intValue -> pgTransactionsCollection
+                CATALOGS_COL_ID.intValue -> pgCatalogsCollection
+                BOOKS_COL_ID.intValue -> books
                 else -> null
             }
         }
-        if (number == COLLECTIONS_COL_FN) return collections
+        if (number == COLLECTIONS_COL_ID.number.toInt()) return collections
         val existing = collectionCache[number]
         if (existing != null || conn == null) return existing
 
         // Read from database
-        setSearchPath(conn)
         val TABLE = collections.headTable.quotedName
-        val SQL = "SELECT * FROM $TABLE WHERE $FnColumn = $1"
-        val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
-        val rows = PgRows().withCollection(collections)
+        val SQL = "SELECT * FROM $ADMIN_CATALOG_QUOTED.$TABLE WHERE $FnColumn = $1"
+        val plan = conn.prepare(SQL, arrayOf(PgType.INT64.string))
+        val rows = PgRows().withPgCollection(collections)
         plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }
         if (rows.size == 0) return null
         val tuple = rows[0] ?: return null

@@ -2,7 +2,7 @@ package naksha.base
 
 import kotlin.test.*
 
-class Foo : AnyObject() {
+class Foo : PAnyMap() {
     companion object {
         val NAME = NotNullProperty<Foo, String>(String::class) { _, _ -> "Bernd" }
         val AGE = NotNullProperty<Foo, Int>(Int::class) { _, _ -> 0 }
@@ -14,7 +14,7 @@ class Foo : AnyObject() {
     var xyz: String? by XYZ
 }
 
-class Bar : AnyObject() {
+class Bar : PAnyMap() {
     companion object {
         val FOO = NotNullProperty<Bar, Foo>(Foo::class)
         val FOO2 = NullableProperty<Bar, Foo>(Foo::class)

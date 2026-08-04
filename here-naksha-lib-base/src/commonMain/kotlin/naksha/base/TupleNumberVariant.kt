@@ -13,9 +13,9 @@ import kotlin.reflect.KClass
  * @since 3.0
  */
 @JsExport
-class TupleNumberVariant internal constructor() : JsEnum() {
+class TupleNumberVariant internal constructor() : BaseEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = TupleNumberVariant::class
+    override fun namespace(): KClass<out BaseEnum> = TupleNumberVariant::class
 
     override fun initClass() {}
 
@@ -203,22 +203,22 @@ class TupleNumberVariant internal constructor() : JsEnum() {
     /**
      * Tests if this variant encodes the `storage-number` in the header.
      */
-    fun sharedStorageNumber(): Boolean = !encodeStorageNumber()
+    fun sharedDatabaseNumber(): Boolean = !encodeDatabaseNumber()
 
     /**
      * Tests if this variant encodes the `storage-number`.
      */
-    fun encodeStorageNumber(): Boolean = subType <= B256.subType
+    fun encodeDatabaseNumber(): Boolean = subType <= B256.subType
 
     /**
      * Tests if this variant encodes the `map-number` in the header.
      */
-    fun sharedMapNumber(): Boolean = !encodeMapNumber()
+    fun sharedCatalogNumber(): Boolean = !encodeCatalogNumber()
 
     /**
      * Tests if this variant encodes the `map-number`.
      */
-    fun encodeMapNumber(): Boolean = subType <= B192.subType
+    fun encodeCatalogNumber(): Boolean = subType <= B192.subType
 
     /**
      * Tests if this variant encodes the `collection-number` in the header.

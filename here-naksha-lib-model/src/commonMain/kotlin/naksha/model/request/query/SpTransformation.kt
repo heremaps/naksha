@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NullableProperty
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -12,7 +12,7 @@ import kotlin.js.JsName
  * @property childTransformation an optional child transformation that should be executed before this one.
  */
 @JsExport
-open class SpTransformation() : AnyObject() {
+open class SpTransformation() : PAnyMap() {
 
     @JsName("of")
     constructor(childTransformation: SpTransformation) : this() {

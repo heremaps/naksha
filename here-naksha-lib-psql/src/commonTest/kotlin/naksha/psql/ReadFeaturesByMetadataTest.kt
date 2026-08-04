@@ -1,5 +1,7 @@
 package naksha.psql
 
+import naksha.base.Id
+
 import naksha.base.Action
 import naksha.model.SessionOptions
 import naksha.model.XyzNs
@@ -23,10 +25,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureByAppId")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // And:
-        val sessionOptions = SessionOptions(appId = "test_app_id_read_metadata")
+        val sessionOptions = SessionOptions(storage.defaultDatabaseId, appId = "test_app_id_read_metadata")
 
         // When:
         insertFeature(feature = inputFeature, sessionOptions = sessionOptions)
@@ -34,7 +36,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         // And:
         val featuresByAppId = executeMetaQuery(
             Equals(XyzMembers.XyzAppId, sessionOptions.appId)
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresByAppId.size)
@@ -46,10 +48,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureStartingWithAppId")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // And:
-        val sessionOptions = SessionOptions(appId = "prefixed_test_app_id_read_metadata")
+        val sessionOptions = SessionOptions(databaseId = storage.defaultDatabaseId, appId = "prefixed_test_app_id_read_metadata")
 
         // When:
         insertFeature(feature = inputFeature, sessionOptions = sessionOptions)
@@ -57,7 +59,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         // And:
         val featuresByAppIdPrefix = executeMetaQuery(
             StartsWith(XyzMembers.XyzAppId, "prefixed_test_app")
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresByAppIdPrefix.size)
@@ -69,10 +71,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureByAuthor")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // And:
-        val sessionOptions = SessionOptions(author = "John Doe")
+        val sessionOptions = SessionOptions(databaseId = storage.defaultDatabaseId, author = "John Doe")
 
         // When:
         insertFeature(feature = inputFeature, sessionOptions = sessionOptions)
@@ -80,7 +82,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         // And:
         val featuresByAuthor = executeMetaQuery(
             Equals(XyzMembers.XyzAuthor, sessionOptions.author)
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresByAuthor.size)
@@ -92,10 +94,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureStartingWithAuthor")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // And:
-        val sessionOptions = SessionOptions(author = "Jacky Foo")
+        val sessionOptions = SessionOptions(databaseId = storage.defaultDatabaseId, author = "Jacky Foo")
 
         // When:
         insertFeature(feature = inputFeature, sessionOptions = sessionOptions)
@@ -103,7 +105,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         // And:
         val featuresByAuthorPrefix = executeMetaQuery(
             StartsWith(XyzMembers.XyzAuthor, "Jacky")
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresByAuthorPrefix.size)
@@ -115,15 +117,15 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureById")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // When:
         insertFeature(feature = inputFeature)
 
         // And:
         val featuresById = executeMetaQuery(
-            Equals(StandardMembers.Id, inputFeature.id)
-        ).features
+            Equals(StandardMembers.IdMember, inputFeature.id)
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresById.size)
@@ -135,15 +137,15 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureStartingWithId")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // When:
         insertFeature(feature = inputFeature)
 
         // And:
         val featuresByIdPrefix = executeMetaQuery(
-            StartsWith(StandardMembers.Id, TEST_FEATURE_ID.substring(0..4))
-        ).features
+            StartsWith(StandardMembers.IdMember, TEST_FEATURE_ID.substring(0..4))
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresByIdPrefix.size)
@@ -155,8 +157,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureByType")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
-            featureType = "unusual_type"
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID)).apply {
+            momType = "unusual_type"
         }
 
         // When:
@@ -164,8 +166,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
 
         // And:
         val featuresByType = executeMetaQuery(
-            Equals(XyzMembers.XyzFeatureType, inputFeature.featureType)
-        ).features
+            Equals(XyzMembers.XyzFeatureType, inputFeature.momType)
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresByType.size)
@@ -177,8 +179,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureStartingWithType")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
-            featureType = "quite_unusual_type"
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID)).apply {
+            momType = "quite_unusual_type"
         }
 
         // When:
@@ -187,7 +189,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         // And:
         val featuresByTypePrefix = executeMetaQuery(
             StartsWith(XyzMembers.XyzFeatureType, "quite")
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresByTypePrefix.size)
@@ -201,27 +203,27 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         // Given: feature
         val appId = "some_app"
         val author = "some_author"
-        val featureToCreate = randomFeature(featureId = TEST_FEATURE_ID)
+        val featureToCreate = randomFeature(featureId = Id(TEST_FEATURE_ID))
         val writeFeaturesReq = WriteRequest().apply {
             add(Write().createFeature(collection, featureToCreate))
         }
 
         // When: executing feature write request with sepcific appId and author
-        executeWrite(writeFeaturesReq, SessionOptions(appId = appId, author = author))
+        executeWriteAndLoadTuples(writeFeaturesReq, SessionOptions(databaseId = storage.defaultDatabaseId, appId = appId, author = author))
 
         // And: execute
-        val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
+        val featuresByAppIdAndAuthor = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
-            queryMembers = And(
+            memberQuery = And(
                 Equals(XyzMembers.XyzAuthor, author),
                 StartsWith(XyzMembers.XyzAppId, appId.substring(0, 2))
             )
         })
 
         // Then:
-        assertEquals(1, featuresByAppIdAndAuthor.features.size)
-        assertEquals(featureToCreate.id, featuresByAppIdAndAuthor.features[0]!!.id)
+        assertEquals(1, featuresByAppIdAndAuthor.asFeatures.size)
+        assertEquals(featureToCreate.id, featuresByAppIdAndAuthor.asFeatures[0]!!.id)
     }
 
     @Test
@@ -229,7 +231,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureByCreatedAt")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // And:
         val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
@@ -240,8 +242,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         )
 
         // Then:
-        assertEquals(1, featuresByCreatedAt.features.size)
-        assertEquals(inputFeature.id, featuresByCreatedAt.features[0]!!.id)
+        assertEquals(1, featuresByCreatedAt.asFeatures.size)
+        assertEquals(inputFeature.id, featuresByCreatedAt.asFeatures[0]!!.id)
     }
 
     @Test
@@ -249,7 +251,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureByUpdatedAt")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // And:
         val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
@@ -260,8 +262,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         )
 
         // Then:
-        assertEquals(1, featuresByUpdatedAt.features.size)
-        assertEquals(inputFeature.id, featuresByUpdatedAt.features[0]!!.id)
+        assertEquals(1, featuresByUpdatedAt.asFeatures.size)
+        assertEquals(inputFeature.id, featuresByUpdatedAt.asFeatures[0]!!.id)
     }
 
     @Test
@@ -269,7 +271,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureByCreatedInTimeFrame")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID)).apply {
             type = "type_for_created_at_frame_test"
         }
 
@@ -285,8 +287,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         )
 
         // Then:
-        assertEquals(1, featuresCreatedInFrame.features.size)
-        assertEquals(inputFeature.id, featuresCreatedInFrame.features[0]!!.id)
+        assertEquals(1, featuresCreatedInFrame.asFeatures.size)
+        assertEquals(inputFeature.id, featuresCreatedInFrame.asFeatures[0]!!.id)
     }
 
     @Test
@@ -294,7 +296,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureByUpdatedInTimeFrame")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID).apply {
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID)).apply {
             type = "type_for_updated_at_frame_test"
         }
 
@@ -310,8 +312,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         )
 
         // Then:
-        assertEquals(1, featuresUpdatedInFrame.features.size)
-        assertEquals(inputFeature.id, featuresUpdatedInFrame.features[0]!!.id)
+        assertEquals(1, featuresUpdatedInFrame.asFeatures.size)
+        assertEquals(inputFeature.id, featuresUpdatedInFrame.asFeatures[0]!!.id)
     }
 
     @Test
@@ -319,7 +321,7 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeatureByAuthorTs")
 
         // Given:
-        val inputFeature = randomFeature(featureId = TEST_FEATURE_ID)
+        val inputFeature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // And:
         val insertedFeatureXyz = insertFeatureAndGetXyz(inputFeature)
@@ -330,8 +332,8 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         )
 
         // Then:
-        assertEquals(1, featuresByAuthorTs.features.size)
-        assertEquals(inputFeature.id, featuresByAuthorTs.features[0]!!.id)
+        assertEquals(1, featuresByAuthorTs.asFeatures.size)
+        assertEquals(inputFeature.id, featuresByAuthorTs.asFeatures[0]!!.id)
     }
 
     @Test
@@ -343,17 +345,17 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         val featuresToCreate = RandomFeatures.randomFeatures(count = 10)
 
         // When
-        insertFeatures(featuresToCreate, SessionOptions(appId = appId))
+        insertFeatures(featuresToCreate, SessionOptions(databaseId = storage.defaultDatabaseId, appId = appId))
 
         // And: execute
-        val featuresByAppIdAndAuthor = executeRead(ReadFeatures().apply {
+        val featuresByAppIdAndAuthor = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
-            queryMembers = Or(
+            memberQuery = Or(
                 Equals(XyzMembers.XyzAuthor, "this_is_totally_off"),
                 StartsWith(XyzMembers.XyzAppId, appId.substring(0, 2))
             )
-        }).features
+        }).asFeatures
 
         // Then:
         assertEquals(10, featuresByAppIdAndAuthor.size)
@@ -366,14 +368,14 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
         testWithCollection("readFeaturesByAction")
 
         // Given
-        val feature = randomFeature(featureId = TEST_FEATURE_ID)
+        val feature = randomFeature(featureId = Id(TEST_FEATURE_ID))
 
         // When: feature is created
         insertFeatures(feature)
 
         // And: feature is deleted
         val deleteFeature = WriteRequest().add(Write().deleteFeatureById(collection, feature.id))
-        executeWrite(deleteFeature)
+        executeWriteAndLoadTuples(deleteFeature)
 
         // And: History table is queried for everything besides CREATED
         val getHistoryWithoutUpdates = ReadFeatures().apply {
@@ -381,10 +383,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
             collectionId = collection.id
             queryHistory = true
             queryDeleted = true
-            queryMembers = Not(Equals(StandardMembers.Action, Action.CREATE.intValue))
+            memberQuery = Not(Equals(StandardMembers.ActionMember, Action.CREATE.intValue))
         }
-        val response = executeRead(getHistoryWithoutUpdates)
-        val retrievedFeatures = response.features
+        val response = executeReadAndLoadTuple(getHistoryWithoutUpdates)
+        val retrievedFeatures = response.asFeatures
 
         // Then: We only got DELETED state
         assertEquals(1, retrievedFeatures.size)
@@ -394,12 +396,12 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
 
     private fun insertFeatureAndGetXyz(feature: NakshaFeature): XyzNs {
         insertFeature(feature = feature)
-        val persistedFeatureResponse =  executeRead(ReadFeatures().apply {
+        val persistedFeatureResponse =  executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds += feature.id
         })
-        val persistedFeatures = persistedFeatureResponse.features
+        val persistedFeatures = persistedFeatureResponse.asFeatures
         assertEquals(1, persistedFeatures.size)
         val persistedFeature = persistedFeatures[0]
         assertNotNull(persistedFeature)
@@ -407,10 +409,10 @@ class ReadFeaturesByMetadataTest : PgTestBase(collection = null, catalogId = "")
     }
 
     private fun executeMetaQuery(op: Op): SuccessResponse {
-        return executeRead(ReadFeatures().apply {
+        return executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
-            queryMembers = op
+            memberQuery = op
         })
     }
 }

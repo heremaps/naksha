@@ -1,6 +1,8 @@
 package naksha.model.objects
 
 import naksha.model.Tuple
+import naksha.base.PTypedMap
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.base.illegalArg
 import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.INT16
@@ -17,7 +19,7 @@ class Int16Member() : TypedMember<Int16Member>() {
     /** Creates a new int16 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
-        this.name = name
+        this.id = name
         this.dataType = INT16
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -27,7 +29,7 @@ class Int16Member() : TypedMember<Int16Member>() {
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != INT16) throw illegalArg("The given member is not of int16 type")
-        this.name = member.name
+        this.id = member.id
         this.dataType = INT16
         this.path = path?.validate() ?: member.path
     }
@@ -42,6 +44,6 @@ class Int16Member() : TypedMember<Int16Member>() {
     @JsName("getFromTuple")
     fun get(tuple: Tuple): Short? = readInt64(tuple)?.toShort()
 
-    /** Sets the int16 value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Short): Any? = setPath(feature, path, value)
+    /** Sets the int16 value of this member on the given object. */
+    fun set(feature: PTypedMap<*, *>, value: Short?): Any? = if (value == null) feature.setPath(UNDEFINED, path) else feature.setPath(value, path)
 }

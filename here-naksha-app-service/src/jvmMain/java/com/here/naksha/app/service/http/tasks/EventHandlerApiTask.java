@@ -21,6 +21,7 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.HANDLER_ID;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
+import static naksha.model.objects.XyzMembers.XyzId;
 
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
 import com.here.naksha.app.service.http.apis.ApiParams;
@@ -31,13 +32,13 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
 import naksha.base.JvmJsonUtil;
-import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.WriteRequest;
+import naksha.model.request.ops.Equals;
 import naksha.model.util.RequestHelper;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -106,8 +107,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeGetHandlers() {
     // Create ReadFeatures Request to read all handlers from Admin DB
-    final ReadFeatures request = new ReadFeatures().withCollectionId(EVENT_HANDLERS);
-    request.setCatalogId(naksha().getAdminMapId());
+    final ReadFeatures request = new ReadFeatures(naksha().eventHandlersCollection());
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);
     // transform Response to Http FeatureCollection response
@@ -117,9 +117,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeGetHandlerById() {
     // Create ReadFeatures Request to read the handler with the specific ID from Admin DB
     final String handlerId = routingContext.pathParam(HANDLER_ID);
-    final ReadFeatures request = new ReadFeatures().withCollectionId(EVENT_HANDLERS);
-    request.setCatalogId(naksha().getAdminMapId());
-    request.setFeatureIds(StringList.of(handlerId));
+    final ReadFeatures request = new ReadFeatures(naksha().eventHandlersCollection()).withMemberQuery(new Equals(XyzId, handlerId));
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzFeatureResponse(

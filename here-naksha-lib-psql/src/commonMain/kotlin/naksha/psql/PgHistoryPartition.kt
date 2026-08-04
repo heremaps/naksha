@@ -2,12 +2,13 @@
 
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.Int64
 import naksha.model.Naksha
 import naksha.base.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
 import naksha.base.NakshaException
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
-import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -49,8 +50,8 @@ class PgHistoryPartition(
         val (CREATE_TABLE, TABLESPACE) = CREATE_TABLE_and_TABLESPACE()
         val toast_tuple_target:Int = collection.catalog.storage.adminCatalog.maxTupleSize
         val parent = this.parent as PgHistoryTable
-        val ID = collection.column(Id)
-        val NEXT_VERSION = collection.column(NextVersion)
+        val ID = collection.column(IdMember)
+        val NEXT_VERSION = collection.column(NextVersionMember)
 
         // HISTORY-PARTITION is NOT distribution partitioned.
         if (partitions.isEmpty()) return """$CREATE_TABLE $quotedName 
@@ -67,33 +68,15 @@ PARTITION BY RANGE ((($FnColumn & 65535)::int4 % ${collection.partitions}))$TABL
     }
 
     /**
-     * Calculates the partition-number from the given [feature-number][FnColumn].
-     * @param featureNumber the [feature-number][FnColumn] from which to calculate the partition-number.
-     * @return the calculated partition-number.
-     * @since 3.0
-     */
-    @JsName("partitionNumberForFeatureNumber")
-    fun partitionNumber(featureNumber: Int64): Int = Naksha.partitionNumber(featureNumber) % collection.partitions
-
-    /**
-     * Calculates the partition-number from the given [feature-id][Id].
-     * @param featureId the [feature-id][Id] from which to calculate the partition-number.
-     * @return the calculated partition-number.
-     * @since 3.0
-     */
-    @JsName("partitionNumberForFeatureId")
-    fun partitionNumber(featureId: String): Int = Naksha.partitionNumber(featureId) % collection.partitions
-
-    /**
      * Calculate the distribution-partition into which to write the feature with the given feature-number.
      * @param featureNumber the feature-number of the feature to return the distribution-partition for.
      * @return either the distribution-partition to put the feature into or `null` if the table is not partitioned, features need to be written into the table itself.
      */
     @JsName("getByFeatureNumber")
-    operator fun get(featureNumber: Int64): PgDistributionPartition? {
+    operator fun get(featureNumber: Long): PgDistributionPartition? {
         val partitions = this.partitions
         if (partitions.isEmpty()) return null
-        val i = Naksha.partitionNumber(featureNumber) % collection.partitions
+        val i = Id.partitionNumber(featureNumber) % collection.partitions
         check(i >= partitions.size) { throw NakshaException(PARTITION_NOT_FOUND, "Partition $i not found in table $name") }
         return partitions[i]
     }
@@ -107,7 +90,7 @@ PARTITION BY RANGE ((($FnColumn & 65535)::int4 % ${collection.partitions}))$TABL
     operator fun get(featureId: String): PgDistributionPartition? {
         val partitions = this.partitions
         if (partitions.isEmpty()) return null
-        val i = Naksha.partitionNumber(featureId) % collection.partitions
+        val i = Id.partitionNumber(featureId) % collection.partitions
         check(i >= partitions.size) { throw NakshaException(PARTITION_NOT_FOUND, "Partition $i not found in table $name") }
         return partitions[i]
     }

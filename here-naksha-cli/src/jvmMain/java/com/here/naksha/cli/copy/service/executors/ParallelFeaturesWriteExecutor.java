@@ -204,6 +204,6 @@ public final class ParallelFeaturesWriteExecutor implements FeaturesWriteExecuto
 
     private List<NakshaFeature> loadFeatures(FeatureTupleList featureTuples) {
         featureTuples.loadAll(0, featureTuples.size(), true, true);
-        return featureTuples.stream().map(FeatureTuple::getFeature).toList();
+        return featureTuples.stream().map(FeatureTuple::getCachedFeature).toList();
     }
 }

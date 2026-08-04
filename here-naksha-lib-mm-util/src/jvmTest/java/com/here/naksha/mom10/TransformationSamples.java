@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.objects.NakshaFeature;
 
 public class TransformationSamples {
@@ -108,8 +108,8 @@ public class TransformationSamples {
         byte[] rawAfter = readAllBytes(dir.resolve(NAKSHA_INTERNAL_JSON));
         return new TransformationSample(
             dir.getFileName().toString(),
-            JvmBoxingUtil.box(Platform.fromJSON(rawBefore), NakshaFeature.class),
-            JvmBoxingUtil.box(Platform.fromJSON(rawAfter), NakshaFeature.class)
+            JvmBoxingUtil.box(Base.fromJSON(rawBefore), NakshaFeature.class),
+            JvmBoxingUtil.box(Base.fromJSON(rawAfter), NakshaFeature.class)
         );
       } catch (IOException e) {
         throw new RuntimeException("Unable to load sample from: " + dir, e);

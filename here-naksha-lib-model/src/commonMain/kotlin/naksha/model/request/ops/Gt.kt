@@ -3,7 +3,6 @@
 package naksha.model.request.ops
 
 import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
 import naksha.model.objects.Member
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -26,7 +25,7 @@ class Gt() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, value: Any) : this(at.name, value)
+    constructor(at: Member, value: Any) : this(at.id, value)
 
     var value: Any by VALUE
 }

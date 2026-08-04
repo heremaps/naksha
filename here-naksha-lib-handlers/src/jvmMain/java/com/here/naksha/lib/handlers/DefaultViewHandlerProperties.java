@@ -20,7 +20,7 @@ package com.here.naksha.lib.handlers;
 
 import java.util.Arrays;
 import java.util.List;
-import naksha.base.JvmBoxingUtil;
+
 import naksha.base.StringList;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
@@ -30,7 +30,7 @@ import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import static naksha.base.Platform.javaProxy;
+import static naksha.base.Base.javaProxy;
 
 @AvailableSince(NakshaVersion.v2_0_12)
 public class DefaultViewHandlerProperties extends NakshaProperties {

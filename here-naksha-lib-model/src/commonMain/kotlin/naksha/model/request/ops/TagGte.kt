@@ -3,7 +3,6 @@
 package naksha.model.request.ops
 
 import naksha.base.NotNullProperty
-import naksha.base.NullableProperty
 import naksha.model.objects.Member
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -28,7 +27,7 @@ class TagGte() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, key: String, value: Any) : this(at.name, key, value)
+    constructor(at: Member, key: String, value: Any) : this(at.id, key, value)
 
     var key: String by KEY
     var value: Any by VALUE

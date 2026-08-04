@@ -2,7 +2,7 @@
 
 package naksha.model.request.ops
 
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 
@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
  * The join style.
  */
 @JsExport
-class SpJoinStyle : JsEnum() {
+class SpJoinStyle : BaseEnum() {
     companion object SpJoinStyle_C {
         val ROUND = def(SpJoinStyle::class, "round")
         val MITRE = def(SpJoinStyle::class, "mitre")
@@ -18,7 +18,7 @@ class SpJoinStyle : JsEnum() {
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = SpJoinStyle::class
+    override fun namespace(): KClass<out BaseEnum> = SpJoinStyle::class
 
     override fun initClass() {}
 }

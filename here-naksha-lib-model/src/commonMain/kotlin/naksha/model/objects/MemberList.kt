@@ -2,11 +2,11 @@
 
 package naksha.model.objects
 
-import naksha.base.ListProxy
+import naksha.base.IdVerifier.TextVerifier_C.MEMBER_AND_INDEX
+import naksha.base.PTypedArray
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.base.NakshaException
-import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-open class MemberList() : ListProxy<Member>(Member::class) {
+open class MemberList() : PTypedArray<Member>(Member::class) {
 
     /**
      * Construct a list from a vararg of members.
@@ -115,7 +115,7 @@ open class MemberList() : ListProxy<Member>(Member::class) {
      */
     fun get(name: String): Member? {
         for (member in this) {
-            if (member != null && member.name == name) return member
+            if (member != null && member.id == name) return member
         }
         return null
     }
@@ -126,13 +126,13 @@ open class MemberList() : ListProxy<Member>(Member::class) {
     fun validate() {
         for (i in 0 until this.size) {
             val member = this[i] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $i is null")
-            val memberName = member.name
-            if (!INTERNAL_MEMBER.isValidId(memberName)) {
+            val memberName = member.id
+            if (!MEMBER_AND_INDEX.isValidId(memberName, internal = true)) {
                 throw NakshaException(ILLEGAL_STATE, "Member at index $i has invalid name: $memberName")
             }
             for (j in (i + 1) until this.size) {
                 val later = this[j] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $j is null")
-                if (memberName == later.name) {
+                if (memberName == later.id) {
                     throw NakshaException(ILLEGAL_STATE, "Member at index $i has same name as member at $j: $memberName")
                 }
             }

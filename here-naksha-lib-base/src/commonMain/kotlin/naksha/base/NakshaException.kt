@@ -15,7 +15,9 @@ import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaError.NakshaErrorCompanion.CATALOG_EXISTS
 import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.base.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
+import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
+import kotlin.jvm.JvmOverloads
 
 /**
  * A Naksha exception.
@@ -53,6 +55,14 @@ expect class NakshaException : RuntimeException {
 }
 
 /**
+ * Create [UNINITIALIZED] exception.
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ */
+fun uninitialized(msg: String): NakshaException = NakshaException(UNINITIALIZED, msg)
+
+/**
  * Create [ILLEGAL_ID] exception.
  * @param msg the message.
  * @return the [NakshaException].
@@ -63,10 +73,11 @@ fun illegalId(msg: String): NakshaException = NakshaException(ILLEGAL_ID, msg)
 /**
  * Create [ILLEGAL_ARGUMENT] exception.
  * @param msg the message.
+ * @param cause the reason for the exception, if being another exception.
  * @return the [NakshaException].
  * @since 3.0
  */
-fun illegalArg(msg: String): NakshaException = NakshaException(ILLEGAL_ARGUMENT, msg)
+fun illegalArg(msg: String, cause: Exception? = null): NakshaException = NakshaException(ILLEGAL_ARGUMENT, msg, cause)
 
 /**
  * Create [ILLEGAL_STATE] exception.
@@ -92,6 +103,7 @@ fun illegalState(msg: String, reason: Exception): NakshaException = NakshaExcept
  * @return the [NakshaException].
  * @since 3.0
  */
+@JvmOverloads
 fun internalError(msg: String, reason: Exception? = null): NakshaException = NakshaException(INTERNAL_ERROR, msg, reason)
 
 /**
@@ -109,6 +121,7 @@ fun forbidden(msg: String): NakshaException = NakshaException(FORBIDDEN, msg)
  * @return the [NakshaException].
  * @since 3.0
  */
+@JvmOverloads
 fun generalException(msg: String, cause: Throwable? = null): NakshaException = NakshaException(EXCEPTION, msg, cause)
 
 /**
@@ -125,7 +138,7 @@ fun mapNotFound(msg: String): NakshaException = NakshaException(MAP_NOT_FOUND, m
  * @return the [NakshaException].
  * @since 3.0
  */
-fun mapExists(msg: String): NakshaException = NakshaException(CATALOG_EXISTS, msg)
+fun catalogExists(msg: String): NakshaException = NakshaException(CATALOG_EXISTS, msg)
 
 /**
  * Create [COLLECTION_NOT_FOUND] exception.
@@ -174,4 +187,3 @@ fun conflict(msg: String): NakshaException = NakshaException(CONFLICT, msg)
  * @since 3.0
  */
 fun unsupportedOp(msg: String): NakshaException = NakshaException(UNSUPPORTED_OPERATION, msg)
-

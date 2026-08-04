@@ -2,7 +2,7 @@
 
 package naksha.model.request.ops
 
-import naksha.base.AnyList
+import naksha.base.PAnyArray
 import naksha.base.NotNullProperty
 import naksha.model.objects.Member
 import kotlin.js.JsExport
@@ -15,7 +15,7 @@ import kotlin.js.JsName
 @JsExport
 class TagListContainsAllOf() : Op() {
     companion object TagListHasAllOf_C {
-        private val ITEMS = NotNullProperty<TagListContainsAllOf, AnyList>(AnyList::class) { _, _ -> AnyList() }
+        private val ITEMS = NotNullProperty<TagListContainsAllOf, PAnyArray>(PAnyArray::class) { _, _ -> PAnyArray() }
     }
 
     @JsName("forName")
@@ -27,7 +27,7 @@ class TagListContainsAllOf() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, vararg items: Any) : this(at.name, *items)
+    constructor(at: Member, vararg items: Any) : this(at.id, *items)
 
-    var items: AnyList by ITEMS
+    var items: PAnyArray by ITEMS
 }

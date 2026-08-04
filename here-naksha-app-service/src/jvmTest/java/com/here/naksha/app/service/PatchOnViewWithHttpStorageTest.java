@@ -13,7 +13,7 @@ import static com.here.naksha.app.common.CommonApiTestSetup.setupHandlerAndSpace
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
 import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
-import static naksha.base.Platform.javaProxy;
+import static naksha.base.Base.javaProxy;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockTest;
@@ -27,7 +27,6 @@ import java.util.UUID;
 
 import naksha.geo.SpFeatureCollection;
 import naksha.model.objects.NakshaFeature;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 

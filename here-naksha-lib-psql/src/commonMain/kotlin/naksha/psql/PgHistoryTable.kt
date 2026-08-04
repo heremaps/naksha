@@ -3,8 +3,8 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
-import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -14,7 +14,7 @@ import kotlin.jvm.JvmField
 /**
  * The _HISTORY_ table of a collection , partitioned by [next_version][PgColumn.NextVersionColumn].
  *
- * Features are moved into the history table when new states _([tuple][naksha.model.Tuple])_ are created in _HEAD_. In that case the previous [tuple][naksha.model.Tuple] is moved from _HEAD_ into _HISTORY_. When moving the [tuple][naksha.model.Tuple], its next-version property is set to the version of the new _head_ [tuple][naksha.model.Tuple], that replaces it. Within the history table the features are partitioned by this [next-version][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion]. With the default [shift][naksha.model.objects.NakshaCollection.shift] of 41 the partitioning effectively is done by calendar year of when the [tuple][naksha.model.Tuple] has become obsolete and was moved into _HISTORY_.
+ * Features are moved into the history table when new states _([tuple][naksha.model.Tuple])_ are created in _HEAD_. In that case the previous [tuple][naksha.model.Tuple] is moved from _HEAD_ into _HISTORY_. When moving the [tuple][naksha.model.Tuple], its next-version property is set to the version of the new _head_ [tuple][naksha.model.Tuple], that replaces it. Within the history table the features are partitioned by this [next-version][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember]. With the default [shift][naksha.model.objects.NakshaCollection.shift] of 41 the partitioning effectively is done by calendar year of when the [tuple][naksha.model.Tuple] has become obsolete and was moved into _HISTORY_.
  * @since 3.0
  * @see [PgHistoryPartition]
  * @see [PgDistributionPartition]
@@ -24,7 +24,7 @@ import kotlin.jvm.JvmField
 class PgHistoryTable(
     /** The collection to which this HEAD table belongs. */
     collection: PgCollection,
-) : PgTable(collection, collection.id + "\$hst", null) {
+) : PgTable(collection, collection.id.text + "\$hst", null) {
 
     /**
      * All history partitions with the key being the partition-number and the value being the partition.
@@ -39,8 +39,8 @@ class PgHistoryTable(
     // stay unique. The partitioned parent has none.
     @Suppress("FunctionName")
     internal fun CONSTRAINT(tableName: String, historyPartition: Int): String {
-        val ID = collection.column(Id)
-        val NEXT_VERSION = collection.column(NextVersion)
+        val ID = collection.column(IdMember)
+        val NEXT_VERSION = collection.column(NextVersionMember)
         return """
   CONSTRAINT ${quoteIdent(tableName, "\$c_pkey")} PRIMARY KEY ($FnColumn, $VersionColumn) INCLUDE ($NEXT_VERSION, $ID),
   CONSTRAINT ${quoteIdent(tableName, "\$c_nv")} CHECK ($NEXT_VERSION IS NOT NULL AND $NEXT_VERSION >= $VersionColumn),
@@ -58,15 +58,15 @@ class PgHistoryTable(
 
     override fun CREATE_SQL(): String {
         val (CREATE_TABLE, TABLESPACE) = CREATE_TABLE_and_TABLESPACE()
-        val NEXT_VERSION = collection.column(NextVersion)
+        val NEXT_VERSION = collection.column(NextVersionMember)
         return """$CREATE_TABLE $quotedName (${columnDefinitions()})
 PARTITION BY RANGE ((($NEXT_VERSION >> ${collection.shift})::int4))
 $TABLESPACE"""
     }
 
     /**
-     * Calculates the partition-number from the given [next-version][NextVersion].
-     * @param nextVersion the [next-version][NextVersion] from which to calculate the partition-number.
+     * Calculates the partition-number from the given [next-version][NextVersionMember].
+     * @param nextVersion the [next-version][NextVersionMember] from which to calculate the partition-number.
      * @return the calculated partition-number.
      * @since 3.0
      */

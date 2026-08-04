@@ -5,8 +5,8 @@ package naksha.auth
 import naksha.auth.action.ACTIONS_BY_NAME
 import naksha.auth.action.AccessRightsAction
 import naksha.auth.attribute.ResourceAttributes
-import naksha.base.ListProxy
-import naksha.base.MapProxy
+import naksha.base.PTypedArray
+import naksha.base.PTypedMap
 import kotlin.js.JsExport
 
 /**
@@ -17,7 +17,7 @@ import kotlin.js.JsExport
  * for given incoming user request bearing [UserRightsMatrix] - see its documentation for details.
  */
 @JsExport
-class AccessRightsMatrix : MapProxy<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
+class AccessRightsMatrix : PTypedMap<String, ServiceAccessRights>(String::class, ServiceAccessRights::class) {
 
     fun useNaksha(): ServiceAccessRights = useService(NAKSHA_SERVICE_NAME)
 
@@ -39,7 +39,7 @@ class AccessRightsMatrix : MapProxy<String, ServiceAccessRights>(String::class, 
 }
 
 @JsExport
-class ServiceAccessRights : MapProxy<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
+class ServiceAccessRights : PTypedMap<String, AccessRightsAction<*, *>>(String::class, AccessRightsAction::class) {
 
     override fun toValue(
         key: String,
@@ -72,4 +72,4 @@ class ServiceAccessRights : MapProxy<String, AccessRightsAction<*, *>>(String::c
 }
 
 @JsExport
-class ResourceAttributesList : ListProxy<ResourceAttributes>(ResourceAttributes::class)
+class ResourceAttributesList : PTypedArray<ResourceAttributes>(ResourceAttributes::class)

@@ -6,6 +6,7 @@ import naksha.model.*
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
+import naksha.base.Base.BaseCompanion.FAL
 import naksha.model.objects.Index
 import naksha.model.objects.IndexList
 import naksha.model.objects.Member
@@ -20,11 +21,11 @@ import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardIndices
-import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytesMember
 import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
-import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
-import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.TnMember
 import naksha.model.objects.StoreMode
 import naksha.model.objects.XyzIndices
 import naksha.psql.PgColumn.PgColumn_C.EXTENDED
@@ -57,20 +58,19 @@ open class PgCollection internal constructor(
      */
     nakshaCollection: NakshaCollection,
 ) {
+    /**
+     * The _HEAD_ state of the collection.
+     * @since 3.0
+     */
+    @JvmField
+    val headRef = AtomicNonNullRef(nakshaCollection)
 
     /**
      * The custom-identifier of the collection.
      * @since 3.0
      */
     @JvmField
-    val id: String = nakshaCollection.id
-
-    /**
-     * The collection-number of the collection, actually the same as the feature-number of the [NakshaCollection] feature.
-     * @since 3.0
-     */
-    @JvmField
-    val collectionNumber: Int = Naksha.collectionNumber(id)
+    val id: Id = nakshaCollection.id
 
     /**
      * The amount of bit the [next-version][PgColumn.NextVersionColumn] should be shifted right to calculate the history-partition.
@@ -80,6 +80,20 @@ open class PgCollection internal constructor(
     @JvmField
     val shift: Int = nakshaCollection.shift
 
+    /**
+     * If this is an internal collection storing catalogs (`naksha~catalogs`).
+     * @since 3.0
+     */
+    @JvmField
+    val storesCatalogs: Boolean = head.storesCatalogs()
+
+    /**
+     * If this is an internal collection storing collections (`naksha~collections`).
+     * @since 3.0
+     */
+    @JvmField
+    val storesCollections: Boolean = head.storesCollections()
+
     private val defaultXyz: Boolean = nakshaCollection.members == null
 
     /**
@@ -88,24 +102,24 @@ open class PgCollection internal constructor(
      * @return the partition index of the [PgHistoryPartition] into which _HEAD_ features will be moved, when modified in the given version.
      * @since 3.0
      */
-    fun historyPartitionNumberOf(version: Int64): Int = (version shr shift).toInt()
+    fun historyPartitionNumberOf(version: Long): Int = (version shr shift).toInt()
 
     /**
-     * Convert the given member into a [PgColumn], only fails for the standard member [Tn].
-     * @param member the member to convert, must not me [Tuple-Number][Tn].
+     * Convert the given member into a [PgColumn], only fails for the standard member [TnMember].
+     * @param member the member to convert, must not me [Tuple-Number][TnMember].
      * @param index the real index in the physical table at which to place the member.
      * @return the [PgColumn] for the member.
-     * @throws NakshaException with error [INTERNAL_ERROR], if the given member is [Tn].
+     * @throws NakshaException with error [INTERNAL_ERROR], if the given member is [TnMember].
      * @since 3.0
      */
     private fun fromMember(member: Member, index: Int): PgColumn {
-        if (Tn.name == member.name) throw NakshaException(INTERNAL_ERROR, "The tuple-number can't be converted using fromMember")
-        val memberName = member.name
+        if (TnMember.id == member.id) throw NakshaException(INTERNAL_ERROR, "The tuple-number can't be converted using fromMember")
+        val memberName = member.id
         // These mandatory members get special storage handling.
         when (memberName) {
-            GlobalBookFeatureNumber.name -> return PgColumn(index, memberName, INT64, "STORAGE $PLAIN")
-            Id.name -> return PgColumn(index, memberName, STRING, "STORAGE $PLAIN COLLATE \"C\"")
-            FeatureBytes.name -> return PgColumn(index, memberName, BYTE_ARRAY, "STORAGE $EXTERNAL")
+            GlobalBookFeatureNumber.id -> return PgColumn(index, memberName, INT64, "STORAGE $PLAIN")
+            IdMember.id -> return PgColumn(index, memberName, STRING, "STORAGE $PLAIN COLLATE \"C\"")
+            FeatureBytesMember.id -> return PgColumn(index, memberName, BYTE_ARRAY, "STORAGE $EXTERNAL")
         }
         val memberType = member.dataType
         return when (memberType) {
@@ -128,7 +142,7 @@ open class PgCollection internal constructor(
             members.sortByDataTypeAndAssignIndex()
         }
         var i = 0
-        // We split tuple-number into `fn` and `version`, therefore we need size + 1.
+        // We split tuple-number (TnMember) into `fn` and `version`, therefore we need size + 1.
         return Array(members.size + 1) {
             when (it) {
                 // The first three members are fixed to:
@@ -137,12 +151,12 @@ open class PgCollection internal constructor(
                 2 -> PgColumn.NextVersionColumn
                 else -> {
                     val col: PgColumn
-                    var member = members[i++] ?: throw NakshaException(ILLEGAL_STATE, "Member #${i-1} is null")
-                    var name = member.name
+                    var member = members[i++] ?: throw illegalState("${FAL}Member #${i-1} is null")
+                    var name = member.id
                     // Tn is already added as `fn` and `version`, and `next_version` is as well already added.
-                    while (name==Tn.name || name==NextVersion.name) {
-                        member = members[i++] ?: throw NakshaException(ILLEGAL_STATE, "Member #${i-1} is null")
-                        name = member.name
+                    while (name==TnMember.id || name==NextVersionMember.id) {
+                        member = members[i++] ?: throw illegalState("${FAL}Member #${i-1} is null")
+                        name = member.id
                     }
                     col = fromMember(member, it)
                     col
@@ -193,12 +207,11 @@ open class PgCollection internal constructor(
         return Array(indices.size) { i ->
             val index = indices[i] ?: throw NakshaException(ILLEGAL_STATE, "Index #$i must not be null")
             val indexName = index.name
-
             val nakshaOn = index.on
             val on: ArrayList<PgColumn> = ArrayList(nakshaOn.size)
             on@ for (i in 0 ..< nakshaOn.size) {
                 val name = nakshaOn[i] ?: throw NakshaException(ILLEGAL_STATE, "Index '$indexName->on[$i]' must not be null")
-                if (onHead && NextVersion.name == name) continue // no NEXT_VERSION in HEAD
+                if (onHead && NextVersionMember.id == name) continue // no NEXT_VERSION in HEAD
                 for (column in columns) {
                     if (column.name == name) {
                         on.add(column)
@@ -213,7 +226,7 @@ open class PgCollection internal constructor(
                 include = ArrayList(nakshaInclude.size)
                 include@ for (i in 0 ..< nakshaInclude.size) {
                     val name = nakshaInclude[i] ?: throw NakshaException(ILLEGAL_STATE, "Index '$indexName->include[$i]' must not be null")
-                    if (onHead && NextVersion.name == name) continue // no NEXT_VERSION in HEAD
+                    if (onHead && NextVersionMember.id == name) continue // no NEXT_VERSION in HEAD
                     for (column in columns) {
                         if (column.name == name) {
                             include.add(column)
@@ -272,12 +285,6 @@ open class PgCollection internal constructor(
         get() = catalog.storage
 
     /**
-     * The _HEAD_ state of the collection.
-     * @since 3.0
-     */
-    val headRef = AtomicNonNullRef(nakshaCollection)
-
-    /**
      * Reads [headRef].
      * @see [headRef]
      * @since 3.0
@@ -288,7 +295,7 @@ open class PgCollection internal constructor(
     /**
      * The storage class of the collection.
      */
-    var storageClass: PgStorageClass = JsEnum.getDefined(nakshaCollection.storageClass, PgStorageClass::class) ?: PgStorageClass.Unknown
+    var storageClass: PgStorageClass = BaseEnum.getDefined(nakshaCollection.storageClass, PgStorageClass::class) ?: PgStorageClass.Unknown
         internal set
 
     /**
@@ -326,7 +333,7 @@ open class PgCollection internal constructor(
      * @since 3.0
      */
     @JsName("getColumnByMember")
-    fun column(member: Member): PgColumn? = column(member.name)
+    fun column(member: Member): PgColumn? = column(member.id)
 
     /**
      * Returns the [PgColumn] that has the given name.
@@ -348,7 +355,7 @@ open class PgCollection internal constructor(
      * Internal collections have some limitation, for example it is not possible to add or drop indices, nor can they be created through normal methods. They are basically immutable by design, but the content can be read and modified to some degree.
      */
     @JvmField
-    val internal: Boolean = id.startsWith("naksha~")
+    val internal: Boolean = id.text.startsWith("naksha~")
 
     /**
      * Ensures that the [PgHistoryPartition] for the given version exists.
@@ -357,7 +364,7 @@ open class PgCollection internal constructor(
      * @param session the write session.
      * @since 3.0
      */
-    fun prepareWrite(conn: PgConnection, version: Int64, session: PgSession) {
+    fun prepareWrite(conn: PgConnection, version: Long, session: PgSession) {
         if (!storeHistory) return
         ensureHistoryPartition(conn, historyPartitionNumberOf(version), session)
     }
@@ -367,6 +374,7 @@ open class PgCollection internal constructor(
         if (historyTable.partitions.containsKey(partitionNumber)) return
         if (session.isPartitionPrepared(this, partitionNumber)) return
         catalog.setSearchPath(conn)
+        DEBUG_printConnection("ensureHistoryPartition", conn)
         historyTable.createPartition(conn, partitionNumber)
         session.markPartitionPrepared(this, partitionNumber)
     }

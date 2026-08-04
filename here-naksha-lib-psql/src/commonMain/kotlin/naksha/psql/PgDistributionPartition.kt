@@ -4,8 +4,8 @@ package naksha.psql
 
 import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.base.NakshaException
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
-import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgColumn.PgColumn_C.VersionColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
@@ -50,8 +50,8 @@ class PgDistributionPartition private constructor(
 
     override fun CREATE_SQL(): String {
         val (CREATE_TABLE, TABLESPACE) = CREATE_TABLE_and_TABLESPACE()
-        val ID = collection.column(Id)
-        val NEXT_VERSION = collection.column(NextVersion)
+        val ID = collection.column(IdMember)
+        val NEXT_VERSION = collection.column(NextVersionMember)
 
         // partition of HEAD.
         if (parent is PgHeadTable) return """$CREATE_TABLE $quotedName 

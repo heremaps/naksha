@@ -3,7 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.Int64
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import naksha.geo.SpGeometry
 import naksha.base.NakshaError.NakshaErrorCompanion.INITIALIZATION_FAILED
 import naksha.base.NakshaException
@@ -37,10 +37,10 @@ import kotlin.reflect.KClass
  * @since 3.0
  */
 @JsExport
-class MemberType : JsEnum() {
+class MemberType : BaseEnum() {
 
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = MemberType::class
+    override fun namespace(): KClass<out BaseEnum> = MemberType::class
 
     override fun initClass() {}
 

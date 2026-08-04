@@ -2,7 +2,7 @@
 
 package naksha.model.objects
 
-import naksha.base.MapProxy
+import naksha.base.PTypedMap
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -11,7 +11,7 @@ import kotlin.js.JsName
  * @since 3.0
  */
 @JsExport
-class NakshaTxFeatureByPartition : MapProxy<String, Int>(String::class, Int::class) {
+class NakshaTxFeatureByPartition : PTypedMap<String, Int>(String::class, Int::class) {
     /**
      * Add the given amount to the partition counter.
      * @param partitionIndex the partition index.

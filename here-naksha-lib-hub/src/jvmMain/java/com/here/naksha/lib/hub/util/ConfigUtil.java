@@ -23,7 +23,7 @@ import com.here.naksha.lib.core.util.json.Json;
 import com.here.naksha.lib.hub.NakshaHubConfig;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,7 +49,7 @@ public class ConfigUtil {
       final IoHelp.LoadedBytes loaded =
           IoHelp.readBytesFromHomeOrResource(configId + ".json", false, appName, path);
       String loadedJson = new String(loaded.getBytes(), StandardCharsets.UTF_8);
-      cfg =  JvmBoxingUtil.box(Platform.fromJSON(loadedJson, FromJsonOptions.DEFAULT), NakshaHubConfig.class);
+      cfg =  JvmBoxingUtil.box(Base.fromJSON(loadedJson, FromJsonOptions.DEFAULT), NakshaHubConfig.class);
       logger.info("Fetched supplied server config from {}", loaded.getPath());
     }
     return cfg;

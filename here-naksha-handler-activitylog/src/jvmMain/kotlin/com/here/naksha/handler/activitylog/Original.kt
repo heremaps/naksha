@@ -1,12 +1,12 @@
 package com.here.naksha.handler.activitylog
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NullableProperty
 
 /**
  * A subset of data stored under activity log.
  */
-class Original : AnyObject() {
+class Original : PAnyMap() {
     companion object {
         private val STRING_NULL = NullableProperty<Original, String>(String::class)
         private val LONG_NULL = NullableProperty<Original, Long>(Long::class)

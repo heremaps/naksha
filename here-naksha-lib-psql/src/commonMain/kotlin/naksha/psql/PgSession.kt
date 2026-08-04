@@ -3,13 +3,13 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.Platform.PlatformCompanion.longToInt64
-import naksha.base.Platform.PlatformCompanion.newAtomicInt64
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
+import naksha.base.Id.Id_C.ADMIN_CATALOG_ID
+import naksha.base.Id.Id_C.TRANSACTIONS_COL_ID
+import naksha.base.Base.BaseCompanion.logger
+import naksha.base.Base.BaseCompanion.longToInt64
+import naksha.base.Base.BaseCompanion.newAtomicLong
 import naksha.model.*
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.XyzMembers
@@ -17,15 +17,16 @@ import naksha.model.objects.XyzProcessors
 import naksha.model.request.*
 import naksha.model.request.WriteRequest
 import naksha.model.objects.NakshaTx
-import naksha.model.objects.StandardMembers.StandardMembers_C.FN
-import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumberMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.VersionMember
+import naksha.model.request.WriteOp.WriteOp_C.CREATE
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
 /**
  * A session linked to a PostgresQL database.
  *
- * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called, creating a session is cheap to create, without pre-allocation of any database connection, it will be connected on demand.
+ * This object is created when [IStorage.newReadSession] or [IStorage.newWriteSession] are called. Creating a session is cheap, it will not allocate any database connection until needed.
  * @since 3.0
  */
 @JsExport
@@ -34,13 +35,13 @@ open class PgSession(
      * The storage to which the session is bound.
      * @since 3.0
      */
-    pgStorage: PgStorage,
+    override val storage: PgStorage,
 
     /**
      * The session options to use, if any specific.
      * @since 3.0
      */
-    options: SessionOptions?,
+    options: SessionOptions,
 
     /**
      * If this session is read-only.
@@ -50,7 +51,7 @@ open class PgSession(
 ) : IWriteSession, IReadSession, ISession {
 
     companion object PgSession_C {
-        private val nextSessionId = newAtomicInt64(longToInt64(0L))
+        private val nextSessionId = newAtomicLong(longToInt64(0L))
         private val ONE = longToInt64(1L)
 
         // Decodes each 16-byte entry of `$1::bytea[]` into `(fn, version)` bigints (big-endian halves).
@@ -85,10 +86,8 @@ open class PgSession(
      */
     val id: Int64 = nextSessionId.getAndAdd(ONE)
 
-    override val storage = pgStorage
-
     /**
-     * Assert that this session mutable and not closed.
+     * Assert that this session mutable and open, so **not** closed.
      * - Throws [NakshaError.ILLEGAL_STATE] if this session is [readOnly] or [closed][isClosed].
      * @since 3.0
      */
@@ -98,7 +97,7 @@ open class PgSession(
     }
 
     /**
-     * Assert that this session is closed.
+     * Assert that this session is open, so has **not** been closed.
      * @since 3.0
      * @throws NakshaException with [ILLEGAL_STATE] if this session is [closed][isClosed].
      */
@@ -106,7 +105,7 @@ open class PgSession(
         if (_closed) throw NakshaException(ILLEGAL_STATE, "Connection closed")
     }
 
-    private var optionsValue: SessionOptions = options ?: SessionOptions()
+    private var optionsValue: SessionOptions = options
 
     override val options: SessionOptions
         get() = optionsValue
@@ -264,7 +263,7 @@ open class PgSession(
         var tx: PgTx? = this.tx
         if (tx == null) {
             val txn = storage.newConnection(options, false, null).use { conn -> storage.adminCatalog.newTxn(conn) }
-            tx = PgTx(storage, txn.version, options.appId, options.author, storage.adminCatalog, this)
+            tx = PgTx(storage, txn.version, storage.adminCatalog, this)
             this.tx = tx
         }
         return tx
@@ -287,7 +286,7 @@ open class PgSession(
             val response = when (request) {
                 is WriteRequest -> {
                     val writer = PgWriter(this, executionCount++ != 0)
-                    writer.execute(request.writes)
+                    writer.execute(request)
                 }
 
                 is ReadRequest -> {
@@ -302,14 +301,11 @@ open class PgSession(
                 }
                 else -> throw illegalArg("Unknown request: ${request::class.simpleName}")
             }
-            if (response is SuccessResponse) {
-                response.filterResults(*request.resultFilters.filterNotNull().toTypedArray())
-            }
             return response
         } catch (t: Throwable) {
-            val nakshaException = PgExceptionMapper.map(t)
-            nakshaException.error.print()
-            return ErrorResponse(nakshaException.error)
+            val e = t as? NakshaException ?: PgExceptionMapper.map(t)
+            logger.debug(e.message ?: t.message ?: "Exception without message", t)
+            return ErrorResponse(e.error)
         }
     }
 
@@ -322,7 +318,7 @@ open class PgSession(
         preparedPartitions.clear()
         try {
             pgConnection?.close()
-        } catch (ignore: Throwable) {
+        } catch (_: Throwable) {
         } finally {
             pgConnection = null
         }
@@ -338,11 +334,18 @@ open class PgSession(
             if (tx != null) {
                 try {
                     val transaction = tx.nakshaTx
-                    val writeTx = Write().createFeature(Naksha.ADMIN_CATALOG_ID, TRANSACTIONS_COL, transaction)
+                    val writeTx = Write()
+                        .withOp(CREATE)
+                        .withAtomic(true)
+                        .withDatabaseId(options.databaseId)
+                        .withCatalogId(ADMIN_CATALOG_ID)
+                        .withCollectionId(TRANSACTIONS_COL_ID)
+                        .withFeature(transaction)
+                        .withId(transaction.id)
+                        .withAtomic(true)
                     val writeRequest = WriteRequest().add(writeTx)
-                    // TODO: Should we use a savepoint here?
                     val writer = PgWriter(this, false)
-                    writer.execute(writeRequest.writes)
+                    writer.execute(writeRequest)
                 } catch (t: Throwable) {
                     throw generalException("Failed to save transaction", cause = t)
                 } finally {
@@ -412,53 +415,111 @@ open class PgSession(
         return PgLock(this, useConnection(), lockId, false)
     }
 
-    override fun loadTuples(featureTuples: List<FeatureTuple?>, from: Int, to: Int) {
-        val missing = featureTuples.subList(from, to).mapNotNull { if (it != null && it.tuple == null) it else null }
-        if (missing.isNotEmpty()) {
-            (if (mayReadParallel) newReadConnection() else readConnection()).use { readConn ->
-                val conn = readConn.conn
-                val adminCatalog = storage.adminCatalog
-                val byCollection: MutableMap<PgCollection, FeatureTupleList> = mutableMapOf()
-                for (featureTuple in missing) {
-                    val tn = featureTuple.tupleNumber
-                    val catalog = adminCatalog.getPgCatalogByNumber(conn, tn.catalogNumber) ?: continue
-                    val collection: PgCollection = catalog.getPgCollectionByNumber(conn, tn.collectionNumber) ?: continue
-                    var list = byCollection[collection]
-                    if (list == null) {
-                        list = FeatureTupleList()
-                        byCollection[collection] = list
+    override fun restoreResultSet(resultSetBytes: ByteArray): ResultSet {
+        throw unsupportedOp("ResultSet restoration not yet supported")
+    }
+
+    override fun loadTuples(tupleNumbers: ITupleNumberArray, cacheOnly: Boolean): Array<Tuple?> {
+        val results = arrayOfNulls<Tuple?>(tupleNumbers.size)
+        val load = IntArray(tupleNumbers.size)
+        readConnection().use { readConn ->
+            val adminCatalog = storage.adminCatalog
+            var pending = tupleNumbers.size
+            var loadCount = 0
+            while (pending > 0) {
+                // TODO: We need to support databases.
+                var catalog: PgCatalog? = null
+                var collection: PgCollection? = null
+                for (i in 0 until results.size) {
+                    if (load[i] == 0) {
+                        // `i` needs loading.
+                        val tn: TupleNumber
+                        try {
+                            tn = tupleNumbers.getTupleNumber(i)
+                            if (tn.databaseNumber != storage.defaultDatabaseId.number) throw illegalArg("Invalid database number")
+                        } catch (_: Exception) {
+                            // We do not load this tuple and treat it as done.
+                            load[i] = -1
+                            pending--
+                            continue
+                        }
+
+                        // Try cache first.
+                        val tuple = Naksha.cache[tn]
+                        if (tuple != null) {
+                            results[i] = tuple
+                            load[i] = -1
+                            pending--
+                            continue
+                        }
+
+                        if (cacheOnly) {
+                            load[i] = -1
+                            pending--
+                            continue
+                        }
+
+                        if (catalog == null) {
+                            catalog = adminCatalog.getPgCatalogByNumber(readConn.conn, tn.catalogNumber)
+                            if (catalog == null) {
+                                load[i] = -1
+                                pending--
+                                continue
+                            }
+                        } else if (catalog.id.number.toInt() != tn.catalogNumber) {
+                            // We do not load the tuple in this round.
+                            continue
+                        }
+                        if (collection == null) {
+                            collection = catalog.getPgCollectionByNumber(readConn.conn, tn.collectionNumber)
+                            if (collection == null) {
+                                load[i] = -1
+                                pending--
+                                continue
+                            }
+                        } else if (collection.id.number.toInt() != tn.collectionNumber) {
+                            // We do not load the tuple in this round.
+                            continue
+                        }
+                        // We load the tupe in this round.
+                        load[i] = 1
+                        loadCount++
                     }
-                    list.add(featureTuple)
-                }
-                for ((collection, featureTuples) in byCollection) {
-                    loadTuplesFromCollection(conn, collection, featureTuples)
+                    if (loadCount > 0) {
+                        try {
+                            loadTuplesFromCollection(readConn.conn, collection!!, tupleNumbers, load, loadCount, results)
+                        } catch (e: Exception) {
+                            throw internalError("Failed to load tuples from collection", e)
+                        }
+                        pending -= loadCount
+                    }
                 }
             }
         }
+        return results
     }
 
-    /**
-     * Load [Tuple] from a specific collection, can be executed in parallel, when multiple collections are needed. We should make parallel reading optional, we experienced that when used for example in EMR, too many connections can harm. However, the cache could keep objects in Redis or alike, and then read perfectly fine in parallel!
-     *
-     * @param conn the connection to use for this read.
-     * @param collection the collection to read.
-     * @param featureTuples the tuple to load.
-     */
-    private fun loadTuplesFromCollection(conn: PgConnection, collection: PgCollection, featureTuples: FeatureTupleList): Int {
-        if (featureTuples.isEmpty()) return 0
+    private fun loadTuplesFromCollection(
+        conn: PgConnection,
+        collection: PgCollection,
+        tupleNumbers: ITupleNumberArray,
+        load: IntArray,
+        loadCount: Int,
+        results: Array<Tuple?>
+    ) {
         val HEAD_TABLE = collection.headTable.quotedName
         val HISTORY_TABLE = collection.historyTable.quotedName
-        // Generate input array
-        val fn_version_bytes = ByteArray(featureTuples.size * 16)
-        val view = Platform.newDataView(fn_version_bytes)
-        for (i in 0..< featureTuples.size) {
-            val tn = featureTuples[i]?.tupleNumber ?: throw NakshaException(INTERNAL_ERROR, "featureTuples[$i] is null")
-            // Note: We do the math by intention. The CPU is very good at math, it's basically free.
-            //       However, memory access is really slow, by doing it this way, the CPU can reorder
-            //       the memory access, and the JIT can unroll the loop.
-            dataview_set_int64(view, i*16, tn.featureNumber)
-            dataview_set_int64(view, i*16 + 8, tn.version)
+        val fn_version_bytes = ByteArray(loadCount * 16)
+        val result_index = IntArray(loadCount)
+        var row_i = 0
+        for (i in 0..< load.size) {
+            if (load[i] != 1) continue
+            val tn = tupleNumbers.getTupleNumber(i)
+            fn_version_bytes.setInt64Be((row_i shl 4), tn.featureNumber)
+            fn_version_bytes.setInt64Be((row_i shl 4) + 8, tn.version)
+            result_index[row_i++] = i
         }
+        if (row_i != result_index.size) throw illegalArg("Found too few tuple-number, expected $loadCount, but got only $row_i")
         val SQL = """
 WITH lookup AS (
     SELECT 
@@ -469,7 +530,7 @@ WITH lookup AS (
         ((get_byte(b, 4) & 255)::bigint << 24) |
         ((get_byte(b, 5) & 255)::bigint << 16) |
         ((get_byte(b, 6) & 255)::bigint << 8)  |
-        (get_byte(b, 7) & 255)::bigint        AS $FN,
+        (get_byte(b, 7) & 255)::bigint        AS $FeatureNumberMember,
         
         ((get_byte(b, 8) & 255)::bigint << 56) |
         ((get_byte(b, 9) & 255)::bigint << 48) |
@@ -478,68 +539,32 @@ WITH lookup AS (
         ((get_byte(b, 12) & 255)::bigint << 24)|
         ((get_byte(b, 13) & 255)::bigint << 16)|
         ((get_byte(b, 14) & 255)::bigint << 8) |
-        (get_byte(b, 15) & 255)::bigint        AS $VERSION
+        (get_byte(b, 15) & 255)::bigint        AS $VersionMember
     FROM (
         SELECT substring($1::bytea FROM g * 16 + 1 FOR 16) AS b
         FROM generate_series(0, octet_length($1::bytea) / 16 - 1) AS g
     ) AS t
 ), from_head AS (
     SELECT head.* FROM $HEAD_TABLE head
-    JOIN lookup l ON (head.$FN, head.$VERSION) = (l.$FN, l.$VERSION)
+    JOIN lookup l ON (head.$FeatureNumberMember, head.$VersionMember) = (l.$FeatureNumberMember, l.$VersionMember)
 ), from_hst AS (
     SELECT hst.* FROM $HISTORY_TABLE hst
-    JOIN lookup l ON (hst.$FN, hst.$VERSION) = (l.$FN, l.$VERSION)
+    JOIN lookup l ON (hst.$FeatureNumberMember, hst.$VersionMember) = (l.$FeatureNumberMember, l.$VersionMember)
 )
 SELECT * FROM from_head 
 UNION ALL 
 SELECT * FROM from_hst"""
         collection.catalog.setSearchPath(conn)
-        val rows = PgRows().withCollection(collection)
-        conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY.text)).use { plan ->
+        val rows = PgRows().withPgCollection(collection)
+        conn.prepare(SQL, arrayOf(PgType.BYTE_ARRAY.string)).use { plan ->
             plan.execute(arrayOf(fn_version_bytes)).fetch().use { cursor ->
                 rows.readAll(cursor)
             }
         }
-        // TupleHeapCache holds tuples as WeakRef, so a just-stored tuple can be GC'd before we read it
-        // back via cache[tupleNumber], returning null under memory pressure. The local map keeps a
-        // strong reference as a workaround.
-        // TODO: Find a better way; the cache should not drop tuples that are currently in use
-        val byTupleNumber = HashMap<TupleNumber, Tuple>(rows.size)
-        for (i in 0 until rows.size) {
-            val tuple = rows[i] ?: continue
-            Naksha.cache.store(tuple)
-            byTupleNumber[tuple.tupleNumber] = tuple
-        }
-        var found = 0
-        for (i in 0..< featureTuples.size) {
-            val featureTuple = featureTuples[i] ?: throw NakshaException(INTERNAL_ERROR, "featureTuples[$i] is null")
-            val tuple = byTupleNumber[featureTuple.tupleNumber] ?: Naksha.cache[featureTuple.tupleNumber]
-            if (tuple != null) {
-                featureTuple.tuple = tuple
-                found++
-            }
-        }
-        return found
-    }
-
-    override fun getCatalogById(catalogId: String, allowTombstone: Boolean): NakshaCatalog? {
-        val catalog = getPgCatalogById(catalogId)?.head
-        if (allowTombstone || catalog == null) return catalog
-        return if (catalog.isDeleted()) null else catalog
-    }
-
-    /**
-     * Returns the [PgCatalog] for the given id.
-     * @param catalogId the catalog-id.
-     * @return the [PgCatalog]; _null_ if the map does not yet exist.
-     */
-    fun getPgCatalogById(catalogId: String): PgCatalog? {
-        val adminCatalog = storage.adminCatalog
-        val cachedCatalog = adminCatalog.getPgCatalogById(null, catalogId)
-        if (cachedCatalog != null) return cachedCatalog
-        assertOpen()
-        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            adminCatalog.getPgCatalogById(it.conn, catalogId)
+        for (row_i in 0 until rows.size) {
+            val tuple = rows[row_i]
+            results[result_index[row_i]] = tuple
+            if (tuple != null) Naksha.cache.store(tuple)
         }
     }
 
@@ -547,6 +572,14 @@ SELECT * FROM from_hst"""
         val catalog = getPgCatalogByNumber(catalogNumber)?.head
         if (allowTombstone || catalog == null) return catalog
         return if (catalog.isDeleted()) null else catalog
+    }
+
+    override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int, allowTombstone: Boolean): NakshaCollection? {
+        val pgCatalog = getPgCatalogByNumber(catalog.id.number.toInt()) ?: return null
+        if (pgCatalog.head.isDeleted()) return null
+        val collection = getPgCollectionByNumber(pgCatalog, collectionNumber)?.head
+        if (allowTombstone || collection == null) return collection
+        return if (collection.isDeleted()) null else collection
     }
 
     /**
@@ -559,38 +592,7 @@ SELECT * FROM from_hst"""
         val cachedCatalog = adminCatalog.getPgCatalogByNumber(null, catalogNumber)
         if (cachedCatalog != null) return cachedCatalog
         assertOpen()
-        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            adminCatalog.getPgCatalogByNumber(it.conn, catalogNumber)
-        }
-    }
-
-    override fun getCollectionById(catalog: NakshaCatalog, collectionId: String, allowTombstone: Boolean): NakshaCollection? {
-        val pgCatalog = getPgCatalogById(catalog.id) ?: return null
-        val collection = getPgCollectionById(pgCatalog, collectionId)?.head
-        if (allowTombstone || collection == null) return collection
-        return if (collection.isDeleted()) null else collection
-    }
-
-    /**
-     * Returns the [PgCollection] for the given id.
-     * @param pgCatalog the [PgCatalog] in which to search for the collection.
-     * @param collectionId the collection-id.
-     * @return the [PgCollection]; _null_ if the collection does not yet exist.
-     */
-    fun getPgCollectionById(pgCatalog: PgCatalog, collectionId: String): PgCollection? {
-        val cachedCollection = pgCatalog.getPgCollectionById(null, collectionId)
-        if (cachedCollection != null) return cachedCollection
-        assertOpen()
-        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgCatalog.getPgCollectionById(it.conn, collectionId)
-        }
-    }
-
-    override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int, allowTombstone: Boolean): NakshaCollection? {
-        val pgCatalog = getPgCatalogById(catalog.id) ?: return null
-        val collection = getPgCollectionByNumber(pgCatalog, collectionNumber)?.head
-        if (allowTombstone || collection == null) return collection
-        return if (collection.isDeleted()) null else collection
+        return readConnection().use { adminCatalog.getPgCatalogByNumber(it.conn, catalogNumber) }
     }
 
     /**
@@ -603,9 +605,7 @@ SELECT * FROM from_hst"""
         val cachedCollection = pgCatalog.getPgCollectionByNumber(null, collectionNumber)
         if (cachedCollection != null) return cachedCollection
         assertOpen()
-        return (if (mayReadParallel) newReadConnection() else readConnection()).use {
-            pgCatalog.getPgCollectionByNumber(it.conn, collectionNumber)
-        }
+        return readConnection().use { pgCatalog.getPgCollectionByNumber(it.conn, collectionNumber) }
     }
 
     override fun executeParallel(request: Request): Response = execute(request)
@@ -613,7 +613,7 @@ SELECT * FROM from_hst"""
     /**
      * Start time of the session.
      */
-    private val start = Platform.currentMillis()
+    private val start = Base.currentMillis()
 
     private var _logOptions: SessionOptions? = null
 
@@ -621,7 +621,7 @@ SELECT * FROM from_hst"""
      * If all queries should be logged.
      * @since 3.0
      */
-    internal var logQueries: Boolean = options?.logLevel?.contains(PgLogLevel.QUERIES) ?: false
+    internal var logQueries: Boolean = options.logLevel?.contains(PgLogLevel.QUERIES) ?: false
         get() {
             val options = this.options
             if (_logOptions != options) {
@@ -636,7 +636,7 @@ SELECT * FROM from_hst"""
      * If all queries should be explained and then the "explain" should be logged.
      * @since 3.0
      */
-    internal var logExplain: Boolean = options?.logLevel?.contains(PgLogLevel.EXPLAIN) ?: false
+    internal var logExplain: Boolean = options.logLevel?.contains(PgLogLevel.EXPLAIN) ?: false
         get() {
             val options = this.options
             if (_logOptions != options) {
@@ -670,7 +670,7 @@ SELECT * FROM from_hst"""
             c.use {
                 val sb = StringBuilder()
                 while (c.next()) {
-                    val map = c.map(AnyObject::class)
+                    val map = c.map(PAnyMap::class)
                     for (value in map.values) {
                         sb.append(value).append("\n");
                     }
@@ -691,8 +691,8 @@ SELECT * FROM from_hst"""
      * @since 11.9.22
      */
     fun logAtInfo(sql: String, vararg args: Any?) {
-        if (PlatformUtil.ENABLE_INFO) {
-            val delta = Platform.currentMillis() - start
+        if (BaseUtil.ENABLE_INFO) {
+            val delta = Base.currentMillis() - start
             logger.info("{}@{}:{}ms: $sql", id, connectionId, delta, *args)
         }
     }

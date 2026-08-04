@@ -1,5 +1,7 @@
 package naksha.model.objects
 
+import naksha.base.PTypedMap
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.model.TagMap
 import naksha.model.Tuple
 import naksha.base.illegalArg
@@ -18,7 +20,7 @@ class TagMapMember() : TypedMember<TagMapMember>() {
     /** Creates a new tag map member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
-        this.name = name
+        this.id = name
         this.dataType = TAG_MAP
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -28,7 +30,7 @@ class TagMapMember() : TypedMember<TagMapMember>() {
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != TAG_MAP) throw illegalArg("The given member is not of tags type")
-        this.name = member.name
+        this.id = member.id
         this.dataType = TAG_MAP
         this.path = path?.validate() ?: member.path
     }
@@ -43,6 +45,6 @@ class TagMapMember() : TypedMember<TagMapMember>() {
     @JsName("getFromTuple")
     fun get(tuple: Tuple): TagMap? = readTagMap(tuple)
 
-    /** Sets the tag map value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: TagMap): Any? = setPath(feature, path, value)
+    /** Sets the tag map value of this member on the given object. */
+    fun set(feature: PTypedMap<*, *>, value: TagMap?): Any? = if (value == null) feature.setPath(UNDEFINED, path) else feature.setPath(value, path)
 }

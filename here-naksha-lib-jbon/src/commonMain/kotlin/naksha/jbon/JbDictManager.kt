@@ -1,6 +1,6 @@
 package naksha.jbon
 
-import naksha.base.Platform
+import naksha.base.Base
 import kotlin.js.JsExport
 
 /**
@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE")
 @JsExport
 class JbDictManager : IDictManager {
-    private val cache = Platform.newAtomicMap<String, JbDictionary>()
+    private val cache = Base.newAtomicMap<String, JbDictionary>()
 
     override fun putDictionary(dict: JbDictionary) {
         val id = dict.id

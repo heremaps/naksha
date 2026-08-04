@@ -1,6 +1,6 @@
 package naksha.diff
 
-import naksha.base.Platform
+import naksha.base.Base
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -9,7 +9,7 @@ class DiffAndPatchTest {
     @Test
     fun diffingAndPatchingShouldResultInOriginalObject() {
         // Given:
-        val left = Platform.fromJSON(
+        val left = Base.fromJSON(
             """
             {
                 "company": "Abc",
@@ -50,7 +50,7 @@ class DiffAndPatchTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Base.fromJSON(
             """
             {
                 "company": "Abc",
@@ -83,8 +83,8 @@ class DiffAndPatchTest {
         Patcher.patch(left!!, diff)
 
         // Then:
-        val leftJson = Platform.toJSON(left)
-        val rightJson = Platform.toJSON(right)
+        val leftJson = Base.toJSON(left)
+        val rightJson = Base.toJSON(right)
         assertEquals(leftJson, rightJson)
     }
 }

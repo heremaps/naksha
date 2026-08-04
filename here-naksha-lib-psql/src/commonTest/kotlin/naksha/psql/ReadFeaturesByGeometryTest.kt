@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.geo.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
@@ -19,25 +20,25 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
 
         // Given: feature with geometry
         val feature = NakshaFeature().apply {
-            id = "test_feature"
+            id = Id("test_feature")
             geometry = SpPoint(PointCoord(1.0, 2.0, 0.0))
         }
 
         // When: executing feature write request
-        executeWrite(
+        executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createFeature(collection, feature)
             )
         )
 
         // And: reading feature
-        val retrievedFeatures = executeRead(
+        val retrievedFeatures = executeReadAndLoadTuple(
             ReadFeatures().apply {
                 catalogId = collection.catalogId
                 collectionId = collection.id
                 featureIds += feature.id
             }
-        ).features
+        ).asFeatures
 
         // Then: geometry is there and it is what we inserted
         assertEquals(1, retrievedFeatures.size)
@@ -52,25 +53,25 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
         // Given: feature with geometry
         val featureGeometry = SpPoint(PointCoord(1.0, 2.0))
         val feature = NakshaFeature().apply {
-            id = "test_feature"
+            id = Id("test_feature")
             geometry = featureGeometry
         }
 
         // When: executing feature write request
-        executeWrite(
+        executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createFeature(collection, feature)
             )
         )
 
         // And: reading feature
-        val retrievedFeatures = executeRead(
+        val retrievedFeatures = executeReadAndLoadTuple(
             ReadFeatures().apply {
                 catalogId = collection.catalogId
                 collectionId = collection.id
                 featureIds += feature.id
             }
-        ).features
+        ).asFeatures
 
         // Then: geometry is there and it is what we inserted
         assertEquals(1, retrievedFeatures.size)
@@ -97,8 +98,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
         )
 
         // Then:
-        assertEquals(1, featuresByBBox.features.size)
-        assertEquals(feature.id, featuresByBBox.features[0]!!.id)
+        assertEquals(1, featuresByBBox.asFeatures.size)
+        assertEquals(feature.id, featuresByBBox.asFeatures[0]!!.id)
     }
 
     @Test
@@ -128,7 +129,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
 
         // And
         val czechiaLvl7 = HereTile("1220103")
-        val featuresInCzechia = executeSpatialQuery(SpRefInHereTile(czechiaLvl7)).features
+        val featuresInCzechia = executeSpatialQuery(SpRefInHereTile(czechiaLvl7)).asFeatures
 
         // Then:
         assertEquals(1, featuresInCzechia.size)
@@ -172,7 +173,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
         insertFeatures(valencia, somePlaceInPrague)
 
         // And:
-        val features = executeSpatialQuery(query).features
+        val features = executeSpatialQuery(query).asFeatures
 
         // Then
         assertEquals(2, features.size)
@@ -201,7 +202,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
         insertFeature(feature)
 
         // And
-        val features = executeSpatialQuery(readByCorridor).features
+        val features = executeSpatialQuery(readByCorridor).asFeatures
 
         // Then:
         assertEquals(1, features.size)
@@ -233,7 +234,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
         val featuresWithinThreeHundredMetersFromNrt = executeSpatialQuery(SpIntersects(
             SpPoint(nrtAirportCoord),
             SpBuffer(distance = 300.0, geography = true)
-        )).features
+        )).asFeatures
 
         // Then:
         assertTrue(featuresWithinThreeHundredMetersFromNrt.isEmpty())
@@ -242,7 +243,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
         val featuresWithinThreeHundredDegreesFromNrt = executeSpatialQuery(SpIntersects(
             SpPoint(nrtAirportCoord),
             SpBuffer(distance = 300.0, geography = false)
-        )).features
+        )).asFeatures
 
         // Then:
         assertEquals(1, featuresWithinThreeHundredDegreesFromNrt.size)
@@ -250,7 +251,7 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "")
     }
 
     private fun executeSpatialQuery(spatialQuery: ISpatialQuery): SuccessResponse {
-        return executeRead(ReadFeatures().apply {
+        return executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             query.spatial = spatialQuery

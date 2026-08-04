@@ -9,13 +9,13 @@ This skill encodes the conventions for writing typed wrappers over `PlatformObje
 
 ## Core concepts
 
-- The JSON parser returns raw `PlatformObject` (map-like, exposed in lib-base as `AnyObject` which extends `MapProxy<String, Any>`) and `PlatformList` (list-like, exposed as `ListProxy<T>`).
+- The JSON parser returns raw `PlatformObject` (map-like, exposed in lib-base as `PAnyMap` which extends `MapProxy<String, Any>`) and `PlatformList` (list-like, exposed as `ListProxy<T>`).
 - A **proxy** is a typed view over one of those. The runtime data is the raw platform value; the proxy is a thin facade that exposes typed getters and setters via delegated properties. Apply a proxy at runtime via `anyObject.proxy(MyProxy::class)`.
 - Proxies are **cached** by the underlying map: `obj.proxy(Foo::class) === obj.proxy(Foo::class)`. They are bound to the same map once and never unlinked.
 - Proxies are **not thread-safe**; only one thread accesses a given instance at a time.
 - An **enumeration** extends `naksha.base.JsEnum`. Values are registered statically through `def(...)` or `defIgnoreCase(...)`. They serialize as plain strings/ints in JSON.
 - Both flavors are `@JsExport`-ed because the same code runs on JVM and JS.
-- For every property, the canonical surface a caller can rely on is four methods: `has<Name>()`, `get<Name>()`, `set<Name>(value)`, `remove<Name>()`. Kotlin's `var name by DELEGATE` compiles to `getName`/`setName` automatically; `hasName`/`removeName` must be written explicitly. Generate all four for every property unless the user explicitly asks for a slimmer surface.
+- For every property, the canonical surface a caller can rely on is four methods: `has<Name>()`, `get<Name>()`, `set<Name>(value)`, `remove<Name>()`. Kotlin's `var name by DELEGATE` compiles to `id`/`id` automatically; `hasIdValue`/`removeId` must be written explicitly. Generate all four for every property unless the user explicitly asks for a slimmer surface.
 
 ## When NOT to use
 
@@ -38,7 +38,7 @@ Before generating anything, do these in order:
 
 ## Object proxy template
 
-A typed view over an `AnyObject` (= `MapProxy<String, Any>`). Use this 90% of the time.
+A typed view over an `PAnyMap` (= `MapProxy<String, Any>`). Use this 90% of the time.
 
 ```kotlin
 @file:Suppress("OPT_IN_USAGE")
@@ -162,7 +162,7 @@ open class <ClassName>() : ListProxy<<ElementType>>(<ElementType>::class) {
 }
 ```
 
-The `ListProxy` base already provides `size`, `add`, `addAll`, `set`, `removeAt`, `iterator`, etc.
+The `PTypedArray` base already provides `size`, `add`, `addAll`, `set`, `removeAt`, `iterator`, etc.
 
 ## Map proxy template
 
@@ -173,7 +173,7 @@ Only when the JSON key is not a `String` (rare). Use:
 open class <ClassName> : MapProxy<<KeyType>, <ValueType>>(<KeyType>::class, <ValueType>::class)
 ```
 
-For `Map<String, Any>` use `AnyObject` (defined as exactly that) and treat it as an object proxy.
+For `Map<String, Any>` use `PAnyMap` (defined as exactly that) and treat it as an object proxy.
 
 ## JsEnum template
 
@@ -243,7 +243,7 @@ A few legacy enums use one Kotlin subclass per constant (see `here-naksha-lib-ba
 4. **Companion delegates are `private val`** — never `internal` or public.
 5. **One delegate per property**. Sharing a single `STRING_NULL` delegate across multiple properties is fine *only* if their JSON key matches their Kotlin name and they share an initializer.
 6. **All public properties have KDoc** ending in `@since 3.0`. Use exactly `3.0` (two components) — that's what `NakshaCollection.kt` / `NakshaFeature.kt` and the rest of the model module use. A few older files use `3.0.0`; ignore them.
-7. **No constructor logic that reads properties** — proxies are usually instantiated by `<obj>.proxy(MyProxy::class)`, and the constructor runs against an empty `AnyObject`. Use delegate `init = { _, _ -> ... }` for defaults instead.
+7. **No constructor logic that reads properties** — proxies are usually instantiated by `<obj>.proxy(MyProxy::class)`, and the constructor runs against an empty `PAnyMap`. Use delegate `init = { _, _ -> ... }` for defaults instead.
 8. **`with<Prop>` returns `<ClassName>`**, not the base class. If the proxy extends another proxy that already has a `with<Prop>`, override with `as <ClassName>` cast (see `NakshaCollection.withId`).
 9. **Enums use `@JvmField`** on companion constants. Add `@JsStatic` only if JS callers need direct access (most don't — they go through `JsEnum.get`).
 10. **Validate the package compiles**: `nix develop --command bash -c 'cd naksha && gradle :here-naksha-lib-<module>:compileKotlinJvm 2>&1 | tail -30'` (the build script ignores `kotlin.compiler.execution.strategy` warnings).
@@ -264,6 +264,6 @@ Use these as exact references for the conventions, not as code to copy:
 - **Forgetting `@JsExport`** — JS callers can't see the class, but JVM still works, so this slips through unless you actually run the JS target.
 - **Putting initializer code in the constructor body** — for proxies, prefer the `init = { _, _ -> default }` lambda on the delegate. The constructor often runs in contexts (deserialization, `proxy()` cast) where reading other properties would yield defaults.
 - **Sharing one delegate across properties with different defaults** — if the values diverge later, the shared delegate produces wrong defaults silently. Keep one delegate per property unless they truly are identical.
-- **Using `kotlin.enum`** — the project uses `JsEnum`. A Kotlin `enum class` does not survive JSON round-tripping the way `JsEnum` does.
+- **Using `kotlin.enum`** — the project uses `BaseEnum`. A Kotlin `enum class` does not survive JSON round-tripping the way `BaseEnum` does.
 - **Adding `has<Name>()` / `remove<Name>()` for every property** — only add them when the property is genuinely optional in the wire format. Required properties don't need them; the delegate's default handles presence.
 - **Renaming a property without updating the JSON key** — if the property name was the JSON key, renaming silently breaks serialization. Either keep the old name as `name=` on the delegate, or include both in a deprecation cycle.

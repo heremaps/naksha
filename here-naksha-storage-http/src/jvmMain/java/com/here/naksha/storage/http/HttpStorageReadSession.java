@@ -21,12 +21,8 @@ package com.here.naksha.storage.http;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
 import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
-import naksha.model.IReadSession;
-import naksha.model.MemberProcessorMap;
-import naksha.model.IStorage;
-import naksha.model.NakshaContext;
+import naksha.model.*;
 import naksha.base.NakshaError;
-import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
@@ -131,17 +127,12 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
-    throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
-  @Override
   public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
     return null;
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
+  public @Nullable Tuple @NotNull [] loadTuples(@NotNull ITupleNumberArray tupleNumbers, boolean cacheOnly) {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 
@@ -157,12 +148,6 @@ public class HttpStorageReadSession implements IReadSession {
 
   @Override
   public @NotNull MemberProcessorMap getProcessors() {
-    throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
-  @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
-    // TODO: Technically, this translates into creating an ReadCollections query!
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 

@@ -18,9 +18,9 @@
  */
 package com.here.naksha.app.service.models;
 
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 
 /**
  * All classes that represent a valid response of any remote procedure to the XYZ Hub need to extend this class.
  */
-public abstract class XyzRequest extends AnyObject {}
+public abstract class XyzRequest extends PAnyMap {}

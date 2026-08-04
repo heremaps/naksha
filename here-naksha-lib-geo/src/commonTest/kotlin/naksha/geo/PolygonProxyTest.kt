@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.base.PlatformObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,9 +35,9 @@ class PolygonProxyTest {
         """.trimIndent()
 
         // when
-        val parsedJson = Platform.fromJSON(polygonJson)
+        val parsedJson = Base.fromJSON(polygonJson)
         assertIs<PlatformObject>(parsedJson)
-        val geometry = Platform.proxy(parsedJson, SpPolygon::class)
+        val geometry = Base.proxy(parsedJson, SpPolygon::class)
 
         // then
         assertEquals(SpType.Polygon.toString(), geometry.type)

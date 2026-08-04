@@ -397,9 +397,9 @@ The transaction logs are stored in the `naksha~transactions` table. Actually, th
 - The feature contains a `collections` map that is used to hold the amount of features modified.
 
 ### Dictionaries Table (`naksha~dictionaries`)
-This table stores dictionaries. It is managed by background jobs that auto-generate optimal dictionaries. The features stored in here will be bound to a collection using the property `collectionId`.
+This table stores dictionaries. It is managed by background jobs that auto-generate optimal dictionaries. The features stored in here will be bound to a collection using the property `catalogId`.
 
-The `collectionId` property is indexed and used to bind the entries in the table to specific collections. When a collection is deleted, all entries for this collections should be deleted as well, except a **truncate** is done. For the truncate use-case only the tables are dropped and re-created, but the dictionaries are left intact.
+The `catalogId` property is indexed and used to bind the entries in the table to specific collections. When a collection is deleted, all entries for this collections should be deleted as well, except a **truncate** is done. For the truncate use-case only the tables are dropped and re-created, but the dictionaries are left intact.
 
 The `type` of the feature in here is always `naksha.Dictionary`.
 

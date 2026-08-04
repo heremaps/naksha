@@ -18,12 +18,12 @@
  */
 package com.here.naksha.lib.core.models.indexing;
 
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.base.JvmListProxy;
 import naksha.base.JvmMapProxy;
 
 /** Base class of all possible constraints that can be combined. */
-public class Constraint extends AnyObject {
+public class Constraint extends PAnyMap {
 
   public static class ConstraintList extends JvmListProxy<Constraint> {
 

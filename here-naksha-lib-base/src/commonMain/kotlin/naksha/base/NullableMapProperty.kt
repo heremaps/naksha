@@ -43,7 +43,7 @@ import kotlin.reflect.KProperty
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NullableMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : MAP_VALUE_TYPE>(
+open class NullableMapProperty<MAP : PTypedMap<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : MAP_VALUE_TYPE>(
     val klass: KClass<out PROPERTY_TYPE>,
     val autoCreate: Boolean = false,
     val autoRemove: Boolean = false,

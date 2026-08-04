@@ -3,7 +3,7 @@
 package naksha.model.request.ops
 
 import naksha.base.IntList
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import naksha.geo.HereTile
 import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 import naksha.base.NakshaException
@@ -164,10 +164,10 @@ class QueryConverter private constructor() {
                     distance = transformation.distance,
                     geography = transformation.geography,
                     quadSegments = transformation.quadSegments,
-                    joinStyle = transformation.joinStyle?.value?.let { JsEnum.getDefined(it, SpJoinStyle::class) },
+                    joinStyle = transformation.joinStyle?.value?.let { BaseEnum.getDefined(it, SpJoinStyle::class) },
                     joinLimit = transformation.joinLimit,
-                    endCap = transformation.endCap?.value?.let { JsEnum.getDefined(it, SpEndCap::class) },
-                    side = transformation.side?.value?.let { JsEnum.getDefined(it, SpSide::class) }
+                    endCap = transformation.endCap?.value?.let { BaseEnum.getDefined(it, SpEndCap::class) },
+                    side = transformation.side?.value?.let { BaseEnum.getDefined(it, SpSide::class) }
                 )
                 else -> throw NakshaException(
                     UNSUPPORTED_OPERATION,

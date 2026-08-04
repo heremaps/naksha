@@ -20,7 +20,6 @@ package com.here.naksha.lib.handlers.util;
 
 import com.here.naksha.lib.core.models.ContextXyzFeatureResponse;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import naksha.base.JvmBoxingUtil;
 import naksha.base.Action;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
@@ -33,7 +32,6 @@ import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import naksha.model.request.Write;
 import naksha.model.request.WriteList;
-import naksha.model.request.WriteOp;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -41,7 +39,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
-import static naksha.base.Platform.proxy;
+import static naksha.base.Base.proxy;
 import static naksha.model.request.WriteOp.UPDATE;
 
 public final class HandlerUtil {
@@ -202,8 +200,8 @@ public final class HandlerUtil {
     final MomDeltaNs deltaNs = properties.useDeltaNamespace();
     // TODO: CASL- 1179 Discuss default value strategy: eager creation vs. lazy on-get.
     initializeDeltaDefaults(deltaNs);
-    deltaNs.setChangeState(MomChangeState.UPDATED.getText());
-    deltaNs.setReviewState(reviewState.getText());
+    deltaNs.setChangeState(MomChangeState.UPDATED.getString());
+    deltaNs.setReviewState(reviewState.getString());
     final @NotNull List<@NotNull String> tags = tagsWithoutReviewState(xyzNs.getTags());
     tags.add(REVIEW_STATE_PREFIX + reviewState);
     TagList tagList = requireNonNull(proxy(tags, TagList.class));

@@ -53,7 +53,7 @@ public final class OneShotFeaturesWriteExecutor implements FeaturesWriteExecutor
 
     private List<NakshaFeature> loadFeatures(FeatureTupleList featureTuples) {
         featureTuples.loadAll(0, featureTuples.size(), true, true);
-        return featureTuples.stream().map(FeatureTuple::getFeature).toList();
+        return featureTuples.stream().map(FeatureTuple::getCachedFeature).toList();
     }
 
     private void requireSuccessResponse(Response response) throws FeaturesWriteExecutorException {

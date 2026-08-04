@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaException
@@ -15,7 +15,7 @@ import kotlin.js.JsExport
  */
 @Suppress("unused")
 @JsExport
-class PgInstanceConfig : AnyObject() {
+class PgInstanceConfig : PAnyMap() {
     companion object PgInstanceConfig_C {
         internal const val DEFAULT_DB = "postgres"
         internal const val DEFAULT_USER = "postgres"

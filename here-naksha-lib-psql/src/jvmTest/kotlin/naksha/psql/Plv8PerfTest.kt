@@ -1,10 +1,9 @@
 package naksha.psql
 
 import naksha.base.JvmMap
-import naksha.base.Platform
-import naksha.base.PlatformUtil
-import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.base.Id
+import naksha.base.Base
+import naksha.base.BaseUtil
 import naksha.model.NakshaContext
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -14,10 +13,6 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -31,7 +26,9 @@ import kotlin.test.assertIs
 @Suppress("HasPlatformType", "MayBeConstant")
 class Plv8PerfTest : PgTestBase(
     NakshaCollection(
-        id = "",
+        id = Id(""),
+        catalogId = Id(""),
+        databaseId = Id(""),
         partitions = NUM_OF_PARTITIONS,
         storeHistory = StoreMode.ON,
         storeDeleted = StoreMode.ON
@@ -48,11 +45,11 @@ class Plv8PerfTest : PgTestBase(
 
         val jsonPath = Companion::class.java.getResource("/topology.json")
         val json = Files.readString(Paths.get(jsonPath.toURI()))
-        val topologyFeatureTemplate: NakshaFeature = (Platform.fromJSON(json) as JvmMap).proxy(NakshaFeature::class)
+        val topologyFeatureTemplate: NakshaFeature = (Base.fromJSON(json) as JvmMap).proxy(NakshaFeature::class)
 
         val smallJsonPath = Companion::class.java.getResource("/small_topology.json")
         val smallJson = Files.readString(Paths.get(smallJsonPath.toURI()))
-        val smallTopologyFeatureTemplate: NakshaFeature = (Platform.fromJSON(smallJson) as JvmMap).proxy(NakshaFeature::class)
+        val smallTopologyFeatureTemplate: NakshaFeature = (Base.fromJSON(smallJson) as JvmMap).proxy(NakshaFeature::class)
     }
 
     @Ignore
@@ -108,7 +105,7 @@ class Plv8PerfTest : PgTestBase(
         // Prepare
         val allFeatures = generateFeatures(featureSource, FEATURES_PER_BATCH * numberOfBatches)
         val groupedFeatures =
-            allFeatures.groupBy { "${partitionNumber(featureNumber(it.id)) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
+            allFeatures.groupBy { "${it.id.partitionIndex(NUM_OF_PARTITIONS)}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
 
         val batchRequests = mutableListOf<WriteRequest>()
         for (requestFeatures in groupedFeatures.values) {
@@ -137,10 +134,10 @@ class Plv8PerfTest : PgTestBase(
 
         // Prepare
         val allFeatures = generateFeatures(featureSource, FEATURES_PER_BATCH * numberOfBatches)
-        allFeatures[0].id = "A7l9RsIxWZCp2I6i3wXo" // fn=-6293233423437375615, pn=22401
-        allFeatures[1].id = "A6ixOLtAZF8IhKez25zY" // fn=-318328739946057960, pn=44824
+        allFeatures[0].id = Id("A7l9RsIxWZCp2I6i3wXo") // fn=-6293233423437375615, pn=22401
+        allFeatures[1].id = Id("A6ixOLtAZF8IhKez25zY") // fn=-318328739946057960, pn=44824
         val groupedFeatures =
-            allFeatures.groupBy { "${partitionNumber(featureNumber(it.id)) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
+            allFeatures.groupBy { "${it.id.partitionIndex(NUM_OF_PARTITIONS)}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
 
         val batchRequests = mutableListOf<WriteRequest>()
         for (requestFeatures in groupedFeatures.values) {
@@ -174,7 +171,7 @@ class Plv8PerfTest : PgTestBase(
             threadPool.submit {
                 context.attachToCurrentThread()
                 val innerStart = System.currentTimeMillis()
-                val response = executeWrite(batchRequest)
+                val response = executeWriteAndLoadTuples(batchRequest)
                 assertIs<SuccessResponse>(response)
                 val innerEnd = System.currentTimeMillis()
                 stats.add(Stats(Thread.currentThread().name, innerEnd - innerStart, batchRequest.writes.size))
@@ -195,7 +192,7 @@ class Plv8PerfTest : PgTestBase(
     private fun featureCopy(feature: NakshaFeature): NakshaFeature {
         // Deep copy: a shallow copy shares `properties`, which encode mutates (writes xyz.uuid).
         val copyF = feature.copy<NakshaFeature>(recursive = true)
-        copyF.id = PlatformUtil.randomString(20)
+        copyF.id = Id(BaseUtil.randomAtoZ(20))
         return copyF
     }
 

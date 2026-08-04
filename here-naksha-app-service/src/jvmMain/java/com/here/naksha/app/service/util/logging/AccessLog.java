@@ -24,7 +24,7 @@ import static naksha.base.JvmAnyObjectUtil.getProperty;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.model.StreamInfo;
 
 public class AccessLog extends AccessLogExtended {
@@ -141,7 +141,7 @@ public class AccessLog extends AccessLogExtended {
     }
   }
 
-  public static class ResponseInfo extends AnyObject {
+  public static class ResponseInfo extends PAnyMap {
 
     private static final String STATUS_CODE_KEY = "statusCode";
     private static final String STATUS_MSG_KEY = "statusMsg";
@@ -181,7 +181,7 @@ public class AccessLog extends AccessLogExtended {
     }
   }
 
-  public static class ClientInfo extends AnyObject {
+  public static class ClientInfo extends PAnyMap {
 
     private static final String REMOTE_ADDRESS_KEY = "remoteAddress";
     private static final String IP_KEY = "ip";
@@ -240,7 +240,7 @@ public class AccessLog extends AccessLogExtended {
   }
 }
 
-class AccessLogExtended extends AnyObject {
+class AccessLogExtended extends PAnyMap {
 
   private static DateTimeFormatter dtFormatter =
       DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss,SSS").withZone(ZoneId.of("UTC"));
@@ -320,7 +320,7 @@ class AccessLogExtended extends AnyObject {
   }
 }
 
-class RequestInfoExtended extends AnyObject {
+class RequestInfoExtended extends PAnyMap {
   private static final String CONTENT_TYPE_KEY = "contentType";
   private static final String ACCEPT_KEY = "accept";
 

@@ -88,7 +88,7 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.regex.Pattern;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.ToJsonOptions;
 import naksha.model.BinaryResponse;
 import naksha.model.NakshaContext;
@@ -463,7 +463,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         routingContext,
         mapErrorCodeToHttpStatus(nakshaError.getCode()),
         APPLICATION_JSON,
-        Buffer.buffer(Platform.toJSON(errorResponse, ToJsonOptions.DEFAULT)));
+        Buffer.buffer(Base.toJSON(errorResponse, ToJsonOptions.DEFAULT)));
     return errorResponse;
   }
 
@@ -533,7 +533,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
       } else {
         httpStatus = mapErrorCodeToHttpStatus(response.getErrorCode());
       }
-      sendRawResponse(routingContext, httpStatus, APPLICATION_JSON, Buffer.buffer(Platform.toJSON(response, ToJsonOptions.DEFAULT)));
+      sendRawResponse(routingContext, httpStatus, APPLICATION_JSON, Buffer.buffer(Base.toJSON(response, ToJsonOptions.DEFAULT)));
     } catch (Throwable t) {
       log.atError()
           .setMessage("Unexpected error while generating error response")
@@ -633,7 +633,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
             routingContext,
             mapErrorCodeToHttpStatus(er.getErrorCode()),
             APPLICATION_JSON,
-            Buffer.buffer(Platform.toJSON(er, ToJsonOptions.DEFAULT)));
+            Buffer.buffer(Base.toJSON(er, ToJsonOptions.DEFAULT)));
         return xyzResponse;
       }
       if (xyzResponse instanceof BinaryResponse br) {
@@ -651,7 +651,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
           sendEmptyResponse(routingContext, OK);
           return xyzResponse;
         } else {
-          final String content = Platform.toJSON(features.get(0), ToJsonOptions.DEFAULT);
+          final String content = Base.toJSON(features.get(0), ToJsonOptions.DEFAULT);
           sendRawResponse(routingContext, OK, responseType, Buffer.buffer(content));
           return xyzResponse;
         }
@@ -660,7 +660,7 @@ public final class NakshaHttpVerticle extends AbstractNakshaHubVerticle {
         sendEmptyResponse(routingContext, OK);
         return xyzResponse;
       }
-      sendRawResponse(routingContext, OK, responseType, Buffer.buffer(Platform.toJSON(xyzResponse, ToJsonOptions.DEFAULT)));
+      sendRawResponse(routingContext, OK, responseType, Buffer.buffer(Base.toJSON(xyzResponse, ToJsonOptions.DEFAULT)));
     } catch (Throwable t) {
       log.atError()
           .setMessage("Unexpected error while sending XYZ response")

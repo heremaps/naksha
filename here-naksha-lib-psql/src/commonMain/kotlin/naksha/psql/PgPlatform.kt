@@ -22,21 +22,6 @@ expect class PgPlatform {
         internal fun quote_ident(vararg parts: String): String?
 
         /**
-         * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions, and the rest addresses the partition, for example for 4 partitions do `partitionNumber(id) % 4`, what will be a value between 0 and 3.
-         *
-         * In PVL8 this is implemented using the native code as `get_byte(digest(id,'md5'),0)`, which is as well what the partitioning
-         * statement will do.
-         * @param featureId the feature id.
-         * @return the partition number of the feature, a value between 0 and 255.
-         */
-        @Deprecated(
-            message = "This function will be removed in a future release.",
-            replaceWith = ReplaceWith("Naksha.partitionNumber(Naksha.featureNumber(featureId))"),
-            level = DeprecationLevel.WARNING
-        )
-        fun partitionNumber(featureId: String): Int
-
-        /**
          * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).
          * @return _true_ if this code is executed within PostgresQL database using [PLV8 extension](https://plv8.github.io/).
          */

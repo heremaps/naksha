@@ -1,5 +1,6 @@
 package com.here.naksha.lib.core.models.features
 
+import naksha.base.Id
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.model.objects.NakshaFeature
@@ -19,7 +20,7 @@ class Extension() : NakshaFeature() {
     var env by STRING_NULL
 
     constructor(
-        id: String,
+        id: Id,
         url: String,
         version: String,
         initClassName: String?,

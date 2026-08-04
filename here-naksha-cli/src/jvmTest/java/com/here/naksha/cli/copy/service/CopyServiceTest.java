@@ -745,7 +745,7 @@ class CopyServiceTest {
         );
         return captor.getAllValues().stream()
                 .flatMap(Collection::stream)
-                .map(FeatureTuple::getFeature)
+                .map(FeatureTuple::getCachedFeature)
                 .toList();
     }
 

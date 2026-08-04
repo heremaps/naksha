@@ -41,7 +41,7 @@ public abstract class EventTarget<SELF extends EventTarget<SELF>> extends Naksha
   }
 
   public @NotNull SELF addHandler(@NotNull EventHandlerConfig handler) {
-    getEventHandlerIds().add(handler.getId());
+    getEventHandlerIds().add(handler.getId().getText());
     return self();
   }
 }

@@ -18,50 +18,64 @@
  */
 package com.here.naksha.lib.view;
 
-import java.util.List;
-import org.apache.commons.lang3.tuple.Pair;
+import naksha.base.Id;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Defines the strategy for missing feature in one of the layers. <br>
+ * Defines the strategy for missing feature in one of the layers.
  *
- * Consider this example:
- * Result from Storage A: [F_1, F_2, F_3, F_4]
- * Result from Storage B: [F_2, F_4]
- * Result from Storage C: [F_3, F_5] <br>
+ * <p>Consider this example:
+ * <li>Result from Storage A: [F_1, F_2, F_3, F_4]
+ * <li>Result from Storage B: [F_2, F_4]
+ * <li>Result from Storage C: [F_3, F_5]
  *
- * The feature F_1 is missing in results from storage B and C, by providing {@link MissingIdResolver} you can decide
- * what to do with it, you can decide to try to fetch F_1 by id or to ignore it. <br>
+ * <p>The feature {@code F_1} is missing in results from storage {@code B} and {@code C}. The implementation of {@link MissingIdResolver} will receive for example {@code F_1} with {@link ViewLayer} of storage {@code A} and should decide in which layers this feature should be searched.
  *
- * Here are couple examples of possible implementations:
- * 1. Ignore fetching more.
- * 2. Calculate missing features' IDs and try to fetch them by ID - good when your basic query is i.e. by Bbox
- * 3. Fetch only if feature is missing in specific Storage and query again only that Storage/layer.
+ * <p>Here are couple examples of possible implementations:
+ * <ol>
+ * <li>Ignore fetching more.
+ * <li>Calculate missing features' IDs and try to fetch them by ID - good when your basic query is i.e. by Bbox
+ * <li>Fetch only if feature is missing in specific Storage and query again only that Storage/layer.
+ * </ol>
  *
  * <b>Notice:</b> If your query is by IDs only, "fetch missing" query will be ignored regardless of {@link MissingIdResolver} implementation.
+ * @since 2.0
  */
 public interface MissingIdResolver {
 
   /**
    * True - turns off fetching missing features by ID.
-   *
-   * @return
+   * @since 2.0
    */
   boolean skip();
 
   /**
-   * Returns Pair<Layer,FEATURE_ID> that will be fetched in second query.
-   * As an input you get feature from layers where it was found, you can decide whether you want to query again (by ID) only
-   * specific layer or all where feature is missing. <br>
+   * Returns a map between {@link ViewLayer} and missing {@link Id}'s, indicating which identifiers should be fetched from which layer in a second query.
    *
-   * You can also implement your own way of ID calculation (for fetching) - maybe your json contains information about previous id:
-   * { "id": "2345", "old_id": "11223" }
-   * in this case you can try fetching by "old_id"
-   *
-   * @param multipleResults
-   * @return
+   * @param multipleResults a list of view features, all with the same {@link Id}.
+   * @return a map between layer and the {@link Id}'s that are missing in it, <b>and</b> which should be loaded.
+   * @since 2.0
    */
-  @Nullable
-  List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerFeature> multipleResults);
+  @Nullable MissingIdsByLayer layersToSearch(@NotNull ViewLayerFeatureStack multipleResults);
+
+  /**
+   * Returns a map between {@link ViewLayer} and missing {@link Id}'s, indicating which identifiers should be fetched from which layer in a second query.
+   * @param resultSet the whole result-set of the view.
+   * @since 3.0
+   */
+  default @NotNull MissingIdsByLayer getAllMissingIdsByLayer(@NotNull ViewLayerFeaturesById resultSet) {
+    final var result = new MissingIdsByLayer();
+    for (final var entry : resultSet.entrySet()) {
+      final ViewLayerFeatureStack features = entry.getValue();
+      final MissingIdsByLayer missingIdsByLayer = layersToSearch(features);
+      if (missingIdsByLayer == null) continue;
+      for (final var e : missingIdsByLayer.entrySet()) {
+        final ViewLayer layer = e.getKey();
+        final MissingIds missingIds = e.getValue();
+        result.getOrCreate(layer).addAllIfAbsent(missingIds);
+      }
+    }
+    return result;
+  }
 }

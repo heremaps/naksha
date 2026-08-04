@@ -6,25 +6,21 @@ import naksha.model.request.ReadCollections
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class ReadCollectionsTest : PgTestBase(collection = NakshaCollection(
-    id = "",
-    partitions = 2,
-    storeDeleted = ON,
-    storeHistory = ON,
-    storeMeta = ON,
-)) {
+class ReadCollectionsTest : PgTestBase(collection = NakshaCollection()
+    .withPartitions(2)
+    .withStoreDeleted(ON)
+    .withStoreHistory(ON)
+    .withStoreMeta(ON)
+) {
 
     @Test
     fun shouldReadCollectionMeta() {
         // When
-        val retrievedCollectionMeta = executeRead(ReadCollections().apply {
-            mapId = catalog.id
-            collectionIds += collection.id
-        })
+        val retrievedCollectionMeta = executeReadAndLoadTuple(ReadCollections(catalog).readCollection(collection.id))
 
         // Then
-        assertEquals(1, retrievedCollectionMeta.features.size)
-        val collectionFeature = retrievedCollectionMeta.features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(1, retrievedCollectionMeta.asFeatures.size)
+        val collectionFeature = retrievedCollectionMeta.asFeatures[0]!!.proxy(NakshaCollection::class)
         assertEquals(collection.id, collectionFeature.id)
         assertEquals(collection.partitions, collectionFeature.partitions)
         assertEquals(collection.storeDeleted, collectionFeature.storeDeleted)

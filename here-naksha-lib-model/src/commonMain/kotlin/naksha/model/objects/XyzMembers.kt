@@ -2,6 +2,15 @@
 
 package naksha.model.objects
 
+import naksha.model.objects.StandardMembers.StandardMembers_C.ChangeCountMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytesMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureTypeMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.GeometryMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.OriginMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.TnMember
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
@@ -21,39 +30,39 @@ class XyzMembers private constructor() {
         // -------------------------------------------------------------------------
 
         /**
-         * The same as [StandardMembers.Tn], but with a Data-Hub compatible path.
+         * The same as [StandardMembers.TnMember], but with a Data-Hub compatible path.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzTn = TupleNumberMember(StandardMembers.Tn, JsonPath("properties", "@ns:com:here:xyz", "uuid"))
+        val XyzTn = TupleNumberMember(TnMember, JsonPath("properties", "@ns:com:here:xyz", "uuid"))
 
         /**
-         * The same as [StandardMembers.NextVersion], but with a Data-Hub compatible path.
+         * The same as [StandardMembers.NextVersionMember], but with a Data-Hub compatible path.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzNextVersion = Int64Member(StandardMembers.NextVersion, JsonPath("properties", "@ns:com:here:xyz", "nextVersion"))
+        val XyzNextVersion = Int64Member(NextVersionMember, JsonPath("properties", "@ns:com:here:xyz", "nextVersion"))
 
         /**
          * The same as [StandardMembers.GlobalBookFeatureNumber], but with a Data-Hub compatible path.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzGlobalBookFeatureNumber = Int64Member(StandardMembers.GlobalBookFeatureNumber, JsonPath("properties", "@ns:com:here:xyz", "globalBookFn"))
+        val XyzGlobalBookFeatureNumber = Int64Member(GlobalBookFeatureNumber, JsonPath("properties", "@ns:com:here:xyz", "globalBookFn"))
 
         /**
-         * The same as [StandardMembers.FeatureBytes].
+         * The same as [StandardMembers.FeatureBytesMember].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeatureBytes = ByteArrayMember(StandardMembers.FeatureBytes, JsonPath()).withMandatory().withVirtual()
+        val XyzFeatureBytes = ByteArrayMember(FeatureBytesMember, JsonPath()).withMandatory().withVirtual()
 
         /**
-         * The same as [StandardMembers.FeatureBytes].
+         * The same as [StandardMembers.IdMember].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzId = StringMember(StandardMembers.Id, JsonPath("id"))
+        val XyzId = StringMember(IdMember, JsonPath("id"))
 
         // -------------------------------------------------------------------------
         // Optional members.
@@ -65,7 +74,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzGeometry = SpatialMember(StandardMembers.Geometry, JsonPath("geometry"))
+        val XyzGeometry = SpatialMember(GeometryMember, JsonPath("geometry"))
 
         /**
          * `updated_at` — millisecond epoch timestamp of the last modification. Default member.
@@ -111,7 +120,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzChangeCount = Int32Member(StandardMembers.ChangeCount, JsonPath("properties", "@ns:com:here:xyz", "changeCount"))
+        val XyzChangeCount = Int32Member(ChangeCountMember, JsonPath("properties", "@ns:com:here:xyz", "changeCount"))
 
         /**
          * `base_tn` — base tuple-number (`BYTE_ARRAY`), set when a three-way merge was performed.
@@ -141,7 +150,7 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzOrigin = StringMember(StandardMembers.Origin, JsonPath("properties", "@ns:com:here:xyz", "origin"))
+        val XyzOrigin = StringMember(OriginMember, JsonPath("properties", "@ns:com:here:xyz", "origin"))
 
         /**
          * `target` — stringified reference to the feature into which this feature was joined.
@@ -153,12 +162,12 @@ class XyzMembers private constructor() {
 
         /**
          * `ft` — feature-type string. `null` when it matches the collection's
-         * [default feature type][NakshaCollection.defaultFeatureType], avoiding redundant storage.
+         * [default feature type][NakshaCollection.typeDefaultValue], avoiding redundant storage.
          * Default member.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeatureType = StringMember("ft", JsonPath("properties", "featureType"))
+        val XyzFeatureType = StringMember(FeatureTypeMember, JsonPath("properties", "featureType"))
 
         /**
          * `cv0` — custom numeric value 0 (`FLOAT64`). `null` if not used. Default member.

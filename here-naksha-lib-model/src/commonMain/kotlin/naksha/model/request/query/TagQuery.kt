@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import kotlin.js.JsExport
 
@@ -24,7 +24,7 @@ import kotlin.js.JsExport
  * @see TagValueMatches
  */
 @JsExport
-open class TagQuery internal constructor(): AnyObject(), ITagQuery {
+open class TagQuery internal constructor(): PAnyMap(), ITagQuery {
 
     companion object TagQuery_C {
         private val STRING = NotNullProperty<TagQuery, String>(String::class) { _,_ -> "" }

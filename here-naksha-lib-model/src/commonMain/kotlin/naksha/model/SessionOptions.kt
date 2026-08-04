@@ -2,24 +2,30 @@
 
 package naksha.model
 
+import naksha.base.Id
+import naksha.base.Int64
 import naksha.base.fn.Fn3
-import naksha.model.SessionOptions.SessionOptions_C.from
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
-import kotlin.js.JsName
-import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
-import kotlin.jvm.JvmStatic
 
 /**
  * Options when acquiring a new session.
  *
- * @constructor Creates a new session, if a default should be created, simply use [from], example `SessionOptions.from(null)`, which will create session options using the defaults setup in the current [NakshaContext] (this is the right thing to do, in most of the cases, and matches the default values in the Kotlin constructor).
+ * @constructor Creates new session options with explicit values.
  * @since 3.0
+ * @see SessionOptionsBuilder
  */
 @JsExport
 data class SessionOptions @JvmOverloads constructor(
+    /**
+     * The `id` of the database to which this session options are bound.
+     * @since 3.0
+     */
+    @JvmField
+    val databaseId: Id,
+
     /**
      * An arbitrary name used to identify this session in debug logs and monitoring tools.
      * @since 3.0
@@ -158,49 +164,5 @@ data class SessionOptions @JvmOverloads constructor(
            stmtTimeout = stmtTimeout ?: this.stmtTimeout,
            lockTimeout = lockTimeout ?: this.lockTimeout,
        )
-    }
-
-    companion object SessionOptions_C {
-        /**
-         * Helper for JavaScript and Java to create a new default instance without providing too many arguments.
-         * @param context the context, if being _null_, then [NakshaContext.currentContext] is called.
-         * @param authToken the authentication-token to use, if any.
-         * @param useMaster _true_ if the master node should be used forcefully (if supported by the storage); only necessary in rare situations, generally the default _false_ is recommended.
-         * @param logLevel if logging should be enabled.
-         * @return the session options.
-         */
-        @JvmStatic
-        @JsStatic
-        @JvmOverloads
-        fun from(
-            context: NakshaContext?,
-            authToken: String? = null,
-            useMaster: Boolean = false,
-            logLevel: String? = Naksha.DEFAULT_SESSION_LOG_LEVEL
-        ): SessionOptions {
-            val c = context ?: NakshaContext.currentContext()
-            return SessionOptions(
-                appName = c.appName,
-                appId = c.appId,
-                author = c.author,
-                excludePaths = c.excludePaths,
-                excludeFn = c.excludeFn,
-                connectTimeout = c.connectTimeout,
-                socketTimeout = c.socketTimeout,
-                stmtTimeout = c.stmtTimeout,
-                lockTimeout = c.lockTimeout,
-                useMaster = useMaster,
-                streamInfo = c.streamInfo,
-                authToken = authToken,
-                logLevel = logLevel
-            )
-        }
-
-        @JvmStatic
-        @JsStatic
-        @JsName("fromWithNullToken")
-        fun from(context: NakshaContext, useMaster: Boolean): SessionOptions {
-            return from(context, null, useMaster)
-        }
     }
 }

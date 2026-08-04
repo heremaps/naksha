@@ -21,9 +21,9 @@ package com.here.naksha.storage.http;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import kotlin.reflect.KClass;
-import naksha.base.Int64;
+import naksha.base.Id;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
@@ -35,13 +35,16 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static java.util.Objects.requireNonNull;
+
 
 public class HttpStorage extends AbstractStorage<NakshaStorage> {
 
-  private  KeyProperties defaultKeyProperties;
+  private Id storageId;
+  private KeyProperties defaultKeyProperties;
 
-  private  NakshaStorage storageConfig;
-  private  HttpStorageProperties httpStorageProperties;
+  private NakshaStorage storageConfig;
+  private HttpStorageProperties httpStorageProperties;
 
   public HttpStorage() {
 
@@ -62,7 +65,8 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
     if (httpStorageProperties == null || httpStorageProperties.getUrl() == null) {
       throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
     }
-    this.defaultKeyProperties = KeyProperties.fromHttpStorageProperties(config.getId(), httpStorageProperties);
+    this.storageId = config.getId();
+    this.defaultKeyProperties = KeyProperties.fromHttpStorageProperties(storageId.getText(), httpStorageProperties);
   }
 
   @NotNull
@@ -75,7 +79,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
 
     final RequestSender requestSender = RequestSenderCache.getInstance()
             .getSenderWith(new KeyProperties(
-                    getId(),
+                    getId().getText(),
                     defaultKeyProperties.getHostUrl(),
                     defaultKeyProperties.getDefaultHeaders(),
                     defaultKeyProperties.getConnectionTimeoutSec(),
@@ -95,7 +99,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
 
     final RequestSender requestSender = RequestSenderCache.getInstance()
             .getSenderWith(new KeyProperties(
-                    getId(),
+                    getId().getText(),
                     defaultKeyProperties.getHostUrl(),
                     defaultKeyProperties.getDefaultHeaders(),
                     defaultKeyProperties.getConnectionTimeoutSec(),
@@ -105,19 +109,13 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
     return new HttpStorageWriteSession(NakshaContext.currentContext(), requestSender, httpStorageProperties.getProtocol());
   }
 
-  @NotNull
   @Override
-  public String getId() {
-    return defaultKeyProperties.getName();
+  public @NotNull Id getId() {
+    return requireNonNull( storageId );
   }
 
   @Override
   public int getHardCap() {
-    throw new NotImplementedException("Not supported by HTTP storage");
-  }
-
-  @Override
-  public @NotNull Int64 getNumber() {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 
@@ -147,6 +145,6 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
 
   @Override
   public @NotNull KClass<NakshaStorage> getConfigKlass() {
-    return Platform.klassFor(NakshaStorage.class);
+    return Base.klassFor(NakshaStorage.class);
   }
 }

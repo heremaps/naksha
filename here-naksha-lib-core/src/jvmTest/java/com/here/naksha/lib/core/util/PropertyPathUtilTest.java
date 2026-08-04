@@ -2,7 +2,7 @@ package com.here.naksha.lib.core.util;
 
 import com.here.naksha.lib.core.common.TestUtil;
 import naksha.base.JvmJsonUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.ToJsonOptions;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -141,7 +141,7 @@ class PropertyPathUtilTest {
 
         // Then: validate output Json content matches the expectations
         assertNotNull(newF);
-        final String actualJsonData = Platform.toJSON(newF, ToJsonOptions.DEFAULT);
+        final String actualJsonData = Base.toJSON(newF, ToJsonOptions.DEFAULT);
         JSONAssert.assertEquals("Extracted property map doesn't match", expectedJsonData, actualJsonData, JSONCompareMode.STRICT);
     }
 

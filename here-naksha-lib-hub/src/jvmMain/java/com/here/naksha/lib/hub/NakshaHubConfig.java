@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.hub;
 
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -309,7 +309,7 @@ public final class NakshaHubConfig extends NakshaFeature {
    * Optional storage-specific parameters
    */
   public Map<String, Object> getStorageParams() {
-    return getProperty(this, STORAGE_PARAMS, AnyObject.class);
+    return getProperty(this, STORAGE_PARAMS, PAnyMap.class);
   }
 
   /**

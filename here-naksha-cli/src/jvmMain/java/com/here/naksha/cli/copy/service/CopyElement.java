@@ -1,13 +1,30 @@
 package com.here.naksha.cli.copy.service;
 
+import naksha.model.objects.NakshaCatalog;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaStorage;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.NakshaExceptionKt.illegalArg;
+import static naksha.base.NakshaExceptionKt.illegalState;
+
 public final class CopyElement {
-    private final NakshaStorage nakshaStorage;
-    private final String mapId;
-    private final String collectionId;
+    private final @NotNull NakshaStorage nakshaStorage;
+    private final @NotNull String mapId;
+    private final @NotNull String collectionId;
+    NakshaCatalog catalog;
+    NakshaCollection collection;
+
+    public @NotNull NakshaCatalog catalog() {
+      if (catalog == null) throw illegalState("The target has no catalog");
+      return catalog;
+    }
+
+    public @NotNull NakshaCollection collection() {
+      if (collection == null) throw illegalState("The target has no collection");
+      return collection;
+    }
 
     @Override
     public String toString() {
@@ -23,35 +40,28 @@ public final class CopyElement {
         return nakshaStorage;
     }
 
-    @Nullable
+    @NotNull
     public String getMapId() {
         return mapId;
     }
 
-    @Nullable
+    @NotNull
     public String getCollectionId() {
         return collectionId;
     }
 
     public static final class Builder {
-        @NotNull
-        private final NakshaStorage nakshaStorage;
-        @Nullable
-        private String mapId;
-        @Nullable
-        private String collectionId;
+        private final @NotNull NakshaStorage nakshaStorage;
+        private @Nullable String mapId;
+        private @Nullable String collectionId;
 
-        public Builder(
-                @NotNull NakshaStorage nakshaStorage
-        ) {
+        public Builder(@NotNull NakshaStorage nakshaStorage) {
             this.nakshaStorage = nakshaStorage;
         }
 
         @NotNull
         public CopyElement build() {
-            return new CopyElement(
-                    this
-            );
+            return new CopyElement(this);
         }
 
         @NotNull
@@ -67,11 +77,13 @@ public final class CopyElement {
         }
     }
 
-    private CopyElement(
-            Builder builder
-    ) {
+    private CopyElement(@NotNull Builder builder) {
         this.nakshaStorage = builder.nakshaStorage;
-        this.collectionId = builder.collectionId;
-        this.mapId = builder.mapId;
+        final var mapId = builder.mapId;
+        if (mapId == null) throw illegalArg("The builder has no map-id");
+        final var collectionId = builder.collectionId;
+        if (collectionId == null) throw illegalArg("The builder has no collection-id");
+        this.mapId = mapId;
+        this.collectionId = collectionId;
     }
 }

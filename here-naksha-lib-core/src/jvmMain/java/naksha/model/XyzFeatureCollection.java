@@ -22,12 +22,8 @@ import static java.util.stream.Collectors.toList;
 
 import com.here.naksha.lib.core.models.payload.XyzResponse;
 import java.util.List;
-import naksha.base.AnyObject;
-import naksha.base.JvmListProxy;
-import naksha.base.JvmPropertyUtil;
-import naksha.base.NotNullProperty;
-import naksha.base.NullableProperty;
-import naksha.base.StringList;
+
+import naksha.base.*;
 import naksha.geo.SpBoundingBox;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -399,21 +395,21 @@ public class XyzFeatureCollection extends XyzResponse {
   public @NotNull XyzFeatureCollection withInsertedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> insertedFeatures) {
     getFeatures().addAll(insertedFeatures); // append features
-    setInserted(insertedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite inserted
+    setInserted(insertedFeatures.stream().map(NakshaFeature::getId).map(Id::getText).collect(toList())); // overwrite inserted
     return this;
   }
 
   public @NotNull XyzFeatureCollection withUpdatedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> updatedFeatures) {
     getFeatures().addAll(updatedFeatures); // append features
-    setUpdated(updatedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite updated
+    setUpdated(updatedFeatures.stream().map(NakshaFeature::getId).map(Id::getText).collect(toList())); // overwrite updated
     return this;
   }
 
   public @NotNull XyzFeatureCollection withDeletedFeatures(
       final @NotNull List<? extends @NotNull NakshaFeature> deletedFeatures) {
     getFeatures().addAll(deletedFeatures); // append features
-    setDeleted(deletedFeatures.stream().map(NakshaFeature::getId).collect(toList())); // overwrite deleted
+    setDeleted(deletedFeatures.stream().map(NakshaFeature::getId).map(Id::getText).collect(toList())); // overwrite deleted
     return this;
   }
 
@@ -460,7 +456,7 @@ public class XyzFeatureCollection extends XyzResponse {
     }
   }
 
-  public static class ModificationFailure extends AnyObject {
+  public static class ModificationFailure extends PAnyMap {
 
     private String id;
     private Long position;

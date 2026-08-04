@@ -2,7 +2,7 @@
 
 package naksha.model.objects
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
@@ -12,7 +12,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-open class IndexList() : ListProxy<Index>(Index::class) {
+open class IndexList() : PTypedArray<Index>(Index::class) {
 
     /**
      * Construct a list from a vararg of indexes.

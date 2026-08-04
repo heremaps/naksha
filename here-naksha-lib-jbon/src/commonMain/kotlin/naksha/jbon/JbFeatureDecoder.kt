@@ -1,7 +1,7 @@
 package naksha.jbon
 
-import naksha.base.AnyObject
-import naksha.base.Platform
+import naksha.base.PAnyMap
+import naksha.base.Base
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 
@@ -38,7 +38,7 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
      * Decode the feature into a map.
      * @return the map.
      */
-    open fun toAnyObject(): AnyObject {
+    open fun toAnyObject(): PAnyMap {
         val feature = root().toAnyObject()
         val id = id()
         if (id != null && "id" !in feature) feature.setRaw("id", id)
@@ -63,11 +63,11 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
      * Reads the value using the given path.
      *
      * @param path the path to select, strings are used to enter maps, integers are used to select from arrays.
-     * @return either the value read from the path or [naksha.base.Platform.UNDEFINED], when the path does not exist.
+     * @return either the value read from the path or [naksha.base.BaseCompanion.UNDEFINED], when the path does not exist.
      */
     open operator fun get(vararg path: Any): Any? {
         reset() // Move the reader to the root-map.
-        if (!_selectPath(reader, 0, path)) return Platform.UNDEFINED
+        if (!_selectPath(reader, 0, path)) return Base.UNDEFINED
         return reader.decodeValue()
     }
 
@@ -75,7 +75,7 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
      * Reads the value using the given path.
      *
      * @param path the path to select (`properties.test`), strings are used to enter maps, integers are used to select from arrays.
-     * @return either the value read from the path or [naksha.base.Platform.UNDEFINED], when the path does not exist.
+     * @return either the value read from the path or [naksha.base.BaseCompanion.UNDEFINED], when the path does not exist.
      */
     open fun getJsonPath(path: String): Any? = get(*splitJsonPath(path))
 
@@ -141,7 +141,7 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
      * Returns the feature as arbitrary map.
      * @return the feature as map.
      */
-    fun toMap(): AnyObject {
+    fun toMap(): PAnyMap {
         val feature = _map.toAnyObject()
         if (id() != null && "id" !in feature) feature.setRaw("id", id())
         return feature
@@ -153,5 +153,5 @@ open class JbFeatureDecoder(dictReader: IDictReader? = null) : JbRecordDecoder(d
      * @return the feature as T.
      */
     @Suppress("NON_EXPORTABLE_TYPE")
-    fun <T: AnyObject> proxy(klass: KClass<T>): T = toMap().proxy(klass)
+    fun <T: PAnyMap> proxy(klass: KClass<T>): T = toMap().proxy(klass)
 }

@@ -6,11 +6,9 @@ import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
-import naksha.base.Int64;
-import naksha.base.Platform;
+import naksha.base.*;
+import naksha.geo.SpFeature;
 import naksha.model.NakshaContext;
-import naksha.base.NakshaError;
-import naksha.base.NakshaException;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -41,7 +39,7 @@ public class ConnectorInterfaceWriteExecute {
     private final WriteRequest request;
     private final RequestSender sender;
     private final String endpoint;
-    private final Map<String, NakshaFeature> databaseFeaturesCache = new HashMap<>();
+    private final Map<Id, NakshaFeature> databaseFeaturesCache = new HashMap<>();
 
     public ConnectorInterfaceWriteExecute(NakshaContext context, WriteRequest request, RequestSender sender) {
         this.context = context;
@@ -97,13 +95,13 @@ public class ConnectorInterfaceWriteExecute {
                 // but in reality, doesn't matter what is the value
                 // and map with null is ignored by JsonSerializable.serialize(),
                 // so empty string is used instead.
-                featuresToDelete.put(write.getId(), "");
+                featuresToDelete.put(write.getId().getText(), "");
             } else {
                 throw new UnsupportedOperationException("Unsupported feature OP: " + write.getOp());
             }
         }
 
-        Int64 currentTime = Platform.currentMillis();
+        Int64 currentTime = Base.currentMillis();
         featuresToInsert.forEach(feature -> {
             assertNoUuid(feature);
             setRandomUuid(feature);
@@ -131,19 +129,21 @@ public class ConnectorInterfaceWriteExecute {
      */
     private void populateDbCache(WriteList writes) {
         List<String> idsList = writes.stream()
-                .filter(feature -> feature.getOp().equals(WriteOp.CREATE) || feature.getOp().equals(WriteOp.UPDATE) || feature.getOp().equals(WriteOp.UPSERT))
-                .map(feature -> feature.getFeature().getId())
+                .filter(write -> write.getOp() == WriteOp.CREATE || write.getOp() == WriteOp.UPDATE || write.getOp() == WriteOp.UPSERT)
+                .map(Write::getFeature)
+                .filter(Objects::nonNull)
+                .map(SpFeature::getId)
+                .map(Id::getText)
                 .collect(Collectors.toList());
         NakshaFeatureList nakshaFeatureList = getFeaturesFromDataHub(idsList);
         for (NakshaFeature nakshaFeature : nakshaFeatureList.asList()) {
-            databaseFeaturesCache.put(nakshaFeature.getId(), nakshaFeature);
+            if (nakshaFeature != null) databaseFeaturesCache.put(nakshaFeature.getId(), nakshaFeature);
         }
     }
 
     private void assertNoUuid(NakshaFeature feature) {
-        String id = feature.getId();
         if (feature.getProperties().getXyz().getUuid() != null) {
-            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,"The feature with id " + id + " cannot be created. "
+            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,"The feature with id " + feature.getId() + " cannot be created. "
                     + "Property UUID should not be provided as input.");
         }
     }
@@ -196,7 +196,7 @@ public class ConnectorInterfaceWriteExecute {
         Response response = ConnectorInterfaceReadExecute.execute(context, getFeaturesRequest, sender);
         if (response instanceof SuccessResponse) {
             SuccessResponse successResponse = (SuccessResponse) response;
-            return successResponse.getFeatures();
+            return successResponse.getAsFeatures();
         } else if (response instanceof ErrorResponse) {
             ErrorResponse errorResponse = (ErrorResponse) response;
             throw new NakshaException(errorResponse.getError());
@@ -205,8 +205,8 @@ public class ConnectorInterfaceWriteExecute {
         }
     }
 
-    private String singleCollectionIdFrom(WriteRequest writeRequest) {
-        List<String> distinctCollectionIds = writeRequest.getWrites().stream()
+    private Id singleCollectionIdFrom(WriteRequest writeRequest) {
+        List<Id> distinctCollectionIds = writeRequest.getWrites().stream()
                 .map(Write::getCollectionId)
                 .distinct()
                 .collect(Collectors.toList());

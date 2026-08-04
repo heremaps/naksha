@@ -1,7 +1,7 @@
 package naksha.psql
 
-import naksha.base.AnyObject
-import naksha.base.Platform
+import naksha.base.PAnyMap
+import naksha.base.Base
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.reflect.KClass
@@ -87,7 +87,7 @@ interface PgCursor : AutoCloseable {
      */
     fun <T : Any> columnOr(name: String, alternative: T): T {
         val v = column(name)
-        val klass = Platform.klassOf(alternative)
+        val klass = Base.klassOf(alternative)
         @Suppress("UNCHECKED_CAST")
         return if (klass.isInstance(v)) v as T else alternative
     }
@@ -111,7 +111,7 @@ interface PgCursor : AutoCloseable {
      * @return the proxy about the row.
      * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
      */
-    fun <T : AnyObject> map(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
+    fun <T : PAnyMap> map(@Suppress("NON_EXPORTABLE_TYPE") klass: KClass<T>): T
 
     /**
      * Closes the cursor.

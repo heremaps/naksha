@@ -1,12 +1,12 @@
 package com.here.naksha.lib.core.models
 
 import com.here.naksha.lib.core.models.features.Extension
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
 
-class ExtensionConfig() : AnyObject() {
+class ExtensionConfig() : PAnyMap() {
     companion object {
         private val EXTENSIONS_NULL = NullableProperty<ExtensionConfig, ExtensionList>(ExtensionList::class)
         private val WHITELIST_DELEGATE_CLASSES_NULL = NullableProperty<ExtensionConfig, StringList>(StringList::class)

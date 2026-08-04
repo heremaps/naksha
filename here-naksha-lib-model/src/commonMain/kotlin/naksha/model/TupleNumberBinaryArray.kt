@@ -2,71 +2,38 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.base.Platform
-import naksha.base.PlatformDataView
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
+import naksha.base.Id
+import naksha.base.Base
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
-import naksha.model.request.FeatureTupleList
+import naksha.base.getInt32Be
+import naksha.base.getInt64Be
 import kotlin.js.JsExport
-import kotlin.js.JsName
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
-import kotlin.jvm.JvmStatic
 
 /**
  * A helper that allows reading a binary encoded array of [naksha.base.TupleNumber]'s.
  *
- * This binary can be serialized technically, but just using the [Platform.toJSON][naksha.base.Platform.toJSON] method, because it requires a binary encoding, which means serialization and deserialization into a [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data), which is normally not supported out of the box by standard JSON parsers/serializers, it is a proprietary extension to the JSON standard, the same way that 64-bit integers are handled as special [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data) by [Platform.toJSON][naksha.base.Platform.toJSON].
+ * This binary can be serialized technically, but just using the [Platform.toJSON][naksha.base.BaseCompanion.toJSON] method, because it requires a binary encoding, which means serialization and deserialization into a [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data), which is normally not supported out of the box by standard JSON parsers/serializers, it is a proprietary extension to the JSON standard, the same way that 64-bit integers are handled as special [Data URL](https://developer.mozilla.org/en-US/docs/Web/URI/Reference/Schemes/data) by [Platform.toJSON][naksha.base.BaseCompanion.toJSON].
  *
  * @since 3.0
  */
 @JsExport
 data class TupleNumberBinaryArray(
     /**
-     * The binary, uncompressed byte-array.
-     * @see [fromGzip]
-     * @see [fromByteArray]
-     * @since 3.0
-     */
-    @JvmField val view: PlatformDataView
-) : List<TupleNumber?> {
-    /**
-     * Create from mapping the given byte-array into a view.
-     * @param bytes the byte-array to map.
-     * @since 3.0
-     */
-    @JsName("ofByteArray")
-    constructor(bytes: ByteArray) : this(Platform.newDataView(bytes))
-
-    /**
-     * Create from mapping the given byte-array into a view.
-     * @param bytes the byte-array to map.
-     * @param from the index of the first byte to map.
-     * @param to the index of the first byte **not** to map _(end, exclusive)_.
-     * @since 3.0
-     */
-    @JsName("fromByteArray")
-    constructor(bytes: ByteArray, from:Int = 0, to:Int = bytes.size) : this(Platform.newDataView(bytes, from, to - from))
-
-    /**
      * The underlying byte-array.
      * @since 3.0
      */
     val bytes: ByteArray
-        get() = dataview_get_byte_array(view)
+) : List<TupleNumber?> {
 
-    private val length: Int = BinaryUtil.getLength(view)
+    private val length: Int = BinaryUtil.getLength(bytes)
     private val contentOffset: Int
-    private val sharedStorageNumber: Int64?
+    private val sharedStorageNumber: Long?
     private val sharedMapNumber: Int?
     private val sharedCollectionNumber: Int?
-    private val sharedFeatureNumber: Int64?
+    private val sharedFeatureNumber: Long?
     private val entrySize: Int
     private val dataOffset: Int
     private val storageNumberOffset: Int
@@ -75,9 +42,9 @@ data class TupleNumberBinaryArray(
     private val featureNumberOffset: Int
     private val txnOffset: Int
     init {
-        when (val subtype = BinaryUtil.getSubType(view)) {
+        when (val subtype = BinaryUtil.getSubType(bytes)) {
             0 -> { // 256-bit (storage-number, map-number, collection-number, feature-number, txn)
-                contentOffset = BinaryUtil.getContentOffset(view)
+                contentOffset = BinaryUtil.getContentOffset(bytes)
                 storageNumberOffset = 0
                 mapNumberOffset = 8
                 collectionNumberOffset = 12
@@ -91,59 +58,59 @@ data class TupleNumberBinaryArray(
                 dataOffset = contentOffset
             }
             1 -> { // 192-bit (map-number, collection-number, feature-number, txn)
-                contentOffset = BinaryUtil.getContentOffset(view)
+                contentOffset = BinaryUtil.getContentOffset(bytes)
                 storageNumberOffset = -1
                 mapNumberOffset = 0
                 collectionNumberOffset = 4
                 featureNumberOffset = 12
                 txnOffset = 20
                 entrySize = 24
-                sharedStorageNumber = dataview_get_int64(view, contentOffset)
+                sharedStorageNumber = bytes.getInt64Be(contentOffset)
                 sharedMapNumber = null
                 sharedCollectionNumber = null
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 8
             }
             2 -> { // 160-bit (collection-number, feature-number, txn)
-                contentOffset = BinaryUtil.getContentOffset(view)
+                contentOffset = BinaryUtil.getContentOffset(bytes)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = 0
                 featureNumberOffset = 4
                 txnOffset = 12
                 entrySize = 20
-                sharedStorageNumber = dataview_get_int64(view, contentOffset)
-                sharedMapNumber = dataview_get_int32(view, contentOffset + 8)
+                sharedStorageNumber = bytes.getInt64Be( contentOffset)
+                sharedMapNumber = bytes.getInt32Be(contentOffset + 8)
                 sharedCollectionNumber = null
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 12
             }
             3 -> { // 128-bit (feature-number, txn)
-                contentOffset = BinaryUtil.getContentOffset(view)
+                contentOffset = BinaryUtil.getContentOffset(bytes)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = -1
                 featureNumberOffset = 0
                 txnOffset = 8
                 entrySize = 16
-                sharedStorageNumber = dataview_get_int64(view, contentOffset)
-                sharedMapNumber = dataview_get_int32(view, contentOffset + 8)
-                sharedCollectionNumber = dataview_get_int32(view, contentOffset + 12)
+                sharedStorageNumber = bytes.getInt64Be(contentOffset)
+                sharedMapNumber = bytes.getInt32Be(contentOffset + 8)
+                sharedCollectionNumber = bytes.getInt32Be(contentOffset + 12)
                 sharedFeatureNumber = null
                 dataOffset = contentOffset + 16
             }
             4 -> { // 64-bit (txn)
-                contentOffset = BinaryUtil.getContentOffset(view)
+                contentOffset = BinaryUtil.getContentOffset(bytes)
                 storageNumberOffset = -1
                 mapNumberOffset = -1
                 collectionNumberOffset = -1
                 featureNumberOffset = -1
                 txnOffset = 0
                 entrySize = 8
-                sharedStorageNumber = dataview_get_int64(view, contentOffset)
-                sharedMapNumber = dataview_get_int32(view, contentOffset + 8)
-                sharedCollectionNumber = dataview_get_int32(view, contentOffset + 12)
-                sharedFeatureNumber = dataview_get_int64(view, contentOffset + 16)
+                sharedStorageNumber = bytes.getInt64Be(contentOffset)
+                sharedMapNumber = bytes.getInt32Be(contentOffset + 8)
+                sharedCollectionNumber = bytes.getInt32Be(contentOffset + 12)
+                sharedFeatureNumber = bytes.getInt64Be(contentOffset + 16)
                 dataOffset = contentOffset + 24
             }
             else -> throw NakshaException(ILLEGAL_ARGUMENT, "The header of the binary stores subtype $subtype, which is invalid")
@@ -210,12 +177,12 @@ data class TupleNumberBinaryArray(
             if (cached != null) return cached
         }
         val offset = offset(index)
-        if (offset < 0 || offset > last) return null
-        val storageNumber = sharedStorageNumber ?: dataview_get_int64(view, offset + storageNumberOffset)
-        val mapNumber = sharedMapNumber ?: dataview_get_int32(view, offset + mapNumberOffset)
-        val collectionNumber = sharedCollectionNumber ?: dataview_get_int32(view, offset + collectionNumberOffset)
-        val featureNumber = sharedFeatureNumber ?: dataview_get_int64(view, offset + featureNumberOffset)
-        val txn = dataview_get_int64(view, offset + txnOffset)
+        if (offset !in 0..last) return null
+        val storageNumber = sharedStorageNumber ?: bytes.getInt64Be(offset + storageNumberOffset)
+        val mapNumber = sharedMapNumber ?: bytes.getInt32Be(offset + mapNumberOffset)
+        val collectionNumber = sharedCollectionNumber ?: bytes.getInt32Be(offset + collectionNumberOffset)
+        val featureNumber = sharedFeatureNumber ?: bytes.getInt64Be(offset + featureNumberOffset)
+        val txn = bytes.getInt64Be(offset + txnOffset)
         val tupleNumber = TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, txn)
         if (!disableCache) {
             var cache = tupleNumberCache
@@ -234,10 +201,10 @@ data class TupleNumberBinaryArray(
      * @return the storage-number.
      * @since 3.0
      */
-    fun getStorageNumber(index: Int): Int64 {
+    fun getStorageNumber(index: Int): Long {
         val offset = offset(index)
-        if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
-        return sharedStorageNumber ?: dataview_get_int64(view, offset + storageNumberOffset)
+        if (offset !in 0..last) throw IndexOutOfBoundsException()
+        return sharedStorageNumber ?: bytes.getInt64Be(offset + storageNumberOffset)
     }
 
     /**
@@ -248,8 +215,8 @@ data class TupleNumberBinaryArray(
      */
     fun getMapNumber(index: Int): Int {
         val offset = offset(index)
-        if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
-        return sharedMapNumber ?: dataview_get_int32(view, offset + mapNumberOffset)
+        if (offset !in 0..last) throw IndexOutOfBoundsException()
+        return sharedMapNumber ?: bytes.getInt32Be(offset + mapNumberOffset)
     }
 
     /**
@@ -260,8 +227,8 @@ data class TupleNumberBinaryArray(
      */
     fun getCollectionNumber(index: Int): Int {
         val offset = offset(index)
-        if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
-        return sharedMapNumber ?: dataview_get_int32(view, offset + collectionNumberOffset)
+        if (offset !in 0..last) throw IndexOutOfBoundsException()
+        return sharedMapNumber ?: bytes.getInt32Be(offset + collectionNumberOffset)
     }
 
     /**
@@ -270,10 +237,10 @@ data class TupleNumberBinaryArray(
      * @return the feature-number.
      * @since 3.0
      */
-    fun getFeatureNumber(index: Int): Int64 {
+    fun getFeatureNumber(index: Int): Long {
         val offset = offset(index)
-        if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
-        return sharedFeatureNumber ?: dataview_get_int64(view, offset + featureNumberOffset)
+        if (offset !in 0..last) throw IndexOutOfBoundsException()
+        return sharedFeatureNumber ?: bytes.getInt64Be(offset + featureNumberOffset)
     }
 
     /**
@@ -282,7 +249,7 @@ data class TupleNumberBinaryArray(
      * @return the partition-number (`0..65535`).
      * @since 3.0
      */
-    fun getPartitionNumber(index: Int): Int = Naksha.partitionNumber(getFeatureNumber(index))
+    fun getPartitionNumber(index: Int): Int = Id.partitionNumber(getFeatureNumber(index))
 
     /**
      * Returns the transaction-number from the given index.
@@ -290,10 +257,10 @@ data class TupleNumberBinaryArray(
      * @return the transaction-number.
      * @since 3.0
      */
-    fun getTxn(index: Int): Int64 {
+    fun getTxn(index: Int): Long {
         val offset = offset(index)
-        if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
-        return dataview_get_int64(view, offset + txnOffset)
+        if (offset !in 0..last) throw IndexOutOfBoundsException()
+        return bytes.getInt64Be( offset + txnOffset)
     }
 
     /**
@@ -301,7 +268,7 @@ data class TupleNumberBinaryArray(
      * @return the compressed tuple-number array.
      * @since 3.0.0
      */
-    fun gzip(): ByteArray = Platform.gzipDeflate(bytes)
+    fun gzip(): ByteArray = Base.gzipDeflate(bytes)
 
     /**
      * Unpack this into an array of [tuple-numbers][TupleNumber].
@@ -315,7 +282,7 @@ data class TupleNumberBinaryArray(
      * @return the MD5 hash above the [bytes].
      * @since 3.0
      */
-    fun md5(): ByteArray = Platform.md5(bytes)
+    fun md5(): ByteArray = Base.md5(bytes)
 
     /**
      * Helper method to convert this binary into a [TupleNumberList].
@@ -327,17 +294,6 @@ data class TupleNumberBinaryArray(
      */
     @JvmOverloads
     fun toTupleNumberList(from:Int=0, to:Int=size): TupleNumberList = TupleNumberList.fromByteArray(this, from, to)
-
-    /**
-     * Helper method to convert this binary into a [FeatureTupleList].
-     *
-     * @param from the index of the first entry to convert.
-     * @param to the index of the first entry **not** to convert.
-     * @return the [FeatureTupleList].
-     * @since 3.0
-     */
-    @JvmOverloads
-    fun toFeatureTupleList(from:Int=0, to:Int=size): FeatureTupleList = FeatureTupleList.fromByteArray(this, from, to)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -415,28 +371,5 @@ data class TupleNumberBinaryArray(
          * The default empty tuple-number cache.
          */
         private val EMPTY = emptyArray<TupleNumber?>()
-
-        /**
-         * Return a [TupleNumberBinaryArray] from a compressed byte-array.
-         * @param compressed the compressed tuple-number array.
-         * @return the [TupleNumberBinaryArray].
-         * @since 3.0.0
-         */
-        @JvmStatic
-        @JsStatic
-        fun fromGzip(compressed: ByteArray): TupleNumberBinaryArray
-            = fromByteArray(Platform.gzipInflate(compressed))
-
-        /**
-         * Return a [TupleNumberBinaryArray] from a raw byte-array.
-         * @param bytes the byte-array that contains the [tuple-numbers][TupleNumber]
-         * @param from the first byte to read _(inclusive)_, defaults to `0`
-         * @param to the first byte **not** to read _(exclusive)_, defaults to `bytes.size`
-         * @return the [TupleNumberBinaryArray] mapping the given byte-array
-         */
-        @JsName("fromByteArray")
-        @JvmOverloads
-        fun fromByteArray(bytes: ByteArray, from:Int = 0, to:Int = bytes.size)
-            = TupleNumberBinaryArray(Platform.newDataView(bytes, from, to - from))
     }
 }

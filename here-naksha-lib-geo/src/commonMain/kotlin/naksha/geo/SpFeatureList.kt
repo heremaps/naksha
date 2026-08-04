@@ -2,9 +2,9 @@
 
 package naksha.geo
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 
 @JsExport
-class SpFeatureList : ListProxy<SpFeature>(SpFeature::class) {
+class SpFeatureList : PTypedArray<SpFeature>(SpFeature::class) {
 }

@@ -1,7 +1,7 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.base.Proxy
 import naksha.base.TupleNumber
 import naksha.base.Version
@@ -10,8 +10,6 @@ import naksha.jbon.HeapBook
 import naksha.jbon.JbEncoder2
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.StandardMembers
-import naksha.model.objects.XyzMembers
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthor
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzId
@@ -278,7 +276,7 @@ class PropertyFilterTest {
     fun valueContainsJson() {
         val request = ReadFeatures()
         val filter = PropertyFilter(request)
-        val nestedJson = Platform.fromJSON("""
+        val nestedJson = Base.fromJSON("""
             {
               "bool": true,
               "nullProps": null,
@@ -466,7 +464,7 @@ class PropertyFilterTest {
 
     companion object {
         private fun wrapInTuple(featureJson: String): FeatureTuple {
-            val feature = Proxy.box(Platform.fromJSON(featureJson), NakshaFeature::class)!!
+            val feature = Proxy.box(Base.fromJSON(featureJson), NakshaFeature::class)!!
             val encoder = JbEncoder2()
             val featureBytes = encoder.buildTupleFromMap(feature)
             val storageNumber = Int64(1)
@@ -481,11 +479,11 @@ class PropertyFilterTest {
                 version.number
             )
             val members = HeapBook(BookType.MEMBER_BOOK)
-            members.put(XyzTn.name, tupleNumber)
-            members.put(XyzUpdatedAt.name, Int64(0))
-            members.put(XyzId.name, feature.id)
-            members.put(XyzAppId.name, "")
-            members.put(XyzAuthor.name, null)
+            members.put(XyzTn.id, tupleNumber)
+            members.put(XyzUpdatedAt.id, Int64(0))
+            members.put(XyzId.id, feature.id)
+            members.put(XyzAppId.id, "")
+            members.put(XyzAuthor.id, null)
             members.put("data_encoding", DataEncoding.JBON.toString())
             val tuple = Tuple(
                 membersBook = members,

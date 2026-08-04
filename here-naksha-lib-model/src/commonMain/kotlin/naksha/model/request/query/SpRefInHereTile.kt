@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import naksha.geo.HereTile
 import kotlin.js.JsExport
@@ -12,7 +12,7 @@ import kotlin.js.JsName
  * Read all features that have their reference point in the given tile.
  */
 @JsExport
-open class SpRefInHereTile() : AnyObject(), ISpatialQuery {
+open class SpRefInHereTile() : PAnyMap(), ISpatialQuery {
 
     /**
      * Create an initialized tile query.

@@ -4,7 +4,7 @@ package naksha.model.request
 
 import naksha.base.NotNullEnum
 import naksha.base.NullableProperty
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.model.objects.Member
 import naksha.model.objects.StandardMembers
 import naksha.model.request.query.SortOrder
@@ -16,12 +16,12 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * Describes a sort order in a [result-set][naksha.model.request.IResultSet].
+ * Describes a sort order in a [result-set][naksha.model.request.ResultSet].
  *
  * @constructor Create an ordering.
  */
 @JsExport
-class OrderBy() : AnyObject() {
+class OrderBy() : PAnyMap() {
 
     /**
      * Create an order.
@@ -34,7 +34,7 @@ class OrderBy() : AnyObject() {
     @JsName("ofMember")
     @JvmOverloads
     constructor(member: Member?, order: SortOrder = ANY, next: OrderBy? = null) : this() {
-        this.member = member?.name
+        this.member = member?.id
         this.sortOrder = order
         this.next = next
     }
@@ -68,21 +68,21 @@ class OrderBy() : AnyObject() {
          */
         @JsStatic
         @JvmStatic
-        fun version(): OrderBy = OrderBy(StandardMembers.FeatureVersion)
+        fun version(): OrderBy = OrderBy(StandardMembers.VersionMember)
 
         /**
          * Supported ordering by `tuple-number` _(so by storage, map, collection, feature, version, uid).
          */
         @JsStatic
         @JvmStatic
-        fun tupleNumber(): OrderBy = OrderBy(StandardMembers.Tn)
+        fun tupleNumber(): OrderBy = OrderBy(StandardMembers.TnMember)
 
         /**
          * Supported ordering by `id` and `version`.
          */
         @JsStatic
         @JvmStatic
-        fun id(): OrderBy = OrderBy(StandardMembers.Id, next = version())
+        fun id(): OrderBy = OrderBy(StandardMembers.IdMember, next = version())
 
         private val STRING_OR_NULL = NullableProperty<OrderBy, String>(String::class)
         private val SORT_ORDER = NotNullEnum<OrderBy, SortOrder>(SortOrder::class) { _, _ -> ANY }
@@ -100,7 +100,7 @@ class OrderBy() : AnyObject() {
      */
     @JsName("withMember")
     fun withMember(member: Member?): OrderBy {
-        this.member = member?.name
+        this.member = member?.id
         return this
     }
 

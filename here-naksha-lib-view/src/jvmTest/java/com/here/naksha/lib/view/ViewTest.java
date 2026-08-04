@@ -54,7 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
-import naksha.base.MapProxy;
+import naksha.base.PTypedMap;
 import naksha.base.Action;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
@@ -128,7 +128,7 @@ public class ViewTest {
   void testWriteApiNotation() {
     final String VIEW_COLLECTION = "myCollection";
     IStorage storage = mock(IStorage.class);
-    MapProxy map = mock(MapProxy.class);
+    PTypedMap map = mock(PTypedMap.class);
     IWriteSession session = mock(IWriteSession.class);
 
     ViewLayer topologiesDS = new ViewLayer(storage, TEST_MAP_ID, "topologies");
@@ -152,7 +152,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatures().get(0).getId());
-    assertEquals(Action.CREATE, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
+    assertEquals(Action.CREATE, successResponse.getFeatureTupleList().get(0).getCachedFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
 
@@ -169,7 +169,7 @@ public class ViewTest {
 
     final WriteRequest request = new WriteRequest();
     final NakshaFeature feature = new NakshaFeature("0");
-    request.add(write.deleteFeatureById(topologiesDS.getMapId(), topologiesDS.getCollectionId(), feature.getId()));
+    request.add(write.deleteFeature(topologiesDS.getMapId(), topologiesDS.getCollectionId(), feature.getId()));
     SuccessResponse successResponse1 = new SuccessResponse(sampleXyzWriteResponse(1, Action.DELETE));
     when(session.execute(request)).thenReturn(successResponse1);
     ViewWriteSession writeSession = view.newWriteSession(sessionOptions);
@@ -178,7 +178,7 @@ public class ViewTest {
     assertInstanceOf(SuccessResponse.class, response);
     SuccessResponse successResponse = (SuccessResponse) response;
     assertEquals(feature.getId(), successResponse.getFeatureTupleList().get(0).getId());
-    assertEquals(Action.DELETE, successResponse.getFeatureTupleList().get(0).getFeature().getProperties().getXyz().getAction());
+    assertEquals(Action.DELETE, successResponse.getFeatureTupleList().get(0).getCachedFeature().getProperties().getXyz().getAction());
     writeSession.commit();
   }
 

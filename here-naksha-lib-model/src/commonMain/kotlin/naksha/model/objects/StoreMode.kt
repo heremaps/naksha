@@ -1,7 +1,7 @@
 @file:Suppress("OPT_IN_USAGE")
 package naksha.model.objects
 
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
@@ -14,7 +14,7 @@ import kotlin.reflect.KClass
  * @since 3.0.0
  */
 @JsExport
-class StoreMode: JsEnum() {
+class StoreMode: BaseEnum() {
     companion object StoreMode_C {
         /**
          * The default storage-mode, data should be stored.
@@ -39,7 +39,7 @@ class StoreMode: JsEnum() {
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = StoreMode::class
+    override fun namespace(): KClass<out BaseEnum> = StoreMode::class
 
     override fun initClass() {}
 }

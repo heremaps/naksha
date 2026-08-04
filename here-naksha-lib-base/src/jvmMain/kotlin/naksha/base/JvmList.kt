@@ -1,8 +1,8 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.UNDEFINED
-import naksha.base.Platform.PlatformCompanion.unsafe
-import naksha.base.Platform.PlatformCompanion.useNewJson
+import naksha.base.Base.BaseCompanion.UNDEFINED
+import naksha.base.Base.BaseCompanion.unsafe
+import naksha.base.Base.BaseCompanion.useNewJson
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.math.max
@@ -142,7 +142,7 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         check(capacity >= 0) { "capacity must be >= 0" }
         var list = this.list
         if (list == null) {
-            list = if (Platform.useNewJson()) JsonArray(capacity) else ArrayList(capacity)
+            list = if (Base.useNewJson()) JsonArray(capacity) else ArrayList(capacity)
             this.list = list
         } else {
             val data = getElementDataOf(list)

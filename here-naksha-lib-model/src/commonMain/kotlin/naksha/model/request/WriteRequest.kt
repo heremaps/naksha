@@ -7,20 +7,7 @@ import kotlin.js.JsExport
 
 /**
  * Ask the storage to perform a set of write operations.
- *
- * Example:
- * ```kotlin
- * val req = WriteRequest()
- * val col = NakshaCollection("foo")
- * req.add(Write().createFeature(col, feature))
- * ...
- * ```
- * ```java
- * final val req = new WriteRequest();
- * final val col = new NakshaCollection("foo");
- * req.add(new Write().createFeature(col, feature));
- * ...
- * ```
+ * @since 3.0
  */
 @JsExport
 open class WriteRequest : Request() {
@@ -28,8 +15,6 @@ open class WriteRequest : Request() {
         private val WRITE_LIST = NotNullProperty<WriteRequest, WriteList>(WriteList::class)
         private val BOOLEAN = NotNullProperty<WriteRequest, Boolean>(Boolean::class) { _, _ -> false }
     }
-
-    override fun defaultRowOptions() : ReturnColumns = ReturnColumns.none().withMembers(true)
 
     /**
      * All writes to perform.

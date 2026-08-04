@@ -2,7 +2,7 @@ package naksha.model.request.notification
 
 import naksha.model.request.Response
 import naksha.base.Int64
-import naksha.base.MapProxy
+import naksha.base.PTypedMap
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -16,7 +16,7 @@ import kotlin.js.JsExport
 class NotificationAck(
     val seqNumber: Int64,
     val uid: Int,
-    val handlerStates: MapProxy<String, Any>
+    val handlerStates: PTypedMap<String, Any>
 ) : Response() {
     override fun resultSize(): Int = 0
 }

@@ -2,8 +2,11 @@ package naksha.psql
 
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
-import naksha.model.Naksha
+import naksha.base.Action.Action_C.CREATE
+import naksha.base.FeatureType.FeatureType_C.COLLECTION
+import naksha.base.Id
 import naksha.base.NakshaError
+import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
@@ -17,6 +20,7 @@ import naksha.model.objects.XyzIndices
 import naksha.model.objects.XyzMembers
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
 import naksha.model.request.ErrorResponse
+import naksha.model.request.ReadCollections
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -27,54 +31,56 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun shouldDropCollection() {
-        // Given: collection that will be tested
-        val collection = NakshaCollection("drop_collection_test", catalog.id)
-
         // When: creating empty collection
-        executeWrite(
-            WriteRequest().add(
-                Write().createCollection(collection)
-            )
+        executeWriteAndLoadTuples(WriteRequest().add(
+            Write().createCollection(NakshaCollection(Id("drop_collection_test"), catalog)))
         )
+        val collection = storage.useReadSession(newSessionOptions()) {
+            it.getCollectionById(catalog, Id("drop_collection_test"))
+        }
+        assertNotNull(collection)
+        assertNotNull(collection.tupleNumber)
+        assertSame(CREATE, collection.tupleNumber?.action)
 
         // Then: this collection is queryable and empty
-        val readAllFromCollection = ReadFeatures().apply {
-            catalogId = collection.catalogId
-            collectionId = collection.id
-        }
-        val collectionContent = executeRead(readAllFromCollection)
-        assertEquals(0, collectionContent.features.size)
+        val readAllFromCollection = ReadFeatures(collection)
+        val collectionContent = executeReadAndLoadTuple(readAllFromCollection)
+        assertEquals(0, collectionContent.length)
+        assertEquals(0, collectionContent.asFeatures.size)
 
-        // And: Virtual Collections contain the created collection
-        val selectCollectionFromVirt = ReadFeatures().apply {
-            catalogId = collection.catalogId
-            collectionId = Naksha.COLLECTIONS_COL_ID
-            featureIds += collection.id
+        // And: Collections contain the created collection
+        val selectCollectionFromVirt = ReadCollections(catalog).readCollection(collection.id)
+        val virtBeforeDelete = executeReadAndLoadTuple(selectCollectionFromVirt)
+        assertEquals(1, virtBeforeDelete.length)
+        val collectionFromSession = storage.useReadSession(newSessionOptions()) {
+            it.getCollectionById(catalog, Id("drop_collection_test"))
         }
-        val virtBeforeDelete = executeRead(selectCollectionFromVirt)
-        assertEquals(1, virtBeforeDelete.features.size)
+        assertNotNull(collectionFromSession)
+        assertEquals(collection.tupleNumber, collectionFromSession.tupleNumber)
 
         // When: Collection gets deleted
-        executeWrite(
-            WriteRequest().add(
-                Write().deleteCollection(collection.catalogId, collection.id)
-            )
+        executeWriteAndLoadTuples(WriteRequest().add(
+            Write().deleteCollection(collection))
         )
 
-        // Then: it is not present in Virtual Collections anymore
-        val virtAfterDelete = executeRead(selectCollectionFromVirt)
-        assertEquals(0, virtAfterDelete.features.size)
+        // Then: it is not present in Collections anymore
+        val virtAfterDelete = executeReadAndLoadTuple(selectCollectionFromVirt)
+        assertEquals(0, virtAfterDelete.length)
+        val collectionFromSessionAfterDelete = storage.useReadSession(newSessionOptions()) {
+            it.getCollectionById(catalog, Id("drop_collection_test"))
+        }
+        assertNull(collectionFromSessionAfterDelete)
 
         // And: reading from this collection fails
         assertFails("ERROR: relation \"${collection.id}\" does not exist") {
-            executeRead(readAllFromCollection)
+            executeReadAndLoadTuple(readAllFromCollection)
         }
     }
 
     @Test
     fun collectionShouldHaveAllColumns() {
-        val collection = NakshaCollection("check_db_columns_test", catalog.id)
-        executeWrite(
+        val collection = NakshaCollection(Id("check_db_columns_test"), catalog)
+        executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
@@ -88,21 +94,21 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
                 while (cursor.next()) columns.add(cursor["column_name"])
                 assertEquals(XyzMembers.ALL.size + 1, columns.size)
                 // Note: We will not find TN in the database, because `lib-psql` stores `fn` and `version` instead.
-                assertTrue(XyzMembers.ALL.all { column -> if (column eq XyzTn) true else columns.contains(column.name) })
+                assertTrue(XyzMembers.ALL.all { column -> if (column eq XyzTn) true else columns.contains(column.id) })
             }
         }
     }
 
     @Test
     fun collectionShouldHaveIndices() {
-        val collection = NakshaCollection("check_db_indices_test", catalog.id)
-        executeWrite(
+        val collection = NakshaCollection(Id("check_db_indices_test"), catalog)
+        executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
         val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
-        checkIndicesCreatedForTable(collection.id)
+        checkIndicesCreatedForTable(collection.id.text)
         // fix1 removed the META/DELETED tables: metadata is materialized as member columns and
         // tombstones remain in HEAD. Optional indices still belong on every history year partition.
         checkIndicesCreatedForTable("${collection.id}\$hst\$$currentYear")
@@ -130,12 +136,13 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     @Test
     fun collectionShouldHasNoHistoryDBTable() {
         val collectionName = "check_no_hst_table_test"
+        val collectionId = Id(collectionName)
         val collection = NakshaCollection(
-            id = collectionName,
-            catalogId = catalog.id,
+            catalog = catalog,
+            id = collectionId,
             storeHistory = StoreMode.OFF
         )
-        executeWrite(
+        executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
@@ -153,68 +160,67 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
         // Check that creating, updating and deleting features still work
         var feature = NakshaFeature()
-        val createFeaturesResponse = executeWrite(
+        val createFeaturesResponse = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createFeature(collection, feature)
             )
         )
-        assertEquals(1, createFeaturesResponse.features.size)
-        feature = assertNotNull(createFeaturesResponse.features[0])
-
+        assertEquals(1, createFeaturesResponse.length)
+        feature = assertNotNull(createFeaturesResponse.asFeatures[0])
 
         val readFeatureRequest = ReadFeatures()
         readFeatureRequest.catalogId = catalog.id
-        readFeatureRequest.collectionId = collectionName
+        readFeatureRequest.collectionId = collectionId
         readFeatureRequest.featureIds.add(feature.id)
-        val readFeaturesResponse = executeRead(readFeatureRequest)
-        assertEquals(1, readFeaturesResponse.features.size)
-        feature = assertNotNull(readFeaturesResponse.features[0])
+        val readFeaturesResponse = executeReadAndLoadTuple(readFeatureRequest)
+        assertEquals(1, readFeaturesResponse.length)
+        feature = assertNotNull(readFeaturesResponse.asFeatures[0])
         feature.properties["foo"] = "bar"
 
 
-        val updateResponse = executeWrite(
+        val updateResponse = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().updateFeature(collection, feature, true)
             )
         )
-        assertEquals(1, updateResponse.features.size)
-        feature = assertNotNull(updateResponse.features[0])
+        assertEquals(1, updateResponse.length)
+        feature = assertNotNull(updateResponse.asFeatures[0])
 
         // Ensure that the updated feature has the "foo" property
-        val readUpdatedFeatureResponse = executeRead(readFeatureRequest)
-        assertEquals(1, readUpdatedFeatureResponse.features.size)
-        val readFeature = assertNotNull(readUpdatedFeatureResponse.features[0])
+        val readUpdatedFeatureResponse = executeReadAndLoadTuple(readFeatureRequest)
+        assertEquals(1, readUpdatedFeatureResponse.length)
+        val readFeature = assertNotNull(readUpdatedFeatureResponse.asFeatures[0])
         assertEquals("bar", readFeature.properties["foo"])
 
         // Delete the feature.
-        executeWrite(
+        executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().deleteFeatureById(collection, feature.id)
             )
         )
 
         // Ensure that it is deleted.
-        val deletedFeatureResponse = executeRead(readFeatureRequest)
-        assertEquals(0, deletedFeatureResponse.features.size)
+        val deletedFeatureResponse = executeReadAndLoadTuple(readFeatureRequest)
+        assertEquals(0, deletedFeatureResponse.length)
     }
 
     @Test
     fun collectionShouldNotHaveDeleteTable() {
-        val collectionId = "check_no_del_table_test"
+        val collectionId = Id("check_no_del_table_test")
         var collection = NakshaCollection(
+            catalog = catalog,
             id = collectionId,
-            catalogId = catalog.id,
             storeDeleted = StoreMode.OFF
         )
 
         // Create the collection and read the response, we need the XYZ namespace!
-        val createCollectionResponse = executeWrite(
+        val createCollectionResponse = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
-        assertEquals(1, createCollectionResponse.features.size)
-        collection = createCollectionResponse.features[0]!!.proxy(NakshaCollection::class)
+        assertEquals(1, createCollectionResponse.length)
+        collection = createCollectionResponse.asFeatures[0]!!.proxy(NakshaCollection::class)
 
         // Proof that del table was not created
         val delTableName = "$collectionId\$del"
@@ -227,77 +233,80 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
         // Check that creating, updating and deleting features still work
         var feature = NakshaFeature()
-        val featureCreateResponse = executeWrite(
+        val featureCreateResponse = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createFeature(collection, feature)
             )
         )
-        assertEquals(1, featureCreateResponse.features.size)
-        feature = featureCreateResponse.features[0]!!
+        assertEquals(1, featureCreateResponse.length)
+        feature = featureCreateResponse.asFeatures[0]!!
 
         val readFeature = ReadFeatures()
         readFeature.catalogId = catalog.id
-        readFeature.collectionId= collectionId
+        readFeature.collectionId = collectionId
         readFeature.featureIds.add(feature.id)
-        val readFeatureResponse = executeRead(readFeature)
-        assertEquals(1, readFeatureResponse.features.size)
+        val readFeatureResponse = executeReadAndLoadTuple(readFeature)
+        assertEquals(1, readFeatureResponse.length)
         // TODO: Deep compare the features, they should be identical!
-        feature = featureCreateResponse.features[0]!!
+        feature = featureCreateResponse.asFeatures[0]!!
 
         feature.properties["foo"] = "bar"
-        val writeResponse = executeWrite(
+        val writeResponse = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().updateFeature(collection, feature, true)
             )
         )
-        assertEquals(1, writeResponse.features.size)
+        assertEquals(1, writeResponse.length)
         Naksha.cache.clear()
-        val updatedFeatureResponse = executeRead(readFeature)
-        assertEquals("bar", updatedFeatureResponse.features[0]?.properties?.get("foo"))
-        executeWrite(
+        val updatedFeatureResponse = executeReadAndLoadTuple(readFeature)
+        assertEquals(1, updatedFeatureResponse.length)
+        assertEquals("bar", updatedFeatureResponse.asFeatures[0]?.properties?.get("foo"))
+        executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().deleteFeatureById(collection, feature.id)
             )
         )
-        val deletedFeatureResponse = executeRead(readFeature)
-        assertEquals(0, deletedFeatureResponse.features.size)
+        val deletedFeatureResponse = executeReadAndLoadTuple(readFeature)
+        assertEquals(0, deletedFeatureResponse.length)
     }
 
     @Test
     fun updateCollection() {
         val collectionName = "update_collection_test"
-        var collection = NakshaCollection(id = collectionName, catalogId = catalog.id)
-        val createResponse = executeWrite(
+        val collectionId = Id(collectionName)
+        var collection = NakshaCollection(collectionId, catalog)
+        val createResponse = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().createCollection(collection)
             )
         )
-        assertEquals(1, createResponse.features.size)
-        collection = assertNotNull(createResponse.features[0]).proxy(NakshaCollection::class)
+        assertEquals(1, createResponse.length)
+        collection = assertNotNull(createResponse.asFeatures[0]).proxy(NakshaCollection::class)
 
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
-        val updateResponse = executeWrite(
+        val updateResponse = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().updateCollection(collection ,true)
             )
         )
-        assertEquals(1, updateResponse.features.size)
-        val responseCollection = assertNotNull(updateResponse.features[0]).proxy(NakshaCollection::class)
+        assertEquals(1, updateResponse.length)
+        val responseCollection = assertNotNull(updateResponse.asFeatures[0]).proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, responseCollection.storeDeleted)
         val selectCollectionFromVirt = ReadFeatures().apply {
-            catalogId = catalog.id
-            collectionId = Naksha.COLLECTIONS_COL_ID
-            featureIds += collection.id
+            this.catalogId = catalog.id
+            this.collectionId = Id.COLLECTIONS_COL_ID
+            this.featureIds += collection.id
         }
-        val colRead = assertNotNull(executeRead(selectCollectionFromVirt).features[0]).proxy(NakshaCollection::class)
+        val colRead = assertNotNull(executeReadAndLoadTuple(selectCollectionFromVirt).asFeatures[0]).proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, colRead.storeDeleted)
     }
 
     @Test
     fun updateNotExistingCollection() {
         val collectionName = "not_existing_collection_test"
-        val collection = NakshaCollection(id = collectionName, catalogId = catalog.id)
+        val collectionId = Id(collectionName)
+        val collection = NakshaCollection(collectionId, catalog)
         // update collection
         collection.storeDeleted = StoreMode.SUSPEND
         val response = executeWriteErrorResponse(
@@ -312,23 +321,24 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     @Test
     fun shouldUpsertCollection() {
         val collectionName = "upsert_collection_test"
-        val collection = NakshaCollection(id = collectionName, catalogId = catalog.id)
+        val collectionId = Id(collectionName)
+        val collection = NakshaCollection(collectionId, catalog)
         // create collection using upsert
-        val response = executeWrite(
+        val response = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().upsertCollection(collection)
             )
         )
-        val createdCollection = response.features[0]!!.proxy(NakshaCollection::class)
+        val createdCollection = response.asFeatures[0]!!.proxy(NakshaCollection::class)
         assertEquals(StoreMode.ON, createdCollection.storeDeleted)
         collection.storeDeleted = StoreMode.SUSPEND
         // update collection using upsert
-        val updateResponse = executeWrite(
+        val updateResponse = executeWriteAndLoadTuples(
             WriteRequest().add(
                 Write().upsertCollection(collection)
             )
         )
-        val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection::class)
+        val updatedCollection = updateResponse.asFeatures[0]!!.proxy(NakshaCollection::class)
         assertEquals(StoreMode.SUSPEND, updatedCollection.storeDeleted)
     }
 
@@ -336,27 +346,28 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     fun dropNotExistingCollection() {
         // given
         val collectionName = "not_existing_collection_name"
+        val collectionId = Id(collectionName)
 
         // when
-        val response = executeWrite(
+        val response = executeWriteAndLoadTuples(
             WriteRequest().add(
-                Write().deleteCollection(id = collectionName, catalogId = catalog.id)
+                Write().deleteCollectionById(catalog, collectionId)
             )
         )
 
         // then
         assertEquals(0, response.length)
-        assertEquals(0, response.featureTupleList.size)
-        assertEquals(0, response.features.size)
+        assertTrue(response.asFeatures.isEmpty())
+        assertEquals(0, response.asFeatures.size)
     }
 
     @Test
     fun testCreateExistingCollection() {
         // Given: collection in db
-        val collectionId = "test_create_existing_collection"
-        executeWrite(
+        val collectionId = Id("test_create_existing_collection")
+        executeWriteAndLoadTuples(
             WriteRequest().add(
-                Write().createCollection(NakshaCollection(collectionId, catalog.id))
+                Write().createCollection(NakshaCollection(collectionId, catalog))
             )
         )
 
@@ -364,7 +375,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         val response = storage.newWriteSession(newSessionOptions()).use { session ->
             session.execute(
                 WriteRequest().add(
-                    Write().createCollection(NakshaCollection(collectionId, catalog.id))
+                    Write().createCollection(NakshaCollection(collectionId, catalog))
                 )
             )
         }
@@ -384,9 +395,9 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
      */
     @Test
     fun membersUndefined_shouldCreateAllColumnsAndDefaultIndices() {
-        val collection = NakshaCollection("members_null_test", catalog.id)
+        val collection = NakshaCollection(Id("members_null_test"), catalog)
         // members are null by default — do NOT set them, then they will automatically become XyzMember.ALL!
-        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        executeWriteAndLoadTuples(WriteRequest().add(Write().createCollection(collection)))
 
         storage.adminConnection().use { conn ->
             // Columns: must include all headColumns (28 columns).
@@ -400,7 +411,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
                 XyzMembers.ALL.size + 1, columns.size,
                 "Expected to find ${XyzMembers.ALL+1} columns, found: ${columns.size}, being: $columns"
             )
-            assertTrue(XyzMembers.ALL.all { XyzMembers.XyzTn eq it || it.name in columns })
+            assertTrue(XyzMembers.ALL.all { XyzMembers.XyzTn eq it || it.id in columns })
 
             // Indices: must include all default optional indices on the HEAD table.
             val indexNames = mutableListOf<String>()
@@ -422,10 +433,10 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
      */
     @Test
     fun membersEmpty_shouldCreateOnlyMandatoryColumnsAndNoDefaultIndices() {
-        val collection = NakshaCollection("members_empty_test", catalog.id).apply {
+        val collection = NakshaCollection(Id("members_empty_test"), catalog).apply {
             members = MemberList() // explicitly empty
         }
-        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        executeWriteAndLoadTuples(WriteRequest().add(Write().createCollection(collection)))
 
         storage.adminConnection().use { conn ->
             // Columns: must be exactly the full head column set (same as members=null).
@@ -447,7 +458,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
                 arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
-            assertNoOptionalIndices(indexNames, collection.id)
+            assertNoOptionalIndices(indexNames, collection.id.text)
         }
     }
 
@@ -458,11 +469,11 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
      */
     @Test
     fun membersNonEmpty_shouldCreateMandatoryPlusCustomColumnsAndCustomIndicesOnly() {
-        val collection = NakshaCollection("members_custom_test", catalog.id).apply {
+        val collection = NakshaCollection(Id("members_custom_test"), catalog).apply {
             addMember(Member("score", MemberType.INT64))
             addIndex(Index("idx_score", "score"))
         }
-        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        executeWriteAndLoadTuples(WriteRequest().add(Write().createCollection(collection)))
 
         storage.adminConnection().use { conn ->
             // Columns: full head columns + 1 custom column (score).
@@ -484,7 +495,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
                 arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
-            assertNoOptionalIndices(indexNames, collection.id)
+            assertNoOptionalIndices(indexNames, collection.id.text)
             // Custom index must be present.
             val customIndexId = "${collection.id}\$ci_idx_score"
             assertTrue(customIndexId in indexNames,
@@ -498,11 +509,11 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
      */
     @Test
     fun membersSet_shouldCreateJsonbColumnAndGinIndex() {
-        val collection = NakshaCollection("members_set_test", catalog.id).apply {
+        val collection = NakshaCollection(Id("members_set_test"), catalog).apply {
             addMember(Member("labels", MemberType.TAG_LIST))
             addIndex(Index("idx_labels", "labels"))
         }
-        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        executeWriteAndLoadTuples(WriteRequest().add(Write().createCollection(collection)))
 
         storage.adminConnection().use { conn ->
             // Column: materialized as jsonb.
@@ -533,7 +544,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
      */
     @Test
     fun membersSet_indexOnNonIndexableMemberShouldFail() {
-        val collection = NakshaCollection("members_set_invalid_test", catalog.id).apply {
+        val collection = NakshaCollection(Id("members_set_invalid_test"), catalog).apply {
             addMember(Member("flag", MemberType.BOOLEAN))
             addIndex(Index("idx_flag", "flag"))
         }
@@ -543,7 +554,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     /** Verifies the physical column order matches PgCollection.generateColumns (HEAD and HISTORY identical). */
     @Test
     fun membersCustom_shouldOrderColumnsForMinimalPadding() {
-        val collection = NakshaCollection("members_order_test", catalog.id).apply {
+        val collection = NakshaCollection(Id("members_order_test"), catalog).apply {
             // Add one member of every type (deliberately in wrong order to prove sorting works).
             addMember(Member("z_str",   MemberType.STRING))
             addMember(Member("a_i32",   MemberType.INT32))
@@ -557,7 +568,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             addMember(Member("i_json",  MemberType.TAG_MAP))
             addMember(Member("j_tag_list", MemberType.TAG_LIST))
         }
-        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        executeWriteAndLoadTuples(WriteRequest().add(Write().createCollection(collection)))
 
         val expected = expectedOrderedColumnNames(collection)
         for (tableName in listOf(collection.id, "${collection.id}\$hst")) {
@@ -582,7 +593,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
      */
     @Test
     fun createCollection_shouldFailWhenIndexReferencesUnknownMember() {
-        val collection = NakshaCollection("members_bad_index_test", catalog.id).apply {
+        val collection = NakshaCollection(Id("members_bad_index_test"), catalog).apply {
             // Declare one real custom member ...
             addMember(Member("score", MemberType.INT64))
             // ... but index a name that does not exist as a member.
@@ -609,8 +620,8 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         val names = mutableListOf(PgColumn.FnColumn.name, PgColumn.VersionColumn.name, PgColumn.NextVersionColumn.name)
         for (member in members) {
             if (member == null) continue
-            val name = member.name
-            if (name == StandardMembers.Tn.name || name == StandardMembers.NextVersion.name) continue
+            val name = member.id
+            if (name == StandardMembers.TnMember.id || name == StandardMembers.NextVersionMember.id) continue
             names.add(PgMemberHelper.pgColumnName(name))
         }
         return names

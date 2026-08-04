@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import kotlin.js.JsExport
@@ -16,7 +16,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PgType : JsEnum() {
+class PgType : BaseEnum() {
     companion object {
         // https://www.postgresql.org/docs/current/datatype.html
         @JvmField
@@ -206,7 +206,7 @@ class PgType : JsEnum() {
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = PgType::class
+    override fun namespace(): KClass<out BaseEnum> = PgType::class
 
     override fun initClass() {}
 

@@ -5,16 +5,16 @@ package naksha.model.mom
 import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import kotlin.js.JsExport
 
 @JsExport
-class MomDeltaNs : AnyObject() {
+class MomDeltaNs : PAnyMap() {
 
     companion object NakshaDeltaProxyCompanion {
         private val STRING_NULL = NullableProperty<MomDeltaNs, String>(String::class)
-        private val CHANGE_STATE = NotNullProperty<MomDeltaNs, String>(String::class) { _, _ -> MomChangeState.CREATED.text }
-        private val REVIEW_STATE = NotNullProperty<MomDeltaNs, String>(String::class) { _, _ -> MomReviewState.UNPUBLISHED.text }
+        private val CHANGE_STATE = NotNullProperty<MomDeltaNs, String>(String::class) { _, _ -> MomChangeState.CREATED.string }
+        private val REVIEW_STATE = NotNullProperty<MomDeltaNs, String>(String::class) { _, _ -> MomReviewState.UNPUBLISHED.string }
         private val INT64 = NotNullProperty<MomDeltaNs, Int64>(Int64::class) { _, _ -> Int64(0) }
     }
 
@@ -63,12 +63,12 @@ class MomDeltaNs : AnyObject() {
     fun getChangeStateEnum(): MomChangeState = MomChangeState.of(changeState)
 
     fun setChangeStateEnum(enumValue: MomChangeState) {
-        changeState = enumValue.text
+        changeState = enumValue.string
     }
 
     fun getReviewStateEnum(): MomReviewState = MomReviewState.of(reviewState)
 
     fun setReviewStateEnum(enumValue: MomReviewState) {
-        reviewState = enumValue.text
+        reviewState = enumValue.string
     }
 }

@@ -6,18 +6,16 @@ import naksha.base.illegalArg
 import java.util.concurrent.TimeUnit
 
 /**
- * A cache for a specific map, which by itself will cache the collections.
+ * A cache for a specific catalog, which by itself will cache the collections.
  *
  * @property adminCatalog the admin-map to which this cache entry belongs.
- * @property id the map-id.
- * @property number the map-number.
+ * @property id the `id` of the catalog.
  * @since 3.0
  */
 data class PsqlCatalog(
     val adminCatalog: PsqlAdminCatalog,
     val pgCatalog: PgCatalog? = null,
-    val id: String = pgCatalog?.id ?: throw illegalArg("PsqlCatalog without valid id"),
-    val number: Int = pgCatalog?.catalogNumber ?: throw illegalArg("PsqlCatalog without valid number")
+    val id: Id = pgCatalog?.id ?: throw illegalArg("PsqlCatalog without valid id")
 ): Expiry<Int, PsqlCollection> {
 
     /**

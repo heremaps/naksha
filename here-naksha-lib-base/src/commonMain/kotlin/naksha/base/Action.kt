@@ -20,9 +20,9 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class Action : JsEnum() {
+class Action : BaseEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = Action::class
+    override fun namespace(): KClass<out BaseEnum> = Action::class
 
     override fun initClass() {}
 
@@ -106,25 +106,25 @@ class Action : JsEnum() {
         )
 
         /**
-         * Helper to parse a string into an [Action]. Returns [VERSION] for unrecognised strings.
+         * Helper to parse a string into an [Action]. Returns [VERSION] for unrecognized strings.
          */
         @JsStatic
         @JvmStatic
         fun fromString(s: String): Action = FROM_STRING[s] ?: VERSION
 
         /**
-         * Helper to obtain an [Action] from its integer value. Returns [VERSION] for unrecognised values.
+         * Helper to obtain an [Action] from its integer value, is expected to be `0..3`. Returns [VERSION] for unrecognized values.
          */
         @JsStatic
         @JvmStatic
         fun fromValue(value: Int): Action = FROM_VALUE[value] ?: VERSION
 
         /**
-         * Helper to obtain an [Action] from its 64-bit version value. Returns [VERSION] for unrecognised values.
+         * Helper to obtain an [Action] from a 64-bit version value, only reading the lower 2-bit. Returns [VERSION] for unrecognized values.
          */
         @JsStatic
         @JvmStatic
-        fun fromVersion(version: Int64): Action = FROM_VALUE[version.toInt() and 3] ?: VERSION
+        fun fromVersion(version: Long): Action = FROM_VALUE[version.toInt() and 3] ?: VERSION
     }
 
     /**

@@ -2,7 +2,7 @@
 
 package naksha.geo
 
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.base.PlatformMap
 
 /**
@@ -39,7 +39,7 @@ actual class GeoUtil private actual constructor() {
             if (raw == null) return null
             browserForbidden("fromTWKB")
             val json = exec("ST_GeomFromTWKB($1::bytea)", raw) as String
-            return (Platform.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
+            return (Base.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
         }
 
         /**
@@ -53,7 +53,7 @@ actual class GeoUtil private actual constructor() {
             if (raw == null) return null
             browserForbidden("fromEWKB")
             val json = exec("ST_GeomFromEWKB($1::bytea)", raw) as String
-            return (Platform.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
+            return (Base.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
         }
 
         /**
@@ -67,7 +67,7 @@ actual class GeoUtil private actual constructor() {
             if (raw == null) return null
             browserForbidden("fromWKB")
             val json = exec("ST_GeomFromWKB($1::bytea, 4326)", raw) as String
-            return (Platform.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
+            return (Base.fromJSON(json) as PlatformMap).proxy(SpGeometry::class)
         }
 
         /**
@@ -80,7 +80,7 @@ actual class GeoUtil private actual constructor() {
         actual fun toTWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             browserForbidden("toTWKB")
-            val json = Platform.toJSON(geometry)
+            val json = Base.toJSON(geometry)
             return exec("ST_AsTWKB(ST_GeomFromGeoJSON(\$1), 7, 7, 0, false, false)", json) as ByteArray
         }
 
@@ -94,7 +94,7 @@ actual class GeoUtil private actual constructor() {
         actual fun toEWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             browserForbidden("toEWKB")
-            val json = Platform.toJSON(geometry)
+            val json = Base.toJSON(geometry)
             return exec("ST_AsEWKB(ST_GeomFromGeoJSON(\$1),'XDR')", json) as ByteArray
         }
 
@@ -108,7 +108,7 @@ actual class GeoUtil private actual constructor() {
         actual fun toWKB(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
             browserForbidden("toWKB")
-            val json = Platform.toJSON(geometry)
+            val json = Base.toJSON(geometry)
             return exec("ST_AsBinary(ST_GeomFromGeoJSON(\$1),'XDR')", json) as ByteArray
         }
     }

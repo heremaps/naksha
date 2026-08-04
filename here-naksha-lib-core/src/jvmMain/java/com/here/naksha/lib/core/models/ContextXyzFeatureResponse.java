@@ -36,7 +36,7 @@ public class ContextXyzFeatureResponse extends SuccessResponse {
   private static final String VIOLATIONS_KEY = "violations";
 
   public void setFeatures(@NotNull List<NakshaFeature> nakshaFeatures) {
-    super.setFeatures(NakshaFeatureList.fromList(nakshaFeatures));
+    super.withObjects(nakshaFeatures);
   }
 
   /**

@@ -41,7 +41,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.ToJsonOptions;
 import naksha.model.StreamInfo;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -225,7 +225,7 @@ public class AccessLogUtil {
       return;
     }
 
-    logger.info(Platform.toJSON(accessLog, ToJsonOptions.DEFAULT));
+    logger.info(Base.toJSON(accessLog, ToJsonOptions.DEFAULT));
 
     // Log relevant details for generating API metrics
     final AccessLog.RequestInfo req = accessLog.getReqInfo();

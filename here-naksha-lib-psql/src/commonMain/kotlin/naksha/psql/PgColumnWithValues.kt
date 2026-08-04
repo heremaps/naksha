@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.AnyList
+import naksha.base.PAnyArray
 import naksha.base.Int64
 
 /**
@@ -25,8 +25,9 @@ internal data class PgColumnWithValues(
      * The values of the column for each row.
      * @since 3.0
      */
-    val values: AnyList = AnyList()
+    val values: PAnyArray = PAnyArray()
 ) {
+    operator fun get(i: Int): Any? = if (i in 0 until values.size) values[i] else null
     fun withSize(size: Int): PgColumnWithValues {
         values.size = size
         return this

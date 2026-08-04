@@ -40,7 +40,7 @@ import java.nio.file.Paths;
 import java.util.List;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.NakshaContext;
 import naksha.psql.PgConfig;
 import naksha.psql.PgInstanceConfig;
@@ -90,7 +90,7 @@ public class TestUtil {
   }
 
   public static <T> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
-    return JvmBoxingUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
+    return JvmBoxingUtil.box(Base.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
   }
 
   public static <T> T parseJsonFileOrFail(final @NotNull String fileName, final @NotNull Class<T> type) {

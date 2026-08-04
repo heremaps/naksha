@@ -36,7 +36,7 @@ public class Sample {
     TupleNumber tupleNumber = new TupleNumber(Int64(1), 0, 0, Naksha.featureNumber(feature.getId()), Int64(1));
     feature.getProperties().getXyz().setRaw("uuid", tupleNumber.toString());
     FeatureTuple featureTuple = new FeatureTuple(tupleNumber, (Tuple) null);
-    featureTuple.setFeature(feature);
+    featureTuple.setCachedFeature(feature);
     return featureTuple;
   }
 

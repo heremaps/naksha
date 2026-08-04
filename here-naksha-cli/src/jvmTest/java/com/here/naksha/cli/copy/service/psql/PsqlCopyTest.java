@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.StringList;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
@@ -59,7 +59,7 @@ class PsqlCopyTest {
         "id": "%s",
         "className": "naksha.psql.PsqlTestStorage"
         }
-        """.formatted(Platform.getTestStorageId()));
+        """.formatted(Base.getTestStorageId()));
     private IStorage psqlStorage;
 
     @BeforeEach

@@ -2,10 +2,10 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.Base.BaseCompanion.toJSON
 
 @Suppress("SENSELESS_COMPARISON")
-internal class JsLogger : PlatformLogger {
+internal class JsLogger : IBaseLogger {
     // https://plv8.github.io/#-code-plv8-elog-code-
     private val plv8: dynamic = js("typeof plv8=='object' && typeof plv8.log=='function' ? plv8 : null")
     private val _DEBUG: dynamic = if (plv8 != null) js("DEBUG1") else null
@@ -42,7 +42,7 @@ internal class JsLogger : PlatformLogger {
     }
 
     override fun debug(msg: String, vararg args: Any?) {
-        if (!PlatformUtil.ENABLE_DEBUG) return
+        if (!BaseUtil.ENABLE_DEBUG) return
         // TODO: KotlinCompilerBug:
         //       Report compiler bug, and add FAQ to describe coding hints for JavaScript
         //       this compiles into `toString_1(this, msg, args.slice())`, but if called
@@ -56,43 +56,43 @@ internal class JsLogger : PlatformLogger {
     }
 
     override fun atDebug(msgFn: () -> String?) {
-        if (!PlatformUtil.ENABLE_DEBUG) return
+        if (!BaseUtil.ENABLE_DEBUG) return
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_DEBUG, m) else console.log(m)
     }
 
     override fun info(msg: String, vararg args: Any?) {
-        if (!PlatformUtil.ENABLE_INFO) return
+        if (!BaseUtil.ENABLE_INFO) return
         val m = if (args == null || args.size == 0) msg else toString(msg, *args)
         if (plv8 != null) plv8.log(_INFO, m) else console.info(m)
     }
 
     override fun atInfo(msgFn: () -> String?) {
-        if (!PlatformUtil.ENABLE_INFO) return
+        if (!BaseUtil.ENABLE_INFO) return
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_INFO, m) else console.info(m)
     }
 
     override fun warn(msg: String, vararg args: Any?) {
-        if (!PlatformUtil.ENABLE_WARN) return
+        if (!BaseUtil.ENABLE_WARN) return
         val m = if (args == null || args.size == 0) msg else toString(msg, *args)
         if (plv8 != null) plv8.log(_WARN, m) else console.info(m)
     }
 
     override fun atWarn(msgFn: () -> String?) {
-        if (!PlatformUtil.ENABLE_WARN) return
+        if (!BaseUtil.ENABLE_WARN) return
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_WARN, m) else console.info(m)
     }
 
     override fun error(msg: String, vararg args: Any?) {
-        if (!PlatformUtil.ENABLE_ERROR) return
+        if (!BaseUtil.ENABLE_ERROR) return
         val m = if (args == null || args.size == 0) msg else toString(msg, *args)
         if (plv8 != null) plv8.log(_ERROR, m) else console.info(m)
     }
 
     override fun atError(msgFn: () -> String?) {
-        if (!PlatformUtil.ENABLE_ERROR) return
+        if (!BaseUtil.ENABLE_ERROR) return
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_ERROR, m) else console.info(m)
     }

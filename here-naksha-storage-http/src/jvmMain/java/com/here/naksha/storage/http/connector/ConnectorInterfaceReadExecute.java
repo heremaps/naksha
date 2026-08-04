@@ -33,6 +33,7 @@ import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
 import com.here.naksha.storage.http.connector.pop.IPropertyQueryToPropertiesQuery;
 import com.here.naksha.storage.http.connector.pop.ITagQueryToTagsQuery;
+import naksha.base.Id;
 import naksha.geo.SpBoundingBox;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
@@ -166,12 +167,7 @@ public class ConnectorInterfaceReadExecute {
         }
     }
 
- private static String firstCollectionIdOrThrow(ReadFeaturesProxyWrapper request) {
-    String id = request.getCollectionId();
-    if (id == null || id.isBlank()) {
-      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
-              "collectionId must be non-empty");
-    }
-    return id;
+ private static @NotNull Id firstCollectionIdOrThrow(@NotNull ReadFeaturesProxyWrapper request) {
+    return request.getCollectionId();
   }
 }

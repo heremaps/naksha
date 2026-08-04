@@ -18,7 +18,7 @@
  */
 package naksha.auth;
 
-import static naksha.base.Platform.newList;
+import static naksha.base.Base.newList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -27,8 +27,8 @@ import naksha.auth.action.ReadCollections;
 import naksha.auth.attribute.CollectionAttributes;
 import naksha.auth.attribute.NakshaAttributes;
 import naksha.auth.attribute.ResourceAttributes;
-import naksha.base.AnyList;
-import naksha.base.ListProxy;
+import naksha.base.PAnyArray;
+import naksha.base.PTypedArray;
 import org.junit.jupiter.api.Test;
 
 class JavaClientSampleTest {
@@ -75,15 +75,15 @@ class JavaClientSampleTest {
 
     // Then:
     assertNotNull(armService);
-    ListProxy<ResourceAttributes> attributes = armService.getResourceAttributesForAction(ReadCollections.NAME);
+    PTypedArray<ResourceAttributes> attributes = armService.getResourceAttributesForAction(ReadCollections.NAME);
     assertNotNull(attributes);
     assertEquals(2, attributes.size());
     assertEquals("someCollection", attributes.get(0).get(NakshaAttributes.ID_KEY));
     assertEquals("someStorage", attributes.get(0).get(CollectionAttributes.STORAGE_ID_KEY));
     assertEquals("otherCollection", attributes.get(1).get(NakshaAttributes.ID_KEY));
     assertEquals("otherStorage", attributes.get(1).get(CollectionAttributes.STORAGE_ID_KEY));
-    final ListProxy<Object> tags =
-        assertInstanceOf(AnyList.class, attributes.get(1).get(CollectionAttributes.TAGS_KEY));
+    final PTypedArray<Object> tags =
+        assertInstanceOf(PAnyArray.class, attributes.get(1).get(CollectionAttributes.TAGS_KEY));
     assertEquals(newList("tag1", "tag2"), tags.platformObject());
   }
 }

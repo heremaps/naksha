@@ -34,7 +34,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NullableProperty<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : Any>(
+open class NullableProperty<OBJECT_TYPE : PAnyMap, PROPERTY_TYPE : Any>(
     klass: KClass<out PROPERTY_TYPE>,
     autoCreate: Boolean = false,
     autoRemove: Boolean = false,

@@ -1,8 +1,10 @@
 package naksha.model.objects
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import naksha.model.TagList
 import naksha.model.Tuple
+import naksha.base.PTypedMap
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.base.illegalArg
 import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.TAG_LIST
@@ -19,7 +21,7 @@ class TagListMember() : TypedMember<TagListMember>() {
     /** Creates a new tag list member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
-        this.name = name
+        this.id = name
         this.dataType = TAG_LIST
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -29,7 +31,7 @@ class TagListMember() : TypedMember<TagListMember>() {
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != TAG_LIST) throw illegalArg("The given member is not of tag_list type")
-        this.name = member.name
+        this.id = member.id
         this.dataType = TAG_LIST
         this.path = path?.validate() ?: member.path
     }
@@ -44,6 +46,6 @@ class TagListMember() : TypedMember<TagListMember>() {
     @JsName("getFromTuple")
     fun get(tuple: Tuple): TagList? = readTagList(tuple)
 
-    /** Sets the tag list value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: ListProxy<*>): Any? = setPath(feature, path, value)
+    /** Sets the tag list value of this member on the given object. */
+    fun set(feature: PTypedMap<*, *>, value: PTypedArray<*>?): Any? = if (value == null) feature.setPath(UNDEFINED, path) else feature.setPath(value, path)
 }

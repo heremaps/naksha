@@ -1,7 +1,6 @@
 package naksha.base
 
 import kotlin.js.JsExport
-import kotlin.jvm.JvmOverloads
 import kotlin.reflect.KClass
 
 /**
@@ -32,7 +31,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NotNullProperty<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : Any>(
+open class NotNullProperty<OBJECT_TYPE : PAnyMap, PROPERTY_TYPE : Any>(
     klass: KClass<out PROPERTY_TYPE>,
     name: String? = null,
     init: ((self: OBJECT_TYPE, name: String) -> PROPERTY_TYPE?)? = null

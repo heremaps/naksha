@@ -1,7 +1,7 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Base.BaseCompanion.logger
 import naksha.jbon.JbDictionary
 import naksha.model.*
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
@@ -31,12 +31,12 @@ class PsqlAdminCatalog internal constructor(
         return null
     }
 
-    override fun createAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int {
-        return upsertAdminMap(conn, storageId, storageNumber, psqlVersion, null, null)
+    override fun createAdminCatalog(conn: PgConnection, config: PgConfig, databaseId: Id, psqlVersion: NakshaVersion): Int {
+        return upsertAdminMap(conn, databaseId, psqlVersion, null, null)
     }
 
-    override fun upgradeAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
-        upsertAdminMap(conn, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
+    override fun upgradeAdminCatalog(conn: PgConnection, config: PgConfig, databaseId: Id, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
+        upsertAdminMap(conn, databaseId, psqlVersion, schemaOid, installedVersion)
     }
 
     /**
@@ -45,8 +45,7 @@ class PsqlAdminCatalog internal constructor(
      */
     private fun upsertAdminMap(
         conn: PgConnection,
-        storageId: String,
-        storageNumber: Int64,
+        databaseId: Id,
         psqlVersion: NakshaVersion,
         schemaOid: Int?,
         installedVersion: NakshaVersion?
@@ -151,8 +150,8 @@ class PsqlAdminCatalog internal constructor(
         executeSqlFromResource(
             conn, "/naksha.sql", replacements = mapOf(
                 "version" to (psqlVersion.toLong()).toString(),
-                "storageIdLiteral" to quoteLiteral(storageId),
-                "storageNumber" to storageNumber.toString()
+                "storageIdLiteral" to quoteLiteral(databaseId.text),
+                "storageNumber" to databaseId.number.toString()
             )
         )
         logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
@@ -161,11 +160,11 @@ class PsqlAdminCatalog internal constructor(
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
         createPgCollection(conn, collections) // 0
-        createPgCollection(conn, transactions) // 1
-        createPgCollection(conn, catalogs) // 2
+        createPgCollection(conn, pgTransactionsCollection) // 1
+        createPgCollection(conn, pgCatalogsCollection) // 2
         createPgCollection(conn, books) //3
 
-        logger.info("Done creating transactions, collections, and dictionaries")
+        logger.info("Done creating transactions, collections, and books")
         return adminMapOid
     }
 

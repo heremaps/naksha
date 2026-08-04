@@ -1,7 +1,7 @@
 package naksha.psql
 
 import naksha.base.Epoch
-import naksha.model.SessionOptions
+import naksha.base.Id
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
@@ -20,18 +20,18 @@ class PartitioningTest : PgTestBase() {
         // given
         val numberOfPartitions = 8
         val partitionedCollection = NakshaCollection(
-            id = "feature_partitioned",
-            catalogId = catalog.id,
+            id = Id("feature_partitioned"),
+            catalog = catalog,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
 
         // when
-        executeWrite(writeRequest)
+        executeWriteAndLoadTuples(writeRequest)
 
         // then
-        val createdPartitions = queryForTablePartitions(partitionedCollection.id)
+        val createdPartitions = queryForTablePartitions(partitionedCollection.id.text)
         assertEquals(numberOfPartitions, createdPartitions.size)
         for ((idx, createdPartition) in createdPartitions.withIndex()) {
             // "feature_partitioned$p000", "feature_partitioned$p001",...
@@ -63,8 +63,8 @@ class PartitioningTest : PgTestBase() {
         // given
         val numberOfPartitions = 2
         val partitionedCollection = NakshaCollection(
-            id = "feature_partitioned_insert_check",
-            catalogId = catalog.id,
+            id = Id("feature_partitioned_insert_check"),
+            catalog = catalog,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -75,7 +75,7 @@ class PartitioningTest : PgTestBase() {
         }
 
         // when
-        val f1 = NakshaFeature("f1")
+        val f1 = NakshaFeature(Id("f1"))
         val writeFeatureOp = Write().createFeature(partitionedCollection, f1)
         val writeFeatureRequest = WriteRequest().add(writeFeatureOp)
         newWriteSession().use { session ->
@@ -85,16 +85,16 @@ class PartitioningTest : PgTestBase() {
             // then
             // feature should be successfully stored
             assertTrue { result is SuccessResponse }
-            assertEquals(1, (result as SuccessResponse).features.size)
+            assertEquals(1, (result as SuccessResponse).asFeatures.size)
         }
 
         // also - should be able to read
         val readRequest = ReadFeatures()
         readRequest.catalogId = partitionedCollection.catalogId
         readRequest.collectionId = partitionedCollection.id
-        readRequest.featureIds.add("f1")
-        val readResponse = executeRead(readRequest)
-        assertEquals(1, readResponse.features.size)
+        readRequest.featureIds.add(Id("f1"))
+        val readResponse = executeReadAndLoadTuple(readRequest)
+        assertEquals(1, readResponse.asFeatures.size)
     }
 
     @Test
@@ -102,18 +102,18 @@ class PartitioningTest : PgTestBase() {
         // given
         val numberOfPartitions = 0
         val partitionedCollection = NakshaCollection(
-            id = "zero_partitions",
-            catalogId = catalog.id,
+            id = Id("zero_partitions"),
+            catalog = catalog,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
 
         // when
-        val response = executeWrite(writeRequest)
+        val response = executeWriteAndLoadTuples(writeRequest)
 
         // then
-        assertEquals(1, response.features.size)
+        assertEquals(1, response.asFeatures.size)
     }
 
     @Test
@@ -121,18 +121,18 @@ class PartitioningTest : PgTestBase() {
         // given
         val numberOfPartitions = 1
         val partitionedCollection = NakshaCollection(
-            id = "one_partitions",
-            catalogId = catalog.id,
+            id = Id("one_partitions"),
+            catalog = catalog,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
         val writeRequest = WriteRequest().add(writeOp)
 
         // when
-        val response = executeWrite(writeRequest)
+        val response = executeWriteAndLoadTuples(writeRequest)
 
         // then
-        assertEquals(1, response.features.size)
+        assertEquals(1, response.asFeatures.size)
     }
 
     @Test
@@ -140,8 +140,8 @@ class PartitioningTest : PgTestBase() {
         // given
         val numberOfPartitions = 65536
         val partitionedCollection = NakshaCollection(
-            id = "to_many_partitions",
-            catalogId = catalog.id,
+            id = Id("to_many_partitions"),
+            catalog = catalog,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -156,7 +156,7 @@ class PartitioningTest : PgTestBase() {
     }
 
     private fun queryForTablePartitions(table: String): List<String> {
-        storage.newConnection(SessionOptions.from(null), true).use { pgConnection ->
+        storage.newConnection( storage.optionsBuilder.build(), true).use { pgConnection ->
             pgConnection.execute("""
 SET search_path TO "${catalog.id}", "naksha~admin", topology, hint_plan, public;
 SELECT inhrelid::regclass AS partitioned_table FROM pg_inherits WHERE inhparent = $1::regclass ORDER BY partitioned_table;

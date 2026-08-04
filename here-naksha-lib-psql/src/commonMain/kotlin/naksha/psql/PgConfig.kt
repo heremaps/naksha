@@ -2,7 +2,9 @@
 
 package naksha.psql
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
+import naksha.base.FeatureType
+import naksha.base.Id
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
@@ -29,9 +31,9 @@ class PgConfig() : NakshaStorage() {
     override fun withCreate(create: Boolean): PgConfig = super.withCreate(create) as PgConfig
     override fun withClassName(className: String): PgConfig = super.withClassName(className) as PgConfig
     override fun withUpgrade(upgrade: Boolean): PgConfig = super.withUpgrade(upgrade) as PgConfig
-    override fun withId(value: String): PgConfig = super.withId(value) as PgConfig
-    override fun withType(value: String): PgConfig = super.withType(value) as PgConfig
-    override fun withFeatureType(value: String): PgConfig = super.withFeatureType(value) as PgConfig
+    override fun withId(value: Id?): PgConfig = super.withId(value) as PgConfig
+    override fun withType(value: String?): PgConfig = super.withType(value) as PgConfig
+    override fun withFeatureType(value: FeatureType?): PgConfig = super.withFeatureType(value) as PgConfig
     override fun withBbox(value: SpBoundingBox?): PgConfig = super.withBbox(value) as PgConfig
     override fun withGeometry(value: SpGeometry?): PgConfig = super.withGeometry(value) as PgConfig
     override fun withReferencePoint(value: SpPoint?): PgConfig = super.withReferencePoint(value) as PgConfig
@@ -43,7 +45,7 @@ class PgConfig() : NakshaStorage() {
      * @since 3.0
      */
     @JsName("of")
-    constructor(id: String): this() {
+    constructor(id: Id): this() {
         this.id = id
         this.className = defaultClassName()
     }
@@ -62,7 +64,7 @@ class PgConfig() : NakshaStorage() {
      * The PostgresQL master to connect to.
      * @since 3.0
      */
-    var master by MASTER
+    var master: PgInstanceConfig by MASTER
 
     /**
      * Tests if the configuration has an explicit master setting.
@@ -80,8 +82,8 @@ class PgConfig() : NakshaStorage() {
         // Try to port old code, so try properties.dbConfig
         // https://github.com/heremaps/naksha/blob/v2/here-naksha-app-service/src/jvmTest/resources/unit_test_data/StorageApi/TC0001_createStorage/create_storage.json
         val rawProperties = getRaw("properties")
-        val rawDbConfig = if (rawProperties is AnyObject) rawProperties.getRaw("dbConfig") else null
-        return if (rawDbConfig is AnyObject) rawDbConfig.proxy(PgInstanceConfig::class) else null
+        val rawDbConfig = if (rawProperties is PAnyMap) rawProperties.getRaw("dbConfig") else null
+        return if (rawDbConfig is PAnyMap) rawDbConfig.proxy(PgInstanceConfig::class) else null
     }
 
     /**

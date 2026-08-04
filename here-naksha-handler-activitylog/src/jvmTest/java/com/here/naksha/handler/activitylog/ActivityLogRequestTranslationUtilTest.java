@@ -43,7 +43,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertTrue(readFeatures.getFeatureIds().isEmpty());
 
     // And: there is a single requested FeatureNumber + Version combo passed from original featureId
-    Op op = readFeatures.getQueryMembers();
+    Op op = readFeatures.getMemberQuery();
     checkOpIsUuidRequest(op, List.of(guid.tupleNumber.version));
   }
 
@@ -67,8 +67,8 @@ class ActivityLogRequestTranslationUtilTest {
 
       // The two Equals may appear in either order; pick the one that targets Version
       Equals versionEq = null;
-      if (StandardMembers.FeatureVersion.getName().equals(eqA.getAt())) versionEq = eqA;
-      else if (StandardMembers.FeatureVersion.getName().equals(eqB.getAt())) versionEq = eqB;
+      if (StandardMembers.VersionMember.getId().equals(eqA.getAt())) versionEq = eqA;
+      else if (StandardMembers.VersionMember.getId().equals(eqB.getAt())) versionEq = eqB;
       else fail("No Version equals in And clause");
       versionsFromOr.add(versionEq.getValue());
     }
@@ -102,7 +102,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertTrue(readFeatures.getFeatureIds().isEmpty());
 
     // And: all guids defined in featureIds were moved to ReadFeatures.guids
-    Op op = readFeatures.getQueryMembers();
+    Op op = readFeatures.getMemberQuery();
     checkOpIsUuidRequest(op, List.of(version1, version2, version3));
   }
 
@@ -132,7 +132,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertNull(readFeatures.getQuery().getProperties());
 
     // And: there are no guids (nothing was declared in original featureIds)
-      assertNull(readFeatures.getQueryMembers());
+      assertNull(readFeatures.getMemberQuery());
   }
 
   @Test
@@ -162,7 +162,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertNull(readFeatures.getQuery().getProperties());
 
     // And: there are no guids (nothing was declared in original featureIds)
-    assertNull(readFeatures.getQueryMembers());
+    assertNull(readFeatures.getMemberQuery());
   }
 
   @Test
@@ -191,7 +191,7 @@ class ActivityLogRequestTranslationUtilTest {
     assertEquals(activityLogId, finalFeatureIds.get(0));
 
     // And: guuids are populated from original feature ids
-    Op op = readFeatures.getQueryMembers();
+    Op op = readFeatures.getMemberQuery();
     checkOpIsUuidRequest(op, List.of(version));
   }
 

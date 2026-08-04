@@ -226,8 +226,8 @@ public final class Space extends EventTarget<Space> {
   public @NotNull String getCollectionId() {
     NakshaCollection collection = getProperties().getCollection();
     if (collection != null) {
-      return collection.getId();
+      return collection.getId().getText();
     }
-    return getId();
+    return getId().getText();
   }
 }

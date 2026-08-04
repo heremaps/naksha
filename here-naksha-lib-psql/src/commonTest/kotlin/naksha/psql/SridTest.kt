@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.geo.LineStringCoord
 import naksha.geo.PointCoord
 import naksha.geo.SpLineString
@@ -7,8 +8,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -28,9 +28,9 @@ class SridTest : PgTestBase() {
     @BeforeTest
     fun setupCollection() {
         val req = WriteRequest().add(
-            Write().createCollection(NakshaCollection(COLLECTION_ID, TEST_MAP_ID))
+            Write().createCollection(NakshaCollection(Id(COLLECTION_ID), catalog))
         )
-        executeWrite(req)
+        executeWriteAndLoadTuples(req)
     }
 
     @Test
@@ -43,17 +43,13 @@ class SridTest : PgTestBase() {
                 )
             )
         }
-        executeWrite(
+        executeWriteAndLoadTuples(
             WriteRequest().add(
-                Write().createFeature(
-                    catalogId = catalog.id,
-                    collectionId = COLLECTION_ID,
-                    feature = feature
-                )
+                Write().createFeature(collection, feature)
             )
         )
 
-        val srid = selectSrid(catalog.id, COLLECTION_ID, feature.id)
+        val srid = selectSrid(catalog.id.text, COLLECTION_ID, feature.id.text)
         assertEquals(EXPECTED_SRID, srid)
     }
 
@@ -61,7 +57,7 @@ class SridTest : PgTestBase() {
         val sql = """
             SELECT ST_SRID(naksha_geometry(${COL_GEOMETRY})) as srid
             FROM $mapId.$collectionName
-            WHERE $Id = '$featureId'
+            WHERE $IdMember = '$featureId'
         """.trimIndent()
         return storage.adminConnection().use { conn ->
             conn.execute(sql).fetch().use { cursor ->

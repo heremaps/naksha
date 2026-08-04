@@ -2,8 +2,8 @@
 
 package naksha.model.request.ops
 
-import naksha.base.AnyObject
-import naksha.base.MapProxy
+import naksha.base.PAnyMap
+import naksha.base.PTypedMap
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import kotlin.js.ExperimentalJsExport
@@ -17,7 +17,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-open class Op : AnyObject() {
+open class Op : PAnyMap() {
     companion object MemberOp_C {
         private val STRING = NotNullProperty<Op, String>(String::class)
         private val STRING_OR_NULL = NullableProperty<Op, String>(String::class)
@@ -61,7 +61,7 @@ open class Op : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun detect(op: MapProxy<*,*>): Op? {
+        fun detect(op: PTypedMap<*,*>): Op? {
             if (op is Op && op::class != Op::class) return op
             return when(op.getRaw("op") as String?) {
                 AND -> op.proxy(And::class)

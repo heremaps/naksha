@@ -2,10 +2,12 @@
 
 package naksha.model.objects
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
+import naksha.base.Id
+import naksha.base.IdVerifier.TextVerifier_C.MEMBER_AND_INDEX
 import naksha.base.Int64
-import naksha.base.ListProxy
-import naksha.base.MapProxy
+import naksha.base.PTypedArray
+import naksha.base.PTypedMap
 import naksha.base.NotNullEnum
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
@@ -16,34 +18,34 @@ import naksha.geo.SpGeometry
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
-import naksha.base.Platform.PlatformCompanion.UNDEFINED
-import naksha.model.NakshaIdType.INTERNAL_MEMBER
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.model.TagList
 import naksha.model.TagMap
 import naksha.model.Tuple
 import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 // TODO: We need an immutable version of this, because this actually allows mutation.
 
 /**
  * A materialized part of a feature.
  *
- * At write time, the storage walks the feature using [path], extracts the value, coerces it to the [dataType], and stores it in a storage-specific location derived from the [name]. The value is removed from the feature, and instead of the actual value a reference into the dedicated storage place is added, so that when decoding the feature, it can be copied back.
+ * At write time, the storage walks the feature using [path], extracts the value, coerces it to the [dataType], and stores it in a storage-specific location derived from the [id]. The value is removed from the feature, and instead of the actual value a reference into the dedicated storage place is added, so that when decoding the feature, it can be copied back.
  *
- * The [name] must be a valid Naksha identifier (see [naksha.model.Naksha.verifyId]). Mandatory members are injected by the storage and **must not** be redeclared by the client with a different type. Mandatory members are:
- * - [Tuple-Number][naksha.model.objects.StandardMembers.StandardMembers_C.Tn]
- * - [NextVersion][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion]
+ * The [id] must be a valid Naksha identifier (see [naksha.base.FeatureType.verify]). Mandatory members are injected by the storage and **must not** be redeclared by the client with a different type. Mandatory members are:
+ * - [Tuple-Number][naksha.model.objects.StandardMembers.StandardMembers_C.TnMember]
+ * - [NextVersion][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember]
  * - [GlobalBookFeatureNumber][naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber]
- * - [Id][naksha.model.objects.StandardMembers.StandardMembers_C.Id]
- * - [Feature][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes]
+ * - [Id][naksha.model.objects.StandardMembers.StandardMembers_C.IdMember]
+ * - [Feature][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytesMember]
  *
  * If [path] is not explicitly set, the implicit path defaults to `["properties", <name>]`.
  * @since 3.0
  */
 @JsExport
-open class Member() : AnyObject(), Comparator<Member> {
+open class Member() : PAnyMap(), Comparator<Member> {
 
     /**
      * Construct a member with a name and the given data type.
@@ -54,7 +56,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("of")
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
-        this.name = INTERNAL_MEMBER.verify(name)
+        this.id = MEMBER_AND_INDEX.verify(name, internal = true)
         this.dataType = dataType
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -71,7 +73,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     @JsName("relocate")
     constructor(origin: Member, path: JsonPath) : this() {
         if (origin.isVirtual()) throw NakshaException(ILLEGAL_ARGUMENT, "Virtual members can't be copied")
-        this.name = origin.name
+        this.id = origin.id
         this.dataType = origin.dataType
         this.path = path
         this.path.validate()
@@ -82,20 +84,21 @@ open class Member() : AnyObject(), Comparator<Member> {
      * column unless it is declared with exactly the same [dataType].
      * @since 3.0
      */
-    var name: String by NAME
+    // TODO: @AI: We need to refactor this back to `name`
+    var id: String by NAME
 
-    /** True iff the underlying map has an entry for [name]. */
+    /** True iff the underlying map has an entry for [id]. */
     fun hasName(): Boolean = hasRaw("name")
 
-    /** Remove [name] from the underlying map; returns this for chaining. */
+    /** Remove [id] from the underlying map; returns this for chaining. */
     fun removeName(): Member {
         removeRaw("name")
         return this
     }
 
-    /** Fluent setter for [name]; returns this for chaining. */
+    /** Fluent setter for [id]; returns this for chaining. */
     fun withName(value: String): Member {
-        name = value
+        id = value
         return this
     }
 
@@ -138,7 +141,7 @@ open class Member() : AnyObject(), Comparator<Member> {
 
     /** Fluent setter for [path]; returns this for chaining. */
     fun withPath(value: JsonPath?): Member {
-        path = value ?: JsonPath("properties", name)
+        path = value ?: JsonPath("properties", id)
         return this
     }
 
@@ -165,7 +168,14 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
-     * True if this member is a virtual member.
+     * True if this member is a virtual member. Will be true for:
+     * - `fn` — [FeatureNumberMember][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumberMember]
+     * - `version` — [VersionMember][naksha.model.objects.StandardMembers.StandardMembers_C.VersionMember]
+     * - `action` — [ActionMember][naksha.model.objects.StandardMembers.StandardMembers_C.ActionMember]
+     * - `feature` — [FeatureBytesMember][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytesMember]
+     *
+     * Beware that `tn` aka [TnMember][naksha.model.objects.StandardMembers.StandardMembers_C.TnMember] is not virtual, but often split by storages into its parts and encoded differently. However, for the sake of being virtual it is not. Only member that have no representation in the members-book are virtual.
+     * @since 3.0
      */
     fun isVirtual(): Boolean = virtual
 
@@ -182,7 +192,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
-     * Check if this member is the same as the given one, so [name] and [dataType] match.
+     * Check if this member is the same as the given one, so [id] and [dataType] match.
      * @param other the other member to test against.
      * @return _true_ if the two members are the same; _false_ otherwise.
      * @since 3.0
@@ -199,7 +209,7 @@ open class Member() : AnyObject(), Comparator<Member> {
         if (other == null) return false
         if (this === other) return true
         // We require same name and data-type, but not same JSON path.
-        if (name != other.name) return false
+        if (id != other.id) return false
         if (dataType != other.dataType) return false
         if (comparePath && !path.contentDeepEquals(other.path)) return false
         return true
@@ -222,8 +232,8 @@ open class Member() : AnyObject(), Comparator<Member> {
         if (other == null) throw NakshaException(ILLEGAL_STATE, "The other member is NULL")
         if (other === this) return other
         // We require same name and data-type, but not same JSON path.
-        if (name != other.name) {
-            throw NakshaException(ILLEGAL_STATE, "The other member has different name: '${other.name}', expected: '${name}'")
+        if (id != other.id) {
+            throw NakshaException(ILLEGAL_STATE, "The other member has different name: '${other.id}', expected: '${id}'")
         }
         if (dataType != other.dataType) {
             throw NakshaException(ILLEGAL_STATE, "The other member has wrong data type: '${other.dataType}', expected '${dataType}'")
@@ -239,10 +249,10 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readTupleNumber(feature: MapProxy<*,*>): TupleNumber? {
+    fun readTupleNumber(feature: PTypedMap<*,*>): TupleNumber? {
         val raw = feature.getPath(path)
         if (raw is TupleNumber) return raw
-        if (raw is String) return TupleNumber.fromStringOrGuid(raw)
+        if (raw is String) return TupleNumber.fromString(raw)
         if (raw is ByteArray) return TupleNumber.fromByteArray(raw)
         return null
     }
@@ -252,7 +262,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readBoolean(feature: MapProxy<*,*>): Boolean? {
+    fun readBoolean(feature: PTypedMap<*,*>): Boolean? {
         val raw = feature.getPath(path)
         if (raw is Boolean) return raw
         return null
@@ -263,9 +273,27 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readString(feature: MapProxy<*,*>): String? {
+    fun readString(feature: PTypedMap<*,*>): String? {
         val raw = feature.getPath(path)
         if (raw is String) return raw
+        return null
+    }
+
+    /**
+     * Helper to read an `id` from a feature.
+     * @param feature the feature to read from.
+     * @param update if `true` and the value was converted into an [Id], the key is reassigned to the new identifier.
+     * @return the read value or `null`, if the feature does not store a [Id] value at the member path.
+     */
+    @JvmOverloads
+    fun readId(feature: PTypedMap<*,*>, update: Boolean = true): Id? {
+        val raw = feature.getPath(path)
+        if (raw is Id) return raw
+        val id = Id.fromValue(raw)
+        if (id is Id) {
+            if (update) feature.setPath(path, id)
+            return id
+        }
         return null
     }
 
@@ -274,11 +302,11 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readInt64(feature: MapProxy<*,*>): Int64? {
+    fun readInt64(feature: PTypedMap<*,*>): Long? {
         val raw = feature.getPath(path)
-        if (raw is Int64) return raw
-        if (raw is Long) return Int64(raw)
-        if (raw is Number) return Int64(raw.toLong())
+        if (raw is Int64) return raw.toLong()
+        if (raw is Long) return raw
+        if (raw is Number) return raw.toLong()
         return null
     }
 
@@ -287,7 +315,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readDouble(feature: MapProxy<*,*>): Double? {
+    fun readDouble(feature: PTypedMap<*,*>): Double? {
         val raw = feature.getPath(path)
         if (raw is Double) return raw
         if (raw is Number) return raw.toDouble()
@@ -299,7 +327,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readGeometry(feature: MapProxy<*,*>): SpGeometry? {
+    fun readGeometry(feature: PTypedMap<*,*>): SpGeometry? {
         val raw = feature.getPath(path)
         if (raw is SpGeometry) return raw
         return null
@@ -310,7 +338,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readByteArray(feature: MapProxy<*,*>): ByteArray? {
+    fun readByteArray(feature: PTypedMap<*,*>): ByteArray? {
         val raw = feature.getPath(path)
         if (raw is ByteArray) return raw
         return null
@@ -321,10 +349,10 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readTagMap(feature: MapProxy<*,*>): TagMap? {
+    fun readTagMap(feature: PTypedMap<*,*>): TagMap? {
         val raw = feature.getPath(path)
         if (raw is TagMap) return raw
-        if (raw is MapProxy<*,*>) return raw.proxy(TagMap::class)
+        if (raw is PTypedMap<*,*>) return raw.proxy(TagMap::class)
         if (raw is PlatformMap) return raw.proxy(TagMap::class)
         return null
     }
@@ -334,10 +362,10 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readTagList(feature: MapProxy<*,*>): TagList? {
+    fun readTagList(feature: PTypedMap<*,*>): TagList? {
         val raw = feature.getPath(path)
         if (raw is TagList) return raw
-        if (raw is ListProxy<*>) return raw.proxy(TagList::class)
+        if (raw is PTypedArray<*>) return raw.proxy(TagList::class)
         if (raw is PlatformList) return raw.proxy(TagList::class)
         return null
     }
@@ -350,9 +378,9 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getTupleNumberFromTuple")
     fun readTupleNumber(tuple: Tuple): TupleNumber? {
-        val raw = tuple.membersBook[this.name] ?: return null
+        val raw = tuple.membersBook[this.id] ?: return null
         if (raw is TupleNumber) return raw
-        if (raw is String) return TupleNumber.fromStringOrGuid(raw)
+        if (raw is String) return TupleNumber.fromString(raw)
         if (raw is ByteArray) return TupleNumber.fromByteArray(raw)
         return null
     }
@@ -365,7 +393,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getBooleanFromTuple")
     fun readBoolean(tuple: Tuple): Boolean? {
-        val raw = tuple.membersBook[this.name]
+        val raw = tuple.membersBook[this.id]
         if (raw is Boolean) return raw
         return null
     }
@@ -378,7 +406,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getStringFromTuple")
     fun readString(tuple: Tuple): String? {
-        val raw = tuple.membersBook[this.name]
+        val raw = tuple.membersBook[this.id]
         if (raw is String) return raw
         return null
     }
@@ -406,7 +434,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getDoubleFromTuple")
     fun readDouble(tuple: Tuple): Double? {
-        val raw = tuple.membersBook[this.name]
+        val raw = tuple.membersBook[this.id]
         if (raw is Double) return raw
         if (raw is Number) return raw.toDouble()
         return null
@@ -420,7 +448,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getGeometryFromTuple")
     fun readGeometry(tuple: Tuple): SpGeometry? {
-        val raw = tuple.membersBook[this.name]
+        val raw = tuple.membersBook[this.id]
         if (raw is SpGeometry) return raw
         return null
     }
@@ -433,7 +461,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getByteArrayFromTuple")
     fun readByteArray(tuple: Tuple): ByteArray? {
-        val raw = tuple.membersBook[this.name]
+        val raw = tuple.membersBook[this.id]
         if (raw is ByteArray) return raw
         return null
     }
@@ -446,9 +474,9 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getTagMapFromTuple")
     fun readTagMap(tuple: Tuple): TagMap? {
-        val raw = tuple.membersBook[this.name]
+        val raw = tuple.membersBook[this.id]
         if (raw is TagMap) return raw
-        if (raw is MapProxy<*,*>) return raw.proxy(TagMap::class)
+        if (raw is PTypedMap<*,*>) return raw.proxy(TagMap::class)
         if (raw is PlatformMap) return raw.proxy(TagMap::class)
         return null
     }
@@ -461,9 +489,9 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     @JsName("getTagListFromTuple")
     fun readTagList(tuple: Tuple): TagList? {
-        val raw = tuple.membersBook[this.name]
+        val raw = tuple.membersBook[this.id]
         if (raw is TagList) return raw
-        if (raw is ListProxy<*>) return raw.proxy(TagList::class)
+        if (raw is PTypedArray<*>) return raw.proxy(TagList::class)
         if (raw is PlatformList) return raw.proxy(TagList::class)
         return null
     }
@@ -474,7 +502,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @return the previous value.
      * @throws RuntimeException If the given feature has a broken path, so the path requires an array, but an object exists already.
      */
-    fun write(feature: MapProxy<*,*>, value: Any?): Any? = feature.setPath(value, path)
+    fun write(feature: PTypedMap<*,*>, value: Any?): Any? = feature.setPath(value, path)
 
     /**
      * Helper to delete a member from the given feature.
@@ -482,15 +510,16 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @return the value that has been removed.
      * @throws RuntimeException If the given feature has a broken path, so the path requires an array, but an object exists already.
      */
-    fun delete(feature: MapProxy<*,*>): Any? = feature.setPath(UNDEFINED, path)
+    fun delete(feature: PTypedMap<*,*>): Any? = feature.setPath(UNDEFINED, path)
 
     override fun compare(a: Member, b: Member): Int = a.dataType.sortOrder - b.dataType.sortOrder
 
     companion object Member_C {
-        private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
+        // TODO: @AI: Remove the name parameter, ones the refactoring of `id` to `name` is done!
+        private val NAME = NotNullProperty<Member, String>(String::class, name = "name")
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
         private val INDEX = NullableProperty<Member, Int>(Int::class)
-        private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath("properties", self.name) }
+        private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath("properties", self.id) }
         private val MANDATORY = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
         private val VIRTUAL = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
     }
@@ -535,5 +564,5 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun asTagMapMember(): TagMapMember = proxy(TagMapMember::class)
     fun asTagListMember(): TagListMember = proxy(TagListMember::class)
 
-    override fun toString(): String = name
+    override fun toString(): String = id
 }

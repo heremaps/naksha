@@ -29,7 +29,7 @@ import kotlin.jvm.JvmStatic
 /**
  * The XYZ namespace stored in [properties.@ns:com:here:xyz][naksha.model.object.NakshaProperties.XYZ] of the [NakshaFeature][naksha.model.objects.NakshaFeature].
  *
- * This represents the external Naksha view of tuple metadata. When a [Tuple] is returned by a storage, and then converted for example by Naksha-Hub into a [NakshaFeature][naksha.model.objects.NakshaFeature], the [uuid] is set to the stringified [Guid] of the [Tuple], so to the [tuple-number][TupleNumber] combined with the [feature id][naksha.model.objects.StandardMembers.Id].
+ * This represents the external Naksha view of tuple metadata. When a [Tuple] is returned by a storage, and then converted for example by Naksha-Hub into a [NakshaFeature][naksha.model.objects.NakshaFeature], the [uuid] is set to the stringified [Guid] of the [Tuple], so to the [tuple-number][TupleNumber] combined with the [feature id][naksha.model.objects.StandardMembers.IdMember].
  *
  * If a client wants to change a feature, the following concepts should be followed:
  *
@@ -42,7 +42,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-class XyzNs : AnyObject() {
+class XyzNs : PAnyMap() {
 
     companion object XyzNsCompanion {
         const val TAGS_KEY = "tags"
@@ -198,7 +198,7 @@ class XyzNs : AnyObject() {
         private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
         private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
         private val _INT_NULL = NullableProperty<XyzNs, Int>(Int::class, autoRemove = true)
-        private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
+        private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64::class) { _, _ -> Base.currentMillis() }
         private val _DOUBLE_NULL = NullableProperty<XyzNs, Double>(Double::class, autoRemove = true)
         private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList::class) { _, _ -> TagList() }
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
@@ -226,11 +226,11 @@ class XyzNs : AnyObject() {
             val tn = tuple.tupleNumber
             val id = tuple.id
             val guid = guidFromTuple(tuple)
-            val updatedAt = tuple.getLong(XyzUpdatedAt, Platform.currentMillis())
+            val updatedAt = tuple.getLong(XyzUpdatedAt, Base.currentMillis())
             val createdAt = tuple.getLong(XyzCreatedAt, updatedAt)
             val authorTs = tuple.getLong(XyzAuthorTimestamp,updatedAt)
             val nextTn = tuple.nextTupleNumber
-            return AnyObject().apply {
+            return PAnyMap().apply {
                 setRaw(UUID, guid.toString())
                 if (nextTn != null) setRaw(NUUID, Guid(id, nextTn).toString())
                 else if (tn.action == Action.DELETE) setRaw(NUUID, guid.toString())
@@ -526,8 +526,9 @@ class XyzNs : AnyObject() {
     val version: Version?
         get() {
             // Downward compatibility hack.
-            val raw = getRaw("version")
-            if (raw is Int64 && raw >= Version.MIN_AUTO) return Version(raw)
+            var raw = getRaw("version")
+            if (raw is Int64) raw = raw.toLong()
+            if (raw is Long && raw >= Version.MIN_AUTO.number) return Version(raw)
             val version = guid?.tupleNumber?.version
             return if (version != null) Version(version) else null
         }
@@ -536,7 +537,7 @@ class XyzNs : AnyObject() {
      * The transaction-number of the feature, basically the same as [version], just as 64-bit integer.
      * @since 2.0
      */
-    val txn: Int64?
+    val txn: Long?
         get() = guid?.tupleNumber?.version
 
     /**

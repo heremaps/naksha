@@ -28,7 +28,7 @@ class HeapBook(
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        fun copyOf(other: IBook, databaseNumber: Int64? = other.databaseNumber, featureNumber: Int64? = other.featureNumber): HeapBook {
+        fun copyOf(other: IBook, databaseNumber: Long? = other.databaseNumber, featureNumber: Long? = other.featureNumber): HeapBook {
             val c = HeapBook(other.bookType)
             c.id = other.id
             c.databaseNumber = other.databaseNumber
@@ -51,8 +51,8 @@ class HeapBook(
 
     }
 
-    override var databaseNumber: Int64? = null
-    override var featureNumber: Int64? = null
+    override var databaseNumber: Long? = null
+    override var featureNumber: Long? = null
 
     private val _names = mutableListOf<String>()
     private val _values = mutableListOf<Any?>()
@@ -97,7 +97,7 @@ class HeapBook(
      * @since 3.0.0
      */
     @JvmOverloads
-    fun copy(bookType: BookType = this.bookType, databaseNumber: Int64? = this.databaseNumber, featureNumber: Int64? = this.featureNumber): HeapBook {
+    fun copy(bookType: BookType = this.bookType, databaseNumber: Long? = this.databaseNumber, featureNumber: Long? = this.featureNumber): HeapBook {
         val c = HeapBook(bookType)
         c.databaseNumber = this.databaseNumber
         c.featureNumber = this.featureNumber

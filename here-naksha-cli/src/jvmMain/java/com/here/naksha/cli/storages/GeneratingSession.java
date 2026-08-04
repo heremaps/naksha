@@ -47,7 +47,7 @@ final class GeneratingSession implements IReadSession {
         for (int i = from; i < to; ++i) {
             FeatureTuple featureTuple = featureTuples.get(i);
             NakshaFeature feature = generatedFeatures.get(i);
-            featureTuple.setFeature(feature);
+            featureTuple.setCachedFeature(feature);
         }
     }
 
@@ -123,7 +123,7 @@ final class GeneratingSession implements IReadSession {
 
     @Nullable
     @Override
-    public NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
+    public NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String id, boolean allowTombstone) {
         throw new NakshaException(NakshaError.UNSUPPORTED_OPERATION, "");
     }
 

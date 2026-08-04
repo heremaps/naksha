@@ -18,6 +18,8 @@ import kotlin.js.JsName
 @JsExport
 open class Notification(): Request() {
 
+    // TODO: We need to update this!
+
     /**
      * Create a new storage notification.
      * @param storage the storage that causes the notification.
@@ -31,7 +33,7 @@ open class Notification(): Request() {
         private val STORAGE = NotNullProperty<Notification, IStorage>(IStorage::class){ _,_ ->
             throw NakshaException(ILLEGAL_STATE, "The notification has no storage")
         }
-        private val STRING = NotNullProperty<Notification, String>(String::class) { self, _ -> self.storage.id }
+        private val STRING = NotNullProperty<Notification, String>(String::class) { self, _ -> self.storage.id.text }
     }
 
     /**

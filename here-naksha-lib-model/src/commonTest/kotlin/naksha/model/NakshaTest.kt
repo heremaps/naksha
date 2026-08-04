@@ -1,11 +1,11 @@
 package naksha.model
 
 import naksha.base.Binary
+import naksha.base.FeatureType
 import naksha.base.Int64
-import naksha.base.Platform
-import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
+import naksha.base.Base
+import naksha.base.BaseUtil.BaseUtil_C.randomAtoZ
 import naksha.model.Naksha.NakshaCompanion.INT64_SIGN_BIT
-import naksha.model.NakshaIdType
 import kotlin.test.*
 
 class NakshaTest {
@@ -14,23 +14,23 @@ class NakshaTest {
     fun shouldLimitCollectionIdLength() {
         // expect
         var collectionId = collectionIdOf(1)
-        assertTrue(collectionId) { NakshaIdType.COLLECTION.isValidId(collectionId) }
+        assertTrue(collectionId) { FeatureType.COLLECTION.isValidId(collectionId) }
         collectionId = collectionIdOf(42)
-        assertTrue(collectionId) { NakshaIdType.COLLECTION.isValidId(collectionId) }
+        assertTrue(collectionId) { FeatureType.COLLECTION.isValidId(collectionId) }
 
         collectionId = collectionIdOf(45)
-        assertFalse(collectionId) { NakshaIdType.COLLECTION.isValidId(collectionId) }
-        assertFalse(collectionId) { NakshaIdType.COLLECTION.isValidId("") }
+        assertFalse(collectionId) { FeatureType.COLLECTION.isValidId(collectionId) }
+        assertFalse(collectionId) { FeatureType.COLLECTION.isValidId("") }
     }
 
     @Test
     fun shouldOnlyAllowCharacterAsFirstChar() {
         // expect
-        assertTrue{ NakshaIdType.COLLECTION.isValidId("c1232_name") }
-        assertFalse{ NakshaIdType.COLLECTION.isValidId("11232_name") }
+        assertTrue{ FeatureType.COLLECTION.isValidId("c1232_name") }
+        assertFalse{ FeatureType.COLLECTION.isValidId("11232_name") }
 
-        assertTrue{ NakshaIdType.CATALOG.isValidId("c1232_name") }
-        assertFalse{ NakshaIdType.CATALOG.isValidId("11232_name") }
+        assertTrue{ FeatureType.CATALOG.isValidId("c1232_name") }
+        assertFalse{ FeatureType.CATALOG.isValidId("11232_name") }
     }
 
     @Test
@@ -59,32 +59,32 @@ class NakshaTest {
     @Test
     fun shouldNotAllowCapitalLettersOrUnsupportedCharacters() {
         // expect
-        assertFalse{ NakshaIdType.COLLECTION.isValidId("C1232_name") }
-        assertFalse{ NakshaIdType.COLLECTION.isValidId("name\$a") }
-        assertFalse{ NakshaIdType.COLLECTION.isValidId("name&a") }
-        assertFalse{ NakshaIdType.COLLECTION.isValidId("name*a") }
-        assertFalse{ NakshaIdType.COLLECTION.isValidId("name#a") }
-        assertFalse{ NakshaIdType.COLLECTION.isValidId("name@a") }
-        assertFalse{ NakshaIdType.COLLECTION.isValidId("name!a") }
+        assertFalse{ FeatureType.COLLECTION.isValidId("C1232_name") }
+        assertFalse{ FeatureType.COLLECTION.isValidId("name\$a") }
+        assertFalse{ FeatureType.COLLECTION.isValidId("name&a") }
+        assertFalse{ FeatureType.COLLECTION.isValidId("name*a") }
+        assertFalse{ FeatureType.COLLECTION.isValidId("name#a") }
+        assertFalse{ FeatureType.COLLECTION.isValidId("name@a") }
+        assertFalse{ FeatureType.COLLECTION.isValidId("name!a") }
 
-        assertTrue{ NakshaIdType.COLLECTION.isValidId("name_a") }
-        assertTrue{ NakshaIdType.COLLECTION.isValidId("name-a") }
-        assertTrue{ NakshaIdType.COLLECTION.isValidId("name:a") }
+        assertTrue{ FeatureType.COLLECTION.isValidId("name_a") }
+        assertTrue{ FeatureType.COLLECTION.isValidId("name-a") }
+        assertTrue{ FeatureType.COLLECTION.isValidId("name:a") }
 
-        assertFalse{ NakshaIdType.CATALOG.isValidId("C1232_name") }
-        assertFalse{ NakshaIdType.CATALOG.isValidId("name\$a") }
-        assertFalse{ NakshaIdType.CATALOG.isValidId("name&a") }
-        assertFalse{ NakshaIdType.CATALOG.isValidId("name*a") }
-        assertFalse{ NakshaIdType.CATALOG.isValidId("name#a") }
-        assertFalse{ NakshaIdType.CATALOG.isValidId("name@a") }
-        assertFalse{ NakshaIdType.CATALOG.isValidId("name!a") }
+        assertFalse{ FeatureType.CATALOG.isValidId("C1232_name") }
+        assertFalse{ FeatureType.CATALOG.isValidId("name\$a") }
+        assertFalse{ FeatureType.CATALOG.isValidId("name&a") }
+        assertFalse{ FeatureType.CATALOG.isValidId("name*a") }
+        assertFalse{ FeatureType.CATALOG.isValidId("name#a") }
+        assertFalse{ FeatureType.CATALOG.isValidId("name@a") }
+        assertFalse{ FeatureType.CATALOG.isValidId("name!a") }
 
-        assertTrue{ NakshaIdType.CATALOG.isValidId("name_a") }
-        assertTrue{ NakshaIdType.CATALOG.isValidId("name-a") }
-        assertTrue{ NakshaIdType.CATALOG.isValidId("name:a") }
+        assertTrue{ FeatureType.CATALOG.isValidId("name_a") }
+        assertTrue{ FeatureType.CATALOG.isValidId("name-a") }
+        assertTrue{ FeatureType.CATALOG.isValidId("name:a") }
     }
 
-    private fun collectionIdOf(length: Int): String = "c" + randomString(length - 1).lowercase()
+    private fun collectionIdOf(length: Int): String = "c" + randomAtoZ(length - 1).lowercase()
 
     companion object NakshaTest_C {
         /**
@@ -135,7 +135,7 @@ class NakshaTest {
         }
     }
     private fun printPairIfIncorrect(id: String, fn: Int64, pn: Int) {
-        val bytes = Platform.md5(id)
+        val bytes = Base.md5(id)
         // To compare: https://www.md5hashgenerator.com/
         val hex = toHex(bytes)
         val view = Binary(bytes)

@@ -24,8 +24,8 @@ kotlin {
                 api(libs.lz4.java)
                 api(libs.slf4j.api) // https://mvnrepository.com/artifact/org.slf4j
 
-                implementation(libs.fastdouble)
                 implementation(libs.jackson.kotlin)
+                implementation(libs.fastdouble)
                 implementation(libs.gson)
                 implementation(libs.jsonio)
                 implementation(libs.fastjson)

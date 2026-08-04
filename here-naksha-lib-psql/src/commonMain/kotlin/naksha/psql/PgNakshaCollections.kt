@@ -2,6 +2,7 @@
 
 package naksha.psql
 
+import naksha.base.Id
 import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
@@ -12,5 +13,5 @@ import kotlin.js.JsExport
 @JsExport
 class PgNakshaCollections internal constructor(map: PgCatalog) : PgCollection(map, NakshaCollection()
     .withCatalogId(map.id)
-    .withId(Naksha.COLLECTIONS_COL_ID)
+    .withId(Id.COLLECTIONS_COL_ID)
 ), PgInternalCollection

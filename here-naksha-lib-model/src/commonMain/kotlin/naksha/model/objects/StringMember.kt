@@ -1,5 +1,7 @@
 package naksha.model.objects
 
+import naksha.base.PTypedMap
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -17,7 +19,7 @@ class StringMember() : TypedMember<StringMember>() {
     /** Creates a new string member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
-        this.name = name
+        this.id = name
         this.dataType = STRING
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -27,7 +29,7 @@ class StringMember() : TypedMember<StringMember>() {
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != STRING) throw illegalArg("The given member is not of string type")
-        this.name = member.name
+        this.id = member.id
         this.dataType = STRING
         this.path = path?.validate() ?: member.path
     }
@@ -42,6 +44,6 @@ class StringMember() : TypedMember<StringMember>() {
     @JsName("getFromTuple")
     fun get(tuple: Tuple): String? = readString(tuple)
 
-    /** Sets the string value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: String): Any? = setPath(feature, path, value)
+    /** Sets the string value of this member on the given object. */
+    fun set(feature: PTypedMap<*, *>, value: String?): Any? = if (value == null) feature.setPath(UNDEFINED, path) else feature.setPath(value, path)
 }

@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Action
+import naksha.base.Id
 import naksha.model.Naksha
 import naksha.model.RandomFeatures
 import naksha.model.objects.NakshaCollection
@@ -12,11 +13,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 
-class HistoryUuidTest: PgTestBase(NakshaCollection(
-    id = "history_puuid_test_collection",
-    storeHistory = StoreMode.ON,
-    storeDeleted = StoreMode.ON
-)) {
+class HistoryUuidTest: PgTestBase(NakshaCollection()
+    .withId(Id("history_puuid_test_collection"))
+    .withStoreHistory(StoreMode.ON)
+    .withStoreDeleted(StoreMode.ON)
+) {
 
     @Test
     fun shouldFormCorrectUuidSequenceOnUpdate(){
@@ -25,27 +26,27 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
 
         // When:
         val createFeatureReq = WriteRequest().add(Write().createFeature(collection, feature))
-        val createdFeature = executeWrite(createFeatureReq).features.first()!!
+        val createdFeature = executeWriteAndLoadTuples(createFeatureReq).asFeatures.first()!!
 
         // And:
         val updateFeatureReq = WriteRequest().add(Write().updateFeature(collection, createdFeature.apply {
             title = "updated_version"
         }, atomic = true))
-        executeWrite(updateFeatureReq)
+        executeWriteAndLoadTuples(updateFeatureReq)
 
         // And:
         val deleteFeatureReq = WriteRequest().add(Write().deleteFeatureById(collection, feature.id))
-        executeWrite(deleteFeatureReq)
+        executeWriteAndLoadTuples(deleteFeatureReq)
 
         // And:
         Naksha.cache.clear()
-        val featureVersions = executeRead(ReadFeatures().apply {
+        val featureVersions = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds += feature.id
             queryHistory = true
             queryDeleted = true
-        }).features.filterNotNull()
+        }).asFeatures.filterNotNull()
 
         // Then:
         assertEquals(3, featureVersions.size)
@@ -72,27 +73,27 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
 
         // When:
         val createFeatureReq = WriteRequest().add(Write().createFeature(collection, feature))
-        val createdFeature = executeWrite(createFeatureReq).features.first()!!
+        val createdFeature = executeWriteAndLoadTuples(createFeatureReq).asFeatures.first()!!
 
         // And:
         val upsertFeatureReq = WriteRequest().add(Write().upsertFeature(collection, createdFeature.apply {
             title = "updated_version"
         }))
-        executeWrite(upsertFeatureReq)
+        executeWriteAndLoadTuples(upsertFeatureReq)
 
         // And:
         val deleteFeatureReq = WriteRequest().add(Write().deleteFeatureById(collection, feature.id))
-        executeWrite(deleteFeatureReq)
+        executeWriteAndLoadTuples(deleteFeatureReq)
 
         // And:
         Naksha.cache.clear()
-        val featureVersions = executeRead(ReadFeatures().apply {
+        val featureVersions = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds += feature.id
             queryHistory = true
             queryDeleted = true
-        }).features.filterNotNull()
+        }).asFeatures.filterNotNull()
 
         // Then:
         assertEquals(3, featureVersions.size)

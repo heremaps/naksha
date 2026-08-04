@@ -26,7 +26,7 @@ import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.ToJsonOptions;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -107,7 +107,7 @@ public abstract class AbstractDataIngest {
       final int reqBatchSize) {
     final FeatureCollectionRequest request = new FeatureCollectionRequest();
     int endIdx = Math.min(crtIdx + reqBatchSize, totalFeatures);
-    return Platform.toJSON(request.withFeatures(features.subList(crtIdx, endIdx)), ToJsonOptions.DEFAULT);
+    return Base.toJSON(request.withFeatures(features.subList(crtIdx, endIdx)), ToJsonOptions.DEFAULT);
   }
 
   private void nullifyUuid(final @NotNull List<NakshaFeature> features) {

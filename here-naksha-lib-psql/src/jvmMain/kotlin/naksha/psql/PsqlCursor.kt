@@ -1,10 +1,9 @@
 package naksha.psql
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.Int64
-import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.longToInt64
-import naksha.base.toInt64
+import naksha.base.Base
+import naksha.base.Base.BaseCompanion.longToInt64
 import java.sql.ResultSet
 import java.sql.Statement
 import kotlin.reflect.KClass
@@ -183,7 +182,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
                 is Byte -> result[i] = raw.toInt()
                 is Short -> result[i] = raw.toInt()
                 is Int -> result[i] = raw
-                is Long -> result[i] = raw.toInt64()
+                is Long -> result[i] = raw.toLong()
                 is Int64 -> result[i] = raw
                 is Float -> result[i] = raw.toDouble()
                 is Double -> result[i] = raw
@@ -225,7 +224,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
             "timestamp" -> valueOrNull(rs, longToInt64(rs.getTimestamp(index).toInstant().toEpochMilli()))
             "date" -> valueOrNull(rs, longToInt64(rs.getDate(index).toInstant().toEpochMilli()))
             "bytea" -> valueOrNull(rs, rs.getBytes(index))
-            "jsonb" -> rs.getString(index)?.let { Platform.fromJSON(it) }
+            "jsonb" -> rs.getString(index)?.let { Base.fromJSON(it) }
             else -> rs.getObject(index)
         }
     }
@@ -259,11 +258,11 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
      * @param klass the type of the proxy object to create.
      * @return the created proxy object.
      */
-    override fun <T : AnyObject> map(klass: KClass<T>): T {
+    override fun <T : PAnyMap> map(klass: KClass<T>): T {
         val rs = rsAtRow()
         val columnNames = columnNames()
         val columnTypes = columnTypes()
-        val row = Platform.newInstanceOf(klass)
+        val row = Base.newInstance(klass)
         var i = 0
         while (i < columnNames.size) {
             val name = columnNames[i]

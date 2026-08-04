@@ -1,6 +1,6 @@
 package naksha.diff
 
-import naksha.base.Platform
+import naksha.base.Base
 import kotlin.test.*
 
 class PatcherTest {
@@ -37,7 +37,7 @@ class PatcherTest {
     @Test
     fun shouldPatchMap(){
         // Given:
-        val patchedObject = Platform.fromJSON(
+        val patchedObject = Base.fromJSON(
             """
             {
                 "name": "John",

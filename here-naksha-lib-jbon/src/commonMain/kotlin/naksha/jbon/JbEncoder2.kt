@@ -6,6 +6,7 @@ import naksha.geo.GeoUtil
 import naksha.geo.SpGeometry
 import kotlin.js.*
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.math.floor
 
@@ -34,20 +35,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
-open class JbEncoder2(var global: IBook? = null) : Binary() {
-
-    /**
-     * Create a new resizable encoder with a new byte-array of the given size backing it.
-     * @param size The amount of byte to allocate initially.
-     * @param global The global book/dictionary to use when encoding; if any.
-     */
-    @Suppress("LeakingThis")
-    @JsName("forSize")
-    constructor(size: Int, global: IBook? = null) : this(global) {
-        view = Platform.newDataView(ByteArray(size))
-        this.readOnly = false
-        this.resize = true
-    }
+open class JbEncoder2 @JvmOverloads constructor(var global: IBook? = null) : Binary() {
 
     companion object JbEncoder2Companion {
         @JvmField
@@ -223,7 +211,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
     }
 
     /** Write a 64-bit integer using the smallest JBON2 encoding. */
-    fun encodeInt64(value: Int64): Int {
+    fun encodeInt64(value: Long): Int {
         if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
             return encodeInt32(value.toInt())
         }
@@ -265,10 +253,10 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * @param value The value to write; only the lower 56 bits are stored.
      * @return The offset of the value written.
      */
-    fun encodeUInt56(value: Int64): Int {
+    fun encodeUInt56(value: Long): Int {
         val pos = end
-        val masked = value and Platform.toInt64(JB2_MASK_56_LOW)
-        val packed = (Platform.toInt64(JB2_UINT56.toLong()) shl 56) or masked
+        val masked = value and JB2_MASK_56_LOW
+        val packed = (JB2_UINT56.toLong() shl 56) or masked
         writeInt64(packed)
         return pos
     }
@@ -291,10 +279,10 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * @param value The timestamp to write.
      * @return The offset of the value written.
      */
-    fun encodeTimestamp(value: Int64): Int {
+    fun encodeTimestamp(value: Long): Int {
         val pos = end
-        val masked = value and Platform.toInt64(JB2_MASK_56_LOW)
-        val packed = (Platform.toInt64(JB2_TIMESTAMP.toLong()) shl 56) or masked
+        val masked = value and JB2_MASK_56_LOW
+        val packed = (JB2_TIMESTAMP.toLong() shl 56) or masked
         writeInt64(packed)
         return pos
     }
@@ -315,11 +303,11 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * @return The offset of the value written.
      */
     fun encodeTupleNumber(
-        databaseNumber: Int64,
+        databaseNumber: Long,
         catalogNumber: Int,
         collectionNumber: Int,
-        featureNumber: Int64,
-        version: Int64
+        featureNumber: Long,
+        version: Long
     ): Int {
         val pos = end
         writeInt8(JB2_TUPLE_NUMBER.toByte())
@@ -513,7 +501,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
                 }
                 if (size >= 3) {
                     sb.clear()
-                    JbDecoder2.readSubstring(this, wordStart, pos, sb)
+                    JbDecoder2.readSubstring(byteArray, wordStart, pos, sb)
                     val subString = sb.toString()
                     var index = -1
                     var book = JB2_REF_BOOK_LOCAL
@@ -527,7 +515,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
                                 val c = getInt8(reversePos).toInt() and 0xff
                                 if (':'.code == c) {
                                     sb.clear()
-                                    JbDecoder2.readSubstring(this, wordStart, reversePos, sb)
+                                    JbDecoder2.readSubstring(byteArray, wordStart, reversePos, sb)
                                     val prefix = sb.toString()
                                     val pidx = global.indexOfString(prefix)
                                     if (pidx >= 0) {
@@ -698,7 +686,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * @param map The map to write.
      * @return The offset of the value written.
      */
-    fun encodeObject(map: MapProxy<String, *>): Int {
+    fun encodeObject(map: PTypedMap<String, *>): Int {
         val start = startObject()
         for (entry in map) {
             val key = entry.key
@@ -718,7 +706,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
     /**
      * When invoking [buildTupleFromMap] this captures the XYZ namespace reference, if found.
      */
-    var xyz: MapProxy<String, *>? = null
+    var xyz: PTypedMap<String, *>? = null
 
     /** Write an array recursively. */
     fun encodeArray(array: Array<Any?>): Int {
@@ -738,7 +726,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
     }
 
     /** Write an array (list proxy) recursively. */
-    fun encodeList(array: ListProxy<*>): Int {
+    fun encodeList(array: PTypedArray<*>): Int {
         val start = startArray()
         var i = 0
         while (i < array.size) {
@@ -758,7 +746,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * Write a TagList recursively. A TagList is a list of unique primitive values where order
      * is significant, but must not have duplicates, null or undefined.
      */
-    fun encodeTagList(list: ListProxy<*>): Int {
+    fun encodeTagList(list: PTypedArray<*>): Int {
         val start = startStruct()
         var i = 0
         while (i < list.size) {
@@ -778,7 +766,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * Write a TagMap recursively. A TagMap is a string-keyed map with primitive values.
      * Uses dictionary compression for keys when a global book is provided.
      */
-    fun encodeTagMap(map: MapProxy<String, *>): Int {
+    fun encodeTagMap(map: PTypedMap<String, *>): Int {
         val start = startStruct()
         for (entry in map) {
             val key = entry.key
@@ -862,14 +850,15 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         when (value) {
             is Char -> if (global != null) encodeText(value.toString()) else encodeString(value.toString())
             is String -> if (global != null) encodeText(value) else encodeString(value)
+            is Id -> if (global != null) encodeText(value.text) else encodeString(value.text)
             is Boolean -> encodeBool(value)
             is Byte -> encodeInt32(value.toInt())
             is Short -> encodeInt32(value.toInt())
             is Int -> encodeInt32(value)
-            is Long -> encodeInt64(value.toInt64())
-            is Int64 -> encodeInt64(value)
+            is Long -> encodeInt64(value)
+            is Int64 -> encodeInt64(value.toLong())
             is Float -> encodeFloat32(value)
-            is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
+            is Double -> if (Base.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
             is SpGeometry -> encodeGeometry(value)
             is TupleNumber -> encodeTupleNumber(
                 value.databaseNumber,
@@ -879,9 +868,10 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
                 value.version
             )
             is ByteArray -> if (value.isNotEmpty()) encodeByteArray(value) else encodeNull()
-            is MapProxy<*, *> -> if (value::class.simpleName == "TagMap") encodeTagMap(value as MapProxy<String, *>) else encodeObject(value as MapProxy<String, *>)
-            is ListProxy<*> -> if (value::class.simpleName == "TagList") encodeTagList(value) else encodeList(value)
+            is PTypedMap<*, *> -> if (value::class.simpleName == "TagMap") encodeTagMap(value as PTypedMap<String, *>) else encodeObject(value as PTypedMap<String, *>)
+            is PTypedArray<*> -> if (value::class.simpleName == "TagList") encodeTagList(value) else encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)
+            is CharSequence -> if (global != null) encodeText(value.toString()) else encodeString(value.toString())
             null -> encodeNull()
             else -> throw IllegalArgumentException("Could not encode value for type: ${value::class}")
         }
@@ -938,7 +928,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * @param withHeader Whether to prepend the `@JB\x02` file header.
      * @return The JBON2 tuple bytes.
      */
-    fun buildTupleFromMap(map: MapProxy<String, *>, withHeader: Boolean = true): ByteArray {
+    fun buildTupleFromMap(map: PTypedMap<String, *>, withHeader: Boolean = true): ByteArray {
         clear()
         xyz = null
         // Encode the feature object into a temporary region first.
@@ -979,21 +969,20 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
         val headerSize = if (withHeader) JB2_MAGIC.size else 0
         val targetSize = headerSize + tupleHeaderSize + tupleContentSize
         val target = ByteArray(targetSize)
-        val targetView = DataViewProxy(target)
         var t = 0
 
         if (withHeader) {
-            for (b in JB2_MAGIC) targetView.setInt8(t++, b)
+            for (b in JB2_MAGIC) target.setInt8(t++, b)
         }
         // tuple header
         var source = tupleHeaderStart
-        while (source < tupleHeaderEnd) targetView.setInt8(t++, getInt8(source++))
+        while (source < tupleHeaderEnd) target.setInt8(t++, getInt8(source++))
         // feature object
         source = featureStart
-        while (source < featureEnd) targetView.setInt8(t++, getInt8(source++))
+        while (source < featureEnd) target.setInt8(t++, getInt8(source++))
         // local book
         source = localBookStart
-        while (source < localBookEnd) targetView.setInt8(t++, getInt8(source++))
+        while (source < localBookEnd) target.setInt8(t++, getInt8(source++))
         return target
     }
 }

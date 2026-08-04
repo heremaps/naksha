@@ -20,7 +20,8 @@ package com.here.naksha.lib.view;
 
 import java.util.List;
 import java.util.Map;
-import naksha.model.request.FeatureTuple;
+
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,8 +30,8 @@ public class ViewSuccessResult extends SuccessResponse {
 
   public Map<String, Integer> originalFeaturesOrder;
 
-  public ViewSuccessResult(@NotNull List<FeatureTuple> rows, @Nullable Map<String, Integer> originalFeaturesOrder) {
-    withFeatureTupleList(rows);
+  public ViewSuccessResult(@NotNull List<NakshaFeature> rows, @Nullable Map<String, Integer> originalFeaturesOrder) {
+    withObjects(rows);
     this.originalFeaturesOrder = originalFeaturesOrder;
   }
 }

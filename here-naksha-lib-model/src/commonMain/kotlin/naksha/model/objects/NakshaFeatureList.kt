@@ -2,7 +2,7 @@
 
 package naksha.model.objects
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
@@ -10,7 +10,7 @@ import kotlin.jvm.JvmStatic
  * A list of Naksha features.
  */
 @JsExport
-open class NakshaFeatureList : ListProxy<NakshaFeature>(NakshaFeature::class){
+open class NakshaFeatureList : PTypedArray<NakshaFeature>(NakshaFeature::class){
 
     companion object NakshaFeatureList_C {
 

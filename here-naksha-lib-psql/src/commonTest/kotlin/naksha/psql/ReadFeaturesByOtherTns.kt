@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.Int64
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaCollection
@@ -15,7 +16,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class ReadFeaturesByOtherTns : PgTestBase(
-    NakshaCollection("read_features_by_tns_test")
+    NakshaCollection().withId(Id("read_features_by_tns_test"))
 ) {
 
     @Test
@@ -23,7 +24,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
         // Given: some freshly created features
         val initialFeatures = insertFeatures(randomFeatures(5).apply {
             forEachIndexed { ind, feature -> feature.title = "f_$ind" }
-        }).features
+        }).asFeatures
 
         // And: updates to these features
         val update = WriteRequest()
@@ -36,21 +37,21 @@ class ReadFeaturesByOtherTns : PgTestBase(
                 )
             )
         }
-        val updateResp = executeWrite(update)
+        val updateResp = executeWriteAndLoadTuples(update)
 
         // And: the shared `next_version` of all updated features (all 5 updates ran in one transaction).
-        val updatedVersion: Int64 = updateResp.features[0]!!.properties.xyz.guid!!.tupleNumber.version
+        val updatedVersion = updateResp.asFeatures[0]!!.properties.xyz.guid!!.tupleNumber.version
 
         // When: querying for features whose `next_version` matches that version
-        val byNextTnResp = executeRead(ReadFeatures().apply {
+        val byNextTnResp = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
-            queryMembers = IsAnyOf(StandardMembers.NextVersion, updatedVersion)
+            memberQuery = IsAnyOf(StandardMembers.NextVersionMember, updatedVersion)
             queryHistory = true
         })
 
         // Then: all 5 initial features are returned — they share next_version since they were demoted together.
-        val fetchedFeatures = byNextTnResp.features
+        val fetchedFeatures = byNextTnResp.asFeatures
         assertEquals(5, fetchedFeatures.size)
         val expectedIds = initialFeatures.map { it!!.id }.toSet()
         fetchedFeatures.forEach { fetchedPredecessor ->

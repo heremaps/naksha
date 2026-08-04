@@ -1,10 +1,9 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Int64
-import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.PlatformUtil
+import naksha.base.Base
+import naksha.base.Base.BaseCompanion.logger
+import naksha.base.BaseUtil
 import naksha.base.TupleNumber
 import naksha.base.generalException
 import naksha.jbon.HeapBook
@@ -29,9 +28,9 @@ internal class PgWriterUpsert(
 
     // All columns that are BYTE_ARRAYs (can be empty)
     private val byteArrayCols = pgCollection.columns.filter { it.memberType == MemberType.BYTE_ARRAY }
-    private val writeByFn = mutableMapOf<Int64, PgWrite>()
+    private val writeByFn = mutableMapOf<Long, PgWrite>()
     init {
-        inRows.addColumns(pgCollection.columns)
+        inRows.withPgCollection(pgCollection)
         loadAllTuple { _, tuple, pgWrite -> writeByFn[tuple.tupleNumber.featureNumber] = pgWrite }
     }
 
@@ -156,9 +155,9 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
 
     override fun doExecute(conn: PgConnection) {
         val outRows = PgRows()
-            .withDatabaseNumber(storageNumber)
-            .withCatalogNumber(catalogNumber)
-            .withCollectionNumber(collectionNumber)
+            .withDatabaseId(databaseId)
+            .withCatalogId(catalogId)
+            .withCollectionId(collectionId)
         outRows.addColumn(FnColumn)
                .addColumn(VersionColumn)
         for (column in byteArrayCols) outRows.addColumn(column)
@@ -174,7 +173,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
         val plan = plan(conn)
         val array = inRows.values()
         val session = this.session
-        if (PlatformUtil.ENABLE_INFO) {
+        if (BaseUtil.ENABLE_INFO) {
             if (session.logQueries) {
                 session.logAtInfo(plan.sql)
             }
@@ -183,9 +182,9 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 session.logAtInfo(explain)
             }
         }
-        val start = Platform.currentNanos()
+        val start = Base.currentNanos()
         val cursor = plan.pgPlan.execute(array)
-        val end = Platform.currentNanos()
+        val end = Base.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (pgWrites.size != 1 || pgWrites[0].isFeatureModification) {
             logger.info("UPSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
@@ -200,8 +199,8 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     val pgWrite = writeByFn[updated_fn] ?: throw generalException("Received _updated_fn '$updated_fn', but found no matching PgWrite")
                     val previousVersion = outRows.getInt64(row, "_head_row_version")
                         ?: throw generalException("Missing previous HEAD version for updated feature '${pgWrite.id}'")
-                    val updatedTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
-                    val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, previousVersion)
+                    val updatedTupleNumber = TupleNumber(databaseId, catalogId, collectionId, updated_fn, updated_version)
+                    val previousTupleNumber = TupleNumber(databaseId, catalogId, collectionId, updated_fn, previousVersion)
                     // If an update was done, we need the following values to be available:
                     val change_count: Int = if (CC!=null) {
                         outRows.getInt(row, CC) ?: throw generalException("Missing '$CC' in update result for feature '${pgWrite.id}'")
@@ -211,7 +210,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                     val insertMemberBook = insertTuple.membersBook
                     val updatedMembersBook = HeapBook.copyOf(insertMemberBook)
                     if (CC != null) updatedMembersBook.put(CC.name, change_count)
-                    updatedMembersBook.put(StandardMembers.Tn.name, updatedTupleNumber)
+                    updatedMembersBook.put(StandardMembers.TnMember.id, updatedTupleNumber)
                     // Update all BYTE_ARRAY members that have been updated.
                     for (column in byteArrayCols) {
                         val inValue = insertTuple.membersBook[column.name] as ByteArray?

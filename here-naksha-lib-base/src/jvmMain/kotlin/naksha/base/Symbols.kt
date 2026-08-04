@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
+import naksha.base.Base.BaseCompanion.DEFAULT_SYMBOL
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.reflect.KClass
@@ -39,7 +39,7 @@ actual class Symbols {
                         val symbol = resolver.call(klass)
                         if (symbol != null) return symbol
                     } catch (e: Exception) {
-                        Platform.logger.error("The symbol resolver raised an exception: {}", e.stackTraceToString())
+                        Base.logger.error("The symbol resolver raised an exception: {}", e.stackTraceToString())
                     }
                 }
             }

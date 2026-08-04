@@ -1,6 +1,5 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
 import kotlin.reflect.KClass
 
 /**

@@ -11,7 +11,7 @@ import java.util.stream.Stream;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmMap;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.ToJsonOptions;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
@@ -184,7 +184,7 @@ class TagFilterHandlerTest extends AbstractTest {
       final @NotNull String outputFilePath) throws JSONException {
     // Given: WriteXyzFeatures request with some tags already part of features
     final String featuresJson = FileUtil.loadFileOrFail(inputFilePath);
-    final JvmMap rawInputCollection = (JvmMap) Platform.fromJSON(featuresJson, FromJsonOptions.DEFAULT);
+    final JvmMap rawInputCollection = (JvmMap) Base.fromJSON(featuresJson, FromJsonOptions.DEFAULT);
     final XyzFeatureCollection inputCollection = JvmBoxingUtil.box(rawInputCollection, XyzFeatureCollection.class);
     final WriteRequest wf = RequestHelper.upsertFeaturesRequest("some_map", "some_space", inputCollection.getFeatures());
 
@@ -205,7 +205,7 @@ class TagFilterHandlerTest extends AbstractTest {
       features.add(write.getFeature());
     }
     final XyzFeatureCollection outputCollection = new XyzFeatureCollection().withFeatures(features);
-    return Platform.toJSON(outputCollection, ToJsonOptions.DEFAULT);
+    return Base.toJSON(outputCollection, ToJsonOptions.DEFAULT);
   }
 
 }

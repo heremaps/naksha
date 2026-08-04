@@ -19,7 +19,8 @@
 package com.here.naksha.lib.view;
 
 import static java.util.stream.Collectors.*;
-import static naksha.model.LibModelKt.FETCH_ALL;
+import static naksha.base.NakshaExceptionKt.illegalState;
+import static naksha.base.NakshaExceptionKt.unsupportedOp;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.lib.view.concurrent.LayerReadRequest;
@@ -32,13 +33,12 @@ import naksha.model.*;
 import naksha.model.MemberProcessorMap;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
+import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
 import naksha.model.request.query.PQuery;
-import naksha.model.request.query.Property;
 import naksha.model.util.CustomStoragePropertiesUtil;
-import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -97,7 +97,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
       @NotNull MissingIdResolver missingIdResolver) {
     /*
     Call every layer/storage and get the first result.
-    After that we should have multiLayerRows like that:
+    After that we should have featuresById like that:
     [
     <featureId_1, [Layer0_Feature1, Layer1_Feature1, ... LayerN_Feature1]>,
     <featureId_2, [Layer0_Feature2, Layer1_Feature2, ... LayerN_Feature2]>,
@@ -107,7 +107,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     List<LayerReadRequest> layerReadRequests = subSessions.entrySet().stream()
         .map(entry -> new LayerReadRequest(request, entry.getKey(), entry.getValue()))
         .collect(toList());
-    Map<String, List<ViewLayerFeature>> multiLayerRows = parallelQueryExecutor.queryInParallel(layerReadRequests);
+    final var featuresById = parallelQueryExecutor.queryInParallel(layerReadRequests);
 
     /*
     If one of the features is missing on one or few layers, we use getMissingFeatures and missingIdResolver to try to fetch it again by id.
@@ -122,9 +122,9 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     ]
     or it might be empty if feature is not there
      */
-    Map<String, List<ViewLayerFeature>> fetchedById = isRequestOnlyById(request)
-        ? Collections.emptyMap()
-        : getMissingFeatures(multiLayerRows, missingIdResolver);
+    ViewLayerFeaturesById fetchedById = isRequestOnlyById(request)
+        ? new ViewLayerFeaturesById()
+        : getMissingFeatures(featuresById, missingIdResolver);
 
     /*
     putting all together:
@@ -134,43 +134,35 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     to get:
     [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
      */
-    fetchedById.forEach((key, value) -> multiLayerRows.get(key).addAll(value));
+    fetchedById.forEach((key, value) -> featuresById.get(key).addAll(value));
 
     /*
     Merging: [ <featureId_1, [Layer0_Feature1, Layer1_Feature1, Layer2_Feature1]> ]
     into final result:  [ Feature1 ]
      */
-    List<FeatureTuple> mergedRows =
-        multiLayerRows.values().stream().map(mergeOperation::apply).collect(toList());
+    List<NakshaFeature> mergedRows =
+        featuresById.values().stream().map(mergeOperation::apply).collect(toList());
 
     return new ViewSuccessResult(mergedRows, null);
   }
 
-  private @NotNull Map<@NotNull String, List<ViewLayerFeature>> getMissingFeatures(
-      @NotNull Map<@NotNull String, @NotNull List<@NotNull ViewLayerFeature>> multiLayerRows,
+  private @NotNull ViewLayerFeaturesById getMissingFeatures(
+      @NotNull ViewLayerFeaturesById resultSet,
       @NotNull MissingIdResolver missingIdResolver
   ) {
-    Map<String, List<ViewLayerFeature>> result = new HashMap<>();
-    if (!missingIdResolver.skip()) {
-      // Prepare map of <Layer_x, [FeatureId_x, ..., FeatureId_z]> features and layers you want to search by id.
-      // to query only once each layer
-      Map<ViewLayer, List<String>> idsToFetch = multiLayerRows.values().stream()
-          .map(missingIdResolver::layersToSearch)
-          .filter(Objects::nonNull)
-          .flatMap(Collection::stream)
-          .collect(groupingBy(Pair::getKey, mapping(Pair::getValue, toList())));
+    if (missingIdResolver.skip()) return new ViewLayerFeaturesById();
 
-      // Prepare request by id and query given layers.
-      List<LayerReadRequest> missingFeaturesRequests = idsToFetch.entrySet().stream()
-          .map(entry -> new LayerReadRequest(
-              readFeaturesByIdsRequest(entry.getKey().getMapId(), entry.getKey().getCollectionId(), entry.getValue()),
-              entry.getKey(),
-              subSessions.get(entry.getKey())))
-          .collect(toList());
+    var idsToFetch = missingIdResolver.getAllMissingIdsByLayer(resultSet);
 
-      result = parallelQueryExecutor.queryInParallel(missingFeaturesRequests);
-    }
-    return result;
+    // Prepare request by id and query given layers.
+    List<LayerReadRequest> missingFeaturesRequests = idsToFetch.entrySet().stream()
+        .map(entry -> new LayerReadRequest(
+            readFeaturesByIdsRequest(entry.getKey().getMapId(), entry.getKey().getCollectionId(), entry.getValue()),
+            entry.getKey(),
+            subSessions.get(entry.getKey())))
+        .collect(toList());
+
+    return parallelQueryExecutor.queryInParallel(missingFeaturesRequests);
   }
 
   @Override
@@ -216,12 +208,12 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
 
   @Override
   public int getLockTimeout() {
-    throw new UnsupportedOperationException();
+    throw unsupportedOp("int getLockTimeout()");
   }
 
   @Override
   public void setLockTimeout(int i) {
-    throw new UnsupportedOperationException();
+    throw unsupportedOp("void setLockTimeout(int i)");
   }
 
   @Override
@@ -236,52 +228,91 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
+  public @Nullable Tuple @NotNull [] loadTuples(@NotNull ITupleNumberArray tupleNumbers, boolean cacheOnly) {
     final ViewLayerCollection viewCollection = view.getViewCollection();
-    final Map<ViewLayer, List<FeatureTuple>> byLayer = new LinkedHashMap<>();
-    for (int i = from; i < to; i++) {
-      final FeatureTuple featureTuple = featureTuples.get(i);
-      if (featureTuple == null) {
+
+    // Group by layer.
+    final var tnByLayers = new HashMap<ViewLayer, TupleNumberList>();
+    for (int i = 0; i < tupleNumbers.getSize(); i++) {
+      var tn = tupleNumbers.getTupleNumber(i);
+      var viewLayer = viewCollection.getByTupleNumber(tn);
+      if (viewLayer == null) {
+        // TODO: Log?
         continue;
       }
-      final ViewLayer layer = viewCollection.getByTupleNumber(featureTuple.tupleNumber);
-      byLayer.computeIfAbsent(layer, k -> new ArrayList<>()).add(featureTuple);
+      tnByLayers.computeIfAbsent(viewLayer, key -> new TupleNumberList()).add(tn);
     }
-    // Sub-sessions read committed data, so features written in this session load only after commit.
-    for (final Map.Entry<ViewLayer, List<FeatureTuple>> entry : byLayer.entrySet()) {
-      final List<FeatureTuple> group = entry.getValue();
-      subSessions.get(entry.getKey()).loadTuples(group, 0, group.size());
+
+    // Load from all layer.
+    // TODO: Use virtual threads to load in parallel!
+    final var tuplesByLayer = new HashMap<ViewLayer, ArrayList<Tuple>>();
+    int totalSize = 0;
+    for (var entry : tnByLayers.entrySet()) {
+      var layer = entry.getKey();
+      var tnArray = entry.getValue();
+      var session = subSessions.get(layer);
+      if (session == null) {
+        // TODO: Log?
+        continue;
+      }
+      var tuples = session.loadTuples(tnArray, cacheOnly);
+      var tuplesList = tuplesByLayer.computeIfAbsent(layer, key -> new ArrayList<>());
+      Collections.addAll(tuplesList, tuples);
+      totalSize += tuples.length;
     }
+
+    // TODO: @AI: We need to guarantee same order as in input, this algo breaks this!
+    final var result = new Tuple[totalSize];
+    int i = 0;
+    for (var entry : tuplesByLayer.entrySet()) {
+      var tupleList = entry.getValue();
+      for (var tuple :  tupleList) {
+        result[i++] = tuple;
+      }
+    }
+    return result;
   }
 
   @Override
   public @NotNull IStorage getStorage() {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
-    throw new UnsupportedOperationException();
+    throw unsupportedOp("IStorage getStorage()");
   }
 
   @Override
   public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
-    throw new UnsupportedOperationException();
+    final var viewCollection = view.getViewCollection();
+    final var layers = viewCollection.getLayers();
+    for (var layer : layers) {
+      var readSession = subSessions.get(layer);
+      if (readSession == null) continue;
+      var catalog = readSession.getCatalogByNumber(catalogNumber, allowTombstone);
+      if (catalog != null) return catalog;
+    }
+    return null;
   }
 
   @Override
   public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber, boolean allowTombstone) {
-    throw new UnsupportedOperationException();
+    final var viewCollection = view.getViewCollection();
+    final var layers = viewCollection.getLayers();
+    for (var layer : layers) {
+      var readSession = subSessions.get(layer);
+      if (readSession == null) continue;
+      var collection = readSession.getCollectionByNumber(catalog, collectionNumber, allowTombstone);
+      if (collection != null) return collection;
+    }
+    return null;
   }
 
   @Override
   public @NotNull SessionOptions getOptions() {
-    throw new UnsupportedOperationException();
+    final var viewCollection = view.getViewCollection();
+    final var layers = viewCollection.getLayers();
+    for (var layer : layers) {
+      var readSession = subSessions.get(layer);
+      if (readSession != null) return readSession.getOptions();
+    }
+    throw illegalState("No valid session options found.");
   }
 
   @Override

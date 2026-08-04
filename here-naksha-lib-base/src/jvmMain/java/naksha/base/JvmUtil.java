@@ -14,13 +14,13 @@ public final class JvmUtil {
    * The size of a JVM pointer in byte.
    * @since 3.0
    */
-  public static final int JVM_OOP_SIZE = Platform.unsafe.arrayIndexScale(Object[].class);
+  public static final int JVM_OOP_SIZE = Base.unsafe.arrayIndexScale(Object[].class);
 
   /**
    * The size of the JVM header for an {@code Object[]}.
    * @since 3.0
    */
-  public static final int JVM_OBJECT_ARRAY_HEADER_SIZE = Platform.unsafe.arrayBaseOffset(Object[].class);
+  public static final int JVM_OBJECT_ARRAY_HEADER_SIZE = Base.unsafe.arrayBaseOffset(Object[].class);
 
   /**
    * The base-offset of the first element in an {@code Object[]}.

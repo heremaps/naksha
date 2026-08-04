@@ -19,36 +19,47 @@
 package com.here.naksha.lib.view;
 
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.FeatureTuple;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-public class ViewLayerFeature {
-
-  private final @NotNull FeatureTuple featureTuple;
+/**
+ * Wrapper around an {@link NakshaFeature} returned by a specific {@link ViewLayer}.
+ * @since 2.0
+ */
+public final class ViewLayerFeature {
+  private final @NotNull NakshaFeature feature;
   // priority 0 - is highest
   private final int storagePriority;
   private final @NotNull ViewLayer viewLayer;
 
-  public ViewLayerFeature(@NotNull FeatureTuple featureTuple, int storagePriority, @NotNull ViewLayer viewLayer) {
-    this.featureTuple = featureTuple;
+  /**
+   * Wrap the given object.
+   * @param feature the object to wrap.
+   * @param storagePriority ?
+   * @param viewLayer the layer from which the object originates.
+   * @since 2.0
+   */
+  public ViewLayerFeature(@NotNull NakshaFeature feature, int storagePriority, @NotNull ViewLayer viewLayer) {
+    this.feature = feature;
     this.storagePriority = storagePriority;
     this.viewLayer = viewLayer;
   }
 
+  // TODO: @AI: What is the meaning of this? Add a documentation, it is missing as well in constructor.
   public int getStoragePriority() {
     return storagePriority;
   }
 
+  /**
+   * The layer from which the feature was returned.
+   */
   public @NotNull ViewLayer getViewLayer() {
     return viewLayer;
   }
 
-  public @Nullable NakshaFeature getFeature() {
-    return featureTuple.getFeature();
-  }
-
-  public @NotNull FeatureTuple getFeatureTuple() {
-    return featureTuple;
+  /**
+   * The feature.
+   */
+  public @NotNull NakshaFeature getFeature() {
+    return feature;
   }
 }

@@ -8,7 +8,7 @@ import naksha.base.TupleNumber;
 import naksha.base.Version;
 import org.jetbrains.annotations.NotNull;
 
-import static naksha.base.Platform.longToInt64;
+import static naksha.base.Base.longToInt64;
 
 public final class TupleInfo {
   /**

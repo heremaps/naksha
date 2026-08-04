@@ -18,6 +18,8 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.base.Id;
+import naksha.base.TupleNumber;
 import naksha.model.IStorage;
 import naksha.model.objects.NakshaCollection;
 import org.jetbrains.annotations.NotNull;
@@ -30,8 +32,9 @@ import org.jetbrains.annotations.Nullable;
 public class ViewLayer {
 
   private final @NotNull IStorage storage;
-  private final @Nullable String mapId;
-  private final @NotNull String collectionId;
+  private final @NotNull Id databaseId;
+  private final @NotNull Id mapId;
+  private final @NotNull Id collectionId;
 
   /**
    * Create a new view-layer.
@@ -40,8 +43,9 @@ public class ViewLayer {
    * @param collectionId the collection-id of the collection to which to redirect requests.
    * @since 2.0
    */
-  public ViewLayer(@NotNull IStorage storage, @Nullable String mapId, @NotNull String collectionId) {
+  public ViewLayer(@NotNull IStorage storage, @Nullable Id databaseId, @NotNull Id mapId, @NotNull Id collectionId) {
     this.storage = storage;
+    this.databaseId = databaseId != null ? databaseId : storage.getDefaultDatabaseId();
     this.mapId = mapId;
     this.collectionId = collectionId;
   }
@@ -53,17 +57,7 @@ public class ViewLayer {
    * @since 2.0
    */
   public ViewLayer(@NotNull IStorage storage, @NotNull NakshaCollection collection) {
-    this(storage, collection.getCatalogId(), collection.getId());
-  }
-
-  /**
-   * Create a new view-layer without a map-id.
-   * @param storage the storage to which to redirect requests.
-   * @param collectionId the collection-id of the collection to which to redirect requests.
-   * @since 3.0
-   */
-  public ViewLayer(@NotNull IStorage storage, @NotNull String collectionId) {
-    this(storage, null, collectionId);
+    this(storage, collection.getDatabaseId(), collection.getCatalogId(), collection.getId());
   }
 
   /**
@@ -76,11 +70,20 @@ public class ViewLayer {
   }
 
   /**
+   * Return the `id` of the database.
+   * @return the `id` of the database.
+   * @since 3.0
+   */
+  public @NotNull Id getDatabaseId() {
+    return databaseId;
+  }
+
+  /**
    * Returns the map-id to which this layer redirects.
    * @return the map-id of the map to which to redirect requests.
    * @since 2.0
    */
-  public @Nullable String getMapId() {
+  public @NotNull Id getMapId() {
     return mapId;
   }
 
@@ -89,7 +92,19 @@ public class ViewLayer {
    * @return the collection-id of the map to which to redirect requests.
    * @since 2.0
    */
-  public @NotNull String getCollectionId() {
+  public @NotNull Id getCollectionId() {
     return collectionId;
+  }
+
+  /**
+   * Tests if a feature with the given tuple-number can be found in this layer.
+   * @param tupleNumber the tuple-number to test
+   * @return true if the feature can be found in this layer; false otherwise.
+   */
+  public boolean contains(@Nullable TupleNumber tupleNumber) {
+    return tupleNumber!= null
+        && databaseId.getNumber() == tupleNumber.databaseNumber
+        && mapId.getIntValue() == tupleNumber.catalogNumber
+        && collectionId.getIntValue() == tupleNumber.collectionNumber;
   }
 }

@@ -7,8 +7,8 @@ import naksha.auth.attribute.CollectionAttributes
 import naksha.auth.attribute.FeatureAttributes
 import naksha.auth.attribute.NakshaAttributes.Companion.ID_KEY
 import naksha.auth.attribute.NakshaAttributes.Companion.TAGS_KEY
-import naksha.base.AnyList
-import naksha.base.Platform
+import naksha.base.PAnyArray
+import naksha.base.Base
 import naksha.base.Proxy
 import kotlin.test.*
 
@@ -118,7 +118,7 @@ class AccessRightsMatrixTest {
         assertEquals("f_id", readFeaturesAttrs_0[ID_KEY])
         val tags = readFeaturesAttrs_0[TAGS_KEY]
         assertNotNull(tags)
-        assertIs<AnyList>(tags)
+        assertIs<PAnyArray>(tags)
         assertContentEquals( listOf("tag_1", "tag_2"), tags)
     }
 
@@ -146,10 +146,10 @@ class AccessRightsMatrixTest {
             )
 
         // When
-        val asJson = Platform.toJSON(arm)
+        val asJson = Base.toJSON(arm)
 
         // And:
-        val fromJson = Proxy.box(Platform.fromJSON(asJson), AccessRightsMatrix::class)!!
+        val fromJson = Proxy.box(Base.fromJSON(asJson), AccessRightsMatrix::class)!!
 
         // Then
         val nakshaFromJson = fromJson.useNaksha()

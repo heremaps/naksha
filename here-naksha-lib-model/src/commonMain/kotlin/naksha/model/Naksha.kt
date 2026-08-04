@@ -3,18 +3,14 @@
 package naksha.model
 
 import naksha.base.*
-import naksha.base.Platform.PlatformCompanion.fromJSON
-import naksha.base.Platform.PlatformCompanion.md5
-import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.Base.BaseCompanion.fromJSON
+import naksha.base.Base.BaseCompanion.toJSON
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
-import naksha.model.NakshaVersion.Companion.CURRENT
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
@@ -28,94 +24,6 @@ import kotlin.jvm.JvmStatic
 class Naksha private constructor() {
     companion object NakshaCompanion {
         /**
-         * The prefix for internal identifiers.
-         * @since 3.0
-         */
-        const val INTERNAL_PREFIX = "naksha~"
-
-        /**
-         * The identifier of the administration catalog, fixed to `naksha~admin`. It can be found in any database under Naksha control.
-         *
-         * **Note**: The feature of the administration catalog is an immutable feature needed to bootstrap a Naksha controlled database, therefore it is not peristed anywhere.
-         * @since 3.0
-         */
-        const val ADMIN_CATALOG_ID = "naksha~admin"
-
-        /**
-         * The identifier of the administration catalog, fixed to `0`. It can be found in any database under Naksha control.
-         * @since 3.0
-         */
-        const val ADMIN_CATALOG_FN = 0
-
-        /**
-         * The identifier of the collections-collection, the collection in which the collection-features of each catalog are persisted.
-         *
-         * This collection exists in every catalog under Naksha management. The identifier of the collection itself is fixed to `naksha~collections`. The feature of the collections-collection is an immutable feature. It is needed to bootstrap a new catalog.
-         * @since 3.0
-         */
-        const val COLLECTIONS_COL_ID = "naksha~collections"
-
-        /**
-         * The collection-number of the collections-collection in which the collection-features of each catalog are persisted, it has the fixed feature-number _(`0`)_.
-         * @since 3.0
-         */
-        const val COLLECTIONS_COL_FN = 0
-
-        /**
-         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~transactions`)_.
-         * @since 3.0
-         * @see [naksha.model.objects.NakshaTx]
-         */
-        const val TRANSACTIONS_COL_ID = "naksha~transactions"
-
-        /**
-         * The collection-number of the collection in which transactions are stored, located in the [admin-catalog][ADMIN_CATALOG_ID]. The feature-number of this collection is fixed to `1`.
-         * @since 3.0
-         */
-        const val TRANSACTIONS_COL_FN = 1
-
-        /**
-         * The identifier of the collection in which catalogs (maps) are stored, located only within the [admin-map][ADMIN_CATALOG_ID] _(`naksha~catalogs`)_.
-         * @see [naksha.model.objects.NakshaCatalog]
-         * @since 3.0
-         */
-        const val CATALOGS_COL_ID = "naksha~catalogs"
-
-        /**
-         * The collection-number of the collection in which catalogs (maps) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`2`)_.
-         * @since 3.0
-         */
-        const val CATALOGS_COL_FN = 2
-
-        /**
-         * The identifier of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~books`)_.
-         * @since 3.0
-         */
-        const val BOOKS_COL_ID = "naksha~books"
-
-        /**
-         * The collection-number of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`3`)_.
-         * @since 3.0
-         */
-        const val BOOKS_COL_FN = 3
-
-        /**
-         * The maximum length of identifiers _(`42`)_.
-         * @since 3.0
-         */
-        const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
-
-        /**
-         * The maximum length of internal identifiers.
-         * @since 3.0
-         */
-        const val MAX_INTERNAL_ID_LENGTH = 63
-
-        // TODO: This shows why we really need a special TupleNumberArray next to TupleNumberList, which stores all tuple-numbers in a single
-        //       byte-array, compressed by adding the database-number, catalog-number and collection-number upfront, then followed by all the
-        //       tuple-numbers. It will reduce memory consumption from 1 GiB to around 256 MiB.
-
-        /**
          * The maximum amount of tuple that can be fetched using normal query methods.
          *
          * This protects the database and client for too big data. When reading tuples, each tuple-number is actually returned from the storage as 16-byte value, so feature-number and version. The Java client then adds database-number, catalog-number and collection-number. Therefore, the maximum amount of data transferred when fetching this amount of tuple is roughly `HARD_READ_LIMIT * 16`. This can already be huge, but when we copy this onto the JVM heap, we expand it, because we add the database-number _(8 byte)_, catalog-number _(4 byte)_ and collection-number _(4 byte)_ to it, plus the overhead of the [TupleNumber] instance (16-byte per instance). Then there is the array into which they are added, this array holds a reference for each [TupleNumber], so another 8-byte. In total, for JVM heap usage, we need to multiple this value with around 56 _(16+16+8+4+4+8)_. For the default value of 16,777,216 this already means around 1 GiB of heap usage, not even thinking about how much more memory will be used, when we start loading all these tuple!
@@ -123,20 +31,6 @@ class Naksha private constructor() {
          */
         @JvmStatic
         var HARD_TUPLE_LIMIT = 16_777_216
-
-        /**
-         * An immutable map between the identifier of an internal collection to the number of that collection.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        val internalIdToNumber = mapOf(
-            Pair(ADMIN_CATALOG_ID, ADMIN_CATALOG_FN),
-            Pair(COLLECTIONS_COL_ID, COLLECTIONS_COL_FN),
-            Pair(TRANSACTIONS_COL_ID, TRANSACTIONS_COL_FN),
-            Pair(CATALOGS_COL_ID, CATALOGS_COL_FN),
-            Pair(BOOKS_COL_ID, BOOKS_COL_FN),
-        )
 
         /**
          * Default feature encoding used by all storages when nothing else is configured.
@@ -153,252 +47,8 @@ class Naksha private constructor() {
         var DEFAULT_SESSION_LOG_LEVEL: String? = null
 
         /**
-         * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.
-         * @param id the identifier to hash.
-         * @return a [Binary] view above the [MD5](https://en.wikipedia.org/wiki/MD5) hash.
-         * @since 3.0
-         */
-        private fun hashId(id: String): Binary {
-            val hash = md5(id)
-            return Binary(Platform.newDataView(hash))
-        }
-
-        /**
-         * A regular expression to test if a string contains potentially a 63-bit unsigned integer (`1 .. 9,223,372,036,854,775,807`).
-         * @since 3.0
-         */
-        private val is63BitUnsigned = Regex("^[1-9][0-9]{0,18}$")
-
-        /**
-         * A regular expression to test if a string contains potentially a 31-bit unsigned integer (`1 .. 2,147,483,647`).
-         * @since 3.0
-         */
-        private val is31BitUnsigned = Regex("^[1-9][0-9]{0,9}\$")
-
-        /**
-         * A method to calculate a valid database-number from the database-id.
-         *
-         * @param id the id, from which to extract the database-number.
-         * @return the database-number.
-         * @since 3.0
-         * @see [hashId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun databaseNumber(id: String): Int64 {
-            if (id == "0" || is63BitUnsigned.matches(id)) {
-                try {
-                    return id.toLong(10).toInt64()
-                } catch (_: Exception) {}
-            }
-            val md5 = hashId(id)
-            return md5.getInt64(8) or INT64_SIGN_BIT
-        }
-
-       /**
-         * A method to calculate a valid catalog-number from the catalog-id.
-         *
-         * @param id the catalog-id, from which to extract the catalog-number.
-         * @return the catalog-number.
-         * @since 3.0
-         * @see [hashId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun catalogNumber(id: String): Int {
-           if (id == ADMIN_CATALOG_ID) return ADMIN_CATALOG_FN
-           if (id == "0" || is31BitUnsigned.matches(id)) {
-               try {
-                   return id.toUInt(10).toInt()
-               } catch (_: Exception) {}
-           }
-           val md5 = hashId(id)
-           return md5.getInt32(12) or -2147483648
-       }
-
-        /**
-         * A method to calculate a valid collection-number from the collection-id.
-         *
-         * @param id the collection-id, from which to extract the collection-number.
-         * @return the collection-number.
-         * @since 3.0
-         * @see [hashId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun collectionNumber(id: String): Int {
-            val internalNumber = internalIdToNumber[id]
-            if (id != ADMIN_CATALOG_ID && internalNumber != null) return internalNumber
-            if (id == "0" || is31BitUnsigned.matches(id)) {
-                try {
-                    return id.toUInt(10).toInt()
-                } catch (_: Exception) {}
-            }
-            val md5 = hashId(id)
-            return md5.getInt32(12) or -2147483648
-        }
-
-        /**
-         * A method to calculate the feature-number (`fn`) from the feature-id.
-         *
-         * Actually, this method will try to detect if the feature-id is a 63-bit unsigned integer, if that is the case, it will convert this string into the corresponding positive 64-bit integer, and return it.
-         *
-         * Otherwise, it uses the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being cleared, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
-         *
-         * ### Collision handling
-         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the lower 16-bit, which we use as [partition-number][partitionNumber]. The general approach is:
-         * ```
-         * new_fn = ((fn + 65536) & 0xffff_ffff_ffff_0000)
-         *        | (fn & 0xffff) | 0x8000_0000_0000_0000
-         * ```
-         * A storage may provide a helper (e.g. `naksha_alt64`) that encapsulates this increment.
-         *
-         * ### Note
-         * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^63)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^64) )`, which results in around 6 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^64) )` to around 63.2 percent, reaching 99.99% for around 147 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
-         *
-         * @param id the feature-id, from which to extract the feature-number.
-         * @return the feature-number.
-         * @see [hashId]
-         * @see [alternativeInt64]
-         */
-        @JsStatic
-        @JvmStatic
-        fun featureNumber(id: String): Int64 {
-            val internalNumber = internalIdToNumber[id]
-            if (internalNumber != null) return internalNumber.toInt64()
-            if (id == "0" || is63BitUnsigned.matches(id)) {
-                try {
-                    return id.toLong(10).toInt64()
-                } catch (_: Exception) {}
-            }
-            val md5 = hashId(id)
-            return md5.getInt64(8) or INT64_SIGN_BIT
-        }
-
-        /**
-         * Test if the given 32-bit represents a number, generated from an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the identifier.
-         * @param number the number to test.
-         * @return `true` if the given map- or collection-number was generated as hash above the identifier; `false` otherwise.
-         */
-        @JsName("isAutoNumber32")
-        @JsStatic
-        @JvmStatic
-        fun isAutoNumber(number: Int): Boolean = (number and -2147483648) == -2147483648
-
-        /**
-         * Test if the given 64-bit represents a number, generated from an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the identifier.
-         * @param number the number to test.
-         * @return `true` if the given storage- or feature-number was generated as hash above the identifier; `false` otherwise.
-         */
-        @JsName("isAutoNumber64")
-        @JsStatic
-        @JvmStatic
-        fun isAutoNumber(number: Int64): Boolean = (number and INT64_SIGN_BIT) == INT64_SIGN_BIT
-
-        /**
-         * `0x8000_0000_0000_0000`, should be `-9223372036854775808`, but this does not work in Kotlin, only `-9223372036854775807 -1`?
-         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
-         */
-        @JvmStatic
-        internal val INT64_SIGN_BIT = Int64(Long.MIN_VALUE)
-
-        /**
-         * `0x7fff_ffff_ffff_ffff`
-         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
-         */
-        @JvmStatic
-        internal val INT64_CLEAR_SIGN_BIT = Int64(0x7fff_ffff_ffff_ffff)
-
-        /**
-         * `0x0000_0000_0000_ffff`
-         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
-         */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH48 = Int64(0x0000_0000_0000_ffff)
-
-        /**
-         * `0x0000_0000_ffff_ffff` aka `4294967295`
-         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
-         */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH32 = Int64(4294967295)
-
-        /**
-         * `0xff00_0000_0000_0000` aka `-72057594037927936`
-         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
-         */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH8 = Int64(-72057594037927936)
-
-        /**
-         * `0xffff_ffff_ffff_0000` aka `-65536`
-         * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
-         */
-        @JvmStatic
-        internal val INT64_CLEAR_LOW16 = Int64(-65536)
-
-        /**
-         * Returns the partition-number from the given feature-id.
-         *
-         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
-         * @param featureId the feature-id.
-         * @return the partition-number.
-         * @see [featureNumber]
-         */
-        @JsName("featureNumberById")
-        @JsStatic
-        @JvmStatic
-        fun partitionNumber(featureId: String): Int = partitionNumber(featureNumber(featureId))
-
-        /**
-         * Returns the partition-number from the given feature-number.
-         *
-         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
-         * @param featureNumber the feature-number.
-         * @return the partition-number.
-         * @see [featureNumber]
-         */
-        @JsStatic
-        @JvmStatic
-        fun partitionNumber(featureNumber: Int64): Int = featureNumber.toInt() and 0xffff
-
-        /**
-         * Increment a 64-bit number _(storage- or feature-number)_ programmatically in case of collision, and return the _alternative_ number, derived deterministically from the given number. This method implements the same behavior as the SQL function `naksha_alt64`.
-         *
-         * ### Note
-         * This method can be applied recursively until a new valid number has been found.
-         *
-         * @param number the number to calculate an alternative from.
-         * @return the alternative number.
-         * @since 3.0
-         * @see [number]
-         * @see [hashId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun alternativeInt64(number: Int64): Int64
-            = ((number + 65536) and INT64_CLEAR_LOW16) or (number and INT64_CLEAR_HIGH48) or INT64_SIGN_BIT
-
-        /**
-         * Increment a 32-bit number _(map- or collection-number)_ programmatically in case of collision, and return the _alternative_ number, derived deterministically from the given number. This method implements the same behavior as the SQL function `naksha_alt32`.
-         *
-         * ### Note
-         * This method can be applied recursively until a new valid number has been found.
-         *
-         * @param number the number to calculate an alternative from.
-         * @return the alternative number.
-         * @since 3.0
-         * @see [number]
-         * @see [hashId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun alternativeInt32(number: Int): Int = (number + 1) or -2147483648
-
-        /**
          * Decode Naksha tags from their binary representation.
-         * @param bytes the bytes to decode.
-         * @param dictReader the dictionary manager to use for decoding; if any.
+         * @param json the JSON string from which to decode.
          * @return the Naksha tags.
          * @since 3.0
          */
@@ -491,17 +141,10 @@ class Naksha private constructor() {
          * @since 3.0
          */
         @JvmField
-        internal val lock = Platform.newLock()
+        internal val lock = Base.newLock()
 
         /**
-         * All registered storages by [storage-number][IStorage.number].
-         * @since 3.0
-         */
-        @JvmField
-        internal val storagesByNumber = AtomicMap<Int64, AbstractStorage<*>>()
-
-        /**
-         * All registered storages by [storage-id][IStorage.id].
+         * All registered storages by [id][IStorage.id].
          * @since 3.0
          */
         @JvmField
@@ -513,7 +156,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun listStorages(): List<IStorage> = storagesByNumber.map { (_, storage) -> storage }
+        fun listStorages(): List<IStorage> = storagesById.map { (_, storage) -> storage }
 
          /**
          * Returns the storage with the given configuration.
@@ -522,11 +165,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun getStorage(storage: NakshaStorage): IStorage? {
-            val s = storagesByNumber[storage.databaseNumber] ?: return null
-            val s2 = storagesById[storage.id] ?: return null
-            return if (s!==s2 || s.config != storage) null else s
-         }
+        fun getStorage(storage: NakshaStorage): IStorage? = storagesById[storage.id.text]
 
         /**
          * Returns the storage with the given identifier.
@@ -536,24 +175,6 @@ class Naksha private constructor() {
         @JvmStatic
         @JsStatic
         fun getStorageById(storageId: String): IStorage? = storagesById[storageId]
-
-        /**
-         * Returns the storage with the given number.
-         * @param storageNumber the storage-number.
-         * @return the storage, if added to cache.
-         */
-        @JvmStatic
-        @JsStatic
-        fun getStorageByNumber(storageNumber: Int64): IStorage? = storagesByNumber[storageNumber]
-
-        /**
-         * Returns the storage for the given tuple-number.
-         * @param tupleNumber the tuple-number.
-         * @return the storage, if added to cache.
-         */
-        @JvmStatic
-        @JsStatic
-        fun getStorageByTupleNumber(tupleNumber: TupleNumber): IStorage? = storagesByNumber[tupleNumber.databaseNumber]
 
         /**
          * Set up the storage with the given configuration, enforces an [initStorage][AbstractStorage.initStorage] invocation that is forced to `create` or `upgrade` the storage.
@@ -589,70 +210,46 @@ class Naksha private constructor() {
         @JsStatic
         fun useStorage(config: NakshaStorage): IStorage = _useStorage(config, null)
 
-        private fun _useStorage(config: NakshaStorage, forceCreateOrUpgrade: Boolean?): IStorage {
-            var s = storagesByNumber[config.databaseNumber]
-            var s2 = storagesById[config.id]
-            if (s !== s2) {
-                lock.acquire().use {
-                    s = storagesByNumber[config.databaseNumber]
-                    s2 = storagesById[config.id]
-                    if (s !== s2) {
-                        throw NakshaException(
-                            ILLEGAL_ARGUMENT,
-                            "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
-                    }
+        private tailrec fun _useStorage(config: NakshaStorage, forceCreateOrUpgrade: Boolean?): IStorage {
+            var storage = storagesById[config.id.text]
+            if (storage != null) {
+                if (storage.config.configEquals(config)) {
+                    // The storage exists already and is configured as requested.
+                    // Only invoke initStorage, when we are forced to do it!
+                    if (forceCreateOrUpgrade == true) storage.invokeInitStorage(config, create = true, upgrade = true)
+                    return storage
                 }
-            }
-            val localS = s
-            if (localS != null && localS.config.configEquals(config)) {
-                // Only invoke initStorage, when we are forced to do it!
-                if (forceCreateOrUpgrade == true) localS.invokeInitStorage(config, create = true, upgrade = true)
-                return localS
+                // The storage exists already, but a new configuration is requested, we need to replace it.
+                storage.invokeShutdownStorage(false)
             }
             lock.acquire().use {
-                var storage = storagesByNumber[config.databaseNumber]
-                val storage2 = storagesById[config.id]
-                if (storage !== storage2) {
-                    throw NakshaException(
-                        ILLEGAL_ARGUMENT,
-                        "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
+                storage = storagesById[config.id.text]
+                // No other client created the storage, and we have a lock, so we can create the storage and add it.
+                if (storage == null) {
+                    val klass = Base.klassForName<AbstractStorage<*>>(config.className)
+                    storage = Base.newInstance(klass)
+                    storage.invokeInitStorage(config, create = forceCreateOrUpgrade, upgrade = forceCreateOrUpgrade)
+                    storagesById[config.id.text] = storage
+                    return storage
                 }
-                if (storage != null) {
-                    if (storage.config.configEquals(config)) {
-                        return storage
-                    }
-                    storage.invokeShutdownStorage(false)
-                }
-                val klass = Platform.klassForName<AbstractStorage<*>>(config.className)
-                storage = Platform.newInstanceOf(klass)
-                storage.invokeInitStorage(config, create = forceCreateOrUpgrade, upgrade = forceCreateOrUpgrade)
-                storagesById[config.id] = storage
-                storagesByNumber[config.databaseNumber] = storage
-                return storage
             }
+            // We only end up here if another thread created the storage while we were waiting for the lock.
+            // To ensure algorithmic safety we simply repeat the method, which is why we use tailrec.
+            // This allows the compiler to create aloop instead of a recursive call, because this can happen quite often,
+            // at least theoretically.
+            return _useStorage(config, forceCreateOrUpgrade)
         }
 
         /**
          * Returns the storage with the given identifier.
-         * - Throws [NakshaError.STORAGE_NOT_FOUND], if no such storage is added to the [cache].
          * @param storageId the storage-id.
          * @return the storage.
+         * @throws NakshaException with [NakshaError.STORAGE_NOT_FOUND], if no such storage is registered.
          */
         @JvmStatic
         @JsStatic
         fun useStorageById(storageId: String): IStorage = storagesById[storageId]
             ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-id: $storageId")
-
-        /**
-         * Returns the storage with the given number.
-         * - Throws [NakshaError.STORAGE_NOT_FOUND], if no such storage is added to the [cache].
-         * @param storageNumber the storage-number.
-         * @return the storage.
-         */
-        @JvmStatic
-        @JsStatic
-        fun useStorageByNumber(storageNumber: Int64): IStorage = storagesByNumber[storageNumber]
-            ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-number: $storageNumber")
 
         /**
          * Remove the given storage, invoke [AbstractStorage.shutdownStorage] so that all cached [Tuple] of this storage are removed, eventually returning the removed and shutdown storage.
@@ -666,81 +263,47 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun removeStorage(config: NakshaStorage): IStorage? {
-            val s = storagesByNumber[config.databaseNumber]
-            if (s == null || s.config != config) return null
-            lock.acquire().use {
-                val storage = storagesByNumber[config.databaseNumber]
-                if (storage == null || storage.config != config) return null
-                val storage2 = storagesById[config.id]
-                if (storage !== storage2) {
-                    throw NakshaException(
-                        ILLEGAL_ARGUMENT,
-                        "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
-                }
-                storagesById.remove(config.id)
-                storagesByNumber.remove(config.databaseNumber)
+        tailrec fun removeStorage(config: NakshaStorage): IStorage? {
+            val storage = storagesById[config.id.text]
+            if (storage == null || storage.config != config) return null
+            if (storagesById.remove(config.id.text, storage)) {
+                // We have removed the storage.
                 storage.invokeShutdownStorage(true)
                 return storage
             }
+            // We use tailrec so the compiler can create a loop instead of a recursive call.
+            // We only end up here, when there was a storage in the registry, but the moment
+            // we tried to remove it, somebody else modified the registry, so we have to
+            // repeat.
+            return removeStorage(config)
         }
 
+        // TODO: We should move this method into TupleNumber itself, but unless TupleNumber has access to Naksha, this won't work.
         /**
-         * The [tuple cache][TupleCache], usage like:
-         * ```kotlin
-         * // rs = ResultTupleList
-         * val result = Naksha.cache.load(rs)
-         * ```
-         * ```java
-         * // rs = ResultTupleList
-         * final ResultTupleList result = Naksha.cache.load(rs, 0, rs.size())
-         * ```
+         * Helper to create a [TupleNumber] from the given values and returns it.
+         * @param databaseId the `id` of the database.
+         * @param catalogId the `id` of the catalog.
+         * @param collectionId the `id` of the collection.
+         * @param featureId the `id` of the feature.
+         * @param version the version of the feature _(includes [Action])_.
+         * @return this.
          * @since 3.0
          */
-        @JvmField
         @JsStatic
-        val cache = TupleCache()
-
-        private val _adminOptions: AtomicRef<SessionOptions> = AtomicRef(null)
-
-        /**
-         * The admin-options to use by all storages for internal processing, like setting up the admin-map.
-         *
-         * This should be overridden by the application when bootstrapping.
-         *
-         * The admin-options are needed for administrative work, reading dictionaries, collection information, create administrative structures. The application should set the defaults to have more control over the `appId` and/or `author` being used, when internal data is processed, and how internal connections authenticate (`appName`).
-         *
-         * If not explicitly set, the first time the options are needed, they are creating from the current [NakshaContext].
-         *
-         * @since 3.0
-         */
         @JvmStatic
-        @JsStatic
-        var adminOptions: SessionOptions
-            get() {
-                var options = _adminOptions.get()
-                while (options == null) {
-                    options = SessionOptions(
-                        appName = "naksha/$CURRENT",
-                        appId = NakshaContext.appId(),
-                        author = NakshaContext.author(),
-                        parallel = false,
-                        useMaster = true,
-                        excludePaths = NakshaContext.defaultExcludePaths.get(),
-                        excludeFn = NakshaContext.defaultExcludeFn.get(),
-                        connectTimeout = NakshaContext.defaultConnectTimeout.get(),
-                        socketTimeout = NakshaContext.defaultSocketTimeout.get(),
-                        stmtTimeout = NakshaContext.defaultStmtTimeout.get(),
-                        lockTimeout = NakshaContext.defaultLockTimeout.get()
-                    )
-                    if (!_adminOptions.compareAndSet(null, options)) {
-                        options = null
-                    }
-                }
-                return options
-            }
-            set(value) {
-                _adminOptions.set(value)
-            }
+        fun tupleNumber(databaseId: Id, catalogId: Id, collectionId: Id, featureId: Id, version: Version): TupleNumber
+            = TupleNumber(
+                databaseNumber = databaseId.number,
+                catalogNumber = catalogId.number.toInt(),
+                collectionNumber = collectionId.number.toInt(),
+                featureNumber = featureId.number,
+                version = version.number
+            )
+
+        /**
+         * The shared tuple-cache.
+         * @since 3.0
+         */
+        val cache = TupleCacheManager()
     }
 }

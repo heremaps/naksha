@@ -47,7 +47,7 @@ import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import io.vertx.ext.web.RoutingContext;
 import java.util.ArrayList;
 import java.util.List;
-import naksha.base.MapProxy;
+import naksha.base.PTypedMap;
 import naksha.diff.Difference;
 import naksha.diff.DifferenceCalculator;
 import naksha.diff.DifferenceFilter;
@@ -295,7 +295,7 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     Response existingFeaturesResp = executeReadRequestFromSpaceStorage(getExistingFeatures);
 
     // Handle response - group existing features by id (optimize subsequent traversals)
-    MapProxy<String, NakshaFeature> existingFeaturesById;
+    PTypedMap<String, NakshaFeature> existingFeaturesById;
     if (existingFeaturesResp instanceof SuccessResponse successResponse) {
       existingFeaturesById = ResultHelper.extractAndGroupAllFeaturesById(successResponse, NakshaFeature.class);
     } else if (existingFeaturesResp instanceof ErrorResponse errorResponse) {

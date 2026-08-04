@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
@@ -28,7 +28,7 @@ public record FeatureMetadata(String featureId, String uuid, long createdAt, lon
     private ExtractionUtil() {}
 
     public static FeatureMetadata featureMetadataFromFeatureResp(String featureResponse) {
-      NakshaFeature feature = JvmBoxingUtil.box(Platform.fromJSON(featureResponse), NakshaFeature.class);
+      NakshaFeature feature = JvmBoxingUtil.box(Base.fromJSON(featureResponse), NakshaFeature.class);
       return FeatureMetadata.from(feature);
     }
 
@@ -44,7 +44,7 @@ public record FeatureMetadata(String featureId, String uuid, long createdAt, lon
     }
 
     private static Stream<FeatureMetadata> featuresMetadata(String featureCollectionResponseJson) {
-      XyzFeatureCollection featureCollection = JvmBoxingUtil.box(Platform.fromJSON(featureCollectionResponseJson),
+      XyzFeatureCollection featureCollection = JvmBoxingUtil.box(Base.fromJSON(featureCollectionResponseJson),
           XyzFeatureCollection.class);
       return featureCollection.getFeatures().stream().map(FeatureMetadata::from);
     }

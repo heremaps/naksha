@@ -2,53 +2,92 @@
 
 package naksha.model.objects
 
-import naksha.base.Int64
-import naksha.base.NullableProperty
+import naksha.base.Id
+import naksha.base.FeatureType
+import naksha.base.NakshaException
+import naksha.base.NotNullIdProperty
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.Naksha
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.base.NakshaException
-import naksha.base.TupleNumber
+import naksha.model.ISession
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A map within a storage; maps are used to group collections.
+ * The catalog descriptor.
+ *
+ * Catalogs are containers that store [collections][NakshaCollection] and [objects][naksha.base.PAnyMap]. You can think of them like a directory on a physical disk _(aka database)_. By definition, the catalog descriptor is a normal feature that follows the [XYZ][XyzMembers] layout. It is stored in a virtual internal collection named `naksha~catalogs`. The actual location is dependent on the storage implementation.
+ *
  * @since 3.0
+ * @see NakshaDatabase
+ * @see NakshaCollection
  */
 @JsExport
 open class NakshaCatalog() : NakshaFeature() {
 
+    companion object NakshaCatalog_C {
+        private val ID_NOT_NULL = NotNullIdProperty<NakshaCatalog>(randomId = false)
+    }
+
     /**
-     * Create a new map feature with the given identifier.
-     * @param id the identifier to set.
+     * Create a new catalog descriptor without `databaseId`, this has to be set later via [withDatabaseId]!
+     * @param id the identifier of the catalog.
      * @since 3.0
      */
-    @Suppress("LeakingThis")
-    @JsName("of")
-    constructor(id: String): this() {
+    @Deprecated("Please always provide a databaseId in some way")
+    @JsName("newCatalog")
+    constructor(id: Id): this() {
+        withType(typeDefaultValue())
         this.id = id
-        this.type = typeDefaultValue()
-        this.featureType = featureTypeDefaultValue()
+        withFeatureType(featureTypeDefaultValue())
     }
 
-    companion object NakshaMap_C {
-        /**
-         * The feature-type of this feature itself _(`naksha.Catalog`)_.
-         * @since 3.0
-         */
-        const val FEATURE_TYPE = "naksha.Catalog"
-
-        private val DATABASE_ID = NullableProperty<NakshaCatalog, String>(String::class)
+    /**
+     * Create a new catalog descriptor.
+     * @param id the identifier of the catalog.
+     * @param databaseId the `id` of the database in which the catalog is stored.
+     * @since 3.0
+     */
+    @JsName("newCatalogForDatabaseId")
+    constructor(id: Id, databaseId: Id): this() {
+        withType(typeDefaultValue())
+        this.id = id
+        withFeatureType(featureTypeDefaultValue())
+        this.databaseId = databaseId
     }
 
-    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
-    override fun withId(value: String): NakshaCatalog = super.withId(value) as NakshaCatalog
-    override fun withType(value: String): NakshaCatalog = super.withType(value) as NakshaCatalog
-    override fun withFeatureType(value: String): NakshaCatalog = super.withFeatureType(value) as NakshaCatalog
+    /**
+     * Create a new catalog descriptor.
+     * @param id the identifier of the catalog.
+     * @param session the session in which the catalog is used _(copies the database-id from session options)_.
+     * @since 3.0
+     */
+    @JsName("newCatalogForSessionDatabase")
+    constructor(id: Id, session: ISession): this() {
+        withType(typeDefaultValue())
+        this.id = id
+        withFeatureType(featureTypeDefaultValue())
+        databaseId = session.options.databaseId
+    }
+
+    /**
+     * Create a new catalog descriptor.
+     * @param id the identifier of the catalog.
+     * @param database the database in which to create the catalog.
+     * @since 3.0
+     */
+    @JsName("newCatalogForDatabase")
+    constructor(id: Id, database: NakshaDatabase): this() {
+        withType(typeDefaultValue())
+        this.id = id
+        withFeatureType(featureTypeDefaultValue())
+        databaseId = database.id
+    }
+
+    override fun withId(value: Id?): NakshaCatalog = super.withId(value) as NakshaCatalog
+    override fun withType(value: String?): NakshaCatalog = super.withType(value) as NakshaCatalog
+    override fun withFeatureType(value: FeatureType?): NakshaCatalog = super.withFeatureType(value) as NakshaCatalog
+    override fun featureTypeDefaultValue(): FeatureType? = FeatureType.CATALOG
     override fun withBbox(value: SpBoundingBox?): NakshaCatalog = super.withBbox(value) as NakshaCatalog
     override fun withGeometry(value: SpGeometry?): NakshaCatalog = super.withGeometry(value) as NakshaCatalog
     override fun withReferencePoint(value: SpPoint?): NakshaCatalog = super.withReferencePoint(value) as NakshaCatalog
@@ -56,60 +95,24 @@ open class NakshaCatalog() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaCatalog = super.withMomType(value) as NakshaCatalog
 
     /**
-     * Helper to get/set the [TupleNumber] of the catalog-feature. All catalogs features follow the old XYZ-Hub style, therefore the location of the [TupleNumber] is clear.
+     * The `id` of the [database][NakshaDatabase] in which this [catalog][NakshaCatalog], and all its [collections][NakshaCollection] and [objects][naksha.base.PAnyMap] are stored.
      * @since 3.0
+     * @throws NakshaException with error [naksha.base.NakshaError.ILLEGAL_STATE] if the [databaseId] is `null`, `undefined` or invalid.
      */
-    var tupleNumber: TupleNumber?
-        get() = XyzMembers.XyzTn.readTupleNumber(this)
-        set(value) {
-            XyzMembers.XyzTn.write(this, value)
-        }
+    var databaseId: Id by ID_NOT_NULL
 
     /**
-     * Tests if this catalog is a tombstone, so deleted.
-     * @return `true` if this catalog is a tombstone; `false` otherwise.
+     * Tests if this feature does have the property `databaseId` set.
      * @since 3.0
      */
-    fun isDeleted(): Boolean {
-        val tn = this.tupleNumber
-        return tn != null && tn.isDeleted()
-    }
-
-    /**
-     * The database-number of the catalog; the catalog-feature itself is stored in the same database as the catalog it describes.
-     * @since 3.0
-     * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
-     */
-    val databaseNumber: Int64
-        get() = tupleNumber?.databaseNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
-
-    /**
-     * The database-id of the collection; **NOT** the database-id of the collection-feature itself, even while they are guaranteed to be the same.
-     * @since 3.0
-     */
-    var databaseId: String? by DATABASE_ID
+    fun hasDatabaseId(): Boolean = hasIdValue("databaseId")
 
     /**
      * @see [databaseId]
+     * @since 3.0
      */
-    fun withDatabaseId(value: String): NakshaCatalog {
-        val tn = tupleNumber
-        if (tn != null) {
-            if (Naksha.databaseNumber(value) != tn.databaseNumber) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "The given database-id does not match the database-number of the collection.")
-            }
-        }
+    fun withDatabaseId(value: Id): NakshaCatalog {
         databaseId = value
         return this
     }
-
-    /**
-     * The catalog-number of the catalog, this is actually the same as the feature-number.
-     *
-     * It is **NOT** the catalog-number of this catalog-feature, so where the catalog-feature itself is stored, which has always the catalog-number `0`, because all catalog features are always stored in the catalog `naksha~admin`.
-     * @since 3.0
-     * @see [Naksha.catalogNumber]
-     */
-    val catalogNumber: Int
-        get() = Naksha.catalogNumber(id)
 }

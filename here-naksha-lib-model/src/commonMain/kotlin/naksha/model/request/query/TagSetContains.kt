@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NullableProperty
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -25,7 +25,7 @@ import kotlin.js.JsName
  * @since 3.0
  */
 @JsExport
-class TagSetContains() : AnyObject(), ITagQuery {
+class TagSetContains() : PAnyMap(), ITagQuery {
 
     /**
      * Tests if the set-form tags member contains the given element.

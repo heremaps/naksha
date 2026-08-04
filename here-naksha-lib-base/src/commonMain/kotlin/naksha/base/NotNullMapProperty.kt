@@ -35,12 +35,11 @@ import kotlin.reflect.KProperty
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NotNullMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : MAP_VALUE_TYPE>(
+open class NotNullMapProperty<MAP : PTypedMap<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : MAP_VALUE_TYPE>(
     val klass: KClass<out PROPERTY_TYPE>,
     val name: String? = null,
     val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null
 ) {
-
     @JvmOverloads
     open fun getValue(self: MAP, propertyName: String? = null): PROPERTY_TYPE = self.getOrCreate(
         this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name"),

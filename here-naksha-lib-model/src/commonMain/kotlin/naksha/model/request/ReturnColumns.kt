@@ -3,7 +3,7 @@
 package naksha.model.request
 
 import naksha.base.NotNullProperty
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -13,7 +13,7 @@ import kotlin.jvm.JvmStatic
  * Fine-grained control over which parts of [rows][naksha.model.Tuple] are needed in a result-set.
  */
 @JsExport
-open class ReturnColumns() : AnyObject() {
+open class ReturnColumns() : PAnyMap() {
 
     /**
      * Create and initialize row options.

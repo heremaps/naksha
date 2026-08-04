@@ -2,9 +2,9 @@
 
 package naksha.psql
 
+import naksha.base.Id
 import naksha.jbon.IDictManager
 import naksha.jbon.JbDictionary
-import naksha.model.Naksha
 import naksha.model.objects.NakshaCollection
 import kotlin.js.JsExport
 
@@ -13,8 +13,8 @@ import kotlin.js.JsExport
  */
 @JsExport
 class PgNakshaBooks internal constructor(adminMap: PgAdminCatalog) : PgCollection(adminMap, NakshaCollection()
-    .withCatalogId(Naksha.ADMIN_CATALOG_ID)
-    .withId(Naksha.BOOKS_COL_ID)
+    .withCatalogId(Id.ADMIN_CATALOG_ID)
+    .withId(Id.BOOKS_COL_ID)
 ), PgInternalCollection, IDictManager {
 
     override fun putDictionary(dict: JbDictionary) {

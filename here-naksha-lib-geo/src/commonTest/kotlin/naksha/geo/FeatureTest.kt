@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.base.PlatformMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -38,9 +38,9 @@ class FeatureTest {
     }
 """
 
-        val parsedJson = Platform.fromJSON(polygonJson)
+        val parsedJson = Base.fromJSON(polygonJson)
         assertIs<PlatformMap>(parsedJson)
-        val feature = Platform.proxy(parsedJson, SpFeature::class)
+        val feature = Base.proxy(parsedJson, SpFeature::class)
         assertEquals("Feature", feature.type)
         assertEquals("Example", feature.id)
         val bbox = feature.bbox

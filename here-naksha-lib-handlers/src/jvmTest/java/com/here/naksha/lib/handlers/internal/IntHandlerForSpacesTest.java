@@ -4,6 +4,7 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static java.util.Collections.emptyList;
 import static naksha.base.NakshaError.NOT_FOUND;
+import static naksha.model.request.WriteOp.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Named.named;
@@ -27,13 +28,7 @@ import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import naksha.model.request.Write;
-import naksha.model.request.WriteRequest;
+import naksha.model.request.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
@@ -60,7 +55,7 @@ class IntHandlerForSpacesTest {
   @Test
   void shouldAlwaysAllowDeletion() {
     // Given:
-    final Request writeRequest = new WriteRequest().add(new Write().deleteFeatureById(new NakshaCollection(SPACES), "to_delete"));
+    final Request writeRequest = new WriteRequest().add(new Write().deleteFeatureById(new NakshaCollection().withId(SPACES), "to_delete"));
     IEvent event = eventWith(writeRequest);
 
     // And:
@@ -124,25 +119,24 @@ class IntHandlerForSpacesTest {
     Space spaceWithoutTitle = space("no_title", null, "some_desc");
     Space spaceWithoutDescription = space("no_desc", "some_title", null);
     return Stream.of(
-        named("PUT Space without title", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutTitle))),
-        named("UPDATE Space without title", new WriteRequest().add(new Write().updateFeature(null, SPACES, spaceWithoutTitle, true))),
-        named("CREATE Space without title", new WriteRequest().add(new Write().createFeature(null, SPACES, spaceWithoutTitle))),
-        named("PUT Space without description", new WriteRequest().add(new Write().upsertFeature(null, SPACES, spaceWithoutDescription))),
-        named("UPDATE Space without description",
-            new WriteRequest().add(new Write().updateFeature(SPACES, spaceWithoutDescription, false))),
-        named("CREATE Space without description", new WriteRequest().add(new Write().createFeatureDeprecated(SPACES, spaceWithoutDescription)))
+        named("PUT Space without title", new WriteRequest().add(new Write().withOp(UPSERT).withCollectionId(SPACES).withFeature(spaceWithoutTitle))),
+        named("UPDATE Space without title", new WriteRequest().add(new Write().withOp(UPDATE).withCollectionId(SPACES).withFeature(spaceWithoutTitle).withAtomic(true))),
+        named("CREATE Space without title", new WriteRequest().add(new Write().withOp(CREATE).withCollectionId(SPACES).withFeature(spaceWithoutTitle))),
+        named("PUT Space without description", new WriteRequest().add(new Write().withOp(UPSERT).withCollectionId(SPACES).withFeature(spaceWithoutDescription))),
+        named("UPDATE Space without description", new WriteRequest().add(new Write().withOp(UPDATE).withCollectionId(SPACES).withFeature(spaceWithoutDescription).withAtomic(false))),
+        named("CREATE Space without description", new WriteRequest().add(new Write().withOp(CREATE).withCollectionId(SPACES).withFeature(spaceWithoutDescription)))
     );
   }
 
   private static Stream<Named<WriteRequest>> persistingSpaceWithoutValidHandlers() {
     Space space = space("space_id", "no_desc", "some_title", List.of("handler_1", "handler_2", "handler_3"));
-    NakshaCollection collection = new NakshaCollection("test_collection");
+    NakshaCollection collection = new NakshaCollection().withId("test_collection");
     collection.setCatalogId("tes_map_id");
     space.getProperties().setCollection(collection);
     return Stream.of(
-        named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
-        named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().updateFeature(SPACES, space, false))),
-        named("CREATE Space without valid handlers", new WriteRequest().add(new Write().createFeatureDeprecated(SPACES, space)))
+        named("PUT Space without valid handlers", new WriteRequest().add(new Write().withOp(UPSERT).withCollectionId(SPACES).withFeature(space))),
+        named("UPDATE Space without valid handlers", new WriteRequest().add(new Write().withOp(UPDATE).withCollectionId(SPACES).withFeature(space).withAtomic(false))),
+        named("CREATE Space without valid handlers", new WriteRequest().add(new Write().withOp(CREATE).withCollectionId(SPACES).withFeature(space)))
     );
   }
 

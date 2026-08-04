@@ -286,7 +286,7 @@ public class NHAdminReaderMock implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String id, boolean allowTombstone) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 

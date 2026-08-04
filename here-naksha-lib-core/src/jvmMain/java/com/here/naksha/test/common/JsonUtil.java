@@ -45,9 +45,9 @@ public class JsonUtil {
 
   private JsonUtil() {}
 
-  public static <T extends AnyObject> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
+  public static <T extends PAnyMap> T parseJson(final @NotNull String jsonStr, final @NotNull Class<T> type) {
     try {
-      return JvmBoxingUtil.box(Platform.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
+      return JvmBoxingUtil.box(Base.fromJSON(jsonStr, FromJsonOptions.DEFAULT), type);
     } catch (Exception e) {
       throw unchecked(e);
     }
@@ -56,7 +56,7 @@ public class JsonUtil {
   public static String toJson(final @NotNull Object obj) {
     String jsonStr = null;
     try {
-      jsonStr = Platform.toJSON(obj, ToJsonOptions.DEFAULT);
+      jsonStr = Base.toJSON(obj, ToJsonOptions.DEFAULT);
     } catch (Exception ex) {
       throw unchecked(ex);
     }

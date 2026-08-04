@@ -25,7 +25,7 @@ class Equals() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, value: Any?) : this(at.name, value)
+    constructor(at: Member, value: Any?) : this(at.id, value)
 
     /**
      * The value to compare against.

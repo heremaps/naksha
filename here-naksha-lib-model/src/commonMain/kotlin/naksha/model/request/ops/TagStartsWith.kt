@@ -27,7 +27,7 @@ class TagStartsWith() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, key: String, value: String) : this(at.name, key, value)
+    constructor(at: Member, key: String, value: String) : this(at.id, key, value)
 
     var key: String by KEY
     var value: String by VALUE

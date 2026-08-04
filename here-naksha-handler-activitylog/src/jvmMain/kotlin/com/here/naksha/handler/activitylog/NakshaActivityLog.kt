@@ -1,13 +1,13 @@
 package com.here.naksha.handler.activitylog
 
 import com.fasterxml.jackson.databind.JsonNode
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.JvmBoxingUtil.box
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.model.objects.NakshaProperties
 
-class NakshaActivityLog : AnyObject() {
+class NakshaActivityLog : PAnyMap() {
     companion object {
         const val ID = "id"
 

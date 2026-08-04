@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -10,7 +10,7 @@ import kotlin.js.JsName
  * Logically AND combine.
  */
 @JsExport
-class TagAnd() : ListProxy<ITagQuery>(ITagQuery::class), ITagQuery {
+class TagAnd() : PTypedArray<ITagQuery>(ITagQuery::class), ITagQuery {
 
     /**
      * Create a logical AND combination of the given queries.

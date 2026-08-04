@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 
 /**
@@ -10,4 +10,4 @@ import kotlin.js.JsExport
  * @since 3.0
  */
 @JsExport
-class PgTypeList : ListProxy<PgType>(PgType::class)
+class PgTypeList : PTypedArray<PgType>(PgType::class)

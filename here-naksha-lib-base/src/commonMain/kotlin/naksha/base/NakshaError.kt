@@ -14,7 +14,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0.0
  */
 @JsExport
-open class NakshaError() : AnyObject() {
+open class NakshaError() : PAnyMap() {
 
     /**
      * Create a new error from the given arguments.
@@ -115,6 +115,13 @@ open class NakshaError() : AnyObject() {
          * @see [FEATURE_NOT_FOUND]
          */
         const val CONFLICT = "Conflict"
+
+        /**
+         * An error to be reported by the storage, if the `id` is unique, but another feature with the same feature-number exists. This is a hash collision as described in [Id]. The storage will not resolve this, it will only inform the client about this problem, the client has to use a different `id`. There is actually no other solution!
+         * @since 3.0
+         * @see Id
+         */
+        const val ID_COLLISION = "IdCollision"
 
         /**
          * Indicates an authorization error.
@@ -248,7 +255,7 @@ open class NakshaError() : AnyObject() {
          */
         @JsStatic
         @JvmStatic
-        val printer = AtomicRef<Fx2<NakshaError, PlatformLogger>>(Fx2 { err, logger ->
+        val printer = AtomicRef<Fx2<NakshaError, IBaseLogger>>(Fx2 { err, logger ->
             var cause = err.cause
             while (cause?.cause != null) cause = cause.cause
             if (cause != null) {
@@ -302,10 +309,10 @@ open class NakshaError() : AnyObject() {
 
     /**
      * Send this error to the logger.
-     * @param logger the logger to which to send if `null`, the [Platform.logger] is used.
+     * @param logger the logger to which to send if `null`, the [BaseCompanion.logger] is used.
      */
     @JvmOverloads
-    open fun print(logger: PlatformLogger = Platform.logger) {
+    open fun print(logger: IBaseLogger = Base.logger) {
         printer.get()?.call(this, logger)
     }
 }

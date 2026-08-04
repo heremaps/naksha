@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -9,7 +9,7 @@ import kotlin.js.JsName
  */
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate", "unused")
 @JsExport
-class PointCoord() : ListProxy<Double>(Double::class), ICoordinates {
+class PointCoord() : PTypedArray<Double>(Double::class), ICoordinates {
 
     @Suppress("SENSELESS_COMPARISON")
     @JsName("of")

@@ -7,7 +7,7 @@ object JvmPropertyUtil {
 
     @JvmStatic
     @JvmOverloads
-    fun <BEARER: AnyObject, PROPERTY: Any> notNullProperty(
+    fun <BEARER: PAnyMap, PROPERTY: Any> notNullProperty(
         propertyType: Class<PROPERTY>,
         name: String,
         init: ((BEARER, String) -> PROPERTY)? = null
@@ -22,7 +22,7 @@ object JvmPropertyUtil {
 
     @JvmStatic
     @JvmOverloads
-    fun <BEARER: AnyObject, PROPERTY: Any> nullableProperty(
+    fun <BEARER: PAnyMap, PROPERTY: Any> nullableProperty(
         propertyType: Class<PROPERTY>,
         name: String,
         autoRemove: Boolean = false,

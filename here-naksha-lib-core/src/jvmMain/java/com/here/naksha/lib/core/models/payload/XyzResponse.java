@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.core.models.payload;
 
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.model.NakshaContext;
 import org.jetbrains.annotations.NotNull;
 
@@ -46,7 +46,7 @@ import org.jetbrains.annotations.NotNull;
 /**
  * All classes that represent a valid response of any remote procedure to the XYZ Hub need to extend this class.
  */
-public abstract class XyzResponse extends AnyObject {
+public abstract class XyzResponse extends PAnyMap {
 
   public static final String STREAM_ID = "streamId";
   public static final String ETAG = "etag";

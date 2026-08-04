@@ -2,11 +2,10 @@
 
 package naksha.model.request.query
 
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -16,9 +15,9 @@ import kotlin.reflect.KClass
  * @see [StringOp]
  */
 @JsExport
-open class AnyOp : JsEnum() {
+open class AnyOp : BaseEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = AnyOp::class
+    override fun namespace(): KClass<out BaseEnum> = AnyOp::class
 
     override fun initClass() {
         register(DoubleOp::class)

@@ -3,14 +3,13 @@
 package naksha.model.request.notification
 
 import naksha.base.Int64
-import naksha.base.MapProxy
+import naksha.base.PTypedMap
 import naksha.base.Version
-import naksha.model.request.FeatureTuple
-import naksha.model.request.FeatureTupleList
+import naksha.model.TupleList
 import kotlin.js.JsExport
 
 /**
- * A map where the key is the transaction number (aka [Version]), and the value is a list of [result-rows][FeatureTuple], order by [uid][naksha.model.Metadata.uid].
+ * A map where the key is the transaction number (aka [Version]), and the value is a list of [naksha.model.Tuple].
  */
 @JsExport
-class TuplesByTxn : MapProxy<Int64, FeatureTupleList>(Int64::class, FeatureTupleList::class)
+class TuplesByTxn : PTypedMap<Int64, TupleList>(Int64::class, TupleList::class)

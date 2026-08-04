@@ -1,8 +1,8 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.Platform.PlatformCompanion.longToInt64
+import naksha.base.Base.BaseCompanion.logger
+import naksha.base.Base.BaseCompanion.longToInt64
 import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 import org.postgresql.PGProperty.*

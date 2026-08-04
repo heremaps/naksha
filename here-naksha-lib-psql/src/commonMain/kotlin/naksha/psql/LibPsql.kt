@@ -3,7 +3,8 @@
 // - jn Java at the class naksha.psql.LibPsqlKt.{name}
 package naksha.psql
 
-import naksha.model.Naksha
+import naksha.base.NakshaConst
+import naksha.base.NakshaConst.IdConst_C.TRANSACTION_TYPE
 import naksha.model.NakshaVersion
 import naksha.psql.PgType.Companion.BYTE_ARRAY
 import naksha.psql.PgType.Companion.INT
@@ -82,7 +83,7 @@ internal const val PG_DIST_PARTITION = "${PG_S}p"
 /**
  * The prefix used for all internal tables.
  */
-internal const val PG_INTERNAL_PREFIX = Naksha.INTERNAL_PREFIX
+internal const val PG_INTERNAL_PREFIX = NakshaConst.INTERNAL_PREFIX
 
 internal const val NAKSHA_VERSION_SEQ = "naksha_version_seq"
 //internal const val NAKSHA_MAP_SEQ = "naksha_map_seq"
@@ -91,10 +92,8 @@ internal const val NAKSHA_VERSION_SEQ = "naksha_version_seq"
 internal const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
 internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
 
-internal const val TRANSACTIONS_COL = Naksha.TRANSACTIONS_COL_ID
-
-internal const val NKC_TABLE = Naksha.TRANSACTIONS_COL_ID
-internal const val NKC_TABLE_ESC = "\"${Naksha.TRANSACTIONS_COL_ID}\""
+internal const val NKC_TABLE = TRANSACTION_TYPE
+internal const val NKC_TABLE_ESC = "\"$TRANSACTION_TYPE\""
 internal const val NKC_PARTITION_COUNT = "partitionCount"
 internal const val NKC_ID = "id"
 internal const val NKC_GEO_INDEX = "geoIndex"
@@ -144,26 +143,26 @@ internal val COL_ALL: String = arrayOf(
     COL_FNVA1
 ).joinToString(",")
 internal val COL_ALL_TYPES: Array<String> = arrayOf(
-    INT64.text,
-    INT64.text,
-    INT.text,
-    INT64.text,
-    INT.text,
-    INT.text,
-    SHORT.text,
-    INT64.text,
-    INT64.text,
-    INT64.text,
-    STRING.text,
-    STRING.text,
-    INT.text,
-    STRING.text,
-    BYTE_ARRAY.text,
-    BYTE_ARRAY.text,
-    BYTE_ARRAY.text,
-    BYTE_ARRAY.text,
-    STRING.text,
-    INT.text)
+    INT64.string,
+    INT64.string,
+    INT.string,
+    INT64.string,
+    INT.string,
+    INT.string,
+    SHORT.string,
+    INT64.string,
+    INT64.string,
+    INT64.string,
+    STRING.string,
+    STRING.string,
+    INT.string,
+    STRING.string,
+    BYTE_ARRAY.string,
+    BYTE_ARRAY.string,
+    BYTE_ARRAY.string,
+    BYTE_ARRAY.string,
+    STRING.string,
+    INT.string)
 private fun createJoiner(): (_: String) -> String {
     var i = 0
     return {

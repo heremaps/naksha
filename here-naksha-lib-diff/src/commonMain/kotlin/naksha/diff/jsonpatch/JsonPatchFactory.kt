@@ -1,6 +1,6 @@
 package naksha.diff.jsonpatch
 
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.diff.*
 
 class JsonPatchFactory private constructor() {
@@ -25,7 +25,7 @@ class JsonPatchFactory private constructor() {
             if (difference == null) return EMPTY_JSON_ARRAY
             val accumulator = mutableListOf<JsonPatchEntry>()
             accumulateJsonPatchEntries(difference, ROOT_PATH, accumulator)
-            return Platform.toJSON(accumulator)
+            return Base.toJSON(accumulator)
         }
 
 

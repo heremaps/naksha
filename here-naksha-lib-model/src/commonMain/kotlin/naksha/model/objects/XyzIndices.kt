@@ -25,7 +25,7 @@ class XyzIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzHereTile = Index("here_tile", XyzMembers.XyzHereTile.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzHereTile = Index("here_tile", XyzMembers.XyzHereTile.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `app_id` — index on `app_id`, `updated_at`, `_fn`, `_version` (WHERE `app_id IS NOT NULL`).
@@ -33,7 +33,7 @@ class XyzIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzAppId = Index("app_id", XyzMembers.XyzAppId.name, XyzMembers.XyzUpdatedAt.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzAppId = Index("app_id", XyzMembers.XyzAppId.id, XyzMembers.XyzUpdatedAt.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `author` — index on the effective author and author timestamp, `_fn`, `_version`
@@ -41,7 +41,7 @@ class XyzIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzAuthor = Index("author", XyzMembers.XyzAuthor.name, XyzMembers.XyzAuthorTimestamp.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzAuthor = Index("author", XyzMembers.XyzAuthor.id, XyzMembers.XyzAuthorTimestamp.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `tags` — inverted ([IndexType.TAG_LIST]) index over the `tags` member, supporting element
@@ -49,7 +49,7 @@ class XyzIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzTags = Index("tags", XyzMembers.XyzTags.name)
+        val XyzTags = Index("tags", XyzMembers.XyzTags.id)
 
         /**
          * `feature_type` — index on `ft`, `_fn`, `_version` (WHERE `ft IS NOT NULL`).
@@ -57,42 +57,42 @@ class XyzIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeatureType = Index("feature_type", XyzMembers.XyzFeatureType.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzFeatureType = Index("feature_type", XyzMembers.XyzFeatureType.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `cv0` — index on custom numeric value 0, `_fn`, `_version` (WHERE `cv0 IS NOT NULL`).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue0 = Index("cv0", XyzMembers.XyzCustomValue0.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomValue0 = Index("cv0", XyzMembers.XyzCustomValue0.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `cv1` — index on custom numeric value 1, `_fn`, `_version` (WHERE `cv1 IS NOT NULL`).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue1 = Index("cv1", XyzMembers.XyzCustomValue1.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomValue1 = Index("cv1", XyzMembers.XyzCustomValue1.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `cv2` — index on custom numeric value 2, `_fn`, `_version` (WHERE `cv2 IS NOT NULL`).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue2 = Index("cv2", XyzMembers.XyzCustomValue2.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomValue2 = Index("cv2", XyzMembers.XyzCustomValue2.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `cv3` — index on custom numeric value 3, `_fn`, `_version` (WHERE `cv3 IS NOT NULL`).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue3 = Index("cv3", XyzMembers.XyzCustomValue3.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomValue3 = Index("cv3", XyzMembers.XyzCustomValue3.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `cs0` — index on custom string value 0, `_fn`, `_version` (WHERE `cs0 IS NOT NULL`).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString0 = Index("cs0", XyzMembers.XyzCustomString0.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomString0 = Index("cs0", XyzMembers.XyzCustomString0.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `cs1` — index on custom string value 1, `_fn`, `_version` (WHERE `cs1 IS NOT NULL`).
@@ -100,21 +100,21 @@ class XyzIndices private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString1 = Index("cs1", XyzMembers.XyzCustomString1.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomString1 = Index("cs1", XyzMembers.XyzCustomString1.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `cs2` — index on custom string value 2, `_fn`, `_version` (WHERE `cs2 IS NOT NULL`).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString2 = Index("cs2", XyzMembers.XyzCustomString2.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomString2 = Index("cs2", XyzMembers.XyzCustomString2.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `cs3` — index on custom string value 3, `_fn`, `_version` (WHERE `cs3 IS NOT NULL`).
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString3 = Index("cs3", XyzMembers.XyzCustomString3.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomString3 = Index("cs3", XyzMembers.XyzCustomString3.id, StandardMembers.FeatureNumberMember.id, StandardMembers.VersionMember.id)
 
         /**
          * `ref_point` — spatial index over the reference-point geometry member.
@@ -122,7 +122,7 @@ class XyzIndices private constructor() {
          * @see [XyzMembers.XyzReferencePoint]
          */
         @JvmField @JsStatic
-        val XyzReferencePoint = Index("ref_point", XyzMembers.XyzReferencePoint.name)
+        val XyzReferencePoint = Index("ref_point", XyzMembers.XyzReferencePoint.id)
 
         /**
          * All indices for a default XYZ collection.

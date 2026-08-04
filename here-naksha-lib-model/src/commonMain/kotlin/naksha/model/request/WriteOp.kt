@@ -2,14 +2,14 @@
 
 package naksha.model.request
 
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.reflect.KClass
 
 @JsExport
-class WriteOp : JsEnum(), Comparable<WriteOp> {
+class WriteOp : BaseEnum(), Comparable<WriteOp> {
     companion object WriteOp_C {
         /**
          * When the write operation is _null_, this is an invalid state that should not persist in a [Write].
@@ -63,7 +63,7 @@ class WriteOp : JsEnum(), Comparable<WriteOp> {
         private set
 
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = WriteOp::class
+    override fun namespace(): KClass<out BaseEnum> = WriteOp::class
 
     override fun initClass() {}
 

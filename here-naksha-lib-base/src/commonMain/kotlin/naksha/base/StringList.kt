@@ -11,7 +11,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-open class StringList() : ListProxy<String>(String::class) {
+open class StringList() : PTypedArray<String>(String::class) {
 
     /**
      * Create an initialized string list.

@@ -1,10 +1,9 @@
 package naksha.jbon
 
-import naksha.base.AnyList
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.Binary
-import naksha.base.MapProxy
-import naksha.base.Platform
+import naksha.base.PTypedMap
+import naksha.base.Base
 import naksha.geo.GeoUtil
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
@@ -34,10 +33,10 @@ class Jbon2GeometryTest {
     /** Decode the first value at offset 0 from the given bytes (no file header). */
     private fun decodeFirst(bytes: ByteArray): Any? {
         val bin = Binary()
-        bin.view = Platform.newDataView(bytes)
+        bin.view = Base.newDataView(bytes)
         bin.end = bytes.size
         val dec = JbDecoder2()
-        dec.view = bin
+        dec.bytes = bin
         dec.end = bytes.size
         return dec.decodeValueAt(0)
     }
@@ -139,13 +138,13 @@ class Jbon2GeometryTest {
 
     @Test
     fun testBuildTupleIncludesGeometry() {
-        val feature = AnyObject()
+        val feature = PAnyMap()
         feature["id"] = "test-feature"
         feature["geometry"] = SpPoint(13.0, 52.0)
 
         val enc = JbEncoder2()
         @Suppress("UNCHECKED_CAST")
-        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
+        val tupleBytes = enc.buildTupleFromMap(feature as PTypedMap<String, *>)
 
         val dec = JbDecoder2()
         dec.mapBytes(tupleBytes)

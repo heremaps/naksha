@@ -4,8 +4,7 @@ package naksha.psql
 
 import naksha.base.fn.Fx2
 import naksha.model.*
-import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
-import naksha.base.NakshaException
+import naksha.base.uninitialized
 import kotlin.js.JsExport
 
 // TODO: Create "naksha~admin" map with map-number 0
@@ -83,7 +82,7 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      * @since 3.0
      */
     open val adminCatalog: PgAdminCatalog
-        get() = _adminMap ?: throw NakshaException(UNINITIALIZED, "Storage uninitialized")
+        get() = _adminMap ?: throw uninitialized("Storage uninitialized")
 
     /**
      * Private setter for the admin map, to be used in the deriving storage class.
@@ -99,11 +98,8 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      */
     internal val defaultDataEncoding: DataEncoding = DataEncoding.DEFAULT
 
-    override fun newWriteSession(options: SessionOptions?): IWriteSession =
-        newSession(options ?: SessionOptions.from(null), false)
-
-    override fun newReadSession(options: SessionOptions?): IWriteSession =
-        newSession(options ?: SessionOptions.from(null), true)
+    override fun newReadSession(options: SessionOptions): IWriteSession = newSession(options, true)
+    override fun newWriteSession(options: SessionOptions): IWriteSession = newSession(options, false)
 
     /**
      * Returns a new PostgresQL session.
@@ -145,4 +141,24 @@ abstract class PgStorage protected constructor() : AbstractStorage<PgConfig>() {
      * @since 3.0
      */
     abstract fun adminConnection(): PgConnection
+}
+
+fun DEBUG_printConnection(label: String, conn: PgConnection) {
+    println("Show schemas for $label:")
+    conn.execute("SELECT nspname FROM pg_catalog.pg_namespace").use {
+        while (it.next()) {
+            val name = it.column("nspname")
+            println("\tSchema '$name' exists")
+        }
+    }
+    println("Show tables:")
+    var exists = false
+    conn.execute("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'naksha~admin'").use {
+        while (it.next()) {
+            exists = true
+            val name = it.column("tablename")
+            println("\tTable '$name' exists in naksha~admin")
+        }
+    }
+    println("DONE: $exists  ---------------------------------------------------------------------------")
 }

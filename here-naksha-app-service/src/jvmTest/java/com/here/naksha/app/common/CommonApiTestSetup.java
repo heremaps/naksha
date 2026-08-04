@@ -14,9 +14,8 @@ import java.util.UUID;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import kotlin.Pair;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.PlatformMap;
-import naksha.base.PlatformMapApi;
 import naksha.model.objects.NakshaCollection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -72,8 +71,8 @@ public class CommonApiTestSetup {
       throws URISyntaxException, IOException, InterruptedException {
     final var requestString = loadFileOrFail(spaceJsonFilePath);
     final var responseString = createAdminEntity(nakshaClient, "hub/spaces", requestString);
-    final PlatformMap map = assertInstanceOf(PlatformMap.class, Platform.fromJSON(responseString));
-    final Space space = Platform.javaProxy(map, Space.class);
+    final PlatformMap map = assertInstanceOf(PlatformMap.class, Base.fromJSON(responseString));
+    final Space space = Base.javaProxy(map, Space.class);
     assertNotNull(space);
     final SpaceProperties spaceProperties = space.getProperties();
     assertNotNull(spaceProperties);
@@ -91,7 +90,7 @@ public class CommonApiTestSetup {
       throws URISyntaxException, IOException, InterruptedException {
     final var requestString = loadFileOrFail(storageJsonFilePath);
     final var responseString = createAdminEntity(nakshaClient, "hub/storages", requestString);
-    final PlatformMap storage = assertInstanceOf(PlatformMap.class, Platform.fromJSON(responseString));
+    final PlatformMap storage = assertInstanceOf(PlatformMap.class, Base.fromJSON(responseString));
 
     final String storageId = assertInstanceOf(String.class, map_get(storage, "id"));
     assertNotNull("Missing 'id' property in response", storageId);
@@ -120,7 +119,7 @@ public class CommonApiTestSetup {
       throws URISyntaxException, IOException, InterruptedException {
     final var requestString = loadFileOrFail(handlerJsonFilePath);
     final var responseString = createAdminEntity(nakshaClient, "hub/handlers", requestString);
-    final PlatformMap map = assertInstanceOf(PlatformMap.class, Platform.fromJSON(responseString));
+    final PlatformMap map = assertInstanceOf(PlatformMap.class, Base.fromJSON(responseString));
     final String id = assertInstanceOf(String.class, map_get(map, "id"));
     assertNotNull(id);
     return id;

@@ -4,12 +4,13 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A weak reference.
+ * The JavaScript weak reference.
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
 @JsName("WeakRef")
 interface WeakRef<T: Any> {
+    // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WeakRef
     // https://kotlinlang.org/docs/operator-overloading.html#infix-calls-for-named-functions
 
     /**

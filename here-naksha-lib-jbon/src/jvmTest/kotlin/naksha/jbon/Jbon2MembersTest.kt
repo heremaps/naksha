@@ -1,10 +1,10 @@
 package naksha.jbon
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.Binary
 import naksha.base.Int64
-import naksha.base.MapProxy
-import naksha.base.Platform
+import naksha.base.PTypedMap
+import naksha.base.Base
 import naksha.geo.GeoUtil
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -48,19 +48,19 @@ class Jbon2MembersTest {
     /** Decode the first unit at offset 0 from raw bytes (no file header), using [membersDict]. */
     private fun decodeFirst(bytes: ByteArray, membersDict: IBook? = null): Any? {
         val bin = Binary()
-        bin.view = Platform.newDataView(bytes)
+        bin.view = Base.newDataView(bytes)
         bin.end = bytes.size
         val dec = JbDecoder2(membersDict = membersDict)
-        dec.view = bin
+        dec.bytes = bin
         dec.end = bytes.size
         return dec.decodeValueAt(0)
     }
 
-    /** Encode a feature [AnyObject] through the tuple path and decode it back with [membersDict]. */
-    private fun tupleRoundTrip(feature: AnyObject, membersDict: IBook? = null): AnyObject {
+    /** Encode a feature [PAnyMap] through the tuple path and decode it back with [membersDict]. */
+    private fun tupleRoundTrip(feature: PAnyMap, membersDict: IBook? = null): PAnyMap {
         val enc = JbEncoder2()
         @Suppress("UNCHECKED_CAST")
-        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
+        val tupleBytes = enc.buildTupleFromMap(feature as PTypedMap<String, *>)
         val dec = JbDecoder2(membersDict = membersDict)
         dec.mapBytes(tupleBytes)
         return dec.toAnyObject()
@@ -78,7 +78,7 @@ class Jbon2MembersTest {
     @Test
     fun testPrimitiveMembersRef() {
         // Build feature
-        val feature = AnyObject()
+        val feature = PAnyMap()
         feature["id"] = "test"
         feature["score"] = 99  // will be intercepted by the member encoder
 
@@ -87,7 +87,7 @@ class Jbon2MembersTest {
             if (pathEnd > 0 && path[pathEnd - 1] == "score") 0 else -1
         })
         @Suppress("UNCHECKED_CAST")
-        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
+        val tupleBytes = enc.buildTupleFromMap(feature as PTypedMap<String, *>)
 
         // Members book: slot 0 → 42
         val membersDict = ListDict(listOf(42))
@@ -121,7 +121,7 @@ class Jbon2MembersTest {
         assertTrue(twkbBytes.isNotEmpty(), "TWKB bytes must not be empty")
 
         // Build feature — geometry value doesn't matter, it will be short-circuited
-        val feature = AnyObject()
+        val feature = PAnyMap()
         feature["id"] = "berlin"
         feature["geometry"] = SpPoint(0.0, 0.0)  // placeholder; intercepted below
 
@@ -130,7 +130,7 @@ class Jbon2MembersTest {
             if (pathEnd > 0 && path[pathEnd - 1] == "geometry") 0 else -1
         })
         @Suppress("UNCHECKED_CAST")
-        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
+        val tupleBytes = enc.buildTupleFromMap(feature as PTypedMap<String, *>)
 
         // Members book: slot 0 → raw TWKB ByteArray (simulating PostgreSQL bytea column)
         val membersDict = ListDict(listOf(twkbBytes))
@@ -160,7 +160,7 @@ class Jbon2MembersTest {
      */
     @Test
     fun testStringMembersRef() {
-        val feature = AnyObject()
+        val feature = PAnyMap()
         feature["id"] = "x"
         feature["label"] = "placeholder"
 
@@ -168,7 +168,7 @@ class Jbon2MembersTest {
             if (pathEnd > 0 && path[pathEnd - 1] == "label") 0 else -1
         })
         @Suppress("UNCHECKED_CAST")
-        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
+        val tupleBytes = enc.buildTupleFromMap(feature as PTypedMap<String, *>)
 
         val membersDict = ListDict(listOf("hello world"))
 
@@ -188,7 +188,7 @@ class Jbon2MembersTest {
      */
     @Test
     fun testNullMembersRef() {
-        val feature = AnyObject()
+        val feature = PAnyMap()
         feature["id"] = "x"
         feature["optional"] = "placeholder"
 
@@ -196,7 +196,7 @@ class Jbon2MembersTest {
             if (pathEnd > 0 && path[pathEnd - 1] == "optional") 0 else -1
         })
         @Suppress("UNCHECKED_CAST")
-        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
+        val tupleBytes = enc.buildTupleFromMap(feature as PTypedMap<String, *>)
 
         val membersDict = ListDict(listOf(null))
 
@@ -220,7 +220,7 @@ class Jbon2MembersTest {
      */
     @Test
     fun testMembersRefWithoutDict() {
-        val feature = AnyObject()
+        val feature = PAnyMap()
         feature["id"] = "x"
         feature["score"] = 99
 
@@ -228,7 +228,7 @@ class Jbon2MembersTest {
             if (pathEnd > 0 && path[pathEnd - 1] == "score") 0 else -1
         })
         @Suppress("UNCHECKED_CAST")
-        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
+        val tupleBytes = enc.buildTupleFromMap(feature as PTypedMap<String, *>)
 
         // Decode without membersDict
         val dec = JbDecoder2()

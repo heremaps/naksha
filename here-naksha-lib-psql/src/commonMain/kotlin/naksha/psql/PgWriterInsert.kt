@@ -1,8 +1,8 @@
 package naksha.psql
 
-import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.PlatformUtil
+import naksha.base.Base
+import naksha.base.Base.BaseCompanion.logger
+import naksha.base.BaseUtil
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
 import naksha.psql.PgColumn.PgColumn_C.VersionColumn
@@ -27,7 +27,7 @@ internal class PgWriterInsert(
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
 
     init {
-        inRows.addColumns(pgCollection.columns)
+        inRows.withPgCollection(pgCollection)
         loadAllTuple()
     }
 
@@ -91,7 +91,7 @@ LEFT JOIN head_inserted ON head_inserted.$FnColumn = new_row.$FnColumn
         if (pgWrites.isEmpty()) return
         val plan = plan(conn)
         val array = inRows.values()
-        if (PlatformUtil.ENABLE_INFO) {
+        if (BaseUtil.ENABLE_INFO) {
             if (session.logQueries) {
                 session.logAtInfo(plan.sql)
             }
@@ -100,10 +100,10 @@ LEFT JOIN head_inserted ON head_inserted.$FnColumn = new_row.$FnColumn
                 session.logAtInfo(explain)
             }
         }
-        val start = Platform.currentNanos()
+        val start = Base.currentNanos()
         // We ignore the result, we know that if it didn't fail, it's okay.
         plan.pgPlan.execute(array).close()
-        val end = Platform.currentNanos()
+        val end = Base.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (pgWrites.size != 1 || pgWrites[0].isFeatureModification) {
             logger.info("INSERT of ${inRows.size} rows took ${seconds * 1000}ms, therefore ${inRows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")

@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -11,7 +11,7 @@ import kotlin.js.JsName
  * Negates the query.
  */
 @JsExport
-class PNot() : AnyObject(), IPropertyQuery {
+class PNot() : PAnyMap(), IPropertyQuery {
 
     /**
      * Create a negation of the given query.

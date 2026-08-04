@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -12,9 +12,9 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class PgStorageClass : JsEnum() {
+class PgStorageClass : BaseEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = PgStorageClass::class
+    override fun namespace(): KClass<out BaseEnum> = PgStorageClass::class
 
     override fun initClass() {
     }

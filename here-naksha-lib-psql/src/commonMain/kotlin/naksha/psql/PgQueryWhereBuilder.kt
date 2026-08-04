@@ -1,7 +1,7 @@
 package naksha.psql
 
+import naksha.base.IdList
 import naksha.base.Int64
-import naksha.base.StringList
 import naksha.model.Naksha
 import naksha.base.NakshaError
 import naksha.base.NakshaException
@@ -34,7 +34,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
      * @since 3.0
      */
     fun build(): PgQueryWhereClause? {
-        var op: Op? = request.queryMembers
+        var op: Op? = request.memberQuery
         if (op == null) op = QueryConverter.convert(request.query)
         // Only read everything when there is no filter at all — featureIds/guids apply even when op is null.
         if (op == null && request.featureIds.isEmpty() && request.guids.isEmpty()) return null
@@ -87,11 +87,11 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         }
         val rawAt: String = op.at ?: throw illegalArg("Missing member name for operation $opName")
         // The action is virtual: resolve it to the version bit-mask instead of a physical column.
-        val isAction = rawAt == StandardMembers.Action.name
+        val isAction = rawAt == StandardMembers.ActionMember.id
         val at: String = when {
             isAction -> "(${PgColumn.VersionColumn.name} & 3)::int4"
-            rawAt == XyzMembers.XyzCreatedAt.name || rawAt == XyzMembers.XyzAuthorTimestamp.name ->
-                "COALESCE($rawAt, ${XyzMembers.XyzUpdatedAt.name})"
+            rawAt == XyzMembers.XyzCreatedAt.id || rawAt == XyzMembers.XyzAuthorTimestamp.id ->
+                "COALESCE($rawAt, ${XyzMembers.XyzUpdatedAt.id})"
             else -> rawAt
         }
         when (op) {
@@ -157,9 +157,9 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 val arrayType = when {
                     isAction -> PgType.INT_ARRAY
-                    rawAt == StandardMembers.FeatureNumber.name ||
-                        rawAt == StandardMembers.NextVersion.name ||
-                        rawAt == StandardMembers.FeatureVersion.name -> PgType.INT64_ARRAY
+                    rawAt == StandardMembers.FeatureNumberMember.id ||
+                        rawAt == StandardMembers.NextVersionMember.id ||
+                        rawAt == StandardMembers.VersionMember.id -> PgType.INT64_ARRAY
                     else -> PgType.STRING_ARRAY
                 }
                 val placeholder = placeholderForArg(op.items, arrayType)
@@ -269,7 +269,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 val geometryToCompare =
                     if (transformation.isEmpty()) queryGeometry
                     else resolveTransformation(transformation, queryGeometry)
-                where.append("ST_Intersects(naksha_2d(${StandardMembers.Geometry.name}), $geometryToCompare)")
+                where.append("ST_Intersects(naksha_2d(${StandardMembers.GeometryMember.id}), $geometryToCompare)")
             }
             else -> throw illegalArg("Unknown operation: '$op'")
         }
@@ -375,18 +375,17 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         }
     }
 
-        private fun whereFeatureId() {
+    private fun whereFeatureId() {
         // Partition into numeric IDs (fn >= 0, id stored as NULL in DB) and named IDs (fn < 0, id NOT NULL).
-        val reqIds: StringList = request.featureIds
-        val featureNumbers: MutableList<Int64> = mutableListOf()
+        val reqIds: IdList = request.featureIds
+        val featureNumbers: MutableList<Long> = mutableListOf()
         val featureIds: MutableList<String> = mutableListOf()
         for (id in reqIds) {
             if (id == null) continue
-            val fn = Naksha.featureNumber(id)
-            if (fn >= Int64(0)) {
-                featureNumbers.add(fn)
+            if (id.number >= 0) {
+                featureNumbers.add(id.number)
             } else {
-                featureIds.add(id)
+                featureIds.add(id.text)
             }
         }
         if (featureNumbers.isEmpty() && featureIds.isEmpty()) return
@@ -396,13 +395,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 
         where.append("( ")
         if (featureIds.isNotEmpty()) {
-            val op = IsAnyOf(at = StandardMembers.Id, items = featureIds.toTypedArray())
+            val op = IsAnyOf(StandardMembers.IdMember, featureIds.toTypedArray())
             applyOp(op)
         }
         if (featureNumbers.isNotEmpty()) {
             if (featureIds.isNotEmpty()) where.append(" OR ")
-
-            val op = IsAnyOf(at = StandardMembers.FeatureNumber, items = featureNumbers.toTypedArray())
+            val op = IsAnyOf(StandardMembers.FeatureNumberMember, featureNumbers.toTypedArray())
             applyOp(op)
         }
         where.append(")")

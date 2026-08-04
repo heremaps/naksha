@@ -23,7 +23,7 @@ class JbCoreTest {
 
     @Test
     fun testRandomString() {
-        val r = PlatformUtil.randomString(100)
+        val r = BaseUtil.randomAtoZ(100)
         assertEquals(100, r.length)
         var i = 0
         while (i < r.length) {
@@ -35,12 +35,12 @@ class JbCoreTest {
 
     @Test
     fun testDoubleToFloat() {
-        assertTrue(Platform.canBeFloat32(12.0))
-        assertTrue(Platform.canBeFloat32(PlatformUtil.FLOAT_MAX))
+        assertTrue(Base.canBeFloat32(12.0))
+        assertTrue(Base.canBeFloat32(BaseUtil.FLOAT_MAX))
         // Note: Technically the conversion is possible, but when widening to double, the exponent is inflated to -149
         //       Even while this is technically correct, our simple method then rejects this, because it only allows
         //       the exponent to be -126 for safe-conversion.
-        assertFalse(Platform.canBeFloat32(PlatformUtil.FLOAT_MIN))
+        assertFalse(Base.canBeFloat32(BaseUtil.FLOAT_MIN))
     }
 
     @Test
@@ -63,7 +63,7 @@ class JbCoreTest {
     @Test
     fun testJson() {
         // Test parse.
-        val raw = Platform.fromJSON("""
+        val raw = Base.fromJSON("""
 {
     "id": "foo",
     "properties": {
@@ -73,18 +73,18 @@ class JbCoreTest {
     }
 }""".trimIndent())
         assertTrue(raw is PlatformMap)
-        val map = raw.proxy(AnyObject::class)
+        val map = raw.proxy(PAnyMap::class)
         assertEquals(2, map.size)
         assertTrue(map.containsKey("id"))
         assertEquals("foo", map["id"])
         assertTrue(map.containsKey("properties"))
-        assertTrue(map["properties"] is AnyObject)
-        val properties = map["properties"] as AnyObject
+        assertTrue(map["properties"] is PAnyMap)
+        val properties = map["properties"] as PAnyMap
         assertEquals(3, properties.size)
         assertEquals("Tim", properties["name"])
         assertEquals(99, properties["age"])
-        assertTrue(properties["array"] is AnyList)
-        val array = properties["array"] as AnyList
+        assertTrue(properties["array"] is PAnyArray)
+        val array = properties["array"] as PAnyArray
         assertEquals(5, array.size)
         assertEquals(1, array[0])
         assertEquals(2, array[1])
@@ -95,7 +95,7 @@ class JbCoreTest {
         assertEquals(2, properties.size)
 
         // Test stringify.
-        val json = Platform.toJSON(map)
+        val json = Base.toJSON(map)
         assertEquals(49, json.length)
         assertTrue(json.contains("properties"))
     }
@@ -220,30 +220,30 @@ class JbCoreTest {
         reader.reset()
 
         // Test 64-bit integers
-        builder.encodeInt64(Platform.INT64_MIN_VALUE)
+        builder.encodeInt64(Base.INT64_MIN_VALUE)
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT, reader.unitType())
-        assertEquals(Platform.INT64_MIN_VALUE, reader.decodeInt64())
+        assertEquals(Base.INT64_MIN_VALUE, reader.decodeInt64())
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.clear())
         reader.reset()
 
-        builder.encodeInt64(Platform.INT64_MAX_VALUE)
+        builder.encodeInt64(Base.INT64_MAX_VALUE)
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT, reader.unitType())
-        assertEquals(Platform.INT64_MAX_VALUE, reader.decodeInt64())
+        assertEquals(Base.INT64_MAX_VALUE, reader.decodeInt64())
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.clear())
         reader.reset()
 
         // This ensures that high and low bits are encoded and decoded correctly in order
-        builder.encodeInt64(Platform.INT64_MIN_VALUE + 65535)
+        builder.encodeInt64(Base.INT64_MIN_VALUE + 65535)
         assertTrue(reader.isInt())
         assertFalse(reader.isInt32())
         assertEquals(TYPE_INT, reader.unitType())
-        assertEquals(Platform.INT64_MIN_VALUE + 65535, reader.decodeInt64())
+        assertEquals(Base.INT64_MIN_VALUE + 65535, reader.decodeInt64())
         assertEquals(9, reader.unitSize())
         assertEquals(9, builder.clear())
         reader.reset()
@@ -840,8 +840,8 @@ class JbCoreTest {
     fun testBuildingCollectionWithOnlyId() {
         val builder = JbEncoder()
         val featureJson = """{"id":"bar"}"""
-        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val featureMap = Base.fromJSON(featureJson) as PlatformMap
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(PAnyMap::class))
         val feature = JbRecordDecoder(dictManager)
         feature.mapBytes(featureBytes)
         assertEquals("bar", feature.id())
@@ -851,8 +851,8 @@ class JbCoreTest {
     fun testSelectPath() {
         val builder = JbEncoder()
         val featureJson = """{"id":"bar","properties":{"foo": "hello","bar":[0,1,2,3,4]}}"""
-        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val featureMap = Base.fromJSON(featureJson) as PlatformMap
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(PAnyMap::class))
         val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(featureBytes)
 
@@ -885,8 +885,8 @@ class JbCoreTest {
     fun testSelectStringBasedArrayPath(){
         val builder = JbEncoder()
         val featureJson = """{"properties":{"foo": "hello","bar":[0,1,2,3,4]}}"""
-        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val featureMap = Base.fromJSON(featureJson) as PlatformMap
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(PAnyMap::class))
         val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(featureBytes)
 
@@ -910,8 +910,8 @@ class JbCoreTest {
     fun testSelectInvalidStringBasedArrayPath(){
         val builder = JbEncoder()
         val featureJson = """{"properties":{"foo": "hello","bar":[0,1,2,3,4]}}"""
-        val featureMap = Platform.fromJSON(featureJson) as PlatformMap
-        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(AnyObject::class))
+        val featureMap = Base.fromJSON(featureJson) as PlatformMap
+        val featureBytes = builder.buildFeatureFromMap(featureMap.proxy(PAnyMap::class))
         val feature = JbFeatureDecoder(dictManager)
         feature.mapBytes(featureBytes)
 

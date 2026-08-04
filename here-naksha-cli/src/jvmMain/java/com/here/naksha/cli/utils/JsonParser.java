@@ -1,7 +1,7 @@
 package com.here.naksha.cli.utils;
 
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ public final class JsonParser {
 
     private Object parseJsonToObject(String json) throws JsonParserException {
         try {
-            return requireNonNull(Platform.fromJSON(json));
+            return requireNonNull(Base.fromJSON(json));
         } catch (Exception e) {
             throw new JsonParserException("Problem with json parsing!", e);
         }

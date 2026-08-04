@@ -23,16 +23,16 @@ class ReadHistoryTest : PgTestBase() {
         val featuresToCreate = randomFeatures(COUNT)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
+                add(Write().createFeature(collection, featureToCreate))
             }
         }
-        val writeFeaturesResp = executeWrite(writeFeaturesReq)
-        assertEquals(COUNT, writeFeaturesResp.features.size)
-        for (feature in writeFeaturesResp.features) {
+        val writeFeaturesResp = executeWriteAndLoadTuples(writeFeaturesReq)
+        assertEquals(COUNT, writeFeaturesResp.asFeatures.size)
+        for (feature in writeFeaturesResp.asFeatures) {
             assertNotNull(feature)
-            assertNull(allFeatures[feature.id])
+            assertNull(allFeatures[feature.id.text])
             assertEquals(Action.CREATE, feature.properties.xyz.action)
-            allFeatures[feature.id] = feature
+            allFeatures[feature.id.text] = feature
         }
     }
 
@@ -46,11 +46,11 @@ class ReadHistoryTest : PgTestBase() {
         // Update it.
         var updatedFeature1 = createdFeature.copy<NakshaFeature>(true)
         updatedFeature1.properties[ALIAS] = "first_update"
-        executeWrite(WriteRequest().apply {
+        executeWriteAndLoadTuples(WriteRequest().apply {
             add(Write().updateFeature(collection, updatedFeature1, true))
         }).apply {
-            assertEquals(1, features.size)
-            updatedFeature1 = assertNotNull(features.first())
+            assertEquals(1, asFeatures.size)
+            updatedFeature1 = assertNotNull(asFeatures.first())
             assertEquals(featureId, updatedFeature1.id)
             assertEquals(Action.UPDATE, updatedFeature1.properties.xyz.guid?.tupleNumber?.action)
         }
@@ -58,29 +58,29 @@ class ReadHistoryTest : PgTestBase() {
         // Update it a second time.
         var updatedFeature2 = updatedFeature1.copy<NakshaFeature>(true)
         updatedFeature2.properties[ALIAS] = "second_update"
-        executeWrite(WriteRequest().apply {
+        executeWriteAndLoadTuples(WriteRequest().apply {
             add(Write().updateFeature(collection, updatedFeature2, true))
         }).apply {
-            assertEquals(1, features.size)
-            updatedFeature2 = assertNotNull(features.first())
+            assertEquals(1, asFeatures.size)
+            updatedFeature2 = assertNotNull(asFeatures.first())
             assertEquals(featureId, updatedFeature2.id)
             assertEquals(Action.UPDATE, updatedFeature2.properties.xyz.guid?.tupleNumber?.action)
         }
 
         // Delete it.
         var deletedFeature: NakshaFeature
-        executeWrite(WriteRequest().apply {
+        executeWriteAndLoadTuples(WriteRequest().apply {
             add(Write().deleteFeatureById(collection, createdFeature.id))
         }).apply {
-            assertEquals(1, features.size)
-            deletedFeature = assertNotNull(features.first())
+            assertEquals(1, asFeatures.size)
+            deletedFeature = assertNotNull(asFeatures.first())
             assertEquals(featureId, deletedFeature.id)
             assertEquals(Action.DELETE, deletedFeature.properties.xyz.guid?.tupleNumber?.action)
         }
 
         // Clear cache, and read the history of the feature.
         Naksha.cache.clear()
-        executeRead(ReadFeatures().apply {
+        executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds.add(featureId)
@@ -89,12 +89,12 @@ class ReadHistoryTest : PgTestBase() {
             versions = 10
         }).apply {
             // We expect to get 4 versions back, in descending order: deleted, updated2, updated1, created
-            assertEquals(4, features.size)
+            assertEquals(4, asFeatures.size)
 
-            val delete = assertNotNull(features[0])
-            val update2 = assertNotNull(features[1])
-            val update1 = assertNotNull(features[2])
-            val create = assertNotNull(features[3])
+            val delete = assertNotNull(asFeatures[0])
+            val update2 = assertNotNull(asFeatures[1])
+            val update1 = assertNotNull(asFeatures[2])
+            val create = assertNotNull(asFeatures[3])
 
             assertEquals(featureId, delete.id)
             assertEquals(Action.DELETE, delete.properties.xyz.action)
@@ -120,7 +120,7 @@ class ReadHistoryTest : PgTestBase() {
             assertEquals(create.properties.xyz.nguid, update1.properties.xyz.guid)
         }
 
-        executeRead(ReadFeatures().apply {
+        executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds.add(featureId)
@@ -130,10 +130,10 @@ class ReadHistoryTest : PgTestBase() {
         }).apply {
             // We expect to have 4 versions, but only want the latest 2 back
             // As specified, we expect descending order: deleted, updated2[, updated1, created]
-            assertEquals(2, features.size)
+            assertEquals(2, asFeatures.size)
 
-            val delete = assertNotNull(features[0])
-            val update2 = assertNotNull(features[1])
+            val delete = assertNotNull(asFeatures[0])
+            val update2 = assertNotNull(asFeatures[1])
 
             assertEquals(featureId, delete.id)
             assertEquals(Action.DELETE, delete.properties.xyz.action)
@@ -142,7 +142,7 @@ class ReadHistoryTest : PgTestBase() {
             assertEquals(Action.UPDATE, update2.properties.xyz.action)
         }
 
-        executeRead(ReadFeatures().apply {
+        executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds.add(featureId)
@@ -152,10 +152,10 @@ class ReadHistoryTest : PgTestBase() {
         }).apply {
             // We expect to have 4 versions, but only want the middle 2 back
             // As specified, we expect descending order: [deleted, ] updated2, updated1 [, created]
-            assertEquals(2, features.size)
+            assertEquals(2, asFeatures.size)
 
-            val update2 = assertNotNull(features[0])
-            val update1 = assertNotNull(features[1])
+            val update2 = assertNotNull(asFeatures[0])
+            val update1 = assertNotNull(asFeatures[1])
 
             assertEquals(featureId, update1.id)
             assertEquals(Action.UPDATE, update1.properties.xyz.action)

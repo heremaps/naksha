@@ -39,21 +39,16 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.base.FromJsonOptions;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.Action;
-import naksha.model.NakshaContext;
+import naksha.base.fn.Fn1;
+import naksha.model.*;
 import naksha.base.NakshaError;
-import naksha.model.SessionOptions;
-import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
-import naksha.model.request.WriteRequest;
+import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -245,15 +240,31 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     }
   }
 
-  protected Response executeReadRequestFromSpaceStorage(ReadFeatures readFeatures) {
-    return naksha().getSpaceStorage().useReadSession(SessionOptions.from(context(), false), reader -> reader.execute(readFeatures));
+  protected @NotNull Response executeReadRequestFromSpaceStorage(@NotNull ReadRequest request) {
+    return naksha()
+        .getSpaceStorage()
+        .useReadSession(SessionOptions.from(context(), false), reader -> reader.execute(request));
   }
 
-  protected Response executeWriteRequestFromSpaceStorage(WriteRequest writeRequest) {
-    return naksha().getSpaceStorage().useWriteSession(SessionOptions.from(context(), true), writer -> writer.execute(writeRequest));
+  protected @NotNull Response executeReadRequestFromSpaceStorage(@NotNull Fn1<@NotNull ReadRequest, @NotNull IReadSession> requestBuilder) {
+    return naksha()
+      .getSpaceStorage()
+      .useReadSession(SessionOptions.from(context(), false), reader -> reader.execute(requestBuilder.call(reader)));
   }
 
-  XyzFeatureCollection emptyFeatureCollection() {
+  protected @NotNull Response executeWriteRequestFromSpaceStorage(@NotNull WriteRequest request) {
+    return naksha()
+        .getSpaceStorage()
+        .useWriteSession(SessionOptions.from(context(), true), writer -> writer.execute(request));
+  }
+
+  protected @NotNull Response executeWriteRequestFromSpaceStorage(@NotNull Fn1<@NotNull WriteRequest, @NotNull IWriteSession> requestBuilder) {
+    return naksha()
+      .getSpaceStorage()
+      .useWriteSession(SessionOptions.from(context(), true), writer -> writer.execute(requestBuilder.call(writer)));
+  }
+
+  @NotNull XyzFeatureCollection emptyFeatureCollection() {
     return new XyzFeatureCollection().withFeatures(emptyList());
   }
 
@@ -284,9 +295,9 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     return null;
   }
 
-  protected <P extends AnyObject> @NotNull P parseRequestBodyAs(final Class<P> type) {
+  protected <P extends PAnyMap> @NotNull P parseRequestBodyAs(final Class<P> type) {
     final String bodyJson = routingContext.body().asString();
-    return requireNonNull(box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), type));
+    return requireNonNull(box(Base.fromJSON(bodyJson, FromJsonOptions.DEFAULT), type));
   }
 
   /**

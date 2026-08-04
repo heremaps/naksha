@@ -43,7 +43,7 @@ import kotlin.reflect.KProperty
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NotNullMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : JsEnum>(
+open class NotNullMapEnum<MAP : PTypedMap<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : BaseEnum>(
     val klass: KClass<out PROPERTY_TYPE>,
     val name: String? = null,
     val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null
@@ -64,7 +64,7 @@ open class NotNullMapEnum<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE
                 }
             }
         }
-        return JsEnum.get(raw, klass)
+        return BaseEnum.get(raw, klass)
     }
 
     open operator fun setValue(self: MAP, property: KProperty<*>, value: PROPERTY_TYPE) {

@@ -2,7 +2,7 @@
 
 package naksha.psql
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -11,7 +11,7 @@ import kotlin.js.JsExport
  * @since 3.0.0
  */
 @JsExport
-class PgMapList : ListProxy<PgCatalog>(PgCatalog::class) {
+class PgMapList : PTypedArray<PgCatalog>(PgCatalog::class) {
     /**
      * Add all given maps
      */

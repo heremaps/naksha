@@ -16,7 +16,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.ToJsonOptions;
 import naksha.geo.LineStringCoord;
 import naksha.geo.PointCoord;
@@ -97,7 +97,7 @@ class GenerativeDataIngest extends AbstractDataIngest {
         .toList();
     FeatureCollectionRequest request = new FeatureCollectionRequest()
         .withFeatures(featuresInBatch);
-    return Platform.toJSON(request, ToJsonOptions.DEFAULT);
+    return Base.toJSON(request, ToJsonOptions.DEFAULT);
   }
 
   private List<NakshaFeature> featuresForTile(String tileId, int count) {

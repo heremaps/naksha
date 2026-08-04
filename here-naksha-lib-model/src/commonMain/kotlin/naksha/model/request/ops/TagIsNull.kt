@@ -25,7 +25,7 @@ class TagIsNull() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, key: String) : this(at.name, key)
+    constructor(at: Member, key: String) : this(at.id, key)
 
     var key: String by KEY
 }

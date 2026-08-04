@@ -2,6 +2,8 @@ package com.here.naksha.lib.handlers;
 
 import static naksha.base.NakshaError.COLLECTION_NOT_FOUND;
 import static naksha.base.NakshaError.MAP_NOT_FOUND;
+import static naksha.base.Base.proxy;
+import static naksha.model.request.WriteOp.CREATE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -28,7 +30,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import naksha.base.JvmBoxingUtil;
+
 import naksha.base.StringList;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
@@ -50,7 +52,6 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteList;
-import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.apache.commons.lang3.RandomUtils;
 import org.jetbrains.annotations.Nullable;
@@ -159,7 +160,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
     WriteRequest writeXyzFeatures = new WriteRequest()
-        .add(new Write().createFeatureDeprecated("different_collection", featureToCreate));
+        .add(new Write().withOp(CREATE).withCollectionId("different_collection").withFeature(featureToCreate));
 
     // And: Handler with autoCreateCollection enabled to test
     DefaultStorageHandler handler = storageHandler(testCase.handlerProperties, testCase.space);
@@ -178,7 +179,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // And: passed Write Collection request was about creating single collection with correct id
     Write writeCollection = findSingleCreateCollectionWrite(capturedWrites);
-    assertEquals(WriteOp.CREATE, writeCollection.getOp());
+    assertEquals(CREATE, writeCollection.getOp());
     assertEquals(testCase.correctCollection().getId(), writeCollection.getId());
     assertEquals(Naksha.COLLECTIONS_COL_ID, writeCollection.getCollectionId());
 
@@ -186,7 +187,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     List<Write> featureWrites = getSingularWritesToCollection(capturedWrites, testCase.correctCollection().getId());
     assertEquals(2, featureWrites.size());
     for (Write writeFeature : featureWrites) {
-      assertEquals(WriteOp.CREATE, writeFeature.getOp());
+      assertEquals(CREATE, writeFeature.getOp());
       assertEquals(featureToCreate.getId(), writeFeature.getId());
       assertEquals(testCase.correctCollection().getId(), writeFeature.getCollectionId());
     }
@@ -205,7 +206,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
     String collectionId = handler.properties.getCollection().getId();
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeatureDeprecated(collectionId, featureToCreate));
+    WriteRequest writeXyzFeatures = new WriteRequest()
+      .add(new Write().withOp(CREATE).withCollectionId(collectionId).withFeature(featureToCreate));
 
     // When: Processing write features
     ignoreExceptionsFrom(
@@ -223,7 +225,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertNotNull(capturedCollectionWrite, "Could not capture writing collection");
 
     // And: passed Write Collection request was about creating collection defined in Handler properties
-    assertEquals(WriteOp.CREATE, capturedCollectionWrite.getOp());
+    assertEquals(CREATE, capturedCollectionWrite.getOp());
     assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getId());
   }
 
@@ -235,7 +237,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // And: feature to be saved in potentially different collection
     NakshaFeature featureToCreate = new NakshaFeature("sample_feature");
-    WriteRequest writeXyzFeatures = new WriteRequest().add(new Write().createFeatureDeprecated("different_collection", featureToCreate));
+    WriteRequest writeXyzFeatures = new WriteRequest()
+      .add(new Write().withOp(CREATE).withCollectionId("different_collection").withFeature(featureToCreate));
 
     // And: Handler with autoCreateCollection disabled to test
     DefaultStorageHandler handler = storageHandler();
@@ -320,7 +323,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     List<Write> secondRequestWrites = capturedWriteRequests.get(1).getWrites();
     assertEquals(1, secondRequestWrites.size());
     Write mapWrite = secondRequestWrites.get(0);
-    assertEquals(WriteOp.CREATE, mapWrite.getOp());
+    assertEquals(CREATE, mapWrite.getOp());
     assertEquals(Naksha.ADMIN_CATALOG_ID, mapWrite.getCatalogId());
     assertEquals(Naksha.CATALOGS_COL_ID, mapWrite.getCollectionId());
     assertEquals(mapId, mapWrite.getId());
@@ -353,7 +356,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     List<Write> subsmittedWrites = capturedWriteRequest.getWrites();
     assertEquals(1, subsmittedWrites.size());
     Write submittedWrite = subsmittedWrites.get(0);
-    assertEquals(WriteOp.CREATE, submittedWrite.getOp());
+    assertEquals(CREATE, submittedWrite.getOp());
     assertEquals(mapIdFromStorageProps, submittedWrite.getCatalogId());
     assertEquals(handler.properties.getCollection().getId(), submittedWrite.getCollectionId());
   }
@@ -402,7 +405,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // 2nd call is map creation in admin map / maps collection
     Write mapCreate = calls.get(1).getWrites().get(0);
-    assertEquals(WriteOp.CREATE, mapCreate.getOp());
+    assertEquals(CREATE, mapCreate.getOp());
     assertEquals(Naksha.ADMIN_CATALOG_ID, mapCreate.getCatalogId());
     assertEquals(Naksha.CATALOGS_COL_ID, mapCreate.getCollectionId());
     assertEquals(mapIdFromStorageProps, mapCreate.getId());
@@ -638,9 +641,9 @@ class DefaultStorageHandlerTest extends AbstractTest {
         case HANDLER_PROPERTIES:
           return handlerProperties.getCollection();
         case SPACE_PROPERTIES:
-          return JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
+          return proxy(space.getProperties(), SpaceProperties.class).getCollection();
         case SPACE_ID:
-          return new NakshaCollection(space.getId()).withCatalogId(getMapId());
+          return new NakshaCollection(space.getId(), getMapId());
         default:
           throw new IllegalStateException("Unexpected collection source: " + validCollectionSource);
       }
@@ -669,9 +672,10 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
   private static Request writeRandomFeature() {
     return new WriteRequest()
-        .add(new Write().createFeatureDeprecated(
-            "random_collection_" + RandomUtils.nextInt(),
-            new NakshaFeature("random_feature_" + RandomUtils.nextInt())
+        .add(new Write()
+            .withOp(CREATE)
+            .withCollectionId("random_collection_" + RandomUtils.nextInt())
+            .withFeature(new NakshaFeature("random_feature_" + RandomUtils.nextInt())
         ));
   }
 
@@ -735,13 +739,13 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
   private static WriteRequest updateCollectionRequest(String collectionId) {
     WriteRequest wr = new WriteRequest();
-    wr.add(new Write().upsertCollection(new NakshaCollection(collectionId)));
+    wr.add(new Write().upsertCollection(new NakshaCollection().withId(collectionId)));
     return wr;
   }
 
   private static WriteRequest deleteCollectionRequest(String collectionId) {
     WriteRequest wr = new WriteRequest();
-    wr.add(new Write().deleteCollection(new NakshaCollection(collectionId), false));
+    wr.add(new Write().deleteCollection(new NakshaCollection().withId(collectionId), false));
     return wr;
   }
 
@@ -752,7 +756,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
         return false;
       }
       Write w = writes.get(0);
-      return WriteOp.CREATE.equals(w.getOp())
+      return CREATE.equals(w.getOp())
              && Naksha.ADMIN_CATALOG_ID.equals(w.getCatalogId())
              && Naksha.CATALOGS_COL_ID.equals(w.getCollectionId())
              && mapId.equals(w.getId());

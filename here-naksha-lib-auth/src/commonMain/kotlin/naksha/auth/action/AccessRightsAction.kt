@@ -1,7 +1,7 @@
 package naksha.auth.action
 
 import naksha.auth.attribute.ResourceAttributes
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 
 /**
@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 @Suppress("OPT_IN_USAGE", "UNCHECKED_CAST")
 @JsExport
 sealed class AccessRightsAction<T : ResourceAttributes, SELF : AccessRightsAction<T, SELF>> :
-    ListProxy<ResourceAttributes>(ResourceAttributes::class) {
+    PTypedArray<ResourceAttributes>(ResourceAttributes::class) {
 
    open val name: String = "unknownAction"
 

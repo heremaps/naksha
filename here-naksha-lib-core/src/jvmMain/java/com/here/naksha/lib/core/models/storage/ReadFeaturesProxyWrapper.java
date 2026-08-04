@@ -18,7 +18,8 @@
  */
 package com.here.naksha.lib.core.models.storage;
 
-import naksha.base.JvmBoxingUtil;
+import naksha.base.Id;
+import naksha.base.IdList;
 import naksha.base.JvmMapProxy;
 import naksha.base.StringList;
 import naksha.model.request.ReadFeatures;
@@ -29,7 +30,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
 
-import static naksha.base.Platform.javaProxy;
+import static naksha.base.Base.javaProxy;
 
 
 public class ReadFeaturesProxyWrapper extends ReadFeatures {
@@ -65,7 +66,7 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   }
 
   public ReadFeaturesProxyWrapper withFeatureIds(StringList featureIds){
-    setFeatureIds(featureIds);
+    setFeatureIds(new IdList(featureIds));
     return this;
   }
 
@@ -108,7 +109,7 @@ public class ReadFeaturesProxyWrapper extends ReadFeatures {
   }
 
   public ReadFeaturesProxyWrapper withCollection(String collectionId){
-    setCollectionId(collectionId);
+    setCollectionId(new Id(collectionId));
     return this;
   }
 

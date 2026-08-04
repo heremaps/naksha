@@ -27,7 +27,7 @@ class TagMapHasAllOf() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, vararg keys: String) : this(at.name, *keys)
+    constructor(at: Member, vararg keys: String) : this(at.id, *keys)
 
     var tagKeys: StringList by KEYS
 }

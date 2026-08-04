@@ -1,7 +1,7 @@
 package naksha.auth
 
 import naksha.base.JvmMap
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.base.Proxy
 import java.io.File
 import kotlin.io.path.Path
@@ -39,7 +39,7 @@ class MatrixMatchTest {
 
         companion object {
             fun from(jsonFile: File): TestCase {
-                val root = Platform.fromJSON(jsonFile.readText()) as JvmMap
+                val root = Base.fromJSON(jsonFile.readText()) as JvmMap
                 val urm = Proxy.box(root["urm"]!!, UserRightsMatrix::class)!!
                 val arm = Proxy.box(root["arm"]!!, AccessRightsMatrix::class)!!
                 val shouldMatch = Proxy.box(root["matches"], Boolean::class)!!

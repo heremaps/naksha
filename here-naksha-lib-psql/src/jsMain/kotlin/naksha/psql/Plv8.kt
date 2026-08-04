@@ -3,7 +3,7 @@ package naksha.psql
 /**
  * Expose the native PLV8 api.
  *
- * - The logger API is already exposed through [naksha.base.Platform.logger]
+ * - The logger API is already exposed through [naksha.base.BaseCompanion.logger]
  * - The `quote_literal` and `quote_ident` methods are as well exposed through [PgPlatform.quote_literal] and [PgPlatform.quote_ident].
  * - See [PLV8 documentation](https://plv8.github.io/)
  */

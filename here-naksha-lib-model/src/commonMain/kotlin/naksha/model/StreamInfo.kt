@@ -30,14 +30,14 @@ open class StreamInfo() {
 
     /**
      * Copy the stream-information into a new platform object, so it can be JSON serialized.
-     * @param klass the type to return, if _null_, [AnyObject] is returned.
+     * @param klass the type to return, if _null_, [PAnyMap] is returned.
      * @return a copy of the stream-information, the copy is no deep copy.
      * @since 3.0
      */
     @Suppress("NON_EXPORTABLE_TYPE", "UNCHECKED_CAST")
     @JvmOverloads
-    open fun <T : AnyObject> toAnyObject(klass: KClass<T>? = null): T {
-        val any = Platform.newInstanceOf(klass ?: AnyObject::class)
+    open fun <T : PAnyMap> toAnyObject(klass: KClass<T>? = null): T {
+        val any = Base.newInstance(klass ?: PAnyMap::class)
         for (entry in data) any.setRaw(entry.key, entry.value)
         any[TIME_IN_STORAGE] = timeInStorageMs.get()
         return any as T
@@ -62,7 +62,7 @@ open class StreamInfo() {
             do {
                 val raw = data[STREAM_ID]
                 if (raw is String) return raw
-                val streamId = PlatformUtil.randomString(12)
+                val streamId = BaseUtil.randomAtoZ(12)
                 val existing = data.putIfAbsent(STREAM_ID, streamId) ?: return streamId
                 if (existing is String) return existing
                 // Someone else set an invalid value, repeat (will be replaced with a valid value)
@@ -122,7 +122,7 @@ open class StreamInfo() {
         return arrayOf(spaceId, storageId).contentHashCode()
     }
 
-    private var timeInStorageMs = AtomicInt64(0)
+    private var timeInStorageMs = AtomicLong(0)
 
     /**
      * Add timer value.

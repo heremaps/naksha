@@ -6,7 +6,6 @@ import naksha.base.*
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.Naksha
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaException
 import kotlin.js.*
@@ -14,13 +13,13 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * A Naksha storage configuration.
+ * A Naksha storage descriptor.
  *
- * This class contains the minimal configuration needed for all storages, actual implementations may need more configuration properties.
+ * This class contains the configuration needed for all storages, actual implementations may need more configuration properties and therefore should provide own types extending this class. The configuration is need to connect to the storage.
  *
- * ### Note
- * There is no default-map configuration available, it's expected that clients provide the `mapId` explicitly.
+ * **Note**: In early Naksha implementations, only one database is supported, which must have the same `id` as the storage. This is strongly discouraged for the future, but for the time being a neccesarity until Naksha-Hub is adjusted.
  * @since 3.0
+ * @see NakshaDatabase
  */
 @Suppress("unused")
 @JsExport
@@ -29,11 +28,11 @@ open class NakshaStorage() : NakshaFeature() {
     /**
      * Create a new storage with the given identifier and class-name.
      * @param id the identifier to set.
-     * @param className the full qualified name of the class to instantiate.
+     * @param className the full qualified name of the class to instantiate for the [naksha.model.IStorage] implementation.
      * @since 3.0
      */
     @JsName("of")
-    constructor(id: String, className: String) : this() {
+    constructor(id: Id, className: String) : this() {
         this.id = id
         this.className = className
     }
@@ -67,7 +66,7 @@ open class NakshaStorage() : NakshaFeature() {
         @JvmOverloads
         fun fromJSON(json: String, fromJsonOptions: FromJsonOptions? = null): NakshaStorage {
             try {
-                return (Platform.fromJSON(json, fromJsonOptions ?: FromJsonOptions.DEFAULT) as PlatformMap).proxy(NakshaStorage::class)
+                return (Base.fromJSON(json, fromJsonOptions ?: FromJsonOptions.DEFAULT) as PlatformMap).proxy(NakshaStorage::class)
             } catch (e: Exception) {
                 if (e is NakshaException) throw e
                 throw NakshaException(ILLEGAL_ARGUMENT, "Failed to parse JSON: $json", e)
@@ -75,10 +74,10 @@ open class NakshaStorage() : NakshaFeature() {
         }
     }
 
-    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
-    override fun withId(value: String): NakshaStorage = super.withId(value) as NakshaStorage
-    override fun withType(value: String): NakshaStorage = super.withType(value) as NakshaStorage
-    override fun withFeatureType(value: String): NakshaStorage = super.withFeatureType(value) as NakshaStorage
+    override fun withId(value: Id?): NakshaStorage = super.withId(value) as NakshaStorage
+    override fun withType(value: String?): NakshaStorage = super.withType(value) as NakshaStorage
+    override fun withFeatureType(value: FeatureType?): NakshaStorage = super.withFeatureType(value) as NakshaStorage
+    override fun featureTypeDefaultValue(): FeatureType = FeatureType.FEATURE
     override fun withBbox(value: SpBoundingBox?): NakshaStorage = super.withBbox(value) as NakshaStorage
     override fun withGeometry(value: SpGeometry?): NakshaStorage = super.withGeometry(value) as NakshaStorage
     override fun withReferencePoint(value: SpPoint?): NakshaStorage = super.withReferencePoint(value) as NakshaStorage
@@ -162,17 +161,6 @@ open class NakshaStorage() : NakshaFeature() {
         this.hardCap = hardCap
         return this
     }
-
-    /**
-     * The database-number to which this storage is hard-wired _(until we support multi-databases per storage)_.
-     * @since 3.0
-     */
-    val databaseNumber: Int64
-        get() {
-            // TODO: We need to allow a custom database number, actually we need to decouple the storage from the database.
-            //       However, this is a much larger architectural change, so for now, the storage and the database are hard-wired the same!
-            return Naksha.featureNumber(id)
-        }
 
     override fun equals(other: Any?): Boolean {
         if (other is NakshaStorage) return super.contentDeepEquals(other)

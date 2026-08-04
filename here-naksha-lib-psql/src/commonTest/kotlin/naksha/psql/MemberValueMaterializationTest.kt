@@ -1,12 +1,13 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.Int64
 import naksha.model.objects.JsonPath
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.Test
@@ -50,7 +51,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, catalogId =
     private fun readColumn(collection: NakshaCollection, featureId: String, column: String): Any? {
         storage.adminConnection().use { conn ->
             conn.execute(
-                """SELECT "$column" AS value FROM "${collection.catalogId}"."${collection.id}" WHERE $Id = $1""",
+                """SELECT "$column" AS value FROM "${collection.catalogId}"."${collection.id}" WHERE $IdMember = $1""",
                 arrayOf(featureId)
             ).use { cursor ->
                 assertTrue(cursor.next(), "No HEAD row found for feature '$featureId'")
@@ -66,20 +67,20 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, catalogId =
     @Test
     fun shouldMaterializeMembersOnInsert() {
         // Given: a collection with two members
-        val collection = NakshaCollection("member_materialization_test", catalog.id).apply {
+        val collection = NakshaCollection(Id("member_materialization_test"), catalog).apply {
             addMember(Member("label", MemberType.STRING, JsonPath("properties", "name")))
             addMember(Member("city", MemberType.STRING, JsonPath("properties", "address", "city")))
         }
-        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        executeWriteAndLoadTuples(WriteRequest().add(Write().createCollection(collection)))
 
         // And: 2 features to insert
         val first = NakshaFeature.fromJson(featureJson("feature-1", "Alice", "Berlin", 10))
         val second = NakshaFeature.fromJson(featureJson("feature-2", "Bob", "Munich", 20))
 
         // When
-        executeWrite(WriteRequest().apply {
-            add(Write().createFeature(collection.catalogId, collection.id, first))
-            add(Write().createFeature(collection.catalogId, collection.id, second))
+        executeWriteAndLoadTuples(WriteRequest().apply {
+            add(Write().createFeature(collection, first))
+            add(Write().createFeature(collection, second))
         })
 
         // Then
@@ -100,19 +101,19 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, catalogId =
     @Test
     fun shouldMaterializeTypedMemberOnInsert() {
         // Given: a collection with a numeric member on properties.score
-        val collection = NakshaCollection("member_typed_materialization_test", catalog.id).apply {
+        val collection = NakshaCollection(Id("member_typed_materialization_test"), catalog).apply {
             addMember(Member("score", MemberType.INT64, JsonPath("properties", "score")))
         }
-        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        executeWriteAndLoadTuples(WriteRequest().add(Write().createCollection(collection)))
 
         // And: 2 features to insert
         val first = NakshaFeature.fromJson(featureJson("typed-1", "Alice", "Berlin", 42))
         val second = NakshaFeature.fromJson(featureJson("typed-2", "Bob", "Munich", 7))
 
         // When
-        executeWrite(WriteRequest().apply {
-            add(Write().createFeature(collection.catalogId, collection.id, first))
-            add(Write().createFeature(collection.catalogId, collection.id, second))
+        executeWriteAndLoadTuples(WriteRequest().apply {
+            add(Write().createFeature(collection, first))
+            add(Write().createFeature(collection, second))
         })
 
         // Then

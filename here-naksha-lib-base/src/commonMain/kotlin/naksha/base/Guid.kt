@@ -2,8 +2,8 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.decodeURIComponent
-import naksha.base.Platform.PlatformCompanion.encodeURIComponent
+import naksha.base.Base.BaseCompanion.decodeURIComponent
+import naksha.base.Base.BaseCompanion.encodeURIComponent
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -51,8 +51,14 @@ data class Guid(
      */
     override fun toString(): String {
         if (!this::_string.isInitialized) {
-             _string = if (tupleNumber != TupleNumber.HEAD) "urn:naksha:guid:${encodeURIComponent(id)}:$tupleNumber"
-                                                            else "urn:naksha:guid:${encodeURIComponent(id)}"
+            val databaseNumber = tupleNumber.databaseNumber
+            val catalogNumber = tupleNumber.catalogNumber
+            val collectionNumber = tupleNumber.collectionNumber
+            val featureNumber = tupleNumber.featureNumber
+            val version = tupleNumber.version
+             _string = if (tupleNumber == TupleNumber.HEAD)
+                     "urn:naksha:guid:${encodeURIComponent(id)}"
+                else "urn:naksha:guid:${encodeURIComponent(id)}:$databaseNumber:$catalogNumber:$collectionNumber:$featureNumber:$version"
         }
         return _string
     }

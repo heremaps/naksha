@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Action
+import naksha.base.Id
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StandardMembers
 import naksha.model.request.OrderBy
@@ -28,16 +29,16 @@ class ReadOrderedTest : PgTestBase() {
         val featuresToCreate = randomFeatures(COUNT)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
+                add(Write().createFeature(collection, featureToCreate))
             }
         }
-        val writeFeaturesResp = executeWrite(writeFeaturesReq)
-        assertEquals(COUNT, writeFeaturesResp.features.size)
-        for (feature in writeFeaturesResp.features) {
+        val writeFeaturesResp = executeWriteAndLoadTuples(writeFeaturesReq)
+        assertEquals(COUNT, writeFeaturesResp.asFeatures.size)
+        for (feature in writeFeaturesResp.asFeatures) {
             assertNotNull(feature)
-            assertNull(allFeatures[feature.id])
+            assertNull(allFeatures[feature.id.text])
             assertEquals(Action.CREATE, feature.properties.xyz.action)
-            allFeatures[feature.id] = feature
+            allFeatures[feature.id.text] = feature
             allFeaturesOrderedByIdAsc.add(feature)
             allFeaturesOrderedByIdDesc.add(feature)
         }
@@ -47,28 +48,28 @@ class ReadOrderedTest : PgTestBase() {
 
     @Test
     fun searchOrderedById() {
-        executeRead(ReadFeatures().apply {
-            catalogId = TEST_MAP_ID
+        executeReadAndLoadTuple(ReadFeatures().apply {
+            catalogId = Id(TEST_MAP_ID)
             collectionId = collection.id
             orderBy = OrderBy.id()
             limit = ORDER_BY_ID_LIMIT
         }).apply {
-            assertEquals(ORDER_BY_ID_LIMIT, features.size)
-            for (entry in features.withIndex()) {
+            assertEquals(ORDER_BY_ID_LIMIT, asFeatures.size)
+            for (entry in asFeatures.withIndex()) {
                 val expected = allFeaturesOrderedByIdDesc[entry.index]
                 val feature = assertNotNull(entry.value)
                 assertEquals(expected.id, feature.id)
             }
         }
 
-        executeRead(ReadFeatures().apply {
-            catalogId = TEST_MAP_ID
+        executeReadAndLoadTuple(ReadFeatures().apply {
+            catalogId = Id(TEST_MAP_ID)
             collectionId = collection.id
-            orderBy = OrderBy(StandardMembers.Id, order = SortOrder.ASCENDING)
+            orderBy = OrderBy(StandardMembers.IdMember, order = SortOrder.ASCENDING)
             limit = ORDER_BY_ID_LIMIT
         }).apply {
-            assertEquals(ORDER_BY_ID_LIMIT, features.size)
-            for (entry in features.withIndex()) {
+            assertEquals(ORDER_BY_ID_LIMIT, asFeatures.size)
+            for (entry in asFeatures.withIndex()) {
                 val expected = allFeaturesOrderedByIdAsc[entry.index]
                 val feature = assertNotNull(entry.value)
                 assertEquals(expected.id, feature.id)

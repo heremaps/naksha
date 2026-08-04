@@ -2,7 +2,7 @@
 
 package naksha.model.mom
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import kotlin.js.JsExport
 
 /**
@@ -10,7 +10,7 @@ import kotlin.js.JsExport
  * @since 3.0.0
  */
 @JsExport
-class MomMetaNs : AnyObject() {
+class MomMetaNs : PAnyMap() {
 
     companion object MomMetaNs_C {
     }

@@ -2,7 +2,7 @@ package naksha.auth.check
 
 import naksha.auth.check.CheckMapCompilerTest.CheckAssertion.Companion.assertThat
 import naksha.auth.UserRights
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.StringList
 import kotlin.reflect.KClass
 import kotlin.test.Test
@@ -63,7 +63,7 @@ class CheckMapCompilerTest {
     @Test
     fun shouldReturnUndefinedCheckForUnknownValue() {
         // Given:
-        val userRights = UserRights().withPropertyCheck("unsupported_object", AnyObject())
+        val userRights = UserRights().withPropertyCheck("unsupported_object", PAnyMap())
 
         // When:
         val checkMap = CheckCompiler.compile(userRights)

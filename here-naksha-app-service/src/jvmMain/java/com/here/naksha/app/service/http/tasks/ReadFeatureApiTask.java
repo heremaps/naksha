@@ -45,6 +45,8 @@ import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_ID;
 import static com.here.naksha.common.http.apis.ApiParamsConst.TILE_TYPE;
 import static com.here.naksha.common.http.apis.ApiParamsConst.WEST;
 import static com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper.proxyWrapperOf;
+import static naksha.base.FeatureType.COLLECTION;
+import static naksha.base.FeatureType.FEATURE;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
@@ -69,6 +71,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import naksha.base.Id;
 import naksha.base.StringList;
 import naksha.geo.PointCoord;
 import naksha.geo.SpBoundingBox;
@@ -181,8 +185,8 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
 
   private @NotNull XyzResponse executeFeatureById() {
     // Parse and validate Path parameters
-    final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final String featureId = extractMandatoryPathParam(routingContext, FEATURE_ID);
+    final Id spaceId = COLLECTION.id(extractMandatoryPathParam(routingContext, SPACE_ID));
+    final Id featureId = FEATURE.id(extractMandatoryPathParam(routingContext, FEATURE_ID));
     final QueryParameterList queryParameters = queryParamsFromRequest(routingContext);
     final Set<String> propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParameters);
 

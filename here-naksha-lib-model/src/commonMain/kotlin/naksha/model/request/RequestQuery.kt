@@ -24,7 +24,7 @@ import kotlin.jvm.JvmField
  * @since 3.0
  */
 @JsExport
-open class RequestQuery : AnyObject() {
+open class RequestQuery : PAnyMap() {
 
     companion object RequestQuery_C {
         @JvmField

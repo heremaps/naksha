@@ -1,26 +1,26 @@
 package naksha.psql.assertions
 
-import naksha.base.AnyList
-import naksha.base.AnyObject
+import naksha.base.PAnyArray
+import naksha.base.PAnyMap
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Custom assertions to be performed on [AnyObject]
+ * Custom assertions to be performed on [PAnyMap]
  */
 object CommonProxyAssertions {
 
-    fun assertAnyObjectsEqual(left: AnyObject?, right: AnyObject?) {
+    fun assertAnyObjectsEqual(left: PAnyMap?, right: PAnyMap?) {
         checkNullsAndDelegate(left, right, this::assertNonNullObjectsEqual)
     }
 
-    fun assertAnyListsEqual(left: AnyList?, right: AnyList?, bearerName: String? = null) {
+    fun assertAnyListsEqual(left: PAnyArray?, right: PAnyArray?, bearerName: String? = null) {
         checkNullsAndDelegate(left, right) { l, r -> assertNonNullListsEqual(l, r, bearerName) }
     }
 
-    private fun assertNonNullObjectsEqual(left: AnyObject, right: AnyObject) {
+    private fun assertNonNullObjectsEqual(left: PAnyMap, right: PAnyMap) {
         left.keys.intersect(right.keys).forEach { commonKey ->
             when (val leftVal = left[commonKey]) {
                 null -> assertNull(
@@ -28,8 +28,8 @@ object CommonProxyAssertions {
                     "Left value for $commonKey is null, right is not"
                 )
 
-                is AnyObject -> assertAnyObjectsEqual(leftVal, right[commonKey] as AnyObject)
-                is AnyList -> assertAnyListsEqual(leftVal, right[commonKey] as AnyList, commonKey)
+                is PAnyMap -> assertAnyObjectsEqual(leftVal, right[commonKey] as PAnyMap)
+                is PAnyArray -> assertAnyListsEqual(leftVal, right[commonKey] as PAnyArray, commonKey)
                 else -> assertEquals(
                     leftVal,
                     right[commonKey],
@@ -53,10 +53,10 @@ object CommonProxyAssertions {
         }
     }
 
-    private fun assertNonNullListsEqual(left: AnyList, right: AnyList, bearerName: String? = null) {
+    private fun assertNonNullListsEqual(left: PAnyArray, right: PAnyArray, bearerName: String? = null) {
         left.forEachIndexed { index, value ->
-            if (value is AnyObject) {
-                assertAnyObjectsEqual(value, right[index] as AnyObject)
+            if (value is PAnyMap) {
+                assertAnyObjectsEqual(value, right[index] as PAnyMap)
             } else {
                 assertEquals(
                     value,
@@ -70,8 +70,8 @@ object CommonProxyAssertions {
     private fun isLogicallyEmpty(value: Any?): Boolean {
         return when (value) {
             null -> true
-            is AnyList -> value.isEmpty()
-            is AnyObject -> value.isEmpty() || value.all { (_, child) -> isLogicallyEmpty(child) }
+            is PAnyArray -> value.isEmpty()
+            is PAnyMap -> value.isEmpty() || value.all { (_, child) -> isLogicallyEmpty(child) }
             else -> false
         }
     }

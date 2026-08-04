@@ -5,9 +5,9 @@ package naksha.auth
 import naksha.auth.action.AccessRightsAction
 import naksha.auth.attribute.ResourceAttributes
 import naksha.auth.check.CheckCompiler
-import naksha.base.ListProxy
-import naksha.base.MapProxy
-import naksha.base.AnyObject
+import naksha.base.PTypedArray
+import naksha.base.PTypedMap
+import naksha.base.PAnyMap
 import kotlin.js.JsExport
 
 /**
@@ -42,7 +42,7 @@ import kotlin.js.JsExport
  * ```
  */
 @JsExport
-class UserRightsMatrix : MapProxy<String, ServiceUserRights>(String::class, ServiceUserRights::class) {
+class UserRightsMatrix : PTypedMap<String, ServiceUserRights>(String::class, ServiceUserRights::class) {
 
     /**
      * URM matches ARM when each service from URM matches corresponding service in ARM
@@ -73,7 +73,7 @@ class UserRightsMatrix : MapProxy<String, ServiceUserRights>(String::class, Serv
 }
 
 @JsExport
-class ServiceUserRights : MapProxy<String, UserAction>(String::class, UserAction::class) {
+class ServiceUserRights : PTypedMap<String, UserAction>(String::class, UserAction::class) {
 
     /**
      * Service defined in URM matches service from ARM when all actions for given service are matching
@@ -100,7 +100,7 @@ class ServiceUserRights : MapProxy<String, UserAction>(String::class, UserAction
 }
 
 @JsExport
-class UserAction : ListProxy<UserRights>(UserRights::class) {
+class UserAction : PTypedArray<UserRights>(UserRights::class) {
 
     /**
      * If [AccessRightsAction] passed to this function is empty, it is assumed that there is no restriction
@@ -137,7 +137,7 @@ class UserAction : ListProxy<UserRights>(UserRights::class) {
  * The difference is, [UserRights] hold checks, while [ResourceAttributes] hold raw values that these checks
  * are being run against.
  */
-class UserRights : AnyObject() {
+class UserRights : PAnyMap() {
 
     /**
      * [UserRights] matches [ResourceAttributes] when all of it's compiled checks hold true against resource values.

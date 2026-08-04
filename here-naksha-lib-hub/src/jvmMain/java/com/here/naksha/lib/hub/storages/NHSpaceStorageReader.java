@@ -330,7 +330,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String id, boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 

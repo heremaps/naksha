@@ -1,8 +1,9 @@
 package naksha.model
 
 import naksha.base.AtomicRef
-import naksha.base.Int64
-import naksha.base.Platform
+import naksha.base.Id
+import naksha.base.IdVerifier
+import naksha.base.Base
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.base.NakshaException
@@ -22,7 +23,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      *
      * @since 3.0.0
      */
-    override val lock = Platform.newLock()
+    override val lock = Base.newLock()
 
     /**
      * The _KClass_ of the configuration needed.
@@ -35,17 +36,24 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @since 3.0.0
      */
     protected var configRef: AtomicRef<CONFIG> = AtomicRef(null)
-    private var _id: String? = null
-    private var _number: Int64? = null
-
     override val config: CONFIG
         get() = configRef.get() ?: throwUninitialized()
 
-    override val id: String
+    /** `id` of the storage */
+    private var _id: Id? = null
+    override val id: Id
         get() = _id ?: throwUninitialized()
 
-    override val number: Int64
-        get() = _number ?: throwUninitialized()
+    /** `id` of the default database. */
+    private var _defaultDatabaseId: Id? = null
+    @Deprecated("To be removed as soon as explicit database management is supported", level = DeprecationLevel.WARNING)
+    override val defaultDatabaseId: Id
+        get() = _defaultDatabaseId ?: throwUninitialized()
+
+    protected fun setDefaultDatabaseId(id: Id) {
+        IdVerifier.DATABASE_AND_STORAGE.verify(id.text)
+        _defaultDatabaseId = id
+    }
 
     override var hardCap: Int = 16777216
         set(value) {
@@ -79,11 +87,12 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].
      */
     internal fun invokeInitStorage(storage: NakshaStorage, create: Boolean?, upgrade: Boolean?) {
+        val id = storage.id
+        IdVerifier.DATABASE_AND_STORAGE.verify(id.text)
         lock.acquire().use {
             if (configRef.get() == null || create==true || upgrade==true) {
                 val _config = storage.proxy(configKlass)
-                this._id = storage.id
-                this._number = Naksha.featureNumber(storage.id)
+                this._id = id
                 this.hardCap = storage.hardCap
                 initStorage(_config, create, upgrade)
                 this.configRef.set(_config)

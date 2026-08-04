@@ -29,7 +29,6 @@ import com.here.naksha.lib.handlers.TagFilterHandler;
 import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.NakshaError;
-import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
@@ -60,7 +59,7 @@ import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_V
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
-import static naksha.base.Platform.javaProxy;
+import static naksha.base.Base.javaProxy;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
 public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<EventHandlerConfig> {

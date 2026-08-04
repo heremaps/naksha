@@ -1,7 +1,7 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
 import naksha.psql.PgColumn.PgColumn_C.VersionColumn
@@ -20,7 +20,7 @@ import kotlin.jvm.JvmField
 class PgHeadTable(
     /** The collection to which this HEAD table belongs. */
     collection: PgCollection,
-) : PgTable(collection, collection.id, null) {
+) : PgTable(collection, collection.id.text, null) {
 
     /**
      * All distribution partitions; if not partitioned, then an empty array.
@@ -35,7 +35,7 @@ class PgHeadTable(
     // constraints stay unique. The partitioned parent has none — its partition key is an expression.
     @Suppress("FunctionName")
     internal fun CONSTRAINT(tableName: String = name): String {
-        val ID = collection.column(Id)
+        val ID = collection.column(IdMember)
         return """
   CONSTRAINT ${quoteIdent(tableName, "\$c_pkey")} PRIMARY KEY ($FnColumn) INCLUDE ($VersionColumn, $ID),
   CONSTRAINT ${quoteIdent(tableName, "\$c_fn")} CHECK (($FnColumn < 0 AND $ID IS NOT NULL) OR ($FnColumn >= 0 AND $ID IS NULL)),
@@ -52,7 +52,7 @@ class PgHeadTable(
 
     override fun CREATE_SQL(): String {
         val (CREATE_TABLE, TABLESPACE) = CREATE_TABLE_and_TABLESPACE()
-        val ID = collection.column(Id)
+        val ID = collection.column(IdMember)
 
         // HEAD is NOT distribution partitioned.
         if (partitions.isEmpty()) return """$CREATE_TABLE $quotedName (${columnDefinitions()}, ${CONSTRAINT()})

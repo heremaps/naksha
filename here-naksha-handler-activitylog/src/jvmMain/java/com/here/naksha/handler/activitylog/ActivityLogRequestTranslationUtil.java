@@ -84,13 +84,13 @@ class ActivityLogRequestTranslationUtil {
           //TODO and this is less efficient than the deprecated ReadFeatures.setGuids()
           orClauses.add(
                   new And(
-                          new Equals(StandardMembers.FeatureVersion.getName(), tupleNumber.version),
-                          new Equals(StandardMembers.FeatureNumber.getName(), tupleNumber.featureNumber)
+                          new Equals(StandardMembers.VersionMember.getId(), tupleNumber.version),
+                          new Equals(StandardMembers.FeatureNumberMember.getId(), tupleNumber.featureNumber)
                   )
           );
         }
       }
-      readFeatures.setQueryMembers(or);
+      readFeatures.setMemberQuery(or);
     }
     StringList finalFeatureIds = new StringList();
 

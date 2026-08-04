@@ -31,8 +31,8 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import kotlin.reflect.KClass;
 import naksha.base.Int64;
-import naksha.base.Platform;
-import naksha.base.PlatformLock;
+import naksha.base.Base;
+import naksha.base.Lock;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
@@ -57,7 +57,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
 
   @Override
   public @NotNull KClass<Config> getConfigKlass() {
-    return Platform.klassFor(Config.class);
+    return Base.klassFor(Config.class);
   }
 
   @Override
@@ -161,8 +161,8 @@ public class NHAdminMock extends AbstractStorage<Config> {
   }
 
   @Override
-  public @NotNull PlatformLock getLock() {
-    return Platform.newLock();
+  public @NotNull Lock getLock() {
+    return Base.newLock();
   }
 
   @Override

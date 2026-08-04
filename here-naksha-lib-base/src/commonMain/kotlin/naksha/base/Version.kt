@@ -49,21 +49,12 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-open class Version(@JvmField val number: Int64) : Comparable<Version> {
+open class Version(@JvmField val number: Long) : Comparable<Version> {
     init {
-        if ((number and Int64(MAX_SAFE_INTEGER)) != number) {
+        if ((number and MAX_SAFE_INTEGER) != number) {
             throw illegalArg("$number is not a valid version")
         }
     }
-
-    /**
-     * Convert a [Long] into a [Int64] version.
-     * @param value the transaction number.
-     * @since 3.0
-     */
-    @Suppress("NON_EXPORTABLE_TYPE")
-    @JsName("fromLong")
-    constructor(value: Long) : this(Int64(value))
 
     /**
      * Convert a stringified version.
@@ -72,7 +63,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
      * @throws NumberFormatException if the given string is no valid version.
      */
     @JsName("fromString")
-    constructor(value: String) : this(Int64(value.toLong()))
+    constructor(value: String) : this(value.toLong())
 
     companion object VersionCompanion {
 
@@ -88,10 +79,10 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         private const val YEAR_MIN = 16
 
         /** Mask for the 30-bit sequence field. */
-        private val SEQ_30_MASK = Int64(0x3FFF_FFFF)
+        private val SEQ_30_MASK = 0x3FFF_FFFF
 
         /** Mask for the 41-bit manual-version seq field (upper 21 bits of the 64-bit value must be 0). */
-        private val MANUAL_SEQ_MASK = Int64(0x1FF_FFFF_FFFF) // 41 bits; 2,199,023,255,551
+        private val MANUAL_SEQ_MASK = 0x1FF_FFFF_FFFF // 41 bits; 2,199,023,255,551
 
         /**
          * Create a version from a double (JavaScript number).
@@ -100,7 +91,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JsStatic
         @JvmStatic
-        fun fromDouble(v: Double): Version = Version(Int64(v))
+        fun fromDouble(v: Double): Version = Version(v.toLong())
 
         /**
          * Creates a version from its string representation.
@@ -117,7 +108,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         @JvmStatic
         fun fromString(s: String): Version {
             try {
-                return Version(Int64(s.toLong()))
+                return Version(s.toLong())
             } catch (_: Exception) {
                 throw illegalArg("Invalid version string: $s")
             }
@@ -136,18 +127,18 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmStatic
         @JsStatic
-        fun auto(year: Int, month: Int, day: Int, seq: Int64, action: Action): Version {
+        fun auto(year: Int, month: Int, day: Int, seq: Long, action: Action): Version {
             if (year !in YEAR_MIN..YEAR_MAX) throw illegalArg("year must be in $YEAR_MIN..$YEAR_MAX, got $year")
             if (month !in 1..12) throw illegalArg("month must be in 1..12, got $month")
             if (day !in 1..31) throw illegalArg("day must be in 1..31, got $day")
-            if (!((seq >= Int64(0) && seq <= SEQ_30_MASK))) {
-                throw illegalArg("seq must be in 0..${SEQ_30_MASK.toLong()} (30-bit), got $seq")
+            if (seq !in 0L..SEQ_30_MASK) {
+                throw illegalArg("seq must be in 0..$SEQ_30_MASK (30-bit), got $seq")
             }
-            val txn = (Int64(year) shl 41) or
-                      (Int64(month) shl 37) or
-                      (Int64(day) shl 32) or
+            val txn = (year.toLong() shl 41) or
+                      (month.toLong() shl 37) or
+                      (day.toLong() shl 32) or
                       (seq shl 2) or
-                      Int64(action.intValue)
+                      action.intValue.toLong()
             return Version(txn)
         }
 
@@ -165,12 +156,20 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmStatic
         @JsStatic
-        fun manual(seq: Int64, action: Action): Version {
-            if (!(seq >= Int64(0) && seq <= MANUAL_SEQ_MASK)) {
-                throw illegalArg("seq for a manual version must be in 0..${MANUAL_SEQ_MASK.toLong()} (41-bit), got $seq")
+        fun manual(seq: Long, action: Action): Version {
+            if (seq !in 0L..MANUAL_SEQ_MASK) {
+                throw illegalArg("seq for a manual version must be in 0..$MANUAL_SEQ_MASK (41-bit), got $seq")
             }
-            return Version((seq shl 2) or Int64(action.intValue))
+            return Version((seq shl 2) or action.intValue.toLong())
         }
+
+        /**
+         * A range for sequence numbers.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        val seqRange = IntRange(0, 1073741824)
 
         /**
          * Creates a dated version for the current wall-clock time.
@@ -181,7 +180,8 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmStatic
         @JsStatic
-        fun now(seq: Int64, action: Action): Version {
+        @JvmOverloads
+        fun now(seq: Long = seqRange.random().toLong(), action: Action = Action.CREATE): Version {
             val now = Timestamp.now()
             return auto(now.year, now.month, now.day, seq, action)
         }
@@ -196,9 +196,8 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmStatic
         @JsStatic
-        @JvmOverloads
-        fun asVersion(version: Int64): Int64 {
-            val v = version or Int64(3)
+        fun asVersion(version: Long): Long {
+            val v = version or 3L
             if (v > HEAD.number) return HEAD.number
             if (v < 0) throw illegalArg("Versions must not be negative")
             return v
@@ -222,7 +221,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MIN_AUTO = auto(16, 1, 1, Int64(0), Action.CREATE)
+        val MIN_AUTO = auto(16, 1, 1, 0L, Action.CREATE)
         // 0n + (0n << 2n) + (1n << 32n) + (1n << (32n+5n)) + (16n << (32n+5n+4n)) = 35326106009600n
         // bitwise: 0x0000_2021_0000_0000
 
@@ -232,7 +231,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MAX_AUTO = auto(4095, 12, 31, Int64(1_073_741_823), Action.VERSION)
+        val MAX_AUTO = auto(4095, 12, 31, 1_073_741_823L, Action.VERSION)
         // 3n + (1073741823n << 2n) + (31n << 32n) + (12n << (32n+5n)) + (4095n << (32n+5n+4n)) = 9006786937880575n
         // bitwise: 0x001f_ff9f_ffff_ffff
 
@@ -242,7 +241,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MIN_MANUAL = manual(Int64(1), Action.CREATE)
+        val MIN_MANUAL = manual(1L, Action.CREATE)
 
         /**
          * The maximum valid manual version (seq=2,199,023,255,551, action=VERSION).
@@ -272,9 +271,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          * The minimum value of the 30-bit sequence field (zero).
          * @since 3.0
          */
-        @JvmField
-        @JsStatic
-        val SEQ_MIN: Int64 = Int64(0)
+        const val SEQ_MIN: Long = 0L
 
         /**
          * The maximum value of the 30-bit sequence field (`0x3FFF_FFFF` = 1073741823).
@@ -283,16 +280,14 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val SEQ_MAX: Int64 = SEQ_30_MASK
+        val SEQ_MAX: Long = SEQ_30_MASK.toLong()
 
         /**
          * The raw increment to add to [number] to advance the sequence counter by one while keeping the
          * action bits unchanged. Equal to `1 shl 2` = `4`.
          * @since 3.0
          */
-        @JvmField
-        @JsStatic
-        val SEQ_INC: Int64 = Int64(1) shl 2
+        const val SEQ_INC: Long = 1L shl 2
     }
 
     private var _year = -1
@@ -332,7 +327,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
             return _day
         }
 
-    private var _seq: Int64? = null
+    private var _seq: Long = -1L
 
     /**
      * The 30-bit or 41-bit sequence number.
@@ -341,10 +336,10 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
      * - For manual versions this is the version-number shifted right by 2 _(1..2,199,023,255,551)_.
      * @since 3.0
      */
-    val seq: Int64
+    val seq: Long
         get() {
             var s = _seq
-            if (s == null) {
+            if (s < 0L) {
                 if (isDated()) {
                     s = (number ushr 2) and SEQ_MAX
                     _seq = s
@@ -366,7 +361,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
      * This is the logical inverse of [isDated].
      * @since 3.0
      */
-    fun isManualVersion(): Boolean = !isDated()
+    fun isManual(): Boolean = !isDated()
 
     /**
      * Returns the [Action] encoded in the lower 2 bits of [number].
@@ -377,14 +372,14 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
     private var _string: String? = null
 
     override fun equals(other: Any?): Boolean {
-        if (other is Int64) return number eq other
-        if (other is Version) return number eq other.number
+        if (other is Long) return number == other
+        if (other is Version) return number == other.number
         return false
     }
 
     override fun compareTo(other: Version): Int {
         val diff = number.minus(other.number)
-        return if (diff.eq(0)) 0 else if (diff < 0) -1 else 1
+        return if (diff == 0L) 0 else if (diff < 0) -1 else 1
     }
 
     override fun hashCode(): Int = number.hashCode()
@@ -400,7 +395,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
     override fun toString(): String {
         var s = _string
         if (s == null) {
-            s = number.toLong().toString()
+            s = number.toString()
             _string = s
         }
         return s

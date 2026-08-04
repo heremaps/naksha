@@ -1,5 +1,7 @@
 package naksha.model.objects
 
+import naksha.base.PTypedMap
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.geo.SpGeometry
 import naksha.model.Tuple
 import naksha.base.illegalArg
@@ -18,7 +20,7 @@ class SpatialMember() : TypedMember<SpatialMember>() {
     /** Creates a new spatial member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
-        this.name = name
+        this.id = name
         this.dataType = SPATIAL
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -28,7 +30,7 @@ class SpatialMember() : TypedMember<SpatialMember>() {
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != SPATIAL) throw illegalArg("The given member is not of spatial type")
-        this.name = member.name
+        this.id = member.id
         this.dataType = SPATIAL
         this.path = path?.validate() ?: member.path
     }
@@ -43,6 +45,6 @@ class SpatialMember() : TypedMember<SpatialMember>() {
     @JsName("getFromTuple")
     fun get(tuple: Tuple): SpGeometry? = readGeometry(tuple)
 
-    /** Sets the spatial geometry value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: SpGeometry): Any? = setPath(feature, path, value)
+    /** Sets the spatial geometry value of this member on the given object. */
+    fun set(feature: PTypedMap<*, *>, value: SpGeometry?): Any? = if (value == null) feature.setPath(UNDEFINED, path) else feature.setPath(value, path)
 }

@@ -8,7 +8,7 @@ import java.util.Arrays;
 import java.util.stream.Stream;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.objects.NakshaFeature;
 import org.json.JSONException;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,7 +34,7 @@ class ActivityLogEnhancerTest {
     NakshaFeature enhancedFeature = ActivityLogEnhancer.enhanceWithActivityLog(newFeature, oldFeature, SPACE_ID);
 
     // And
-    String enhancedFeatureJson = Platform.toJSON(enhancedFeature);
+    String enhancedFeatureJson = Base.toJSON(enhancedFeature);
 
     // Then
     JSONAssert.assertEquals(
@@ -61,7 +61,7 @@ class ActivityLogEnhancerTest {
   private static NakshaFeature featureFromFile(String sampleDir, String fileName) {
     String fileContent = FileUtil.loadFileOrFail(sampleDir, fileName);
     return JvmBoxingUtil.box(
-            Platform.fromJSON(fileContent, FromJsonOptions.DEFAULT),
+            Base.fromJSON(fileContent, FromJsonOptions.DEFAULT),
             NakshaFeature.class
     );
   }

@@ -18,11 +18,8 @@
  */
 package com.here.naksha.lib.view.missing;
 
-import com.here.naksha.lib.view.MissingIdResolver;
-import com.here.naksha.lib.view.ViewLayer;
-import com.here.naksha.lib.view.ViewLayerFeature;
-import java.util.List;
-import org.apache.commons.lang3.tuple.Pair;
+import com.here.naksha.lib.view.*;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -34,7 +31,7 @@ public class IgnoreMissingResolver implements MissingIdResolver {
   }
 
   @Override
-  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerFeature> multipleResults) {
+  public @Nullable MissingIdsByLayer layersToSearch(@NotNull ViewLayerFeatureStack multipleResults) {
     return null;
   }
 }

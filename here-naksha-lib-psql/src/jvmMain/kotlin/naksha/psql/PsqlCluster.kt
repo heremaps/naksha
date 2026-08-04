@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.base.fn.Fx2
 import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.base.NakshaException
@@ -43,7 +43,7 @@ class PsqlCluster @JvmOverloads constructor(override val master: PgInstance, rep
             return master.openConnection(options, readOnly, init)
         }
         // Read-Only connection.
-        val i = min((Platform.random() * replicas.size).toInt(), replicas.size - 1)
+        val i = min((Base.random() * replicas.size).toInt(), replicas.size - 1)
         val pgInstance = replicas[i]
         check(pgInstance is PsqlInstance) { "This implementation requires PsqlInstance's"}
         return pgInstance.openConnection(options, true, init)

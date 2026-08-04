@@ -2,8 +2,7 @@
 
 package naksha.model.objects
 
-import naksha.base.AnyObject
-import naksha.base.NotNullEnum
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
@@ -11,23 +10,13 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * An index on a [NakshaCollection] — either a mandatory/internal storage-managed index or a
- * user-defined one.
+ * A user defined index on [Member]'s of a [collection][NakshaCollection].
  *
- * The [on] list holds the names of the members to index. These may be names of mandatory or default
- * built-in members (see [StandardMembers]) or names of custom [Member]s declared on the same
- * collection. The [type] decides the storage method:
- * - [IndexType.BTREE]: ordered index for equality and range queries on scalar and text columns.
- * - [IndexType.SPATIAL]: spatial index covering a 2D-encoded geometry column. [on] must contain exactly one geometry member.
- * - [IndexType.TAG_MAP]: inverted index over a tags member ([MemberType.TAG_MAP] or [MemberType.TAG_MAP_FROM_ARRAY]) supporting key/value containment queries. [on] must contain exactly one member.
- * - [IndexType.TAG_LIST]: inverted index over a tag-list member ([MemberType.TAG_LIST]) supporting element containment queries. [on] must contain exactly one member.
- *
- * When [internal] is `true` the index is storage-managed (e.g. primary key, id_unique). The storage
- * injects these into the [NakshaCollection.indices] list; clients must not declare them manually.
+ * The [on] list holds the names of the members to index. These may be names of mandatory or default built-in members (see [StandardMembers]) or names of custom [Member]s declared on the same collection. What indexing is support is implementation dependent, so depends on the actual storage. For example, `lib-psql` will not support to add a spatial member behind a string member, but vice versa.
  * @since 3.0
  */
 @JsExport
-open class Index() : AnyObject() {
+open class Index() : PAnyMap() {
 
     /**
      * Construct a user-defined index.
@@ -153,7 +142,7 @@ open class Index() : AnyObject() {
     }
 
     companion object Index_C {
-        private val NAME     = NotNullProperty<Index, String>(String::class) { _, _ -> "" }
+        private val NAME     = NotNullProperty<Index, String>(String::class)
         private val ON       = NotNullProperty<Index, StringList>(StringList::class)
         private val INCLUDE  = NullableProperty<Index, StringList>(StringList::class)
         private val UNIQUE   = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }

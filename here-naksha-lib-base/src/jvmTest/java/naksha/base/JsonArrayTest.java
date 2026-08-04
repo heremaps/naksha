@@ -11,25 +11,25 @@ public class JsonArrayTest {
 
   @BeforeEach
   void setUp() {
-    wasNewParserEnabled = Platform.PlatformCompanion.useNewJson();
-    Platform.PlatformCompanion.enableNewJsonParser();
+    wasNewParserEnabled = Base.BaseCompanion.useNewJson();
+    Base.BaseCompanion.enableNewJsonParser();
   }
 
   @AfterEach
   void tearDown() {
     if (!wasNewParserEnabled) {
-      Platform.PlatformCompanion.disableNewJsonParser();
+      Base.BaseCompanion.disableNewJsonParser();
     }
   }
 
   @Test
   public void test_capacity() {
-    Platform.PlatformCompanion.enableNewJsonParser();
+    Base.BaseCompanion.enableNewJsonParser();
     final var list = new JvmList();
     assertEquals(0, list.getCapacity());
     list.setCapacity(0);
     assertEquals(0, list.getCapacity());
-    Platform.PlatformCompanion.disableNewJsonParser();
+    Base.BaseCompanion.disableNewJsonParser();
   }
 
   @Test

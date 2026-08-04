@@ -19,11 +19,14 @@
 package naksha.model.util;
 
 import java.util.List;
+
+import naksha.base.Id;
+import naksha.base.IdList;
+import naksha.base.StringList;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Write;
-import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,36 +41,38 @@ public class RequestHelper {
   /**
    * Helper method to create ReadFeatures request for reading feature by given Id from given storage collection name.
    *
-   * @param collectionName name of the storage collection
+   * @param collectionId   id of the storage collection
    * @param featureId      id to fetch matching feature
    * @return ReadFeatures request that can be used against IStorage methods
    */
   public static @NotNull ReadFeatures readFeaturesByIdRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionName,
-      final @NotNull String featureId
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
+      final @NotNull Id featureId
   ) {
-    final ReadFeatures readFeatures = new ReadFeatures().withCollectionId(collectionName);
-    readFeatures.setCatalogId(mapId);
-    readFeatures.getFeatureIds().add(featureId);
+    final ReadFeatures readFeatures = new ReadFeatures();
+    if (mapId != null) readFeatures.setCatalogId(mapId);
+    if (collectionId != null) readFeatures.setCollectionId(collectionId);
+    readFeatures.setFeatureIds(new IdList(featureId));
     return readFeatures;
   }
 
   /**
    * Helper method to create ReadFeatures request for reading feature by given Ids from given storage collection name.
    *
-   * @param collectionName name of the storage collection
+   * @param collectionId name of the storage collection
    * @param featureIds     list of ids to fetch matching features
    * @return ReadFeatures request that can be used against IStorage methods
    */
   public static @NotNull ReadFeatures readFeaturesByIdsRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionName,
-      final @NotNull List<String> featureIds
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
+      final @NotNull List<Id> featureIds
   ) {
-    final ReadFeatures readFeatures = new ReadFeatures().withCollectionId(collectionName);
-    readFeatures.setCatalogId(mapId);
-    readFeatures.getFeatureIds().addAll(featureIds);
+    final ReadFeatures readFeatures = new ReadFeatures();
+    if (mapId != null) readFeatures.setCatalogId(mapId);
+    if (collectionId != null) readFeatures.setCollectionId(collectionId);
+    readFeatures.setFeatureIds(new IdList(featureIds));
     return readFeatures;
   }
 
@@ -81,8 +86,8 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest createFeatureRequest(
-      final @Nullable String mapId,
-      final @Nullable String collection,
+      final @Nullable Id mapId,
+      final @Nullable Id collection,
       final @NotNull FEATURE feature
   ) {
     return createFeaturesRequest(mapId, collection, List.of(feature));
@@ -114,18 +119,18 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest nonAtomicUpdateFeatureRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionId,
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
       final @NotNull FEATURE feature
   ) {
     // TODO: We should not allow null values for catalogId and collectionId !
     // final Write write = new Write().updateFeature(mapId, collectionId, feature, false);
-    final Write write = new Write()
-      .withOp(UPDATE)
-      .withCatalogId(mapId)
-      .withCollectionId(collectionId)
-      .withFeature(feature)
-      .withAtomic(false);
+    final Write write = new Write();
+    write.setOp(UPDATE);
+    if (mapId != null) write.setCatalogId(mapId);
+    if (collectionId != null) write.setCollectionId(collectionId);
+    write.setFeature(feature);
+    write.setAtomic(false);
     return new WriteRequest().add(write);
   }
 
@@ -139,18 +144,18 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static <FEATURE extends NakshaFeature> @NotNull WriteRequest atomicUpdateFeatureRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionId,
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
       final @NotNull FEATURE feature
   ) {
     // TODO: We should not allow null values for catalogId and collectionId !
     // final Write write = new Write().updateFeature(mapId, collectionId, feature, true);
-    final Write write = new Write()
-      .withOp(UPDATE)
-      .withCatalogId(mapId)
-      .withCollectionId(collectionId)
-      .withFeature(feature)
-      .withAtomic(true);
+    final Write write = new Write();
+    write.setOp(UPDATE);
+    if (mapId != null) write.setCatalogId(mapId);
+    if (collectionId != null) write.setCollectionId(collectionId);
+    write.setFeature(feature);
+    write.setAtomic(true);
     return new WriteRequest().add(write);
   }
 
@@ -183,17 +188,17 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionId,
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
       FEATURE feature) {
     final WriteRequest request = new WriteRequest();
     // TODO: We should not allow null values for catalogId and collectionId !
     // final Write write = new Write().upsertFeature(mapId, collectionId, feature)
-    final Write write = new Write()
-      .withOp(UPSERT)
-      .withCatalogId(mapId)
-      .withCollectionId(collectionId)
-      .withFeature(feature);
+    final Write write = new Write();
+    write.setOp(UPSERT);
+    if (mapId != null) write.setCatalogId(mapId);
+    if (collectionId != null) write.setCollectionId(collectionId);
+    write.setFeature(feature);
     request.add(write);
     return request;
   }
@@ -207,17 +212,17 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull <FEATURE extends NakshaFeature> WriteRequest upsertFeaturesRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionId,
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
       final @NotNull List<FEATURE> features
   ) {
     final WriteRequest request = new WriteRequest();
     for (FEATURE feature : features) {
-      request.add(
-          // TODO: We should not allow null values for catalogId and collectionId !
-          // new Write().upsertFeature(mapId, collectionId, feature)
-          new Write().withOp(UPSERT).withCatalogId(mapId).withCollectionId(collectionId).withFeature(feature)
-      );
+      final var write = new Write().withOp(UPSERT);
+      if (mapId != null) write.setCatalogId(mapId);
+      if (collectionId != null) write.setCollectionId(collectionId);
+      write.setFeature(feature);
+      request.add(write);
     }
     return request;
   }
@@ -230,13 +235,13 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionId,
-      final @NotNull List<String> ids) {
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
+      final @NotNull List<Id> ids) {
     // TODO: We should not allow null values for catalogId and collectionId !
     final var collection = new NakshaCollection();
-    collection.setId(collectionId);
-    collection.setCatalogId(mapId);
+    if (mapId != null) collection.setCatalogId(mapId);
+    if (collectionId != null) collection.setId(collectionId);
     return deleteFeaturesByIdsRequest(collection, ids);
   }
 
@@ -249,11 +254,11 @@ public class RequestHelper {
    */
   public static @NotNull WriteRequest deleteFeaturesByIdsRequest(
       final @NotNull NakshaCollection collection,
-      final @NotNull List<String> ids
+      final @NotNull List<Id> ids
   ) {
     final WriteRequest request = new WriteRequest();
-    for (String id : ids) {
-      request.add(new Write().deleteFeature(collection, id));
+    for (Id id : ids) {
+      request.add(new Write().deleteFeatureById(collection, id));
     }
     return request;
   }
@@ -266,13 +271,16 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest deleteFeatureByIdRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionId,
-      final @NotNull String id
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
+      final @NotNull Id id
   ) {
     // TODO: We should not allow null values for catalogId and collectionId !
     // final Write write = new Write().deleteFeatureById(mapId, collectionId, id);
-    final Write write = new Write().withOp(DELETE).withCatalogId(mapId).withCollectionId(collectionId).withId(id);
+    final Write write = new Write().withOp(DELETE);
+    if (mapId != null) write.setCatalogId(mapId);
+    if (collectionId != null) write.setCollectionId(collectionId);
+    write.setId(id);
     return new WriteRequest().add(write);
   }
 
@@ -284,8 +292,8 @@ public class RequestHelper {
    * @return WriteFeatures request that can be used against IStorage methods
    */
   public static @NotNull WriteRequest createFeaturesRequest(
-      final @Nullable String mapId,
-      final @Nullable String collectionId,
+      final @Nullable Id mapId,
+      final @Nullable Id collectionId,
       final @NotNull List<? extends NakshaFeature> featureList
   ) {
     final WriteRequest request = new WriteRequest();

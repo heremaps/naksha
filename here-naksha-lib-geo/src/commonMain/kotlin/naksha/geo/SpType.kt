@@ -1,7 +1,7 @@
 package naksha.geo
 
-import naksha.base.AnyObject
-import naksha.base.JsEnum
+import naksha.base.PAnyMap
+import naksha.base.BaseEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -13,9 +13,9 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class SpType : JsEnum() {
+class SpType : BaseEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = SpType::class
+    override fun namespace(): KClass<out BaseEnum> = SpType::class
 
     override fun initClass() {}
 
@@ -75,7 +75,7 @@ class SpType : JsEnum() {
     fun isType(any: Any?): Boolean {
         if (!isDefined) return false
         val typeName = this.toString()
-        if (any !is AnyObject) return false
+        if (any !is PAnyMap) return false
         return any.getRaw("type") == typeName
     }
 

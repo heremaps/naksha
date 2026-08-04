@@ -1,10 +1,9 @@
 package naksha.diff.jsonpatch
 
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.diff.DifferenceCalculator
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 
 // most of these tests are based on [DifferenceCalculatorTest]
@@ -18,7 +17,7 @@ class JsonPatchFactoryTest {
     @Test
     fun shouldCreateJsonPatchForSimpleMapDiff() {
         // Given:
-        val left = Platform.fromJSON(
+        val left = Base.fromJSON(
             """
             {
                 "name": "John",
@@ -33,7 +32,7 @@ class JsonPatchFactoryTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Base.fromJSON(
             """
             {
                 "name": "John",
@@ -135,7 +134,7 @@ class JsonPatchFactoryTest {
     @Test
     fun shouldCreateJsonPatchForComplexMaps(){
         // Given:
-        val left = Platform.fromJSON(
+        val left = Base.fromJSON(
             """
             {
                 "company": "Abc",
@@ -176,7 +175,7 @@ class JsonPatchFactoryTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Base.fromJSON(
             """
             {
                 "company": "Abc",
@@ -253,8 +252,8 @@ class JsonPatchFactoryTest {
     }
 
     private fun assertJsonsAreEqual(expected: String, actual: String) {
-        val expectedFlat = Platform.toJSON(Platform.fromJSON(expected))
-        val actualFlat = Platform.toJSON(Platform.fromJSON(actual))
+        val expectedFlat = Base.toJSON(Base.fromJSON(expected))
+        val actualFlat = Base.toJSON(Base.fromJSON(actual))
         assertEquals(expectedFlat, actualFlat)
     }
 }

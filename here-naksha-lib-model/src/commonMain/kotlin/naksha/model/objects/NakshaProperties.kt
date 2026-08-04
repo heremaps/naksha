@@ -2,7 +2,7 @@
 
 package naksha.model.objects
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.model.XyzNs
@@ -10,14 +10,13 @@ import naksha.model.mom.MomDeltaNs
 import naksha.model.mom.MomMetaNs
 import naksha.model.mom.MomReferenceList
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 /**
  * The properties of a standard Naksha feature.
  * @since 1.0
  */
 @JsExport
-open class NakshaProperties : AnyObject() {
+open class NakshaProperties : PAnyMap() {
 
     companion object {
         /**

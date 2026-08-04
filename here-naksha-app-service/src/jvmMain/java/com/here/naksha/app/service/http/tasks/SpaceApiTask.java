@@ -31,7 +31,7 @@ import com.here.naksha.lib.core.models.payload.XyzResponse;
 import io.vertx.ext.web.RoutingContext;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
@@ -105,8 +105,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private XyzResponse executeDeleteSpace() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeature(naksha().getAdminMapId(), SPACES, spaceId));
-
+    final WriteRequest wr = new WriteRequest().add(new Write().deleteFeatureById(naksha().spacesCollection(), spaceId));
     Response response = executeWriteRequestFromSpaceStorage(wr);
     return transformResponseToXyzFeatureResponse(response, NakshaFeature.class, NOT_FOUND_ON_NO_ELEMENTS);
   }
@@ -149,7 +148,7 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
 
   private Space spaceFromRequestBody() {
     final String bodyJson = routingContext.body().asString();
-    return JvmBoxingUtil.box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), Space.class);
+    return JvmBoxingUtil.box(Base.fromJSON(bodyJson, FromJsonOptions.DEFAULT), Space.class);
   }
 
   private static String mismatchMsg(String spaceIdFromPath, Space spaceFromBody) {

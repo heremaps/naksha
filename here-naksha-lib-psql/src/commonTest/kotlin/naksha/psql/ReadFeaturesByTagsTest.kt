@@ -23,7 +23,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val featuresWithFooTag = executeTagsQuery(
             TagExists("sample")
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(1, featuresWithFooTag.size)
@@ -41,7 +41,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val featuresWithFooTag = executeTagsQuery(
             TagExists("non-existing")
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(0, featuresWithFooTag.size)
@@ -61,12 +61,12 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         insertFeature(feature = inputFeature)
 
         // Then: the full element matches.
-        val byFullElement = executeTagsQuery(TagExists("fullelem=bar")).features
+        val byFullElement = executeTagsQuery(TagExists("fullelem=bar")).asFeatures
         assertEquals(1, byFullElement.size)
         assertEquals(inputFeature.id, byFullElement[0]!!.id)
 
         // And: the key alone does not (the tag is not split).
-        assertTrue(executeTagsQuery(TagExists("fullelem")).features.isEmpty())
+        assertTrue(executeTagsQuery(TagExists("fullelem")).asFeatures.isEmpty())
     }
 
     @Test
@@ -82,7 +82,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And:
         val enabledFeatures = executeTagsQuery(
             TagSetContains("flag:=true")
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(2, enabledFeatures.size)
@@ -99,7 +99,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         insertFeature(feature = inputFeature)
 
         // And:
-        val readFeatures = executeTagsQuery(TagExists("zulu")).features
+        val readFeatures = executeTagsQuery(TagExists("zulu")).asFeatures
 
         // Then: the set guarantees the exact element order given at write time.
         assertEquals(1, readFeatures.size)
@@ -139,7 +139,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
             ),
             TagSetContains("role=admin")
         )
-        val features = executeTagsQuery(activeJohnOrAdmin).features
+        val features = executeTagsQuery(activeJohnOrAdmin).asFeatures
 
         // Then:
         assertEquals(2, features.size)
@@ -160,7 +160,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And: TagAnd of pure TagExists uses the `?&` (jsonb_exists_all) operator.
         val withBoth = executeTagsQuery(
             TagAnd(TagExists("seta"), TagExists("setb"))
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(1, withBoth.size)
@@ -169,7 +169,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         // And: TagOr of pure TagExists uses the `?|` (jsonb_exists_any) operator.
         val withAny = executeTagsQuery(
             TagOr(TagExists("seta"), TagExists("setb"))
-        ).features
+        ).asFeatures
 
         // Then:
         assertEquals(3, withAny.size)
@@ -182,13 +182,13 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         insertFeatures(feature)
 
         // When
-        val byTagName = executeTagsQuery(TagExists("ref_lorem")).features
+        val byTagName = executeTagsQuery(TagExists("ref_lorem")).asFeatures
 
         // Then
         assertTrue(byTagName.isEmpty())
 
         // When
-        val byFullTag = executeTagsQuery(TagExists("ref_lorem=ipsum")).features
+        val byFullTag = executeTagsQuery(TagExists("ref_lorem=ipsum")).asFeatures
 
         // Then
         assertEquals(1, byFullTag.size)
@@ -202,13 +202,13 @@ class ReadFeaturesByTagsTest : PgTestBase() {
         insertFeatures(feature)
 
         // When
-        val byTagName = executeTagsQuery(TagExists("sourceID")).features
+        val byTagName = executeTagsQuery(TagExists("sourceID")).asFeatures
 
         // Then
         assertTrue(byTagName.isEmpty())
 
         // When
-        val byFullTag = executeTagsQuery(TagExists("sourceID:=123")).features
+        val byFullTag = executeTagsQuery(TagExists("sourceID:=123")).asFeatures
 
         // Then
         assertEquals(1, byFullTag.size)
@@ -222,7 +222,7 @@ class ReadFeaturesByTagsTest : PgTestBase() {
     }
 
     private fun executeTagsQuery(tagQuery: ITagQuery): SuccessResponse {
-        return executeRead(ReadFeatures().apply {
+        return executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection!!.id
             query.tags = tagQuery

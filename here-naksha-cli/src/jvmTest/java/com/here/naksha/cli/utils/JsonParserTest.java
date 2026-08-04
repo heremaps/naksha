@@ -1,6 +1,6 @@
 package com.here.naksha.cli.utils;
 
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -23,7 +23,7 @@ class JsonParserTest {
         // When & Then
         assertThrows(
                 JsonParserException.class,
-                () -> jsonParser.readAndParse(pathToFile, AnyObject.class)
+                () -> jsonParser.readAndParse(pathToFile, PAnyMap.class)
         );
     }
 
@@ -40,7 +40,7 @@ class JsonParserTest {
         // When & Then
         assertThrows(
                 JsonParserException.class,
-                () -> jsonParser.readAndParse(pathToFile, AnyObject.class)
+                () -> jsonParser.readAndParse(pathToFile, PAnyMap.class)
         );
     }
 
@@ -52,7 +52,7 @@ class JsonParserTest {
         // When & Then
         assertThrows(
                 JsonParserException.class,
-                () -> jsonParser.readAndParse(dir, AnyObject.class)
+                () -> jsonParser.readAndParse(dir, PAnyMap.class)
         );
     }
 
@@ -70,7 +70,7 @@ class JsonParserTest {
         // When & Then
         assertThrows(
                 JsonParserException.class,
-                () -> jsonParser.readAndParse(pathToFile, AnyObject.class)
+                () -> jsonParser.readAndParse(pathToFile, PAnyMap.class)
         );
     }
 
@@ -84,7 +84,7 @@ class JsonParserTest {
         // When: parsing to proxy for PlatformMap & Then: throw
         JsonParserException exception = assertThrows(
                 JsonParserException.class,
-                () -> jsonParser.readAndParse(pathToFile, AnyObject.class)
+                () -> jsonParser.readAndParse(pathToFile, PAnyMap.class)
         );
         assertEquals("Cannot be boxed! file: %s".formatted(pathToFile), exception.getMessage());
     }
@@ -101,7 +101,7 @@ class JsonParserTest {
         JsonParser jsonParser = new JsonParser();
 
         // When
-        AnyObject object = assertDoesNotThrow(() -> jsonParser.readAndParse(pathToFile, AnyObject.class));
+        PAnyMap object = assertDoesNotThrow(() -> jsonParser.readAndParse(pathToFile, PAnyMap.class));
 
         // Then: key and value are present
         assertNotNull(object);

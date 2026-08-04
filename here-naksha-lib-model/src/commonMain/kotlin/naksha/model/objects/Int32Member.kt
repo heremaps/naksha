@@ -1,6 +1,8 @@
 package naksha.model.objects
 
 import naksha.model.Tuple
+import naksha.base.PTypedMap
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.base.illegalArg
 import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.INT32
@@ -17,7 +19,7 @@ class Int32Member() : TypedMember<Int32Member>() {
     /** Creates a new int32 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
-        this.name = name
+        this.id = name
         this.dataType = INT32
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -27,7 +29,7 @@ class Int32Member() : TypedMember<Int32Member>() {
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != INT32) throw illegalArg("The given member is not of int32 type")
-        this.name = member.name
+        this.id = member.id
         this.dataType = INT32
         this.path = path?.validate() ?: member.path
     }
@@ -42,6 +44,6 @@ class Int32Member() : TypedMember<Int32Member>() {
     @JsName("getFromTuple")
     fun get(tuple: Tuple): Int? = readInt64(tuple)?.toInt()
 
-    /** Sets the int32 value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Int): Any? = setPath(feature, path, value)
+    /** Sets the int32 value of this member on the given object. */
+    fun set(feature: PTypedMap<*, *>, value: Int?): Any? = if (value == null) feature.setPath(UNDEFINED, path) else feature.setPath(value, path)
 }

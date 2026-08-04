@@ -1,6 +1,6 @@
 package naksha.diff
 
-import naksha.base.Platform
+import naksha.base.Base
 import org.json.JSONException
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Assertions.*
@@ -27,7 +27,7 @@ import kotlin.test.assertNull
  *  - `Patcher.getDifference` is [DifferenceCalculator.calculateDifference]
  *  - `PatcherUtils.removeAllRemoveOp` is [DifferenceFilter.removeAllRemoveOpFromMaps]
  *  - `Patcher.patch` remained as [Patcher.patch]
- *  - JSON (de)serialization happens via [Platform.toJSON] and [Platform.fromJSON]
+ *  - JSON (de)serialization happens via [BaseCompanion.toJSON] and [BaseCompanion.fromJSON]
  */
 class MigratedJsonBasedDiffTest {
     @Test
@@ -97,8 +97,8 @@ class MigratedJsonBasedDiffTest {
 
         // Check that the patched feature 3 has the correct content as 4 but no JSON properties deleted
         JSONAssert.assertEquals(
-            Platform.toJSON(expectedPatchedf3),
-            Platform.toJSON(patchedf3),
+            Base.toJSON(expectedPatchedf3),
+            Base.toJSON(patchedf3),
             JSONCompareMode.STRICT
         )
         val newDiff = DifferenceCalculator.calculateDifference(patchedf3, expectedPatchedf3)
@@ -130,8 +130,8 @@ class MigratedJsonBasedDiffTest {
         // Check that the patched feature 3 has the same content as 5
         val patchedf3Tof5 = Patcher.patch(f3, diff35)
         JSONAssert.assertEquals(
-            Platform.toJSON(patchedf3Tof5),
-            Platform.toJSON(f3),
+            Base.toJSON(patchedf3Tof5),
+            Base.toJSON(f3),
             JSONCompareMode.STRICT
         )
         val newDiff = DifferenceCalculator.calculateDifference(patchedf3Tof5, f5)
@@ -157,8 +157,8 @@ class MigratedJsonBasedDiffTest {
         assertNotNull(expectedPatchedf3)
 
         JSONAssert.assertEquals(
-            Platform.toJSON(expectedPatchedf3),
-            Platform.toJSON(patchedf3Tof6),
+            Base.toJSON(expectedPatchedf3),
+            Base.toJSON(patchedf3Tof6),
             JSONCompareMode.STRICT
         )
         val newDiff36 = DifferenceCalculator.calculateDifference(patchedf3Tof6, expectedPatchedf3)
@@ -249,7 +249,7 @@ class MigratedJsonBasedDiffTest {
     }
 
     private fun loadFeature(fileName: String): Any =
-        Platform.fromJSON(getResourceAsText(fileName))
+        Base.fromJSON(getResourceAsText(fileName))
             ?: "Could not load/convert feature for filename: $fileName"
 
     private fun getResourceAsText(fileName: String): String =

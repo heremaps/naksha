@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.DEFAULT_SYMBOL
+import naksha.base.Base.BaseCompanion.DEFAULT_SYMBOL
 import kotlin.reflect.KClass
 
 /**
@@ -11,6 +11,69 @@ open class JvmObject : PlatformObject {
         @JvmStatic
         internal val undefined = Json.UNDEFINED; // JvmObject()
     }
+
+    /** The first linked proxy, if any. */
+    internal var firstProxy: JvmProxyLink? = null
+
+    /**
+     * Links the given proxy to this object and returns this object.
+     * @param proxy the proxy to link, called from [AbstractProxy].
+     * @return this.
+     * @since 3.0
+     */
+    internal fun linkProxy(proxy: AbstractProxy): JvmObject {
+        var link: JvmProxyLink? = this.firstProxy
+        if (link == null) {
+            link = JvmProxyLink(this, proxy)
+            this.firstProxy = link
+            return this
+        }
+        var nextLink = link.next
+        while (nextLink != null) {
+            link = nextLink
+            nextLink = link.next
+        }
+        link.next = JvmProxyLink(this, proxy)
+        return this
+    }
+
+    /**
+     * Creates a new proxy of the given type. The returned proxy will be linked to this object through the constructor of the proxy.
+     * @param klass the type of the proxy.
+     * @return the new proxy, linked to this object _(through the constructor of the proxy)_.
+     */
+    private fun <T : Proxy> newProxyLinkedToThis(klass: Class<T>): T {
+        val constructor = klass.getDeclaredConstructor(PlatformObject::class.java)
+        val proxy = constructor.newInstance(this) as T
+        constructor.isAccessible = true
+        return proxy
+    }
+
+    /**
+     * Create a proxy or return the existing proxy.
+     * @param klass The proxy class.
+     * @return The proxy instance.
+     * @see BaseCompanion.proxy
+     */
+    fun <T : Proxy> proxy(klass: Class<T>): T {
+        var link: JvmProxyLink = firstProxy ?: return newProxyLinkedToThis(klass) // No existing proxy, create new, link, return.
+        if (klass.isInstance(link.proxy)) return klass.cast(link.proxy)
+        var nextLink = link.next
+        while (nextLink != null) {
+            link = nextLink
+            if (klass.isInstance(link.proxy)) return klass.cast(link.proxy)
+            nextLink = link.next
+        }
+        // No matching existing proxy, create new, link, return.
+        return newProxyLinkedToThis(klass)
+    }
+
+    /**
+     * Create a proxy or return the existing proxy.
+     * @param klass The proxy class.
+     * @return The proxy instance.
+     */
+    fun <T : Proxy> proxy(klass: KClass<T>): T = proxy(klass.java)
 
     /**
      * The Naksha default symbol, only used as long as no other symbols are defined.
@@ -126,12 +189,4 @@ open class JvmObject : PlatformObject {
         s[sym] = value
         return old
     }
-
-    /**
-     * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
-     * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
-     * @param klass The proxy class.
-     * @return The proxy instance.
-     */
-    fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(this, klass)
 }

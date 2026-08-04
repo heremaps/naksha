@@ -64,7 +64,7 @@ public final class HubInternalIdentifiers {
   public static final String EXTENSIONS = "hub_internal:extensions";
 
   /**
-   * List of all admin-db collections.
+   * List of the identifiers (`id`) of all admin-db collections.
    */
   public static final List<@NotNull String> ALL_HUB_INTERNAL_COLLECTIONS =
       List.of(CONFIGS, SPACES, SUBSCRIPTIONS, EVENT_HANDLERS, STORAGES, EXTENSIONS);

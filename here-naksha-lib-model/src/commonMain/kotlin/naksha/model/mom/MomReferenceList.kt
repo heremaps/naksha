@@ -2,7 +2,7 @@
 
 package naksha.model.mom
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
@@ -10,7 +10,7 @@ import kotlin.jvm.JvmStatic
  * A list of MOM references.
  */
 @JsExport
-class MomReferenceList : ListProxy<MomReference>(MomReference::class) {
+class MomReferenceList : PTypedArray<MomReference>(MomReference::class) {
     companion object MomReferenceList_C {
 
         @JvmStatic

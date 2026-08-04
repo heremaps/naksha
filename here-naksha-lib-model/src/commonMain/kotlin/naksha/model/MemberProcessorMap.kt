@@ -55,7 +55,7 @@ class MemberProcessorMap : MutableMap<String, MemberProcessorList> {
      * @return this.
      */
     @JsName("addMemberProcessor")
-    fun addProcessor(member: Member, processor: IMemberProcessor): MemberProcessorMap = addProcessor(member.name, processor)
+    fun addProcessor(member: Member, processor: IMemberProcessor): MemberProcessorMap = addProcessor(member.id, processor)
 
     /**
      * Add multiple processor for the member with the given name.
@@ -90,7 +90,7 @@ class MemberProcessorMap : MutableMap<String, MemberProcessorList> {
      * @return this.
      */
     @JsName("addMemberProcessors")
-    fun addProcessors(member: Member, processors: List<IMemberProcessor>): MemberProcessorMap = addProcessors(member.name, processors)
+    fun addProcessors(member: Member, processors: List<IMemberProcessor>): MemberProcessorMap = addProcessors(member.id, processors)
 
     /**
      * Remove a processor for the member with the given name.
@@ -119,7 +119,7 @@ class MemberProcessorMap : MutableMap<String, MemberProcessorList> {
      * @return _true_ if the processor was found and removed, _false_ otherwise.
      */
     @JsName("removeMemberProcessor")
-    fun removeProcessor(member: Member, processor: IMemberProcessor): Boolean = removeProcessor(member.name, processor)
+    fun removeProcessor(member: Member, processor: IMemberProcessor): Boolean = removeProcessor(member.id, processor)
 
     /**
      * Returns the list of processors for the member with the given name, or `null` if none are registered.
@@ -139,7 +139,7 @@ class MemberProcessorMap : MutableMap<String, MemberProcessorList> {
      * @return the processor list or `null`, if no processor for the given member is added.
      */
     @JsName("getMemberProcessors")
-    fun getProcessors(member: Member): MemberProcessorList? = delegate[member.name]
+    fun getProcessors(member: Member): MemberProcessorList? = delegate[member.id]
 
     // -------------------------------------------------------------------------
     // MutableMap delegation

@@ -13,7 +13,7 @@ import com.here.naksha.cli.utils.JsonParserException;
 import kotlin.reflect.KClass;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.StringList;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
@@ -33,7 +33,7 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
     @NotNull
     @Override
     public KClass<GeneratingStorageConfig> getConfigKlass() {
-        return Platform.klassFor(GeneratingStorageConfig.class);
+        return Base.klassFor(GeneratingStorageConfig.class);
     }
 
     @NotNull

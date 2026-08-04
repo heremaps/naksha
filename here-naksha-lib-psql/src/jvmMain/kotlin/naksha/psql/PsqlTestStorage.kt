@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Base.BaseCompanion.logger
 import org.testcontainers.containers.GenericContainer
 import org.testcontainers.containers.wait.strategy.LogMessageWaitStrategy
 import java.sql.DriverManager

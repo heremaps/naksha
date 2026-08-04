@@ -1,8 +1,9 @@
 package naksha.psql
 
-import naksha.base.PlatformUtil
+import naksha.base.BaseUtil
 import naksha.base.TupleNumber
 import naksha.base.Version
+import naksha.model.TupleNumberList
 import naksha.model.request.*
 import kotlin.jvm.JvmField
 
@@ -32,7 +33,7 @@ class PgReader(
      * The version of which this reader is part.
      */
     val version: Version
-        get() = session.useTransaction().version
+        get() = session.useTransaction().asVersion
 
     fun execute(): Response {
         try {
@@ -40,7 +41,7 @@ class PgReader(
             val query = PgQueryBuilder(session, request).build()
             val conn = session.useConnection()
             session.storage.adminCatalog.setSearchPath(conn)
-            if (PlatformUtil.ENABLE_INFO) {
+            if (BaseUtil.ENABLE_INFO) {
                 if (session.logQueries) {
                     session.logAtInfo(query.sql)
                 }
@@ -51,23 +52,24 @@ class PgReader(
             }
             conn.prepare(query.sql, query.argTypes).use { plan ->
                 // Start allocating around 8 KiB
-                val featureTuples = FeatureTupleList()
-                featureTuples.setCapacity(1024)
+                val tupleNumbers = TupleNumberList()
+                tupleNumbers.setCapacity(1024)
                 // Note: We know that each result is only 12 or 20 byte
                 plan.setFetchSize(1_000_000) // Set very high to encourage parallelism on server side
                 // https://www.cybertec-postgresql.com/en/parallel-query-postgresql-problems-jdbc-dbeaver/
                 plan.execute(query.argValues).use { cursor ->
-                    val storageNumber = query.storageNumber
-                    val mapNumber = query.mapNumber
-                    val collectionNumber = query.collectionNumber
+                    val databaseNumber = query.databaseId.number
+                    val catalogNumber = query.catalog.id.number.toInt()
+                    val collectionNumber = query.collection.id.number.toInt()
                     while (cursor.next()) {
-                        val col_num: Int = collectionNumber ?: cursor["col_num"]
-                        val fn: naksha.base.Int64 = cursor["fn"]
-                        val version: naksha.base.Int64 = cursor["version"]
-                        featureTuples.add(FeatureTuple(TupleNumber(storageNumber, mapNumber, col_num, fn, version)))
+                        val fn: Long = cursor["fn"]
+                        val version: Long = cursor["version"]
+                        val tn = TupleNumber(databaseNumber, catalogNumber, collectionNumber, fn, version)
+                        tupleNumbers.add(tn)
                     }
                 }
-                return SuccessResponse().withFeatureTupleList(featureTuples)
+                val rs = TupleNumberResultSet(request, storage, session, tupleNumbers)
+                return SuccessResponse().withResultSet(rs)
             }
         } catch (e: Exception) {
             val nakshaException = PgExceptionMapper.map(e)

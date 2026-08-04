@@ -4,7 +4,7 @@ import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.storage.ContextWriteXyzFeatures;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.ToJsonOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
@@ -23,6 +23,7 @@ import java.util.stream.Stream;
 
 import static com.here.naksha.test.common.FileUtil.loadFileOrFail;
 import static com.here.naksha.test.common.FileUtil.parseJsonFileOrFail;
+import static naksha.model.request.WriteOp.CREATE;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -175,7 +176,7 @@ class SourceIdHandlerUnitTest extends AbstractTest {
         // Then: validate that the feature in the original request is modified as per expectation
         assertNotNull(wf.getWrites().get(0));
         assertNotNull(wf.getWrites().get(0).getFeature());
-        final String featureString = Platform.toJSON(wf.getWrites().get(0).getFeature(), ToJsonOptions.DEFAULT);
+        final String featureString = Base.toJSON(wf.getWrites().get(0).getFeature(), ToJsonOptions.DEFAULT);
         JSONAssert.assertEquals("Output Feature not as expected", expectedFeatureJson, featureString, JSONCompareMode.STRICT);
     }
 
@@ -205,14 +206,14 @@ class SourceIdHandlerUnitTest extends AbstractTest {
     private static WriteRequest createWriteXyzFeaturesFromFile(final String filePath) {
         final NakshaFeature feature = parseJsonFileOrFail(filePath, NakshaFeature.class);
         final WriteRequest writeRequest = new WriteRequest();
-        writeRequest.add(new Write().createFeatureDeprecated("some_collection", feature));
+        writeRequest.add(new Write().withOp(CREATE).withCollectionId("some_collection").withFeature(feature));
         return writeRequest;
     }
 
     private static ContextWriteXyzFeatures createContextWriteXyzFeaturesFromFile(final String filePath) {
         final NakshaFeature feature = parseJsonFileOrFail(filePath, NakshaFeature.class);
         final ContextWriteXyzFeatures writeXyzFeatures = new ContextWriteXyzFeatures();
-        writeXyzFeatures.add(new Write().createFeatureDeprecated("some_collection", feature));
+        writeXyzFeatures.add(new Write().withOp(CREATE).withCollectionId("some_collection").withFeature(feature));
         return writeXyzFeatures;
     }
 }

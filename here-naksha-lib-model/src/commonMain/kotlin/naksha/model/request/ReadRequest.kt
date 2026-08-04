@@ -2,10 +2,7 @@
 
 package naksha.model.request
 
-import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.model.FETCH_ALL
-import naksha.model.FetchMode
 import kotlin.js.JsExport
 
 /**
@@ -16,39 +13,27 @@ import kotlin.js.JsExport
 @JsExport
 open class ReadRequest : Request() {
     companion object ReadRequestCompanion {
-        private val INT_NULL = NullableProperty<ReadRequest, Int>(Int::class)
+        private val INT_NULLABLE = NullableProperty<ReadRequest, Int>(Int::class)
         private val BOOLEAN = NullableProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val FETCH_MODE = NotNullProperty<Request, FetchMode>(FetchMode::class) { _, _ -> FETCH_ALL }
     }
-
-    override fun defaultRowOptions(): ReturnColumns = ReturnColumns.all()
 
     /**
      * A soft-cap, so the amount of [Tuple][naksha.model.Tuple] the client needs.
      *
-     * If _null_, the storage will automatically return the complete result-set up to the soft-cap, except the soft-cap exceeds the [hard-cap][naksha.model.IStorage.hardCap]. If the soft-cap (_limit_) is bigger than what the storage supports as [hard-cap][naksha.model.IStorage.hardCap], the [hard-cap][naksha.model.IStorage.hardCap] is used by the storage.
-     *
-     * To query more than the [hard-cap][naksha.model.IStorage.hardCap] of a storage, a streaming processing is needed. The interface for this is not yet designed, but may come with later model specifications.
+     * If `null`, the storage will automatically select a limit. To query more than the [hard-cap][naksha.model.IStorage.hardCap] of a storage, a streaming processing is needed or handles need to be used.
      * @since 3.0.0
      */
-    var limit by INT_NULL
+    var limit: Int? by INT_NULLABLE
 
     /**
      * A parameter to tell the storage if the client wants a handle.
      *
-     * If _true_, the storage need to always generate the full result-set. It does not need to load all features into memory all the time, but as soon as a handle should be generated, an ordered result-set is needed, which requires to fetch all results to order them. Therefore, the storage at least need to generate the list of all [tuple-numbers][naksha.base.TupleNumber] being part of the result, then ordering them, optimally only by `version` and `uid`, which does not require to load all the row data. This is needed to be able to generate a handle from it (so to seek within the result-set).
+     * If `true`, the storage need to always generate the full result-set. It does not need to load all objects into memory all the time, but as soon as a handle should be generated, an ordered result-set is needed, which requires to fetch all results to order them. Therefore, the storage at least need to generate the list of all [tuple-numbers][naksha.base.TupleNumber] being part of the result, then ordering them. This is needed to be able to generate a handle from it (so to seek within the result-set).
      *
      * If the storage need to apply any filter-lambdas or perform a _property_ search (which is as well an intrinsic filtering lambda), it at least need to load as many results as the [limit] describes from the storage into memory.
      *
-     * A middle ground is to order by data that is part of the [metadata][naksha.model.Metadata]. This requires the storage to load all rows with their metadata into memory, but it does not yet need to load the feature itself, nor the geometry, tags or attachment.
-     *
-     * The worst case is an order by something very custom, when requested, the storage needs not only the [tuple-numbers][naksha.base.TupleNumber], but the full rows with all data. In that case all results are loaded into memory, filtered, and eventually ordered.
+     * Therefore, unless really needed, handles should be avoided as they can make result generation much slower.
      * @since 3.0.0
      */
     var returnHandle by BOOLEAN
-
-    /**
-     * How do we want the fetch to be performed
-     */
-    var fetchMode by FETCH_MODE
 }

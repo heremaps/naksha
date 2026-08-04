@@ -1,5 +1,7 @@
 package naksha.model.objects
 
+import naksha.base.PTypedMap
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.model.Tuple
 import naksha.base.TupleNumber
 import naksha.base.illegalArg
@@ -18,7 +20,7 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
     /** Creates a new tuple number member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
-        this.name = name
+        this.id = name
         this.dataType = TUPLE_NUMBER
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -28,13 +30,13 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != TUPLE_NUMBER) throw illegalArg("The given member is not of tuple_number type")
-        this.name = member.name
+        this.id = member.id
         this.dataType = TUPLE_NUMBER
         this.path = path?.validate() ?: member.path
     }
 
-    /** Retrieves the tuple number value of this member from the given feature. */
-    fun get(feature: NakshaFeature): TupleNumber? = readTupleNumber(feature)
+    /** Retrieves the tuple number value of this member from the given object. */
+    fun get(feature: PTypedMap<*, *>): TupleNumber? = readTupleNumber(feature)
 
     /**
      * Retrieves the tuple number value of this member from the given tuple.
@@ -43,6 +45,6 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
     @JsName("getFromTuple")
     fun get(tuple: Tuple): TupleNumber? = readTupleNumber(tuple)
 
-    /** Sets the tuple number value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: TupleNumber): Any? = setPath(feature, path, value)
+    /** Sets the tuple number value of this member on the given object. */
+    fun set(feature: PTypedMap<*, *>, value: TupleNumber?): Any? = if (value == null) feature.setPath(UNDEFINED, path) else feature.setPath(value, path)
 }

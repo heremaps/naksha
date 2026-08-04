@@ -14,8 +14,8 @@ import kotlin.test.*
  *    inspect exact byte counts and lead-in bytes.
  *  - [roundTrip]: encodes a JSON feature string through [JbEncoder2.buildTupleFromMap] and decodes
  *    it back through [JbDecoder2]; used for full integration tests.
- *  - [toJson]: encodes through the Tuple path and converts the decoded [AnyObject] to a JSON string
- *    via [Platform.toJSON], verifying JSON round-trip fidelity.
+ *  - [toJson]: encodes through the Tuple path and converts the decoded [PAnyMap] to a JSON string
+ *    via [BaseCompanion.toJSON], verifying JSON round-trip fidelity.
  *
  * Logical-byte types (BYTE_ARRAY / BINARY struct) are intentionally not tested here.
  */
@@ -42,9 +42,9 @@ class Jbon2Test {
     private fun singleDecode(enc: JbEncoder2): Any? {
         val dec = JbDecoder2()
         val bin = Binary()
-        bin.view = Platform.newDataView(ByteArray(enc.end) { enc.getInt8(it) })
+        bin.view = Base.newDataView(ByteArray(enc.end) { enc.getInt8(it) })
         bin.end = enc.end
-        dec.view = bin
+        dec.bytes = bin
         dec.offset = 0
         dec.end = enc.end
         return dec.decodeValueAt(0)
@@ -58,10 +58,10 @@ class Jbon2Test {
 
     /**
      * Full Tuple round-trip: encode the given JSON feature string, decode it, and return the
-     * feature [AnyObject].  Also verifies the `@JB\x02` file header.
+     * feature [PAnyMap].  Also verifies the `@JB\x02` file header.
      */
-    private fun roundTrip(json: String): AnyObject {
-        val map = (Platform.fromJSON(json) as PlatformMap).proxy(AnyObject::class)
+    private fun roundTrip(json: String): PAnyMap {
+        val map = (Base.fromJSON(json) as PlatformMap).proxy(PAnyMap::class)
         val enc = JbEncoder2()
         val bytes = enc.buildTupleFromMap(map)
         assertEquals('@'.code.toByte(), bytes[0], "header[0] must be '@'")
@@ -74,9 +74,9 @@ class Jbon2Test {
     }
 
     /**
-     * Encode → Tuple → decode → [Platform.toJSON]; returns the JSON string.
+     * Encode → Tuple → decode → [BaseCompanion.toJSON]; returns the JSON string.
      */
-    private fun toJson(json: String): String = Platform.toJSON(roundTrip(json))
+    private fun toJson(json: String): String = Base.toJSON(roundTrip(json))
 
     private fun structHeaderSize(lead: Int): Int = when (lead and JB2_STRUCT_SIZE_MASK) {
         JB2_STRUCT_SIZE0 -> 1
@@ -241,7 +241,7 @@ class Jbon2Test {
 
     @Test
     fun testInt64FirstAboveInt32Max() {
-        val v = (Int.MAX_VALUE.toLong() + 1L).toInt64()
+        val v = (Int.MAX_VALUE.toLong() + 1L).toLong()
         val enc = singleEncode(v)
         assertEquals(9, enc.end, "Int64 above Int32 max must be 9 bytes")
         assertEquals(JB2_INT64.toByte(), enc.getInt8(0), "lead-in must be INT64")
@@ -252,7 +252,7 @@ class Jbon2Test {
 
     @Test
     fun testInt64FirstBelowInt32Min() {
-        val v = (Int.MIN_VALUE.toLong() - 1L).toInt64()
+        val v = (Int.MIN_VALUE.toLong() - 1L).toLong()
         val enc = singleEncode(v)
         assertEquals(9, enc.end)
         val decoded = singleDecode(enc)
@@ -262,7 +262,7 @@ class Jbon2Test {
 
     @Test
     fun testInt64MaxValue() {
-        val enc = singleEncode(Long.MAX_VALUE.toInt64())
+        val enc = singleEncode(Long.MAX_VALUE.toLong())
         assertEquals(9, enc.end)
         val decoded = singleDecode(enc) as Int64
         assertEquals(Long.MAX_VALUE, decoded.toLong())
@@ -270,7 +270,7 @@ class Jbon2Test {
 
     @Test
     fun testInt64MinValue() {
-        val enc = singleEncode(Long.MIN_VALUE.toInt64())
+        val enc = singleEncode(Long.MIN_VALUE.toLong())
         assertEquals(9, enc.end)
         val decoded = singleDecode(enc) as Int64
         assertEquals(Long.MIN_VALUE, decoded.toLong())
@@ -279,7 +279,7 @@ class Jbon2Test {
     /** Values inside Int32 range must NOT use the 9-byte Int64 encoding. */
     @Test
     fun testInt64FallsBackToInt32ForSmallValues() {
-        val enc = singleEncode(Int.MAX_VALUE.toLong().toInt64())
+        val enc = singleEncode(Int.MAX_VALUE.toLong().toLong())
         assertEquals(5, enc.end, "Int.MAX_VALUE as Long should be encoded as Int32 (5 bytes), not Int64")
         assertEquals(Int.MAX_VALUE, singleDecode(enc))
     }
@@ -351,7 +351,7 @@ class Jbon2Test {
     @Test
     fun testFloat32AutoNarrowing() {
         // 3.5 = 7/2 is representable exactly in float32 (lower 29 mantissa bits are zero).
-        assertTrue(Platform.canBeFloat32(3.5), "3.5 must be flag as lossless float32")
+        assertTrue(Base.canBeFloat32(3.5), "3.5 must be flag as lossless float32")
         val enc = singleEncode(3.5)
         assertEquals(5, enc.end, "3.5 must be encoded as float32 (5 bytes)")
         assertEquals(JB2_FLOAT32.toByte(), enc.getInt8(0), "lead-in must be FLOAT32")
@@ -360,7 +360,7 @@ class Jbon2Test {
 
     @Test
     fun testFloat32NegativeHalf() {
-        assertTrue(Platform.canBeFloat32(-0.5))
+        assertTrue(Base.canBeFloat32(-0.5))
         val enc = singleEncode(-0.5)
         assertEquals(5, enc.end)
         assertEquals(-0.5, (singleDecode(enc) as Number).toDouble())
@@ -370,7 +370,7 @@ class Jbon2Test {
     fun testFloat32FloatMaxValue() {
         // Float.MAX_VALUE is exactly representable in float32 by definition.
         val v = Float.MAX_VALUE.toDouble()
-        assertTrue(Platform.canBeFloat32(v))
+        assertTrue(Base.canBeFloat32(v))
         val enc = singleEncode(v)
         assertEquals(5, enc.end, "Float.MAX_VALUE must be 5 bytes")
         val decoded = (singleDecode(enc) as Number).toDouble()
@@ -384,7 +384,7 @@ class Jbon2Test {
 
     @Test
     fun testFloat64Pi() {
-        assertFalse(Platform.canBeFloat32(PI), "PI must NOT be representable as float32")
+        assertFalse(Base.canBeFloat32(PI), "PI must NOT be representable as float32")
         val enc = singleEncode(PI)
         assertEquals(9, enc.end, "PI must be encoded as float64 (9 bytes)")
         assertEquals(JB2_FLOAT64.toByte(), enc.getInt8(0), "lead-in must be FLOAT64")
@@ -395,7 +395,7 @@ class Jbon2Test {
     fun testFloat64LargeExponent() {
         // 1e300 is far outside float32 exponent range.
         val v = 1.0e300
-        assertFalse(Platform.canBeFloat32(v))
+        assertFalse(Base.canBeFloat32(v))
         val enc = singleEncode(v)
         assertEquals(9, enc.end)
         assertEquals(v, (singleDecode(enc) as Number).toDouble())
@@ -404,7 +404,7 @@ class Jbon2Test {
     @Test
     fun testFloat64NegativeLarge() {
         val v = -1.0e200
-        assertFalse(Platform.canBeFloat32(v))
+        assertFalse(Base.canBeFloat32(v))
         val enc = singleEncode(v)
         assertEquals(9, enc.end)
         assertEquals(v, (singleDecode(enc) as Number).toDouble())
@@ -413,7 +413,7 @@ class Jbon2Test {
     @Test
     fun testFloat64DoubleMax() {
         val v = Double.MAX_VALUE
-        assertFalse(Platform.canBeFloat32(v))
+        assertFalse(Base.canBeFloat32(v))
         val enc = singleEncode(v)
         assertEquals(9, enc.end)
         assertEquals(v, (singleDecode(enc) as Number).toDouble())
@@ -427,7 +427,7 @@ class Jbon2Test {
         val v = 0.3
         val enc = singleEncode(v)
         val decoded = (singleDecode(enc) as Number).toDouble()
-        if (Platform.canBeFloat32(v)) {
+        if (Base.canBeFloat32(v)) {
             // If the platform considers this float32-safe, just verify round-trip.
             assertEquals(v.toFloat().toDouble(), decoded)
         } else {
@@ -476,9 +476,9 @@ class Jbon2Test {
         enc.encodeString(s)
         val dec = JbDecoder2()
         val bin = Binary()
-        bin.view = Platform.newDataView(ByteArray(enc.end) { enc.getInt8(it) })
+        bin.view = Base.newDataView(ByteArray(enc.end) { enc.getInt8(it) })
         bin.end = enc.end
-        dec.view = bin; dec.offset = 0; dec.end = enc.end
+        dec.bytes = bin; dec.offset = 0; dec.end = enc.end
         return dec.decodeValueAt(0) as String
     }
 
@@ -629,14 +629,14 @@ class Jbon2Test {
     fun testEncodeTextRoundTrip() {
         // "hello world" must survive a full Tuple round-trip (string-ref for "hello" and "world").
         val f = roundTrip("""{"id":"hello","properties":{"a":"hello world","b":"hello world"}}""")
-        assertEquals("hello world", (f["properties"] as AnyObject)["a"])
-        assertEquals("hello world", (f["properties"] as AnyObject)["b"])
+        assertEquals("hello world", (f["properties"] as PAnyMap)["a"])
+        assertEquals("hello world", (f["properties"] as PAnyMap)["b"])
     }
 
     @Test
     fun testEncodeTextWithUnderscoreSeparator() {
         val f = roundTrip("""{"id":"x","properties":{"k":"first_second","k2":"first_second"}}""")
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals("first_second", p["k"])
         assertEquals("first_second", p["k2"])
     }
@@ -644,7 +644,7 @@ class Jbon2Test {
     @Test
     fun testEncodeTextWithColonSeparator() {
         val f = roundTrip("""{"id":"x","properties":{"k":"urn:here:type","k2":"urn:here:type"}}""")
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals("urn:here:type", p["k"])
         assertEquals("urn:here:type", p["k2"])
     }
@@ -653,15 +653,15 @@ class Jbon2Test {
     fun testEncodeTextNonWordChars() {
         // Digits/symbols are not "word" chars and fall through to verbatim encoding.
         val s = "12345!@#"
-        val f = roundTrip("""{"id":"x","properties":{"v":${Platform.toJSON(s)}}}""")
-        assertEquals(s, (f["properties"] as AnyObject)["v"])
+        val f = roundTrip("""{"id":"x","properties":{"v":${Base.toJSON(s)}}}""")
+        assertEquals(s, (f["properties"] as PAnyMap)["v"])
     }
 
     @Test
     fun testEncodeTextEmptyString() {
         // An empty string must round-trip correctly even through the text path.
         val f = roundTrip("""{"id":"x","properties":{"e":""}}""")
-        assertEquals("", (f["properties"] as AnyObject)["e"])
+        assertEquals("", (f["properties"] as PAnyMap)["e"])
     }
 
     @Test
@@ -670,7 +670,7 @@ class Jbon2Test {
         val word = "coordinate"
         val json = """{"id":"x","properties":{"a":"$word","b":"$word","c":"$word","d":"$word"}}"""
         val f = roundTrip(json)
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals(word, p["a"])
         assertEquals(word, p["b"])
         assertEquals(word, p["c"])
@@ -681,16 +681,16 @@ class Jbon2Test {
     fun testEncodeTextMixedLanguage() {
         // String combining ASCII words and non-ASCII characters.
         val s = "München city"
-        val f = roundTrip("""{"id":"x","properties":{"city":${Platform.toJSON(s)}}}""")
-        assertEquals(s, (f["properties"] as AnyObject)["city"])
+        val f = roundTrip("""{"id":"x","properties":{"city":${Base.toJSON(s)}}}""")
+        assertEquals(s, (f["properties"] as PAnyMap)["city"])
     }
 
     @Test
     fun testEncodeTextVeryLongString() {
         // 200-char string that exercises the SHORT (2-byte) size header for compressed content.
         val s = "word ".repeat(40) // 200 chars; "word" interned, space is ADD_SPACE
-        val f = roundTrip("""{"id":"x","properties":{"t":${Platform.toJSON(s)}}}""")
-        assertEquals(s, (f["properties"] as AnyObject)["t"])
+        val f = roundTrip("""{"id":"x","properties":{"t":${Base.toJSON(s)}}}""")
+        assertEquals(s, (f["properties"] as PAnyMap)["t"])
     }
 
     // -----------------------------------------------------------------------
@@ -706,7 +706,7 @@ class Jbon2Test {
     @Test
     fun testTinyIntEdgesInFeature() {
         val f = roundTrip("""{"id":"x","properties":{"mn":-16,"mx":15,"z":0,"n1":-1,"p1":1}}""")
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals(-16, p["mn"])
         assertEquals(15,  p["mx"])
         assertEquals(0,   p["z"])
@@ -717,7 +717,7 @@ class Jbon2Test {
     @Test
     fun testInt8EdgeCasesInFeature() {
         val f = roundTrip("""{"id":"x","properties":{"a":-17,"b":16,"c":-128,"d":127}}""")
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals(-17, p["a"])
         assertEquals(16,  p["b"])
         assertEquals(-128, p["c"])
@@ -727,7 +727,7 @@ class Jbon2Test {
     @Test
     fun testInt16EdgeCasesInFeature() {
         val f = roundTrip("""{"id":"x","properties":{"a":-32768,"b":32767,"c":-129,"d":128}}""")
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals(-32768, p["a"])
         assertEquals(32767,  p["b"])
         assertEquals(-129,   p["c"])
@@ -737,7 +737,7 @@ class Jbon2Test {
     @Test
     fun testInt32EdgeCasesInFeature() {
         val f = roundTrip("""{"id":"x","properties":{"a":-32769,"b":32768,"c":${Int.MAX_VALUE},"d":${Int.MIN_VALUE}}}""")
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals(-32769,       p["a"])
         assertEquals(32768,        p["b"])
         assertEquals(Int.MAX_VALUE, p["c"])
@@ -747,7 +747,7 @@ class Jbon2Test {
     @Test
     fun testFloatsInFeature() {
         val f = roundTrip("""{"id":"x","properties":{"f32":3.5,"f64":3.141592653589793}}""")
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals(3.5, (p["f32"] as Number).toDouble())
         assertEquals(PI, (p["f64"] as Number).toDouble())
     }
@@ -755,19 +755,19 @@ class Jbon2Test {
     @Test
     fun testNestedAndArray() {
         val f = roundTrip("""{"id":"a","properties":{"arr":[0,1,2,3,4],"nested":{"k":"v"}}}""")
-        val p = f["properties"] as AnyObject
-        val arr = p["arr"] as AnyList
+        val p = f["properties"] as PAnyMap
+        val arr = p["arr"] as PAnyArray
         assertEquals(5, arr.size)
         assertEquals(0, arr[0])
         assertEquals(4, arr[4])
-        assertEquals("v", (p["nested"] as AnyObject)["k"])
+        assertEquals("v", (p["nested"] as PAnyMap)["k"])
     }
 
     @Test
     fun testLargeArrayWithMixedTypes() {
         val json = """{"id":"x","properties":{"arr":[-16,-1,0,1,15,-17,16,-128,127,-129,128,-32768,32767,true,false,null,"str"]}}"""
         val f = roundTrip(json)
-        val arr = (f["properties"] as AnyObject)["arr"] as AnyList
+        val arr = (f["properties"] as PAnyMap)["arr"] as PAnyArray
         assertEquals(17, arr.size)
         assertEquals(-16,  arr[0]);  assertEquals(-1, arr[1])
         assertEquals(0,    arr[2]);  assertEquals(1,  arr[3])
@@ -783,7 +783,7 @@ class Jbon2Test {
     @Test
     fun testStringRepetitionInFeature() {
         val f = roundTrip("""{"id":"hello","properties":{"a":"hello","b":"hello","c":"world"}}""")
-        val p = f["properties"] as AnyObject
+        val p = f["properties"] as PAnyMap
         assertEquals("hello", p["a"])
         assertEquals("hello", p["b"])
         assertEquals("world", p["c"])
@@ -854,9 +854,9 @@ class Jbon2Test {
         val enc = singleEncode(tn)
         val dec = JbDecoder2()
         val bin = Binary()
-        bin.view = Platform.newDataView(ByteArray(enc.end) { enc.getInt8(it) })
+        bin.view = Base.newDataView(ByteArray(enc.end) { enc.getInt8(it) })
         bin.end = enc.end
-        dec.view = bin
+        dec.bytes = bin
         dec.end = enc.end
         assertEquals(33, dec.unitSize(0), "unitSize of TUPLE_NUMBER must be 33")
     }
@@ -890,7 +890,7 @@ class Jbon2Test {
         val f = roundTrip(json)
         // geometry must appear in the decoded feature object
         assertNotNull(f["geometry"], "geometry must be included in the JBON2 feature object")
-        assertEquals("test", (f["properties"] as AnyObject)["name"])
+        assertEquals("test", (f["properties"] as PAnyMap)["name"])
     }
 
     // -----------------------------------------------------------------------
@@ -961,7 +961,7 @@ class Jbon2Test {
     fun testJsonConversionLargeInt() {
         // 2147483648 = Int.MAX_VALUE + 1; decoded as Int or Int64; either way must appear as a number.
         val f = roundTrip("""{"id":"x","properties":{"big":2147483648}}""")
-        val json = Platform.toJSON(f)
+        val json = Base.toJSON(f)
         assertTrue(json.contains("2147483648"), "large integer must appear numerically in JSON, not as a class name")
     }
 
@@ -969,7 +969,7 @@ class Jbon2Test {
     fun testJsonConversionDoesNotThrow() {
         // A feature with all supported scalar types must convert to JSON without throwing.
         val f = roundTrip("""{"id":"x","properties":{"a":-16,"b":127,"c":32767,"d":2147483647,"e":3.5,"f":3.14,"g":true,"h":false,"i":null,"j":"text"}}""")
-        val json = Platform.toJSON(f)
+        val json = Base.toJSON(f)
         assertNotNull(json)
         assertTrue(json.isNotEmpty())
     }
@@ -980,10 +980,10 @@ class Jbon2Test {
 
     @Test
     fun testMemberEncoderPathTrackingNested() {
-        val root = AnyObject()
-        val a = AnyObject()
-        val b = AnyList()
-        val cObj = AnyObject()
+        val root = PAnyMap()
+        val a = PAnyMap()
+        val b = PAnyArray()
+        val cObj = PAnyMap()
         cObj["c"] = 1
         b.add(cObj)
         b.add(2)
@@ -1015,9 +1015,9 @@ class Jbon2Test {
 
     @Test
     fun testMemberEncoderPathResize() {
-        var value: Any? = AnyObject().also { (it as AnyObject)["leaf"] = 1 }
+        var value: Any? = PAnyMap().also { (it as PAnyMap)["leaf"] = 1 }
         for (i in 19 downTo 0) {
-            val obj = AnyObject()
+            val obj = PAnyMap()
             obj["k$i"] = value
             value = obj
         }
@@ -1040,7 +1040,7 @@ class Jbon2Test {
 
     @Test
     fun testMemberEncoderShortCircuitToMembersRef() {
-        val obj = AnyObject()
+        val obj = PAnyMap()
         obj["x"] = 123
 
         val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->

@@ -18,12 +18,13 @@
  */
 package com.here.naksha.lib.hub;
 
-import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
-import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
-import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
-import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.*;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static naksha.base.Action.CREATE;
+import static naksha.base.NakshaExceptionKt.illegalArg;
+import static naksha.base.NakshaExceptionKt.illegalState;
+import static naksha.base.NakshaExceptionKt.internalError;
+import static naksha.base.Base.proxy;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
@@ -52,10 +53,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmJsonUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
@@ -63,11 +66,7 @@ import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
-import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaCatalog;
-import naksha.model.objects.NakshaStorage;
+import naksha.model.objects.*;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
@@ -103,28 +102,28 @@ public class NakshaHub implements INaksha {
   protected final @NotNull NakshaHubConfig nakshaHubConfig;
 
   /**
-   * Singleton instance of physical admin storage implementation
+   * Singleton instance of physical admin storage implementation.
    */
   protected final @NotNull IStorage psqlStorage;
   /**
-   * Singleton instance of AdminStorage, which internally uses physical admin storage (i.e. PsqlStorage)
+   * Singleton instance of AdminStorage, which internally uses physical admin storage (i.e. PsqlStorage).
    */
   protected final @NotNull IStorage adminStorageInstance;
   /**
    * Singleton instance of Space Storage, which is responsible to manage admin collections as spaces and support respective read/write
-   * operations on spaces
+   * operations on spaces. This storage is a wrapper on top of the {@link #adminStorageInstance} adding additional security constraints.
    */
   protected final @NotNull IStorage spaceStorageInstance;
 
   /**
-   * Singleton instance of Extension Manager, which is responsible to manage Naksha extensions cache
+   * Singleton instance of Extension Manager, which is responsible to manage Naksha extensions cache.
    */
   protected @NotNull IExtensionManager extensionManager;
 
   private final @NotNull String adminMapId;
 
   /**
-   * The extensionId property path in handler json.
+   * The extensionId property path in handler JSON.
    */
   protected static final String[] EXTN_ID_PROP_PATH = {"extensionId"};
 
@@ -171,8 +170,8 @@ public class NakshaHub implements INaksha {
     this.adminStorageInstance = new NHAdminStorage(this.psqlStorage);
     this.spaceStorageInstance = new NHSpaceStorage(this, new NakshaEventPipelineFactory(this));
     // setup backend storage DB and Hub config
-    NakshaContext nakshaContext = setupMapAndContext(adminMapId);
-    final NakshaHubConfig finalCfg = this.storageSetup(customCfg, configId, nakshaContext, adminMapId);
+    final var nakshaContext = setupMapAndContext(adminMapId);
+    final var finalCfg = this.storageSetup(customCfg, configId, nakshaContext);
     if (finalCfg == null) {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
@@ -198,19 +197,58 @@ public class NakshaHub implements INaksha {
     return adminMapId;
   }
 
-  private NakshaContext setupMapAndContext(String mapId) {
-    NakshaCatalog map = new NakshaCatalog().withId(mapId);
-    Write createMap = new Write().upsertCatalog(map, false);
-    NakshaContext initialContext = NakshaContext.currentContext().withAuthor(NakshaHubConfig.defaultAppName());
-    psqlStorage.runInWriteSession(SessionOptions.from(initialContext), writer -> {
-      Response response = writer.execute(new WriteRequest().add(createMap));
-      if(!(response instanceof SuccessResponse)) {
+  @Override
+  public @NotNull NakshaDatabase getAdminDatabase() {
+    final var adminDb = adminDatabase;
+    if (adminDb == null) throw illegalState("The admin storage has not been initialized");
+    return adminDb;
+  }
+
+  @Override
+  public @NotNull NakshaCollection getAdminCollection(@NotNull String collectionId) {
+    if (adminCollections.isEmpty()) throw illegalState("The admin storage has not been initialized");
+    final var collection = adminCollections.get(collectionId);
+    if (collection == null) throw illegalArg("Unknown admin collection: "+collectionId);
+    return collection;
+  }
+
+  @Override
+  public @NotNull NakshaCatalog getAdminCatalog() {
+    final var adminCatalog = this.adminCatalog;
+    if (adminCatalog == null) throw illegalState("The admin storage has not been initialized");
+    return adminCatalog;
+  }
+
+  /** The admin database, created by {@link #setupMapAndContext(String)}. */
+  private NakshaDatabase adminDatabase;
+  /** The admin catalog within the {@link #adminDatabase}, created by {@link #setupMapAndContext(String)}. */
+  private NakshaCatalog adminCatalog;
+  /** The admin collections within the {@link #adminCatalog}, created by {@link #createAdminCollections(NakshaContext)}. */
+  private final ConcurrentHashMap<String, NakshaCollection> adminCollections = new ConcurrentHashMap<>();
+
+  /**
+   * Does create the {@link #adminDatabase} and {@link #adminCatalog}.
+   * @param mapId the identifier of the admin-catalog.
+   * @return the context.
+   */
+  private @NotNull NakshaContext setupMapAndContext(@NotNull String mapId) {
+    final NakshaContext initialContext = NakshaContext.currentContext().withAuthor(NakshaHubConfig.defaultAppName());
+    try (final var writer = psqlStorage.newWriteSession(SessionOptions.from(initialContext))) {
+      this.adminDatabase = new NakshaDatabase(writer);
+      final var adminCatalog = new NakshaCatalog(mapId, adminDatabase);
+      final var createMap = new Write().upsertCatalog(adminCatalog, false);
+      final var response = writer.execute(new WriteRequest().add(createMap));
+      if (response instanceof SuccessResponse successResponse) {
+        final var features = successResponse.getFeatures();
+        if (features.size() != 1) throw internalError("Expected only one feature as response to Naksha-Hub admin catalog creation, but got: "+features.size());
+        writer.commit();
+        this.adminCatalog = proxy(features.getFirst(), NakshaCatalog.class);
+      } else {
         writer.rollback();
-        throw new RuntimeException("Map creation for Naksha Hub Admin failed: " + response);
+        throw internalError("Failed to create admin catalog for Naksha-Hub: " + response);
       }
-      writer.commit();
-    });
-    NakshaContext nakshaHubAdminContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName(), NakshaHubConfig.defaultAppName());
+    }
+    final var nakshaHubAdminContext = NakshaContext.newInstance(NakshaHubConfig.defaultAppName(), NakshaHubConfig.defaultAppName());
     nakshaHubAdminContext.attachToCurrentThread();
     return nakshaHubAdminContext;
   }
@@ -218,29 +256,35 @@ public class NakshaHub implements INaksha {
   private @Nullable NakshaHubConfig storageSetup(
       final @Nullable NakshaHubConfig customCfg,
       final @Nullable String configId,
-      final @NotNull NakshaContext nakshaContext,
-      final @NotNull String adminMapId) {
+      final @NotNull NakshaContext nakshaContext
+  ) {
     // 1. Create all Admin collections in Admin DB
-    createAdminCollections(nakshaContext, adminMapId);
+    createAdminCollections(nakshaContext);
 
     // 2. fetch / add latest config
     return configSetup(nakshaContext, customCfg, configId, adminMapId);
   }
 
-  private void createAdminCollections(NakshaContext nakshaContext, String adminMapId) {
+  private void createAdminCollections(@NotNull NakshaContext nakshaContext) {
     getAdminStorage().runInWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       logger.info("WriteCollections Request for {}, against Admin storage.", ALL_HUB_INTERNAL_COLLECTIONS);
-      final Response createAdminCollectionsResponse = admin.execute(upsertAdminCollectionsRequest(adminMapId));
+      final Response createAdminCollectionsResponse = admin.execute(upsertAdminCollectionsRequest());
       if (createAdminCollectionsResponse instanceof SuccessResponse successResponse) {
         NakshaFeatureList createdCollections = successResponse.getFeatures();
         for (NakshaFeature createdCollection : createdCollections) {
-          if (Objects.equals(
-              CREATE.getValue(),
-              createdCollection.getProperties().getXyz().getAction())) {
+          if (Objects.equals(CREATE.getValue(), createdCollection.getProperties().getXyz().getAction())) {
             logger.info("Collection {} successfully created.", createdCollection.getId());
           }
         }
         admin.commit();
+        for (final var collectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
+          final var collection = admin.getCollectionById(adminCatalog, collectionId);
+          if (collection == null || collection.isDeleted()) {
+            logger.error("Failed to create admin collection: {}", collectionId);
+            throw illegalState("Failed to create admin collection: "+collectionId);
+          }
+          adminCollections.put(collectionId, collection);
+        }
       } else {
         if (createAdminCollectionsResponse instanceof ErrorResponse errorResponse) {
           NakshaError err = errorResponse.getError();
@@ -253,10 +297,11 @@ public class NakshaHub implements INaksha {
     });
   }
 
-  private static WriteRequest upsertAdminCollectionsRequest(@NotNull String adminMapId) {
+  private WriteRequest upsertAdminCollectionsRequest() {
     final WriteRequest writeRequest = new WriteRequest();
-    for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
-      writeRequest.add(new Write().upsertCollection(new NakshaCollection(adminCollectionId, adminMapId)));
+    for (String collectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
+      final var collection = new NakshaCollection(collectionId, adminCatalog);
+      writeRequest.add(new Write().upsertCollection(collection));
     }
     return writeRequest;
   }
@@ -276,16 +321,19 @@ public class NakshaHub implements INaksha {
     logger.info("Running config setup for Nakshs Hub against Admin storage.");
     return getAdminStorage().useWriteSession(SessionOptions.from(nakshaContext, true), admin -> {
       if (customCfg != null) {
-        WriteRequest writeCustomCfg = new WriteRequest()
-            .add(new Write().upsertFeature(adminMapId, CONFIGS, customCfg));
-        Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
+        final var catalog = admin.getCatalogById(adminMapId);
+        if (catalog == null) throw illegalState("The given admin catalog "+adminMapId+" does not exist");
+        final var configCollection = admin.getCollectionById(catalog, CONFIGS);
+        if (configCollection == null) throw illegalState("The given configuration collection "+CONFIGS+" does not exist");
+        final WriteRequest writeCustomCfg = new WriteRequest().add(new Write().upsertFeature(configCollection, customCfg));
+        final Response writeCustomCfgResponse = admin.execute(writeCustomCfg);
         if (writeCustomCfgResponse instanceof SuccessResponse) {
           admin.commit();
           return customCfg;
         } else {
           admin.rollback();
           if (writeCustomCfgResponse instanceof ErrorResponse errorResponse) {
-            NakshaError error = errorResponse.getError();
+            final NakshaError error = errorResponse.getError();
             throw unchecked(new Exception(
                 "Unable to add custom config in Admin DB (error code: " + error.getCode() + " )",
                 error.getCause()));
@@ -447,7 +495,7 @@ public class NakshaHub implements INaksha {
                 extensionRootPath + extensionIdWotEnv + "/latest-" + extEnv.toLowerCase() + ".txt");
         String exJson = fileClient.getFileContent(extensionRootPath + extensionIdWotEnv + "/"
                 + extensionIdWotEnv + "-" + version + "." + extEnv.toLowerCase() + ".json");
-        Extension extension = JvmBoxingUtil.box(Platform.fromJSON(exJson, FromJsonOptions.DEFAULT), Extension.class);
+        Extension extension = JvmBoxingUtil.box(Base.fromJSON(exJson, FromJsonOptions.DEFAULT), Extension.class);
         extension.setEnv(extEnv);
         extList.add(extension);
       } catch (Exception e) {

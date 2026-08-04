@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.geo.SpGeometry
@@ -16,7 +16,7 @@ import kotlin.jvm.JvmOverloads
  * Tests for an intersection of features geometry with the given one.
  */
 @JsExport
-open class SpIntersects() : AnyObject(), ISpatialQuery {
+open class SpIntersects() : PAnyMap(), ISpatialQuery {
 
     /**
      * Create an initialized intersection.

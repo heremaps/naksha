@@ -91,7 +91,7 @@ public class JsonBenchmark {
   }
 
   @Nullable Object naksha_jackson(byte @NotNull [] utf8_json) throws IOException {
-    return Platform.objectMapper.get().readValue(utf8_json, Map.class);
+    return Base.objectMapper.get().readValue(utf8_json, Map.class);
   }
 
   @Nullable Object gson_parse(byte @NotNull [] utf8_json) throws IOException {

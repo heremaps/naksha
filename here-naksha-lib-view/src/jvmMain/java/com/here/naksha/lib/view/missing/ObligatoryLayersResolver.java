@@ -18,19 +18,20 @@
  */
 package com.here.naksha.lib.view.missing;
 
-import com.here.naksha.lib.view.MissingIdResolver;
-import com.here.naksha.lib.view.ViewLayer;
-import com.here.naksha.lib.view.ViewLayerFeature;
+import com.here.naksha.lib.view.*;
+
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import naksha.base.Id;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class ObligatoryLayersResolver implements MissingIdResolver {
 
-  private final Set<ViewLayer> obligatoryLayers;
+  private final @NotNull Set<@NotNull ViewLayer> obligatoryLayers;
 
   public ObligatoryLayersResolver(@NotNull Set<@NotNull ViewLayer> obligatoryLayers) {
     this.obligatoryLayers = obligatoryLayers;
@@ -42,20 +43,15 @@ public class ObligatoryLayersResolver implements MissingIdResolver {
   }
 
   @Override
-  public @Nullable List<Pair<ViewLayer, String>> layersToSearch(@NotNull List<ViewLayerFeature> multiFeature) {
-
-    if (multiFeature.isEmpty()) {
-      return null;
+  public @Nullable MissingIdsByLayer layersToSearch(@NotNull ViewLayerFeatureStack multiFeature) {
+    if (multiFeature.isEmpty()) return null;
+    final var result = new MissingIdsByLayer();
+    for (var layerFeature : multiFeature) {
+      final var layer = layerFeature.getViewLayer();
+      if (obligatoryLayers.contains(layer)) {
+        result.getOrCreate(layer).addIfAbsent(layerFeature.getFeature().getId());
+      }
     }
-
-    List<ViewLayer> layersHavingFeature =
-        multiFeature.stream().map(ViewLayerFeature::getViewLayer).collect(Collectors.toList());
-
-    List<Pair<ViewLayer, String>> missingObligatoryLayers = obligatoryLayers.stream()
-        .filter(obligatoryLayer -> !layersHavingFeature.contains(obligatoryLayer))
-        .map(layer -> Pair.of(layer, multiFeature.get(0).getFeatureTuple().getId()))
-        .collect(Collectors.toList());
-
-    return missingObligatoryLayers;
+    return result;
   }
 }

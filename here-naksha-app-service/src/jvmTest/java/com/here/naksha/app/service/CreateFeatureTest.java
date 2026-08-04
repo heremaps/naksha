@@ -39,7 +39,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.UUID;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.Assertions;
@@ -244,7 +244,7 @@ class CreateFeatureTest extends ApiTest {
 
     // Given: Space (without EventHandler) configured in Admin storage
     final String spaceJson = loadFileOrFail("CreateFeatures/TC0307_createFeaturesWithNoHandler/create_space.json");
-    final Space space = JvmBoxingUtil.box(Platform.fromJSON(spaceJson), Space.class);
+    final Space space = JvmBoxingUtil.box(Base.fromJSON(spaceJson), Space.class);
     HttpResponse<String> response = getNakshaClient().post("hub/spaces", spaceJson, streamId);
     assertEquals(200, response.statusCode(), "ResCode mismatch. Failed creating Event Handler");
 
@@ -324,7 +324,7 @@ class CreateFeatureTest extends ApiTest {
           {
           "type": "FeatureCollection",
           "features": [
-          """ + Platform.toJSON(feature) + "]}", streamId);
+          """ + Base.toJSON(feature) + "]}", streamId);
 
     // Then: first patch succeeded
     final String firstResponse = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/first_response.json");
@@ -342,7 +342,7 @@ class CreateFeatureTest extends ApiTest {
                 {
                 "type": "FeatureCollection",
                 "features": [
-                """ + Platform.toJSON(feature) + "]}",
+                """ + Base.toJSON(feature) + "]}",
             streamId);
 
     // Then: second patch should fail due to UUID conflict
@@ -356,7 +356,7 @@ class CreateFeatureTest extends ApiTest {
           {
           "type": "FeatureCollection",
           "features": [
-          """ + Platform.toJSON(feature) + "]}", streamId);
+          """ + Base.toJSON(feature) + "]}", streamId);
 
     // Then: third patch should succeed
     final String thirdResponse = loadFileOrFail("CreateFeatures/TC0309_createFeaturesWithUuid/third_response.json");

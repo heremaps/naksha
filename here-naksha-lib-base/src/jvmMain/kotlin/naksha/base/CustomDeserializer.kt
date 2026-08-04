@@ -4,27 +4,31 @@ import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonDeserializer
 import com.fasterxml.jackson.databind.JsonNode
-import naksha.base.Platform.PlatformCompanion.longToInt64
+import naksha.base.Base.BaseCompanion.longToInt64
 import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 object CustomDeserializer : JsonDeserializer<Any>() {
 
-    @OptIn(ExperimentalEncodingApi::class)
+    /**
+     * @see BaseCompanion.module
+     */
     override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Any? {
         val value = p.codec.readTree<JsonNode>(p)
         if (value.isLong) {
             return longToInt64(value.longValue())
         }
-        else if (value.isInt || value.isShort) {
+        if (value.isInt || value.isShort) {
             return value.intValue()
         }
-        else if (value.isFloat || value.isDouble) {
+        if (value.isFloat || value.isDouble) {
             return value.doubleValue()
         }
-        else if (value.isTextual) {
+        if (value.isNumber) {
+            return value.numberValue()
+        }
+        if (value.isTextual) {
             val asText = value.asText()
-            if (asText.startsWith("data:bigint;") && Platform.fromJsonOptions.get().parseDataUrl) {
+            if (asText.startsWith("data:bigint;") && Base.fromJsonOptions.get().parseDataUrl) {
                 val data = asText.split(";")[1]
                 val parts = data.split(",")
                 val encoding = parts[0]
@@ -36,7 +40,7 @@ object CustomDeserializer : JsonDeserializer<Any>() {
                     "bin" -> return longToInt64(number.removePrefix("0b").toLong(2))
                 }
             }
-            if (asText.startsWith("data:application/octet-stream;") && Platform.fromJsonOptions.get().parseDataUrl) {
+            if (asText.startsWith("data:application/octet-stream;") && Base.fromJsonOptions.get().parseDataUrl) {
                 val data = asText.split(";")[1]
                 val parts = data.split(",")
                 val encoding = parts[0]

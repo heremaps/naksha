@@ -2,13 +2,14 @@
 
 package naksha.model
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
+import naksha.base.Id
 import naksha.base.Int64
-import naksha.base.ListProxy
-import naksha.base.MapProxy
+import naksha.base.PTypedArray
+import naksha.base.PTypedMap
 import naksha.base.PlatformList
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.Base.BaseCompanion.logger
+import naksha.base.Base.BaseCompanion.toJSON
 import naksha.base.TupleNumber
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
@@ -37,7 +38,7 @@ object FeatureMemberValues {
         for (segment in path) {
             if (current == null) return null
             current = when (current) {
-                is AnyObject -> current.getRaw(segment)
+                is PAnyMap -> current.getRaw(segment)
                 else -> return null
             }
         }
@@ -56,7 +57,7 @@ object FeatureMemberValues {
      * @param memberName the member name (for logging).
      * @return the coerced value, or _null_ if coercion failed.
      */
-    fun coerce(value: Any?, type: MemberType, featureId: String, memberName: String): Any? {
+    fun coerce(value: Any?, type: MemberType, featureId: Id, memberName: String): Any? {
         if (value == null) return null
         return when (type) {
             MemberType.BOOLEAN -> coerceBoolean(value, featureId, memberName)
@@ -84,12 +85,12 @@ object FeatureMemberValues {
     // Individual coercion implementations
     // -------------------------------------------------------------------------
 
-    private fun coerceBoolean(value: Any, featureId: String, memberName: String): Boolean? = when (value) {
+    private fun coerceBoolean(value: Any, featureId: Id, memberName: String): Boolean? = when (value) {
         is Boolean -> value
         else -> { warnMismatch(featureId, memberName, "boolean", value); null }
     }
 
-    private fun coerceInt8(value: Any, featureId: String, memberName: String): Short? {
+    private fun coerceInt8(value: Any, featureId: Id, memberName: String): Short? {
         val asLong = numberToLongOrNull(value) ?: return null.also { warnMismatch(featureId, memberName, "int8", value) }
         if (asLong !in Byte.MIN_VALUE.toLong()..Byte.MAX_VALUE.toLong()) {
             warnMismatch(featureId, memberName, "int8 (out of range)", value)
@@ -98,7 +99,7 @@ object FeatureMemberValues {
         return asLong.toShort()
     }
 
-    private fun coerceInt16(value: Any, featureId: String, memberName: String): Short? {
+    private fun coerceInt16(value: Any, featureId: Id, memberName: String): Short? {
         val asLong = numberToLongOrNull(value) ?: return null.also { warnMismatch(featureId, memberName, "int16", value) }
         if (asLong !in Short.MIN_VALUE.toLong()..Short.MAX_VALUE.toLong()) {
             warnMismatch(featureId, memberName, "int16 (out of range)", value)
@@ -107,7 +108,7 @@ object FeatureMemberValues {
         return asLong.toShort()
     }
 
-    private fun coerceInt32(value: Any, featureId: String, memberName: String): Int? {
+    private fun coerceInt32(value: Any, featureId: Id, memberName: String): Int? {
         val asLong = numberToLongOrNull(value) ?: return null.also { warnMismatch(featureId, memberName, "int32", value) }
         if (asLong !in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) {
             warnMismatch(featureId, memberName, "int32 (out of range)", value)
@@ -116,7 +117,7 @@ object FeatureMemberValues {
         return asLong.toInt()
     }
 
-    private fun coerceInt64(value: Any, featureId: String, memberName: String): Int64? = when (value) {
+    private fun coerceInt64(value: Any, featureId: Id, memberName: String): Int64? = when (value) {
         is Int64 -> value
         is Int -> Int64(value.toLong())
         is Long -> Int64(value)
@@ -127,7 +128,7 @@ object FeatureMemberValues {
         else -> { warnMismatch(featureId, memberName, "int64", value); null }
     }
 
-    private fun coerceFloat32(value: Any, featureId: String, memberName: String): Float? = when (value) {
+    private fun coerceFloat32(value: Any, featureId: Id, memberName: String): Float? = when (value) {
         is Float -> value
         is Double -> value.toFloat()
         is Int -> value.toFloat()
@@ -138,7 +139,7 @@ object FeatureMemberValues {
         else -> { warnMismatch(featureId, memberName, "float32", value); null }
     }
 
-    private fun coerceFloat64(value: Any, featureId: String, memberName: String): Double? = when (value) {
+    private fun coerceFloat64(value: Any, featureId: Id, memberName: String): Double? = when (value) {
         is Double -> value
         is Float -> value.toDouble()
         is Int -> value.toDouble()
@@ -149,12 +150,12 @@ object FeatureMemberValues {
         else -> { warnMismatch(featureId, memberName, "float64", value); null }
     }
 
-    private fun coerceString(value: Any, featureId: String, memberName: String): String? = when (value) {
+    private fun coerceString(value: Any, featureId: Id, memberName: String): String? = when (value) {
         is String -> value
         else -> { warnMismatch(featureId, memberName, "string", value); null }
     }
 
-    private fun coerceByteArray(value: Any, featureId: String, memberName: String): ByteArray? = when (value) {
+    private fun coerceByteArray(value: Any, featureId: Id, memberName: String): ByteArray? = when (value) {
         is ByteArray -> value
         else -> { warnMismatch(featureId, memberName, "byte_array", value); null }
     }
@@ -162,9 +163,9 @@ object FeatureMemberValues {
     /**
      * Coerce a tuple-number value: an already-materialized [naksha.base.TupleNumber], or a string/byte-array encoding.
      */
-    private fun coerceTupleNumber(value: Any, featureId: String, memberName: String): TupleNumber? = when (value) {
+    private fun coerceTupleNumber(value: Any, featureId: Id, memberName: String): TupleNumber? = when (value) {
         is TupleNumber -> value
-        is String -> TupleNumber.fromStringOrGuid(value)
+        is String -> TupleNumber.fromString(value)
         is ByteArray -> TupleNumber.fromByteArray(value)
         else -> { warnMismatch(featureId, memberName, "tuple_number", value); null }
     }
@@ -175,34 +176,34 @@ object FeatureMemberValues {
      * The expected input is a [SpGeometry] (which may be a [naksha.geo.SpPoint] or any other geometry subclass).
      * The geometry is encoded as TWKB and returned as a [ByteArray].
      */
-    private fun coerceSpatial(value: Any, featureId: String, memberName: String): ByteArray? = when (value) {
+    private fun coerceSpatial(value: Any, featureId: Id, memberName: String): ByteArray? = when (value) {
         is SpGeometry -> toTWKB(value)
         is ByteArray -> value
-        is MapProxy<*, *> -> toTWKB(value.proxy(SpGeometry::class))
+        is PTypedMap<*, *> -> toTWKB(value.proxy(SpGeometry::class))
         else -> { warnMismatch(featureId, memberName, "spatial", value); null }
     }
 
-    private fun coerceTags(value: Any, featureId: String, memberName: String): String? {
-        if (value !is AnyObject) {
+    private fun coerceTags(value: Any, featureId: Id, memberName: String): String? {
+        if (value !is PAnyMap) {
             warnMismatch(featureId, memberName, "tags", value)
             return null
         }
         return try { toJSON(value) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags", value); null }
     }
 
-    private fun coerceTagsFromArray(value: Any, featureId: String, memberName: String): String? {
+    private fun coerceTagsFromArray(value: Any, featureId: Id, memberName: String): String? {
         val tagList = when (value) {
             is TagList -> value
-            is AnyObject -> value.proxy(TagList::class)
+            is PAnyMap -> value.proxy(TagList::class)
             else -> { warnMismatch(featureId, memberName, "tags_from_array", value); return null }
         }
         val tagMap = tagList.toTagMap()
         return try { toJSON(tagMap) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags_from_array", value); null }
     }
 
-    private fun coerceTagListToJsonArray(value: Any, featureId: String, memberName: String): String? {
+    private fun coerceTagListToJsonArray(value: Any, featureId: Id, memberName: String): String? {
         val list: Any = when (value) {
-            is ListProxy<*> -> value
+            is PTypedArray<*> -> value
             is PlatformList -> value.proxy(TagList::class)
             else -> { warnMismatch(featureId, memberName, "tag_list", value); return null }
         }
@@ -220,7 +221,7 @@ object FeatureMemberValues {
         else -> null
     }
 
-    private fun warnMismatch(featureId: String, memberName: String, expected: String, value: Any) {
+    private fun warnMismatch(featureId: Id, memberName: String, expected: String, value: Any) {
         logger.warn("Member '$memberName' on feature '$featureId': expected $expected, got ${value::class.simpleName}")
     }
 }

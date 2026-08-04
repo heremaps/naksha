@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import kotlin.js.JsExport
@@ -13,7 +13,7 @@ import kotlin.jvm.JvmOverloads
  * A property query within the Naksha feature.
  */
 @JsExport
-open class PQuery() : AnyObject(), IPropertyQuery {
+open class PQuery() : PAnyMap(), IPropertyQuery {
     /**
      * Create an initialized property query.
      * @param property the property to query.

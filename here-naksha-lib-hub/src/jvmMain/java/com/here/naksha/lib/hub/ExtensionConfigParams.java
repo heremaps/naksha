@@ -22,10 +22,10 @@ import static naksha.base.JvmAnyObjectUtil.getOrSetProperty;
 import static naksha.base.JvmAnyObjectUtil.getProperty;
 
 import java.util.List;
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.base.StringList;
 
-public class ExtensionConfigParams extends AnyObject {
+public class ExtensionConfigParams extends PAnyMap {
 
   public static final String WHITELIST_CLASSES = "whitelistClasses";
   public static final String INTERVAL_MS = "intervalms";

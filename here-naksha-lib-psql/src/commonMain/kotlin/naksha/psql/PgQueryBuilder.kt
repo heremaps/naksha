@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.Int64
 import naksha.base.Version
 import naksha.base.collectionNotFound
@@ -7,9 +8,9 @@ import naksha.base.illegalArg
 import naksha.base.mapNotFound
 import naksha.base.unsupportedOp
 import naksha.model.Naksha.NakshaCompanion.HARD_TUPLE_LIMIT
-import naksha.model.objects.StandardMembers.StandardMembers_C.FN
-import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
-import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumberMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.VersionMember
 import naksha.model.request.*
 import naksha.model.request.query.SortOrder
 import kotlin.math.max
@@ -31,8 +32,6 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     fun build(): PgQuery {
         return when (readRequest) {
             is ReadFeatures -> readFeatures(readRequest)
-            is ReadCollections -> readFeatures(readRequest.toReadFeatures())
-            is ReadMaps -> readFeatures(readRequest.toReadFeatures())
             else -> throw unsupportedOp("The given read-request is unknown")
         }
     }
@@ -40,12 +39,13 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     private fun readFeatures(req: ReadFeatures): PgQuery {
         // Collect needed data
         val pgStorage = session.storage
-        val catalogId = req.catalogId ?: throw illegalArg("Request has not 'catalogId'")
-        val pgCatalog = session.getPgCatalogById(catalogId) ?: throw mapNotFound("Catalog with id '$catalogId' does not exist")
+        val databaseId = req.databaseId
+        val catalogId = req.catalogId
+        val pgCatalog = session.getPgCatalogByNumber(catalogId.number.toInt()) ?: throw mapNotFound("Catalog with id '$catalogId' does not exist")
         val REQ_LIMIT = min(max(0, req.limit ?: HARD_TUPLE_LIMIT), session.storage.hardCap)
         if (REQ_LIMIT == 0) throw illegalArg("Invalid limit given: ${req.limit}, must be 0 to $HARD_TUPLE_LIMIT")
-        val collectionId: String = req.collectionId ?: throw illegalArg("Request has no 'collectionId'")
-        val pgCollection = session.getPgCollectionById(pgCatalog, collectionId) ?:
+        val collectionId: Id = req.collectionId ?: throw illegalArg("Request has no 'collectionId'")
+        val pgCollection = session.getPgCollectionByNumber(pgCatalog, collectionId.number.toInt()) ?:
             throw collectionNotFound("Collection with id '$collectionId' not found in catalog '$catalogId'")
 
         val whereClause = PgQueryWhereBuilder(req, pgCollection).build()
@@ -69,8 +69,8 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                     }
                     if (exit < 0) throw illegalArg("Too many orders in orderBy")
                 } else { // deterministic ordering is by `feature-number ASC, version DESC`
-                    order_by.add(Pair(FN, SortOrder.ASCENDING.toString()))
-                    order_by.add(Pair(VERSION, SortOrder.DESCENDING.toString()))
+                    order_by.add(Pair(FeatureNumberMember.id, SortOrder.ASCENDING.toString()))
+                    order_by.add(Pair(VersionMember.id, SortOrder.DESCENDING.toString()))
                 }
             }
         } while(false)
@@ -80,25 +80,25 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val WHERE = StringBuilder()
         var version = req.version
         if (version != null) {
-            version = version or Int64(3)
+            version = version or 3L
             if (version == Version.HEAD.number) {
                 version = null // HEAD
             } else {
                 if (WHERE.isNotEmpty()) WHERE.append(" AND ")
-                WHERE.append("($VERSION <= ").append(version).append(")")
+                WHERE.append("(${VersionMember.id} <= ").append(version).append(")")
             }
         }
         var minVersion = req.minVersion
         if (minVersion != null) {
-            minVersion = minVersion or Int64(3)
+            minVersion = minVersion or 3L
             if (WHERE.isNotEmpty()) WHERE.append(" AND ")
-            WHERE.append("($VERSION >= ").append(minVersion).append(")")
+            WHERE.append("(${VersionMember.id} >= ").append(minVersion).append(")")
         }
         val readHistory = req.queryHistory && pgCollection.storeHistory
         val versions = req.versions
         if (readHistory && versions == 1 && version != null) { // Return latest version only, but involve history.
             if (WHERE.isNotEmpty()) WHERE.append(" AND ")
-            WHERE.append("($NEXT_VERSION > ").append(version).append(" OR $NEXT_VERSION IS NULL) ")
+            WHERE.append("(${NextVersionMember.id} > ").append(version).append(" OR ${NextVersionMember.id} IS NULL) ")
         }
         if (whereQuery.isNotEmpty()) {
             if (WHERE.isNotEmpty()) WHERE.append(" AND ")
@@ -109,11 +109,11 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val headWhere = if (req.queryDeleted) where else {
             val hw = StringBuilder(WHERE)
             if (hw.isNotEmpty()) hw.append(" AND ")
-            hw.append("($VERSION & 3) < 2 ")
+            hw.append("(${VersionMember.id} & 3) < 2 ")
             " WHERE $hw"
         }
 
-        val baseCols = listOf(FN, VERSION)
+        val baseCols = listOf(FeatureNumberMember.id, VersionMember.id)
         val extraCols = order_by?.map { it.first }?.filter { it !in baseCols }?.distinct() ?: emptyList()
         val selectCols = (baseCols + extraCols).joinToString(", ")
 
@@ -128,7 +128,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         // or we want only the latest version, but no specific version target is given, then
         // we need to partition the result, so that we can select the requested amount of latest versions.
         val all = if (readHistory && versions > 1) """, query_partitioned AS
-(SELECT $selectCols, ROW_NUMBER() OVER (PARTITION BY $FN ORDER BY $VERSION DESC) AS v FROM query)
+(SELECT $selectCols, ROW_NUMBER() OVER (PARTITION BY ${FeatureNumberMember.id} ORDER BY ${VersionMember.id} DESC) AS v FROM query)
 , all_versions AS
 (SELECT $selectCols FROM query_partitioned WHERE v <= $versions)""" else ""
 
@@ -138,20 +138,20 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         // apply limit and order, if given
         val limited = """, limited AS
 (SELECT $selectCols FROM ${if (all.isNotEmpty()) "all_versions" else "query"} ${if (order_by_string.isNotEmpty()) "ORDER BY $order_by_string "
-else if (all.isNotEmpty()) "ORDER BY $FN ASC, $VERSION DESC " else ""}LIMIT $REQ_LIMIT)"""
+else if (all.isNotEmpty()) "ORDER BY ${FeatureNumberMember.id} ASC, ${VersionMember.id} DESC " else ""}LIMIT $REQ_LIMIT)"""
 
         // The final SQL query.
         // We only need `col_num`, `fn`, and `version`; the additional columns in limit were only for sorting.
         // If we only select from a single collection (thePgCollection != null), `col_num` is implicit.
         val SQL = """WITH $query$all$limited
-SELECT $FN AS fn, $VERSION AS version FROM limited"""
+SELECT ${FeatureNumberMember.id} AS fn, ${VersionMember.id} AS version FROM limited"""
         return PgQuery(
             sql = SQL,
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),
             argTypes = whereClause?.argTypeNames ?: emptyArray(),
-            pgStorage.number,
-            pgCatalog.catalogNumber,
-            pgCollection.collectionNumber
+            databaseId = databaseId,
+            pgCatalog,
+            pgCollection
         )
     }
 }

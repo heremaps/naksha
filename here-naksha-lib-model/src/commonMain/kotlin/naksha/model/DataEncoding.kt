@@ -2,7 +2,7 @@
 
 package naksha.model
 
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -19,9 +19,9 @@ import kotlin.reflect.KClass
  * @since 3.0
  */
 @JsExport
-class DataEncoding : JsEnum() {
+class DataEncoding : BaseEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = DataEncoding::class
+    override fun namespace(): KClass<out BaseEnum> = DataEncoding::class
 
     override fun initClass() {}
 

@@ -2,7 +2,7 @@
 
 package naksha.model.request.query
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -10,7 +10,7 @@ import kotlin.js.JsName
  * Logically OR combine.
  */
 @JsExport
-class SpOr() : ListProxy<ISpatialQuery>(ISpatialQuery::class), ISpatialQuery {
+class SpOr() : PTypedArray<ISpatialQuery>(ISpatialQuery::class), ISpatialQuery {
 
     /**
      * Create a logical AND combination of the given queries.

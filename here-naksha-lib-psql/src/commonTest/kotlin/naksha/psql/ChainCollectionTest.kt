@@ -1,15 +1,18 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.Int64
 import naksha.model.objects.Index
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumberMember
 import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.model.request.ops.IsAnyOf
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -34,7 +37,7 @@ import kotlin.test.assertNull
  *   `left_fn`) returns the expected feature.
  */
 class ChainCollectionTest : PgTestBase(
-    collection = NakshaCollection("").apply {
+    collection = NakshaCollection().apply {
         // Two custom INT64 columns that hold left / right neighbour feature-numbers.
         addMember(Member("left_fn",  MemberType.INT64))
         addMember(Member("right_fn", MemberType.INT64))
@@ -49,7 +52,7 @@ class ChainCollectionTest : PgTestBase(
     private val tailFn  = 3000L
 
     private fun makeFeature(fn: Long, leftFn: Long?, rightFn: Long?): NakshaFeature {
-        val f = NakshaFeature(fn.toString())
+        val f = NakshaFeature(Id(fn))
         if (leftFn  != null) f.properties["left_fn"]  = Int64(leftFn)
         if (rightFn != null) f.properties["right_fn"] = Int64(rightFn)
         return f
@@ -67,9 +70,9 @@ class ChainCollectionTest : PgTestBase(
     @Test
     fun allMembersShouldHaveAnEffectivePath() {
         val members = assertNotNull(collection.members)
-        val leftFn = assertNotNull(members.find { it?.name == "left_fn" })
+        val leftFn = assertNotNull(members.find { it?.id == "left_fn" })
         assertContentEquals(listOf("properties", "left_fn"), leftFn.path)
-        val rightFn = assertNotNull(members.find { it?.name == "right_fn" })
+        val rightFn = assertNotNull(members.find { it?.id == "right_fn" })
         assertContentEquals(listOf("properties", "right_fn"), rightFn.path)
     }
 
@@ -83,26 +86,19 @@ class ChainCollectionTest : PgTestBase(
         val mid  = makeFeature(midFn,  leftFn = headFn, rightFn = tailFn)
         val tail = makeFeature(tailFn, leftFn = midFn,  rightFn = null)
 
-        executeWrite(WriteRequest().apply {
-            add(Write().createFeature(collection.catalogId, collection.id, head))
-            add(Write().createFeature(collection.catalogId, collection.id, mid))
-            add(Write().createFeature(collection.catalogId, collection.id, tail))
+        executeWriteAndLoadTuples(WriteRequest().apply {
+            add(Write().createFeature(collection, head))
+            add(Write().createFeature(collection, mid))
+            add(Write().createFeature(collection, tail))
         })
 
         // When: reading all three back by their numeric IDs in one request
-        val response = executeRead(ReadFeatures().apply {
-            catalogId = collection.catalogId
-            collectionId = collection.id
-            featureIds += headFn.toString()
-            featureIds += midFn.toString()
-            featureIds += tailFn.toString()
-        })
-
-        assertEquals(3, response.features.size)
+        val response = executeReadAndLoadTuple(ReadFeatures(collection).withMemberQuery(IsAnyOf(FeatureNumberMember.id, head.id, mid.id, tail.id)))
+        assertEquals(3, response.length)
 
         // Then: verify head
-        val headBack = assertNotNull(response.features.find { it?.id == headFn.toString() })
-        assertEquals(Int64(headFn), XyzTn.get(headBack)?.featureNumber)
+        val headBack = assertNotNull(response.asFeatures.find { it?.id?.text == headFn.toString() })
+        assertEquals(headFn, XyzTn.get(headBack)?.featureNumber)
         assertNull(
             headBack.properties["left_fn"],
             "head.left_fn should be null"
@@ -114,8 +110,8 @@ class ChainCollectionTest : PgTestBase(
         )
 
         // Then: verify mid
-        val midBack = assertNotNull(response.features.find { it?.id == midFn.toString() })
-        assertEquals(Int64(midFn), XyzTn.get(midBack)?.featureNumber)
+        val midBack = assertNotNull(response.asFeatures.find { it?.id?.text == midFn.toString() })
+        assertEquals(midFn, XyzTn.get(midBack)?.featureNumber)
         assertEquals(
             Int64(headFn),
             toInt64(midBack.properties["left_fn"]),
@@ -128,8 +124,8 @@ class ChainCollectionTest : PgTestBase(
         )
 
         // Then: verify tail
-        val tailBack = assertNotNull(response.features.find { it?.id == tailFn.toString() })
-        assertEquals(Int64(tailFn), XyzTn.get(tailBack)?.featureNumber)
+        val tailBack = assertNotNull(response.asFeatures.find { it?.id?.text == tailFn.toString() })
+        assertEquals(tailFn, XyzTn.get(tailBack)?.featureNumber)
         assertEquals(
             Int64(midFn),
             toInt64(tailBack.properties["left_fn"]),
@@ -175,23 +171,20 @@ class ChainCollectionTest : PgTestBase(
         val head = makeFeature(headFn, leftFn = null,  rightFn = midFn)
         val mid  = makeFeature(midFn,  leftFn = headFn, rightFn = tailFn)
         val tail = makeFeature(tailFn, leftFn = midFn,  rightFn = null)
-        executeWrite(WriteRequest().apply {
-            add(Write().upsertFeature(collection.catalogId, collection.id, head))
-            add(Write().upsertFeature(collection.catalogId, collection.id, mid))
-            add(Write().upsertFeature(collection.catalogId, collection.id, tail))
-        })
+        executeWriteAndLoadTuples(WriteRequest()
+            .add(Write().upsertFeature(collection, head))
+            .add(Write().upsertFeature(collection, mid))
+            .add(Write().upsertFeature(collection, tail))
+        )
 
         // When: reading all features from this collection (no ID filter)
-        val all = executeRead(ReadFeatures().apply {
-            catalogId = collection.catalogId
-            collectionId = collection.id
-        })
+        val all = executeReadAndLoadTuple(ReadFeatures(collection))
 
         // Then: find the feature whose right_fn == tailFn (that must be mid)
-        val candidate = all.features.find { f ->
+        val candidate = all.asFeatures.find { f ->
             f != null && toInt64(f.properties["right_fn"]) == Int64(tailFn)
         }
         assertNotNull(candidate, "No feature with right_fn == tailFn found")
-        assertEquals(midFn.toString(), candidate.id)
+        assertEquals(midFn.toString(), candidate.id.text)
     }
 }

@@ -1,7 +1,7 @@
 package naksha.psql.assertions
 
-import naksha.base.AnyList
-import naksha.base.AnyObject
+import naksha.base.PAnyArray
+import naksha.base.PAnyMap
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -17,7 +17,7 @@ class NakshaFeatureFluidAssertions private constructor(val subject: NakshaFeatur
         other: NakshaFeature,
         ignoreProps: Boolean = true
     ): NakshaFeatureFluidAssertions {
-        return hasId(other.id)
+        return hasId(other.id.text)
             .hasType(other.type)
             .hasBbox(other.bbox)
             .hasGeometry(other.geometry)
@@ -31,7 +31,7 @@ class NakshaFeatureFluidAssertions private constructor(val subject: NakshaFeatur
     }
 
     fun hasId(id: String): NakshaFeatureFluidAssertions =
-        apply { assertEquals(id, subject.id) }
+        apply { assertEquals(id, subject.id.text) }
 
     fun hasType(type: String): NakshaFeatureFluidAssertions =
         apply { assertEquals(type, subject.type) }
@@ -44,8 +44,8 @@ class NakshaFeatureFluidAssertions private constructor(val subject: NakshaFeatur
             } else {
                 assertNotNull(subjectBbox)
                 CommonProxyAssertions.assertAnyListsEqual(
-                    boundingBox.proxy(AnyList::class),
-                    subjectBbox.proxy(AnyList::class),
+                    boundingBox.proxy(PAnyArray::class),
+                    subjectBbox.proxy(PAnyArray::class),
                     "boundingBox"
                 )
             }
@@ -68,8 +68,8 @@ class NakshaFeatureFluidAssertions private constructor(val subject: NakshaFeatur
         } else {
             assertNotNull(right)
             CommonProxyAssertions.assertAnyObjectsEqual(
-                left.proxy(AnyObject::class),
-                right.proxy(AnyObject::class)
+                left.proxy(PAnyMap::class),
+                right.proxy(PAnyMap::class)
             )
         }
     }

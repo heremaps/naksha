@@ -1,6 +1,6 @@
 package naksha.model.mom
 
-import naksha.base.JsEnum
+import naksha.base.BaseEnum
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -11,9 +11,9 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class MomChangeState : JsEnum() {
+class MomChangeState : BaseEnum() {
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = MomChangeState::class
+    override fun namespace(): KClass<out BaseEnum> = MomChangeState::class
 
     override fun initClass() {}
 

@@ -1,6 +1,6 @@
 package naksha.geo
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.math.abs
@@ -8,7 +8,7 @@ import kotlin.math.min
 
 @Suppress("OPT_IN_USAGE", "MemberVisibilityCanBePrivate", "unused")
 @JsExport
-class SpBoundingBox() : ListProxy<Double>(Double::class) {
+class SpBoundingBox() : PTypedArray<Double>(Double::class) {
 
     @JsName("of2D")
     constructor(west: Double, south: Double, east: Double, north: Double) : this() {

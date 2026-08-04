@@ -1,6 +1,6 @@
 package naksha.auth.attribute
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 
 
@@ -9,7 +9,7 @@ class SpaceAttributes : NakshaAttributes<StorageAttributes>() {
 
     fun eventHandlerIds(eventHandlerIds: List<String>) =
         apply {
-            box(eventHandlerIds, ListProxy::class)?.let { set(EVENT_HANDLER_IDS_KEY, it) }
+            box(eventHandlerIds, PTypedArray::class)?.let { set(EVENT_HANDLER_IDS_KEY, it) }
         }
 
     companion object {

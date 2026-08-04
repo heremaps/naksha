@@ -18,7 +18,7 @@ class ProxyOnCreateTest {
 const val TEST_KEY = "test_key"
 const val TEST_VALUE = "test_value"
 
-private class TestClassWithOnCreate : AnyObject() {
+private class TestClassWithOnCreate : PAnyMap() {
 
     override fun onCreation() {
         super.onCreation()

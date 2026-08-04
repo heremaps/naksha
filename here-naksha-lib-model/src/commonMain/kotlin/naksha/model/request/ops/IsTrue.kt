@@ -19,5 +19,5 @@ class IsTrue() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member) : this(at.name)
+    constructor(at: Member) : this(at.id)
 }

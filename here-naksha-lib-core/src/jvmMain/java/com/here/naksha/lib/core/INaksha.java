@@ -19,9 +19,15 @@
 package com.here.naksha.lib.core;
 
 import com.here.naksha.lib.core.models.ExtensionConfig;
+import naksha.base.NakshaException;
 import naksha.model.IStorage;
+import naksha.model.objects.NakshaCatalog;
+import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.NakshaDatabase;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
+
+import static com.here.naksha.lib.core.HubInternalIdentifiers.*;
 
 /**
  * The Naksha host interface. When an application bootstraps, it creates a Naksha host implementation and exposes it to the Naksha API. The
@@ -31,8 +37,72 @@ import org.jetbrains.annotations.NotNull;
 @SuppressWarnings("unused")
 public interface INaksha {
 
+  /**
+   * The `id` of the admin-catalog.
+   * @deprecated Please replace with {@link #getAdminCatalog()}.
+   */
+  @Deprecated
+  @NotNull String getAdminMapId();
+
+  /**
+   * Returns the admin database.
+   * @return the admin database.
+   * @throws NakshaException if not yet initialized.
+   */
+  @NotNull NakshaDatabase getAdminDatabase();
+
+  /**
+   * Returns the admin catalog.
+   * @return the admin catalog.
+   * @throws NakshaException if not yet initialized.
+   */
+  @NotNull NakshaCatalog getAdminCatalog();
+
+  /**
+   * Returns on the pre-defined admin-collections, see {@link HubInternalIdentifiers}.
+   * @param collectionId the `id` of the collection to return.
+   * @return the collection.
+   * @throws NakshaException if not yet initialized or no such collection exists.
+   */
   @NotNull
-  String getAdminMapId();
+  NakshaCollection getAdminCollection(@NotNull String collectionId);
+
+  /**
+   * Returns the {@link HubInternalIdentifiers#SPACES spaces} collection descriptor.
+   * <p><b>The returned object must not be modified!</b></p>
+   * @return the collection descriptor.
+   */
+  default @NotNull NakshaCollection spacesCollection() { return getAdminCollection(SPACES); }
+  /**
+   * Returns the {@link HubInternalIdentifiers#CONFIGS configs} collection descriptor.
+   * <p><b>The returned object must not be modified!</b></p>
+   * @return the collection descriptor.
+   */
+  default @NotNull NakshaCollection configsCollection() { return getAdminCollection(CONFIGS); }
+  /**
+   * Returns the {@link HubInternalIdentifiers#SUBSCRIPTIONS subscriptions} collection descriptor.
+   * <p><b>The returned object must not be modified!</b></p>
+   * @return the collection descriptor.
+   */
+  default @NotNull NakshaCollection subscriptionsCollection() { return getAdminCollection(SUBSCRIPTIONS); }
+  /**
+   * Returns the {@link HubInternalIdentifiers#EVENT_HANDLERS event-handlers} collection descriptor.
+   * <p><b>The returned object must not be modified!</b></p>
+   * @return the collection descriptor.
+   */
+  default @NotNull NakshaCollection eventHandlersCollection() { return getAdminCollection(EVENT_HANDLERS); }
+  /**
+   * Returns the {@link HubInternalIdentifiers#STORAGES storages} collection descriptor.
+   * <p><b>The returned object must not be modified!</b></p>
+   * @return the collection descriptor.
+   */
+  default @NotNull NakshaCollection storagesCollection() { return getAdminCollection(STORAGES); }
+  /**
+   * Returns the {@link HubInternalIdentifiers#EXTENSIONS extensions} collection descriptor.
+   * <p><b>The returned object must not be modified!</b></p>
+   * @return the collection descriptor.
+   */
+  default @NotNull NakshaCollection extensionsCollection() { return getAdminCollection(EXTENSIONS); }
 
   /**
    * Returns a thin wrapper above the admin-database that adds authorization and internal event handling. Basically, this allows access to the admin collections.

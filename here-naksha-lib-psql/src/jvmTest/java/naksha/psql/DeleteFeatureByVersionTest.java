@@ -3,7 +3,7 @@ package naksha.psql;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-import naksha.base.StringList;
+import naksha.base.Id;
 import naksha.base.NakshaError;
 import naksha.base.Version;
 import naksha.model.objects.NakshaCollection;
@@ -22,7 +22,7 @@ class DeleteFeatureByVersionTest extends PgTestBase {
   private static final String COLLECTION_ID = "delete_feature_by_uuid_test_col";
 
   public DeleteFeatureByVersionTest() {
-    super(new NakshaCollection(COLLECTION_ID), "");
+    super(new NakshaCollection(new Id(COLLECTION_ID), new Id(""), new Id("")), "");
   }
 
   @Test
@@ -33,7 +33,7 @@ class DeleteFeatureByVersionTest extends PgTestBase {
 
     // And: a delete request including version
     WriteRequest deleteByVersionReq = new WriteRequest().add(
-        new Write().deleteFeatureById(getCollection(), initialFeature.getId(), version));
+        new Write().deleteFeatureById(getCollection(), initialFeature.getId(), version.number));
 
     // When: executing delete request
     Response deleteResp = storage.useWriteSession(newSessionOptions(), writer -> {
@@ -61,7 +61,7 @@ class DeleteFeatureByVersionTest extends PgTestBase {
 
     // And: a delete request including version
     WriteRequest deleteByVersionReq = new WriteRequest().add(
-        new Write().deleteFeatureById(getCollection(), updatedFeature.getId(), version));
+        new Write().deleteFeatureById(getCollection(), updatedFeature.getId(), version.number));
 
     // When: executing delete request
     Response deleteResp = storage.useWriteSession(newSessionOptions(), writer -> {
@@ -89,23 +89,23 @@ class DeleteFeatureByVersionTest extends PgTestBase {
 
     // And: a delete request including outdated version
     WriteRequest deleteByVersionReq = new WriteRequest().add(
-        new Write().deleteFeatureById(getCollection(), updatedFeature.getId(), initialVersion));
+        new Write().deleteFeatureById(getCollection(), updatedFeature.getId(), initialVersion.number)
+    );
 
     // When: executing delete request
-    Response deleteResp = storage.useWriteSession(newSessionOptions(), writer -> {
-      Response resp = writer.execute(deleteByVersionReq);
+    final Response resp;
+    try (final var session = storage.newWriteSession(newSessionOptions())) {
+      resp = session.execute(deleteByVersionReq);
       if (resp instanceof SuccessResponse) {
-        writer.commit();
+        session.commit();
       } else {
-        writer.rollback();
+        session.rollback();
       }
-      return resp;
-    });
-
+    }
     // Then: deletion failed
-    assertInstanceOf(ErrorResponse.class, deleteResp);
-    ErrorResponse errorDeleteResp = (ErrorResponse) deleteResp;
-    assertEquals(NakshaError.CONFLICT, errorDeleteResp.getError().getCode());
+    assertInstanceOf(ErrorResponse.class, resp);
+    ErrorResponse errorResp = (ErrorResponse) resp;
+    assertEquals(NakshaError.CONFLICT, errorResp.getError().getCode());
   }
 
   @Test
@@ -121,9 +121,9 @@ class DeleteFeatureByVersionTest extends PgTestBase {
     String firstAdditionalFeatureId = "additional_feature_1";
     String secondAdditionalFeatureId = "additional_feature_2";
     WriteRequest compositeWriteRequest = new WriteRequest()
-        .add(new Write().createFeature(getCollection(), new NakshaFeature(firstAdditionalFeatureId)))
-        .add(new Write().deleteFeatureById(getCollection(), updatedFeature.getId(), initialVersion)) // invalid delete Write operation
-        .add(new Write().createFeature(getCollection(), new NakshaFeature(secondAdditionalFeatureId)));
+        .add(new Write().createFeature(getCollection(), new NakshaFeature(new Id(firstAdditionalFeatureId))))
+        .add(new Write().deleteFeatureById(getCollection(), updatedFeature.getId(), initialVersion.number)) // invalid delete Write operation
+        .add(new Write().createFeature(getCollection(), new NakshaFeature(new Id(secondAdditionalFeatureId))));
 
     // When: executing composite request
     Response deleteResp = storage.useWriteSession(newSessionOptions(), writer -> {
@@ -142,7 +142,7 @@ class DeleteFeatureByVersionTest extends PgTestBase {
     assertEquals(NakshaError.CONFLICT, errorDeleteResp.getError().getCode());
 
     // And: there is only one (updated) feature in the collection
-    NakshaFeatureList storedFeatures = getFeatureByIds(initialFeature.getId(), firstAdditionalFeatureId, secondAdditionalFeatureId);
+    NakshaFeatureList storedFeatures = getFeatureByIds(initialFeature.getId().getText(), firstAdditionalFeatureId, secondAdditionalFeatureId);
     assertEquals(1, storedFeatures.size());
     NakshaFeature storedFeature = storedFeatures.get(0);
     assertEquals(updatedFeature.getId(), storedFeature.getId());
@@ -153,15 +153,17 @@ class DeleteFeatureByVersionTest extends PgTestBase {
     ReadFeatures readAll = new ReadFeatures()
         .withCatalogId(getCollection().getCatalogId())
         .withCollectionId(getCollection().getId());
-    readAll.setFeatureIds(StringList.of(ids));
-    return executeRead(readAll, newSessionOptions()).getFeatures();
+    for (String id : ids) {
+      readAll.getFeatureIds().add(new Id(id));
+    }
+    return executeReadAndLoadTuple(readAll, newSessionOptions()).getAsFeatures();
   }
 
   private NakshaFeature createFeatureWithId(String id) {
-    NakshaFeature initialFeature = new NakshaFeature(id);
+    NakshaFeature initialFeature = new NakshaFeature(new Id(id));
     WriteRequest createFeatureReq = new WriteRequest().add(new Write().createFeature(getCollection(), initialFeature));
-    SuccessResponse createResp = executeWrite(createFeatureReq);
-    NakshaFeatureList createdFeatures = createResp.getFeatures();
+    SuccessResponse createResp = executeWriteAndLoadTuples(createFeatureReq);
+    NakshaFeatureList createdFeatures = createResp.getAsFeatures();
     assertEquals(1, createdFeatures.size());
     return createdFeatures.get(0);
   }
@@ -169,8 +171,8 @@ class DeleteFeatureByVersionTest extends PgTestBase {
   private NakshaFeature updateFeature(NakshaFeature feature) {
     feature.getProperties().put("foo", "bar");
     WriteRequest updateFeatureReq = new WriteRequest().add(new Write().updateFeature(getCollection(), feature, true));
-    SuccessResponse updateResp = executeWrite(updateFeatureReq);
-    NakshaFeatureList updatedFeatures = updateResp.getFeatures();
+    SuccessResponse updateResp = executeWriteAndLoadTuples(updateFeatureReq);
+    NakshaFeatureList updatedFeatures = updateResp.getAsFeatures();
     assertEquals(1, updatedFeatures.size());
     return updatedFeatures.get(0);
   }

@@ -3,7 +3,6 @@
 package naksha.jbon
 
 import naksha.base.*
-import naksha.base.Binary.BinaryCompanion.EMPTY_IMMUTABLE
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
@@ -192,8 +191,8 @@ open class JbDecoder {
          * @return The platform native map.
          */
         @JvmStatic
-        internal fun readMap(jbMapDecoder: JbMapDecoder): AnyObject {
-            val imap = AnyObject()
+        internal fun readMap(jbMapDecoder: JbMapDecoder): PAnyMap {
+            val imap = PAnyMap()
             while (jbMapDecoder.next()) {
                 imap[jbMapDecoder.key()] = jbMapDecoder.value().decodeValue()
             }
@@ -206,8 +205,8 @@ open class JbDecoder {
          * @return The platform native array.
          */
         @JvmStatic
-        internal fun readArray(jbArray: JbArrayDecoder): AnyList {
-            val list = AnyList()
+        internal fun readArray(jbArray: JbArrayDecoder): PAnyArray {
+            val list = PAnyArray()
             list.setCapacity(jbArray.length())
             while (jbArray.next() && jbArray.ok()) {
                 list.add(jbArray.value().decodeValue())
@@ -219,7 +218,7 @@ open class JbDecoder {
     /**
      * The binary that is read. When assigned, by default the
      */
-    var binary: BinaryView = EMPTY_IMMUTABLE
+    var binary: BinaryView = Binary()
         set(value) {
             field = value
             this.end = value.end
@@ -362,7 +361,7 @@ open class JbDecoder {
      */
     open fun leadIn(): Int {
         val offset = this.pos
-        if (offset < 0 || offset >= end) return ENC_MIXED_CONST_UNDEFINED
+        if (offset !in 0 until end) return ENC_MIXED_CONST_UNDEFINED
         return binary.getInt8(offset).toInt() and 0xff
     }
 
@@ -627,22 +626,20 @@ open class JbDecoder {
      * Read the current unit as integer.
      * @return The value read or _null_, if the current unit is no integer.
      */
-    fun decodeInt64(): Int64? {
+    fun decodeInt64(): Long? {
         val leadIn = leadIn()
         return when (leadIn and ENC_MASK) {
             ENC_TINY -> when (leadIn and ENC_TINY_MASK) {
-                ENC_TINY_INT -> Int64((leadIn shl 27) shr 27)
+                ENC_TINY_INT -> ((leadIn shl 27) shr 27).toLong()
                 else -> null
             }
-
             ENC_MIXED -> when (leadIn) {
-                ENC_MIXED_SCALAR_INT8 -> Int64(binary.getInt8(pos + 1).toInt())
-                ENC_MIXED_SCALAR_INT16 -> Int64(binary.getInt16(pos + 1).toInt())
-                ENC_MIXED_SCALAR_INT32 -> Int64(binary.getInt32(pos + 1))
+                ENC_MIXED_SCALAR_INT8 -> binary.getInt8(pos + 1).toLong()
+                ENC_MIXED_SCALAR_INT16 -> binary.getInt16(pos + 1).toLong()
+                ENC_MIXED_SCALAR_INT32 -> binary.getInt32(pos + 1).toLong()
                 ENC_MIXED_SCALAR_INT64 -> binary.getInt64(pos + 1)
                 else -> null
             }
-
             else -> null
         }
     }
@@ -853,7 +850,7 @@ open class JbDecoder {
 
     /**
      * Read the current unit.
-     * @return _null_, [Boolean], [Int], [Int64], [Double], [String], [AnyObject] or [Array].
+     * @return _null_, [Boolean], [Int], [Int64], [Double], [String], [PAnyMap] or [Array].
      * @throws IllegalStateException If the reader position or the unit-type is invalid.
      */
     fun decodeValue(): Any? {

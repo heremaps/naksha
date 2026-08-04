@@ -12,8 +12,8 @@ import kotlin.time.Instant
  */
 @Suppress("OPT_IN_USAGE", "unused")
 @JsExport
-open class Epoch(val millis: Int64 = Platform.currentMillis()) {
-    private val dateTime = Instant.fromEpochMilliseconds(millis.toLong()).toLocalDateTime(TimeZone.UTC)
+open class Epoch(val millis: Long = Base.currentMillis()) {
+    private val dateTime = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.UTC)
 
     /**
      * The year.

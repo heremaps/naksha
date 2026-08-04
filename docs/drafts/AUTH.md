@@ -377,10 +377,10 @@ Matrix of all supported **Actions** and **Attributes** for validating authorizat
 * `appId` - `properties.@ns:com:here:xyz.appId`
 * `author` - `properties.@ns:com:here:xyz.author`
 * **Storage** related:
-  * `storageId` - wild-card supported
+  * `databaseId` - wild-card supported
   * `storageTags` - wild-card supported - Storage prop path `properties.@ns:com:here:xyz.tags`
 * **XyzCollection** related:
-  * `collectionId` - wild-card supported
+  * `catalogId` - wild-card supported
   * `collectionTags` - wild-card supported - XyzCollection prop path `properties.@ns:com:here:xyz.tags`
 
 #### Actions
@@ -404,7 +404,7 @@ Matrix of all supported **Actions** and **Attributes** for validating authorizat
 * `appId` - `properties.@ns:com:here:xyz.appId`
 * `author` - `properties.@ns:com:here:xyz.author`
 * **Storage** related:
-  * `storageId` - wild-card supported
+  * `databaseId` - wild-card supported
   * `storageTags` - wild-card supported - Storage prop path `properties.@ns:com:here:xyz.tags`
 
 #### Actions
@@ -428,7 +428,7 @@ Matrix of all supported **Actions** and **Attributes** for validating authorizat
 * `appId` - `properties.@ns:com:here:xyz.appId`
 * `author` - `properties.@ns:com:here:xyz.author`
 * **Storage** related:
-  * `storageId` - wild-card supported
+  * `databaseId` - wild-card supported
 * **EventHandler** related:
   * `eventHandlerIds` - wild-card supported
 * **XyzCollection** related:

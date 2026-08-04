@@ -1,9 +1,9 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.I64_INT_MASK
-import naksha.base.Platform.PlatformCompanion.I64_ZERO
-import naksha.base.Platform.PlatformCompanion._int64
-import naksha.base.Platform.PlatformCompanion.i64_arr
+import naksha.base.Base.BaseCompanion.I64_INT_MASK
+import naksha.base.Base.BaseCompanion.I64_ZERO
+import naksha.base.Base.BaseCompanion._int64
+import naksha.base.Base.BaseCompanion.i64_arr
 
 class JsInt64 internal constructor(): Int64 {
     override fun unaryPlus(): Int64 = this
@@ -88,13 +88,13 @@ class JsInt64 internal constructor(): Int64 {
 
     override fun toInt(): Int = js("Number(BigInt.asIntN(32,this.valueOf()))").unsafeCast<Int>()
 
-    override fun toLong(): Long = Platform.int64ToLong(this)
+    override fun toLong(): Long = Base.int64ToLong(this)
 
     override fun toFloat(): Float = js("Number(this.valueOf())").unsafeCast<Float>()
 
     override fun toDouble(): Double = js("Number(this.valueOf())").unsafeCast<Double>()
 
-    override fun toDoubleRawBits(): Double = Platform.toDoubleRawBits(this)
+    override fun toDoubleRawBits(): Double = Base.toDoubleRawBits(this)
 
     override fun hashCode(): Int {
         val u: dynamic = js("BigInt.asUintN(64, this.valueOf())")

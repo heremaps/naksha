@@ -2,7 +2,7 @@
 
 package naksha.model.request
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import kotlin.js.JsExport
 
 /**
@@ -11,7 +11,7 @@ import kotlin.js.JsExport
  * If this response is for a write request with [WriteRequest.returnResults] being _true_, the client signals that it is not interested in the result (except for either being success or failure), and the database should not generate result rows. This improves write throughput, because no data must be returned (often it simplifies the write itself, e.g. when deleting rows, they do not need to be read from the database).
  */
 @JsExport
-open class Response : AnyObject() {
+open class Response : PAnyMap() {
 
     /**
      * The size of the underlying platform object, so the hash-map, **not the amount of results**!

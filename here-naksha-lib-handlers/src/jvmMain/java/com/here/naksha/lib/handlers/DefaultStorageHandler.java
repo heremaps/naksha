@@ -25,8 +25,8 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import naksha.model.objects.NakshaDatabase;
 import naksha.model.util.CustomStoragePropertiesUtil;
-import naksha.base.JvmBoxingUtil;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
@@ -52,7 +52,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.function.Supplier;
 
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
@@ -64,7 +63,7 @@ import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttemp
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static naksha.base.Platform.*;
+import static naksha.base.Base.*;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
@@ -457,7 +456,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull SessionOptions sessionOptions,
       @NotNull IStorage storageImpl,
       @NotNull String mapId) {
-    WriteRequest createMapRequest = new WriteRequest().add(new Write().createCatalog(new NakshaCatalog(mapId)));
+    WriteRequest createMapRequest = new WriteRequest().add(new Write().createCatalog(new NakshaCatalog(mapId, new NakshaDatabase(storageImpl))));
     return singleWrite(sessionOptions, storageImpl, createMapRequest);
   }
 
@@ -611,7 +610,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull String collectionId
   ) {
     return storageImpl.useWriteSession(sessionOptions, writer -> {
-      final Response result = writer.execute(createWriteCollectionsRequest(new NakshaCollection(collectionId, mapId)));
+      final var catalog = writer.getCatalogById(mapId);
+      if (catalog == null) return new ErrorResponse(NakshaError.MAP_NOT_FOUND, mapId);
+      final Response result = writer.execute(createWriteCollectionsRequest(new NakshaCollection(collectionId, catalog)));
       if (result instanceof SuccessResponse) {
         writer.commit();
         return result;

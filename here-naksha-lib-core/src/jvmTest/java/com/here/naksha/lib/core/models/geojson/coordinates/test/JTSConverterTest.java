@@ -25,7 +25,7 @@ import java.nio.file.Paths;
 
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmMap;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.geo.SpGeometry;
 import naksha.geo.ProxyGeoUtil;
 import naksha.model.objects.NakshaFeature;
@@ -39,8 +39,8 @@ public class JTSConverterTest {
         .getResource("/com/here/xyz/test/geometries.json")
         .toURI()));
     String featureText = new String(bytes);
-    JvmMap jvmMap = (JvmMap) Platform.fromJSON(featureText, FromJsonOptions.DEFAULT);
-    NakshaFeature feature = jvmMap.proxy(Platform.klassFor(NakshaFeature.class));
+    JvmMap jvmMap = (JvmMap) Base.fromJSON(featureText, FromJsonOptions.DEFAULT);
+    NakshaFeature feature = jvmMap.proxy(Base.klassFor(NakshaFeature.class));
 
     SpGeometry sourceGeometry = feature.getGeometry();
     org.locationtech.jts.geom.Geometry jtsGeometry = ProxyGeoUtil.toJtsGeometry(sourceGeometry);

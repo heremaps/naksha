@@ -2,33 +2,54 @@
 
 package naksha.model.request
 
+import naksha.base.FeatureType.FeatureType_C.CATALOG
+import naksha.base.FeatureType.FeatureType_C.COLLECTION
+import naksha.base.FeatureType.FeatureType_C.DATABASE
+import naksha.base.Id
+import naksha.base.IdList
 import naksha.base.Int64
+import naksha.base.NotNullIdProperty
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.GuidList
 import naksha.base.Version
 import naksha.base.illegalArg
+import naksha.base.illegalState
+import naksha.model.objects.NakshaCollection
 import naksha.model.request.ops.Op
-import naksha.model.request.query.IPropertyQuery
+import naksha.model.request.ops.*
 import naksha.model.request.query.ITagQuery
+import naksha.model.request.query.IPropertyQuery
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.math.max
 
 /**
- * Read features from a collection of a map of a storage.
+ * Read features from a [collection][NakshaCollection].
  *
- * If a logical **OR** between the different condition is needed, for example search for features being in a certain bounding box **or** having a certain tag, then two read-requests should be executed, and joined by the client. These queries can be executed in parallel using two distinct sessions to improve the performance.
+ * If multiple [collections][NakshaCollection] should be queried, then multiple read requests should be issued and the results should be merged, best is to send requests in parallel and then to join the results.
  *
  * @since 3.0.0
  */
 @JsExport
-open class ReadFeatures : ReadRequest() {
+open class ReadFeatures() : ReadRequest() {
+
+    /**
+     * Initiate a read from the given collection.
+     * @param collection the collection from which to read.
+     * @since 3.0
+     */
+    @JsName("forCollection")
+    constructor(collection: NakshaCollection) : this() {
+        databaseId = collection.databaseId
+        catalogId = collection.catalogId
+        collectionId = collection.id
+    }
 
     companion object ReadFeatures_C {
-        private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
-        private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class) { _, _ -> StringList() }
+        private val ID_NOT_NULL = NotNullIdProperty<ReadRequest>(randomId = false)
+        private val ID_LIST = NotNullProperty<ReadRequest, IdList>(IdList::class) { _, _ -> IdList() }
         private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
         private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
         private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
@@ -37,52 +58,65 @@ open class ReadFeatures : ReadRequest() {
     }
 
     /**
+     * The `id` of the database from which to read.
+     * @since 3.0
+     */
+    var databaseId: Id by ID_NOT_NULL
+
+    /**
+     * Tests if the [databaseId] is set.
+     * @since 3.0
+     */
+    open fun hasDatabaseId(): Boolean = hasIdValue("databaseId")
+
+    /**
+     * @see [databaseId]
+     */
+    open fun withDatabaseId(value: Id): ReadFeatures {
+        databaseId = value
+        return this
+    }
+
+    /**
      * The id of the catalog from which to read.
      *
      * @since 3.0
      */
-    var catalogId by STRING_OR_NULL
+    var catalogId: Id by ID_NOT_NULL
+
+    /**
+     * Tests if the [catalogId] is set.
+     * @since 3.0
+     */
+    open fun hasCatalogId(): Boolean = hasIdValue("catalogId")
 
     /**
      * @see [catalogId]
      */
-    open fun withCatalogId(value: String?): ReadFeatures {
+    open fun withCatalogId(value: Id): ReadFeatures {
         catalogId = value
         return this
     }
 
+
     /**
-     * Sets the property query for the request and automatically manages the required PropertyFilter.
-     * If the provided query is null, any existing PropertyFilter will be removed.
-     *
-     * @param pQuery The property query to apply, or null to clear it.
-     * @return this.
-     *
+     * The `id` of the collection to read.
      * @since 3.0
      */
-    @Deprecated("Remove, need always to be done on the client using post-filtering", replaceWith = ReplaceWith("op"))
-    open fun withPropertyQuery(pQuery: IPropertyQuery?): ReadFeatures {
-        this.query.properties = pQuery
-        this.resultFilters.removeAll { it is PropertyFilter }
-
-        if (pQuery != null) {
-            this.resultFilters.add(PropertyFilter(this))
-        }
-
-        return this
-    }
+    var collectionId: Id by ID_NOT_NULL
 
     /**
-     * Refreshes PropertyFilter based on [RequestQuery.properties] found under [ReadFeatures.query]
-     * This method comes handy if [IPropertyQuery] was mutated outside of this class scope,
-     * in such cases we need to populate the filter once again so it will be in sync with the query
+     * Tests if the [collectionId] is set.
+     * @since 3.0
      */
-    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
-    fun refreshPropertyFilter() {
-        this.resultFilters.removeAll { it is PropertyFilter }
-        if(query.properties != null) {
-            this.resultFilters.add(PropertyFilter(this))
-        }
+    open fun hasCollectionId(): Boolean = hasIdValue("collectionId")
+
+    /**
+     * @see collectionId
+     */
+    open fun withCollectionId(collectionId: Id): ReadFeatures {
+        this.collectionId = collectionId
+        return this
     }
 
     /**
@@ -101,19 +135,13 @@ open class ReadFeatures : ReadRequest() {
     }
 
     /**
-     * Ids of collections to read.
-     * @since 3.0
-     */
-    var collectionId: String? by STRING_OR_NULL
-
-    /**
-     * Sets the collection-id into [collectionId].
-     * @param collectionId the collection-id to set.
+     * Sets a property query on this read request.
+     * @param propertyQuery the property query to set.
      * @return this.
      * @since 3.0
      */
-    open fun withCollectionId(collectionId: String?): ReadFeatures {
-        this.collectionId = collectionId
+    open fun withPropertyQuery(propertyQuery: IPropertyQuery?): ReadFeatures {
+        this.query.properties = propertyQuery
         return this
     }
 
@@ -123,11 +151,27 @@ open class ReadFeatures : ReadRequest() {
     var queryDeleted: Boolean by BOOLEAN_OR_FALSE
 
     /**
+     * @see queryDeleted
+     */
+    fun withQueryDeleted(value: Boolean): ReadFeatures {
+        this.queryDeleted = value
+        return this
+    }
+
+    /**
      * Extend the request to search through historic states of features _(defaults to `false`)_.
      *
      * Setting this to `true` adds past states from the **HISTORY** section to the result set. When [versions] is greater than `1`, results are ordered automatically by the storage in reverse version order, so the most recent state is returned first.
      */
     var queryHistory: Boolean by BOOLEAN_OR_FALSE
+
+    /**
+     * @see queryHistory
+     */
+    fun withQueryHistory(value: Boolean): ReadFeatures {
+        this.queryHistory = value
+        return this
+    }
 
     /**
      * Defines how many states (versions) of each matching feature should be returned _(defaults to `1`)_.
@@ -156,12 +200,13 @@ open class ReadFeatures : ReadRequest() {
      * If the underlying JSON map contains a values that is not a number or invalid, the default value `null` will be used.
      * @since 3.0.0
      */
-    var minVersion: Int64?
+    var minVersion: Long?
         get() {
-            val raw = getRaw("minVersion")
-            if (raw is Int64) return if (raw < Version.MIN.number || raw > Version.HEAD.number) null else raw
+            var raw = getRaw("minVersion")
+            if (raw is Int64) raw = raw.toLong()
+            if (raw is Long) return if (raw < Version.MIN.number || raw > Version.HEAD.number) null else raw
             if (raw is Number) {
-                val value = Int64(raw.toLong())
+                val value = raw.toLong()
                 return if (value < Version.MIN.number || value > Version.HEAD.number) null else value
             }
             return null
@@ -173,21 +218,21 @@ open class ReadFeatures : ReadRequest() {
             set("minVersion", value)
         }
 
+    /**
+     * @see minVersion
+     */
     @JsName("withMinVersionInt64")
-    fun withMinVersion(minVersion: Int64?): ReadFeatures {
+    fun withMinVersion(minVersion: Long?): ReadFeatures {
         this.minVersion = minVersion
         return this
     }
 
+    /**
+     * @see minVersion
+     */
     @JsName("withMinVersion")
     fun withMinVersion(minVersion: Version?): ReadFeatures {
         this.minVersion = minVersion?.number
-        return this
-    }
-
-    @JsName("withMinVersionLong")
-    fun withMinVersion(minVersion: Long?): ReadFeatures {
-        this.minVersion = if (minVersion != null) Int64(minVersion) else null
         return this
     }
 
@@ -199,35 +244,35 @@ open class ReadFeatures : ReadRequest() {
      * If the underlying JSON map contains a values that is not a number or invalid, the default value `null` will be used.
      * @since 3.0.0
      */
-    var version: Int64?
+    var version: Long?
         get() {
             val raw = getRaw("version")
-            if (raw is Int64) return raw
-            if (raw is Number) return Int64(raw.toLong())
+            if (raw is Long) return raw
+            if (raw is Int64) return raw.toLong()
+            if (raw is Number) return raw.toLong()
             return null
         }
         set(value) {
             set("version", value)
         }
 
+    /**
+     * @see minVersion
+     */
     @JsName("withVersionInt64")
-    fun withVersion(version: Int64?): ReadFeatures {
+    fun withVersion(version: Long?): ReadFeatures {
         this.version = version
         return this
     }
 
+    /**
+     * @see minVersion
+     */
     @JsName("withVersion")
     fun withVersion(version: Version?): ReadFeatures {
         this.version = version?.number
         return this
     }
-
-    @JsName("withVersionLong")
-    fun withVersion(version: Long?): ReadFeatures {
-        this.version = if (version != null) Int64(version) else null
-        return this
-    }
-
 
     /**
      * Order the result-set like given; this is an expensive operation and should be avoided.
@@ -237,11 +282,19 @@ open class ReadFeatures : ReadRequest() {
     var orderBy: OrderBy? by ORDER_BY_OR_NULL
 
     /**
+     * @see orderBy
+     */
+    fun withOrderBy(orderBy: OrderBy?): ReadFeatures {
+        this.orderBy = orderBy
+        return this
+    }
+
+    /**
      * Add all features that match the given IDs into the result-set.
      * @since 3.0.0
      */
     @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
-    var featureIds: StringList by STRING_LIST
+    var featureIds: IdList by ID_LIST
 
     /**
      * Add all features that match the given [GUIDs][naksha.base.Guid] into the result-set.
@@ -258,16 +311,55 @@ open class ReadFeatures : ReadRequest() {
      * Add all features that match the given query into the result-set.
      * @since 3.0.0
      */
-    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
+    @Deprecated("Replaced with queryMembers", replaceWith = ReplaceWith("queryMembers"))
+    @JsName("queryDeprecated") // We never used this anywhere in JavaScript!
     var query: RequestQuery by QUERY
 
     /**
      * The [operations][Op] to execute to query members.
      *
-     * This replaces [query] and must not be used together with [query]. It actually allows to query for any member value. In doubt, [queryMembers] always wins.
+     * This replaces [withMemberQuery] and must not be used together with [withMemberQuery]. It actually allows to query for any member value. In doubt, [memberQuery] always wins.
      * @since 3.0
      */
-    var queryMembers: Op? by OP_OR_NULL
+    var memberQuery: Op? by OP_OR_NULL
+
+    /**
+     * Add a members query.
+     *
+     * Available operations are:
+     * - [And]
+     * - [Equals]
+     * - [Gt]
+     * - [Gte]
+     * - [Intersects]
+     * - [IsAnyOf]
+     * - [IsFalse]
+     * - [IsNull]
+     * - [IsTrue]
+     * - [Lt]
+     * - [Lte]
+     * - [Not]
+     * - [Or]
+     * - [StartsWith]
+     * - [TagEquals]
+     * - [TagGt]
+     * - [TagGte]
+     * - [TagIsNull]
+     * - [TagListContains]
+     * - [TagListContainsAllOf]
+     * - [TagListContainsAnyOf]
+     * - [TagMapHasAllOf]
+     * - [TagMapHasAnyOf]
+     * - [TagMapHasKey]
+     * - [TagMatches]
+     * - [TagStartsWith]
+     * @param op the query operation to perform.
+     * @since 3.0
+     */
+    fun withMemberQuery(op: Op): ReadFeatures {
+        this.memberQuery = op
+        return this
+    }
 
     /**
      * Tests whether this request is effectively a query for all features in their current **HEAD** state,

@@ -9,4 +9,6 @@ import kotlin.js.JsExport
  * @since 3.0.0
  */
 @JsExport
-interface IReadSession: ISession
+interface IReadSession: ISession {
+
+}

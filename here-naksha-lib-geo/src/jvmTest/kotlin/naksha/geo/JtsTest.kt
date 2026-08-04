@@ -1,7 +1,7 @@
 package naksha.geo
 
 import naksha.base.JvmMap
-import naksha.base.Platform
+import naksha.base.Base
 import org.junit.jupiter.api.Assertions.assertInstanceOf
 import org.junit.jupiter.api.Test
 import org.locationtech.jts.geom.LineString
@@ -57,7 +57,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val proxyGeometryFromJson = (Base.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -67,7 +67,7 @@ class JtsTest {
         // then
         assertInstanceOf(Point::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(Base.toJSON(proxyFromJts), Base.toJSON(proxyGeometryFromJson))
     }
 
     @Test
@@ -83,7 +83,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val proxyGeometryFromJson = (Base.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -93,7 +93,7 @@ class JtsTest {
         // then
         assertInstanceOf(MultiPoint::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(Base.toJSON(proxyFromJts), Base.toJSON(proxyGeometryFromJson))
     }
 
     @Test
@@ -109,7 +109,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val proxyGeometryFromJson = (Base.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -119,7 +119,7 @@ class JtsTest {
         // then
         assertInstanceOf(LineString::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(Base.toJSON(proxyFromJts), Base.toJSON(proxyGeometryFromJson))
     }
 
     @Test
@@ -141,7 +141,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val proxyGeometryFromJson = (Base.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -151,7 +151,7 @@ class JtsTest {
         // then
         assertInstanceOf(MultiLineString::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(Base.toJSON(proxyFromJts), Base.toJSON(proxyGeometryFromJson))
     }
 
     @Test
@@ -183,7 +183,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val proxyGeometryFromJson = (Base.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -193,7 +193,7 @@ class JtsTest {
         // then
         assertInstanceOf(Polygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(Base.toJSON(proxyFromJts), Base.toJSON(proxyGeometryFromJson))
     }
 
     @Test
@@ -243,7 +243,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val proxyGeometryFromJson = (Base.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -253,7 +253,7 @@ class JtsTest {
         // then
         assertInstanceOf(Polygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(Base.toJSON(proxyFromJts), Base.toJSON(proxyGeometryFromJson))
     }
 
     @Test
@@ -307,7 +307,7 @@ class JtsTest {
           }
         """.trimIndent()
 
-        val proxyGeometryFromJson = (Platform.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
+        val proxyGeometryFromJson = (Base.fromJSON(json) as JvmMap).proxy(SpGeometry::class)
         val jtsFromJson = jtsJsonReader.read(json)
 
         // when
@@ -317,7 +317,7 @@ class JtsTest {
         // then
         assertInstanceOf(MultiPolygon::class.java, jtsFromProxy)
         assertEquals(jtsFromJson, jtsFromProxy)
-        assertEquals(Platform.toJSON(proxyFromJts), Platform.toJSON(proxyGeometryFromJson))
+        assertEquals(Base.toJSON(proxyFromJts), Base.toJSON(proxyGeometryFromJson))
     }
 
     @Test
@@ -326,7 +326,7 @@ class JtsTest {
         val json = """{"coordinates":[1.0, 2.0]}"""
 
         // when
-        val proxyPoint = (Platform.fromJSON(json) as JvmMap).proxy(SpPoint::class)
+        val proxyPoint = (Base.fromJSON(json) as JvmMap).proxy(SpPoint::class)
         val jtsFromProxy = GeoUtil.toJtsGeometry(proxyPoint)
 
         // then

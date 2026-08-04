@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.Guid
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmStatic
@@ -14,7 +14,7 @@ import kotlin.jvm.JvmStatic
  * **Warning**: A [naksha.base.Guid] is not serializable, and it is not possible to create it without parameters.
  */
 @JsExport
-class GuidList : ListProxy<Guid>(Guid::class){
+class GuidList : PTypedArray<Guid>(Guid::class){
 
     companion object {
         @JvmStatic

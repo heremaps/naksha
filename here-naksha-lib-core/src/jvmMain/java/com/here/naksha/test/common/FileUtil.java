@@ -42,7 +42,7 @@ import static com.here.naksha.test.common.JsonUtil.parseJson;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import org.jetbrains.annotations.NotNull;
 
 public class FileUtil {
@@ -64,12 +64,12 @@ public class FileUtil {
     return loadFileOrFail(TEST_DATA_FOLDER, fileName);
   }
 
-  public static <T extends AnyObject> T parseJsonFileOrFail(
+  public static <T extends PAnyMap> T parseJsonFileOrFail(
       final @NotNull String fileName, final @NotNull Class<T> type) {
     return parseJson(loadFileOrFail(fileName), type);
   }
 
-  public static <T extends AnyObject> T parseJsonFileOrFail(
+  public static <T extends PAnyMap> T parseJsonFileOrFail(
       final @NotNull String rootPath, final @NotNull String fileName, final @NotNull Class<T> type) {
     return parseJson(loadFileOrFail(rootPath, fileName), type);
   }

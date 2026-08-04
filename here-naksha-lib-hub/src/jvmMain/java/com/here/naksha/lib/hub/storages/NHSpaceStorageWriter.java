@@ -162,7 +162,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     String spaceId = originalWrite.getId();
     WriteRequest deleteCollectionReq = new WriteRequest().add(
         // Note: The catalogId is set in DefaultStorageHandler.applyMapIdAndCollectionId
-        new Write().deleteCollection(new NakshaCollection(spaceId, null), false)
+        new Write().deleteCollection(new NakshaCollection().withId(spaceId), false)
     );
     Response deleteCollectionRes = executeSingleCollectionWrite(deleteCollectionReq, spaceId);
     if (deleteCollectionRes instanceof SuccessResponse) {

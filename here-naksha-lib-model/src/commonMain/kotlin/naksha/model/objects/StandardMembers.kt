@@ -22,92 +22,68 @@ class StandardMembers private constructor() {
         // Mandatory members — storage-managed, always present.
         // -------------------------------------------------------------------------
 
-        /** The name of the tuple-number member: `tn`. */
-        const val TN = "tn"
-
-        /** The name of the virtual feature-number member `fn`. */
-        const val FN = "fn"
-
-        /** The name of the virtual version member: `version`. */
-        const val VERSION = "version"
-
-        /** The name of the virtual action member: `action`. */
-        const val ACTION = "action"
-
-        /** The name of the id member: `id`. */
-        const val ID = "id"
-
-        /** The name of the next-version member: `nv`. */
-        const val NEXT_VERSION = "nv"
-
-        /** The name of the global-book feature-number member: `gbfn`. */
-        const val GLOBAL_BOOK_FN = "gbfn"
-
-        /** The name of the feature-bytes member: `feature`. */
-        const val FEATURE_BYTES = "feature"
-
         /**
          * `tn` — **Tuple-Number**. The [naksha.base.TupleNumber] of this feature. This persists out of:
-         * - `database-number: long` - The database in which the feature is stored.
-         * - `catalog-number: int` - The catalog in which the feature is stored.
-         * - `collection-number: int` - The collection in which the feature is stored.
-         * - `feature-number: long` - The unique identifier of the feature within the collection.
+         * - `databaseNumber: long` - The database in which the feature is stored.
+         * - `catalogNumber: int` - The catalog in which the feature is stored.
+         * - `collectionNumber: int` - The collection in which the feature is stored.
+         * - `featureNumber: long` - The unique identifier of the feature within the collection.
          * - `version: long` - The version of this feature state.
          *
-         * **Beware**: Not all storages will persist the full tuple-number, i.e. `lib-psql` will only store the `feature-number` as `_fn` and the `version` as `_version`, because the other parts can be deducted from the table location. Searching for parts of the tuple-number is supported by the [ReadFeatures][naksha.model.request.ReadFeatures] request using the [version][naksha.model.request.ReadFeatures.version] property.
+         * **Beware**: Not all storages will persist the full tuple-number, i.e. `lib-psql` will only store the `featureNumber` as `fn` and the `version` as `version`, because the other parts can be deducted from the table location. Searching for parts of the tuple-number is supported by the [ReadFeatures][naksha.model.request.ReadFeatures] request using the [version][naksha.model.request.ReadFeatures.version] property.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Tn = TupleNumberMember(TN, JsonPath(TN)).withMandatory()
+        val TnMember = TupleNumberMember("tn", JsonPath("tn")).withMandatory()
 
         /**
-         * Virtual member that refers to the feature-number of the [tuple-number][Tn], the only purpose is for queries and result ordering.
+         * `fn` — **Virtual** member that refers to the feature-number inside the [tuple-number][TnMember]; the only purpose is for queries and result ordering.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val FeatureNumber = Int64Member(FN, JsonPath()).withMandatory().withVirtual()
+        val FeatureNumberMember = Int64Member("fn", JsonPath()).withMandatory().withVirtual()
 
         /**
-         * Virtual member that refers to the version of the [tuple-number][Tn], the only purpose is for queries and result ordering.
+         * `version` — **Virtual** member that refers to the version inside the [tuple-number][TnMember]; the only purpose is for queries and result ordering.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val FeatureVersion = Int64Member(VERSION, JsonPath()).withMandatory().withVirtual()
+        val VersionMember = Int64Member("version", JsonPath()).withMandatory().withVirtual()
 
         /**
-         * Virtual, query-only member for the [action][naksha.base.Action] (the lower two bits of the version); resolved to `(version & 3)` by the storage, not stored as a column.
+         * `action` — **Virtual** member that refers to the action encoded in the [version][VersionMember]. The purpose is to query for the [action][naksha.base.Action] _(the lower two bits of the version)_; eventually resolved to `(version & 3)` by the storage, not stored dedicated value.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Action = Int32Member(ACTION, JsonPath()).withMandatory().withVirtual()
+        val ActionMember = Int32Member("action", JsonPath()).withMandatory().withVirtual()
 
         /**
          * `nv` — **next-version** (`INT64`). The version at which this tuple was superseded by the next state. Present only in _HISTORY_; in _HEAD_ the value is intrinsically the current [HEAD version][naksha.base.Version.HEAD].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val NextVersion = Int64Member(NEXT_VERSION, JsonPath(NEXT_VERSION)).withMandatory()
+        val NextVersionMember = Int64Member("nv", JsonPath("nv")).withMandatory()
 
          /**
-         * `gbfn` — **Global-book-feature-number** (`INT64`). References the feature-number in `naksha~books`, which carries the JBON2 global dictionary needed to decode this tuple's [FeatureBytes] blob when global-book encoding is used.
+         * `gbfn` — **Global-book-feature-number** (`INT64`). References the feature-number in `naksha~books`, which carries the JBON2 global dictionary needed to decode this tuple's [FeatureBytesMember] blob when global-book encoding is used.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val GlobalBookFeatureNumber = Int64Member(GLOBAL_BOOK_FN, JsonPath(GLOBAL_BOOK_FN)).withMandatory()
+        val GlobalBookFeatureNumber = Int64Member("gbfn", JsonPath("gbfn")).withMandatory()
 
         /**
          * `id` — custom feature string identifier. Either stringified feature-number _(as positive decimal number, i.e. `12345678`)_ or the unique identifier of the feature, resulting in a negative feature-number, generated by hashing the `id`. Technically, the storage can store `null`, when the feature-number is positive.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Id = StringMember(ID, JsonPath(ID)).withMandatory()
+        val IdMember = StringMember("id", JsonPath("id")).withMandatory()
 
         /**
-         * `feature` — **Serialised feature** (`BYTE_ARRAY`).
+         * `feature` — **Virtual** member storing the serialised feature (`BYTE_ARRAY`). It technically very likely exists, but as it is the root of the object all storages must treat it specially and clients must not provide values for it. Technically seaching for the bytes may or may not be supported by storages, but mainly is not recommended.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val FeatureBytes = ByteArrayMember(FEATURE_BYTES, JsonPath()).withMandatory().withVirtual()
+        val FeatureBytesMember = ByteArrayMember("feature", JsonPath()).withMandatory().withVirtual()
 
         /**
          * All mandatory members, in declaration order.
@@ -118,24 +94,25 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val MANDATORY: List<Member> = listOf(Tn, NextVersion, FeatureBytes, Id, GlobalBookFeatureNumber)
+        val MANDATORY: List<Member> = listOf(TnMember, NextVersionMember, FeatureBytesMember, IdMember, GlobalBookFeatureNumber)
 
         // -------------------------------------------------------------------------
         // Optional members.
         // -------------------------------------------------------------------------
-
-        /** The name of the optional origin member: `origin`. */
-        const val ORIGIN = "origin"
-
-        /** The name of the optional change-count member: `cc`. */
-        const val CHANGE_COUNT = "cc"
 
         /**
          * `origin` — stringified reference to the originating feature when this feature was forked or copied from another storage, map, or collection. Used for rebase support.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Origin = StringMember(ORIGIN, JsonPath(ORIGIN))
+        val OriginMember = StringMember("origin", JsonPath("origin"))
+
+        /**
+         * `featureType` — stringified feature-type, normally not stored in the storage.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val FeatureTypeMember = StringMember("ft", JsonPath("featureType"))
 
         /**
          * `pn` — **Publish-number** (`INT64`). A sequencer-assigned, gap-free sequential number
@@ -152,18 +129,18 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val PublishNumber = Int64Member("pn")
+        val PublishNumberMember = Int64Member("pn")
 
         /**
          * `pt` — **Publish-time** (`INT64`). The millisecond epoch timestamp at which the
-         * publisher recognised and sequenced the transaction, assigning it its [PublishNumber].
+         * publisher recognised and sequenced the transaction, assigning it its [PublishNumberMember].
          * `null` until the publisher has processed the transaction.
          *
          * Currently used only in `naksha~transactions`.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val PublishTime = Int64Member("pt")
+        val PublishTimeMember = Int64Member("pt")
 
         /**
          * `gv` — **Global-version** (`INT64`). The HERE-internal global version number,
@@ -174,7 +151,7 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val GlobalVersion = Int64Member("gv")
+        val GlobalVersionMember = Int64Member("gv")
 
         /**
          * `geo` — feature geometry stored as TWKB. `null` if the feature has no geometry.
@@ -182,13 +159,13 @@ class StandardMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val Geometry = SpatialMember("geo", JsonPath("geometry"))
+        val GeometryMember = SpatialMember("geo", JsonPath("geometry"))
 
         /**
          * `cc` — change-count: how many times this feature has been modified. There is some special low-level treatment for this member, if it is added to a collection. It is always initialized with `1` and incremented for every new state.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val ChangeCount = Int32Member(CHANGE_COUNT, JsonPath("properties", "changeCount"))
+        val ChangeCountMember = Int32Member("cc", JsonPath("properties", "changeCount"))
      }
 }

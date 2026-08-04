@@ -2,13 +2,14 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.base.PlatformLock
+import naksha.base.Id
+import naksha.base.Lock
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fx1
 import naksha.jbon.IDictReader
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
+import kotlin.js.JsName
 
 /**
  * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
@@ -35,7 +36,7 @@ interface IStorage : IDictReader {
      * ```
      * @since 3.0
      */
-    val lock: PlatformLock
+    val lock: Lock
 
     /**
      * The configuration object with which this storage was initialized.
@@ -47,20 +48,22 @@ interface IStorage : IDictReader {
     val config: NakshaStorage
 
     /**
-     * The storage-id, optionally stored in the storage, must always be the same for the same physical storage.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     * The storage-id.
      * @since 2.0.8
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    val id: String
+    val id: Id
 
     /**
-     * The storage-number, managed by environment, optionally stored in the storage, must always be the same for the same physical storage.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     * The default database.
      * @since 3.0
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    val number: Int64
+    @Deprecated(
+        message = "To be removed as soon as explicit database management is supported",
+        level = DeprecationLevel.WARNING
+    )
+    val defaultDatabaseId: Id
 
     /**
      * The hard-cap _(max result size)_ of the storage. No result-set every can become bigger than this amount of features.
@@ -77,24 +80,60 @@ interface IStorage : IDictReader {
     //       fun deleteDatabase(database: NakshaDatabase)
 
     /**
+     * Creates a new options builder linked to this storage.
+     * @return an options builder linked to this storage.
+     * @since 3.0
+     */
+    val optionsBuilder: SessionOptionsBuilder
+        get() = SessionOptionsBuilder(this)
+
+    /**
+     * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
+     * @param options session options.
+     * @return the read-only session.
+     * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     */
+    @JsName("newReadSessionWithOptions")
+    fun newReadSession(options: SessionOptions): IReadSession
+
+    /**
      * Open a new write session.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
-     * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
+     * @param options session options.
      * @return the write session.
      * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    // TODO: Modify: fun newWriteSession(database: NakshaDatabase, options: SessionOptions? = null): IWriteSession
-    fun newWriteSession(options: SessionOptions? = null): IWriteSession
+    @JsName("newWriteSessionWithOptions")
+    fun newWriteSession(options: SessionOptions): IWriteSession
+
+    // ------------------------------------------------< Default Implementations >------------------------------------------------
+
+    /**
+     * Open a new write session with default options.
+     * @return the write session.
+     * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     */
+    fun newWriteSession(): IWriteSession = newWriteSession(optionsBuilder.build())
+
+    /**
+     * Open a new write-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
+     * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
+     * @return the result of the lambda.
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     */
+    fun <T> useWriteSession(lambda: Fn1<T, IWriteSession>): T = useWriteSession(optionsBuilder.build(), lambda)
 
     /**
      * Open a new write-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
      * @param options the session-options.
-     * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
+     * @param options session options.
      * @return the result of the lambda.
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    // TODO: Modify: fun useWriteSession(database: NakshaDatabase, options: SessionOptions? = null, lambda: Fn1<T, IWriteSession>): T
-    fun <T> useWriteSession(options: SessionOptions? = null, lambda: Fn1<T, IWriteSession>): T {
+    @JsName("useWriteSessionWithOptions")
+    fun <T> useWriteSession(options: SessionOptions, lambda: Fn1<T, IWriteSession>): T {
         val session = newWriteSession(options)
         return session.use { lambda.call(session) }
     }
@@ -102,34 +141,51 @@ interface IStorage : IDictReader {
     /**
      * Open a new write-session and execute the given void lambda, ensuring that the session is closed after the lambda returns.
      * This is very similar to [useWriteSession] but it's not returning any value.
-     * @param options the session-options.
      * @param lambda the void lambda to execute in a try block, ensuring that the session is closed.
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    // TODO: Modify: fun runInWriteSession(database: NakshaDatabase, options: SessionOptions? = null, lambda: Fx1<IWriteSession>): T
-    fun runInWriteSession(options: SessionOptions? = null, lambda: Fx1<IWriteSession>) {
+    fun runInWriteSession(lambda: Fx1<IWriteSession>) = runInWriteSession(optionsBuilder.build(), lambda)
+
+    /**
+     * Open a new write-session and execute the given void lambda, ensuring that the session is closed after the lambda returns.
+     * This is very similar to [useWriteSession] but it's not returning any value.
+     * @param options session options.
+     * @param lambda the void lambda to execute in a try block, ensuring that the session is closed.
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     */
+    @JsName("runInWriteSessionWithOptions")
+    fun runInWriteSession(options: SessionOptions, lambda: Fx1<IWriteSession>) {
         val session = newWriteSession(options)
         session.use { lambda.call(session) }
     }
 
     /**
      * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
-     * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
      * @return the read-only session.
      * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    // TODO: Modify: fun newReadSession(database: NakshaDatabase, options: SessionOptions? = null): IReadSession
-    fun newReadSession(options: SessionOptions? = null): IReadSession
+    fun newReadSession(): IReadSession = newReadSession(optionsBuilder.build())
 
     /**
      * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
-     * @param options the session-options.
      * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
      * @return the result of the lambda.
+     * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    // TODO: Modify: fun useReadSession(database: NakshaDatabase, options: SessionOptions? = null, useReadSession): T
-    fun <T> useReadSession(options: SessionOptions? = null, lambda: Fn1<T, IReadSession>): T {
+    fun <T> useReadSession(lambda: Fn1<T, IReadSession>): T = useReadSession(optionsBuilder.build(), lambda)
+
+    /**
+     * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
+     * @param options session options.
+     * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
+     * @return the result of the lambda.
+     * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     */
+    @JsName("useReadSessionWithOptions")
+    fun <T> useReadSession(options: SessionOptions, lambda: Fn1<T, IReadSession>): T {
         val session = newReadSession(options)
         return session.use { lambda.call(session) }
     }
@@ -137,11 +193,22 @@ interface IStorage : IDictReader {
     /**
      * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
      * This is very similar to [useReadSession] but it's not returning any value.
-     * @param options the session-options.
      * @param lambda the void lambda to execute in a try block, ensuring that the session is closed.
+     * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    // TODO: Modify: fun runInReadSession(database: NakshaDatabase, options: SessionOptions? = null, lambda: Fx1<IReadSession>): T
-    fun runInReadSession(options: SessionOptions? = null, lambda: Fx1<IReadSession>) {
+    fun runInReadSession(lambda: Fx1<IReadSession>) = runInReadSession(optionsBuilder.build(), lambda)
+
+    /**
+     * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
+     * This is very similar to [useReadSession] but it's not returning any value.
+     * @param options session options.
+     * @param lambda the void lambda to execute in a try block, ensuring that the session is closed.
+     * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     */
+    @JsName("runInReadSessionWithOptions")
+    fun runInReadSession(options: SessionOptions, lambda: Fx1<IReadSession>) {
         val session = newReadSession(options)
         session.use { lambda.call(session) }
     }

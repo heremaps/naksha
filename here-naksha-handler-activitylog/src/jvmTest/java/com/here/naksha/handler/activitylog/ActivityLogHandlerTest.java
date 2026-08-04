@@ -31,7 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-import naksha.base.AnyList;
+import naksha.base.PAnyArray;
 import naksha.base.Int64;
 import naksha.base.JvmInt64;
 import naksha.base.Timestamp;
@@ -456,7 +456,7 @@ class ActivityLogHandlerTest {
   }
 
   private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
-    Op metaQuery = readFeatures.getQueryMembers();
+    Op metaQuery = readFeatures.getMemberQuery();
     if (metaQuery instanceof Or or) {
       OpList orChildren = or.getChildren();
       List<Int64> versions = new java.util.ArrayList<>();
@@ -473,11 +473,11 @@ class ActivityLogHandlerTest {
 
         // Determine which Equals is NextVersion and which is FeatureNumber (order may vary)
         Equals nextEq;
-        if (StandardMembers.NextVersion.getName().equals(eqA.getAt())
-                && StandardMembers.FeatureNumber.getName().equals(eqB.getAt())) {
+        if (StandardMembers.NextVersionMember.getId().equals(eqA.getAt())
+                && StandardMembers.FeatureNumberMember.getId().equals(eqB.getAt())) {
           nextEq = eqA;
-        } else if (StandardMembers.NextVersion.getName().equals(eqB.getAt())
-                && StandardMembers.FeatureNumber.getName().equals(eqA.getAt())) {
+        } else if (StandardMembers.NextVersionMember.getId().equals(eqB.getAt())
+                && StandardMembers.FeatureNumberMember.getId().equals(eqA.getAt())) {
           nextEq = eqB;
         } else {
           return false;
@@ -495,9 +495,9 @@ class ActivityLogHandlerTest {
               .allMatch(expected -> versions.stream().anyMatch(expected::equals));
     }
     if (!(metaQuery instanceof IsAnyOf op)) return false;
-    if (!StandardMembers.NextVersion.getName().equals(op.getAt())) return false;
+    if (!StandardMembers.NextVersionMember.getId().equals(op.getAt())) return false;
     // next_version is an int8 column — the IsAnyOf items hold the Int64 version values.
-    AnyList items = op.getItems();
+    PAnyArray items = op.getItems();
     if (expectedTns.length == 0) return items.getSize() > 0;
     List<Int64> versions = new java.util.ArrayList<>();
     for (int i = 0; i < items.getSize(); i++) {

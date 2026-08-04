@@ -1,9 +1,9 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Int64
+import naksha.base.Id
 import naksha.base.NakshaError
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.base.Version
 import naksha.geo.SpBoundingBox
 import naksha.model.*
@@ -25,19 +25,19 @@ class InsertFeatureTest : PgTestBase() {
         xyz.tags.clear()
         xyz.tags.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
+            add(Write().createFeature(collection, featureToCreate))
         }
 
         // When: executing feature write request
-        executeWrite(writeFeaturesReq)
+        executeWriteAndLoadTuples(writeFeaturesReq)
 
         // And: reading all features from collection
-        val readResponse = executeRead(ReadFeatures().apply {
+        val readResponse = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds += featureToCreate.id
         })
-        val retrievedFeatures = readResponse.features
+        val retrievedFeatures = readResponse.asFeatures
 
         // Then: we got 1 feature
         assertEquals(1, retrievedFeatures.size)
@@ -57,7 +57,7 @@ class InsertFeatureTest : PgTestBase() {
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                            .hasProperty("action", Action.CREATE.text)
+                            .hasProperty("action", Action.CREATE.string)
                     }
                     .hasTags(TagList("wicked"))
             }
@@ -99,19 +99,19 @@ class InsertFeatureTest : PgTestBase() {
         val xyz = featureToCreate.properties.xyz
         xyz.tags.addTag("wicked", false)
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
+            add(Write().createFeature(collection, featureToCreate))
         }
 
         // When: executing feature write request
-        executeWrite(writeFeaturesReq)
+        executeWriteAndLoadTuples(writeFeaturesReq)
 
         // And: reading all features from collection
-        val readResponse = executeRead(ReadFeatures().apply {
+        val readResponse = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds += featureToCreate.id
         })
-        val retrievedFeatures = readResponse.features
+        val retrievedFeatures = readResponse.asFeatures
 
         // Then: we got 1 feature
         assertEquals(1, retrievedFeatures.size)
@@ -119,8 +119,8 @@ class InsertFeatureTest : PgTestBase() {
         // And:
         val retrievedFeature = retrievedFeatures.find { it?.id == featureToCreate.id }
         assertNotNull(retrievedFeature, "Missing feature with id: ${featureToCreate.id}")
-        assertEquals(Int64(featureNumber), retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
-        assertEquals(Int64(featureNumber), retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
+        assertEquals(featureNumber, retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
+        assertEquals(featureNumber, retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
         assertThatFeature(retrievedFeature)
             .isIdenticalTo(
                 other = featureToCreate,
@@ -132,7 +132,7 @@ class InsertFeatureTest : PgTestBase() {
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                            .hasProperty("action", Action.CREATE.text)
+                            .hasProperty("action", Action.CREATE.string)
                     }
                     .hasTags(TagList("wicked"))
             }
@@ -143,19 +143,19 @@ class InsertFeatureTest : PgTestBase() {
         // Given: features to create
         val featureToCreate = randomFeature()
         val writeFeaturesReq = WriteRequest().apply {
-            add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
+            add(Write().createFeature(collection, featureToCreate))
         }
 
         // When: executing feature write request
-        executeWrite(writeFeaturesReq)
+        executeWriteAndLoadTuples(writeFeaturesReq)
 
         // And: reading all features from collection
-        val readResponse = executeRead(ReadFeatures().apply {
+        val readResponse = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds += featureToCreate.id
         })
-        val retrievedFeatures = readResponse.features
+        val retrievedFeatures = readResponse.asFeatures
 
         // Then: we got 1 feature
         assertEquals(1, retrievedFeatures.size)
@@ -172,36 +172,35 @@ class InsertFeatureTest : PgTestBase() {
         val featuresToCreate = randomFeatures(count = count)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
+                add(Write().createFeature(collection, featureToCreate))
             }
         }
         val firstFeatureToCreate = featuresToCreate[0]
 
         // When: executing feature write request
-        val start = Platform.currentNanos()
-        val version: Version
-        newWriteSession().use { session ->
-            version = session.useTransaction().version
-            val response = assertSuccess(session.execute(writeFeaturesReq))
+        val start = Base.currentNanos()
+        val version: Version = newWriteSession().use { session ->
+            val v = session.useTransaction().asVersion
+            assertSuccess(session.execute(writeFeaturesReq))
             session.commit()
-            response
+            v
         }
-        val end = Platform.currentNanos()
+        val end = Base.currentNanos()
         val time = end - start
         val totalMillis = time / 1_000_000
         val featuresPerSecond = count.toDouble() / (time.toDouble()/(1_000_000_000.toDouble()))
-        Platform.logger.info("Insert took ${totalMillis}ms, $featuresPerSecond features per second")
-        Platform.logger.info("Inserted version: $version")
+        Base.logger.info("Insert took ${totalMillis}ms, $featuresPerSecond features per second")
+        Base.logger.info("Inserted version: $version")
         assertEquals(count, featuresToCreate.size)
 
         // And: reading all features from collection
-        val readResponse = executeRead(ReadFeatures().apply {
+        val readResponse = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
 //            this.version = version
 //            this.minVersion = version
         })
-        val retrievedFeatures = readResponse.features
+        val retrievedFeatures = readResponse.asFeatures
 
         // Then: we got <count> features
         //assertEquals(count, retrievedFeatures.size)
@@ -210,10 +209,10 @@ class InsertFeatureTest : PgTestBase() {
         // And:
         val firstFeature = retrievedFeatures.find { it?.id == firstFeatureToCreate.id }
         assertNotNull(firstFeature)
-        assertEquals(storage.number, firstFeature.properties.xyz.guid?.tupleNumber?.databaseNumber)
-        assertEquals(catalog.catalogNumber, firstFeature.properties.xyz.guid?.tupleNumber?.catalogNumber)
-        assertEquals(collection.collectionNumber, firstFeature.properties.xyz.guid?.tupleNumber?.collectionNumber)
-        Platform.logger.info("Storage reported guid '${firstFeature.properties.xyz.guid}' for first feature")
+        assertEquals(storage.defaultDatabaseId.number, firstFeature.properties.xyz.guid?.tupleNumber?.databaseNumber)
+        assertEquals(catalog.id.number.toInt(), firstFeature.properties.xyz.guid?.tupleNumber?.catalogNumber)
+        assertEquals(collection.id.number.toInt(), firstFeature.properties.xyz.guid?.tupleNumber?.collectionNumber)
+        Base.logger.info("Storage reported guid '${firstFeature.properties.xyz.guid}' for first feature")
         assertEquals(firstFeatureToCreate.id, firstFeature.id)
 
         // And:
@@ -232,15 +231,15 @@ class InsertFeatureTest : PgTestBase() {
                             retrievedXyz
                                 .hasProperty("appId", PgTest.TEST_APP_ID)
                                 .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                                .hasProperty("action", Action.CREATE.text)
+                                .hasProperty("action", Action.CREATE.string)
                         }
                 }
         }
 
         // Read only one feature by ID, bypassing the cache.
-        Platform.logger.info("Clear cache and reload feature from database")
-        Naksha.cache.clear(storage)
-        val featuresByIdResponse = executeRead(ReadFeatures().apply {
+        Base.logger.info("Clear cache and reload feature from database")
+        Naksha.cache.clear()
+        val featuresByIdResponse = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             featureIds.add(firstFeatureToCreate.id)
@@ -248,26 +247,25 @@ class InsertFeatureTest : PgTestBase() {
 
         // Expect it to have the same tuple-number as the first feature originally returned!
         assertEquals(1, featuresByIdResponse.length)
-        val tuples = featuresByIdResponse.featureTupleList
-        assertEquals(1, tuples.size)
-        val tupleNumber = assertNotNull(tuples.first()).tupleNumber
-        assertNotNull(tupleNumber)
-        Platform.logger.info("Expect that the originally returned tuple-number is the same as the one from search")
+        val byIdRs = assertNotNull(featuresByIdResponse.resultSet)
+        assertEquals(1, byIdRs.size)
+        val tupleNumber = byIdRs.getTupleNumber(0)
+        Base.logger.info("Expect that the originally returned tuple-number is the same as the one from search")
         assertEquals(firstFeature.properties.xyz.guid?.tupleNumber, tupleNumber)
 
         // This will force the cache to contact the storage, and to load the tuple.
-        val features = featuresByIdResponse.features
+        val features = featuresByIdResponse.asFeatures
         assertEquals(firstFeatureToCreate.id, features[0]!!.id)
 
         // Read only one feature by bounding box.
-        val featuresByBBox = executeRead(ReadFeatures().apply {
+        val featuresByBBox = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             query.spatial =
                 SpIntersects(SpBoundingBox(firstFeatureToCreate.geometry).addMargin(0.0000001).toPolygon())
         })
-        assertEquals(1, featuresByBBox.features.size)
-        assertEquals(firstFeatureToCreate.id, featuresByBBox.features[0]!!.id)
+        assertEquals(1, featuresByBBox.asFeatures.size)
+        assertEquals(firstFeatureToCreate.id, featuresByBBox.asFeatures[0]!!.id)
     }
 
     @Test
@@ -280,23 +278,23 @@ class InsertFeatureTest : PgTestBase() {
         val namedFeature = randomFeature() // has a UUID-style named id (fn < 0)
 
         val writeReq = WriteRequest().apply {
-            add(Write().createFeature(collection.catalogId, collection.id, numericFeature))
-            add(Write().createFeature(collection.catalogId, collection.id, namedFeature))
+            add(Write().createFeature(collection, numericFeature))
+            add(Write().createFeature(collection, namedFeature))
         }
-        executeWrite(writeReq)
+        executeWriteAndLoadTuples(writeReq)
 
         // When: reading both features in a single request with mixed IDs
-        val readResponse = executeRead(ReadFeatures().apply {
+        val readResponse = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
-            featureIds += numericId
+            featureIds += Id(numericId)
             featureIds += namedFeature.id
         })
-        val retrieved = readResponse.features
+        val retrieved = readResponse.asFeatures
 
         // Then: both features are returned
         assertEquals(2, retrieved.size)
-        assertNotNull(retrieved.find { it?.id == numericId }, "Missing numeric-ID feature '$numericId'")
+        assertNotNull(retrieved.find { it?.id?.text == numericId }, "Missing numeric-ID feature '$numericId'")
         assertNotNull(retrieved.find { it?.id == namedFeature.id }, "Missing named-ID feature '${namedFeature.id}'")
     }
 
@@ -311,7 +309,7 @@ class InsertFeatureTest : PgTestBase() {
 
         // And
         val writeReq = WriteRequest().add(
-            Write().createFeature(collection.catalogId, collection.id, featureWithDuplicatedId)
+            Write().createFeature(collection, featureWithDuplicatedId)
         )
         val insertDuplicateResponse = newWriteSession().use { session ->
             session.execute(writeReq)

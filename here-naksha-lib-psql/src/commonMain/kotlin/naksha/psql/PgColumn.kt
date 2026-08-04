@@ -4,10 +4,9 @@ package naksha.psql
 
 import naksha.model.objects.MemberType
 import naksha.model.objects.MemberType.MemberType_C.INT64
-import naksha.model.objects.StandardMembers
-import naksha.model.objects.StandardMembers.StandardMembers_C.FN
-import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
-import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumberMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersionMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.VersionMember
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -119,7 +118,7 @@ data class PgColumn(
          */
         @JvmField
         @JsStatic
-        val FnColumn = PgColumn(0, FN, INT64, "STORAGE $PLAIN NOT NULL")
+        val FnColumn = PgColumn(0, FeatureNumberMember.id, INT64, "STORAGE $PLAIN NOT NULL")
 
         /**
          * The version (with action in the lower 2 bits) of this tuple.
@@ -129,7 +128,7 @@ data class PgColumn(
          */
         @JvmField
         @JsStatic
-        val VersionColumn = PgColumn(1, VERSION, INT64, "STORAGE $PLAIN NOT NULL")
+        val VersionColumn = PgColumn(1, VersionMember.id, INT64, "STORAGE $PLAIN NOT NULL")
 
         /**
          * The next-version (with action in the lower 2 bits) of this tuple, only available in the history.
@@ -139,7 +138,7 @@ data class PgColumn(
         @JsStatic
         // Nullable on purpose: HEAD rows carry NULL, history rows a real value; each table enforces the
         // right nullability via its own `$c_nv` CHECK (HEAD: IS NULL, history: IS NOT NULL).
-        val NextVersionColumn = PgColumn(2, NEXT_VERSION, INT64, "STORAGE $PLAIN")
+        val NextVersionColumn = PgColumn(2, NextVersionMember.id, INT64, "STORAGE $PLAIN")
     }
 
     /**

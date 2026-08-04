@@ -38,7 +38,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
-open class NullableEnum<OBJECT_TYPE : AnyObject, PROPERTY_TYPE : JsEnum>(
+open class NullableEnum<OBJECT_TYPE : PAnyMap, PROPERTY_TYPE : BaseEnum>(
     klass: KClass<out PROPERTY_TYPE>,
     name: String? = null,
     init: ((self: OBJECT_TYPE, name: String) -> PROPERTY_TYPE?)? = null

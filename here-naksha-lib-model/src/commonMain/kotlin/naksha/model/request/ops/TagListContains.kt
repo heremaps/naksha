@@ -27,7 +27,7 @@ class TagListContains() : Op() {
     @JsName("forMember")
     constructor(at: Member, item: Any) : this() {
         this.op = TAGLIST_CONTAINS
-        this.at = at.name
+        this.at = at.id
         this.item = item
     }
 

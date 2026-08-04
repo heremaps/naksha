@@ -1,7 +1,7 @@
 package naksha.auth.check
 
 import naksha.auth.UserRights
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import naksha.base.PlatformList
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_entries
 
@@ -38,7 +38,7 @@ object CheckCompiler {
         return when (value) {
             is String -> getStringCheckFor(value)
             is PlatformList -> getListCheckFor(value)
-            is ListProxy<*> -> getListCheckFor(value.platformObject())
+            is PTypedArray<*> -> getListCheckFor(value.platformObject())
             else -> UndefinedCheck().apply { add(value) }
         }
     }

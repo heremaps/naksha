@@ -6,12 +6,18 @@ import naksha.base.*
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.Naksha
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
-import naksha.model.NakshaIdType
+import naksha.base.FeatureType
+import naksha.base.IdVerifier.TextVerifier_C.MEMBER_AND_INDEX
+import naksha.base.NakshaConst.IdConst_C.BOOKS_COL_TEXT
+import naksha.base.NakshaConst.IdConst_C.CATALOGS_COL_TEXT
+import naksha.base.NakshaConst.IdConst_C.COLLECTIONS_COL_TEXT
+import naksha.base.NakshaConst.IdConst_C.TRANSACTIONS_COL_TEXT
+import naksha.base.Base.BaseCompanion.FAL
 import naksha.base.TupleNumber
+import naksha.model.objects.StandardMembers.StandardMembers_C.TnMember
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -19,35 +25,47 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * A Naksha collection.
+ * The collection descriptor.
+ *
+ * Collection are containers that store [objects][PTypedMap]. Valid objects are all [JSON](https://www.rfc-editor.org/info/rfc8259/) objects. You can think of a collection like a file in the path _(catalog)_ of a physical disk _(database)_. By definition, the collection descriptor is a normal feature that follows the [XYZ][XyzMembers] layout. It is stored in a virtual internal collection named `naksha~collections`. The actual location is dependent on the storage implementation.
+ *
+ * Even while collections can store arbitrary [JSON](https://www.rfc-editor.org/info/rfc8259/) objects, you may consider storing [NakshaFeature]'s in it, which have a pre-defined layout, following the [XYZ member layout][XyzMembers], and some comfort functions available. Following this standard makes usage of standard handlers easier.
+ *
  * @since 3.0
+ * @see NakshaCatalog
+ * @see NakshaFeature
  */
 @JsExport
 open class NakshaCollection() : NakshaFeature() {
 
     /**
      * Create a Naksha collection with settings.
-     * @param id the collection-identifier.
-     * @param catalogId the catalog-identifier of the catalog in which the collection should be created.
+     * @param id the `id` of the collection.
+     * @param databaseId the `id` of the database in which the collection is stored.
+     * @param catalogId the `id` of the catalog in which the collection is stored.
      * @param partitions the partitions to create; defaults to `1`.
      * @param storageClass the [storage-class][storageClass] to create; defaults to `null`.
      * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON].
      * @param storeHistory if [historic states should be stored][storeHistory], defaults to [StoreMode.ON].
      * @param storeMeta if [statistics should be stored][storeMeta], defaults to [StoreMode.ON].
      */
-    @JsName("of")
+    @JsName("newCollectionFromIds")
     @JvmOverloads
     constructor(
-        id: String,
-        catalogId: String?, // TODO: We need a catalogId, we should not allow null values here!
+        id: Id,
+        catalogId: Id?,
+        databaseId: Id?,
         partitions: Int = 1,
         storageClass: String? = null,
         storeDeleted: StoreMode = StoreMode.ON,
         storeHistory: StoreMode = StoreMode.ON,
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
+        withType(typeDefaultValue())
         this.id = id
-        this.catalogId = catalogId
+        withFeatureType(featureTypeDefaultValue())
+        if (databaseId != null) this.databaseId = databaseId
+        if (catalogId != null) this.catalogId = catalogId
         this.storageClass = storageClass
         this.partitions = partitions
         this.storeDeleted = storeDeleted
@@ -55,10 +73,43 @@ open class NakshaCollection() : NakshaFeature() {
         this.storeMeta = storeMeta
     }
 
-    override fun featureTypeDefaultValue(): String = FEATURE_TYPE
-    override fun withId(value: String): NakshaCollection = super.withId(value) as NakshaCollection
-    override fun withType(value: String): NakshaCollection = super.withType(value) as NakshaCollection
-    override fun withFeatureType(value: String): NakshaCollection = super.withFeatureType(value) as NakshaCollection
+    /**
+     * Create a Naksha collection with settings.
+     * @param id the collection-identifier.
+     * @param catalog the catalog in which the collection is stored.
+     * @param partitions the partitions to create; defaults to `1`.
+     * @param storageClass the [storage-class][storageClass] to create; defaults to `null`.
+     * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON].
+     * @param storeHistory if [historic states should be stored][storeHistory], defaults to [StoreMode.ON].
+     * @param storeMeta if [statistics should be stored][storeMeta], defaults to [StoreMode.ON].
+     */
+    @JsName("newCollection")
+    @JvmOverloads
+    constructor(
+        id: Id,
+        catalog: NakshaCatalog,
+        partitions: Int = 1,
+        storageClass: String? = null,
+        storeDeleted: StoreMode = StoreMode.ON,
+        storeHistory: StoreMode = StoreMode.ON,
+        storeMeta: StoreMode = StoreMode.ON,
+    ) : this() {
+        withType(typeDefaultValue())
+        this.id = id
+        withFeatureType(featureTypeDefaultValue())
+        this.databaseId = catalog.databaseId
+        this.catalogId = catalog.id
+        this.storageClass = storageClass
+        this.partitions = partitions
+        this.storeDeleted = storeDeleted
+        this.storeHistory = storeHistory
+        this.storeMeta = storeMeta
+    }
+
+    override fun withId(value: Id?): NakshaCollection = super.withId(value) as NakshaCollection
+    override fun withType(value: String?): NakshaCollection = super.withType(value) as NakshaCollection
+    override fun withFeatureType(value: FeatureType?): NakshaCollection = super.withFeatureType(value) as NakshaCollection
+    override fun featureTypeDefaultValue(): FeatureType? = FeatureType.COLLECTION
     override fun withBbox(value: SpBoundingBox?): NakshaCollection = super.withBbox(value) as NakshaCollection
     override fun withGeometry(value: SpGeometry?): NakshaCollection = super.withGeometry(value) as NakshaCollection
     override fun withReferencePoint(value: SpPoint?): NakshaCollection = super.withReferencePoint(value) as NakshaCollection
@@ -66,91 +117,46 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaCollection = super.withMomType(value) as NakshaCollection
 
     /**
-     * Helper to get/set the [TupleNumber] of the collection-feature. All collection features follow the old XYZ-Hub style, therefore the location of the [TupleNumber] is clear at `properties->@ns:com:here:xyz->uuid`.
+     * The `id` of the [database][NakshaDatabase] in which this [collection][NakshaCollection] and all [objects][naksha.base.PAnyMap] are stored.
      * @since 3.0
+     * @throws NakshaException with error [naksha.base.NakshaError.ILLEGAL_STATE] if the [databaseId] is `null`, `undefined` or invalid.
      */
-    var tupleNumber: TupleNumber?
-        get() = XyzMembers.XyzTn.readTupleNumber(this)
-        set(value) {
-            XyzMembers.XyzTn.write(this, value)
-        }
+    var databaseId: Id by ID_NOT_NULL
 
     /**
-     * Tests if this collection is a tombstone, so deleted.
-     * @return `true` if this collection is a tombstone; `false` otherwise.
+     * Tests if this feature does have the property `databaseId` set.
      * @since 3.0
      */
-    fun isDeleted(): Boolean {
-        val tn = this.tupleNumber
-        return tn != null && tn.isDeleted()
-    }
-
-    /**
-     * The database-number of the collection; the collection-feature itself is stored in the same database as the collection it describes.
-     * @since 3.0
-     * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
-     */
-    val databaseNumber: Int64
-        get() = tupleNumber?.databaseNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
-
-    /**
-     * The database-id of the collection; the collection-feature itself is stored in the same database as the collection it describes.
-     * @since 3.0
-     */
-    var databaseId: String? by DATABASE_ID
+    fun hasDatabaseId(): Boolean = hasIdValue("databaseId")
 
     /**
      * @see [databaseId]
+     * @since 3.0
      */
-    fun withDatabaseId(value: String): NakshaCollection {
-        val tn = tupleNumber
-        if (tn != null) {
-            if (Naksha.databaseNumber(value) != tn.databaseNumber) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "The given database-id does not match the database-number of the collection.")
-            }
-        }
+    fun withDatabaseId(value: Id): NakshaCollection {
         databaseId = value
         return this
     }
 
     /**
-     * The catalog-number of the collection; the collection-feature itself is stored in the same catalog as the collection it describes.
+     * The `id` of the [catalog][NakshaCatalog] in which this [collection][NakshaCollection] and all [objects][naksha.base.PAnyMap] are stored.
      * @since 3.0
-     * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
      */
-    val catalogNumber: Int
-        get() = tupleNumber?.catalogNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
+    var catalogId: Id by ID_NOT_NULL
 
     /**
-     * The custom identifier of the catalog in which the collection is located; the collection-feature itself is stored in the same catalog as the collection it describes.
+     * Tests if this feature does have the property `catalogId` set.
      * @since 3.0
      */
-    var catalogId: String? by CATALOG_ID
+    fun hasCatalogId(): Boolean = hasIdValue("catalogId")
 
     /**
      * @see [catalogId]
      */
-    fun withCatalogId(value: String): NakshaCollection {
+    fun withCatalogId(value: Id): NakshaCollection {
         catalogId = value
-        val tn = tupleNumber
-        if (tn != null) {
-            if (Naksha.catalogNumber(value) != tn.catalogNumber) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "The given catalog-id does not match the catalog-number of the collection.")
-            }
-        }
-        databaseId = value
         return this
     }
-
-    /**
-     * The collection-number of the collection, this is actually the same as the feature-number.
-     *
-     * It is **NOT** the collection-number of this collection-feature, so where the collection-feature itself is stored, which has always the collection-number `0`, because all collection features are always stored in the collection `naksha~collections`.
-     * @since 3.0
-     * @see [Naksha.collectionNumber]
-     */
-    val collectionNumber: Int
-        get() = Naksha.collectionNumber(id)
 
     /**
      * If partitions is given, then the collection is internally partitioned in the storage, optimised for large quantities of features. The default is no partitions; as a rule of thumb, add one more partition for every 10 to 20 million features expected.
@@ -169,6 +175,42 @@ open class NakshaCollection() : NakshaFeature() {
         this.partitions = value
         return this
     }
+
+    /**
+     * If this is an internal collection storing [databases][NakshaDatabase].
+     * @since 3.0
+     */
+    fun storesDatabases(): Boolean = false
+
+    /**
+     * If this is an internal collection storing [catalogs][NakshaCatalog] (`naksha~catalogs`).
+     * @since 3.0
+     */
+    fun storesCatalogs(): Boolean = id.text == CATALOGS_COL_TEXT
+
+    /**
+     * If this is an internal collection storing [collections][NakshaCollection] (`naksha~collections`).
+     * @since 3.0
+     */
+    fun storesCollections(): Boolean = id.text == COLLECTIONS_COL_TEXT
+
+    /**
+     * If this is an internal collection storing [books][NakshaBook] (`naksha~books`).
+     * @since 3.0
+     */
+    fun storesBooks(): Boolean = id.text == BOOKS_COL_TEXT
+
+    /**
+     * If this is an internal collection storing [transactions][NakshaTx] (`naksha~transactions`).
+     * @since 3.0
+     */
+    fun storesTransactions(): Boolean = id.text == TRANSACTIONS_COL_TEXT
+
+    /**
+     * If this is a collection storing normal features.
+     * @since 3.0
+     */
+    fun storesFeatures(): Boolean = !storesDatabases() && !storesCatalogs() && !storesCollections() && !storesBooks() && !storesTransactions()
 
     /**
      * The bit-shift applied to a transaction number to derive the history partition key.
@@ -321,25 +363,25 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Adds the given [Member] to [members].
      *
-     * Validates that the [Member.name] is a valid Naksha identifier (see [Naksha.verifyId]) and does not already exist on this collection. Caps the list at [MemberList.MAX_MEMBERS] entries.
+     * Validates that the [Member.id] is a valid Naksha identifier (see [Id.verifyId]) and does not already exist on this collection. Caps the list at [MemberList.MAX_MEMBERS] entries.
      * @param value the member to add.
      * @return this.
      * @since 3.0
      */
     open fun addMember(value: Member): NakshaCollection {
-        NakshaIdType.INTERNAL_MEMBER.verify(value.name)
+        MEMBER_AND_INDEX.verify(value.id, internal = false)
         var list = this.members
         if (list == null) {
             list = MemberList()
             this.members = list
         }
         for (existing in list) {
-            if (existing != null && existing.name == value.name) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "Duplicate member name: '${value.name}'")
+            if (existing != null && existing.id == value.id) {
+                throw illegalArg("${FAL}Duplicate member name: '${value.id}'")
             }
         }
         if (list.size >= MemberList.MAX_MEMBERS) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
+            throw illegalArg("${FAL}Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
         }
         list.add(value)
         return this
@@ -388,12 +430,12 @@ open class NakshaCollection() : NakshaFeature() {
         list.validate()
         // Ensure that the mandatory members are in.
         for (mandatory in StandardMembers.MANDATORY) {
-            val found: Member? = list.get(mandatory.name)
+            val found: Member? = list.get(mandatory.id)
             if (found != null) {
                 mandatory.asSame(found, comparePath = false)
             } else {
                 // Collection Tn lives at xyz.uuid (the tupleNumber accessor), so backfill XyzTn not the generic Tn.
-                list.add(if (mandatory === StandardMembers.Tn) XyzMembers.XyzTn else mandatory)
+                list.add(if (mandatory === TnMember) XyzMembers.XyzTn else mandatory)
                 write = true
             }
         }
@@ -409,7 +451,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @throws NakshaException If no such member was found.
      */
     @JvmOverloads
-    open fun useMember(member: Member, comparePath: Boolean = false): Member = member.asSame(useMembers().get(member.name), comparePath)
+    open fun useMember(member: Member, comparePath: Boolean = false): Member = member.asSame(useMembers().get(member.id), comparePath)
 
     /**
      * Search for the given member in this collection.
@@ -427,26 +469,49 @@ open class NakshaCollection() : NakshaFeature() {
      * @return the found member or `null`, if no such member is declared in this collection.
      */
     @JvmOverloads
-    open fun findMember(member: Member, comparePath: Boolean = false): Member? {
-        val found = useMembers().get(member.name)
+    open fun getMember(member: Member, comparePath: Boolean = false): Member? {
+        val found = useMembers().get(member.id)
         if (member.isSameAs(found, comparePath)) return found
         return null
     }
 
     /**
-     * Helper to return the [TupleNumber] of the given feature; if there is any.
+     * Read the [TupleNumber member][TnMember] of the given feature; if there is any.
      * @param feature the feature to extract the [TupleNumber] aka `uuid` from.
      * @return the [TupleNumber] or `null`, if the given `feature` does not have a state identifier _(the feature is not yet persisted)_.
      * @since 3.0
      */
-    fun tupleNumberOf(feature: NakshaFeature): TupleNumber? = useMember(StandardMembers.Tn).readTupleNumber(feature)
+    fun readTupleNumber(feature: PAnyMap): TupleNumber? = TupleNumber.toTupleNumber(useMember(TnMember).read(feature))
+
+    /**
+     * Read the [TupleNumber member][TnMember] of the given feature; if there is any.
+     * @param feature the feature to extract the [TupleNumber] from.
+     * @return the raw value stored in the [TupleNumber] aka `uuid`. This can be a valid [TupleNumber], a stringified [TupleNumber] or some arbitrary other value _(when the feature is coming from another storage)_.
+     * @since 3.0
+     */
+    fun readTupleNumberRaw(feature: PAnyMap): Any? = useMember(TnMember).read(feature)
+
+    /**
+     * Read the [id member][Id] of the given feature; if the feature does not yet have an identifier, creates a random one, write it back into the feature and return it.
+     * @param feature the feature to read the [identifier][Id] aka `id` from.
+     * @return the identifier, if the given `feature` does not have an identifier, generate one and write it back into the feature.
+     * @since 3.0
+     */
+    fun readId(feature: PAnyMap): Id {
+        val idMember = useMember(StandardMembers.IdMember)
+        var id = idMember.readId(feature, true)
+        if (id is Id) return id
+        id = Id()
+        idMember.write(feature, id)
+        return id
+    }
 
     /**
      * The indices to maintain on this collection.
      *
-     * Each [Index] declares a name, an [IndexType] ([IndexType.BTREE] / [IndexType.SPATIAL] / [IndexType.TAG_MAP] / [IndexType.TAG_LIST]), the column(s) to index, an optional include-list (for [IndexType.BTREE]), and a `unique` flag.
+     * Each [Index] declares a name and the column(s) to index, plus an optional include-list, and an optional `unique` flag _(can't be set by users, only supported for intrinsic mandatory indices)_.
      *
-     * Indices are applied to every variant of the collection (head, history, deleted, meta) by the storage. Mandatory and default indices are injected by the storage; clients only need to declare additional custom indices here.
+     * Indices are applied to every section of the collection by the storage (_HEAD_, _HISTORY_, ...). Mandatory and default indices are injected by the storage; clients only need to declare additional custom indices here.
      * @since 3.0
      */
     var indices: IndexList? by INDICES
@@ -465,7 +530,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Initializes the [indices] to the [standard XYZ indices][XyzIndices.ALL].
      *
-     * The method should be called, if next to the standard XYZ indices, additional proprietary indices should be added.
+     * The method should be called, if next to the standard XYZ indices, additional proprietary indices can be added afterward.
      * @since 3.0
      */
     fun withXyzIndices(): NakshaCollection {
@@ -499,13 +564,13 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Adds the given [Index] to [indices].
      *
-     * Validates that the index [Index.name] is a valid Naksha identifier (see [Naksha.verifyId]) and is unique within this collection.
+     * Validates that the index [Index.name] is a valid Naksha identifier and is unique within this collection.
      * @param value the index to add.
      * @return this.
      * @since 3.0
      */
     open fun addIndex(value: Index): NakshaCollection {
-        NakshaIdType.INDEX.verify(value.name)
+        MEMBER_AND_INDEX.verify(value.name)
         var list = this.indices
         if (list == null) {
             list = IndexList()
@@ -531,7 +596,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [maxAge]
      */
-    open fun withMaxAge(value: Int64): NakshaCollection {
+    open fun withMaxAge(value: Long): NakshaCollection {
         this.maxAge = value
         return this
     }
@@ -554,13 +619,13 @@ open class NakshaCollection() : NakshaFeature() {
      * The estimated amount of features stored within a collection, read-only property only set by the storage.
      * @since 3.0
      */
-    val estimatedFeatureCount: Int64 by _ESTIMATED_FEATURE_COUNT
+    val estimatedFeatureCount: Long by _ESTIMATED_FEATURE_COUNT
 
     /**
      * The estimated amount of deleted features within a collection, read-only property only set by the storage.
      * @since 3.0
      */
-    val estimatedDeletedFeatures: Int64 by _ESTIMATED_DELETED_FEATURES
+    val estimatedDeletedFeatures: Long by _ESTIMATED_DELETED_FEATURES
 
     companion object NakshaCollection_C {
         /**
@@ -677,20 +742,19 @@ open class NakshaCollection() : NakshaFeature() {
          */
         @JvmStatic
         @JsStatic
-        val UNKNOWN = Int64(-1)
+        val UNKNOWN = -1L
 
-        private val DATABASE_ID = NullableProperty<NakshaCollection, String>(String::class)
-        private val CATALOG_ID = NullableProperty<NakshaCollection, String>(String::class)
+        private val ID_NOT_NULL = NotNullIdProperty<NakshaCollection>(randomId = false)
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
         private val SHIFT = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 41 }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val MEMBERS = NullableProperty<NakshaCollection, MemberList>(MemberList::class)
         private val INDICES = NullableProperty<NakshaCollection, IndexList>(IndexList::class)
-        private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
+        private val MAX_AGE = NotNullProperty<NakshaCollection, Long>(Long::class) { _, _ -> -1L }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
-        private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
-        private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
+        private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Long>(Long::class) { _, _ -> UNKNOWN }
+        private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Long>(Long::class) { _, _ -> UNKNOWN }
         private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
             // For downward compatibility with Naksha version 2
             val old = self.getRaw("disableHistory")

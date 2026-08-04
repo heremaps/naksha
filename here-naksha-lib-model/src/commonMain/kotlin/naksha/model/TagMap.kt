@@ -3,7 +3,7 @@
 package naksha.model
 
 import naksha.base.Int64
-import naksha.base.MapProxy
+import naksha.base.PTypedMap
 import naksha.base.NakshaError
 import naksha.base.NakshaException
 import kotlin.js.JsExport
@@ -21,7 +21,7 @@ import kotlin.js.JsName
  * with use of [TagNormalizer] (that is used for example by [TagList])
  */
 @JsExport
-class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
+class TagMap() : PTypedMap<String, Any>(String::class, Any::class) {
 
     @Suppress("LeakingThis")
     @JsName("of")

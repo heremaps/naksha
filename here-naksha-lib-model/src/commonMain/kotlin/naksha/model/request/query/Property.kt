@@ -8,7 +8,7 @@ import naksha.base.fn.Fn1
 import naksha.model.objects.JsonPath
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
-import naksha.model.objects.StandardMembers
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytesMember
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -21,7 +21,7 @@ import kotlin.js.JsName
  * @see ITagQuery
  */
 @JsExport
-open class Property() : Member(StandardMembers.FeatureBytes.name, MemberType.STRING, JsonPath()) {
+open class Property() : Member(FeatureBytesMember.id, MemberType.STRING, JsonPath()) {
 
     /**
      * Create a property from a path given as variable argument list.

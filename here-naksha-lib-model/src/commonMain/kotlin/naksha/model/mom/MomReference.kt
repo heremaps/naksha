@@ -3,7 +3,7 @@
 package naksha.model.mom
 
 import naksha.base.NullableProperty
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -11,7 +11,7 @@ import kotlin.js.JsName
  * MOM reference object holding minimum equivalent fields from MOM reference object.
  */
 @JsExport
-class MomReference() : AnyObject() {
+class MomReference() : PAnyMap() {
 
     @JsName("of")
     constructor(id: String?, spaceId: String?, featureType: String?) : this() {

@@ -20,14 +20,14 @@ package com.here.naksha.app.service.models;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.ToJsonOptions;
 import org.jetbrains.annotations.NotNull;
 
-public class IterateHandle extends AnyObject {
+public class IterateHandle extends PAnyMap {
 
   private static final String OFFSET_KEY = "offset";
   private static final String LIMIT_KEY = "limit";
@@ -65,11 +65,11 @@ public class IterateHandle extends AnyObject {
   }
 
   public String base64EncodedSerializedJson() {
-    return Base64.getEncoder().encodeToString(Platform.toJSON(this, ToJsonOptions.DEFAULT).getBytes(StandardCharsets.UTF_8));
+    return Base64.getEncoder().encodeToString(Base.toJSON(this, ToJsonOptions.DEFAULT).getBytes(StandardCharsets.UTF_8));
   }
 
   public static IterateHandle base64DecodedDeserializedJson(final @NotNull String handle) {
     final String json = new String(Base64.getDecoder().decode(handle));
-    return JvmBoxingUtil.box(Platform.fromJSON(json, FromJsonOptions.DEFAULT), IterateHandle.class);
+    return JvmBoxingUtil.box(Base.fromJSON(json, FromJsonOptions.DEFAULT), IterateHandle.class);
   }
 }

@@ -7,7 +7,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 @JsExport
-open class SpGeometry() : AnyObject() {
+open class SpGeometry() : PAnyMap() {
 
     @JsName("of")
     constructor(coordinates: ICoordinates) : this() {

@@ -1,6 +1,6 @@
 package naksha.diff
 
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.diff.DifferenceCalculator.DifferenceCalculator_C.calculateDifference
 import kotlin.test.*
 
@@ -8,7 +8,7 @@ class DifferenceCalculatorTest {
 
     @Test
     fun x(){
-        val objectToPatch = Platform.fromJSON("""
+        val objectToPatch = Base.fromJSON("""
             {
                 "foo": "bar",
                 "lorem": "ipsum"
@@ -22,7 +22,7 @@ class DifferenceCalculatorTest {
 
         Patcher.patch(objectToPatch, diff)
 
-        val x = Platform.toJSON(objectToPatch)
+        val x = Base.toJSON(objectToPatch)
     }
 
     @Test
@@ -54,7 +54,7 @@ class DifferenceCalculatorTest {
     @Test
     fun shouldCalculateDiffForSimpleMaps() {
         // Given:
-        val left = Platform.fromJSON(
+        val left = Base.fromJSON(
             """
             {
                 "name": "John",
@@ -69,7 +69,7 @@ class DifferenceCalculatorTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Base.fromJSON(
             """
             {
                 "name": "John",
@@ -185,7 +185,7 @@ class DifferenceCalculatorTest {
     @Test
     fun shouldIgnoreSpecifiedKeys() {
         // Given:
-        val left = Platform.fromJSON("""
+        val left = Base.fromJSON("""
             {
                 "foo": "abc",
                 "bar": 123
@@ -193,7 +193,7 @@ class DifferenceCalculatorTest {
         """.trimIndent())
 
         // And:
-        val right = Platform.fromJSON("""
+        val right = Base.fromJSON("""
             {
                 "foo": "abc",
                 "bar": 456
@@ -226,7 +226,7 @@ class DifferenceCalculatorTest {
     @Test
     fun shouldCalculateDiffForComplexMaps() {
         // Given:
-        val left = Platform.fromJSON(
+        val left = Base.fromJSON(
             """
             {
                 "company": "Abc",
@@ -267,7 +267,7 @@ class DifferenceCalculatorTest {
         )
 
         // And
-        val right = Platform.fromJSON(
+        val right = Base.fromJSON(
             """
             {
                 "company": "Abc",

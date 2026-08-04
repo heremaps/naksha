@@ -7,25 +7,28 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.Action
 import naksha.base.AtomicMap
+import naksha.base.FeatureType
+import naksha.base.Id
+import naksha.base.Id.Id_C.ADMIN_CATALOG_ID
 import naksha.base.Int64
+import naksha.base.NakshaConst.IdConst_C.ADMIN_CATALOG_QUOTED
 import naksha.model.NakshaVersion
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Base.BaseCompanion.logger
 import naksha.jbon.IDictReader
 import naksha.jbon.JbDictionary
-import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
-import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_FN
 import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
 import naksha.base.NakshaException
+import naksha.base.Base.BaseCompanion.FAL
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.forbidden
 import naksha.base.illegalState
+import naksha.model.Naksha
 import naksha.model.objects.NakshaCatalog
-import naksha.model.objects.StandardMembers
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
+import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumberMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.TnMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.VersionMember
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.time.Instant
@@ -34,134 +37,133 @@ import kotlin.time.Instant
  * The admin-map of the storage, requires a platform specific implementation.
  * @property storage the
  * @property schemaOid the `OID` of the admin-map schema.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 abstract class PgAdminCatalog internal constructor(
     /**
      * The storage to which this admin-map belongs.
-     * @since 3.0.0
+     * @since 3.0
      */
     storage: PgStorage,
 
     /**
      * The configuration as required.
-     * @since 3.0.0
+     * @since 3.0
      */
     config: PgConfig,
 
     /**
      * If not _null_, overrides [NakshaStorage.create][naksha.model.objects.NakshaStorage.create].
-     * @since 3.0.0
+     * @since 3.0
      */
     create: Boolean?,
 
     /**
      * If not _null_, overrides [NakshaStorage.upgrade][naksha.model.objects.NakshaStorage.upgrade].
-     * @since 3.0.0
+     * @since 3.0
      */
-    upgrade: Boolean?
-) : PgCatalog(storage, NakshaCatalog().withDatabaseId(storage.id).withId(ADMIN_CATALOG_ID)), IDictReader {
+    upgrade: Boolean?,
+) : PgCatalog(storage, NakshaCatalog(ADMIN_CATALOG_ID, Id(config.master.db))), IDictReader {
+
     /**
      * The page-size of the database (`current_setting('block_size')`).
-     * @since 3.0.0
+     * @since 3.0
      */
     val pageSize: Int
 
     /**
      * The maximum size of a tuple (row).
-     * @since 3.0.0
+     * @since 3.0
      */
     val maxTupleSize: Int
 
     /**
      * If there is a special tablespace for temporary tables.
-     * @since 3.0.0
+     * @since 3.0
      */
     val tempTableSpace: String?
 
     /**
      * The `OID` of the temporary tablespace.
-     * @since 3.0.0
+     * @since 3.0
      */
     val tempTableSpaceOid: Int?
 
     /**
      * If there is a special tablespace for brittle tables.
-     * @since 3.0.0
+     * @since 3.0
      */
     val brittleTableSpace: String?
 
     /**
      * The `OID` of the brittle tablespace.
-     * @since 3.0.0
+     * @since 3.0
      */
     val brittleTableSpaceOid: Int?
 
     /**
      * If there is a special tablespace for ephemeral tables.
-     * @since 3.0.0
+     * @since 3.0
      */
     val ephemeralTableSpace: String?
 
     /**
      * The `OID` of the ephemeral tablespace.
-     * @since 3.0.0
+     * @since 3.0
      */
     val ephemeralTableSpaceOid: Int?
 
     /**
      * If the [pgsql-gzip][https://github.com/pramsey/pgsql-gzip] extension is installed, therefore PostgresQL supported `gzip`/`gunzip` as standalone SQL function by the database. Note, that if this is not the case, we're installing code that is implemented in JavaScript.
-     * @since 3.0.0
+     * @since 3.0
      */
     val gzipExtension: Boolean
 
     /**
      * The PostgresQL database version.
-     * @since 3.0.0
+     * @since 3.0
      */
     val postgresVersion: NakshaVersion
 
     /**
      * The OID of the current HEAD version.
-     * @since 3.0.0
+     * @since 3.0
      */
     val versionSequenceOid: Int
 
     /**
      * The OID of the map-number sequence.
-     * @since 3.0.0
+     * @since 3.0
      */
     //val mapNumberSequenceOid: Int
 
     /**
      * The `OID` of the admin-map aka admin schema.
-     * @since 3.0.0
+     * @since 3.0
      */
     val schemaOid: Int
 
     /**
      * The transactions' collection _(`naksha~transactions` aka `1`)_.
-     * @since 3.0.0
+     * @since 3.0
      */
-    val transactions: PgNakshaTransactions
+    val pgTransactionsCollection: PgNakshaTransactions
 
     /**
      * The catalogs' collection _(`naksha~catalogs` aka `2`)_.
-     * @since 3.0.0
+     * @since 3.0
      */
-    val catalogs: PgNakshaCatalogs
+    val pgCatalogsCollection: PgNakshaCatalogs
 
     /**
      * The books' collection _(`naksha~books` aka `3`)_.
-     * @since 3.0.0
+     * @since 3.0
      */
     val books: PgNakshaBooks
 
     // Called from invokeInitStorage->initStorage, so within a lock!
     init {
-        val id = config.id // storageId
-        val number = config.databaseNumber // storageNumber
         val doOverride = config.override == true
         val doCreate = create ?: config.create
         val doUpgrade = upgrade ?: config.upgrade
@@ -172,7 +174,7 @@ abstract class PgAdminCatalog internal constructor(
         val psql_version = if (config_version != null) NakshaVersion.of(config_version) else adminVersion
 
         // Switch to admin context.
-        val conn = storage.newConnection(Naksha.adminOptions, false)
+        val conn = storage.newConnection(storage.optionsBuilder.build(), false)
         conn.use {
             logger.info("Start initStorage of database {}", conn.toUri())
             conn.autoCommit = false
@@ -248,92 +250,95 @@ SELECT basics.*, procs.* FROM basics, procs;
 
             // This only creates the logical structure, no database access is yet done!
             // Beware: We need to do this here, because `PgCollection` back-refers to `maxTupleSize` !
-            transactions = PgNakshaTransactions(this)
+            pgTransactionsCollection = PgNakshaTransactions(this)
             books = PgNakshaBooks(this)
-            catalogs = PgNakshaCatalogs(this)
+            pgCatalogsCollection = PgNakshaCatalogs(this)
 
             // Admin collections are constructed fresh (not decoded from storage), so give each a valid
             // tuple-number: encodeFeature needs the owning collection's tuple-number to write features
             // into it (e.g. the transaction record persisted on commit). A collection's own feature-number
             // is its collection-number, and its record lives in `naksha~collections`.
-            val collectionsColNumber = collections.collectionNumber
-            for (adminCol in listOf(collections, transactions, books, catalogs)) {
+            val collectionsColNumber = collections.id.intValue
+            for (adminCol in listOf(collections, pgTransactionsCollection, books, pgCatalogsCollection)) {
                 val tn = TupleNumber(
-                    number, catalogNumber, collectionsColNumber,
-                    Int64(adminCol.collectionNumber.toLong()), Int64(1)
+                    databaseId.number,
+                    id.intValue,
+                    collectionsColNumber,
+                    adminCol.id.number,
+                    1L
                 )
                 // Set the collection's resolved `_tn` member, where encodeFeature reads it back.
                 val col = adminCol.head
-                col.useMember(naksha.model.objects.StandardMembers.Tn).write(col, tn)
+                col.useMember(TnMember).write(col, tn)
             }
 
             if (admin_schema_oid == null) {
                 if (!doCreate) throw forbidden("Creation of admin-map needed, but forbidden by config")
-                logger.info("Install Naksha admin-map in version $psql_version for storage $id / $number")
-                schemaOid = createAdminCatalog(conn, config, id, number, psql_version)
+                logger.info("Install Naksha admin-map in version '$psql_version' for storage '${storage.id}' with db '$databaseId'")
+                schemaOid = createAdminCatalog(conn, config, databaseId, psql_version)
             } else {
                 schemaOid = admin_schema_oid
                 if (has_naksha_version != true) {
-                    throw illegalState("The storage '$id' does have an admin-map, but it is broken, because function `naksha_version` is missing")
+                    throw illegalState("The storage '$databaseId' does have an admin-map, but it is broken, because function `naksha_version` is missing")
                 }
                 if (has_naksha_storage_id != true) {
-                    throw illegalState("The storage '$id' does have an admin-map, but it is broken, because function `naksha_storage_id` is missing")
+                    throw illegalState("The storage '$databaseId' does have an admin-map, but it is broken, because function `naksha_storage_id` is missing")
                 }
                 if (has_naksha_storage_number != true) {
-                    throw illegalState("The storage '$id' does have an admin-map, but it is broken, because function `naksha_storage_number` is missing")
+                    throw illegalState("The storage '$databaseId' does have an admin-map, but it is broken, because function `naksha_storage_number` is missing")
                 }
                 var installed_version: NakshaVersion
                 var installed_storage_id: String
-                var installed_storage_number: Int64
+                var installed_storage_number: Long
                 conn.execute("SELECT \"${ADMIN_CATALOG_ID}\".naksha_version() AS v, \"${ADMIN_CATALOG_ID}\".naksha_storage_id() AS id, \"${ADMIN_CATALOG_ID}\".naksha_storage_number() AS n").fetch().use { cursor ->
                     try {
-                        val v: Int64 = cursor["v"]
+                        val v: Long = cursor["v"]
                         installed_version = NakshaVersion(v)
                         installed_storage_id = cursor["id"]
                         installed_storage_number = cursor["n"]
                     } catch (pe: Exception) {
                         throw illegalState(
-                            "The storage '$id' does have an admin schema, but it is broken, because reading storage version, id, and/or number failed",
+                            "The storage '$databaseId' does have an admin schema, but it is broken, because reading storage version, id, and/or number failed",
                             pe
                         )
                     }
                 }
-                if (installed_storage_id != id) {
+                if (installed_storage_id != databaseId.text) {
                     throw NakshaException(
                         STORAGE_ID_MISMATCH,
-                        "Failed to initialize storage, the storage-id is '$installed_storage_id', but was expected to be '$id'"
+                        "Failed to initialize storage, the storage-id is '$installed_storage_id', but was expected to be '$databaseId'"
                     )
                 }
-                if (installed_storage_number != number) {
+                if (installed_storage_number != databaseId.number) {
                     throw NakshaException(
                         STORAGE_ID_MISMATCH,
-                        "Failed to initialize the storage, the storage-number is '$installed_storage_number', but was expected to be '$number'"
+                        "Failed to initialize the storage, the storage-number is '$installed_storage_number', but was expected to be '${databaseId.number}'"
                     )
                 }
                 if (installed_version != psql_version) {
-                    logger.info("The admin-map of '$id' is in version $installed_version, this library uses version $psql_version")
+                    logger.info("The admin-map of '$databaseId' is in version $installed_version, this library uses version $psql_version")
                     if (doOverride) {
-                        logger.warn("Forcefully upgrade storage '$id' admin-map (current=$installed_version, new=$psql_version)")
-                        upgradeAdminCatalog(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
+                        logger.warn("Forcefully upgrade storage '$databaseId' admin-map (current=$installed_version, new=$psql_version)")
+                        upgradeAdminCatalog(conn, config, databaseId, psql_version, admin_schema_oid, installed_version)
                     } else {
                         if (installed_version > psql_version) {
-                            throw illegalState("The storage '$id' is in a newer version ($installed_version) than this library ($psql_version), access denied (otherwise we risk damaging the storage)")
+                            throw illegalState("The storage '$databaseId' is in a newer version ($installed_version) than this library ($psql_version), access denied (otherwise we risk damaging the storage)")
                         }
                         if (installed_version < minAdminVersion) {
                             if (!doUpgrade) {
-                                throw illegalState("The storage '$id' is in a newer version ($installed_version) that this library ($psql_version), access denied (there is a risk damaging the storage)")
+                                throw illegalState("The storage '$databaseId' is in a newer version ($installed_version) that this library ($psql_version), access denied (there is a risk damaging the storage)")
                             }
-                            logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
-                            upgradeAdminCatalog(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
+                            logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $databaseId")
+                            upgradeAdminCatalog(conn, config, databaseId, psql_version, admin_schema_oid, installed_version)
                         } else if (doUpgrade){
-                            logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $id")
-                            upgradeAdminCatalog(conn, config, id, number, psql_version, admin_schema_oid, installed_version)
+                            logger.info("Upgrade Naksha admin-map from $installed_version to $psql_version for storage $databaseId")
+                            upgradeAdminCatalog(conn, config, databaseId, psql_version, admin_schema_oid, installed_version)
                         } else {
-                            logger.info("In storage '$id' admin-map is in version $installed_version, this library is version $psql_version, but we should not upgrade the storage, and are okay working with the older version")
+                            logger.info("In storage '$databaseId' admin-map is in version $installed_version, this library is version $psql_version, but we should not upgrade the storage, and are okay working with the older version")
                         }
                     }
                 } else {
-                    logger.info("The admin-map of '$id' is up-to-date: $psql_version")
+                    logger.info("The admin-map of '$databaseId' is up-to-date: $psql_version")
                 }
             }
             setSearchPath(conn)
@@ -344,7 +349,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                 //mapNumberSequenceOid = cursor["map_oid"]
                 //colNumberSequenceOid = cursor["col_oid"]
             }
-            logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, txn-seq-oid=$versionSequenceOid, commit")
+            logger.info("Database $databaseId / ${databaseId.number} initialized for storage ${config.id}, txn-seq-oid=$versionSequenceOid, commit")
             conn.commit()
         }
     }
@@ -355,17 +360,15 @@ SELECT basics.*, procs.* FROM basics, procs;
      * **Note**: At the time of calling this method, [schemaOid] has not been initialized!
      * @param conn the connection to use to perform initialization work.
      * @param config the configuration.
-     * @param storageId the storage-id to install.
-     * @param storageNumber the storage-number to install.
+     * @param databaseId the database-id to install.
      * @param psqlVersion the PSQL version to install.
      * @return the admin schema `OID`.
-     * @since 3.0.0
+     * @since 3.0
      */
     protected abstract fun createAdminCatalog(
         conn: PgConnection,
         config: PgConfig,
-        storageId: String,
-        storageNumber: Int64,
+        databaseId: Id,
         psqlVersion: NakshaVersion
     ): Int
 
@@ -376,17 +379,15 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @param conn the connection to use to perform initialization work.
      * @param config the configuration.
      * @param storageId the storage-id to install.
-     * @param storageNumber the storage-number to install.
      * @param psqlVersion the PSQL version to install.
      * @param schemaOid the admin schema `OID` of the current schema.
      * @param installedVersion the PSQL version that is currently installed that should be upgraded, if any (maybe only the schema exists).
-     * @since 3.0.0
+     * @since 3.0
      */
     protected abstract fun upgradeAdminCatalog(
         conn: PgConnection,
         config: PgConfig,
-        storageId: String,
-        storageNumber: Int64,
+        storageId: Id,
         psqlVersion: NakshaVersion,
         schemaOid: Int,
         installedVersion: NakshaVersion?
@@ -398,7 +399,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * **Beware**: The returned transaction number can be located long in the past, days or month ago.
      * @param conn the connection to use to access the database.
      * @return the next _(unused)_ transaction-number.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getTxn(conn: PgConnection): Int64 {
         val QUERY = "SELECT currval($1) as txn"
@@ -413,16 +414,16 @@ SELECT basics.*, procs.* FROM basics, procs;
      * Allocate a new transaction-number and return the details of it.
      * @param conn the connection to use to access the database.
      * @return the allocated transaction-number.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun newTxn(conn: PgConnection): PgTxn {
         val QUERY = "SELECT nextval($1) as version, (extract(epoch from transaction_timestamp())*1000)::int8 as time"
         val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
         cursor.use {
-            var number: Int64 = cursor["version"]
-            val time: Int64 = cursor["time"]
+            var number: Long = cursor["version"]
+            val time: Long = cursor["time"]
             var version = Version(number)
-            val txInstant = Instant.fromEpochMilliseconds(time.toLong())
+            val txInstant = Instant.fromEpochMilliseconds(time)
             val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
             if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
                 logger.info("Transaction counter is in wrong day")
@@ -436,7 +437,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                     }
                     if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
                         logger.info("Transaction counter is still at wrong day, rollover to next day")
-                        version = Version.auto(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0), Action.VERSION)
+                        version = Version.auto(txDate.year, txDate.monthNumber, txDate.dayOfMonth, 0L, Action.VERSION)
                         number = version.number
                         conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, number + 4)).close()
                     }
@@ -471,23 +472,21 @@ SELECT basics.*, procs.* FROM basics, procs;
         do {
             val id = catalog.id
             val newCatalog = catalog.head
-            val catalogNumber = newCatalog.catalogNumber
-            val newVersion = newCatalog.tupleNumber?.version ?: throw NakshaException(
-                ILLEGAL_STATE,
-                "Cannot store catalog '$id' in cache, missing `tupleNumber`"
-            )
+            val intNumber = newCatalog.id.intValue
+            val newVersion = newCatalog.tupleNumber?.version
+                ?: throw illegalState("${FAL}Cannot store catalog '$id' in cache, missing `tupleNumber`")
 
-            val existing = catalogCache[catalogNumber]
+            val existing = catalogCache[intNumber]
             val existingTn = existing?.head?.tupleNumber
-            val existingVersion: Int64? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
+            val existingVersion: Long? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
             if (existingVersion != null && existingVersion > newVersion) {
                 logger.debug("Do not update catalog '$id', the existing version ($existingVersion) is newer than the new ($newVersion)")
                 break
             }
             if (existing != null) {
-                if (catalogCache.replace(catalogNumber, existing, catalog)) break
+                if (catalogCache.replace(intNumber, existing, catalog)) break
             } else {
-                if (catalogCache.putIfAbsent(catalogNumber, catalog) == null) break
+                if (catalogCache.putIfAbsent(intNumber, catalog) == null) break
             }
         } while (true)
     }
@@ -496,7 +495,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * Remove the catalog with the given catalog-number from the cache.
      */
     protected fun invalidateCatalog(catalog: PgCatalog, atomic: Boolean = true) {
-        if (atomic) catalogCache.remove(catalog.head.catalogNumber, catalog) else catalogCache.remove(catalog.head.catalogNumber)
+        if (atomic) catalogCache.remove(catalog.head.id.number.toInt(), catalog) else catalogCache.remove(catalog.head.id.number.toInt())
     }
 
     /**
@@ -507,10 +506,10 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @param conn the connection to use to access the database.
      * @param catalog the catalog to create.
      * @throws NakshaException with [naksha.base.NakshaError.CATALOG_EXISTS] if a catalog with the same `id` exists, or if a catalog with a different `id`, but same feature-number exists _(hash collision)_.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun createPgCatalog(conn: PgConnection, catalog: PgCatalog) {
-        NakshaIdType.CATALOG.verify(catalog.id)
+        FeatureType.CATALOG.verify(catalog.id.text)
         // TODO: We need to ensure that there is no other schema with the same feature-number:
         // Write: `ALTER SCHEMA ${catalog.quotedId} SET SCHEMA OPTION 'featureNumber' 'stringifiedFN';`
         // Read:
@@ -530,42 +529,12 @@ SELECT basics.*, procs.* FROM basics, procs;
      * Does not commit the given connection, therefore the map is not yet physically deleted. The method neither deletes the corresponding entry from the collection's collection of the admin-map, it only drops the schema!
      * @param conn the connection to use to access the database.
      * @param catalog the map to delete.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun deletePgCatalog(conn: PgConnection, catalog: PgCatalog) {
-        NakshaIdType.CATALOG.verify(catalog.id)
+        FeatureType.CATALOG.verify(catalog.id.text)
         conn.execute("DROP SCHEMA IF EXISTS ${catalog.quotedId} CASCADE").close()
         invalidateCatalog(catalog)
-    }
-
-    /**
-     * Returns the existing catalog with the given identifier; if any.
-     * @param conn the connection to use to access the database.
-     * @param id the catalog-id to query.
-     * @return the map, if it exists; _null_ otherwise.
-     * @since 3.0.0
-     */
-    fun getPgCatalogById(conn: PgConnection?, id: String): PgCatalog? {
-        if (ADMIN_CATALOG_ID == id) return this
-        val catalogNumber = Naksha.catalogNumber(id)
-        val existing = catalogCache[catalogNumber]
-        if (existing != null || conn==null) return existing
-
-        val outRows = PgRows().withCollection(catalogs)
-        val SQL = """SELECT ${outRows.aliases()}
-FROM "naksha~admin".${catalogs.headTable.quotedName}
-WHERE $Id = $1 AND (${StandardMembers.FeatureVersion} & 3) < 2"""
-        val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
-        plan.execute(arrayOf(id)).fetch().use { cursor ->
-            if (!outRows.read(cursor)) return null
-        }
-        if (outRows.size == 0) return null
-        val tuple: Tuple = outRows[0] ?: return null
-        Naksha.cache.store(tuple)
-        val nakshaCatalog = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
-        val pgCatalog = PgCatalog(storage, nakshaCatalog)
-        cacheCatalog(pgCatalog)
-        return pgCatalog
     }
 
     /**
@@ -573,26 +542,25 @@ WHERE $Id = $1 AND (${StandardMembers.FeatureVersion} & 3) < 2"""
      * @param conn the connection to use to access the database.
      * @param number the map-number to query.
      * @return the map, if it exists; _null_ otherwise.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun getPgCatalogByNumber(conn: PgConnection?, number: Int): PgCatalog? {
-        if (ADMIN_CATALOG_FN == number) return this
+        if (ADMIN_CATALOG_ID.intValue == number) return this
         val existing = catalogCache[number]
         if (existing != null) return existing
         if (conn == null) return null
 
         // Read from database
-        val rows = PgRows().withCollection(catalogs)
+        val rows = PgRows().withPgCollection(pgCatalogsCollection)
         val SQL = """SELECT ${rows.aliases()} 
-FROM "naksha~admin".${catalogs.headTable.quotedName} 
-WHERE ${StandardMembers.FeatureNumber} = $1 AND (${StandardMembers.FeatureVersion} & 3) < 2"""
-        setSearchPath(conn)
-        val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
+FROM $ADMIN_CATALOG_QUOTED.${pgCatalogsCollection.headTable.quotedName} 
+WHERE $FeatureNumberMember = $1 AND ($VersionMember & 3) < 2"""
+        val plan = conn.prepare(SQL, arrayOf(PgType.INT64.string))
         plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }
         if (rows.size == 0) return null
         val tuple = rows[0] ?: return null
         Naksha.cache.store(tuple)
-        val nakshaCatalog = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
+        val nakshaCatalog = tuple.decodeCatalog(null)
         val pgCatalog = PgCatalog(storage, nakshaCatalog)
         cacheCatalog(pgCatalog)
         return pgCatalog
@@ -602,7 +570,7 @@ WHERE ${StandardMembers.FeatureNumber} = $1 AND (${StandardMembers.FeatureVersio
      * Returns a list of all existing maps, excluding the admin-map.
      * @param conn the connection to use to access the database.
      * @return the list of existing maps, _(empty, when no maps exist)_.
-     * @since 3.0.0
+     * @since 3.0
      */
     fun listPgMaps(conn: PgConnection): PgMapList
         = PgMapList().withAll(catalogCache.mapNotNull { it.value })

@@ -25,7 +25,7 @@ class StartsWith() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, value: String) : this(at.name, value)
+    constructor(at: Member, value: String) : this(at.id, value)
 
     var value: String by VALUE
 }

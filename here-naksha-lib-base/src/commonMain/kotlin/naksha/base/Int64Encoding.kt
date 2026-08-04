@@ -3,7 +3,6 @@ package naksha.base
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmStatic
 import kotlin.reflect.KClass
 
 /**
@@ -11,7 +10,7 @@ import kotlin.reflect.KClass
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-class Int64Encoding : JsEnum() {
+class Int64Encoding : BaseEnum() {
     companion object Int64EncodingCompanion {
         /**
          * Encode as 64-bit integer (_default_).
@@ -57,6 +56,6 @@ class Int64Encoding : JsEnum() {
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
-    override fun namespace(): KClass<out JsEnum> = Int64Encoding::class
+    override fun namespace(): KClass<out BaseEnum> = Int64Encoding::class
     override fun initClass() {}
 }

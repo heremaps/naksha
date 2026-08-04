@@ -2,7 +2,7 @@
 
 package naksha.geo
 
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NotNullProperty
 import kotlin.js.JsExport
 
@@ -10,7 +10,7 @@ import kotlin.js.JsExport
 // TODO: https://datatracker.ietf.org/doc/html/rfc7946#section-3.3
 
 @JsExport
-class SpFeatureCollection : AnyObject() {
+class SpFeatureCollection : PAnyMap() {
     companion object SpFeatureCollection_C {
         private val FEATURES = NotNullProperty<SpFeatureCollection, SpFeatureList>(SpFeatureList::class) { _, _ -> SpFeatureList() }
     }

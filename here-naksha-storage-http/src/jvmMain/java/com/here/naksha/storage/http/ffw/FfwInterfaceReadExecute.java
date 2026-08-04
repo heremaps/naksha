@@ -21,6 +21,7 @@ package com.here.naksha.storage.http.ffw;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
+import naksha.base.IdList;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
@@ -88,7 +89,7 @@ public class FfwInterfaceReadExecute {
 
     if (response.statusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
       // For Error 404 (not found) on single feature GetById request, we need to return empty result
-      return new SuccessResponse(Collections.emptyList());
+      return new SuccessResponse().withObjects(Collections.emptyList());
     }
     return prepareResult(response,  PrepareResult.singleFeatureMapper);
   }
@@ -119,7 +120,7 @@ public class FfwInterfaceReadExecute {
   }
 
   private static String getFeatureIdsQueryOrEmpty(ReadFeaturesProxyWrapper readRequest) {
-    StringList featureIds = readRequest.getFeatureIds();
+    IdList featureIds = readRequest.getFeatureIds();
     if (featureIds.isEmpty()) {
       return "";
     } else {
@@ -179,6 +180,6 @@ public class FfwInterfaceReadExecute {
   }
 
   private static String baseEndpoint(ReadFeaturesProxyWrapper request) {
-    return request.getCollectionId();
+    return request.getCollectionId().getText();
   }
 }

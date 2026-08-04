@@ -2,7 +2,7 @@ package naksha.model.objects
 
 import naksha.base.Fnv1a32
 import naksha.base.Int64
-import naksha.base.Platform
+import naksha.base.Base
 import naksha.geo.HereTile
 import naksha.base.Action
 import naksha.model.IMemberProcessor
@@ -38,14 +38,16 @@ class XyzProcessors private constructor() {
          */
         @JvmStatic
         val xyzCreatedAt = IMemberProcessor { _, collection, feature, _, value ->
-            when (value) {
-                is Int64 -> value
-                is Number -> Int64(value.toLong())
-                else -> {
-                    val action = collection.useMember(StandardMembers.Tn).readTupleNumber(feature)?.action
-                    if (action == Action.CREATE) null else feature.properties.xyz.createdAt
+            if (feature is NakshaFeature) {
+                when (value) {
+                    is Int64 -> value
+                    is Number -> Int64(value.toLong())
+                    else -> {
+                        val action = collection.useMember(StandardMembers.TnMember).readTupleNumber(feature)?.action
+                        if (action == Action.CREATE) null else feature.properties.xyz.createdAt
+                    }
                 }
-            }
+            } else value
         }
 
         /**
@@ -53,7 +55,7 @@ class XyzProcessors private constructor() {
          * @since 3.0
          */
         @JvmStatic
-        val xyzUpdatedAt = IMemberProcessor { _, _, _, _, _ -> Platform.currentMillis() }
+        val xyzUpdatedAt = IMemberProcessor { _, _, _, _, _ -> Base.currentMillis() }
 
         /**
          * Ensures that [XyzAppId][naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId] is set correctly.
@@ -75,7 +77,7 @@ class XyzProcessors private constructor() {
          */
         @JvmStatic
         val xyzAuthorTimestamp = IMemberProcessor { session, _, _, _, value ->
-            if (session.options.author != null) Platform.currentMillis() else value as Int64?
+            if (session.options.author != null) Base.currentMillis() else value as Int64?
         }
 
         /**
@@ -84,9 +86,11 @@ class XyzProcessors private constructor() {
          * @since 3.0
          */
         @JvmStatic
-        val xyzHereTile = IMemberProcessor { _, _, feature, _, _ ->
-            val point = feature.referencePoint ?: feature.geometry?.calculateCentroid()
-            if (point != null) HereTile(point.latitude, point.longitude).intKey else Fnv1a32.string(0, feature.id)
+        val xyzHereTile = IMemberProcessor { _, _, feature, _, value ->
+            if (feature is NakshaFeature) {
+                val point = feature.referencePoint ?: feature.geometry?.calculateCentroid()
+                if (point != null) HereTile(point.latitude, point.longitude).intKey else Fnv1a32.string(0, feature.id.text)
+            } else value
         }
 
         /**
@@ -94,6 +98,8 @@ class XyzProcessors private constructor() {
          * @since 3.0
          */
         @JvmStatic
-        val xyzHash = IMemberProcessor { _, _, feature, _, _ -> Fnv1a32.string(0, feature.id) }
+        val xyzHash = IMemberProcessor { _, _, feature, _, value ->
+            if (feature is NakshaFeature) Fnv1a32.string(0, feature.id.text) else value
+        }
     }
 }

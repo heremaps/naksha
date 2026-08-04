@@ -2,11 +2,7 @@
 
 package naksha.model
 
-import naksha.base.Int64
-import naksha.base.ListProxy
-import naksha.base.Platform
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
+import naksha.base.PTypedArray
 import naksha.base.TupleNumber
 import naksha.base.TupleNumberVariant
 import naksha.model.BinaryUtil.BinaryUtil_C.TYPE_TUPLE_NUMBER_ARRAY
@@ -16,9 +12,11 @@ import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B160
 import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B192
 import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B256
 import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B64
+import naksha.base.illegalArg
 import naksha.base.illegalState
-import naksha.model.request.FeatureTuple
-import naksha.model.request.FeatureTupleList
+import naksha.base.setInt32Be
+import naksha.base.setInt64Be
+import naksha.model.request.ITupleNumberArray
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
@@ -29,29 +27,7 @@ import kotlin.jvm.JvmStatic
  * @since 3.0.0
  */
 @JsExport
-class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
-
-    /**
-     * Convert this list of [TupleNumber] into a list of [FeatureTuple].
-     * @param from the index of the first entry to convert.
-     * @param to the index of the first entry **not** to convert.
-     * @return the [FeatureTupleList].
-     * @since 3.0
-     */
-    @JvmOverloads
-    fun toFeatureTupleList(from: Int = 0, to: Int = size): FeatureTupleList {
-        val rs = FeatureTupleList()
-        val length = to - from
-        rs.setCapacity(length)
-        var i = from
-        while (i < to) {
-            val tupleNumber = this[i] ?: continue
-            val featureTuple = FeatureTuple(tupleNumber)
-            rs.add(featureTuple)
-            i++
-        }
-        return rs
-    }
+class TupleNumberList : PTypedArray<TupleNumber>(TupleNumber::class), ITupleNumberArray {
 
     /**
      * Encode this list into a byte-array.
@@ -68,10 +44,10 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
         //   if the tuple-numbers share storage-, map-, collection-, and/or feature-number
         // Note, this code is not thread safe, no other thread must modify the list while we iterate it.
         var variant: TupleNumberVariant? = null
-        var storageNumber: Int64? = null
-        var mapNumber: Int? = -1
-        var collectionNumber: Int? = -1
-        var featureNumber: Int64? = null
+        var databaseNumber = 0L
+        var catalogNumber = 0
+        var collectionNumber = 0
+        var featureNumber = 0L
         for (tupleNumber in this) {
             if (tupleNumber == null) {
                 length--
@@ -80,46 +56,39 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
             if (variant == null) {
                 // We found a first tuple, we hope that each tuple can be encoded in 64-bit only.
                 variant = B64
-                storageNumber = tupleNumber.databaseNumber
-                mapNumber = tupleNumber.catalogNumber
+                // Share all values
+                databaseNumber = tupleNumber.databaseNumber
+                catalogNumber = tupleNumber.catalogNumber
                 collectionNumber = tupleNumber.collectionNumber
                 featureNumber = tupleNumber.featureNumber
                 continue
             }
-            if (storageNumber != tupleNumber.databaseNumber) {
+            if (variant === B256) continue
+            if (databaseNumber != tupleNumber.databaseNumber) {
                 // We need to encode all values individually
                 variant = B256
-                storageNumber = null
-                mapNumber = null
-                collectionNumber = null
-                featureNumber = null
                 break
             }
-            if (variant === B192) continue
-            if (mapNumber != tupleNumber.catalogNumber) {
-                // We need to encode individual map-, collection-, and feature-numbers
+            if (variant === B192) continue // We know that we max share the database
+            if (catalogNumber != tupleNumber.catalogNumber) {
+                // We need to encode individual catalog-, collection-, and feature-numbers
                 variant = B192
-                mapNumber = null
-                collectionNumber = null
-                featureNumber = null
                 continue
             }
-            if (variant === B160) continue
+            if (variant === B160) continue // We know that we max share the database, and catalog
             if (collectionNumber != tupleNumber.collectionNumber) {
                 // We need to encode individual collection-, and feature-numbers
                 variant = B160
-                collectionNumber = null
-                featureNumber = null
                 continue
             }
-            if (variant === B128) continue // We need to encode at least individual feature-numbers
+            if (variant === B128) continue // We know that we max share the database, catalog, and collection
             if (featureNumber != tupleNumber.featureNumber) {
                 // We need to encode individual feature-numbers
                 variant = B128
-                featureNumber = null
                 continue
             }
-            // So far, we found the same storage-, map-, collection-, and feature-numbers for all tuple-numbers.
+            // So far, we found the same storage-, catalog-, collection-, and feature-numbers for all tuple-numbers.
+            // So we expect that the current variant is still B64 as initially setup for the first tuple.
             check(variant === B64)
         }
         // If the list is empty, return empty bytes.
@@ -132,50 +101,56 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
         //  8 byte = txn:8
         val SIZE = 8 + variant.sharedBytes + variant.encodingBytes * length
         val bytes = ByteArray(SIZE)
-        val view = Platform.newDataView(bytes)
-        writeSimpleHeader(view, 0, TYPE_TUPLE_NUMBER_ARRAY, variant.subType, length, SIZE)
+        writeSimpleHeader(bytes, 0, TYPE_TUPLE_NUMBER_ARRAY, variant.subType, length, SIZE)
         var i = 8
-        if (variant.sharedStorageNumber()) {
-            dataview_set_int64(view, i, storageNumber!!)
+        if (variant.sharedDatabaseNumber()) {
+            bytes.setInt64Be(i, databaseNumber)
             i += 8
         }
-        if (variant.sharedMapNumber()) {
-            dataview_set_int32(view, i, mapNumber!!)
+        if (variant.sharedCatalogNumber()) {
+            bytes.setInt32Be( i, catalogNumber)
             i += 4
         }
         if (variant.sharedCollectionNumber()) {
-            dataview_set_int32(view, i, collectionNumber!!)
+            bytes.setInt32Be(i, collectionNumber)
             i += 4
         }
         if (variant.sharedFeatureNumber()) {
-            dataview_set_int64(view, i, featureNumber!!)
+            bytes.setInt64Be(i, featureNumber)
             i += 8
         }
         check(i == variant.sharedBytes)
         for (tupleNumber in this) {
             if (tupleNumber == null) continue
-            if (variant.encodeStorageNumber()) {
-                dataview_set_int64(view, i, tupleNumber.databaseNumber)
+            if (variant.encodeDatabaseNumber()) {
+                bytes.setInt64Be(i, tupleNumber.databaseNumber)
                 i += 8
             }
-            if (variant.encodeMapNumber()) {
-                dataview_set_int32(view, i, tupleNumber.catalogNumber)
+            if (variant.encodeCatalogNumber()) {
+                bytes.setInt32Be(i, tupleNumber.catalogNumber)
                 i += 4
             }
             if (variant.encodeCollectionNumber()) {
-                dataview_set_int32(view, i, tupleNumber.collectionNumber)
+                bytes.setInt32Be(i, tupleNumber.collectionNumber)
                 i += 4
             }
             if (variant.encodeFeatureNumber()) {
-                dataview_set_int64(view, i, tupleNumber.featureNumber)
+                bytes.setInt64Be(i, tupleNumber.featureNumber)
                 i += 8
             }
-            dataview_set_int64(view, i, tupleNumber.version)
+            bytes.setInt64Be(i, tupleNumber.version)
             i += 8
         }
         check(i == SIZE)
         return bytes
     }
+
+    override fun getDatabaseNumber(i: Int): Long = get(i)?.databaseNumber ?: throw illegalArg("No tuple-number at index $i")
+    override fun getCatalogNumber(i: Int): Int = get(i)?.catalogNumber ?: throw illegalArg("No tuple-number at index $i")
+    override fun getCollectionNumber(i: Int): Int = get(i)?.collectionNumber ?: throw illegalArg("No tuple-number at index $i")
+    override fun getFeatureNumber(i: Int): Long = get(i)?.featureNumber ?: throw illegalArg("No tuple-number at index $i")
+    override fun getVersion(i: Int): Long = get(i)?.version ?: throw illegalArg("No tuple-number at index $i")
+    override fun getTupleNumber(i: Int): TupleNumber = get(i) ?: throw illegalArg("No tuple-number at index $i")
 
     companion object TupleNumberList_C {
         /**

@@ -1,9 +1,9 @@
 package naksha.jbon;
 
 import naksha.base.*
-import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_size
 import kotlin.js.*
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 import kotlin.math.floor
 
@@ -13,71 +13,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
-open class JbEncoder(var global: IBook? = null) : Binary() {
-
-    /**
-     * Create a new resizable editor with a new byte-array of the given size backing it.
-     * @param size The amount of byte to allocate initially.
-     * @param global The global dictionary to use when encoding; if any.
-     */
-    @Suppress("LeakingThis")
-    @JsName("forSize")
-    constructor(size: Int, global: IBook? = null) : this(global) {
-        view = Platform.newDataView(ByteArray(size))
-        this.readOnly = false
-        this.resize = true
-    }
-
-    /**
-     * Creates a new resizable editor about the given data-view.
-     * @param binaryView The view for which to create a proxy.
-     * @param pos The position in the view to start reading; defaults to `0`.
-     * @param end The position in the view to stop reading at (first position to **not** read); defaults to `view.byteLength`.
-     * @param global The global dictionary to use when encoding; if any.
-     */
-    @Suppress("LeakingThis")
-    @JsName("forBinary")
-    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: IBook? = null) : this(global) {
-        this.view = binaryView.view
-        this.pos = pos
-        this.end = end
-        this.readOnly = false
-        this.resize = true
-    }
-
-    /**
-     * Creates a new resizable editor about the given data-view.
-     * @param view The view for which to create a proxy.
-     * @param pos The position in the view to start reading; defaults to `0`.
-     * @param end The position in the view to stop reading at (first position to **not** read); defaults to `view.byteLength`.
-     * @param global The global dictionary to use when encoding; if any.
-     */
-    @Suppress("LeakingThis")
-    @JsName("forDataView")
-    constructor(view: PlatformDataView, pos: Int = 0, end: Int = dataview_get_size(view), global: JbDictionary? = null) : this(global) {
-        this.view = view
-        this.pos = pos
-        this.end = end
-        this.readOnly = false
-        this.resize = true
-    }
-
-    /**
-     * Creates a new resizable editor with a new data-view about the given byte-array.
-     * @param byteArray The byte-array to view.
-     * @param offset The first byte to view.
-     * @param length The amount of byte to view; defaults to everything from [offset] to `byteArray.size`.
-     * @param global The global dictionary to use when encoding; if any.
-     */
-    @Suppress("LeakingThis")
-    @JsName("forUint8Array")
-    constructor(byteArray: ByteArray, offset: Int = 0, length: Int = byteArray.size - offset, global: JbDictionary? = null) : this(global) {
-        view = Platform.newDataView(byteArray, offset, length)
-        this.pos = 0
-        this.end = dataview_get_size(view)
-        this.readOnly = false
-        this.resize = true
-    }
+open class JbEncoder @JvmOverloads constructor(var global: IBook? = null) : Binary() {
 
     companion object JbEncoderCompanion {
         /**
@@ -296,7 +232,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
      * @param value The integer to write.
      * @return The offset of the value written.
      */
-    fun encodeInt64(value: Int64): Int {
+    fun encodeInt64(value: Long): Int {
         if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
             return encodeInt32(value.toInt())
         }
@@ -311,7 +247,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
      * @param value The timestamp to write.
      * @return The offset of the value written.
      */
-    fun encodeTimestamp(value: Int64): Int {
+    fun encodeTimestamp(value: Long): Int {
         val offset = end;
         writeInt8(ENC_MIXED_SCALAR_TIMESTAMP.toByte())
         val hi = (value ushr 32).toShort()
@@ -834,7 +770,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
      * @param map The GeoJSON feature to convert into JBON.
      * @return The JBON representation of the feature, the XYZ-namespace and the geometry.
      */
-    fun buildFeatureFromMap(map: MapProxy<String, *>): ByteArray {
+    fun buildFeatureFromMap(map: PTypedMap<String, *>): ByteArray {
         clear()
         val id: String? = map.getAs("id", String::class)
         xyz = null
@@ -844,9 +780,9 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
             val value = entry.value
             if ("id" == key || "geometry" == key) continue
             writeKey(entry.key)
-            if ("properties" == key && value is MapProxy<*, *>) {
+            if ("properties" == key && value is PTypedMap<*, *>) {
                 @Suppress("UNCHECKED_CAST")
-                encodeMap(value as MapProxy<String, *>, true)
+                encodeMap(value as PTypedMap<String, *>, true)
             } else {
                 encodeValue(value)
             }
@@ -858,7 +794,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
     /**
      * When invoking [buildFeatureFromMap] this is used to capture the XYZ namespace reference, if any is found.
      */
-    var xyz: MapProxy<String, *>? = null
+    var xyz: PTypedMap<String, *>? = null
 
     /**
      * Writes a map recursively.
@@ -866,14 +802,14 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
      * @param ignoreXyzNs If the key _@ns:com:here:xyz_ should be ignored (a reference is added to [xyz]).
      * @return The offset of the value written.
      */
-    fun encodeMap(map: MapProxy<String, *>, ignoreXyzNs: Boolean = false): Int {
+    fun encodeMap(map: PTypedMap<String, *>, ignoreXyzNs: Boolean = false): Int {
         val start = startMap()
         for (entry in map) {
             val key = entry.key
             val value = entry.value
             if (ignoreXyzNs && ("@ns:com:here:xyz" == key)) {
                 @Suppress("UNCHECKED_CAST")
-                if (value is MapProxy<*, *>) xyz = value as MapProxy<String, *>
+                if (value is PTypedMap<*, *>) xyz = value as PTypedMap<String, *>
                 continue
             }
             writeKey(entry.key)
@@ -900,7 +836,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
      * @param array The array to write.
      * @return The offset of the value written.
      */
-    fun encodeList(array: ListProxy<*>): Int {
+    fun encodeList(array: PTypedArray<*>): Int {
         val start = startArray()
         for (value in array) encodeValue(value)
         endArray(start)
@@ -923,12 +859,12 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
             is Byte -> encodeInt32(value.toInt())
             is Short -> encodeInt32(value.toInt())
             is Int -> encodeInt32(value)
-            is Long -> encodeInt64(value.toInt64())
-            is Int64 -> encodeInt64(value)
+            is Long -> encodeInt64(value)
+            is Int64 -> encodeInt64(value.toLong())
             is Float -> encodeFloat32(value)
-            is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
-            is MapProxy<*, *> -> encodeMap(value as MapProxy<String, *>)
-            is ListProxy<*> -> encodeList(value)
+            is Double -> if (Base.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
+            is PTypedMap<*, *> -> encodeMap(value as PTypedMap<String, *>)
+            is PTypedArray<*> -> encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)
             null -> encodeNull()
             else -> {
@@ -1006,38 +942,37 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
 
         // Now, copy everything together into a target array.
         val targetArray = ByteArray(targetSize)
-        val targetView = DataViewProxy(targetArray)
         var target = 0
 
         // Copy feature header.
         var source = startOfFeatureHeader
         while (source < endOfFeatureHeader) {
-            targetView.setInt8(target++, getInt8(source++))
+            targetArray.setInt8(target++, getInt8(source++))
         }
         // Copy the global dictionary id.
         source = startOfGlobalDictId
         while (source < endOfGlobalDictId) {
-            targetView.setInt8(target++, getInt8(source++))
+            targetArray.setInt8(target++, getInt8(source++))
         }
         // Copy the feature id.
         source = startOfFeatureId
         while (source < endOfFeatureId) {
-            targetView.setInt8(target++, getInt8(source++))
+            targetArray.setInt8(target++, getInt8(source++))
         }
         // Copy header of local dictionary.
         source = startOfLocalDictHeader
         while (source < endOfLocalDictHeader) {
-            targetView.setInt8(target++, getInt8(source++))
+            targetArray.setInt8(target++, getInt8(source++))
         }
         // Copy local dict content.
         source = startOfLocalDictPayload
         while (source < endOfLocalDictPayload) {
-            targetView.setInt8(target++, getInt8(source++))
+            targetArray.setInt8(target++, getInt8(source++))
         }
         // Copy the feature payload.
         source = startOfFeaturePayload
         while (source < endOfFeaturePayload) {
-            targetView.setInt8(target++, getInt8(source++))
+            targetArray.setInt8(target++, getInt8(source++))
         }
         return targetArray
     }

@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
@@ -13,20 +14,20 @@ class ReadLimitTest : PgTestBase() {
     fun shouldUseLimitWhenReturningResults() {
         // Given
         val writeReq = WriteRequest().apply {
-            add(Write().createFeature(collection, NakshaFeature("test_feature1")))
-            add(Write().createFeature(collection, NakshaFeature("test_feature2")))
-            add(Write().createFeature(collection, NakshaFeature("test_feature3")))
+            add(Write().createFeature(collection, NakshaFeature(Id("test_feature1"))))
+            add(Write().createFeature(collection, NakshaFeature(Id("test_feature2"))))
+            add(Write().createFeature(collection, NakshaFeature(Id("test_feature3"))))
         }
-        executeWrite(writeReq)
+        executeWriteAndLoadTuples(writeReq)
 
         // When
-        val readWithLimit = executeRead(ReadFeatures().apply {
+        val readWithLimit = executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
             limit = 2
         })
 
         // then
-        assertEquals(2, readWithLimit.features.size)
+        assertEquals(2, readWithLimit.asFeatures.size)
     }
 }

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.app.common;
 
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
@@ -29,19 +29,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static naksha.base.Platform.javaProxy;
+import static naksha.base.Base.javaProxy;
 
 public class FeatureUtil {
 
   private FeatureUtil() {}
 
   public static @Nullable NakshaFeature featureFromFeatureResponse(String featureCollectionResponseJson) {
-    final var raw = Platform.fromJSON(featureCollectionResponseJson);
+    final var raw = Base.fromJSON(featureCollectionResponseJson);
     return javaProxy(raw, NakshaFeature.class);
   }
 
   public static @Nullable NakshaFeature featureFromCollectionResponse(String featureCollectionResponseJson) {
-    final var raw = Platform.fromJSON(featureCollectionResponseJson);
+    final var raw = Base.fromJSON(featureCollectionResponseJson);
     final var featureCollection = javaProxy(raw, XyzFeatureCollection.class);
     if (featureCollection == null) return null;
     final var features = featureCollection.getFeatures();
@@ -50,14 +50,14 @@ public class FeatureUtil {
   }
 
   public static @NotNull List<@NotNull NakshaFeature> featuresFromCollectionResponse(String featureCollectionResponseJson) {
-    final var raw = Platform.fromJSON(featureCollectionResponseJson);
+    final var raw = Base.fromJSON(featureCollectionResponseJson);
     final var featureCollection = javaProxy(raw, XyzFeatureCollection.class);
     if (featureCollection == null) return Collections.emptyList();
     return featureCollection.getFeatures();
   }
 
   public static @NotNull Map<@NotNull String, @NotNull NakshaFeature> featuresByIdFromCollectionResponse(String featureCollectionResponseJson) {
-    final var raw = Platform.fromJSON(featureCollectionResponseJson);
+    final var raw = Base.fromJSON(featureCollectionResponseJson);
     final var featureCollection = javaProxy(raw, XyzFeatureCollection.class);
     final var map = new HashMap<String, NakshaFeature>();
     if (featureCollection == null) return map;

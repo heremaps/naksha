@@ -3,9 +3,7 @@ package naksha.model
 import naksha.base.NormalizerForm
 import naksha.base.NormalizerForm.NFD
 import naksha.base.NormalizerForm.NFKC
-import naksha.base.Platform
-import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
-import naksha.model.TagNormalizer.TagNormalizer_C.splitNormalizedTag
+import naksha.base.Base
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
 
@@ -58,7 +56,7 @@ class TagNormalizer private constructor() {
         @JvmStatic
         fun normalizeTag(tag: String): String {
             val policy = policyFor(tag)
-            val normalized = Platform.normalize(tag, policy.normalizerForm)
+            val normalized = Base.normalize(tag, policy.normalizerForm)
             return if (policy.lowercase) {
                 if (policy.removeNonAscii) {
                     removeNonAscii(normalized, TO_LOWER)

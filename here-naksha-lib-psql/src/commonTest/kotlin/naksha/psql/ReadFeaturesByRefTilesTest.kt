@@ -52,7 +52,7 @@ class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, catalogId = "")
         }
 
         // When:
-        val features = executeRead(getFeaturesFromZagrebAndPrague).features
+        val features = executeReadAndLoadTuple(getFeaturesFromZagrebAndPrague).asFeatures
 
         // Then:
         assertEquals(2, features.size)
@@ -73,7 +73,7 @@ class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, catalogId = "")
         }
 
         // When:
-        val features = executeRead(getFeaturesFromBologna).features
+        val features = executeReadAndLoadTuple(getFeaturesFromBologna).asFeatures
 
         // Then:
         assertTrue(features.isEmpty())

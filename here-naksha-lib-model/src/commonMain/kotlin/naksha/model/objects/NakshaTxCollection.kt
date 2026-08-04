@@ -3,12 +3,14 @@
 package naksha.model.objects
 
 import naksha.base.NotNullProperty
-import naksha.base.AnyObject
+import naksha.base.PAnyMap
 import naksha.base.NullableProperty
 import naksha.base.Action
 import naksha.base.Action.Action_C.CREATE
 import naksha.base.Action.Action_C.DELETE
 import naksha.base.Action.Action_C.UPDATE
+import naksha.base.Id
+import naksha.base.NotNullIdProperty
 import naksha.base.NakshaError
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
@@ -21,25 +23,22 @@ import kotlin.jvm.JvmOverloads
  * @since 3.0
  */
 @JsExport
-class NakshaTxCollection() : AnyObject() {
+class NakshaTxCollection() : PAnyMap() {
 
     /**
      * Create a new collection info.
      * @param id the collection-id.
-     * @param number the collection-number.
      * @param action the _(optional)_ action done to this collection; `null` if the collection was not modified.
      */
     @JvmOverloads
     @JsName("of")
-    constructor(id: String, number: Int, action: Action? = null) : this() {
+    constructor(id: Id, action: Action? = null) : this() {
         this.id = id
-        this.number = number
         this.action = action
     }
 
     companion object {
-        private val ID = NotNullProperty<NakshaTxCollection, String>(String::class)
-        private val NUMBER = NotNullProperty<NakshaTxCollection, Int>(Int::class)
+        private val ID_NOT_NULL = NotNullIdProperty<NakshaTxCollection>(randomId = false)
         private val ACTION_OR_NULL = NullableProperty<NakshaTxCollection, Action>(Action::class)
         private val COUNT = NotNullProperty<NakshaTxCollection, Int>(Int::class) { _, _ -> 0 }
         private val FEATURES_BY_PARTITION = NullableProperty<NakshaTxCollection, NakshaTxFeatureByPartition>(NakshaTxFeatureByPartition::class)
@@ -49,13 +48,7 @@ class NakshaTxCollection() : AnyObject() {
      * The collection-id.
      * @since 3.0
      */
-    var id by ID
-
-    /**
-     * The collection-number.
-     * @since 3.0
-     */
-    var number by NUMBER
+    var id: Id by ID_NOT_NULL
 
     /**
      * The [Action] done to the collection, if the collection was modified within the transaction, `null` if only children _(features)_ of the collection were modified.

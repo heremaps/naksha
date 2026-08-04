@@ -20,7 +20,7 @@ package naksha.base;
 
 import java.util.UUID;
 
-class SampleJavaProxy extends AnyObject {
+class SampleJavaProxy extends PAnyMap {
 
   static final UUID DEFAULT_VERSION = UUID.randomUUID();
 

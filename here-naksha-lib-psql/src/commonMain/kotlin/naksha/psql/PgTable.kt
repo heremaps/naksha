@@ -12,7 +12,6 @@ import kotlin.jvm.JvmStatic
  * Information about a single database table.
  * @see [PgHeadTable]
  * @see [PgHistoryTable]
- * @see [PgMetaTable]
  */
 @JsExport
 abstract class PgTable(

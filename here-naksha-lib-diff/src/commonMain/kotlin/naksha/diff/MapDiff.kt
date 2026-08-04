@@ -1,5 +1,5 @@
 package naksha.diff
 
-import naksha.base.MapProxy
+import naksha.base.PTypedMap
 
-class MapDiff : MapProxy<Any, Difference>(Any::class, Difference::class), Difference
+class MapDiff : PTypedMap<Any, Difference>(Any::class, Difference::class), Difference

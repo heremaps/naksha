@@ -3,7 +3,7 @@ package com.here.naksha.storage.http;
 import org.junit.jupiter.api.Test;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmJsonUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.objects.NakshaStorage;
 
 import java.io.IOException;
@@ -121,7 +121,7 @@ class HttpStoragePropertiesTest {
             return;
         }
 
-        final NakshaStorage storage = JvmBoxingUtil.box(Platform.fromJSON(storageJson), NakshaStorage.class);
+        final NakshaStorage storage = JvmBoxingUtil.box(Base.fromJSON(storageJson), NakshaStorage.class);
         assertNotNull(storage);
 
         final HttpStorageProperties properties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);

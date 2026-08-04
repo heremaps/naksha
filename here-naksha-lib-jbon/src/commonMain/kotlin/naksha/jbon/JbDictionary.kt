@@ -8,8 +8,8 @@ import kotlin.js.JsExport
 
 @JsExport
 class JbDictionary(override val bookType: BookType = BookType.LOCAL_BOOK,) : JbStructDecoder<JbDictionary>(), IBook {
-    override var databaseNumber: Int64? = null
-    override var featureNumber: Int64? = null
+    override var databaseNumber: Long? = null
+    override var featureNumber: Long? = null
 
     /**
      * Cached ID of the dictionary, if any.

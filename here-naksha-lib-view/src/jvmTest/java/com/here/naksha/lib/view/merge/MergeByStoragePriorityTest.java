@@ -3,16 +3,13 @@ package com.here.naksha.lib.view.merge;
 import com.here.naksha.lib.view.Sample;
 import com.here.naksha.lib.view.ViewLayerFeature;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.request.FeatureTuple;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static naksha.base.LibBaseKt.Int64;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
 
 public class MergeByStoragePriorityTest {
 
@@ -27,19 +24,15 @@ public class MergeByStoragePriorityTest {
     NakshaFeature f2 = new NakshaFeature();
     NakshaFeature f3 = new NakshaFeature();
 
-    FeatureTuple t1 = Sample.featureTuple(f1);
-    FeatureTuple t2 = Sample.featureTuple(f2);
-    FeatureTuple t3 = Sample.featureTuple(f3);
-
-    singleRowFeatures.add(new ViewLayerFeature(t1, 1, null));
-    singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));
-    singleRowFeatures.add(new ViewLayerFeature(t3, 2, null));
+    singleRowFeatures.add(new ViewLayerFeature(f1, 1, null));
+    singleRowFeatures.add(new ViewLayerFeature(f2, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(f3, 2, null));
 
     // when
-    NakshaFeature outputFeature = mergeStrategy.apply(singleRowFeatures).getFeature();
+    NakshaFeature outputFeature = mergeStrategy.apply(singleRowFeatures);
 
     // then
-    assertSame(t2.getFeature(),  outputFeature);
+    assertSame(f2, outputFeature);
   }
 
   @Test
@@ -51,19 +44,15 @@ public class MergeByStoragePriorityTest {
     NakshaFeature f2 = new NakshaFeature();
     NakshaFeature f3 = new NakshaFeature();
 
-    FeatureTuple t1 = Sample.featureTuple(f1);
-    FeatureTuple t2 = Sample.featureTuple(f2);
-    FeatureTuple t3 = Sample.featureTuple(f3);
-
-    singleRowFeatures.add(new ViewLayerFeature(t1, 0, null));
-    singleRowFeatures.add(new ViewLayerFeature(t2, 0, null));
-    singleRowFeatures.add(new ViewLayerFeature(t3, 2, null));
+    singleRowFeatures.add(new ViewLayerFeature(f1, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(f2, 0, null));
+    singleRowFeatures.add(new ViewLayerFeature(f3, 2, null));
 
     // when
-    NakshaFeature outputFeature = mergeStrategy.apply(singleRowFeatures).getFeature();
+    NakshaFeature outputFeature = mergeStrategy.apply(singleRowFeatures);
 
     // then should pick first on list
-    assertSame(t1.getFeature(),  outputFeature);
+    assertSame(f1,  outputFeature);
   }
 
   @Test

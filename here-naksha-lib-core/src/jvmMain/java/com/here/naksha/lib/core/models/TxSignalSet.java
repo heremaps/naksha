@@ -147,7 +147,7 @@ public class TxSignalSet implements Iterable<TxSignal> {
       assert removed;
     }
     all.add(signal);
-    final TxSignal removed = allById.put(signal.getId(), signal);
+    final TxSignal removed = allById.put(signal.getId().getText(), signal);
     assert removed == null;
     return existing;
   }

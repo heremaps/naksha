@@ -18,15 +18,13 @@
  */
 package naksha.model
 
-import naksha.base.Platform.PlatformCompanion.javaProxy
+import naksha.base.Base.BaseCompanion.javaProxy
 import naksha.geo.PointCoord
 import naksha.geo.SpPoint
 import naksha.model.objects.NakshaFeature
 import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertNotNull
-import org.junit.jupiter.api.function.Executable
 
 internal class NakshaFeatureProxyTest {
     @Test

@@ -1,6 +1,6 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.useNewJson
+import naksha.base.Base.BaseCompanion.useNewJson
 import java.util.LinkedHashMap
 
 open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
@@ -24,7 +24,7 @@ open class JvmMap() : JvmObject(), MutableMap<Any, Any?>, PlatformMap {
     internal var map: LinkedHashMap<Any, Any?>? = null
 
     /**
-     * The key-value pairs; as long as only `String`'s are used as keys and [Platform.useNewJson] is enabled.
+     * The key-value pairs; as long as only `String`'s are used as keys and [BaseCompanion.useNewJson] is enabled.
      */
     @JvmField
     internal var jsonMap: JsonMap? = null

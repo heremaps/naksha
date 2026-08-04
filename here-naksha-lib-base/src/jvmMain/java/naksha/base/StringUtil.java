@@ -12,7 +12,7 @@ import static java.lang.Character.highSurrogate;
 import static java.lang.Character.lowSurrogate;
 import static naksha.base.JvmUtil.JVM_OBJECT_ARRAY_BASE_OFFSET;
 import static naksha.base.JvmUtil.JVM_OBJECT_ARRAY_SCALE;
-import static naksha.base.Platform.unsafe;
+import static naksha.base.Base.unsafe;
 
 /**
  * String utils, including a cache with support for UTF-16 encoded Java strings, and UTF-8 encoded byte arrays.

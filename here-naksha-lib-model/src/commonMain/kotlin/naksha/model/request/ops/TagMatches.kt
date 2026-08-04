@@ -27,7 +27,7 @@ class TagMatches() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, key: String, regex: String) : this(at.name, key, regex)
+    constructor(at: Member, key: String, regex: String) : this(at.id, key, regex)
 
     var key: String by KEY
     var regex: String by REGEX

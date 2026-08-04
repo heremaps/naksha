@@ -19,7 +19,7 @@
 package com.here.naksha.lib.hub.storages;
 
 import naksha.base.Int64;
-import naksha.base.PlatformLock;
+import naksha.base.Lock;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
 import naksha.jbon.JbDictionary;
@@ -74,7 +74,7 @@ public class NHAdminStorage implements IStorage {
   }
 
   @Override
-  public @NotNull PlatformLock getLock() {
+  public @NotNull Lock getLock() {
     throw new NakshaException(new NakshaError(NakshaError.NOT_IMPLEMENTED, "getLock not supported"));
   }
 

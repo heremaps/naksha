@@ -3,20 +3,21 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.PlatformUtil
+import naksha.base.Id
+import naksha.base.Base.BaseCompanion.FAL
+import naksha.base.BaseUtil
 import naksha.base.collectionExists
 import naksha.base.collectionNotFound
 import naksha.base.forbidden
 import naksha.base.illegalArg
 import naksha.base.illegalState
-import naksha.base.mapExists
+import naksha.base.catalogExists
 import naksha.base.mapNotFound
+import naksha.base.unsupportedOp
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
-import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaTx
-import naksha.model.objects.StandardMembers
 import naksha.model.request.*
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -50,6 +51,13 @@ open class PgWriter internal constructor(
     val storage: PgStorage = session.storage
 
     /**
+     * The `id` of the database into which to write.
+     * @since 3.0
+     */
+    val databaseId: Id
+        get() = session.options.databaseId
+
+    /**
      * The database connection to use for modifications.
      * @since 3.0
      */
@@ -71,12 +79,13 @@ open class PgWriter internal constructor(
 
     /**
      * Performs the given writes.
-     * @param writes the writes to perform.
+     * @param request the write request to perform.
      * @return the response.
      */
-    fun execute(writes: WriteList) : Response {
-        val tupleNumberList = executeWrites(writes.mapNotNull { it }.toMutableList())
-        return SuccessResponse().withTupleNumberList(tupleNumberList)
+    fun execute(request: WriteRequest) : Response {
+        val tupleNumberList = executeWrites(request.writes.mapNotNull { it }.toMutableList())
+        val rs = TupleNumberResultSet(request, storage, session, tupleNumberList)
+        return SuccessResponse().withResultSet(rs)
     }
 
     /**
@@ -89,12 +98,14 @@ open class PgWriter internal constructor(
         // Add the input-index.
         val pgWrites = ArrayList<PgWrite>(writes.size)
         for (i in 0 ..< writes.size) pgWrites.add(PgWrite(writes[i], i))
-        val savepointId = PlatformUtil.randomString()
+        val savepointId = BaseUtil.randomAtoZ()
         var conn: PgConnection? = null
         var partitionSnapshot: Map<PgCollection, Set<Int>>? = null
         try {
+            DEBUG_printConnection("PgWrite -> before prepareWrite", session.useConnection())
             // This can be time-consuming, unless the connection is already open, try not to open it before we do this!
             prepareWrite(pgWrites)
+            DEBUG_printConnection("PgWrite -> after prepareWrite", session.useConnection())
 
             // Order by:
             // - catalog-number ASC
@@ -105,15 +116,15 @@ open class PgWriter internal constructor(
             //
             // The ordering is very important, because otherwise there can be deadlocks in the database at row-level locking!
             pgWrites.sortWith { a, b ->
-                val catalogDiff = a.catalog.catalogNumber - b.catalog.catalogNumber
+                val catalogDiff = (a.catalog.id.number - b.catalog.id.number).toInt()
                 if (catalogDiff != 0) return@sortWith catalogDiff
-                val collectionDiff = a.collection.collectionNumber - b.collection.collectionNumber
+                val collectionDiff = (a.collection.id.number - b.collection.id.number).toInt()
                 if (collectionDiff != 0) return@sortWith collectionDiff
                 val partitionDiff = a.partition - b.partition
                 if (partitionDiff != 0) return@sortWith partitionDiff
                 val opDiff = a.op.order - b.op.order
                 if (opDiff != 0) return@sortWith opDiff
-                val featureNumberDiff = a.featureNumber - b.featureNumber
+                val featureNumberDiff = a.id.number - b.id.number
                 if (featureNumberDiff < 0) return@sortWith -1
                 if (featureNumberDiff > 0) return@sortWith 1
                 0
@@ -129,8 +140,8 @@ open class PgWriter internal constructor(
             var start = 0
             for (i in 1..pgWrites.size) {
                 if (i == pgWrites.size ||
-                    pgWrites[i].catalog.catalogNumber != pgWrites[start].catalog.catalogNumber ||
-                    pgWrites[i].collection.collectionNumber != pgWrites[start].collection.collectionNumber ||
+                    pgWrites[i].catalog.id != pgWrites[start].catalog.id ||
+                    pgWrites[i].collection.id != pgWrites[start].collection.id ||
                     pgWrites[i].partition != pgWrites[start].partition)
                 {
                     executeWrite(pgWrites, start, i)
@@ -150,38 +161,36 @@ open class PgWriter internal constructor(
         // Reorder results to match input.
         val tupleNumbers = TupleNumberList()
         tupleNumbers.setCapacity(writes.size)
-        val tupleList = ArrayList<Tuple>(writes.size)
         val transaction = tx.nakshaTx
         var featuresModified = 0
-        for (write in pgWrites) {
+        val cache = Naksha.cache
+        for (i in 0 until pgWrites.size) {
+            val write = pgWrites[i]
             val tupleNumber = write.tupleNumber
             tupleNumbers[write.i] = tupleNumber
             val tuple = write.tuple
             if (write.isFeatureModification) {
-                val map = write.catalog
+                val catalog = write.catalog
                 val col = write.collection
-                val txCol = transaction.useCatalog(map.id, map.catalogNumber).useCollection(col.id, col.collectionNumber)
+                val txCol = transaction.useCatalog(catalog.id).useCollection(col.id)
                 if (tupleNumber != null) {
                     txCol.add(tupleNumber, col.partitions)
                 }
                 featuresModified += 1
             } else if (write.isCatalogModification) {
-                val map = write.asPgCatalog
-                if (map != null) transaction.useCatalog(map.id, map.catalogNumber, write.action)
+                val catalog = write.asPgCatalog
+                if (catalog != null) transaction.useCatalog(catalog.id, write.action)
             } else if (write.isCollectionModification) {
-                val map = write.catalog
+                val catalog = write.catalog
                 val col = write.asPgCollection
                 if (col != null) {
-                    transaction.useCatalog(map.id, map.catalogNumber).useCollection(col.id, col.collectionNumber, write.action)
-                    map.invalidateCollection(col)
+                    transaction.useCatalog(catalog.id).useCollection(col.id, write.action)
+                    catalog.invalidateCollection(col)
                 }
             }
-            if (tuple != null) tupleList.add(tuple)
+            if (tuple != null) cache.put(tuple)
         }
         transaction.featuresModified += featuresModified
-        // We do not put tuples into cache, before we are sure everything was successful!
-        // Adding all together into the cache reduces the effort to iterate above all caches multiple times.
-        Naksha.cache.store(tupleList)
         return tupleNumbers
     }
 
@@ -190,74 +199,79 @@ open class PgWriter internal constructor(
     // After this has run, only the `tuple` is missing!
     private fun prepareWrite(pgWrites: ArrayList<PgWrite>) {
         for (pgWrite in pgWrites) {
+            // The index in the original write instructions, for debugging purpose only!
+            val i = pgWrite.i
+
+            // Note: Technically, all operations should work without `id`,
+            //       because the primary key is anyway only the feature-number!
             val featureId = pgWrite.id
             val op = pgWrite.op
+            val pgAdminCatalog = storage.adminCatalog
 
-            // Detect tbe map into which to write.
-            val catalogId = pgWrite.original.catalogId ?: throw illegalArg("The given write does not have a catalog-id")
-            val pgCatalog = storage.adminCatalog.getPgCatalogById(conn, catalogId)
-                ?: throw mapNotFound("The write #${pgWrite.i} refers to not existing map '$catalogId'")
+            // Detect tbe catalog into which to write.
+            val catalogId = pgWrite.originalWrite.catalogId
+            val pgCatalog = pgAdminCatalog.getPgCatalogByNumber(conn, catalogId.intValue)
+                ?: throw mapNotFound("${FAL}Failed write #$i, write refers to not existing catalog '$catalogId'")
             pgWrite.catalog = pgCatalog
 
             // Detect the collection into which to write.
-            val collectionId = pgWrite.original.collectionId ?: throw illegalArg("The given write does not have a collection-id")
-            val pgCollection = pgCatalog.getPgCollectionById(conn, collectionId)
-                ?: throw collectionNotFound("The write #${pgWrite.i} refers to not existing collection '$collectionId'")
+            val collectionId = pgWrite.originalWrite.collectionId
+            val pgCollection = pgCatalog.getPgCollectionByNumber(conn, collectionId.intValue)
+                ?: throw collectionNotFound("${FAL}Failed write #$i, write refers to not existing collection '$collectionId'")
             pgWrite.collection = pgCollection
 
-            // If this operation modifies a catalog.
+            // If this operation modifies a catalog, produces: asCatalog.
             if (pgWrite.isCatalogModification) {
-                var targetCatalog = storage.adminCatalog.getPgCatalogById(null, pgWrite.id)
-                    ?: storage.adminCatalog.getPgCatalogById(conn, pgWrite.id)
+                var targetCatalog = pgAdminCatalog.getPgCatalogByNumber(conn, pgWrite.id.intValue)
 
-                val nakshaMap: NakshaCatalog?
+                val nakshaCatalog: NakshaCatalog?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
-                    val feature = pgWrite.feature ?: throw illegalArg("The write #${pgWrite.i} is $op, but the feature is null")
-                    nakshaMap = feature as? NakshaCatalog ?: feature.proxy(NakshaCatalog::class)
-                    nakshaMap.databaseId = storage.id
+                    val feature = pgWrite.feature ?: throw illegalArg("${FAL}Failed write #$i, op is $op, but the feature is null")
+                    nakshaCatalog = feature as? NakshaCatalog ?: feature.proxy(NakshaCatalog::class)
+                    nakshaCatalog.databaseId = this.databaseId
                     if (targetCatalog == null) {
                         if (op == WriteOp.UPDATE) {
-                            throw mapNotFound("The UPDATE (write #${pgWrite.i}) failed, because the map '$featureId' does not exist")
+                            throw mapNotFound("${FAL}Failed write #$i, UPDATE failed, because the catalog '$featureId' does not exist")
                         }
-                        targetCatalog = PgCatalog(storage, nakshaMap)
+                        targetCatalog = PgCatalog(storage, nakshaCatalog)
                         createPgCatalog(targetCatalog)
                     } else if (op == WriteOp.CREATE) {
-                        throw mapExists("The write #${pgWrite.i} failed, because the map '$featureId' does exist already")
+                        throw catalogExists("${FAL}Failed write #$i, because the catalog '$featureId' does exist already")
                     }
                 } else if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
                     if (targetCatalog != null) {
-                        deletePgMap(targetCatalog)
+                        deletePgCatalog(targetCatalog)
                     }
-                    nakshaMap = null
+                    nakshaCatalog = null
                 } else {
-                    throw illegalState("The write #${pgWrite.i} refers to an unsupported operation: '$op'")
+                    throw unsupportedOp("${FAL}Failed write #$i, unsupported operation: '$op'")
                 }
                 pgWrite.asPgCatalog = targetCatalog
-                pgWrite.asNakshaMap = nakshaMap
+                pgWrite.asNakshaCatalog = nakshaCatalog
             }
 
-            // If this operation modifies a collection.
+            // If this operation modifies a collection: asCollection.
             if (pgWrite.isCollectionModification) {
-                var targetCollection = pgCatalog.getPgCollectionById(null, pgWrite.id) ?: pgCatalog.getPgCollectionById(conn, pgWrite.id)
+                var targetCollection = pgCatalog.getPgCollectionByNumber(conn, pgWrite.id.intValue)
 
                 val nakshaCollection: NakshaCollection?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
-                    val feature = pgWrite.feature ?: throw illegalArg("The write #${pgWrite.i} is $op, but the feature is null")
+                    val feature = pgWrite.feature ?: throw illegalArg("${FAL}The write #$i is $op, but the feature is null")
                     nakshaCollection = feature as? NakshaCollection ?: feature.proxy(NakshaCollection::class)
                     if (nakshaCollection.partitions > 1000) {
-                        throw illegalArg("Invalid partition-count, expect 2 .. 1000, found : ${nakshaCollection.partitions}")
+                        throw illegalArg("${FAL}Failed write #$i, partition-count expected 2 .. 1000, found : ${nakshaCollection.partitions}")
                     }
                     if (targetCollection == null) {
                         if (op == WriteOp.UPDATE) {
                             throw collectionNotFound(
-                                "The UPDATE (write #${pgWrite.i}) failed, because the collection '$featureId' does not exist in map '$catalogId'"
+                                "${FAL}Failed write #$i, UPDATE failed, because the collection '$featureId' does not exist in map '$catalogId'"
                             )
                         }
                         targetCollection = PgCollection(pgCatalog, nakshaCollection)
                         createPgCollection(targetCollection)
                     } else if (op == WriteOp.CREATE) {
                         throw collectionExists(
-                            "The write #${pgWrite.i} failed, because the collection '$featureId' does exist already in map '$catalogId'"
+                            "${FAL}Failed write #$i, because the collection '$featureId' does exist already in map '$catalogId'"
                         )
                     } else {
                         // UPSERT or UPDATE on an existing collection: Ensure that no invalid changes are asked for.
@@ -269,46 +283,38 @@ open class PgWriter internal constructor(
                     }
                     nakshaCollection = null
                 } else {
-                    throw illegalState("The write #${pgWrite.i} refers to an unsupported operation: '$op'")
+                    throw unsupportedOp("${FAL}Failed write #$i, unsupported operation: '$op'")
                 }
                 pgWrite.asPgCollection = targetCollection
                 pgWrite.asNakshaCollection = nakshaCollection
             }
-            when (op) {
-                WriteOp.CREATE -> {
-                    val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.CREATE, pgWrite.atomic)
-                    pgWrite.tuple = tuple
-                    pgWrite.tupleNumber = tuple.tupleNumber
+
+            // If this operation modifies a collection: asTransaction.
+            if (pgWrite.isTransactionModification) {
+                val feature = pgWrite.feature ?: throw illegalArg("${FAL}Failed write #$i, modification of a transaction requires a transaction feature")
+                pgWrite.asTransaction = feature as? NakshaTx ?: feature.proxy(NakshaTx::class)
+            }
+
+            if (op == WriteOp.DELETE || op == WriteOp.PURGE) {
+                // Deletes carry no tuple-number; PgWriterDelete resolves the existing HEAD by feature-number.
+                if (pgWrite.isTransactionModification) throw forbidden("${FAL}Failed write #$i, transactions must not be deleted or purged")
+            } else {
+                val collection = pgCollection.head
+                val obj = pgWrite.`object`
+                    ?: throw illegalState("${FAL}Failed write #$i, missing object in write instruction for operation $op")
+                var upsert = false
+                val action = when (op) {
+                    WriteOp.CREATE -> Action.CREATE
+                    WriteOp.UPDATE -> Action.UPDATE
+                    WriteOp.UPSERT -> {
+                        upsert = true
+                        Action.CREATE
+                    }
+                    else -> throw unsupportedOp("${FAL}Failed write #$i, unsupported operation: $op")
                 }
-                WriteOp.UPDATE -> {
-                    val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.UPDATE, pgWrite.atomic)
-                    pgWrite.tuple = tuple
-                    pgWrite.tupleNumber = tuple.tupleNumber
-                }
-                WriteOp.UPSERT -> {
-                    // Note:
-                    // - If the client has not provided a UUID or a UUID of a foreign feature, this results in CREATE.
-                    // - If the client provide a UUID, this becomes an atomic UPDATE.
-                    //
-                    // To stay downward compatible, we therefore remove (as a hack) the UUID, so we ensure that we get a CREATE.
-                    // TODO: Remove this hack and remove UPSERT completely from storage.
-                    val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val nakshaCollection = pgWrite.collection.head
-                    val uuidMember = nakshaCollection.useMember(StandardMembers.Tn)
-                    uuidMember.delete(f)
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.CREATE, null)
-                    pgWrite.tuple = tuple
-                    pgWrite.tupleNumber = tuple.tupleNumber
-                }
-                WriteOp.DELETE, WriteOp.PURGE -> {
-                    // Deletes carry no tuple-number; PgWriterDelete resolves the existing HEAD by feature-number.
-                    if (pgWrite.isTransactionModification) throw forbidden("Transactions must not be deleted or purged")
-                }
-                else -> {
-                    throw illegalArg("Unknown write operation: $op")
-                }
+                val tuple: Tuple = Tuple.encodeObject(obj, session, collection, null, action, pgWrite.atomic, upsert)
+                pgWrite.tuple = tuple
+                pgWrite.tupleNumber = tuple.tupleNumber
             }
         }
     }
@@ -378,18 +384,18 @@ open class PgWriter internal constructor(
 
     private fun seedHistoryPartitions(collection: PgCollection) {
         if (!collection.storeHistory) return
-        val year = collection.historyPartitionNumberOf(tx.version.number)
-        collection.ensureHistoryPartition(conn, year, session)
-        collection.ensureHistoryPartition(conn, year + 1, session)
+        val partitionNumber = collection.historyPartitionNumberOf(tx.version.number)
+        collection.ensureHistoryPartition(conn, partitionNumber, session)
+        collection.ensureHistoryPartition(conn, partitionNumber + 1, session)
     }
 
     /**
      * Invoked when a [NakshaMap][naksha.model.objects.NakshaCatalog] was created.
-     * @param map the map that was just created.
+     * @param catalog the map that was just created.
      * @since 3.0
      */
-    protected open fun deletePgMap(map: PgCatalog) {
-        storage.adminCatalog.deletePgCatalog(conn, map)
+    protected open fun deletePgCatalog(catalog: PgCatalog) {
+        storage.adminCatalog.deletePgCatalog(conn, catalog)
     }
 
     /**

@@ -23,7 +23,7 @@ import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationU
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SUCCEED_WITHOUT_PROCESSING;
-import static naksha.base.Platform.getLogger;
+import static naksha.base.Base.getLogger;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
 import com.here.naksha.lib.core.IEvent;
@@ -165,15 +165,15 @@ public class ActivityLogHandler extends AbstractEventHandler {
         //TODO very inefficient, but ISession.loadTuples() currently cannot target next version
           orClauses.add(
                   new And(
-                          new Equals(StandardMembers.NextVersion.getName(), tupleNumber.version),
-                          new Equals(StandardMembers.FeatureNumber.getName(), tupleNumber.featureNumber)
+                          new Equals(StandardMembers.NextVersionMember.getId(), tupleNumber.version),
+                          new Equals(StandardMembers.FeatureNumberMember.getId(), tupleNumber.featureNumber)
                   )
           );
       }
     ReadFeatures requestPredecessors = new ReadFeatures();
     requestPredecessors.setCollectionId(properties.getSpaceId());
     requestPredecessors.setQueryHistory(true);
-    requestPredecessors.setQueryMembers(or);
+    requestPredecessors.setMemberQuery(or);
     return requestPredecessors;
   }
 

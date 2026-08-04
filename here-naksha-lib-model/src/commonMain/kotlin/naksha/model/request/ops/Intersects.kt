@@ -29,7 +29,7 @@ class Intersects() : Op() {
     }
 
     @JsName("forMember")
-    constructor(at: Member, geometry: SpGeometry, vararg transformers: SpTransformation) : this(at.name, geometry, *transformers)
+    constructor(at: Member, geometry: SpGeometry, vararg transformers: SpTransformation) : this(at.id, geometry, *transformers)
 
     /**
      * The geometry to test for intersection.

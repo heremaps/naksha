@@ -1,11 +1,10 @@
 package naksha.psql
 
-import naksha.base.Platform.PlatformCompanion.logger
+import naksha.base.Id
+import naksha.base.Base.BaseCompanion.logger
 import naksha.base.fn.Fx2
 import naksha.jbon.JbDictionary
 import naksha.model.*
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import kotlin.reflect.KClass
 
 /**
@@ -54,6 +53,13 @@ open class PsqlStorage : PgStorage(), IStorage {
             c = PsqlCluster(master, replicas)
             _cluster = c
         }
+        // TODO: We need to use the storage identifier as well as database identifier.
+        //       Would be use the schema, we would cause huge problems, because then
+        //       arbitray storages would suddenly start to share cache entries for totally
+        //       distinct databases. We need to change this in the future, we need to
+        //       ensure that the schema name becomes unique and that the same schema name
+        //       really means the same database, even when being stored in distinct storages!
+        setDefaultDatabaseId(Id(config.id.text))
         setAdminMap(newAdminMap(config, create, upgrade))
         adminCatalog.start()
     }
@@ -73,7 +79,7 @@ open class PsqlStorage : PgStorage(), IStorage {
     override fun newConnection(options: SessionOptions, readOnly: Boolean, init: Fx2<PgConnection, String>?): PgConnection
         = cluster.newConnection(options, readOnly, init)
 
-    override fun adminConnection(): PgConnection = newConnection(Naksha.adminOptions, false)
+    override fun adminConnection(): PgConnection = newConnection(optionsBuilder.build(), false)
 
     override fun afterInit() {
         // TODO: Do we need anything?

@@ -4,7 +4,7 @@ import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import naksha.base.Int64;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.TupleNumber;
 import naksha.base.Version;
 import naksha.geo.LineStringCoord;
@@ -30,7 +30,7 @@ final class GeneratingStorageService {
         dummyFeatureTuples.setCapacity(numOfTuplesToGenerate);
         for (int i = 0; i < numOfTuplesToGenerate; ++i) {
             TupleNumber dummyTupleNumber = new TupleNumber(
-                storageNumber, 0, 0, Platform.intToInt64(0), Version.HEAD.number
+                storageNumber, 0, 0, Base.intToInt64(0), Version.HEAD.number
             );
             FeatureTuple dummyFeatureTuple = new FeatureTuple(dummyTupleNumber, null);
             dummyFeatureTuples.add(dummyFeatureTuple);

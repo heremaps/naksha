@@ -33,7 +33,7 @@ class ParentProxyingTest {
     ProxyParent parent = new ProxyParent();
 
     // When:
-    var child = parent.proxy(Platform.klassFor(ProxyChild.class));
+    var child = parent.proxy(Base.klassFor(ProxyChild.class));
 
     // Then:
     assertNotNull(child);
@@ -47,7 +47,7 @@ class ParentProxyingTest {
 
     // Then:
     assertThrows(IllegalArgumentException.class, () -> {
-      parent.proxy(Platform.klassFor(ProxyChildWithoutNonArgConstructor.class));
+      parent.proxy(Base.klassFor(ProxyChildWithoutNonArgConstructor.class));
     });
   }
 
@@ -58,11 +58,11 @@ class ParentProxyingTest {
 
     // Then:
     assertThrows(IllegalCallableAccessException.class, () -> {
-      parent.proxy(Platform.klassFor(ProxyChildWithoutPublicConstructor.class));
+      parent.proxy(Base.klassFor(ProxyChildWithoutPublicConstructor.class));
     });
   }
 
-  static class ProxyParent extends AnyObject {}
+  static class ProxyParent extends PAnyMap {}
 
   public static class ProxyChild extends ProxyParent {}
 

@@ -2,240 +2,47 @@
 
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.UNDEFINED
-import naksha.base.Platform.PlatformCompanion.isNil
+import naksha.base.Base.BaseCompanion.UNDEFINED
+import naksha.base.Literal.Literal_C.literal
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_delete
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_remove
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
-import naksha.base.fn.Fn0
-import naksha.base.fn.Fn1
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
-import kotlin.jvm.JvmStatic
 import kotlin.math.min
-import kotlin.reflect.KClass
 
 /**
- * The base class for proxy types bound to [PlatformObject], [PlatformList], [PlatformMap], or [PlatformDataViewApi].
+ * The base class for proxies.
+ * @param baseObject the object to which this proxy is linked.
+ * @since 3.0
  */
 @JsExport
-abstract class Proxy : PlatformObject {
-    companion object ProxyCompanion {
-        @Suppress("UNCHECKED_CAST")
-        private fun <T : Any> proxyOf(data: PlatformObject, klass: KClass<out T>): T {
-            if (klass.isInstance(data)) return data as T
-            val symbol = Symbols.of(klass)
-            val existing = Symbols.get(data, symbol)
-            if (klass.isInstance(existing)) return existing as T
-            // Create a new instance.
-            val instance = Platform.newInstanceOf(klass)
-            (instance as Proxy).bind(data, symbol)
-            return instance
-        }
-
-        /**
-         * Convert the given raw value into a value of the given type.
-         * @param raw the raw value to convert.
-         * @param alternative the alternative to return, when the raw value can't be converted.
-         * @param init the initializer, when the raw value can't be converted, preferred above [alternative] if given.
-         * @return the given raw as given type, the result of [init] or the given [alternative] (in that order).
-         */
-        @Suppress("UNCHECKED_CAST", "NON_EXPORTABLE_TYPE")
-        @JvmStatic
-        @JsStatic
-        fun <T : Any> box(raw: Any?, klass: KClass<out T>, alternative: T? = null, init: Fn0<out T?>? = null): T? {
-            val data = unbox(raw)
-            if (isNil(data)) return if (init != null) init.call() else alternative
-
-            // The data value is a complex object
-            if (!Platform.isScalar(data) && data is PlatformObject) {
-                // If a proxy is requested.
-                if (Platform.isProxyKlass(klass)) return proxyOf(data, klass)
-                // A scalar type was requested, but a complex type found.
-                // The only acceptable situation is that Any was requested.
-                // Then, return the standard types.
-                if (klass == Any::class) {
-                    if (data is PlatformMap) return data.proxy(AnyObject::class) as T
-                    if (data is PlatformList) return data.proxy(AnyList::class) as T
-                    if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
-                }
-                // If there is an existing instance that fits our needs, return it.
-                // Special handling, when the given klass is an interface.
-                val symbol = Symbols.of(klass)
-                val existing = Symbols.get(data, symbol)
-                if (klass.isInstance(existing)) return existing as T
-            } else if (klass.isInstance(data)) return data as T
-            if (Platform.isAssignable(klass, JsEnum::class)) {
-                return JsEnum.get(raw, klass as KClass<out JsEnum>) as T
-            }
-            if (klass == Int64::class) {
-                val value = if (klass == Int64::class) when (raw) {
-                    is Short -> Int64(raw.toInt())
-                    is Int -> Int64(raw)
-                    is Long -> Int64(raw)
-                    is Float -> Int64(raw.toDouble())
-                    is Double -> Int64(raw)
-                    else -> raw
-                } else raw
-                if (value is Int64) return value as T
-            }
-            return if (init != null) init.call() else alternative
-        }
-
-        /**
-         * Convert the given raw value into a value of the given type.
-         * @param raw the raw value to convert.
-         * @param key the key to forward to the [init] function.
-         * @param init the initializer, when the raw value can't be converted, preferred above [alternative] if given.
-         * @return the given raw as given type, the result of [init] or the given [alternative] (in that order).
-         */
-        @Suppress("UNCHECKED_CAST", "NON_EXPORTABLE_TYPE")
-        @JvmStatic
-        @JsStatic
-        fun <T : Any, K : Any> boxPair(
-            raw: Any?,
-            klass: KClass<out T>,
-            key: K,
-            init: Fn1<out T?, in K>
-        ): T? {
-            val data = unbox(raw)
-            if (isNil(data)) return init.call(key)
-            // The data value is a complex object
-            if (!Platform.isScalar(data) && data is PlatformObject) {
-                // If a proxy is requested.
-                if (Platform.isProxyKlass(klass)) return proxyOf(data, klass)
-                // A scalar type was requested, but a complex type found.
-                // The only acceptable situation is that Any was requested.
-                // Then, return the standard types.
-                if (klass == Any::class) {
-                    if (data is PlatformMap) return data.proxy(AnyObject::class) as T
-                    if (data is PlatformList) return data.proxy(AnyList::class) as T
-                    if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
-                }
-            } else if (klass.isInstance(data)) return data as T
-            return init.call(key)
-        }
-
-        /**
-         * Unboxes the given object so that the underlying native value is returned.
-         * @param value The object to unbox.
-         * @return The unboxed value.
-         */
-        @JvmStatic
-        @JsStatic
-        fun unbox(value: Any?): Any? = Platform.unbox(value)
-    }
-
-    /**
-     * The symbol though which this proxy is linked to the native object.
-     */
-    private var symbol: Symbol? = null
-
-    /**
-     * The native object to which this type is linked.
-     */
-    internal var data: PlatformObject? = null
-
-    /**
-     * A helper method that creates a new data object.
-     */
-    protected abstract fun createData(): PlatformObject // TODO: Rename to createPlatformObject
-
-    /**
-     * Binds this proxy to the given native object and symbol, normally only invoke from [Platform]. This method should only be invoked ones,
-     * it will throw an [IllegalStateException] otherwise. It can be overloaded by extending types to perform late initialization. It is
-     * guaranteed that the method is invoked at least ones in the lifetime of a proxy.
-     * @param data The native object to which to bind.
-     * @param symbol The symbol to which to bind.
-     * @throws IllegalArgumentException If the given data object is not of the expected type, for example when only [PlatformMap] can be bound.
-     * @throws IllegalStateException If the proxy is already linked.
-     */
-    open fun bind(data: PlatformObject, symbol: Symbol) {
-        check(this.data == null)
-        this.data = data
-        this.symbol = symbol
-        Symbols.set(data, symbol, this)
-    }
-
-    /**
-     * Tests if this proxy is bound to an underlying object.
-     * @return _true_ if the proxy is bound; _false_ otherwise.
-     */
-    fun isBound(): Boolean = data != null
-
-    /**
-     * Returns the platform object to which this proxy is bound via the [symbol].
-     * - Java: `JvmList`, `JvmMap` or `JvmDataView`
-     * - JavaScript: `Array`, `Map` or `DataView`
-     */
-    open fun platformObject(): PlatformObject {
-        var data = this.data
-        if (data == null) {
-            data = createData()
-            bind(data, symbol())
-            onCreation()
-        }
-        return data
-    }
-
-    /**
-     * Function invoked after binding - can be used ie for initial data population.
-     */
-    open fun onCreation(){ /* implement in subclass if needed */ }
-
-    /**
-     * Returns the symbol through which this proxy is bound to the [platformObject] object.
-     */
-    fun symbol(): Symbol {
-        var symbol = this.symbol
-        if (symbol == null) {
-            symbol = Symbols.of(this::class)
-            this.symbol = symbol
-        }
-        return symbol
-    }
-
-    /**
-     * Create a proxy or return the existing proxy. If a proxy of a not compatible type exists already and [doNotOverride]
-     * is _true_, the method will throw an _IllegalStateException_; otherwise the current type is simply overridden.
-     *
-     * ### Note
-     * In Java, you may want to rather use a JVM only implementation `Platform.javaProxy(object, Foo.class)`.
-     * @param klass The proxy class.
-     * @return The proxy instance.
-     */
-    @Suppress("NON_EXPORTABLE_TYPE")
-    fun <T : Proxy> proxy(klass: KClass<T>): T = Platform.proxy(platformObject(), klass)
-
-    override fun hashCode(): Int = platformObject().hashCode()
-
+abstract class Proxy(baseObject: BaseObject): AbstractProxy(baseObject) {
+    override fun hashCode(): Int = this@Proxy.baseObject.hashCode()
     override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        return platformObject() == Platform.unbox(other)
+        return this === other || this@Proxy.baseObject == this@Proxy.baseObject.unbox(other)
     }
-
-    override fun toString(): String = platformObject().toString()
+    override fun toString(): String = this@Proxy.baseObject.toString()
 
     /**
      * Create a copy of this object.
      *
      * @param recursive _true_ if this method should make a recursive copy; _false_ (default) and a shallow copy is made.
-     * @return a (optionally recursive) copy.
+     * @return the (optionally recursive) copy.
      */
     @Suppress("UNCHECKED_CAST")
-    fun <SELF : Proxy> copy(recursive: Boolean = false): SELF = Platform.copy(platformObject(), recursive).proxy(this::class) as SELF
+    fun <SELF : Proxy> copy(recursive: Boolean = false): SELF = Base.copy(baseObject, recursive).proxy(this::class) as SELF
 
     /**
      * Recursively compare this object with another, checking for values instead of just referential.
      * This is needed because for arrays, the == operation compares whether the arrays are the same object.
      * This will work for any nested structures of maps, lists, and arrays.
      */
-    fun contentDeepEquals(other: Proxy): Boolean = PlatformUtil.deepEquals(this, other)
+    fun contentDeepEquals(other: Proxy): Boolean = BaseUtil.deepEquals(this, other)
 
     /**
      * Get the property from the given path.
@@ -247,37 +54,41 @@ abstract class Proxy : PlatformObject {
     @JsName("getPathByList")
     @JvmOverloads
     fun getPath(path: List<Any?>, end: Int = path.size): Any? {
-        var current: Any? = this.platformObject()
+        var current: Any? = this.baseObject
         for (i in 0 until min(path.size, end)) {
             val key = path[i]
+            if (key is Literal) {
+                if (current !is IMap) return null
+                current = current[key]
+                continue
+            }
             if (key is String) {
-                if (current !is PlatformMap) return null
-                current = map_get(current, key)
+                if (current !is IMap) return null
+                current = current[literal(key)]
                 continue
             }
             if (key is Number) {
-                if (current !is PlatformList) return null
+                if (current !is IArray) return null
                 val index = key.toInt()
-                current = array_get(current, index)
+                current = current[index]
                 continue
             }
             return null
         }
-        if (current is PlatformMap) return Platform.proxy(current, AnyObject::class)
-        if (current is PlatformList) return Platform.proxy(current, AnyList::class)
-        if (current is PlatformDataView) return Platform.proxy(current, DataViewProxy::class)
+        if (current is BaseArray) return current.proxy(PAnyMap::class)
+        if (current is BaseMap) return current.proxy(PAnyArray::class)
         return current
     }
 
     /**
      * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
      *
-     * @param value the value to set; if [Platform.UNDEFINED], the value will be removed.
+     * @param value the value to set; if [BaseCompanion.UNDEFINED], the value will be removed.
      * @param path the JSON path to mutate.
      * @param end the optional end in the JSON path, defaults to max _(used to select a zero-copy sub-path)_.
      * @return the previous value.
      * @since 3.0
-     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [Platform.UNDEFINED].
+     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [BaseCompanion.UNDEFINED].
      */
     @JsName("setPathByList")
     @JvmOverloads
@@ -286,27 +97,30 @@ abstract class Proxy : PlatformObject {
         val pathEnd = min(path.size, end)
         if (pathEnd == 0 && isRemove) return UNDEFINED
         val pathLast = pathEnd - 1
-        var current: Any = this.platformObject()
+        var current: Any = this.baseObject
         for (i in 0 until pathLast) {
-            val key = path[i]
-            if (key is String) {
-                if (current !is PlatformMap) {
+            var key = path[i]
+            if (key is String) key = literal(key)
+            if (key is Literal) {
+                if (current !is IMap) {
                     if (isRemove) return null
-                    throw illegalArg("Invalid value at key '$key', expected object")
+                    throw illegalArg("Invalid value at key '$key', expected IMutableMap")
                 }
-                // --- current is PlatformMap ---
-                val value = map_get(current, key)
+                // --- current is IMap ---
+                val value = current[key]
                 if (value == null) {
                     // The key does not exist, check if we should create a map or list.
-                    val next_key = path[i + 1]
-                    if (next_key is String) {
-                        val new_map = Platform.newMap()
+                    var next_key = path[i + 1]
+                    if (next_key is String) next_key = literal(next_key)
+                    if (next_key is Literal) {
+                        if (current !is IMutableMap) throw illegalArg("Invalid value at key '$key', expected IMutableMap")
+                        val new_map = Base.newMap()
                         map_set(current, key, new_map)
                         current = new_map
                         continue
                     }
                     if (next_key is Number) {
-                        val new_list = Platform.newList()
+                        val new_list = Base.newList()
                         map_set(current, key, new_list)
                         current = new_list
                         continue
@@ -330,13 +144,13 @@ abstract class Proxy : PlatformObject {
                     // The index does not exist, check if we should create a map or list.
                     val next_key = path[i + 1]
                     if (next_key is String) {
-                        val new_map = Platform.newMap()
+                        val new_map = Base.newMap()
                         array_set(current, index, new_map)
                         current = new_map
                         continue
                     }
                     if (next_key is Number) {
-                        val new_list = Platform.newList()
+                        val new_list = Base.newList()
                         array_set(current, index, new_list)
                         current = new_list
                         continue
@@ -401,21 +215,20 @@ abstract class Proxy : PlatformObject {
             }
             return null
         }
-        if (current is PlatformMap) return Platform.proxy(current, AnyObject::class)
-        if (current is PlatformList) return Platform.proxy(current, AnyList::class)
-        if (current is PlatformDataView) return Platform.proxy(current, DataViewProxy::class)
+        if (current is PlatformMap) return Base.proxy(current, PAnyMap::class)
+        if (current is PlatformList) return Base.proxy(current, PAnyArray::class)
         return current
     }
 
     /**
      * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
      *
-     * @param value the value to set; if [Platform.UNDEFINED], the value will be removed.
+     * @param value the value to set; if [BaseCompanion.UNDEFINED], the value will be removed.
      * @param path the JSON path to mutate.
      * @param end the optional end in the JSON path, defaults to max _(used to select a zero-copy sub-path)_.
      * @return the previous value.
      * @since 3.0
-     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [Platform.UNDEFINED].
+     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [BaseCompanion.UNDEFINED].
      */
     @JsName("setPathByArray")
     fun setPath(value: Any?, path: Array<Any?>, end: Int = path.size): Any? {
@@ -437,13 +250,13 @@ abstract class Proxy : PlatformObject {
                     // The key does not exist, check if we should create a map or list.
                     val next_key = path[i + 1]
                     if (next_key is String) {
-                        val new_map = Platform.newMap()
+                        val new_map = Base.newMap()
                         map_set(current, key, new_map)
                         current = new_map
                         continue
                     }
                     if (next_key is Number) {
-                        val new_list = Platform.newList()
+                        val new_list = Base.newList()
                         map_set(current, key, new_list)
                         current = new_list
                         continue
@@ -467,13 +280,13 @@ abstract class Proxy : PlatformObject {
                     // The index does not exist, check if we should create a map or list.
                     val next_key = path[i + 1]
                     if (next_key is String) {
-                        val new_map = Platform.newMap()
+                        val new_map = Base.newMap()
                         array_set(current, index, new_map)
                         current = new_map
                         continue
                     }
                     if (next_key is Number) {
-                        val new_list = Platform.newList()
+                        val new_list = Base.newList()
                         array_set(current, index, new_list)
                         current = new_list
                         continue
@@ -535,20 +348,19 @@ abstract class Proxy : PlatformObject {
             }
             return null
         }
-        if (current is PlatformMap) return Platform.proxy(current, AnyObject::class)
-        if (current is PlatformList) return Platform.proxy(current, AnyList::class)
-        if (current is PlatformDataView) return Platform.proxy(current, DataViewProxy::class)
+        if (current is PlatformMap) return Base.proxy(current, PAnyMap::class)
+        if (current is PlatformList) return Base.proxy(current, PAnyArray::class)
         return current
     }
 
     /**
      * Set the property at the given path. Creates the path, if it does not exist yet. Throws an [RuntimeException] if the path exists, but is of wrong type, for example an array is expected, but an object found or vice versa.
      *
-     * @param value the value to set; if [Platform.UNDEFINED], the value will be removed.
+     * @param value the value to set; if [BaseCompanion.UNDEFINED], the value will be removed.
      * @param path the JSON path to mutate.
      * @return the previous value.
      * @since 3.0
-     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [Platform.UNDEFINED].
+     * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the path is invalid and the value is not [BaseCompanion.UNDEFINED].
      */
     fun setPath(value: Any?, vararg path: Any): Any? {
         val isRemove = value == UNDEFINED
@@ -569,13 +381,13 @@ abstract class Proxy : PlatformObject {
                     // The key does not exist, check if we should create a map or list.
                     val next_key = path[i + 1]
                     if (next_key is String) {
-                        val new_map = Platform.newMap()
+                        val new_map = Base.newMap()
                         map_set(current, key, new_map)
                         current = new_map
                         continue
                     }
                     if (next_key is Number) {
-                        val new_list = Platform.newList()
+                        val new_list = Base.newList()
                         map_set(current, key, new_list)
                         current = new_list
                         continue
@@ -599,13 +411,13 @@ abstract class Proxy : PlatformObject {
                     // The index does not exist, check if we should create a map or list.
                     val next_key = path[i + 1]
                     if (next_key is String) {
-                        val new_map = Platform.newMap()
+                        val new_map = Base.newMap()
                         array_set(current, index, new_map)
                         current = new_map
                         continue
                     }
                     if (next_key is Number) {
-                        val new_list = Platform.newList()
+                        val new_list = Base.newList()
                         array_set(current, index, new_list)
                         current = new_list
                         continue

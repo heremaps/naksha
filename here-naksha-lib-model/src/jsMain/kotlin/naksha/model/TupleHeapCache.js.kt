@@ -4,8 +4,6 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.TupleNumber
-import naksha.jbon.IDictReader
-import naksha.model.request.FeatureTuple
 
 /**
  * A cache in the Java heap for [Tuple]'s, used as default cache by the [Naksha.cache]. This cache is a mandatory first level cache, the application can install second or third level caches.
@@ -21,7 +19,7 @@ actual class TupleHeapCache : ITupleCache {
         TODO("Not yet implemented")
     }
 
-    actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int, acceptFeature: Boolean): Int {
+    actual override fun load(tuples: Array<Tuple?>, tupleNumbers: Array<TupleNumber>, from:Int, to:Int, maxMicros: Int64?): Int {
         TODO("Not yet implemented")
     }
 
@@ -29,19 +27,7 @@ actual class TupleHeapCache : ITupleCache {
         TODO("Not yet implemented")
     }
 
-    actual override fun store(tuples: List<Tuple>) {
-        TODO("Not yet implemented")
-    }
-
-    actual override fun onStorageAdd(storage: IStorage) {
-        TODO("Not yet implemented")
-    }
-
-    actual override fun onStorageRemove(storage: IStorage) {
-        TODO("Not yet implemented")
-    }
-
-    actual override fun getDictReader(storageNumber: Int64): IDictReader? {
+    actual override fun store(vararg tuples: Tuple?) {
         TODO("Not yet implemented")
     }
 
@@ -49,22 +35,7 @@ actual class TupleHeapCache : ITupleCache {
         TODO("Not yet implemented")
     }
 
-    actual override fun clear(storage: IStorage) {
-        TODO("Not yet implemented")
-    }
-
     actual override fun gc() {
         TODO("Not yet implemented")
-    }
-
-    actual companion object TupleHeapCache_C {
-        /**
-         * Returns the head-cache implementation.
-         * @return the head-cache implementation.
-         * @since 3.0
-         */
-        actual fun getInstance(): TupleHeapCache {
-            TODO("Not yet implemented")
-        }
     }
 }

@@ -1,6 +1,8 @@
 package naksha.model.objects
 
 import naksha.model.Tuple
+import naksha.base.PTypedMap
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.base.illegalArg
 import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.FLOAT64
@@ -17,7 +19,7 @@ class Float64Member() : TypedMember<Float64Member>() {
     /** Creates a new float64 member with the given name and an optional custom JSON path. */
     @JsName("of")
     constructor(name: String, path: JsonPath? = null) : this() {
-        this.name = name
+        this.id = name
         this.dataType = FLOAT64
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -27,7 +29,7 @@ class Float64Member() : TypedMember<Float64Member>() {
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
         if (member.dataType != FLOAT64) throw illegalArg("The given member is not of float64 type")
-        this.name = member.name
+        this.id = member.id
         this.dataType = FLOAT64
         this.path = path?.validate() ?: member.path
     }
@@ -42,6 +44,6 @@ class Float64Member() : TypedMember<Float64Member>() {
     @JsName("getFromTuple")
     fun get(tuple: Tuple): Double? = readDouble(tuple)
 
-    /** Sets the float64 value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Double): Any? = setPath(feature, path, value)
+    /** Sets the float64 value of this member on the given object. */
+    fun set(feature: PTypedMap<*, *>, value: Double?): Any? = if (value == null) feature.setPath(UNDEFINED, path) else feature.setPath(value, path)
 }

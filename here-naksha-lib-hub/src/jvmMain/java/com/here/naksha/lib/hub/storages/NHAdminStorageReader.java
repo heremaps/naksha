@@ -126,13 +126,13 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId, boolean allowTombstone) {
-    return session.getCollectionById(map, collectionId, allowTombstone);
+  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String id, boolean allowTombstone) {
+    return session.getCollectionById(map, id, allowTombstone);
   }
 
   @Override
   public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
-    session.loadTuples(featureTuples, from, to);
+    session.loadFeatureTuples(featureTuples, from, to);
   }
 
   @Override

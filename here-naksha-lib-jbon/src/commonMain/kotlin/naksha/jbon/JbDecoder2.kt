@@ -1,6 +1,7 @@
 package naksha.jbon
 
 import naksha.base.*
+import naksha.base.Binary.BinaryCompanion.EMPTY_BYTE_ARRAY
 import naksha.base.TupleNumber
 import naksha.geo.GeoUtil
 import kotlin.js.JsExport
@@ -32,7 +33,7 @@ import kotlin.jvm.JvmStatic
 open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = null) {
 
     /** The underlying binary view. */
-    var view: BinaryView = Binary()
+    var bytes: ByteArray = EMPTY_BYTE_ARRAY
         internal set
 
     /** The current read offset (the lead-in byte of the current unit). */
@@ -54,13 +55,13 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
          * @throws IllegalStateException if a `@JB` prefix is found with an unknown version byte.
          */
         @JvmStatic
-        fun skipHeader(view: BinaryView, offset: Int): Int {
-            if (offset + 4 > view.end) return offset
-            val a = view.getInt8(offset).toInt() and 0xff
-            val b = view.getInt8(offset + 1).toInt() and 0xff
-            val c = view.getInt8(offset + 2).toInt() and 0xff
+        fun skipHeader(bytes: ByteArray, offset: Int): Int {
+            if (offset + 4 > bytes.size) return offset
+            val a = bytes.getInt8(offset).toInt() and 0xff
+            val b = bytes.getInt8(offset + 1).toInt() and 0xff
+            val c = bytes.getInt8(offset + 2).toInt() and 0xff
             if (a == '@'.code && b == 'J'.code && c == 'B'.code) {
-                val v = view.getInt8(offset + 3).toInt() and 0xff
+                val v = bytes.getInt8(offset + 3).toInt() and 0xff
                 check(v == JB2_VERSION) { "Unsupported JBON version: $v" }
                 return offset + 4
             }
@@ -72,20 +73,20 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
          * or `-1` on error. Mirrors the JBON2 code-point lead bytes.
          */
         @JvmStatic
-        internal fun readCodePoint(view: BinaryView, i: Int, end: Int): Int {
+        internal fun readCodePoint(bytes: ByteArray, i: Int, end: Int): Int {
             if (i >= end) return -1
-            val lead = view.getInt8(i).toInt() and 0xff
+            val lead = bytes.getInt8(i).toInt() and 0xff
             return when {
                 lead and 0b1000_0000 == 0 -> (lead shl 3) or 1 // 0_vvvvvvv ASCII
                 lead and JB2_CP_2BYTE_MASK == JB2_CP_2BYTE -> { // 100_vvvvv
                     if (i + 1 >= end) return -1
-                    val lo = view.getInt8(i + 1).toInt() and 0xff
+                    val lo = bytes.getInt8(i + 1).toInt() and 0xff
                     val biased = ((lead and 0b0001_1111) shl 8) or lo
                     ((biased + JB2_CP_2BYTE_BIAS) shl 3) or 2
                 }
                 lead and JB2_CP_2BYTE_MASK == JB2_CP_3BYTE -> { // 101_vvvvv
                     if (i + 2 >= end) return -1
-                    val lo = view.getInt16(i + 1).toInt() and 0xffff
+                    val lo = bytes.getInt16(i + 1).toInt() and 0xffff
                     val biased = ((lead and 0b0001_1111) shl 16) or lo
                     ((biased + JB2_CP_3BYTE_BIAS) shl 3) or 3
                 }
@@ -99,7 +100,7 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
          */
         @JvmStatic
         internal fun readSubstring(
-            view: BinaryView,
+            bytes: ByteArray,
             offset: Int,
             end: Int,
             sb: StringBuilder,
@@ -109,16 +110,16 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
         ) {
             var i = offset
             while (i < end) {
-                val lead = view.getInt8(i).toInt() and 0xff
+                val lead = bytes.getInt8(i).toInt() and 0xff
                 if (lead and JB2_SREF_PREFIX_MASK == JB2_SREF) { // 11_aaa_bbs string-reference
                     val sizeBit = lead and JB2_SREF_SIZE_MASK
                     val index: Int
                     if (sizeBit == JB2_SREF_SIZE_SMALL) {
-                        index = view.getInt8(i + 1).toInt() and 0xff
+                        index = bytes.getInt8(i + 1).toInt() and 0xff
                         i += 2
                     } else {
-                        val hi = view.getInt8(i + 1).toInt() and 0xff
-                        val lo = view.getInt16(i + 2).toInt() and 0xffff
+                        val hi = bytes.getInt8(i + 1).toInt() and 0xff
+                        val lo = bytes.getInt16(i + 2).toInt() and 0xffff
                         index = (hi shl 16) or lo
                         i += 4
                     }
@@ -135,7 +136,7 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
                     val ch = JB2_ADD_CHAR[add]
                     if (ch != 0) sb.append(ch.toChar())
                 } else {
-                    val cp = readCodePoint(view, i, end)
+                    val cp = readCodePoint(bytes, i, end)
                     check(cp != -1) { "Invalid code point at offset $i" }
                     i += cp and 0b111
                     val unicode = cp shr 3
@@ -157,12 +158,9 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
      */
     @JsName("mapBytes")
     fun mapBytes(bytes: ByteArray): JbDecoder2 {
-        val v = Binary()
-        v.view = Platform.newDataView(bytes)
-        v.end = bytes.size
-        this.view = v
+        this.bytes = bytes
         this.end = bytes.size
-        this.offset = skipHeader(v, 0)
+        this.offset = skipHeader(bytes, 0)
         return this
     }
 
@@ -170,7 +168,7 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
     // Lead-in inspection
     // -----------------------------------------------------------------------
 
-    private fun leadIn(at: Int): Int = view.getInt8(at).toInt() and 0xff
+    private fun leadIn(at: Int): Int = bytes.getInt8(at).toInt() and 0xff
 
     /** The size-field width contribution and content size of a structure at [at]. */
     private fun structHeaderSize(at: Int): Int {
@@ -185,9 +183,9 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
     private fun structContentSize(at: Int): Int {
         return when (leadIn(at) and JB2_STRUCT_SIZE_MASK) {
             JB2_STRUCT_SIZE0 -> 0
-            JB2_STRUCT_SIZE8 -> view.getInt8(at + 1).toInt() and 0xff
-            JB2_STRUCT_SIZE16 -> view.getInt16(at + 1).toInt() and 0xffff
-            else -> view.getInt32(at + 1)
+            JB2_STRUCT_SIZE8 -> bytes.getInt8(at + 1).toInt() and 0xff
+            JB2_STRUCT_SIZE16 -> bytes.getInt16(at + 1).toInt() and 0xffff
+            else -> bytes.getInt32(at + 1)
         }
     }
 
@@ -233,9 +231,9 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
     private fun stringUnitSize(at: Int): Int {
         val sizeField = leadIn(at) and JB2_STRING_SIZE_MASK
         return when (sizeField) {
-            JB2_STRING_SIZE_BYTE -> 2 + (view.getInt8(at + 1).toInt() and 0xff) + JB2_STRING_SIZE_BIAS
-            JB2_STRING_SIZE_SHORT -> 3 + (view.getInt16(at + 1).toInt() and 0xffff)
-            JB2_STRING_SIZE_INT -> 5 + view.getInt32(at + 1)
+            JB2_STRING_SIZE_BYTE -> 2 + (bytes.getInt8(at + 1).toInt() and 0xff) + JB2_STRING_SIZE_BIAS
+            JB2_STRING_SIZE_SHORT -> 3 + (bytes.getInt16(at + 1).toInt() and 0xffff)
+            JB2_STRING_SIZE_INT -> 5 + bytes.getInt32(at + 1)
             else -> 1 + sizeField
         }
     }
@@ -275,21 +273,21 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
             JB2_NULL -> null
             JB2_FALSE -> false
             JB2_TRUE -> true
-            JB2_INT8 -> view.getInt8(at + 1).toInt()
-            JB2_INT16 -> view.getInt16(at + 1).toInt()
-            JB2_INT32 -> view.getInt32(at + 1)
-            JB2_INT64 -> view.getInt64(at + 1)
-            JB2_FLOAT32 -> view.getFloat32(at + 1)
-            JB2_FLOAT64 -> view.getFloat64(at + 1)
-            JB2_TIMESTAMP, JB2_UINT56 -> view.getInt64(at) and Platform.toInt64(JB2_MASK_56_LOW)
-            JB2_UINT24 -> view.getInt32(at) and JB2_MASK_24_LOW
+            JB2_INT8 -> bytes.getInt8(at + 1).toInt()
+            JB2_INT16 -> bytes.getInt16(at + 1).toInt()
+            JB2_INT32 -> bytes.getInt32(at + 1)
+            JB2_INT64 -> bytes.getInt64(at + 1)
+            JB2_FLOAT32 -> bytes.getFloat32(at + 1)
+            JB2_FLOAT64 -> bytes.getFloat64(at + 1)
+            JB2_TIMESTAMP, JB2_UINT56 -> bytes.getInt64(at) and JB2_MASK_56_LOW
+            JB2_UINT24 -> bytes.getInt32(at) and JB2_MASK_24_LOW
             JB2_TUPLE_NUMBER -> {
                 // lead-in at `at`, data starts at `at + 1`: 8 + 4 + 4 + 8 + 8 = 32 bytes
-                val db = view.getInt64(at + 1)
-                val cat = view.getInt32(at + 9)
-                val col = view.getInt32(at + 13)
-                val feat = view.getInt64(at + 17)
-                val ver = view.getInt64(at + 25)
+                val db = bytes.getInt64(at + 1)
+                val cat = bytes.getInt32(at + 9)
+                val col = bytes.getInt32(at + 13)
+                val feat = bytes.getInt64(at + 17)
+                val ver = bytes.getInt64(at + 25)
                 TupleNumber(db, cat, col, feat, ver)
             }
             else -> throw IllegalStateException("Unsupported mixed lead-in for decode: ${lead.toString(2)}")
@@ -299,10 +297,10 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
     private fun decodeRefAt(at: Int): Any? {
         val lead = leadIn(at)
         val index = when (lead and JB2_REF_SIZE_MASK) {
-            JB2_REF_SIZE8 -> view.getInt8(at + 1).toInt() and 0xff
-            JB2_REF_SIZE16 -> view.getInt16(at + 1).toInt() and 0xffff
-            JB2_REF_SIZE24 -> ((view.getInt8(at + 1).toInt() and 0xff) shl 16) or (view.getInt16(at + 2).toInt() and 0xffff)
-            else -> view.getInt32(at + 1)
+            JB2_REF_SIZE8 -> bytes.getInt8(at + 1).toInt() and 0xff
+            JB2_REF_SIZE16 -> bytes.getInt16(at + 1).toInt() and 0xffff
+            JB2_REF_SIZE24 -> ((bytes.getInt8(at + 1).toInt() and 0xff) shl 16) or (bytes.getInt16(at + 2).toInt() and 0xffff)
+            else -> bytes.getInt32(at + 1)
         }
         return when (lead and JB2_REF_BOOK_MASK) {
             JB2_REF_BOOK_GLOBAL -> globalDict?.get(index)
@@ -316,7 +314,7 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
         val hs = stringHeaderSize(at)
         val total = stringUnitSize(at)
         val sb = StringBuilder()
-        readSubstring(view, at + hs, at + total, sb, globalStringsList(), localStrings, memberStringsList())
+        readSubstring(bytes, at + hs, at + total, sb, globalStringsList(), localStrings, memberStringsList())
         return sb.toString()
     }
 
@@ -359,7 +357,7 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
         val contentEnd = contentStart + contentSize
         return when (type) {
             JB2_STRUCT_ARRAY, JB2_STRUCT_TAG_LIST -> {
-                val list = AnyList()
+                val list = PAnyArray()
                 var p = contentStart
                 while (p < contentEnd) {
                     list.add(decodeValueAt(p))
@@ -368,7 +366,7 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
                 list
             }
             JB2_STRUCT_OBJECT, JB2_STRUCT_MAP, JB2_STRUCT_TAG_MAP -> {
-                val obj = AnyObject()
+                val obj = PAnyMap()
                 var p = contentStart
                 while (p < contentEnd) {
                     val key = decodeValueAt(p)?.toString() ?: "null"
@@ -386,12 +384,12 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
             }
             JB2_STRUCT_TWKB -> {
                 // Content bytes are raw TWKB; convert to SpGeometry via GeoUtil.
-                val bytes = ByteArray(contentSize) { view.getInt8(contentStart + it) }
+                val bytes = ByteArray(contentSize) { bytes.getInt8(contentStart + it) }
                 GeoUtil.fromTWKB(bytes)
             }
             JB2_STRUCT_BYTE_ARRAY -> {
                 // Content bytes are raw ByteArray.
-                ByteArray(contentSize) { view.getInt8(contentStart + it) }
+                ByteArray(contentSize) { bytes.getInt8(contentStart + it) }
             }
             JB2_STRUCT_DICTIONARY -> {
                 readDictionaryStrings(at)
@@ -436,12 +434,12 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
     }
 
     /**
-     * Decode the top-level tuple into an [AnyObject] feature.
+     * Decode the top-level tuple into an [PAnyMap] feature.
      * @return the decoded feature.
      * @throws IllegalStateException if the top-level unit does not decode to an object.
      */
-    fun toAnyObject(): AnyObject {
+    fun toAnyObject(): PAnyMap {
         val v = decodeValueAt(offset)
-        return v as? AnyObject ?: throw IllegalStateException("Top-level JBON2 unit is not an object: $v")
+        return v as? PAnyMap ?: throw IllegalStateException("Top-level JBON2 unit is not an object: $v")
     }
 }

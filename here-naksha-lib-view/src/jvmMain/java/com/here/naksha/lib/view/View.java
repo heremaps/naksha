@@ -19,7 +19,8 @@
 package com.here.naksha.lib.view;
 
 import kotlin.reflect.KClass;
-import naksha.base.Platform;
+import naksha.base.Id;
+import naksha.base.Base;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
 import naksha.model.SessionOptions;
@@ -28,17 +29,16 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import static naksha.base.NakshaExceptionKt.illegalArg;
+
 // TODO: This should implement IStorage
 public class View extends AbstractStorage<NakshaStorage> implements IView {
 
   private @NotNull ViewLayerCollection viewLayerCollection;
-
-  public View() {
-
-  }
+  private @NotNull Id databaseId;
 
   public View(@NotNull ViewLayerCollection viewLayerCollection) {
-    this.viewLayerCollection = viewLayerCollection;
+    setViewLayerCollection(viewLayerCollection);
   }
 
   public @NotNull ViewLayerCollection getViewCollection() {
@@ -54,6 +54,10 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
   }
 
   public void setViewLayerCollection(@NotNull ViewLayerCollection viewLayerCollection) {
+    final var layers = viewLayerCollection.getLayers();
+    if (layers.isEmpty()) throw illegalArg("Empty layer collection is not supported");
+    final ViewLayer firstLayer = layers.get(0);
+    this.databaseId = firstLayer.getDatabaseId();
     this.viewLayerCollection = viewLayerCollection;
   }
 
@@ -83,11 +87,16 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
 
   @Override
   public @NotNull KClass<NakshaStorage> getConfigKlass() {
-    return Platform.klassFor(NakshaStorage.class);
+    return Base.klassFor(NakshaStorage.class);
   }
 
   @Override
   protected void initStorage(@NotNull NakshaStorage nakshaStorage, @Nullable Boolean create, @Nullable Boolean upgrade) {
     // Nothing to do
+  }
+
+  @Override
+  public @NotNull Id getDefaultDatabaseId() {
+    return null;
   }
 }

@@ -19,33 +19,32 @@ class ReadFeaturesAll : PgTestBase() {
         val featuresToCreate = randomFeatures(COUNT)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
+                add(Write().createFeature(collection, featureToCreate))
             }
         }
-        val writeFeaturesResp = executeWrite(writeFeaturesReq)
-        assertEquals(COUNT, writeFeaturesResp.features.size)
-        for (feature in writeFeaturesResp.features) {
+        val writeFeaturesResp = executeWriteAndLoadTuples(writeFeaturesReq)
+        assertEquals(COUNT, writeFeaturesResp.asFeatures.size)
+        for (feature in writeFeaturesResp.asFeatures) {
             assertNotNull(feature)
-            assertNull(allFeatures[feature.id])
+            assertNull(allFeatures[feature.id.text])
             assertEquals(Action.CREATE, feature.properties.xyz.action)
-            allFeatures[feature.id] = feature
+            allFeatures[feature.id.text] = feature
         }
     }
 
     @Test
     fun shouldReturnAllFeatures() {
-        executeRead(ReadFeatures().apply {
+        executeReadAndLoadTuple(ReadFeatures().apply {
             catalogId = collection.catalogId
             collectionId = collection.id
         }).apply {
-            assertEquals(COUNT, features.size)
-            for (feature in features) {
+            assertEquals(COUNT, asFeatures.size)
+            for (feature in asFeatures) {
                 assertNotNull(feature)
-                assertNotNull(allFeatures[feature.id])
-                allFeatures.remove(feature.id)
+                assertNotNull(allFeatures[feature.id.text])
+                allFeatures.remove(feature.id.text)
             }
             assertEquals(0, allFeatures.size)
         }
     }
-
 }

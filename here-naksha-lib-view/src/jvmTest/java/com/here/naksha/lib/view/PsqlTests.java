@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
@@ -34,7 +34,7 @@ import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static naksha.base.Platform.javaProxy;
+import static naksha.base.Base.javaProxy;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -71,7 +71,7 @@ abstract class PsqlTests {
 
   protected static @NotNull SuccessResponse assertSuccess(@NotNull Response response) {
     if (response instanceof ErrorResponse) {
-      ((ErrorResponse)response).getError().print(Platform.getLogger());
+      ((ErrorResponse)response).getError().print(Base.getLogger());
     }
     return assertInstanceOf(SuccessResponse.class, response);
   }
@@ -97,16 +97,16 @@ abstract class PsqlTests {
       NakshaStorage.fromJSON(
         String.format(
           "{\"id\":\"%s\",\"className\":\"naksha.psql.PsqlTestStorage\"}",
-          Platform.getTestStorageId())
+          Base.getTestStorageId())
         )
     );
     assertNotNull(storage);
 
     // Drop the map, if it exists
-    executeWrite(new WriteRequest().add(new Write().deleteMapById(TEST_MAP_ID)));
+    executeWrite(new WriteRequest().add(new Write().deleteCatalog(TEST_MAP_ID)));
 
     // Create the map.
-    SuccessResponse response = executeWrite(new WriteRequest().add(new Write().createMap(new NakshaCatalog(TEST_MAP_ID))));
+    SuccessResponse response = executeWrite(new WriteRequest().add(new Write().createCatalog(new NakshaCatalog(TEST_MAP_ID))));
     assertEquals(1, response.getFeatures().size());
     NakshaFeature raw = response.getFeatures().get(0);
     assertNotNull(raw);

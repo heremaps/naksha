@@ -18,7 +18,7 @@ PGPASSWORD='XprclPDUTMsWpHvvtusuVCNDWsJZPVTP' \
 NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
-./gradlew :here-naksha-app-service:jvmTest
+./gradlew :here-naksha-lib-psql:jvmTest
 ```
 
-If a specific test is wished, just append `--tests "com.here.naksha.app.service.PatchOnViewWithHttpStorageTest"` to the `gradlew` call.
+If a specific test is wished, just append `--tests "{full qualified classname}"` to the `gradlew` call.

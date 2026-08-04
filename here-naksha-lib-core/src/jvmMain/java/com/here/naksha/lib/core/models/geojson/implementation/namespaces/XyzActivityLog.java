@@ -25,7 +25,7 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Action;
 import naksha.model.objects.NakshaProperties;
@@ -33,7 +33,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 @SuppressWarnings("unused")
-public class XyzActivityLog extends AnyObject {
+public class XyzActivityLog extends PAnyMap {
   public static final ObjectMapper mapper = new ObjectMapper();
   public static final String ID = "id";
   public static final String ORIGINAL = "original";

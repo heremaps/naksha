@@ -151,7 +151,7 @@ To allow interoperability between different storages, applications, modules, and
 | `TypedArrayProxy<E>` |                  |      |                     |                      | A [Proxy] that can be linked to any `IArray` to view it as a typed-array.                                      |
 | `SetProxy`           |                  |      |                     |                      | A [Proxy] that can be linked to any `ISet` to extend the set with custom functions.                            |
 | `TypedSetProxy<E>`   |                  |      |                     |                      | A [Proxy] that can be linked to any `ISet` to view it as a typed-set.                                          |
-| `MapProxy`           |                  |      |                     |                      | A [Proxy] that can be linked to any `IMap` to extend the map with custom functions.                            |
+| `PTypedMap`           |                  |      |                     |                      | A [Proxy] that can be linked to any `IMap` to extend the map with custom functions.                            |
 | `TypedMapProxy<K,V>` |                  |      |                     |                      | A [Proxy] that can be linked to any `IMap` to view it as a typed-map.                                          |
 |                      |                  |      |                     |                      |                                                                                                                |
 | `TagsProxy`          |                  |      |                     |                      | A [Proxy] for an `IArray` to be treated as a list of tags, split and made available as a map.                  |
@@ -749,7 +749,7 @@ public abstract class TypedSetProxy<E> extends SetProxy implements Set<E> {
 ```
 
 ### TypedMapProxy
-Basically the same as an `MapProxy`, but implementing the `Map` interface, with added type safety for all elements. Used to implement some standard sets via proxies like `StringObjectMap` or `StringStringMap`.
+Basically the same as an `PTypedMap`, but implementing the `Map` interface, with added type safety for all elements. Used to implement some standard sets via proxies like `StringObjectMap` or `StringStringMap`.
 
 ```java
 package naksha.data;
@@ -1400,7 +1400,7 @@ Now, when deciding in which historic partition a [Tuple] should be located a **p
 The abstract `TupleStorage` base class, extended by all [storages] and [caches], representing a sink for [tuples] aka _feature_ states. Only allows to read and store tuples using [tuple-numbers].
 
 ## TupleCache
-The `TupleCache` is a static in-memory cache for tuples. It holds a certain threshold of soft-references, plus as much as possible weak-references to tuple. The cache is used to speed up access to tuples, and to reduce memory consumption by allowing the garbage collector to reclaim memory when needed.
+The `TupleCacheManager` is a static in-memory cache for tuples. It holds a certain threshold of soft-references, plus as much as possible weak-references to tuple. The cache is used to speed up access to tuples, and to reduce memory consumption by allowing the garbage collector to reclaim memory when needed.
 
 ### Java
 

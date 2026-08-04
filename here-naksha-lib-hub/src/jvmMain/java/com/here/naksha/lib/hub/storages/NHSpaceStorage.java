@@ -36,7 +36,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import naksha.base.Int64;
-import naksha.base.PlatformLock;
+import naksha.base.Lock;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
 import naksha.jbon.JbDictionary;
@@ -118,7 +118,7 @@ public class NHSpaceStorage implements IStorage {
   }
 
   @Override
-  public @NotNull PlatformLock getLock() {
+  public @NotNull Lock getLock() {
     throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 

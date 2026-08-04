@@ -1,9 +1,8 @@
 package naksha.psql
 
-import naksha.base.Int64
-import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.PlatformUtil
+import naksha.base.Base
+import naksha.base.Base.BaseCompanion.logger
+import naksha.base.BaseUtil
 import naksha.base.TupleNumber
 import naksha.base.conflict
 import naksha.base.featureNotFound
@@ -31,14 +30,14 @@ internal class PgWriterUpdate(
 
     // All columns that are BYTE_ARRAYs (can be empty)
     private val byteArrayCols = pgCollection.columns.filter { it.memberType == MemberType.BYTE_ARRAY }
-    private val writeByFn = mutableMapOf<Int64, PgWrite>()
+    private val writeByFn = mutableMapOf<Long, PgWrite>()
     init {
-        inRows.addColumns(pgCollection.columns)
+        inRows.withPgCollection(pgCollection)
         inRows.addColumn("expected_version", MemberType.INT64) // needed to do atomic updates
         loadAllTuple { row, tuple, pgWrite ->
             writeByFn[tuple.tupleNumber.featureNumber] = pgWrite
             // Separate column for the expected HEAD version.
-            inRows.set(row, "expected_version", pgWrite.version?.number)
+            inRows.set(row, "expected_version", pgWrite.version)
         }
     }
 
@@ -124,9 +123,9 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
         // All nullable BYTE_ARRAY columns may carry the "keep if undefined" sentinel and must be
         // read back from the DB so the in-memory tuple reflects the final stored value.
         val outRows = PgRows()
-            .withDatabaseNumber(storageNumber)
-            .withCatalogNumber(catalogNumber)
-            .withCollectionNumber(collectionNumber)
+            .withDatabaseId(databaseId)
+            .withCatalogId(catalogId)
+            .withCollectionId(collectionId)
         outRows.addColumn(FnColumn)
             .addColumn(VersionColumn)
             .addColumn("_existing_fn", MemberType.INT64)
@@ -138,7 +137,7 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
 
         val plan = plan(conn)
         val array = this.inRows.values()
-        if (PlatformUtil.ENABLE_INFO) {
+        if (BaseUtil.ENABLE_INFO) {
             if (session.logQueries) {
                 session.logAtInfo(plan.sql)
             }
@@ -147,9 +146,9 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
                 session.logAtInfo(explain)
             }
         }
-        val start = Platform.currentNanos()
+        val start = Base.currentNanos()
         val cursor = plan.pgPlan.execute(array)
-        val end = Platform.currentNanos()
+        val end = Base.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (pgWrites.size != 1 || pgWrites[0].isFeatureModification) {
             logger.info("UPDATE of ${outRows.size} rows took ${seconds * 1000}ms, therefore ${outRows.size / seconds} features/s, partitions: $featureCountByPartitionJoined")
@@ -159,9 +158,9 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
             for (row in 0 until outRows.size) {
                 val fn = outRows.getInt64(row, FnColumn) ?: throw illegalState("Column '$FnColumn' in result must not be null")
                 val version = outRows.getInt64(row, VersionColumn) ?: throw illegalState("Column '$VersionColumn' in result must not be null")
-                val newTn = TupleNumber(storageNumber, catalogNumber, collectionNumber, fn, version)
+                val newTn = TupleNumber(databaseId, catalogId, collectionId, fn, version)
                 val pgWrite = writeByFn[fn] ?: throw illegalState("Missing write record for feature-number: $fn")
-                val expected_version: Int64? = pgWrite.version?.number
+                val expected_version: Long? = pgWrite.version
 
                 // Feature should have existed.
                 val existing_fn = outRows.getInt64(row, "_existing_fn")
@@ -173,12 +172,12 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
                 val existing_version = outRows.getInt64(row, "_existing_version")
                     // We do not expect this to ever happen, when we have an existing_fn there must be as well an existing_version!
                     ?: throw generalException("Internal error, missing existing version for feature '${pgWrite.id}' in result-set")
-                val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, existing_fn, existing_version)
+                val previousTupleNumber = TupleNumber(databaseId, catalogId, collectionId, existing_fn, existing_version)
 
                 // We should have updated the feature
                 val inserted_fn = outRows.getInt64(row, "_inserted_fn") ?: {
                     // The only defined reason is that the expected version did not match.
-                    if (expected_version != null && (expected_version and Int64(-4)) != (existing_version and Int64(-4))) {
+                    if (expected_version != null && (expected_version and -4L) != (existing_version and -4L)) {
                         throw conflict("Atomic update failed, feature '${pgWrite.id}' was expected in version $existing_version, but found to be in $existing_version")
                     }
                     // Otherwise, there is an internal error.
@@ -188,7 +187,7 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
                 val tuple = pgWrite.tuple ?: throw generalException("Missing tuple for feature '${pgWrite.id}}'")
                 val memberBook = tuple.membersBook
                 val updatedMembersBook = HeapBook.copyOf(memberBook)
-                updatedMembersBook.put(StandardMembers.Tn.name, newTn)
+                updatedMembersBook.put(StandardMembers.TnMember.id, newTn)
                 // Update all BYTE_ARRAY members that have been updated.
                 for (column in byteArrayCols) {
                     val inValue = tuple.membersBook[column.name] as ByteArray?

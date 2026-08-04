@@ -18,10 +18,10 @@
  */
 package com.here.naksha.storage.http;
 
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.base.FromJsonOptions;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.Platform;
+import naksha.base.Base;
 import naksha.base.NakshaError;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
@@ -30,7 +30,7 @@ import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import org.jetbrains.annotations.Nullable;
-import static naksha.base.Platform.getLogger;
+import static naksha.base.Base.getLogger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -64,29 +64,29 @@ public class PrepareResult {
     if (error != null)
       return new ErrorResponse(new NakshaError(error, "Response http status code: " + httpResponse.statusCode()));
 
-    Object tuples = Platform.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
-    AnyObject any = JvmBoxingUtil.box(tuples, AnyObject.class);
+    Object tuples = Base.fromJSON(prepareBody(httpResponse), FromJsonOptions.DEFAULT);
+    PAnyMap any = JvmBoxingUtil.box(tuples, PAnyMap.class);
     // Some storages may return success status code but contain ErrorResponse.
     if(isSuccessStatusErrorResponse(any)){
       NakshaError successStatusError = extractNakshaError(any);
       if(isEmptyListError(successStatusError)){
-        return new SuccessResponse(new NakshaFeatureList());
+        return new SuccessResponse().withObjects(new NakshaFeatureList());
       }
       return new ErrorResponse(successStatusError);
     }
     List<NakshaFeature> featuresList = tuplesToFeatureList.apply(tuples);
     NakshaFeatureList nakshaFeatures = NakshaFeatureList.fromList(featuresList);
-    return new SuccessResponse(nakshaFeatures);
+    return new SuccessResponse().withObjects(nakshaFeatures);
   }
 
-  private static boolean isSuccessStatusErrorResponse(AnyObject any) {
+  private static boolean isSuccessStatusErrorResponse(PAnyMap any) {
     if (any == null) return false;
     Object type = any.getRaw(TYPE_KEY);
     if (ERROR_RESPONSE.equals(type)) return true;
     return any.getRaw(ERROR_KEY) != null || any.getRaw(ERROR_MSG_KEY) != null;
   }
 
-  private static NakshaError extractNakshaError(AnyObject any) {
+  private static NakshaError extractNakshaError(PAnyMap any) {
     String codeStr = asString(any.getRaw(ERROR_KEY));
     String msgStr  = asString(any.getRaw(ERROR_MSG_KEY));
 

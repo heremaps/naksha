@@ -1,8 +1,8 @@
 package naksha.psql
 
-import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.PlatformUtil
+import naksha.base.Base
+import naksha.base.Base.BaseCompanion.logger
+import naksha.base.BaseUtil
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.conflict
@@ -45,8 +45,8 @@ internal class PgWriterDelete(
         var row = 0
         for (i in start until end) {
             val pgWrite = pgWrites[i]
-            inRows.set(row, FnColumn.ident, pgWrite.featureNumber)
-            inRows.set(row, "expected_version", pgWrite.version?.number)
+            inRows.set(row, FnColumn.ident, pgWrite.id.number)
+            inRows.set(row, "expected_version", pgWrite.version)
             row++
         }
         check(row == (end-start))
@@ -151,7 +151,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
 
     override fun doExecute(conn: PgConnection) {
         if (pgWrites.isEmpty()) return
-        val outRows = PgRows().withCollection(pgCollection)
+        val outRows = PgRows().withPgCollection(pgCollection)
         outRows.addColumn("head_history_version", MemberType.INT64)
             .addColumn("history_version", MemberType.INT64)
             .addColumn("select_fn", MemberType.INT64)
@@ -162,7 +162,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
             .addColumn("query_expected_version", MemberType.INT64)
         val plan = plan(conn)
         val array = inRows.values()
-        if (PlatformUtil.ENABLE_INFO) {
+        if (BaseUtil.ENABLE_INFO) {
             if (session.logQueries) {
                 session.logAtInfo(plan.sql)
             }
@@ -171,9 +171,9 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
                 session.logAtInfo(explain)
             }
         }
-        val start = Platform.currentNanos()
+        val start = Base.currentNanos()
         val cursor = plan.pgPlan.execute(array)
-        val end = Platform.currentNanos()
+        val end = Base.currentNanos()
         val seconds = (end.toDouble() - start.toDouble()) / 1e9
         if (pgWrites.size != 1 || pgWrites[0].isFeatureModification) {
             logger.info(
@@ -210,7 +210,10 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
                 val tombstone_fn = outRows.getInt64(row, FnColumn)
                 val tombstone_version = outRows.getInt64(row, VersionColumn)
                 write.tupleNumber = if (tombstone_fn != null && tombstone_version != null) {
-                    TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
+                    val databaseNumber = databaseId.number
+                    val catalogNumber = catalogId.number.toInt()
+                    val collectionNumber = collectionId.number.toInt()
+                    TupleNumber(databaseNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
                 } else null
             }
         }

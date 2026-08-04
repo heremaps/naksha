@@ -18,7 +18,7 @@ class MemberTest {
     @Test
     fun defaultDataTypeIsString() {
         val m = Member("age")
-        assertEquals("age", m.name)
+        assertEquals("age", m.id)
         assertEquals(MemberType.STRING, m.dataType)
     }
 
@@ -36,7 +36,7 @@ class MemberTest {
 
     @Test
     fun addMemberRejectsInvalidName() {
-        val c = NakshaCollection("my_coll")
+        val c = NakshaCollection().withId("my_coll")
         assertFailsWith<NakshaException> { c.addMember(Member("BadName")) }
         assertFailsWith<NakshaException> { c.addMember(Member("123start")) }
         assertFailsWith<NakshaException> { c.addMember(Member("with space")) }
@@ -44,26 +44,26 @@ class MemberTest {
 
     @Test
     fun addMemberRejectsDuplicates() {
-        val c = NakshaCollection("my_coll")
+        val c = NakshaCollection().withId("my_coll")
         c.addMember(Member("age", MemberType.INT32))
         assertFailsWith<NakshaException> { c.addMember(Member("age", MemberType.INT64)) }
     }
 
     @Test
     fun addMemberStoresInOrder() {
-        val c = NakshaCollection("my_coll")
+        val c = NakshaCollection().withId("my_coll")
         c.addMember(Member("a", MemberType.INT32))
         c.addMember(Member("b", MemberType.STRING))
         val members = c.members
         assertNotNull(members)
         assertEquals(2, members.size)
-        assertEquals("a", members[0]!!.name)
-        assertEquals("b", members[1]!!.name)
+        assertEquals("a", members[0]!!.id)
+        assertEquals("b", members[1]!!.id)
     }
 
     @Test
     fun addMemberCapsAt64() {
-        val c = NakshaCollection("my_coll")
+        val c = NakshaCollection().withId("my_coll")
         for (i in 0 until MemberList.MAX_MEMBERS) {
             c.addMember(Member("m$i", MemberType.INT32))
         }
@@ -72,7 +72,7 @@ class MemberTest {
 
     @Test
     fun addIndexRejectsDuplicateName() {
-        val c = NakshaCollection("my_coll")
+        val c = NakshaCollection().withId("my_coll")
         c.addIndex(Index("idx1", "id"))
         assertFailsWith<NakshaException> {
             c.addIndex(Index("idx1", "geo"))

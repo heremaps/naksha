@@ -1,9 +1,9 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.longToInt64
+import naksha.base.Base.BaseCompanion.longToInt64
 
 /**
- * The JVM Int64 implementation. If an instance is needed use [Platform.longToInt64].
+ * The JVM Int64 implementation. If an instance is needed use [Base.longToInt64].
  */
 class JvmInt64 internal constructor(internal val value: Long) : Number(), Int64 {
     @Suppress("NOTHING_TO_INLINE")

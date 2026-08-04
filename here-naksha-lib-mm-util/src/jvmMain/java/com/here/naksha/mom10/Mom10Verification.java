@@ -21,7 +21,7 @@ package com.here.naksha.mom10;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +33,7 @@ public class Mom10Verification {
   private Mom10Verification() {
   }
 
-  public static boolean isMom10OrGreater(AnyObject rawFeature) {
+  public static boolean isMom10OrGreater(PAnyMap rawFeature) {
     Map properties = nestedMapOrNull(rawFeature, NakshaFeature.PROPERTIES_KEY);
     if (properties != null) {
       Map meta = nestedMapOrNull(properties, MetaProperties.META);

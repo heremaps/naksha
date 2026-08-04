@@ -19,23 +19,20 @@
 package com.here.naksha.lib.view.concurrent;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static java.util.stream.Collectors.groupingBy;
-import static naksha.base.Platform.longToInt64;
 import static naksha.base.NakshaError.EXCEPTION;
 import static naksha.base.NakshaError.INTERNAL_ERROR;
 
-import com.here.naksha.lib.view.View;
-import com.here.naksha.lib.view.ViewLayer;
-import com.here.naksha.lib.view.ViewLayerFeature;
+import com.here.naksha.lib.view.*;
 
 import java.util.*;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
-import naksha.base.Int64;
+import naksha.base.Id;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.model.*;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -55,7 +52,7 @@ public class ParallelQueryExecutor {
    * @param requests the requests to execute.
    * @return the merged result as map where the key is the identifier of the feature, and the value are all states.
    */
-  public @NotNull Map<String, @NotNull List<@NotNull ViewLayerFeature>> queryInParallel(
+  public @NotNull ViewLayerFeaturesById queryInParallel(
           @NotNull List<@NotNull LayerReadRequest> requests
   ) {
     // Execute all requests in parallel.
@@ -74,14 +71,14 @@ public class ParallelQueryExecutor {
       futures.add(futureResult);
     }
     try {
-      final var result = new HashMap<@NotNull String, @NotNull List<@NotNull ViewLayerFeature>>();
+      final var result = new ViewLayerFeaturesById();
       for (var future : futures) {
         final List<@NotNull ViewLayerFeature> features = future.get();
-        for (final ViewLayerFeature feature : features) {
-          final FeatureTuple tuple = feature.getFeatureTuple();
-          final String id = tuple.getId();
-          var versions = result.computeIfAbsent(id, v -> new ArrayList<>());
-          versions.add(feature);
+        for (final ViewLayerFeature viewFeature : features) {
+          final NakshaFeature feature = viewFeature.getFeature();
+          final Id id = feature.getId();
+          final var featureList = result.computeIfAbsent(id, v -> new ViewLayerFeatureStack(id));
+          featureList.add(viewFeature);
         }
       }
       return result;
@@ -92,47 +89,39 @@ public class ParallelQueryExecutor {
     }
   }
 
-  private List<@NotNull ViewLayerFeature> executeSingle(
+  /**
+   * Execute a read-query in a single {@link ViewLayer}.
+   * @param layer the {@link ViewLayer} to query.
+   * @param session the {@link ISession session} to use.
+   * @param request the {@link ReadRequest} to execute.
+   * @return the features found in the layer, can be an empty list.
+   * @throws NakshaException if the request fails.
+   */
+  private @NotNull ViewLayerFeatureList executeSingle(
       @NotNull ViewLayer layer,
       @NotNull IReadSession session,
       @NotNull ReadFeatures request
   ) {
-    final long startTime = System.currentTimeMillis();
-    int featureCnt = 0;
     int layerPriority = view.getViewCollection().priorityOf(layer);
-    final String collectionId = layer.getCollectionId();
+    final Id collectionId = layer.getCollectionId();
     final ReadFeatures readRequest = request.copy(false);
     readRequest.setCatalogId(layer.getMapId());
     readRequest.setCollectionId(collectionId);
-
-    final @NotNull Response readResponse = session.execute(readRequest);
-    final FeatureTupleList featureTupleList = getFeatureTuples(readResponse);
-    final Int64 maxMicros = longToInt64(TimeUnit.SECONDS.toMicros(10));
-    Naksha.cache.load(featureTupleList, 0, featureTupleList.size(), maxMicros, true, false);
-    log.info(
-        "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",
-        NakshaContext.currentContext().getStreamId(),
-        collectionId,
-        "READ",
-        "OK",
-        System.currentTimeMillis() - startTime,
-        featureCnt);
-    final int SIZE = featureTupleList.getSize();
-    final var viewFeatures = new ArrayList<ViewLayerFeature>(SIZE);
-    for (int i = 0; i < SIZE; i++) {
-      final var featureTuple = featureTupleList.get(i);
-      if (featureTuple == null) continue;
-      final var viewFeature = new ViewLayerFeature(featureTuple, layerPriority, layer);
+    final var readResponse = session.execute(readRequest);
+    final var features = getFeatures(readResponse);
+    final var viewFeatures = new ViewLayerFeatureList(features.size());
+    for (var feature : features) {
+      final var viewFeature = new ViewLayerFeature(feature, layerPriority, layer);
       viewFeatures.add(viewFeature);
     }
     return viewFeatures;
   }
 
-  private static @NotNull FeatureTupleList getFeatureTuples(@NotNull Response response) {
+  private static @NotNull NakshaFeatureList getFeatures(@NotNull Response response) {
     if (response instanceof SuccessResponse) {
       final var success = (SuccessResponse) response;
       try {
-        return success.getFeatureTupleList();
+        return success.getAsFeatures();
       } catch (NakshaException e) {
         throw e;
       } catch (Exception e) {

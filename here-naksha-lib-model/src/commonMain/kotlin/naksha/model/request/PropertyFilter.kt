@@ -1,35 +1,28 @@
 package naksha.model.request
 
-import naksha.base.AnyList
-import naksha.base.AnyObject
-import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.UNDEFINED
+import naksha.base.PAnyArray
+import naksha.base.PAnyMap
+import naksha.base.Base
+import naksha.base.Base.BaseCompanion.UNDEFINED
 import naksha.base.PlatformList
-import naksha.base.PlatformListApi
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
 import naksha.base.PlatformMap
-import naksha.base.PlatformMapApi
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
-import naksha.base.PlatformUtil
+import naksha.base.BaseUtil
 import naksha.base.Proxy
 import naksha.model.objects.JsonPath
+import naksha.model.objects.NakshaCollection
 
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.query.*
 
-class PropertyFilter(val req: ReadFeatures) : ResultFilter {
+class PropertyFilter(val req: ReadFeatures) : IObjectFilter {
 
-    /**
-     * Check if the feature matches the query
-     * @param featureTuple the tuple containing the feature
-     * @return the tuple back if matches, else return null
-     */
-    override fun filter(featureTuple: FeatureTuple): FeatureTuple? {
-        val pSearch = req.query.properties ?: return featureTuple
-        val feature = featureTuple.feature ?: return null
-        return if (resolvePropsQueryOnFeature(pSearch, feature)) featureTuple else null
+    override fun filter(collection: NakshaCollection, obj: PAnyMap): PAnyMap? {
+        val pSearch = req.query.properties ?: return obj
+        return if (resolvePropsQueryOnFeature(pSearch, obj.proxy(NakshaFeature::class))) obj else null
     }
 
     /**
@@ -51,14 +44,14 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
     /**
      * Walk a property path on an object or array.
-     * @return [Platform.UNDEFINED] if the path does not exist.
+     * @return [BaseCompanion.UNDEFINED] if the path does not exist.
      */
     private fun walkPath(objectOrArray: Any?, path: JsonPath): Any? {
         var current: Any? = objectOrArray
         for (key in path) {
             if (key == null) return UNDEFINED
             current = when (current) {
-                is AnyList -> {
+                is PAnyArray -> {
                     val index: Int = keyToListIndex(key) ?: return UNDEFINED
                     if (index < 0 || index >= current.size) return UNDEFINED
                     current[index]
@@ -67,7 +60,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
                     val raw = current.getRaw(key)
                     if (raw === UNDEFINED) return UNDEFINED else raw
                 }
-                is AnyObject -> if (current.containsKey(key)) current[key] else return UNDEFINED
+                is PAnyMap -> if (current.containsKey(key)) current[key] else return UNDEFINED
                 is PlatformList -> {
                     val index: Int = keyToListIndex(key) ?: return UNDEFINED
                     if (index < 0 || index >= array_get_length(current)) return UNDEFINED
@@ -81,8 +74,8 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
                 else -> return UNDEFINED
             }
         }
-        if (current is PlatformList) return current.proxy(AnyList::class)
-        if (current is PlatformMap) return current.proxy(AnyObject::class)
+        if (current is PlatformList) return current.proxy(PAnyArray::class)
+        if (current is PlatformMap) return current.proxy(PAnyMap::class)
         return current
     }
 
@@ -124,21 +117,21 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
     private fun resolveContains(featureProperty: Any?, queryProperty: Any?): Boolean {
         if (featureProperty == null) return queryProperty == null
-        if (Platform.isScalar(featureProperty)) {
+        if (Base.isScalar(featureProperty)) {
             return featureProperty.toString() == queryProperty.toString()
         }
         val parsedQuery = if (queryProperty is String) parseJsonString(queryProperty) else queryProperty
 
         when (featureProperty) {
-            is AnyList -> {
+            is PAnyArray -> {
                 return when (parsedQuery) {
-                    is AnyList -> parsedQuery.all { queryItem -> featureProperty.any { featureItem -> isMatch(featureItem, queryItem) } }
-                    is AnyObject -> featureProperty.any { it is AnyObject && it.containsAllProperties(parsedQuery) }
-                    else -> featureProperty.any { featureItem -> PlatformUtil.deepEquals(featureItem, parsedQuery) }
+                    is PAnyArray -> parsedQuery.all { queryItem -> featureProperty.any { featureItem -> isMatch(featureItem, queryItem) } }
+                    is PAnyMap -> featureProperty.any { it is PAnyMap && it.containsAllProperties(parsedQuery) }
+                    else -> featureProperty.any { featureItem -> BaseUtil.deepEquals(featureItem, parsedQuery) }
                 }
             }
-            is AnyObject -> {
-                if (parsedQuery is AnyObject) {
+            is PAnyMap -> {
+                if (parsedQuery is PAnyMap) {
                     return featureProperty.containsAllProperties(parsedQuery)
                 }
             }
@@ -146,7 +139,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         return false
     }
 
-    private fun AnyObject.containsAllProperties(queryObject: AnyObject): Boolean {
+    private fun PAnyMap.containsAllProperties(queryObject: PAnyMap): Boolean {
         return queryObject.entries.all { (queryKey, queryValue) ->
             if (!this.containsKey(queryKey)) {
                 false
@@ -159,8 +152,8 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
 
     private fun isMatch(featureItem: Any?, queryItem: Any?): Boolean {
         return when (queryItem) {
-            is AnyObject -> featureItem is AnyObject && featureItem.containsAllProperties(queryItem)
-            else -> PlatformUtil.deepEquals(featureItem, queryItem)
+            is PAnyMap -> featureItem is PAnyMap && featureItem.containsAllProperties(queryItem)
+            else -> BaseUtil.deepEquals(featureItem, queryItem)
         }
     }
 
@@ -171,9 +164,9 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
             return json
         }
         return try {
-            Proxy.box(Platform.fromJSON(json), Any::class)
+            Proxy.box(Base.fromJSON(json), Any::class)
         } catch (e: Exception) {
-            Platform.logger.warn("JSON parsing failed for string that appeared to be JSON: $json")
+            Base.logger.warn("JSON parsing failed for string that appeared to be JSON: $json")
             json
         }
     }

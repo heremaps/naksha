@@ -18,37 +18,40 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.model.Naksha;
 import naksha.base.TupleNumber;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+
+import static java.util.Objects.requireNonNull;
 
 public class ViewLayerCollection {
 
-  private final String name;
-  private final List<ViewLayer> layers;
+  private final @NotNull String name;
+  private final @NotNull List<@NotNull ViewLayer> layers;
 
-  public ViewLayerCollection(String name, List<ViewLayer> layers) {
+  public ViewLayerCollection(@NotNull String name, @NotNull List<@NotNull ViewLayer> layers) {
     this.name = name;
     this.layers = Collections.unmodifiableList(layers);
   }
 
-  public ViewLayerCollection(String name, ViewLayer... orderedLowerLevelStorages) {
+  public ViewLayerCollection(@NotNull String name, @NotNull ViewLayer... orderedLowerLevelStorages) {
     this.name = name;
     this.layers = List.of(orderedLowerLevelStorages);
   }
 
-  public String getName() {
+  public @NotNull String getName() {
     return name;
   }
 
-  public List<ViewLayer> getLayers() {
+  public @NotNull List<@NotNull ViewLayer> getLayers() {
     return layers;
   }
 
-  public int priorityOf(ViewLayer layer) {
+  public int priorityOf(@NotNull ViewLayer layer) {
     return layers.indexOf(layer);
   }
 
@@ -56,20 +59,10 @@ public class ViewLayerCollection {
     return layers.get(0);
   }
 
-  public ViewLayer getByTupleNumber(@NotNull TupleNumber tupleNumber) {
-    for (ViewLayer layer : layers) {
-      if (layer.getStorage().getNumber().toLong() != tupleNumber.databaseNumber.toLong()) {
-        continue;
-      }
-      String mapId = layer.getMapId();
-      int catalogNumber = mapId == null ? tupleNumber.catalogNumber : Naksha.catalogNumber(mapId);
-      if (catalogNumber != tupleNumber.catalogNumber) {
-        continue;
-      }
-      if (Naksha.collectionNumber(layer.getCollectionId()) == tupleNumber.collectionNumber) {
-        return layer;
-      }
+  public @Nullable ViewLayer getByTupleNumber(@NotNull TupleNumber tupleNumber) {
+    for (@NotNull ViewLayer layer : layers) {
+      if (layer.contains(tupleNumber)) return layer;
     }
-    throw new IllegalArgumentException("No view layer matches tuple-number " + tupleNumber);
+    return null;
   }
 }

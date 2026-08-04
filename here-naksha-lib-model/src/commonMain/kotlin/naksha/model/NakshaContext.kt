@@ -69,7 +69,7 @@ open class NakshaContext protected constructor(
      * Arbitrary attachments.
      */
     @JvmField
-    val attachments: AtomicMap<Any, Any> = Platform.newAtomicMap()
+    val attachments: AtomicMap<Any, Any> = Base.newAtomicMap()
 ) {
 
     private var _appName: String? = null
@@ -360,7 +360,7 @@ open class NakshaContext protected constructor(
      * relative timestamps (time since start of a request).
      */
     @JvmField
-    val startMicros: Int64 = Platform.currentMicros()
+    val startMicros: Int64 = Base.currentMicros()
 
     /**
      * Attaches this context to the current thread.
@@ -486,7 +486,7 @@ open class NakshaContext protected constructor(
          * The thread local that stores the [NakshaContext].
          */
         @JvmStatic
-        protected var threadLocal: PlatformThreadLocal<NakshaContext> = Platform.newThreadLocal(::NakshaContext)
+        protected var threadLocal: ThreadLocalNullable<NakshaContext> = Base.newThreadLocal(::NakshaContext)
 
         /**
          * Can be overridden by application code to modify the context creation.

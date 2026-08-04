@@ -26,6 +26,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
+import static naksha.base.Id.COLLECTIONS_COL_ID;
+
 public final class RequestTypesUtil {
 
   private RequestTypesUtil() {}
@@ -38,7 +40,7 @@ public final class RequestTypesUtil {
     for (Write write : ((WriteRequest) request).getWrites()) {
       // A Write operation onto the virtual "naksha~collections" means that it is a write request for
       // NakshaCollection
-      if (Naksha.COLLECTIONS_COL_ID.equals(write.getCollectionId())) return false;
+      if (COLLECTIONS_COL_ID.equals(write.getCollectionId())) return false;
     }
     return true;
   }
@@ -53,7 +55,7 @@ public final class RequestTypesUtil {
     for (Write write : writes) {
       // A Write operation onto the virtual "naksha~collections" means that it is a write request for
       // NakshaCollection
-      if (!Naksha.COLLECTIONS_COL_ID.equals(write.getCollectionId())) return false;
+      if (!COLLECTIONS_COL_ID.equals(write.getCollectionId())) return false;
     }
     return true;
   }

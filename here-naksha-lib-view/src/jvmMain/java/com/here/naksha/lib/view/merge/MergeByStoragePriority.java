@@ -20,15 +20,16 @@ package com.here.naksha.lib.view.merge;
 
 import com.here.naksha.lib.view.MergeOperation;
 import com.here.naksha.lib.view.ViewLayerFeature;
-import java.util.List;
-import naksha.model.request.FeatureTuple;
+
+import com.here.naksha.lib.view.ViewLayerFeatureStack;
+import naksha.model.objects.NakshaFeature;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class MergeByStoragePriority implements MergeOperation {
 
   @Override
-  public @Nullable FeatureTuple apply(@NotNull List<@NotNull ViewLayerFeature> sameFeatureFromEachStorage) {
+  public @Nullable NakshaFeature apply(@NotNull ViewLayerFeatureStack sameFeatureFromEachStorage) {
     ViewLayerFeature layer = sameFeatureFromEachStorage.get(0);
     for (var i = 1; i < sameFeatureFromEachStorage.size(); i++) {
       var otherLayer = sameFeatureFromEachStorage.get(i);
@@ -36,6 +37,6 @@ public class MergeByStoragePriority implements MergeOperation {
         layer = otherLayer;
       }
     }
-    return layer.getFeatureTuple();
+    return layer.getFeature();
   }
 }

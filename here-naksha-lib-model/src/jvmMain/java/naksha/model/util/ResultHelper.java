@@ -19,11 +19,14 @@
 package naksha.model.util;
 
 import static java.util.Collections.emptyList;
+import static naksha.base.Base.proxy;
 
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+
+import naksha.base.Id;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmMapProxy;
 import naksha.model.objects.NakshaFeature;
@@ -63,10 +66,14 @@ public class ResultHelper {
    * @param <R>         type of feature
    * @return list of features extracted from ReadResult
    */
-  public static <R extends NakshaFeature> List<R> extractResponseItems(
-      SuccessResponse response, Class<R> featureType, long offset, long limit) {
+  public static <R extends NakshaFeature> @NotNull List<@NotNull R> extractResponseItems(
+      @NotNull SuccessResponse response,
+      @NotNull Class<R> featureType,
+      long offset,
+      long limit
+  ) {
     final List<R> features = new ArrayList<>();
-    final Iterator<NakshaFeature> iterator = response.getFeatures().iterator();
+    final Iterator<NakshaFeature> iterator = response.getAsFeatures().iterator();
     int pos = 0;
     int cnt = 0;
     while (iterator.hasNext() && cnt < limit) {
@@ -84,14 +91,16 @@ public class ResultHelper {
     return features;
   }
 
-  public static <R extends NakshaFeature> JvmMapProxy<String, R> extractAndGroupAllFeaturesById(SuccessResponse response,
-      Class<R> featureType) {
+  public static <R extends NakshaFeature> @NotNull JvmMapProxy<String, R> extractAndGroupAllFeaturesById(
+      @NotNull SuccessResponse response,
+      @NotNull Class<R> featureType
+  ) {
     JvmMapProxy<String, R> featuresById = new JvmMapProxy<>(String.class, featureType);
-    final Iterator<NakshaFeature> iterator = response.getFeatures().iterator();
+    final Iterator<NakshaFeature> iterator = response.getAsFeatures().iterator();
     NakshaFeature current;
     while (iterator.hasNext()) {
       current = iterator.next();
-      featuresById.put(current.getId(), JvmBoxingUtil.box(current, featureType));
+      featuresById.put(current.getId().getText(), proxy(current, featureType));
     }
     return featuresById;
   }
@@ -108,20 +117,20 @@ public class ResultHelper {
       final @NotNull SuccessResponse result,
       final @NotNull Class<T> type
   ) {
-    final List<NakshaFeature> features = result.getFeatures();
+    final List<NakshaFeature> features = result.getAsFeatures();
     if (features.isEmpty()) {
       return null;
     }
     return JvmBoxingUtil.box(features.get(0), type);
   }
 
-  public static List<String> readIdsFromResult(final @NotNull Response result) {
+  public static List<Id> readIdsFromResult(final @NotNull Response result) {
     if (!(result instanceof SuccessResponse)) {
       return emptyList();
     }
     final var response = (SuccessResponse) result;
-    final ArrayList<String> ids = new ArrayList<>(response.resultSize());
-    final NakshaFeatureList features = response.getFeatures();
+    final ArrayList<Id> ids = new ArrayList<>(response.getLength());
+    final NakshaFeatureList features = response.getAsFeatures();
     for (final NakshaFeature feature : features) {
       ids.add(feature.getId());
     }

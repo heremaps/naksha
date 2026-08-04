@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.Int64
+import naksha.base.Id
 import naksha.base.IntMutable
 import naksha.base.fn.Fx3
 import naksha.model.Tuple
@@ -8,7 +8,8 @@ import naksha.base.Version
 import naksha.base.illegalArg
 import naksha.base.illegalState
 import naksha.model.objects.NakshaTx
-import naksha.model.objects.StandardMembers
+import naksha.model.objects.StandardMembers.StandardMembers_C.ChangeCountMember
+import naksha.model.objects.StandardMembers.StandardMembers_C.IdMember
 import kotlin.collections.mutableMapOf
 import kotlin.jvm.JvmStatic
 
@@ -58,14 +59,14 @@ internal abstract class PgWriterBase protected constructor(
     val session: PgSession
         get() = pgWriter.session
 
-    val storageNumber: Int64
-        get() = pgCollection.storage.number
+    val databaseId: Id
+        get() = pgCollection.catalog.databaseId
 
-    val catalogNumber: Int
-        get() = pgCollection.catalog.catalogNumber
+    val catalogId: Id
+        get() = pgCollection.catalog.id
 
-    val collectionNumber: Int
-        get() = pgCollection.collectionNumber
+    val collectionId: Id
+        get() = pgCollection.id
 
     /** The _HEAD_ table. */
     val headTable = pgCollection.headTable
@@ -76,9 +77,9 @@ internal abstract class PgWriterBase protected constructor(
     /** The quoted name of the _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
     val historyIdent = historyTable?.quotedName
     /** The `id` column */
-    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
+    val ID: PgColumn = pgCollection.column(IdMember) ?: throw illegalState("The collection does not have an 'id' column.")
     /** The change-count column, if there is any defined. */
-    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
+    val CC: PgColumn? = pgCollection.column(ChangeCountMember)
 
     /**
      * The transaction to operate upon.
@@ -101,9 +102,9 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     val inRows = PgRows()
-        .withDatabaseNumber(storageNumber)
-        .withCatalogNumber(catalogNumber)
-        .withCollectionNumber(collectionNumber)
+        .withDatabaseId(databaseId)
+        .withCatalogId(catalogId)
+        .withCollectionId(collectionId)
 
     /**
      * Generates a live mapping between the write instructions and the partition-index into which they will write.

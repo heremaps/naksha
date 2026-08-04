@@ -2,7 +2,7 @@
 
 package naksha.model.objects
 
-import naksha.base.AnyList
+import naksha.base.PAnyArray
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
 import kotlin.js.JsExport
@@ -15,7 +15,7 @@ import kotlin.js.JsName
  * @since 3.0
  */
 @JsExport
-open class JsonPath() : AnyList() {
+open class JsonPath() : PAnyArray() {
 
     /**
      * Construct a path from a vararg of segments.

@@ -2,11 +2,11 @@
 
 package naksha.model
 
-import naksha.base.ListProxy
+import naksha.base.PTypedArray
 import kotlin.js.JsExport
 
 /**
  * A list of [Tuple].
  */
 @JsExport
-class TupleList : ListProxy<Tuple>(Tuple::class)
+class TupleList : PTypedArray<Tuple>(Tuple::class)

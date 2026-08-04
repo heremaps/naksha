@@ -3,7 +3,7 @@ package com.here.naksha.mom10;
 import static org.junit.jupiter.api.Named.named;
 
 import java.util.stream.Stream;
-import naksha.base.AnyObject;
+import naksha.base.PAnyMap;
 import naksha.model.mom.MomMetaNs;
 import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Assertions;
@@ -14,15 +14,15 @@ import org.junit.jupiter.params.provider.MethodSource;
 class Mom10VerificationTest {
 
   static final class VerificationCase {
-    private final AnyObject rawFeature;
+    private final PAnyMap rawFeature;
     private final boolean isAtLeastMom10;
 
-    VerificationCase(AnyObject rawFeature, boolean isAtLeastMom10) {
+    VerificationCase(PAnyMap rawFeature, boolean isAtLeastMom10) {
       this.rawFeature = rawFeature;
       this.isAtLeastMom10 = isAtLeastMom10;
     }
 
-    AnyObject getRawFeature() {
+    PAnyMap getRawFeature() {
       return rawFeature;
     }
 
@@ -69,7 +69,7 @@ class Mom10VerificationTest {
 
   private static NakshaFeature featureWithVersionInMeta(String modelVersion) {
     NakshaFeature feature = new NakshaFeature();
-    AnyObject newMeta = new AnyObject();
+    PAnyMap newMeta = new PAnyMap();
     newMeta.put(MetaProperties.MODEL_VERSION, modelVersion);
     feature.getProperties().put(MetaProperties.META, newMeta);
     return feature;

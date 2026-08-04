@@ -2,8 +2,8 @@
 
 package naksha.psql
 
-import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
+import naksha.base.Id.Id_C.ADMIN_CATALOG_ID
+import naksha.base.Id.Id_C.TRANSACTIONS_COL_ID
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardIndices
 import naksha.model.objects.StandardMembers
@@ -23,12 +23,13 @@ import kotlin.js.JsExport
  * - [StandardIndices.PublishTime] (`pt`) — BTREE index for time-range scans by publisher timestamp
  * - [StandardIndices.GlobalVersion] (`gv`) — BTREE index for HERE global version scans
  *
- * The [StandardMembers.PublishNumber], [StandardMembers.PublishTime], and
- * [StandardMembers.GlobalVersion] members are all `null` until an external publisher or
+ * The [StandardMembers.PublishNumberMember], [StandardMembers.PublishTimeMember], and
+ * [StandardMembers.GlobalVersionMember] members are all `null` until an external publisher or
  * HERE global sequencer populates them.
  */
 @JsExport
 class PgNakshaTransactions internal constructor(adminCatalog: PgAdminCatalog) : PgCollection(adminCatalog, NakshaCollection()
+    .withDatabaseId(adminCatalog.databaseId)
     .withCatalogId(ADMIN_CATALOG_ID)
     .withId(TRANSACTIONS_COL_ID)
     .withStoreDeleted(StoreMode.OFF)
@@ -36,9 +37,9 @@ class PgNakshaTransactions internal constructor(adminCatalog: PgAdminCatalog) : 
     .withStoreMeta(StoreMode.OFF)
     .withPartitions(16)
     .withMembers(
-        StandardMembers.PublishNumber,
-        StandardMembers.PublishTime,
-        StandardMembers.GlobalVersion,
+        StandardMembers.PublishNumberMember,
+        StandardMembers.PublishTimeMember,
+        StandardMembers.GlobalVersionMember,
         XyzMembers.XyzTags,
     )
     .withIndices(
