@@ -39,7 +39,10 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import naksha.base.Platform;
+import naksha.base.StringList;
+import naksha.base.TupleNumber;
 import naksha.geo.SpPoint;
+import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.Index;
@@ -53,6 +56,8 @@ import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
+import naksha.model.request.Write;
+import naksha.model.request.WriteRequest;
 import naksha.model.request.ops.Equals;
 import naksha.model.request.ops.Gte;
 import naksha.model.request.ops.Intersects;
@@ -62,6 +67,7 @@ import naksha.model.request.ops.StartsWith;
 import naksha.model.request.ops.TagEquals;
 import naksha.model.request.ops.TagListContainsAllOf;
 import naksha.model.request.ops.TagListContainsAnyOf;
+import naksha.model.request.ops.TagMapHasAnyOf;
 import naksha.model.request.ops.TagMapHasKey;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
@@ -107,7 +113,7 @@ class CustomMemberIndexProbeIT extends ApiTest {
   void runRetainedCustomMemberCheckpoint(@NakshaAppInjection NakshaApp app) throws Exception {
     String runId = requiredEnvironment("NAKSHA_CUSTOM_MEMBER_PROBE_RUN_ID");
     String jdbcUrl = requiredEnvironment("NAKSHA_TEST_DATA_DB_URL");
-    String collectionId = "custom_member_probe_" + runId;
+    String collectionId = "cm_" + runId;
     String matchingFeatureId = "custom_member_match_" + runId;
     String standardGeoFeatureId = "custom_member_standard_geo_" + runId;
 
@@ -122,26 +128,52 @@ class CustomMemberIndexProbeIT extends ApiTest {
 
     verifyHttpReadback(resources.spaceId, matchingFeatureId);
     DefaultStorageHandler realHandler = realHandler(app, resources);
+    String typedBytesFeatureId = "custom_member_typed_bytes_" + runId;
+    String typedTupleNumberFeatureId = "custom_member_typed_tn_" + runId;
+    TupleNumber typedTupleNumber = typedTupleNumber(resources.collection, typedTupleNumberFeatureId);
+    byte[] typedBytes = new byte[] {1, 2, 3, 4};
+    verifyTypedOpaqueMemberWriteDefects(
+        realHandler,
+        resources.collection,
+        typedBytesFeatureId,
+        typedTupleNumberFeatureId,
+        typedBytes,
+        typedTupleNumber);
     verifyWorkingMemberQueries(realHandler, matchingFeatureId);
     characterizeKnownQueryDefects(realHandler, matchingFeatureId, standardGeoFeatureId);
 
     ProbeResources booleanFailure = createResources(
         "custom_member_bool_failure_" + runId,
-        invalidBooleanIndexCollection("custom_member_bool_failure_" + runId));
+        invalidBooleanIndexCollection("cm_bool_" + runId));
     ProbeResources missingMemberFailure = createResources(
         "custom_member_missing_failure_" + runId,
-        missingMemberIndexCollection("custom_member_missing_failure_" + runId));
+        missingMemberIndexCollection("cm_missing_" + runId));
     assertRejectedAutoCreate(booleanFailure);
     assertRejectedAutoCreate(missingMemberFailure);
 
     try (Connection connection = DriverManager.getConnection(jdbcUrl)) {
+      configureDiagnosticConnection(connection);
       verifyPhysicalColumns(connection, collectionId);
       verifyPhysicalIndices(connection, collectionId);
       verifyRawMaterializedValues(connection, collectionId);
+      assertFeatureAbsent(connection, collectionId, typedBytesFeatureId);
+      verifyTypedTupleNumber(connection, collectionId, typedTupleNumberFeatureId, typedTupleNumber);
       verifyExactIndexPlans(connection, collectionId);
       assertTableAbsent(connection, booleanFailure.collection.getId());
       assertTableAbsent(connection, missingMemberFailure.collection.getId());
       printInspectionSummary(connection, runId, resources, booleanFailure, missingMemberFailure);
+    }
+  }
+
+  private static void configureDiagnosticConnection(Connection connection) throws SQLException {
+    // Raw JDBC connections do not inherit lib-psql's catalog search path. The Naksha SQL helpers,
+    // including naksha_2d(bytea), live in naksha~admin and are resolved there by real sessions.
+    try (Statement statement = connection.createStatement()) {
+      statement.execute("SET SESSION search_path TO "
+              + quoteIdentifier(SCHEMA)
+              + ", "
+              + quoteIdentifier("naksha~admin")
+              + ", topology, hint_plan, public");
     }
   }
 
@@ -231,7 +263,7 @@ class CustomMemberIndexProbeIT extends ApiTest {
     NakshaCollection collection = new NakshaCollection(collectionId).withXyzMembers();
     collection.addMember(member(PROBE_BOOL, MemberType.BOOLEAN, "properties", "bool_value"));
     IndexList indices = CollectionIndexPolicy.hubSlimIndices();
-    indices.add(new Index("idx_probe_bool", PROBE_BOOL));
+    indices.add(new Index(indexName(PROBE_BOOL), PROBE_BOOL));
     collection.setIndices(indices);
     return collection;
   }
@@ -239,7 +271,7 @@ class CustomMemberIndexProbeIT extends ApiTest {
   private static NakshaCollection missingMemberIndexCollection(String collectionId) {
     NakshaCollection collection = new NakshaCollection(collectionId).withXyzMembers();
     IndexList indices = CollectionIndexPolicy.hubSlimIndices();
-    indices.add(new Index("idx_missing_member", "member_does_not_exist"));
+    indices.add(new Index("ix_missing_member", "member_does_not_exist"));
     collection.setIndices(indices);
     return collection;
   }
@@ -316,6 +348,65 @@ class CustomMemberIndexProbeIT extends ApiTest {
     assertNotNull(feature.getProperties().getPath("custom_tag_list"));
   }
 
+  private static void verifyTypedOpaqueMemberWriteDefects(
+      DefaultStorageHandler handler,
+      NakshaCollection collection,
+      String bytesFeatureId,
+      String tupleNumberFeatureId,
+      byte[] expectedBytes,
+      TupleNumber expectedTupleNumber) {
+    NakshaFeature bytesFeature = new NakshaFeature(bytesFeatureId);
+    bytesFeature.getProperties().setRaw("missing_bytes", expectedBytes);
+    ErrorResponse bytesResponse = assertInstanceOf(
+        ErrorResponse.class,
+        executeFeatureWrite(handler, collection, bytesFeature));
+    assertTrue(bytesResponse.getError().getMsg().contains("byte[] nested inside Object[]"));
+
+    NakshaFeature tupleNumberFeature = new NakshaFeature(tupleNumberFeatureId);
+    tupleNumberFeature.getProperties().setRaw("missing_tn", expectedTupleNumber);
+    SuccessResponse tupleNumberResponse = assertInstanceOf(
+        SuccessResponse.class,
+        executeFeatureWrite(handler, collection, tupleNumberFeature));
+    assertEquals(1, tupleNumberResponse.getFeatures().size());
+
+    SuccessResponse tupleNumberRead = assertInstanceOf(
+        SuccessResponse.class,
+        executeFeatureRead(handler, tupleNumberFeatureId));
+    assertEquals(1, tupleNumberRead.getFeatures().size());
+    NakshaFeature readFeature = tupleNumberRead.getFeatures().get(0);
+    TupleNumber actualTupleNumber = assertInstanceOf(
+        TupleNumber.class,
+        readFeature.getProperties().getRaw("missing_tn"));
+    assertEquals(expectedTupleNumber, actualTupleNumber);
+  }
+
+  private static Response executeFeatureWrite(
+      DefaultStorageHandler handler,
+      NakshaCollection collection,
+      NakshaFeature feature) {
+    WriteRequest write = new WriteRequest().add(new Write().createFeature(collection, feature));
+    IEvent event = mock(IEvent.class);
+    when(event.getRequest()).thenReturn(write);
+    return handler.processEvent(event);
+  }
+
+  private static Response executeFeatureRead(DefaultStorageHandler handler, String featureId) {
+    ReadFeatures read = new ReadFeatures();
+    read.setFeatureIds(new StringList(featureId));
+    IEvent event = mock(IEvent.class);
+    when(event.getRequest()).thenReturn(read);
+    return handler.processEvent(event);
+  }
+
+  private static TupleNumber typedTupleNumber(NakshaCollection collection, String featureId) {
+    return new TupleNumber(
+        databaseNumber,
+        catalogNumber,
+        Naksha.collectionNumber(collection.getId()),
+        Naksha.featureNumber(featureId),
+        naksha.base.Version.HEAD.number);
+  }
+
   private static DefaultStorageHandler realHandler(NakshaApp app, ProbeResources resources) {
     DefaultStorageHandlerProperties properties = new DefaultStorageHandlerProperties();
     properties.setStorageId(databaseId);
@@ -350,6 +441,10 @@ class CustomMemberIndexProbeIT extends ApiTest {
       String standardSpatialFeatureId) {
     Response tagKey = executeMemberRead(handler, new TagMapHasKey(PROBE_TAG_MAP, "region"));
     assertInstanceOf(ErrorResponse.class, tagKey, "Raw JSONB '?' must currently be observed as a JDBC failure");
+
+    Response tagMapAnyOf = executeMemberRead(handler, new TagMapHasAnyOf(PROBE_TAG_MAP, "region", "rank" ));
+    assertInstanceOf(ErrorResponse.class, tagMapAnyOf, "doesnt have .key value only .tagKey");
+
 
     Response tagValue = executeMemberRead(handler, new TagEquals(PROBE_TAG_MAP, "rank", 3));
     assertInstanceOf(ErrorResponse.class, tagValue, "PgType.ofValue is currently unfinished");
@@ -548,6 +643,32 @@ class CustomMemberIndexProbeIT extends ApiTest {
     }
   }
 
+  private static void assertFeatureAbsent(Connection connection, String collectionId, String featureId) throws SQLException {
+    String sql = "SELECT 1 FROM " + qualified(collectionId) + " WHERE id = ?";
+    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setString(1, featureId);
+      try (ResultSet row = statement.executeQuery()) {
+        assertFalse(row.next());
+      }
+    }
+  }
+
+  private static void verifyTypedTupleNumber(
+      Connection connection,
+      String collectionId,
+      String featureId,
+      TupleNumber expectedTupleNumber) throws SQLException {
+    String sql = "SELECT probe_tn FROM " + qualified(collectionId) + " WHERE id = ?";
+    try (PreparedStatement statement = connection.prepareStatement(sql)) {
+      statement.setString(1, featureId);
+      try (ResultSet row = statement.executeQuery()) {
+        assertTrue(row.next());
+        assertEquals(expectedTupleNumber.toString(), row.getString(PROBE_TN));
+        assertFalse(row.next());
+      }
+    }
+  }
+
   private static void verifyExactIndexPlans(Connection connection, String collectionId) throws SQLException {
     try (Statement statement = connection.createStatement()) {
       statement.execute("SET enable_seqscan = off");
@@ -637,7 +758,7 @@ class CustomMemberIndexProbeIT extends ApiTest {
   }
 
   private static String indexName(String memberName) {
-    return "idx_" + memberName;
+    return "ix_" + memberName;
   }
 
   private static String qualified(String table) {

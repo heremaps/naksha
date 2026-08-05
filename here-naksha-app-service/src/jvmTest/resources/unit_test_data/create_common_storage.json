@@ -4,9 +4,10 @@
   "title": "Test PSQL storage",
   "description": "PSQL storage instance for testing purpose - by design shared by other tests",
   "className": "naksha.psql.PsqlStorage",
+  "create": true,
   "master": {
     "host": "${dataDb.host}",
-    "database": "${dataDb.db}",
+    "db": "${dataDb.db}",
     "port": ${dataDb.port},
     "user": "${dataDb.user}",
     "password": "${dataDb.password}",
