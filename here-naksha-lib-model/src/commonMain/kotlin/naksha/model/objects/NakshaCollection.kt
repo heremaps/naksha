@@ -360,6 +360,16 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
+     * Initializes the [members] to [those for admin collections][XyzMembers.ADMIN_COLLECTION_MEMBERS].
+     *
+     * @since 3.0
+     */
+    fun withAdminMembers(): NakshaCollection {
+        members = MemberList(XyzMembers.ADMIN_COLLECTION_MEMBERS)
+        return this
+    }
+
+    /**
      * Returns the validated members list.
      *
      * If the member list is currently `null`, it creates it from [XyzMembers.ALL]. If the list does not contain the mandatory members, they will be added.
@@ -452,6 +462,16 @@ open class NakshaCollection() : NakshaFeature() {
      */
     fun withXyzIndices(): NakshaCollection {
         indices = IndexList(XyzIndices.ALL)
+        return this
+    }
+
+    /**
+     * Initializes the [indices] to the [admin collection indices][XyzIndices.ADMIN_COLLECTION_INDICES].
+     *
+     * @since 3.0
+     */
+    fun withAdminIndices(): NakshaCollection {
+        indices = IndexList(XyzIndices.ADMIN_COLLECTION_INDICES)
         return this
     }
 

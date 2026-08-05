@@ -94,8 +94,8 @@ open class PgCatalog internal constructor(
             var c = _collections
             if (c == null) {
                 val nakshaCollection = NakshaCollection(COLLECTIONS_COL_ID, id)
-                    .withXyzMembers()
-                    .withXyzIndices()
+                    .withAdminMembers()
+                    .withAdminIndices()
                 c = PgCollection(this, nakshaCollection)
                 val collectionsColNumber = c.collectionNumber
                 nakshaCollection.tupleNumber = TupleNumber(

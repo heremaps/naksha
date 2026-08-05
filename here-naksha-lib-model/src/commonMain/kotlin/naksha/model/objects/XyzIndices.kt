@@ -140,5 +140,15 @@ class XyzIndices private constructor() {
             XyzReferencePoint,
             StandardIndices.Geometry,
         )
+
+        /**
+         * Indices for an admin collection.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val ADMIN_COLLECTION_INDICES: List<Index> = listOf(
+            XyzAppId,
+            XyzAuthor
+        )
     }
 }
