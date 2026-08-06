@@ -503,7 +503,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun subType(): Member {
         val klass = this::class
         if (klass != Member::class) return this
-        when (dataType) {
+        return when (dataType) {
             MemberType.BOOLEAN -> proxy(BoolMember::class)
             MemberType.INT8 -> proxy(Int8Member::class)
             MemberType.INT16 -> proxy(Int16Member::class)
@@ -517,8 +517,8 @@ open class Member() : AnyObject(), Comparator<Member> {
             MemberType.SPATIAL -> proxy(SpatialMember::class)
             MemberType.TAG_MAP, MemberType.TAG_MAP_FROM_ARRAY -> proxy(TagMapMember::class)
             MemberType.TAG_LIST -> proxy(TagListMember::class)
+            else -> this
         }
-        return this
     }
 
     fun asBoolMember(): BoolMember = proxy(BoolMember::class)

@@ -10,8 +10,8 @@ import kotlin.js.JsName
 
 class TagMapMember() : TypedMember<TagMapMember>() {
     override fun verify(): TagMapMember {
-        if ((dataType != TAG_MAP) && (dataType != TAG_MAP_FROM_ARRAY)) {
-            throw illegalState("The member was illegally cast, expected subtype: $TAG_MAP or $TAG_MAP_FROM_ARRAY, found: $dataType")
+        if (dataType != TAG_MAP) {
+            throw illegalState("The member was illegally cast, expected subtype: $TAG_MAP, found: $dataType")
         }
         return this
     }
