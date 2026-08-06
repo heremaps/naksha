@@ -250,5 +250,14 @@ class XyzMembers private constructor() {
             XyzCustomString0, XyzCustomString1, XyzCustomString2, XyzCustomString3,
             XyzTags, XyzReferencePoint
         )
+
+        /**
+         * Members necessary for [NakshaCollection], excluding [StandardMembers.MANDATORY].
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val ADMIN_COLLECTION_MEMBERS: List<Member> = listOf(
+            XyzAppId, XyzAuthor, XyzChangeCount, XyzUpdatedAt, XyzAuthorTimestamp
+        )
     }
 }

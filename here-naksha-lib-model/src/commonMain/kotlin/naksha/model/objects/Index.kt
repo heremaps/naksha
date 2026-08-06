@@ -3,7 +3,6 @@
 package naksha.model.objects
 
 import naksha.base.AnyObject
-import naksha.base.NotNullEnum
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList

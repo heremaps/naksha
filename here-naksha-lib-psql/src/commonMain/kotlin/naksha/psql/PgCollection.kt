@@ -184,7 +184,7 @@ open class PgCollection internal constructor(
         val declared: IndexList? = nakshaCollection.indices
         val requested: List<Index> = when {
             declared != null -> List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
-            defaultXyz -> XyzIndices.ALL
+            defaultXyz -> XyzIndices.ALL //TODO
             else -> emptyList()
         }
         for (requestedIndex in requested) {

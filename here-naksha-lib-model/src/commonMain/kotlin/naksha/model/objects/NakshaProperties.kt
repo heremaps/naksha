@@ -10,7 +10,6 @@ import naksha.model.mom.MomDeltaNs
 import naksha.model.mom.MomMetaNs
 import naksha.model.mom.MomReferenceList
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 /**
  * The properties of a standard Naksha feature.
