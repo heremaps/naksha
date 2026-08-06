@@ -3,6 +3,7 @@
 package naksha.psql
 
 import naksha.base.JsEnum
+import naksha.base.ListProxy
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import kotlin.js.JsExport
@@ -164,7 +165,31 @@ class PgType : JsEnum() {
         @JsStatic
         @JvmStatic
         fun ofValue(value: Any?): PgType? {
-            // TODO: Implement detection.
+            when (value) {
+                is Boolean -> return BOOLEAN
+                is Byte -> return SHORT
+                is Short -> return SHORT
+                is Int -> return INT
+                is Long -> return INT64
+                is Float -> return FLOAT
+                is Double -> return DOUBLE
+                is String -> return STRING
+                is ByteArray -> return BYTE_ARRAY
+                is List<*>, is ListProxy<*> -> {
+                    val elementType = value.firstOrNull()?.let { ofValue(it) } ?: return null
+                    return when (elementType) {
+                        BOOLEAN -> BOOLEAN_ARRAY
+                        SHORT -> SHORT_ARRAY
+                        INT -> INT_ARRAY
+                        INT64 -> INT64_ARRAY
+                        FLOAT -> FLOAT_ARRAY
+                        DOUBLE -> DOUBLE_ARRAY
+                        STRING -> STRING_ARRAY
+                        BYTE_ARRAY -> BYTE_ARRAY_ARRAY
+                        else -> null
+                    }
+                }
+            }
             return null
         }
 
@@ -243,6 +268,9 @@ class PgType : JsEnum() {
     fun convertValue(value: Any?): Any? {
         // TODO: We need to convert certain values to postgres valid ones
         //       For lists, we need to convert them into typed arrays.
-        return value
+        return when (value) {
+            is ListProxy<*>, is List<*> -> value.toTypedArray()
+            else -> value
+        }
     }
 }

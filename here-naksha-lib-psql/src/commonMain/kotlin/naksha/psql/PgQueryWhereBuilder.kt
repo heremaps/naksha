@@ -87,7 +87,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         // The action is virtual: resolve it to the version bit-mask instead of a physical column.
         val isAction = rawAt == StandardMembers.Action.name
         val at: String = when {
-            isAction -> "(${PgColumn.VersionColumn.name} & 3)::int4"
+            isAction -> "(${VersionColumn.name} & 3)::int4"
             rawAt == XyzMembers.XyzCreatedAt.name || rawAt == XyzMembers.XyzAuthorTimestamp.name ->
                 "COALESCE($rawAt, ${XyzMembers.XyzUpdatedAt.name})"
             else -> rawAt
@@ -165,20 +165,20 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             }
             is TagMapHasKey -> {
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb").append(" ? ").append(placeholderForArg(op.key)).append(" ")
+                where.append(at).append("::jsonb").append(" ?? ").append(placeholderForArg(op.key)).append(" ")
             }
             is TagMapHasAnyOf -> {
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb").append(" ?| ").append(placeholderForArg(op.keys)).append(" ")
+                where.append(at).append("::jsonb").append(" ??| ").append(placeholderForArg(op.tagKeys)).append(" ")
             }
             is TagMapHasAllOf -> {
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb").append(" ?& ").append(placeholderForArg(op.keys)).append(" ")
+                where.append(at).append("::jsonb").append(" ??& ").append(placeholderForArg(op.tagKeys)).append(" ")
             }
             is TagIsNull -> {
                 // ( foo::jsonb ? $1 AND ((foo::jsonb)->>$1) IS [NOT ]NULL)
                 where.append("( ")
-                    .append(at).append("::jsonb").append(" ? ").append(placeholderForArg(op.key)).append(" AND ")
+                    .append(at).append("::jsonb").append(" ?? ").append(placeholderForArg(op.key)).append(" AND ")
                     .append("((").append(at).append("::jsonb)").append("->>").append(placeholderForArg(op.key)).append(")")
                 if (negate) where.append("IS NOT NULL) ") else where.append("IS NULL) ")
             }
@@ -266,7 +266,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 val geometryToCompare =
                     if (transformation.isEmpty()) queryGeometry
                     else resolveTransformation(transformation, queryGeometry)
-                where.append("ST_Intersects(naksha_2d(${StandardMembers.Geometry.name}), $geometryToCompare)")
+                where.append("ST_Intersects(naksha_2d(${op.at}), $geometryToCompare)")
             }
             else -> throw illegalArg("Unknown operation: '$op'")
         }
