@@ -108,22 +108,22 @@ $TABLESPACE"""
     }
 
     override fun addIndex(index: PgIndex) {
-        for (entry in partitions) entry.value.addIndex(index)
+        for (entry in partitions.values.sortedBy { it.partitionIndex }) entry.addIndex(index)
         if (index !in indices) indices += index
     }
 
     override fun removeIndex(index: PgIndex) {
-        for (entry in partitions) entry.value.removeIndex(index)
+        for (entry in partitions.values.sortedBy { it.partitionIndex }) entry.removeIndex(index)
         indices = indices - index
     }
 
     override fun createIndex(conn: PgConnection, index: PgIndex) {
-        for (entry in partitions) entry.value.createIndex(conn, index)
+        for (entry in partitions.values.sortedBy { it.partitionIndex }) entry.createIndex(conn, index)
         if (index !in indices) indices += index
     }
 
     override fun dropIndex(conn: PgConnection, index: PgIndex) {
-        for (entry in partitions) entry.value.dropIndex(conn, index)
+        for (entry in partitions.values.sortedBy { it.partitionIndex }) entry.dropIndex(conn, index)
         indices = indices - index
     }
 }

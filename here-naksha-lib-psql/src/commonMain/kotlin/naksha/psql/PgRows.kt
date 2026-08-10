@@ -314,7 +314,7 @@ internal class PgRows {
     fun set(row: Int, columnName: String, value: Any?): Boolean {
         val column = getColumn(columnName)
         if (column != null) {
-            setMinRows(row)
+            setMinRows(row+1)
             column.values[row] = value
             return true
         }
@@ -322,7 +322,7 @@ internal class PgRows {
     }
 
     operator fun set(row: Int, tuple: Tuple) {
-        setMinRows(row)
+        setMinRows(row+1)
         val membersBook = tuple.membersBook
         val END = membersBook.namesLength()
         for (i in 0 until END) {
