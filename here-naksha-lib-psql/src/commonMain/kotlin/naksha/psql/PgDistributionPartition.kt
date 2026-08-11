@@ -4,6 +4,7 @@ package naksha.psql
 
 import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.base.NakshaException
+import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
@@ -52,22 +53,25 @@ class PgDistributionPartition private constructor(
         val (CREATE_TABLE, TABLESPACE) = CREATE_TABLE_and_TABLESPACE()
         val ID = collection.column(Id)
         val NEXT_VERSION = collection.column(NextVersion)
+        val GBN = collection.column(GlobalBookFeatureNumber)
 
         // partition of HEAD.
-        if (parent is PgHeadTable) return """$CREATE_TABLE $quotedName 
+        if (parent is PgHeadTable) return """$CREATE_TABLE $quotedName
 PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
-FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
+FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn) INCLUDE ($FnColumn, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn) INCLUDE ($FnColumn, $ID);
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_gbn")} ON $quotedName USING btree ($GBN) WHERE $GBN IS NOT NULL;"""
 
         // partition of HISTORY-PARTITION.
         if (parent is PgHistoryPartition) {
             val root = parent.parent as PgHistoryTable
-            return """$CREATE_TABLE $quotedName 
+            return """$CREATE_TABLE $quotedName
 PARTITION OF ${parent.quotedName} (${root.CONSTRAINT(name, parent.partitionIndex, partitionIndex)})
-FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
+FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn, $NEXT_VERSION) INCLUDE ($FnColumn, $ID);"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn, $NEXT_VERSION) INCLUDE ($FnColumn, $ID);
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_gbn")} ON $quotedName USING btree ($GBN) WHERE $GBN IS NOT NULL;"""
         }
 
         throw NakshaException(INTERNAL_ERROR, "The distribution partition must have PgHeadTable or PgHistoryPartition as parent")

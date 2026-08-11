@@ -129,6 +129,28 @@ open class Index() : AnyObject() {
     }
 
     /**
+     * Whether the index is partial: only covers rows where the leading [on] column is not null
+     * (storage adds `WHERE <leading column> IS NOT NULL`). Defaults to `false`.
+     * @since 3.0
+     */
+    private var partial: Boolean by PARTIAL
+
+    /** True iff this index is [partial]. */
+    fun isPartial(): Boolean = partial
+
+    /** Remove [partial] from the underlying map; returns this for chaining. */
+    internal fun removePartial(): Index {
+        removeRaw("partial")
+        return this
+    }
+
+    /** Fluent setter for [partial]; returns this for chaining. */
+    internal fun withPartial(value: Boolean): Index {
+        partial = value
+        return this
+    }
+
+    /**
      * Whether this index is storage-managed (internal). When `true`, the storage controls the DDL
      * for this index (e.g. PRIMARY KEY, UNIQUE with a partial WHERE clause) and clients must not
      * attempt to recreate or drop it. Defaults to `false`.
@@ -156,6 +178,7 @@ open class Index() : AnyObject() {
         private val ON       = NotNullProperty<Index, StringList>(StringList::class)
         private val INCLUDE  = NullableProperty<Index, StringList>(StringList::class)
         private val UNIQUE   = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
+        private val PARTIAL  = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
         private val INTERNAL = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
     }
 }

@@ -20,55 +20,41 @@ class StandardIndices private constructor() {
 
     companion object StandardIndices_C {
 
-        // -------------------------------------------------------------------------
-        // Mandatory indices — storage-managed, always present, internal = true
-        // -------------------------------------------------------------------------
+        // Reserved names only — the table DDL already provides these ($c_pkey covers fn_unique;
+        // $c_id covers id_unique and id; $i_version covers version). Kept so custom indices can't
+        // collide with them; NOT part of [MANDATORY].
 
-        /**
-         * `fn_unique` — PRIMARY KEY on the feature-number. Present in all tables. Mandatory.
-         * @since 3.0
-         */
+        /** `fn_unique` — reserved name; the `$c_pkey` PRIMARY KEY covers it. @since 3.0 */
         @JvmField @JsStatic
         val FeatureNumberUnique = Index("fn_unique", StandardMembers.FeatureNumber.name).withInternal(true).withUnique(true)
 
-        /**
-         * `id_unique` — UNIQUE index on `id` (WHERE `id IS NOT NULL`). Present in HEAD, DELETED, and
-         * META tables. Mandatory.
-         * @since 3.0
-         */
+        /** `id_unique` — reserved name; the `$c_id` UNIQUE constraint covers it. @since 3.0 */
         @JvmField @JsStatic
         val IdUnique = Index("id_unique", StandardMembers.Id.name).withInternal(true).withUnique(true)
 
-        /**
-         * `id` — non-unique index on `id`, `fn`, `version` (WHERE `id IS NOT NULL`). Present in
-         * HISTORY tables. Mandatory.
-         * @since 3.0
-         */
+        /** `id` — reserved name; the `$c_id` constraint covers it (id key + INCLUDE version, fn). @since 3.0 */
         @JvmField @JsStatic
         val Id = Index("id", StandardMembers.Id.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name).withInternal(true)
 
-        /**
-         * `version` — non-unique index on `version`. Present in all tables. Mandatory.
-         * @since 3.0
-         */
+        /** `version` — reserved name; the `$i_version` btree index covers it. @since 3.0 */
         @JvmField @JsStatic
         val Version = Index("version", StandardMembers.FeatureVersion.name).withInternal(true)
 
         /**
-         * `gbn` — conditional non-unique index on `gbn` WHERE `gbn IS NOT NULL`. Used by the sequencer
-         * to efficiently locate all tuples that reference a particular global-book. Present in all
-         * tables. Mandatory.
+         * `gbn` — partial index (`WHERE gbn IS NOT NULL`) used by the sequencer. Created by the
+         * table DDL as `$i_gbn`; reserved name, not created via [MANDATORY].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val GlobalBookNumber = Index("gbn", StandardMembers.GlobalBookFeatureNumber.name).withInternal(true)
+        val GlobalBookNumber = Index("gbn", StandardMembers.GlobalBookFeatureNumber.name).withInternal(true).withPartial(true)
 
         /**
-         * All mandatory indices, in declaration order. These are always created by the storage.
+         * Mandatory indices injected into every collection — now empty: all intrinsic indexes are
+         * provided by the table DDL (constraints + `$i_gbn`). Kept so `indicesFor()` stays generic.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val MANDATORY: List<Index> = listOf(FeatureNumberUnique, IdUnique, Id, Version, GlobalBookNumber)
+        val MANDATORY: List<Index> = emptyList()
 
         /**
          * The names of all [MANDATORY] indices, for fast lookup.
@@ -76,6 +62,14 @@ class StandardIndices private constructor() {
          */
         @JvmField @JsStatic
         val MANDATORY_NAMES: Set<String> = MANDATORY.map { it.name }.toHashSet()
+
+        /**
+         * Intrinsic index names a custom index must not reuse.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val RESERVED_NAMES: Set<String> =
+            listOf(FeatureNumberUnique.name, IdUnique.name, Id.name, Version.name, GlobalBookNumber.name).toHashSet()
 
         // -------------------------------------------------------------------------
         // Standard optional indices — index a standard optional member (see StandardMembers).

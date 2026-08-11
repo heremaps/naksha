@@ -417,8 +417,8 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     /**
      * When [NakshaCollection.members] is explicitly an **empty list**, the collection must be
-     * created with all standard head columns (full schema) and no default optional indices —
-     * only the internal indices (`id_unique`, `version`).
+     * created with all standard head columns (full schema) and only the intrinsic indices
+     * (`$c_pkey`, `$c_id`, `$i_version`, `$i_gbn`) — no default optional indices.
      */
     @Test
     fun membersEmpty_shouldCreateOnlyMandatoryColumnsAndNoDefaultIndices() {

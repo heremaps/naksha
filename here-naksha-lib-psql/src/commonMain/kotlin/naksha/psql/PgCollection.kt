@@ -226,7 +226,13 @@ open class PgCollection internal constructor(
             } else {
                 include = null
             }
-            PgIndex(indexName, on.toTypedArray(), include?.toTypedArray() ?: emptyArray())
+            PgIndex(
+                indexName,
+                on.toTypedArray(),
+                include?.toTypedArray() ?: emptyArray(),
+                unique = index.isUnique(),
+                partial = index.isPartial()
+            )
         }
     }
 
