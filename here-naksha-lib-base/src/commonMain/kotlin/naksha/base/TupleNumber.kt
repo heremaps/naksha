@@ -255,7 +255,7 @@ data class TupleNumber(
         internal const val COLLECTION_NUMBER = 2
         internal const val FEATURE_NUMBER = 3
         internal const val VERSION = 4
-        internal const val ALL_PARTS = 5
+        const val ALL_PARTS = 5
 
         internal const val URN = 0
         internal const val NAKSHA = 1

@@ -62,9 +62,9 @@ data class Guid(
         internal const val NAKSHA = 1
         internal const val GUID = 2
         internal const val FEATURE_ID = 3
-        internal const val ID_ONLY_PARTS = 4
+        const val ID_ONLY_PARTS = 4
         internal const val STORAGE_NUMBER = 4
-        internal const val ALL_PARTS = 9  // urn + naksha + guid + featureId + 5 TupleNumber parts
+        const val ALL_PARTS = 9  // urn + naksha + guid + featureId + 5 TupleNumber parts
 
         /**
          * Create a _HEAD_ [Guid] for the given feature-id.
