@@ -109,7 +109,8 @@ open class PgCollection internal constructor(
         }
         val memberType = member.dataType
         return when (memberType) {
-            BYTE_ARRAY, TUPLE_NUMBER -> PgColumn(index, memberName, STRING, "STORAGE $EXTENDED")
+            //TUPLE_NUMBER is already handled differently (split into PgColumn.FnColumn and PgColumn.VersionColumn), where this method is called
+            BYTE_ARRAY -> PgColumn(index, memberName, memberType, "STORAGE $EXTENDED")
             STRING -> PgColumn(index, memberName, STRING, "STORAGE $MAIN COLLATE \"C\"")
             TAG_MAP, TAG_MAP_FROM_ARRAY, TAG_LIST -> PgColumn(index, memberName, memberType, "STORAGE $MAIN")
             SPATIAL -> PgColumn(index, memberName, memberType, "STORAGE $EXTERNAL")

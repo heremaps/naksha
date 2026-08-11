@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Int64
 import naksha.base.ListProxy
@@ -193,6 +194,7 @@ object FeatureMemberValues {
     private fun coerceTagsFromArray(value: Any, featureId: String, memberName: String): String? {
         val tagList = when (value) {
             is TagList -> value
+            is AnyList -> value.proxy(TagList::class)
             is AnyObject -> value.proxy(TagList::class)
             else -> { warnMismatch(featureId, memberName, "tags_from_array", value); return null }
         }

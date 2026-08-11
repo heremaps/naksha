@@ -5,6 +5,7 @@ import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
 import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
+import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
 import kotlin.js.JsName
 
 class TagMapMember() : TypedMember<TagMapMember>() {
@@ -27,7 +28,7 @@ class TagMapMember() : TypedMember<TagMapMember>() {
     /** Creates a tag map member from an existing [Member], validating its type. */
     @JsName("from")
     constructor(member: Member, path: JsonPath? = null) : this() {
-        if (member.dataType != TAG_MAP) throw illegalArg("The given member is not of tags type")
+        if ((member.dataType != TAG_MAP) && (member.dataType != TAG_MAP_FROM_ARRAY)) throw illegalArg("The given member is not of tags type")
         this.name = member.name
         this.dataType = TAG_MAP
         this.path = path?.validate() ?: member.path
