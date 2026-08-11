@@ -5,6 +5,7 @@ package naksha.model
 import naksha.base.Action
 import naksha.base.AnyList
 import naksha.base.AnyObject
+import naksha.base.Guid
 import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.MapProxy
@@ -130,8 +131,22 @@ data class Tuple @JvmOverloads constructor(
                 Naksha.CATALOGS_COL_ID -> Int64(Naksha.catalogNumber(id))
                 else -> Naksha.featureNumber(id)
             }
-            var prevTn: TupleNumber? = tnMember.readTupleNumber(feature)
+            var prevTn: TupleNumber?
             var origin: String? = originMember?.readString(feature)
+            val rawUuid = feature.getPath(tnMember.path)
+            val uuidParts = (rawUuid as? String)?.split(":")?.size
+
+            if (uuidParts != null &&
+                uuidParts != TupleNumber.ALL_PARTS &&
+                uuidParts != Guid.ALL_PARTS &&
+                uuidParts != Guid.ID_ONLY_PARTS
+            ) {
+                //UUID is from another source not Naksha V3, so this is treated as a new feature
+                prevTn = null
+                origin = rawUuid
+            } else {
+                prevTn = tnMember.readTupleNumber(feature)
+            }
 
             // Detect CREATE, UPDATE , fork, and update.
             val action: Action
