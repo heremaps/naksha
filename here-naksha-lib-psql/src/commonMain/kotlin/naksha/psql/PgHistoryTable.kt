@@ -80,7 +80,7 @@ $TABLESPACE"""
 
     override fun create(conn: PgConnection) {
         super.create(conn)
-        for (entry in partitions) entry.value.create(conn)
+        for (entry in partitions.values) entry.create(conn)
     }
 
     /**
@@ -93,6 +93,7 @@ $TABLESPACE"""
     fun createPartition(conn: PgConnection, partitionNumber: Int): PgHistoryPartition {
         val partition = partitions[partitionNumber] ?: PgHistoryPartition(this, partitionNumber)
         partition.create(conn)
+        partitions[partitionNumber] = partition
         for (index in indices) {
             partition.createIndex(conn, index)
         }
