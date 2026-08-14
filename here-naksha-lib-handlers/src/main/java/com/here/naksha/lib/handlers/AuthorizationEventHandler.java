@@ -73,6 +73,10 @@ public class AuthorizationEventHandler extends AbstractEventHandler {
 
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
+    if (ctx.isSuperUser()) {
+      return event.sendUpstream();
+    }
+
     final ServiceMatrix serviceMatrix = ctx.getUrm();
     ActionMatrix hereActionMatrix = null;
     if (serviceMatrix != null) {
