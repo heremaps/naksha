@@ -11,8 +11,7 @@ import java.net.http.HttpResponse;
 import java.util.UUID;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
-import static com.here.naksha.app.common.TestUtil.generateJWT;
-import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.*;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 
 public class JwtTest extends ApiTest {
@@ -99,5 +98,37 @@ public class JwtTest extends ApiTest {
         // Providing an expired JWT, should fail
         HttpResponse<String> response = getNakshaClient().get("hub/storages", streamId, "Bearer "+jwt);
         assertThat(response).hasStatus(401);
+    }
+
+    @Test
+    public void testJwtModeWriteAuthorizationNegativeForCreateStorage() throws Exception {
+        final String streamId = UUID.randomUUID().toString();
+        final String storageJson = loadFileOrFail("Auth/WriteAuthorizationNegative/create_storage.json");
+        HttpResponse<String> response = getNakshaClient().post("hub/storages", storageJson, streamId, "Bearer " + readOnlyJwt());
+        assertThat(response).hasStatus(403);
+    }
+
+    @Test
+    public void testJwtModeWriteAuthorizationNegativeForCreateHandler() throws Exception {
+        final String streamId = UUID.randomUUID().toString();
+        final String handlerJson = loadFileOrFail("Auth/WriteAuthorizationNegative/create_event_handler.json");
+        HttpResponse<String> response = getNakshaClient().post("hub/handlers", handlerJson, streamId, "Bearer " + readOnlyJwt());
+        assertThat(response).hasStatus(403);
+    }
+
+    @Test
+    public void testJwtModeWriteAuthorizationNegativeForCreateSpace() throws Exception {
+        final String streamId = UUID.randomUUID().toString();
+        final String spaceJson = loadFileOrFail("Auth/WriteAuthorizationNegative/create_space.json");
+        HttpResponse<String> response = getNakshaClient().post("hub/spaces", spaceJson, streamId, "Bearer " + readOnlyJwt());
+        assertThat(response).hasStatus(403);
+    }
+
+    @Test
+    public void testJwtModeWriteAuthorizationNegativeForCreateFeature() throws Exception {
+        final String streamId = UUID.randomUUID().toString();
+        final String featuresBodyJson = loadFileOrFail("Auth/WriteAuthorizationNegative/create_features.json");
+        HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", featuresBodyJson, streamId, "Bearer " + readOnlyJwt());
+        assertThat(response).hasStatus(403);
     }
 }

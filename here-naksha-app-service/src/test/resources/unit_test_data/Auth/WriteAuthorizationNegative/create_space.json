@@ -1,0 +1,16 @@
+{
+  "id": "auth_readonly_space_denied",
+  "type": "Space",
+  "title": "Readonly JWT denied space",
+  "description": "Space payload for write authorization negative test",
+  "eventHandlerIds": [
+    "auth_readonly_handler_denied"
+  ],
+  "properties": {
+    "collection": {
+      "id": "auth_readonly_collection_denied",
+      "type": "NakshaCollection"
+    }
+  }
+}
+

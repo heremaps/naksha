@@ -142,4 +142,9 @@ public class TestUtil {
     // Sign the following JWT payload
     return nakshaAuthProvider.generateToken(new JsonObject(payload));
   }
+
+  public static String readOnlyJwt() {
+    final String readOnlyJwtClaims = TestUtil.loadFileOrFail("Auth/readOnlyJwtClaims.json");
+    return generateJWT(readOnlyJwtClaims);
+  }
 }
