@@ -78,20 +78,19 @@ public class AuthorizationEventHandler extends AbstractEventHandler {
     }
 
     final ServiceMatrix serviceMatrix = ctx.getUrm();
-    ActionMatrix hereActionMatrix = null;
+    ActionMatrix actionMatrix = null;
     if (serviceMatrix != null) {
-      hereActionMatrix = serviceMatrix.get(SERVICE_NAKSHA);
-      if (hereActionMatrix == null) {
-        hereActionMatrix = serviceMatrix.get(SERVICE_XYZ_HUB);
+      actionMatrix = serviceMatrix.get(SERVICE_NAKSHA);
+      if (actionMatrix == null) {
+        actionMatrix = serviceMatrix.get(SERVICE_XYZ_HUB);
       }
     }
 
-    if (hasNonReadFeatureAction(hereActionMatrix)) {
+    if (hasNonReadFeatureAction(actionMatrix)) {
       return event.sendUpstream();
     }
 
-    return new ErrorResult(
-        XyzError.FORBIDDEN, "You do not have the required permissions to perform this action.", null);
+    return new ErrorResult(XyzError.FORBIDDEN, "You do not have the required permissions to perform this action.", null);
   }
 
   private boolean hasNonReadFeatureAction(@Nullable ActionMatrix matrix) {
