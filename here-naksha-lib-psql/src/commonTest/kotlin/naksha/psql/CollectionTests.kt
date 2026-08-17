@@ -95,7 +95,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun collectionShouldHaveIndices() {
-        val collection = NakshaCollection("check_db_indices_test", catalog.id)
+        val collection = NakshaCollection("check_db_indices_test", catalog.id).withXyzIndices()
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -380,10 +380,11 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     /**
      * When [NakshaCollection.members] is **null** (the default / undefined), the collection must be
-     * created with all default columns and all default optional indices — backward-compatible behaviour.
+     * created with all default columns but **no** default optional indices — lib-psql injects none;
+     * applications declare the indices they need (e.g. via [NakshaCollection.withXyzIndices]).
      */
     @Test
-    fun membersUndefined_shouldCreateAllColumnsAndDefaultIndices() {
+    fun membersUndefined_shouldCreateAllColumnsAndNoDefaultIndices() {
         val collection = NakshaCollection("members_null_test", catalog.id)
         // members are null by default — do NOT set them, then they will automatically become XyzMember.ALL!
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
@@ -402,16 +403,12 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             )
             assertTrue(XyzMembers.ALL.all { XyzMembers.XyzTn eq it || it.name in columns })
 
-            // Indices: must include all default optional indices on the HEAD table.
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
                 arrayOf(catalog.id, collection.id)
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
-            for (index in XyzIndices.ALL) {
-                val expected = "${collection.id}\$ci_${index.name}"
-                assertTrue(expected in indexNames, "Expected index '$expected' to be present, found: $indexNames")
-            }
+            assertNoOptionalIndices(indexNames, collection.id)
         }
     }
 

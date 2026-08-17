@@ -476,16 +476,6 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * Initializes the [indices] to the minimum XYZ set ([XyzIndices.MINIMAL], `geo` + `tags`) — the
-     * lean Hub default. Additional indices can be added afterwards via [addIndex].
-     * @since 3.0
-     */
-    fun withMinimalXyzIndices(): NakshaCollection {
-        indices = IndexList(XyzIndices.MINIMAL)
-        return this
-    }
-
-    /**
      * @see [indices]
      */
     @JsName("withIndexList")

@@ -150,16 +150,5 @@ class XyzIndices private constructor() {
             XyzAppId,
             XyzAuthor
         )
-
-        /**
-         * Minimum default index set for a Hub collection: `geo` + `tags`. `id` / `fn` / `nv` come
-         * from the table constraints, so only these two non-constraint indices are requested here.
-         * @since 3.0
-         */
-        @JvmField @JsStatic
-        val MINIMAL: List<Index> = listOf(
-            StandardIndices.Geometry,
-            XyzTags,
-        )
     }
 }

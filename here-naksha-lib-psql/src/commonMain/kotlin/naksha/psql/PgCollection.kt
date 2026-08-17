@@ -26,7 +26,6 @@ import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
 import naksha.model.objects.StoreMode
-import naksha.model.objects.XyzIndices
 import naksha.psql.PgColumn.PgColumn_C.EXTENDED
 import naksha.psql.PgColumn.PgColumn_C.EXTERNAL
 import naksha.psql.PgColumn.PgColumn_C.MAIN
@@ -79,8 +78,6 @@ open class PgCollection internal constructor(
      */
     @JvmField
     val shift: Int = nakshaCollection.shift
-
-    private val defaultXyz: Boolean = nakshaCollection.members == null
 
     /**
      * Returns the partition index of the [PgHistoryPartition] in which features can be found, that are modified in the given version.
@@ -183,11 +180,9 @@ open class PgCollection internal constructor(
     private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
         val indices = IndexList(StandardIndices.MANDATORY)
         val declared: IndexList? = nakshaCollection.indices
-        val requested: List<Index> = when {
-            declared != null -> List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
-            defaultXyz -> XyzIndices.ALL //TODO
-            else -> emptyList()
-        }
+        val requested: List<Index> =
+            if (declared != null) List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
+            else emptyList()
         for (requestedIndex in requested) {
             if (!indices.contains(requestedIndex)) indices.add(requestedIndex)
         }
