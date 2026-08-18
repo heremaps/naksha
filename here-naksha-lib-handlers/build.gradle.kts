@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.config.JvmTarget
-
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
@@ -25,7 +23,8 @@ kotlin {
             dependencies {
                 implementation(kotlin("test-junit5"))
                 implementation(libs.bundles.testing)
-                runtimeOnly(libs.junit.platform.launcher)  // https://github.com/gradle/gradle/issues/34512
+                // https://github.com/gradle/gradle/issues/34512
+                runtimeOnly(libs.junit.platform.launcher)
             }
         }
     }

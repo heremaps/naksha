@@ -1,6 +1,5 @@
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.jvm.toolchain.JavaLanguageVersion
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
 import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
@@ -266,7 +265,6 @@ allprojects {
                     js {
                         outputModuleName = _moduleName
                         useEsModules()
-                        @OptIn(ExperimentalKotlinGradlePluginApi::class)
                         compilerOptions {
                             target = "es2015"
                             freeCompilerArgs.add("-Xes-long-as-bigint")
