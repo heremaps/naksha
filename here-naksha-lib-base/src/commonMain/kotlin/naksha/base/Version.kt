@@ -295,6 +295,13 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         val SEQ_INC: Int64 = Int64(1) shl 2
     }
 
+    /**
+     * Returns this version as version-number, setting the lowest two bit to 3.
+     * @return this version with [action] set to [Action.VERSION].
+     * @since 3.0
+     */
+    val asVersion = (number and Int64(-4)) or Int64(3)
+
     private var _year = -1
 
     /**
