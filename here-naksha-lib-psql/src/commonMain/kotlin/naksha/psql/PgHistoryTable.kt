@@ -2,6 +2,7 @@
 
 package naksha.psql
 
+import naksha.base.AtomicMap
 import naksha.base.Int64
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
@@ -33,7 +34,7 @@ class PgHistoryTable(
      * @since 3.0
      */
     @JvmField
-    val partitions: MutableMap<Int, PgHistoryPartition> = mutableMapOf()
+    val partitions: AtomicMap<Int, PgHistoryPartition> = AtomicMap()
 
     // Constraint names derive from [tableName]; each partition passes its own name so its constraints
     // stay unique. The partitioned parent has none.
@@ -80,7 +81,7 @@ $TABLESPACE"""
 
     override fun create(conn: PgConnection) {
         super.create(conn)
-        for (entry in partitions.values) entry.create(conn)
+        for (entry in partitions.values.sortedBy { it.partitionIndex }) entry.create(conn)
     }
 
     /**
@@ -92,8 +93,8 @@ $TABLESPACE"""
      */
     fun createPartition(conn: PgConnection, partitionNumber: Int): PgHistoryPartition {
         val partition = partitions[partitionNumber] ?: PgHistoryPartition(this, partitionNumber)
-        partition.create(conn)
         partitions[partitionNumber] = partition
+        partition.create(conn)
         for (index in indices) {
             partition.createIndex(conn, index)
         }
