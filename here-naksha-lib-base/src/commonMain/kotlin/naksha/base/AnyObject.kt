@@ -11,4 +11,3 @@ import kotlin.js.JsExport
 @Suppress("unused", "OPT_IN_USAGE")
 @JsExport
 open class AnyObject : MapProxy<String, Any>(String::class, Any::class)
-

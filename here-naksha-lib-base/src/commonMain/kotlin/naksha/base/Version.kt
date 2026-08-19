@@ -196,7 +196,6 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmStatic
         @JsStatic
-        @JvmOverloads
         fun asVersion(version: Int64): Int64 {
             val v = version or Int64(3)
             if (v > HEAD.number) return HEAD.number

@@ -15,11 +15,11 @@ kotlin {
                 api(project(":here-naksha-lib-model"))
 
                 // Can we get rid of this?
+                api(libs.bundles.spatial)
                 implementation(libs.google.guava)
                 implementation(libs.google.findbugs.jsr305)
                 implementation(libs.commons.lang3)
                 implementation(libs.google.flatbuffers)
-                implementation(libs.bundles.spatial)
                 implementation(libs.bundles.jackson)
             }
         }

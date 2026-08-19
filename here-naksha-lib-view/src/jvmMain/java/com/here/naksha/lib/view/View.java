@@ -37,6 +37,11 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
 
   }
 
+  @Override
+  public @NotNull String getId() {
+    return viewLayerCollection.getName();
+  }
+
   public View(@NotNull ViewLayerCollection viewLayerCollection) {
     this.viewLayerCollection = viewLayerCollection;
   }
