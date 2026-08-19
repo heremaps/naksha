@@ -120,13 +120,20 @@ public class NakshaTestWebClient {
 
   public HttpResponse<String> put(String subPath, String jsonBody, String streamId)
       throws URISyntaxException, IOException, InterruptedException {
-    HttpRequest putRequest = requestBuilder(SOCKET_TIMEOUT)
+    return this.put(subPath, jsonBody, streamId, null);
+  }
+
+  public HttpResponse<String> put(String subPath, String jsonBody, String streamId, @Nullable String jwt)
+      throws URISyntaxException, IOException, InterruptedException {
+    Builder requestBuilder = requestBuilder(SOCKET_TIMEOUT)
         .uri(nakshaPath(subPath))
         .PUT(BodyPublishers.ofString(jsonBody))
         .header("Content-Type", "application/json")
-        .header(HDR_STREAM_ID, streamId)
-        .build();
-    return sendOnce(putRequest);
+        .header(HDR_STREAM_ID, streamId);
+    if (jwt != null) {
+      requestBuilder.header(AUTHORIZATION, jwt);
+    }
+    return sendOnce(requestBuilder.build());
   }
 
   public HttpResponse<String> options(String subPath, String originHeader, String requestMethod, String reqHeaderKeys)
@@ -154,13 +161,20 @@ public class NakshaTestWebClient {
 
   public HttpResponse<String> delete(String subPath, String streamId)
       throws URISyntaxException, IOException, InterruptedException {
-    HttpRequest deleteRequest = requestBuilder(SOCKET_TIMEOUT)
+    return this.delete(subPath, streamId, null);
+  }
+
+  public HttpResponse<String> delete(String subPath, String streamId, @Nullable String jwt)
+      throws URISyntaxException, IOException, InterruptedException {
+    Builder requestBuilder = requestBuilder(SOCKET_TIMEOUT)
         .uri(nakshaPath(subPath))
         .DELETE()
         .header("Content-Type", "application/json")
-        .header(HDR_STREAM_ID, streamId)
-        .build();
-    return sendOnce(deleteRequest);
+        .header(HDR_STREAM_ID, streamId);
+    if (jwt != null) {
+      requestBuilder.header(AUTHORIZATION, jwt);
+    }
+    return sendOnce(requestBuilder.build());
   }
 
   private HttpResponse<String> sendOnce(HttpRequest request) throws IOException, InterruptedException {

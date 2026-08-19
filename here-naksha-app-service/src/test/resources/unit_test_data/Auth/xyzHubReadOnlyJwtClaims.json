@@ -1,0 +1,16 @@
+{
+  "appId": "web-client-custom-app-id",
+  "userId": "my-custom-user-id",
+  "urm": {
+    "xyz-hub": {
+      "readFeatures": [
+        {
+          "storageId": "dev-*"
+        }
+      ]
+    }
+  },
+  "iat": 1704063599,
+  "exp": 3000000000
+}
+

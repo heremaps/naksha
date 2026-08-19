@@ -90,7 +90,8 @@ public class AuthorizationEventHandler extends AbstractEventHandler {
       return event.sendUpstream();
     }
 
-    return new ErrorResult(XyzError.FORBIDDEN, "You do not have the required permissions to perform this action.", null);
+    return new ErrorResult(
+        XyzError.FORBIDDEN, "You do not have the required permissions to perform this action.", null);
   }
 
   private boolean hasNonReadFeatureAction(@Nullable ActionMatrix matrix) {

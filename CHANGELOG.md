@@ -1,4 +1,4 @@
-## Naksha_2.3.0
+## Naksha_2.2.23
 - Enforced write authorization checks to deny write operations for read-only URM tokens.
 
 ## Naksha_2.2.22

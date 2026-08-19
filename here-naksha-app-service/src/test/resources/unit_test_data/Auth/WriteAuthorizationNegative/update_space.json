@@ -1,0 +1,16 @@
+{
+  "id": "auth_test_space",
+  "type": "Space",
+  "title": "Auth Test Space (updated)",
+  "description": "Space payload for write authorization denial test - PUT",
+  "eventHandlerIds": [
+    "auth_test_handler"
+  ],
+  "properties": {
+    "collection": {
+      "id": "um-mod-dev:topology",
+      "type": "NakshaCollection"
+    }
+  }
+}
+

@@ -147,4 +147,9 @@ public class TestUtil {
     final String readOnlyJwtClaims = TestUtil.loadFileOrFail("Auth/readOnlyJwtClaims.json");
     return generateJWT(readOnlyJwtClaims);
   }
+
+  public static String xyzHubReadOnlyJwt() {
+    final String xyzHubReadOnlyJwtClaims = TestUtil.loadFileOrFail("Auth/xyzHubReadOnlyJwtClaims.json");
+    return generateJWT(xyzHubReadOnlyJwtClaims);
+  }
 }

@@ -6,9 +6,15 @@ import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static com.here.naksha.app.common.CommonApiTestSetup.setupSpaceAndRelatedResources;
 import static com.here.naksha.app.common.TestUtil.*;
@@ -24,6 +30,10 @@ public class JwtTest extends ApiTest {
     }
 
     private static final String SPACE_ID = "auth_test_space";
+    private static final String STORAGE_ID = "auth_test_storage";
+    private static final String HANDLER_ID = "auth_test_handler";
+    private static final String FEATURE_ID = "auth_test_feature_id";
+    private static final List<String> READ_ONLY_JWTS = List.of(readOnlyJwt(), xyzHubReadOnlyJwt());
 
     @Test
     public void testDummyModeNoJWT() throws Exception {
@@ -100,35 +110,75 @@ public class JwtTest extends ApiTest {
         assertThat(response).hasStatus(401);
     }
 
-    @Test
-    public void testJwtModeWriteAuthorizationNegativeForCreateStorage() throws Exception {
+    /**
+     * Parameterized POST test: 4 resources × 2 URM types ("naksha" / "xyz-hub").
+     * Verifies that a read-only JWT receives HTTP 403 Forbidden on all POST write endpoints.
+     */
+    @ParameterizedTest
+    @MethodSource("postWriteAuthorizationDenialScenarios")
+    void testPostWriteAuthorizationDenied(String endpoint, String bodyFile, String jwt) throws Exception {
         final String streamId = UUID.randomUUID().toString();
-        final String storageJson = loadFileOrFail("Auth/WriteAuthorizationNegative/create_storage.json");
-        HttpResponse<String> response = getNakshaClient().post("hub/storages", storageJson, streamId, "Bearer " + readOnlyJwt());
+        final String authHeader = "Bearer " + jwt;
+        HttpResponse<String> response = getNakshaClient().post(endpoint, loadFileOrFail(bodyFile), streamId, authHeader);
         assertThat(response).hasStatus(403);
     }
 
-    @Test
-    public void testJwtModeWriteAuthorizationNegativeForCreateHandler() throws Exception {
+    /**
+     * Parameterized PUT test: 4 resources × 2 URM types ("naksha" / "xyz-hub").
+     * Verifies that a read-only JWT receives HTTP 403 Forbidden on all PUT write endpoints.
+     */
+    @ParameterizedTest
+    @MethodSource("putWriteAuthorizationDenialScenarios")
+    void testPutWriteAuthorizationDenied(String endpoint, String bodyFile, String jwt) throws Exception {
         final String streamId = UUID.randomUUID().toString();
-        final String handlerJson = loadFileOrFail("Auth/WriteAuthorizationNegative/create_event_handler.json");
-        HttpResponse<String> response = getNakshaClient().post("hub/handlers", handlerJson, streamId, "Bearer " + readOnlyJwt());
+        final String authHeader = "Bearer " + jwt;
+        HttpResponse<String> response = getNakshaClient().put(endpoint, loadFileOrFail(bodyFile), streamId, authHeader);
         assertThat(response).hasStatus(403);
     }
 
-    @Test
-    public void testJwtModeWriteAuthorizationNegativeForCreateSpace() throws Exception {
+    /**
+     * Parameterized DELETE test: 4 resources × 2 URM types ("naksha" / "xyz-hub").
+     * Verifies that a read-only JWT receives HTTP 403 Forbidden on all DELETE write endpoints.
+     */
+    @ParameterizedTest
+    @MethodSource("deleteWriteAuthorizationDenialScenarios")
+    void testDeleteWriteAuthorizationDenied(String endpoint, String jwt) throws Exception {
         final String streamId = UUID.randomUUID().toString();
-        final String spaceJson = loadFileOrFail("Auth/WriteAuthorizationNegative/create_space.json");
-        HttpResponse<String> response = getNakshaClient().post("hub/spaces", spaceJson, streamId, "Bearer " + readOnlyJwt());
+        final String authHeader = "Bearer " + jwt;
+        HttpResponse<String> response = getNakshaClient().delete(endpoint, streamId, authHeader);
         assertThat(response).hasStatus(403);
     }
 
-    @Test
-    public void testJwtModeWriteAuthorizationNegativeForCreateFeature() throws Exception {
-        final String streamId = UUID.randomUUID().toString();
-        final String featuresBodyJson = loadFileOrFail("Auth/WriteAuthorizationNegative/create_features.json");
-        HttpResponse<String> response = getNakshaClient().post("hub/spaces/" + SPACE_ID + "/features", featuresBodyJson, streamId, "Bearer " + readOnlyJwt());
-        assertThat(response).hasStatus(403);
+    static Stream<Arguments> postWriteAuthorizationDenialScenarios() {
+        List<Arguments> scenarios = new ArrayList<>();
+        for (String jwt : READ_ONLY_JWTS) {
+            scenarios.add(Arguments.of("hub/storages", "Auth/WriteAuthorizationNegative/create_storage.json", jwt));
+            scenarios.add(Arguments.of("hub/handlers", "Auth/WriteAuthorizationNegative/create_event_handler.json", jwt));
+            scenarios.add(Arguments.of("hub/spaces",   "Auth/WriteAuthorizationNegative/create_space.json", jwt));
+            scenarios.add(Arguments.of("hub/spaces/" + SPACE_ID + "/features", "Auth/WriteAuthorizationNegative/create_features.json", jwt));
+        }
+        return scenarios.stream();
+    }
+
+    static Stream<Arguments> putWriteAuthorizationDenialScenarios() {
+        List<Arguments> scenarios = new ArrayList<>();
+        for (String jwt : READ_ONLY_JWTS) {
+            scenarios.add(Arguments.of("hub/storages/" + STORAGE_ID, "Auth/WriteAuthorizationNegative/update_storage.json", jwt));
+            scenarios.add(Arguments.of("hub/handlers/" + HANDLER_ID, "Auth/WriteAuthorizationNegative/update_event_handler.json", jwt));
+            scenarios.add(Arguments.of("hub/spaces/" + SPACE_ID, "Auth/WriteAuthorizationNegative/update_space.json", jwt));
+            scenarios.add(Arguments.of("hub/spaces/" + SPACE_ID + "/features", "Auth/WriteAuthorizationNegative/update_features.json", jwt));
+        }
+        return scenarios.stream();
+    }
+
+    static Stream<Arguments> deleteWriteAuthorizationDenialScenarios() {
+        List<Arguments> scenarios = new ArrayList<>();
+        for (String jwt : READ_ONLY_JWTS) {
+            scenarios.add(Arguments.of("hub/storages/" + STORAGE_ID, jwt));
+            scenarios.add(Arguments.of("hub/handlers/" + HANDLER_ID, jwt));
+            scenarios.add(Arguments.of("hub/spaces/" + SPACE_ID, jwt));
+            scenarios.add(Arguments.of("hub/spaces/" + SPACE_ID + "/features/" + FEATURE_ID, jwt));
+        }
+        return scenarios.stream();
     }
 }
