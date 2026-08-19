@@ -245,4 +245,14 @@ open class NakshaFeature() : AnyObject() {
      * Human-readable description.
      */
     open var description by DESCRIPTION_NULL
+
+    /**
+     * Tests if this feature is a tombstone, so deleted.
+     * @return _true_ if this feature is a tombstone; _false_ otherwise.
+     * @since 3.0
+     */
+    open fun isDeleted(): Boolean {
+        val guid = this.properties.xyz.guid
+        return guid?.tupleNumber?.isDeleted ?: false
+    }
 }
