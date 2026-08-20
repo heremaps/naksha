@@ -6,7 +6,6 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 // TODO: @AI: Fix the documentation, it does not match the actual one.
@@ -185,6 +184,20 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
             val now = Timestamp.now()
             return auto(now.year, now.month, now.day, seq, action)
         }
+
+        private val seq = AtomicInt64(Int64(0))
+
+        /**
+         * Creates a new virtual version with the given action. Guarantees a unique version number like storages will do.
+         *
+         * **This function is for testing or Mockup only, the sequence restarts with JVM!**
+         * @param action the action to encode in the version.
+         * @return the new virtual unique version.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun virtualVersion(action: Action): Version = now(seq.addAndGet(Int64(1)), action)
 
         /**
          * Turns the given version into a real version, so setting the lower two bit to two, and ensure that the value is a valid version number.

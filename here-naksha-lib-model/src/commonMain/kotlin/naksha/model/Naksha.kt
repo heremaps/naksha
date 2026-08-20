@@ -11,6 +11,7 @@ import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
+import naksha.base.Version.VersionCompanion.virtualVersion
 import naksha.model.NakshaVersion.Companion.CURRENT
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
@@ -742,5 +743,23 @@ class Naksha private constructor() {
             set(value) {
                 _adminOptions.set(value)
             }
+
+
+        /**
+         * Creates a new virtual [TupleNumber] for a feature in the given storage, catalog, collection.
+         *
+         * You need a new version number for features belonging together to the same virtual transaction, therefore, you need to query this via [Version.virtualVersion] before invoking this method. This method is for testing and Mockups only!
+         * @param storageId the `id` of the storage where the feature is contained.
+         * @param catalogId the `id` of the catalog where the feature is contained.
+         * @param collectionId the `id` of the collection where the feature is contained.
+         * @param featureId the `id` of the feature being stored.
+         * @param version the version, see [Version.virtualVersion].
+         * @return the new virtual feature-number.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun virtualTupleNumber(storageId: String, catalogId: String, collectionId: String, featureId: String, version: Version): TupleNumber
+            = TupleNumber(databaseNumber(storageId), catalogNumber(catalogId), collectionNumber(collectionId), featureNumber(featureId), version.number)
     }
 }
