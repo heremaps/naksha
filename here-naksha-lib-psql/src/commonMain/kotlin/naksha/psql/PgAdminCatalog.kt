@@ -523,6 +523,24 @@ SELECT basics.*, procs.* FROM basics, procs;
         invalidateCatalog(catalog)
     }
 
+    // Call after the admin-catalog is set (the partition DDL reads it). Idempotent.
+    fun seedAdminHistoryPartitions() {
+        val conn = storage.newConnection(Naksha.adminOptions, false)
+        conn.use {
+            conn.autoCommit = false
+            setSearchPath(conn)
+            val versionNumber = Version.now(Int64(1), Action.CREATE).number
+            for (adminCol in listOf(collections, transactions, catalogs, books)) {
+                if (!adminCol.storeHistory) continue
+                val year = adminCol.historyPartitionNumberOf(versionNumber)
+                adminCol.historyTable.createPartition(conn, year)
+                adminCol.historyTable.createPartition(conn, year + 1)
+                adminCol.historyTable.createPartition(conn, year + 2)
+            }
+            conn.commit()
+        }
+    }
+
     /**
      * Delete a map.
      *
