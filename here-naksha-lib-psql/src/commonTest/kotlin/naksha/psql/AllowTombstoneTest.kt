@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
  * [naksha.model.ISession.getCatalogById] / [naksha.model.ISession.getCollectionById] are called
  * without `allowTombstone = true`), and that they **are** returned when `allowTombstone = true`.
  */
-class AllowTombstoneTest : PgTestBase(collection = null, catalogId = "") {
+class AllowTombstoneTest : PgTestBase() {
 
     @Test
     fun deletedCollectionShouldNotBeReturnedByDefault() {

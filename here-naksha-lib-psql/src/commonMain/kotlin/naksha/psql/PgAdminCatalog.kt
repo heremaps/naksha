@@ -495,8 +495,17 @@ SELECT basics.*, procs.* FROM basics, procs;
     /**
      * Remove the catalog with the given catalog-number from the cache.
      */
-    protected fun invalidateCatalog(catalog: PgCatalog, atomic: Boolean = true) {
-        if (atomic) catalogCache.remove(catalog.head.catalogNumber, catalog) else catalogCache.remove(catalog.head.catalogNumber)
+    internal fun invalidateCatalog(catalog: PgCatalog, atomic: Boolean = true) {
+        if (atomic) catalogCache.remove(catalog.head.catalogNumber, catalog)
+        else catalogCache.remove(catalog.head.catalogNumber)
+    }
+
+    /**
+     * Invalidate the cache for the catalog with the given number.
+     * @param catalogNumber the number of the catalog to invalidate the cache for.
+     */
+    internal fun invalidateCatalog(catalogNumber: Int) {
+        catalogCache.remove(catalogNumber)
     }
 
     /**

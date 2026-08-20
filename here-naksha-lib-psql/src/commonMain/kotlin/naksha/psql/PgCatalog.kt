@@ -136,8 +136,17 @@ open class PgCatalog internal constructor(
         } while (true)
     }
 
-    internal fun invalidateCollection(collection: PgCollection) {
-        collectionCache.remove(collection.head.collectionNumber, collection)
+    internal fun invalidateCollection(collection: PgCollection, atomic: Boolean = true) {
+        if (atomic) collectionCache.remove(collection.head.collectionNumber, collection)
+        else collectionCache.remove(collection.head.collectionNumber)
+    }
+
+    /**
+     * Invalidate the cache for the collection with the given number.
+     * @param collectionNumber the number of the collection to invalidate the cache for.
+     */
+    internal fun invalidateCollection(collectionNumber: Int) {
+        collectionCache.remove(collectionNumber)
     }
 
     /**
