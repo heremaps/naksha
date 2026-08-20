@@ -4,6 +4,8 @@ package com.here.naksha.app.auth;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.app.common.TestUtil;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -117,13 +119,18 @@ public class JwtTest extends ApiTest {
      */
     @ParameterizedTest
     @MethodSource("authorizationScenarios")
-    void testAuthorizationMatrix(String httpMethod, String endpoint, String bodyFile, String jwt, int expectedStatus) throws Exception {
+    void testAuthorizationMatrix(
+            @NotNull String httpMethod,
+            @NotNull String endpoint,
+            @Nullable String bodyFile,
+            @NotNull String jwt,
+            int expectedStatus) throws Exception {
         final String streamId = UUID.randomUUID().toString();
-        final String authHeader = jwt != null ? "Bearer " + jwt : null;
+        final String authHeader = "Bearer " + jwt;
         final String body = bodyFile != null ? loadFileOrFail(bodyFile) : "{}";
 
         HttpResponse<String> response = switch (httpMethod) {
-            case "GET" -> authHeader != null ? getNakshaClient().get(endpoint, streamId, authHeader) : getNakshaClient().get(endpoint, streamId);
+            case "GET" -> getNakshaClient().get(endpoint, streamId, authHeader);
             case "POST" -> getNakshaClient().post(endpoint, body, streamId, authHeader);
             case "PUT" -> getNakshaClient().put(endpoint, body, streamId, authHeader);
             case "DELETE" -> getNakshaClient().delete(endpoint, streamId, authHeader);
@@ -133,7 +140,7 @@ public class JwtTest extends ApiTest {
         assertThat(response).hasStatus(expectedStatus);
     }
 
-    static Stream<Arguments> authorizationScenarios() {
+    static @NotNull Stream<Arguments> authorizationScenarios() {
         List<Arguments> scenarios = new ArrayList<>();
         final List<String> readOnlyJwts = List.of(readOnlyJwt(), xyzHubReadOnlyJwt());
         final String storageId = "auth_test_storage";
