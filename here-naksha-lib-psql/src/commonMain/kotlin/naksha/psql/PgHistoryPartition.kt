@@ -6,7 +6,6 @@ import naksha.base.Int64
 import naksha.model.Naksha
 import naksha.base.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
 import naksha.base.NakshaException
-import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
@@ -52,15 +51,13 @@ class PgHistoryPartition(
         val parent = this.parent as PgHistoryTable
         val ID = collection.column(Id)
         val NEXT_VERSION = collection.column(NextVersion)
-        val GBN = collection.column(GlobalBookFeatureNumber)
 
         // HISTORY-PARTITION is NOT distribution partitioned.
         if (partitions.isEmpty()) return """$CREATE_TABLE $quotedName
 PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
 FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn, $NEXT_VERSION) INCLUDE ($FnColumn, $ID);
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_gbn")} ON $quotedName USING btree ($GBN) WHERE $GBN IS NOT NULL;"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn, $NEXT_VERSION) INCLUDE ($FnColumn, $ID);"""
 
         // HISTORY-PARTITION is distribution partitioned.
         return """$CREATE_TABLE $quotedName

@@ -311,13 +311,13 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Adds the given [Member] to [members].
      *
-     * Validates that the [Member.name] is a valid Naksha identifier (see [Naksha.verifyId]) and does not already exist on this collection. Caps the list at [MemberList.MAX_MEMBERS] entries.
+     * Validates that the [Member.name] is a valid Naksha identifier (see [Naksha.verifyId]), does not start with an underscore (reserved for storage-internal members), and does not already exist on this collection. Caps the list at [MemberList.MAX_MEMBERS] entries.
      * @param value the member to add.
      * @return this.
      * @since 3.0
      */
     open fun addMember(value: Member): NakshaCollection {
-        NakshaIdType.INTERNAL_MEMBER.verify(value.name)
+        NakshaIdType.MEMBER.verify(value.name)
         var list = this.members
         if (list == null) {
             list = MemberList()

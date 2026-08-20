@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Int64
-import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
@@ -54,13 +53,11 @@ class PgHeadTable(
     override fun CREATE_SQL(): String {
         val (CREATE_TABLE, TABLESPACE) = CREATE_TABLE_and_TABLESPACE()
         val ID = collection.column(Id)
-        val GBN = collection.column(GlobalBookFeatureNumber)
 
         // HEAD is NOT distribution partitioned.
         if (partitions.isEmpty()) return """$CREATE_TABLE $quotedName (${columnDefinitions()}, ${CONSTRAINT()})
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn) INCLUDE ($FnColumn, $ID);
-CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_gbn")} ON $quotedName USING btree ($GBN) WHERE $GBN IS NOT NULL;"""
+CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn) INCLUDE ($FnColumn, $ID);"""
 
         // HEAD is distribution partitioned.
         return """$CREATE_TABLE $quotedName (${columnDefinitions()})

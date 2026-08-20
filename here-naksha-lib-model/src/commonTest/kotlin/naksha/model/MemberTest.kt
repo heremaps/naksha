@@ -40,6 +40,7 @@ class MemberTest {
         assertFailsWith<NakshaException> { c.addMember(Member("BadName")) }
         assertFailsWith<NakshaException> { c.addMember(Member("123start")) }
         assertFailsWith<NakshaException> { c.addMember(Member("with space")) }
+        assertFailsWith<NakshaException> { c.addMember(Member("_fn")) }
     }
 
     @Test

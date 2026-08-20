@@ -226,7 +226,7 @@ open class PgCollection internal constructor(
                 on.toTypedArray(),
                 include?.toTypedArray() ?: emptyArray(),
                 unique = index.isUnique(),
-                partial = index.isPartial()
+                partial = index.isConditional()
             )
         }
     }

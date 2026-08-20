@@ -7,12 +7,21 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * The canonical, storage-managed indices that every Naksha storage understands.
+ * The canonical, storage-independent indices that every Naksha storage understands.
  *
- * These are flavour-independent: the [MANDATORY] indices are always present, the standard optional
- * [Geometry] indexes the standard [StandardMembers.Geometry] member, and the [SPECIAL] indices
- * are declared explicitly per collection (e.g. `naksha~transactions`). The default index set for a
- * Data-Hub (XYZ) compatible collection lives in [XyzIndices], the index counterpart of [XyzMembers].
+ * **Mandatory members are indexed implicitly.** Every storage must, on its own, index the mandatory
+ * members — [feature-number][StandardMembers.FeatureNumber], [version][StandardMembers.FeatureVersion],
+ * [next-version][StandardMembers.NextVersion] and [id][StandardMembers.Id] — so that lookups and range
+ * queries on them are fast. Consumers may rely on this without declaring any index; there is therefore
+ * nothing to declare here and [MANDATORY] is intentionally empty. (The
+ * [global-book-number][StandardMembers.GlobalBookFeatureNumber] member is stored but deliberately **not**
+ * indexed — it is only read by background maintenance, which tolerates a full scan.)
+ *
+ * What remains are **offers**, never mandatory: the standard optional [Geometry] index over the standard
+ * [StandardMembers.Geometry] member (recommended for GeoJSON data, and freely editable), and the [SPECIAL]
+ * indices that a collection declares explicitly when it needs them (e.g. `naksha~transactions`). The
+ * default index set for a Data-Hub (XYZ) compatible collection lives in [XyzIndices], the index
+ * counterpart of [XyzMembers].
  * @since 3.0
  */
 @JsExport
@@ -20,37 +29,15 @@ class StandardIndices private constructor() {
 
     companion object StandardIndices_C {
 
-        // Reserved names only — the table DDL already provides these ($c_pkey covers fn_unique;
-        // $c_id covers id_unique and id; $i_version covers version). Kept so custom indices can't
-        // collide with them; NOT part of [MANDATORY].
-
-        /** `fn_unique` — reserved name; the `$c_pkey` PRIMARY KEY covers it. @since 3.0 */
-        @JvmField @JsStatic
-        val FeatureNumberUnique = Index("fn_unique", StandardMembers.FeatureNumber.name).withInternal(true).withUnique(true)
-
-        /** `id_unique` — reserved name; the `$c_id` UNIQUE constraint covers it. @since 3.0 */
-        @JvmField @JsStatic
-        val IdUnique = Index("id_unique", StandardMembers.Id.name).withInternal(true).withUnique(true)
-
-        /** `id` — reserved name; the `$c_id` constraint covers it (id key + INCLUDE version, fn). @since 3.0 */
-        @JvmField @JsStatic
-        val Id = Index("id", StandardMembers.Id.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name).withInternal(true)
-
-        /** `version` — reserved name; the `$i_version` btree index covers it. @since 3.0 */
-        @JvmField @JsStatic
-        val Version = Index("version", StandardMembers.FeatureVersion.name).withInternal(true)
-
         /**
-         * `gbn` — partial index (`WHERE gbn IS NOT NULL`) used by the sequencer. Created by the
-         * table DDL as `$i_gbn`; reserved name, not created via [MANDATORY].
-         * @since 3.0
-         */
-        @JvmField @JsStatic
-        val GlobalBookNumber = Index("gbn", StandardMembers.GlobalBookFeatureNumber.name).withInternal(true).withPartial(true)
-
-        /**
-         * Mandatory indices injected into every collection — now empty: all intrinsic indexes are
-         * provided by the table DDL (constraints + `$i_gbn`). Kept so `indicesFor()` stays generic.
+         * Mandatory indices to inject into every collection — intentionally empty: the mandatory
+         * members are indexed implicitly by the storage itself (see the class documentation), so there
+         * is nothing to add on top. Kept as an (empty) list so index-composition code stays generic.
+         *
+         * Custom indices cannot collide with the storage-internal ones: internal index and member
+         * names are reserved by a leading underscore, and client-supplied names are validated against
+         * [naksha.model.NakshaIdType.INDEX] / [naksha.model.NakshaIdType.MEMBER] (which forbid a leading
+         * underscore).
          * @since 3.0
          */
         @JvmField @JsStatic
@@ -62,14 +49,6 @@ class StandardIndices private constructor() {
          */
         @JvmField @JsStatic
         val MANDATORY_NAMES: Set<String> = MANDATORY.map { it.name }.toHashSet()
-
-        /**
-         * Intrinsic index names a custom index must not reuse.
-         * @since 3.0
-         */
-        @JvmField @JsStatic
-        val RESERVED_NAMES: Set<String> =
-            listOf(FeatureNumberUnique.name, IdUnique.name, Id.name, Version.name, GlobalBookNumber.name).toHashSet()
 
         // -------------------------------------------------------------------------
         // Standard optional indices — index a standard optional member (see StandardMembers).
@@ -90,24 +69,24 @@ class StandardIndices private constructor() {
         // -------------------------------------------------------------------------
 
         /**
-         * `pn` — BTREE index on `pn` (WHERE `pn IS NOT NULL`). Enables efficient ordering and
-         * range scans by publish-number. Used in `naksha~transactions`.
+         * `pn` — index over the publish-number member, for efficient ordering and range queries by
+         * publish-number. Used in `naksha~transactions`.
          * @since 3.0
          */
         @JvmField @JsStatic
         val PublishNumber = Index("pn", StandardMembers.PublishNumber.name)
 
         /**
-         * `pt` — BTREE index on `pt` (WHERE `pt IS NOT NULL`). Enables efficient range scans
-         * by publish-time. Used in `naksha~transactions`.
+         * `pt` — index over the publish-time member, for efficient range queries by publish-time.
+         * Used in `naksha~transactions`.
          * @since 3.0
          */
         @JvmField @JsStatic
         val PublishTime = Index("pt", StandardMembers.PublishTime.name)
 
         /**
-         * `gv` — BTREE index on `gv` (WHERE `gv IS NOT NULL`). Enables efficient range scans
-         * by HERE global version. Used in `naksha~transactions`.
+         * `gv` — index over the HERE global-version member, for efficient range queries by global
+         * version. Used in `naksha~transactions`.
          * @since 3.0
          */
         @JvmField @JsStatic
