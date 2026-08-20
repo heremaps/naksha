@@ -1,0 +1,13 @@
+{
+  "id": "auth_test_handler",
+  "type": "EventHandler",
+  "title": "Storage Handler for Auth Test (updated)",
+  "description": "Default Naksha Storage Handler - PUT auth denial",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "active": true,
+  "extensionId": null,
+  "properties": {
+    "storageId": "auth_test_storage"
+  }
+}
+

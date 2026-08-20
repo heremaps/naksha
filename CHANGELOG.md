@@ -1,3 +1,6 @@
+## Naksha_2.2.23
+- Enforced write authorization checks to deny write operations for read-only URM tokens.
+
 ## Naksha_2.2.22
 - Configure Gradle builds to resolve dependencies and plugins through optional custom artifactory urls.
 

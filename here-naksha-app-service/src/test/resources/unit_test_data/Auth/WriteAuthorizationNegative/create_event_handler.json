@@ -1,0 +1,13 @@
+{
+  "id": "auth_readonly_handler_denied",
+  "type": "EventHandler",
+  "title": "Readonly JWT denied handler",
+  "description": "Event handler payload for write authorization negative test",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "active": true,
+  "extensionId": null,
+  "properties": {
+    "storageId": "auth_readonly_storage_denied"
+  }
+}
+
