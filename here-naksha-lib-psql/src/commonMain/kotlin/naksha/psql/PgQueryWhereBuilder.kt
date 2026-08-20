@@ -169,11 +169,11 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             }
             is TagMapHasAnyOf -> {
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb").append(" ??| ").append(placeholderForArg(op.tagKeys)).append(" ")
+                where.append(at).append("::jsonb").append(" ??| ").append(placeholderForArg(op.tagKeys, PgType.STRING_ARRAY)).append(" ")
             }
             is TagMapHasAllOf -> {
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb").append(" ??& ").append(placeholderForArg(op.tagKeys)).append(" ")
+                where.append(at).append("::jsonb").append(" ??& ").append(placeholderForArg(op.tagKeys, PgType.STRING_ARRAY)).append(" ")
             }
             is TagIsNull -> {
                 // ( foo::jsonb ? $1 AND ((foo::jsonb)->>$1) IS [NOT ]NULL)
