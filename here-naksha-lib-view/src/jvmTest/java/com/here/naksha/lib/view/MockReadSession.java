@@ -102,22 +102,28 @@ public class MockReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
     return null;
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
     return null;
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId) {
+  public @Nullable NakshaCollection getCollectionById(
+      @NotNull NakshaCatalog map,
+      @NotNull String collectionId,
+      boolean allowTombstone) {
     return null;
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(
+      @NotNull NakshaCatalog catalog,
+      int collectionNumber,
+      boolean allowTombstone) {
     return null;
   }
 

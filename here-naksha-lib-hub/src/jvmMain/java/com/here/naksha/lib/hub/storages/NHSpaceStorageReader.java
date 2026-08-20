@@ -315,7 +315,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 
@@ -325,12 +325,15 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaCatalog map, @NotNull String collectionId) {
+  public @Nullable NakshaCollection getCollectionById(
+      @NotNull NakshaCatalog map,
+      @NotNull String collectionId,
+      boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 
@@ -340,7 +343,10 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaCatalog catalog, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(
+      @NotNull NakshaCatalog catalog,
+      int collectionNumber,
+      boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 
