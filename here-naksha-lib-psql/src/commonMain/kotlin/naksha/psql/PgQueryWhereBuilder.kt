@@ -188,7 +188,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 = $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
+                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
                     .append("=").append(placeholderForArg(value, pgType))
             }
             is TagGt -> {
@@ -197,7 +197,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 > $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
+                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
                     .append(">").append(placeholderForArg(value, pgType))
             }
             is TagGte -> {
@@ -206,7 +206,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 >= $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
+                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
                     .append(">=").append(placeholderForArg(value, pgType))
             }
             is TagLt -> {
@@ -215,7 +215,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 < $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
+                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
                     .append("<").append(placeholderForArg(value, pgType))
             }
             is TagLte -> {
@@ -224,17 +224,15 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 <= $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
+                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
                     .append("<=").append(placeholderForArg(value, pgType))
             }
             is TagStartsWith -> {
-                val pgType = PgType.ofValue(op.value) ?: throw illegalArg("The given value is no valid argument for ${op.op}}: ${op.value}")
-                val value = pgType.convertValue(op.value)
                 // [NOT ]starts_with(((foo::jsonb)->>$1), $2)
                 if (negate) where.append("NOT ")
                 where.append("starts_with(((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
-                    .append(", ").append(placeholderForArg(value, pgType)).append(") ")
+                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(PgType.STRING)
+                    .append(", ").append(placeholderForArg(op.value)).append(") ")
             }
             is TagListContains -> {
                 // A tag list is stored as text[]; single-element membership: <tag> = ANY(tags) does not use GIN; tags @> ARRAY[<tags>] does use GIN
