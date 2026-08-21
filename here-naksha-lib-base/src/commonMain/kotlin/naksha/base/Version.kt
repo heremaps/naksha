@@ -305,7 +305,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JsStatic
         @JvmStatic
-        fun isCREATE(version: Int64): Boolean = (version.toLong() and -4L).toInt() == CREATE.intValue
+        fun isCREATE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == CREATE.intValue
 
         /**
          * Tests if the given version encodes the [UPDATE] action.
@@ -315,7 +315,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JsStatic
         @JvmStatic
-        fun isUPDATE(version: Int64): Boolean = (version.toLong() and -4L).toInt() == UPDATE.intValue
+        fun isUPDATE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == UPDATE.intValue
 
         /**
          * Tests if the given version encodes the [DELETE] action.
@@ -325,7 +325,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JsStatic
         @JvmStatic
-        fun isDELETE(version: Int64): Boolean = (version.toLong() and -4L).toInt() == DELETE.intValue
+        fun isDELETE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == DELETE.intValue
 
         /**
          * Tests if the given version encodes the [VERSION] action.
@@ -335,7 +335,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JsStatic
         @JvmStatic
-        fun isVERSION(version: Int64): Boolean = (version.toLong() and -4L).toInt() == VERSION.intValue
+        fun isVERSION(version: Int64): Boolean = (version.toLong() and 3L).toInt() == VERSION.intValue
     }
 
     private var _year = -1

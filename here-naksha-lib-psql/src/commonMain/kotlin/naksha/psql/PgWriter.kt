@@ -140,7 +140,7 @@ open class PgWriter internal constructor(
             }
             // If everything worked out as expected
             if (updateCache != null) {
-                for (pgWrite in pgWrites) {
+                for (pgWrite in updateCache) {
                     val id = pgWrite.id
                     val catalogId = pgWrite.catalog.id
                     if (pgWrite.isCollectionModification) {
