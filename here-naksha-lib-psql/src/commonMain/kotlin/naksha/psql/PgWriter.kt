@@ -382,6 +382,9 @@ open class PgWriter internal constructor(
     private fun seedHistoryPartitions(collection: PgCollection) {
         if (!collection.storeHistory) return
         val historyTable = collection.historyTable
+        // TODO This creation of history partitions upfront by 3 years is a temporary hack, to be replaced when pg_partman is used
+        // This partition number is correctly the year, only when NakshaCollection.shift = 41 by default,
+        // else this number will have a different meaning
         val year = collection.historyPartitionNumberOf(tx.version.number)
         historyTable.createPartition(conn, year)
         historyTable.createPartition(conn, year + 1)

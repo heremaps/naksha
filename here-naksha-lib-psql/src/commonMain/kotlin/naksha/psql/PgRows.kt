@@ -165,7 +165,6 @@ internal class PgRows {
         if (existing == null) {
             val column = PgColumnWithValues(column, alias).withSize(size)
             columns.add(column)
-            for (column in columns) column.values.size = size
         }
         return this
     }
@@ -175,7 +174,6 @@ internal class PgRows {
         if (existing == null) {
             val column = PgColumnWithValues(PgColumn(-1, alias, type)).withSize(size)
             columns.add(column)
-            for (column in columns) column.values.size = size
         }
         return this
     }

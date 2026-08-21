@@ -532,6 +532,9 @@ SELECT basics.*, procs.* FROM basics, procs;
             val versionNumber = Version.now(Int64(1), Action.CREATE).number
             for (adminCol in listOf(collections, transactions, catalogs, books)) {
                 if (!adminCol.storeHistory) continue
+                // TODO This creation of history partitions upfront by 3 years is a temporary hack, to be replaced when pg_partman is used
+                // This partition number is correctly the year, only when NakshaCollection.shift = 41 by default,
+                // else this number will have a different meaning
                 val year = adminCol.historyPartitionNumberOf(versionNumber)
                 adminCol.historyTable.createPartition(conn, year)
                 adminCol.historyTable.createPartition(conn, year + 1)
