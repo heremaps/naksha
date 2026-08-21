@@ -7,6 +7,7 @@ import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
  * Verifies that deleted catalogs and collections are not returned by default (i.e. when
@@ -119,5 +120,33 @@ class AllowTombstoneTest : PgTestBase() {
             assertNotNull(recreated, "Re-created collection MUST be visible after re-creation")
             assertEquals(collectionId, recreated.id, "Re-created collection id must match")
         }
+    }
+
+    @Test
+    fun deletingAlreadyDeletedCollectionShouldSucceed() {
+        val collectionId = "tombstone_double_delete_col_test"
+        val collection = NakshaCollection(collectionId, catalog.id)
+
+        // Create the collection.
+        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+
+        // Delete the collection (first deletion).
+        executeWrite(WriteRequest().add(Write().deleteCollectionById(catalog.id, collectionId)))
+
+        // Fetch the HEAD state including the tombstone and verify it is marked deleted.
+        val tombstone = newWriteSession().use { session ->
+            val cat = session.getCatalogById(catalog.id)
+            assertNotNull(cat, "Catalog should still exist after first deletion")
+            val ts = session.getCollectionById(cat, collectionId, allowTombstone = true)
+            assertNotNull(ts, "Tombstone must be retrievable with allowTombstone = true")
+            assertTrue(
+                ts.tupleNumber?.isDeleted ?: false,
+                "HEAD state must be marked as deleted (tombstone)"
+            )
+            ts
+        }
+
+        // Delete the already-deleted collection again, non-atomically (should succeed).
+        executeWrite(WriteRequest().add(Write().deleteCollection(tombstone, atomic = false)))
     }
 }
