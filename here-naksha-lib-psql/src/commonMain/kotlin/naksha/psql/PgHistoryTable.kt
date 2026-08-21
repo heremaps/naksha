@@ -92,6 +92,7 @@ $TABLESPACE"""
      */
     fun createPartition(conn: PgConnection, partitionNumber: Int): PgHistoryPartition {
         val partition = partitions[partitionNumber] ?: PgHistoryPartition(this, partitionNumber)
+        partitions[partitionNumber] = partition
         partition.create(conn)
         for (index in indices) {
             partition.createIndex(conn, index)

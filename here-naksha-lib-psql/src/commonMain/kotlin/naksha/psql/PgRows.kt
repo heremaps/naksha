@@ -59,9 +59,6 @@ internal class PgRows {
     fun setMinRows(rowsCount: Int): PgRows {
         if (this.size < rowsCount) {
             this.size = rowsCount
-            for (column in columns) {
-                column.values.size = rowsCount
-            }
         }
         return this
     }
@@ -152,6 +149,7 @@ internal class PgRows {
     }
 
     fun addColumns(columns: Array<PgColumn>): PgRows {
+        clearCache()
         for (column in columns) {
             val alias = column.name
             val existing = getColumn(alias)
@@ -167,7 +165,6 @@ internal class PgRows {
         if (existing == null) {
             val column = PgColumnWithValues(column, alias).withSize(size)
             columns.add(column)
-            setMinRows(size)
         }
         return this
     }
@@ -177,7 +174,6 @@ internal class PgRows {
         if (existing == null) {
             val column = PgColumnWithValues(PgColumn(-1, alias, type)).withSize(size)
             columns.add(column)
-            setMinRows(size)
         }
         return this
     }
@@ -314,7 +310,7 @@ internal class PgRows {
     fun set(row: Int, columnName: String, value: Any?): Boolean {
         val column = getColumn(columnName)
         if (column != null) {
-            setMinRows(row)
+            setMinRows(row+1)
             column.values[row] = value
             return true
         }
@@ -322,7 +318,7 @@ internal class PgRows {
     }
 
     operator fun set(row: Int, tuple: Tuple) {
-        setMinRows(row)
+        setMinRows(row+1)
         val membersBook = tuple.membersBook
         val END = membersBook.namesLength()
         for (i in 0 until END) {

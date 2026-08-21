@@ -352,27 +352,6 @@ open class PgCollection internal constructor(
     val internal: Boolean = id.startsWith("naksha~")
 
     /**
-     * Ensures that the [PgHistoryPartition] for the given version exists.
-     * @param conn the connection to use to create the partition, if needed.
-     * @param version the version to be written.
-     * @param session the write session.
-     * @since 3.0
-     */
-    fun prepareWrite(conn: PgConnection, version: Int64, session: PgSession) {
-        if (!storeHistory) return
-        ensureHistoryPartition(conn, historyPartitionNumberOf(version), session)
-    }
-
-    fun ensureHistoryPartition(conn: PgConnection, partitionNumber: Int, session: PgSession) {
-        if (!storeHistory) return
-        if (historyTable.partitions.containsKey(partitionNumber)) return
-        if (session.isPartitionPrepared(this, partitionNumber)) return
-        catalog.setSearchPath(conn)
-        historyTable.createPartition(conn, partitionNumber)
-        session.markPartitionPrepared(this, partitionNumber)
-    }
-
-    /**
      * Verify the given new _HEAD_ state, ensure that none of the following values is modified:
      * - [NakshaCollection.members] - Ensure that they result in the same [columns].
      * - [NakshaCollection.indices] - Ensure that they result in the same [headIndices] and [historyIndices].

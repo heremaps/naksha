@@ -125,7 +125,6 @@ open class PgWriter internal constructor(
             conn = this.conn
             if (useSavepoint) {
                 conn.execute("SAVEPOINT \"$savepointId\"").close()
-                partitionSnapshot = session.snapshotPreparedPartitions()
             }
             var start = 0
             for (i in 1..pgWrites.size) {
@@ -162,7 +161,6 @@ open class PgWriter internal constructor(
         } catch (t: Throwable) {
             if (conn != null && useSavepoint) {
                 conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
-                if (partitionSnapshot != null) session.restorePreparedPartitions(partitionSnapshot)
             }
             throw PgExceptionMapper.map(t)
         }
@@ -364,7 +362,6 @@ open class PgWriter internal constructor(
         // All writes in [start, end) share one catalog and collection (the caller grouped them) and are
         // ordered by op; dispatch each contiguous op-block to its writer.
         val pgCollection = pgWrites[start].collection
-        pgCollection.prepareWrite(conn, tx.version.number, session)
         var s = start
         var e = start
 
@@ -418,9 +415,14 @@ open class PgWriter internal constructor(
 
     private fun seedHistoryPartitions(collection: PgCollection) {
         if (!collection.storeHistory) return
+        val historyTable = collection.historyTable
+        // TODO This creation of history partitions upfront by 3 years is a temporary hack, to be replaced when pg_partman is used
+        // This partition number is correctly the year, only when NakshaCollection.shift = 41 by default,
+        // else this number will have a different meaning
         val year = collection.historyPartitionNumberOf(tx.version.number)
-        collection.ensureHistoryPartition(conn, year, session)
-        collection.ensureHistoryPartition(conn, year + 1, session)
+        historyTable.createPartition(conn, year)
+        historyTable.createPartition(conn, year + 1)
+        historyTable.createPartition(conn, year + 2)
     }
 
     /**

@@ -1,7 +1,7 @@
 package naksha.psql
 
-import naksha.base.AnyList
 import naksha.base.Int64
+import naksha.base.ListProxy
 import naksha.base.Platform
 import naksha.base.illegalArg
 import naksha.psql.PgType.Companion.BOOLEAN
@@ -158,7 +158,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         else -> throw illegalArg("Failed to detect array type, and invalid type-name was provided: $typeName")
                     }
                 }
-                is AnyList -> setArgument(stmt, arg.toArray(), indices)
+                is ListProxy<*> -> setArgument(stmt, arg.toArray(), indices)
                 null -> stmt.setNull(index, 0)
                 else -> throw illegalArg("Unable to set argument: args[${index - 1}], unknown type: ${arg.javaClass.name}")
             }
