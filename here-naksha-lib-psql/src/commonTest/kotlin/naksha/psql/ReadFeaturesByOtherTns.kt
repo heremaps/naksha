@@ -7,6 +7,8 @@ import naksha.model.objects.StandardMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
+import naksha.model.request.ops.And
+import naksha.model.request.ops.Equals
 import naksha.model.request.ops.IsAnyOf
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.Test
@@ -60,5 +62,37 @@ class ReadFeaturesByOtherTns : PgTestBase(
                 assertNotNull(initialFeatures.find { it!!.id == fetchedPredecessor.id })
             assertThatFeature(fetchedPredecessor).isIdenticalTo(initialState)
         }
+    }
+
+    @Test
+    fun shouldGetOnePredecessorByFeatureNumberAndNextVersion() {
+        // Given: five features that will be updated in one transaction
+        val initialFeatures = insertFeatures(randomFeatures(5)).features.filterNotNull()
+        val update = WriteRequest()
+        initialFeatures.forEach { feature ->
+            update.add(Write().updateFeature(collection, feature.apply { title = "updated_$id" }, atomic = true))
+        }
+        val updateResponse = executeWrite(update)
+
+        // And: one target's feature number and the successor version shared by the transaction
+        val target = initialFeatures.first()
+        val targetSuccessorTn = updateResponse.features.first()!!.properties.xyz.guid!!.tupleNumber
+        val successorVersion = targetSuccessorTn.version
+        val targetFeatureNumber = targetSuccessorTn.featureNumber
+
+        // When: querying history by the pair used for ActivityLog predecessor lookup
+        val response = executeRead(ReadFeatures().apply {
+            catalogId = collection.catalogId
+            collectionId = collection.id
+            queryMembers = And(
+                Equals(StandardMembers.NextVersion.name, successorVersion),
+                Equals(StandardMembers.FeatureNumber.name, targetFeatureNumber),
+            )
+            queryHistory = true
+        })
+
+        // Then: we get one searched feature decided by next version and feature number
+        assertEquals(1, response.features.size)
+        assertEquals(target.id, response.features.first()!!.id)
     }
 }

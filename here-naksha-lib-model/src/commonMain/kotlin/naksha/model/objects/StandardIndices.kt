@@ -2,6 +2,7 @@
 
 package naksha.model.objects
 
+import naksha.base.StringList
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -89,6 +90,22 @@ class StandardIndices private constructor() {
          */
         @JvmField @JsStatic
         val Geometry = Index("geo", StandardMembers.Geometry.name)
+
+        /**
+         * `next_version` — history-only lookup index on the successor version and feature number.
+         *
+         * This supports resolving one exact predecessor from the `(next_version, feature-number)` pair.
+         * The current tuple version is included so the initial tuple-number lookup can be index-only.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val NextVersion = Index(
+            "next_version",
+            StandardMembers.NextVersion.name,
+            StandardMembers.FeatureNumber.name,
+        ).withInclude(StringList(
+            StandardMembers.FeatureVersion.name,
+        ))
 
         // -------------------------------------------------------------------------
         // Special indices — not added automatically; declared explicitly per collection

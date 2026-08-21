@@ -35,6 +35,11 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmField
 
+private enum class RequestedIndexTarget {
+    HEAD,
+    HISTORY,
+}
+
 /**
  * A collection is a set of database tables that together form a logical feature store. This lower level implementation supports methods to create the collection physically (so the whole set of tables), to refresh the information about the collection, drop the tables, to add, or remove indices at runtime, aso.
  *
@@ -180,7 +185,15 @@ open class PgCollection internal constructor(
         return sb.toString()
     }
 
-    private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
+    private fun isRequestedIndexAllowed(index: Index, target: RequestedIndexTarget): Boolean = when {
+        index.name == StandardIndices.NextVersion.name -> target == RequestedIndexTarget.HISTORY
+        else -> true
+    }
+
+    private fun indicesFor(
+        nakshaCollection: NakshaCollection,
+        target: RequestedIndexTarget,
+    ): Array<PgIndex> {
         val indices = IndexList(StandardIndices.MANDATORY)
         val declared: IndexList? = nakshaCollection.indices
         val requested: List<Index> = when {
@@ -191,8 +204,14 @@ open class PgCollection internal constructor(
         for (requestedIndex in requested) {
             if (!indices.contains(requestedIndex)) indices.add(requestedIndex)
         }
-        return Array(indices.size) { i ->
+        val allowedIndices = ArrayList<Index>(indices.size)
+        for (i in 0 ..< indices.size) {
             val index = indices[i] ?: throw NakshaException(ILLEGAL_STATE, "Index #$i must not be null")
+            if (isRequestedIndexAllowed(index, target)) allowedIndices.add(index)
+        }
+        val onHead = target == RequestedIndexTarget.HEAD
+        return Array(allowedIndices.size) { i ->
+            val index = allowedIndices[i]
             val indexName = index.name
 
             val nakshaOn = index.on
@@ -235,14 +254,14 @@ open class PgCollection internal constructor(
      * @since 3.0
      */
     @JvmField
-    val headIndices: Array<PgIndex> = indicesFor(nakshaCollection, onHead = true)
+    val headIndices: Array<PgIndex> = indicesFor(nakshaCollection, RequestedIndexTarget.HEAD)
 
     /**
      * The indices of the HISTORY table.
      * @since 3.0
      */
     @JvmField
-    val historyIndices: Array<PgIndex> = indicesFor(nakshaCollection, onHead = false)
+    val historyIndices: Array<PgIndex> = indicesFor(nakshaCollection, RequestedIndexTarget.HISTORY)
 
     /**
      * Tests if the history should be stored.
