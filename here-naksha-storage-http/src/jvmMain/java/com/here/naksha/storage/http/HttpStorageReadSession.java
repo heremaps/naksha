@@ -21,14 +21,21 @@ package com.here.naksha.storage.http;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
 import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
+import naksha.base.Action;
 import naksha.model.IReadSession;
 import naksha.model.MemberProcessorMap;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
+import naksha.model.Naksha;
 import naksha.base.NakshaError;
+import naksha.base.NakshaException;
+import naksha.base.TupleNumber;
+import naksha.base.Version;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaCatalog;
+import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.*;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -41,6 +48,7 @@ import java.util.List;
 public class HttpStorageReadSession implements IReadSession {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorageReadSession.class);
+  private static final String DEFAULT_VIRTUAL_CATALOG_ID = "0";
 
   @NotNull
   private final NakshaContext context;
@@ -49,10 +57,18 @@ public class HttpStorageReadSession implements IReadSession {
   private final RequestSender requestSender;
 
   @NotNull
+  private final String storageId;
+
+  @NotNull
   private final HttpInterface httpInterface;
 
-  HttpStorageReadSession(@Nullable NakshaContext context, @NotNull RequestSender requestSender, @NotNull HttpInterface httpInterface) {
+  HttpStorageReadSession(
+      @Nullable NakshaContext context,
+      @NotNull String storageId,
+      @NotNull RequestSender requestSender,
+      @NotNull HttpInterface httpInterface) {
     this.context = context == null ? NakshaContext.currentContext() : context;
+    this.storageId = storageId;
     this.requestSender = requestSender;
     this.httpInterface = httpInterface;
   }
@@ -64,16 +80,21 @@ public class HttpStorageReadSession implements IReadSession {
   @Override
   public @NotNull Response execute(@NotNull Request readRequest) {
     try {
+      final ReadFeaturesProxyWrapper request = (ReadFeaturesProxyWrapper) readRequest;
+      final Response response;
       switch (httpInterface) {
         case ffwAdapter:
-          return FfwInterfaceReadExecute.execute(
-              context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+          response = FfwInterfaceReadExecute.execute(context, request, requestSender);
+          break;
         case dataHubConnector:
-          return ConnectorInterfaceReadExecute.execute(
-              context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
+          response = ConnectorInterfaceReadExecute.execute(context, request, requestSender);
+          break;
         default:
           throw new IllegalStateException("Unsupported HTTP interface: " + httpInterface);
       }
+      return attachVirtualTupleNumbers(response, request);
+    } catch (NakshaException exception) {
+      return new ErrorResponse(exception.getError());
     } catch (Exception exception) {
       log.warn("We got exception while executing Read request.", exception);
       return new ErrorResponse(NakshaError.EXCEPTION, exception.getMessage(), exception);
@@ -169,5 +190,55 @@ public class HttpStorageReadSession implements IReadSession {
   @NotNull
   RequestSender getRequestSender() {
     return requestSender;
+  }
+
+  @NotNull Response attachVirtualTupleNumbers(
+      @NotNull Response response, @NotNull ReadFeaturesProxyWrapper request) {
+    // Virtual tuple numbers are transient adapter identities and are not reloadable or persistable.
+    if (!(response instanceof SuccessResponse)) {
+      return response;
+    }
+
+    final SuccessResponse success = (SuccessResponse) response;
+    final NakshaFeatureList features = success.getFeatures();
+    final FeatureTupleList featureTuples = new FeatureTupleList();
+    featureTuples.setCapacity(features.size());
+    if (features.isEmpty()) {
+      return new SuccessResponse(featureTuples);
+    }
+
+    final String requestedCatalogId = request.getCatalogId();
+    // HTTP storage schemas are optional; catalog number 0 is the documented default scope.
+    final String catalogId = requestedCatalogId == null ? DEFAULT_VIRTUAL_CATALOG_ID : requestedCatalogId;
+    final String collectionId = requireNonEmpty(request.getCollectionId(), "collectionId");
+    final Version version = Version.virtualVersion(Action.VERSION);
+    for (final NakshaFeature feature : features) {
+      if (feature == null) {
+        continue;
+      }
+      final String featureId = requireFeatureId(feature);
+      final TupleNumber tupleNumber = Naksha.virtualTupleNumber(
+          storageId, catalogId, collectionId, featureId, version);
+      final FeatureTuple featureTuple = new FeatureTuple(tupleNumber, null);
+      featureTuple.setFeature(feature);
+      featureTuples.add(featureTuple);
+    }
+    return new SuccessResponse(featureTuples);
+  }
+
+  private static @NotNull String requireFeatureId(@NotNull NakshaFeature feature) {
+    final Object rawId = feature.getRaw(NakshaFeature.ID_KEY);
+    if (!(rawId instanceof String) || ((String) rawId).isBlank()) {
+      throw new NakshaException(
+          NakshaError.ILLEGAL_ARGUMENT, "HTTP response contains a feature without a non-empty 'id'");
+    }
+    return (String) rawId;
+  }
+
+  private static @NotNull String requireNonEmpty(@Nullable String value, @NotNull String name) {
+    if (value == null || value.isBlank()) {
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, name + " must be non-empty");
+    }
+    return value;
   }
 }

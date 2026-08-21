@@ -22,8 +22,9 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
 
     private final HttpInterface httpInterface;
 
-    public HttpStorageWriteSession(NakshaContext context, RequestSender requestSender, HttpInterface httpInterface) {
-        super(context, requestSender, httpInterface);
+    public HttpStorageWriteSession(
+            NakshaContext context, String storageId, RequestSender requestSender, HttpInterface httpInterface) {
+        super(context, storageId, requestSender, httpInterface);
         this.httpInterface = httpInterface;
     }
 
