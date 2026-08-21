@@ -636,7 +636,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
    */
   private void incActorLevelUsage(String actorId, long limit) {
     if (actorId == null) return;
-    if (limit <= 0) {
+    if (!context.isSuperUser() && limit <= 0) {
       log.info(
           "NAKSHA_ERR_REQ_LIMIT_4_ACTOR - [Request Limit breached for Actor => appId,author,actor,limit,crtValue] - ReqLimitForActor {} {} {} {} {}",
           context.getAppId(),
@@ -660,7 +660,7 @@ public abstract class AbstractTask<RESULT, SELF extends AbstractTask<RESULT, SEL
         return;
       }
       // Increment counter
-      if (!internal && counter >= limit) {
+      if (!internal && !context.isSuperUser() && counter >= limit) {
         log.info(
             "NAKSHA_ERR_REQ_LIMIT_4_ACTOR - [Request Limit breached for Actor => appId,author,actor,limit,crtValue] - ReqLimitForActor {} {} {} {} {}",
             context.getAppId(),

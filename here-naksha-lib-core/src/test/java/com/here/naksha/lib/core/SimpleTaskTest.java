@@ -20,7 +20,9 @@ package com.here.naksha.lib.core;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import com.here.naksha.lib.core.exceptions.TooManyTasks;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import org.jetbrains.annotations.NotNull;
@@ -38,5 +40,21 @@ class SimpleTaskTest {
     final String result = future.get();
     assertNotNull(result);
     assertEquals("hello_world", result);
+  }
+
+  @Test
+  void shouldBypassActorLevelLimitForSuperUserContext() throws Exception {
+    final Future<String> future = new SimpleTask<String>(createTestContextWithActorLimitZero(true)).start(() -> "ok");
+    assertEquals("ok", future.get());
+  }
+
+  @Test
+  void shouldEnforceActorLevelLimitForNonSuperUserContext() {
+    assertThrows(TooManyTasks.class, () -> new SimpleTask<String>(createTestContextWithActorLimitZero(false)).start(() -> "ok"));
+  }
+
+  private static @NotNull NakshaContext createTestContextWithActorLimitZero(boolean superUser) {
+    AbstractTask.setConcurrencyLimitManager(new DefaultRequestLimitManager(1000, 0));
+    return new NakshaContext().withAppId("naksha-test").withAuthor("test-author").withSuperUser(superUser);
   }
 }

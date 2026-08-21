@@ -1,3 +1,6 @@
+## Naksha_2.2.24
+- Bypass actor-level concurrency checks for extension-loading tasks by running them in super-user context.
+
 ## Naksha_2.2.23
 - Enforced write authorization checks to deny write operations for read-only URM tokens.
 
