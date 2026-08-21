@@ -495,8 +495,17 @@ SELECT basics.*, procs.* FROM basics, procs;
     /**
      * Remove the catalog with the given catalog-number from the cache.
      */
-    protected fun invalidateCatalog(catalog: PgCatalog, atomic: Boolean = true) {
-        if (atomic) catalogCache.remove(catalog.head.catalogNumber, catalog) else catalogCache.remove(catalog.head.catalogNumber)
+    internal fun invalidateCatalog(catalog: PgCatalog, atomic: Boolean = true) {
+        if (atomic) catalogCache.remove(catalog.head.catalogNumber, catalog)
+        else catalogCache.remove(catalog.head.catalogNumber)
+    }
+
+    /**
+     * Invalidate the cache for the catalog with the given number.
+     * @param catalogNumber the number of the catalog to invalidate the cache for.
+     */
+    internal fun invalidateCatalog(catalogNumber: Int) {
+        catalogCache.remove(catalogNumber)
     }
 
     /**
@@ -554,7 +563,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         val outRows = PgRows().withCollection(catalogs)
         val SQL = """SELECT ${outRows.aliases()}
 FROM "naksha~admin".${catalogs.headTable.quotedName}
-WHERE $Id = $1 AND (${StandardMembers.FeatureVersion} & 3) < 2"""
+WHERE $Id = $1"""
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         plan.execute(arrayOf(id)).fetch().use { cursor ->
             if (!outRows.read(cursor)) return null
@@ -585,7 +594,7 @@ WHERE $Id = $1 AND (${StandardMembers.FeatureVersion} & 3) < 2"""
         val rows = PgRows().withCollection(catalogs)
         val SQL = """SELECT ${rows.aliases()} 
 FROM "naksha~admin".${catalogs.headTable.quotedName} 
-WHERE ${StandardMembers.FeatureNumber} = $1 AND (${StandardMembers.FeatureVersion} & 3) < 2"""
+WHERE ${StandardMembers.FeatureNumber} = $1"""
         setSearchPath(conn)
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }

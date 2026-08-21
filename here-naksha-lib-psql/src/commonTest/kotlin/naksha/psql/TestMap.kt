@@ -17,6 +17,9 @@ enum class TestMap(val id: String) {
     /** Shared map used by tests that do **not** request their own schema (`mapId = null`). */
     SHARED("naksha_psql_test"),
 
+    /** Dedicated map for [AllowTombstoneTest]. */
+    ALLOW_TOMBSTONE_TEST("allow_tombstone_test"),
+
     /** Dedicated map for [CollectionTests]. */
     COLLECTION_TESTS("collection_tests"),
 

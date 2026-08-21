@@ -2,6 +2,10 @@
 
 package naksha.base
 
+import naksha.base.Action.Action_C.CREATE
+import naksha.base.Action.Action_C.DELETE
+import naksha.base.Action.Action_C.UPDATE
+import naksha.base.Action.Action_C.VERSION
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -221,7 +225,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MIN_AUTO = auto(16, 1, 1, Int64(0), Action.CREATE)
+        val MIN_AUTO = auto(16, 1, 1, Int64(0), CREATE)
         // 0n + (0n << 2n) + (1n << 32n) + (1n << (32n+5n)) + (16n << (32n+5n+4n)) = 35326106009600n
         // bitwise: 0x0000_2021_0000_0000
 
@@ -231,7 +235,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MAX_AUTO = auto(4095, 12, 31, Int64(1_073_741_823), Action.VERSION)
+        val MAX_AUTO = auto(4095, 12, 31, Int64(1_073_741_823), VERSION)
         // 3n + (1073741823n << 2n) + (31n << 32n) + (12n << (32n+5n)) + (4095n << (32n+5n+4n)) = 9006786937880575n
         // bitwise: 0x001f_ff9f_ffff_ffff
 
@@ -241,7 +245,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MIN_MANUAL = manual(Int64(1), Action.CREATE)
+        val MIN_MANUAL = manual(Int64(1), CREATE)
 
         /**
          * The maximum valid manual version (seq=2,199,023,255,551, action=VERSION).
@@ -249,7 +253,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MAX_MANUAL = manual(MANUAL_SEQ_MASK, Action.CREATE)
+        val MAX_MANUAL = manual(MANUAL_SEQ_MASK, CREATE)
 
         /**
          * The absolute minimum version number _(3)_.
@@ -292,6 +296,46 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         @JvmField
         @JsStatic
         val SEQ_INC: Int64 = Int64(1) shl 2
+
+        /**
+         * Tests if the given version encodes the [CREATE] action.
+         * @param version the version to test.
+         * @return _true_ if the encoded [Action] is [CREATE].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun isCREATE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == CREATE.intValue
+
+        /**
+         * Tests if the given version encodes the [UPDATE] action.
+         * @param version the version to test.
+         * @return _true_ if the encoded [Action] is [UPDATE].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun isUPDATE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == UPDATE.intValue
+
+        /**
+         * Tests if the given version encodes the [DELETE] action.
+         * @param version the version to test.
+         * @return _true_ if the encoded [Action] is [DELETE].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun isDELETE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == DELETE.intValue
+
+        /**
+         * Tests if the given version encodes the [VERSION] action.
+         * @param version the version to test.
+         * @return _true_ if the encoded [Action] is [VERSION].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun isVERSION(version: Int64): Boolean = (version.toLong() and 3L).toInt() == VERSION.intValue
     }
 
     private var _year = -1
