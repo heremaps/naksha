@@ -210,7 +210,7 @@ public class HttpStorageReadSession implements IReadSession {
     final String requestedCatalogId = request.getCatalogId();
     // HTTP storage schemas are optional; catalog number 0 is the documented default scope.
     final String catalogId = requestedCatalogId == null ? DEFAULT_VIRTUAL_CATALOG_ID : requestedCatalogId;
-    final String collectionId = requireNonEmpty(request.getCollectionId(), "collectionId");
+    final String collectionId = requireCollectionId(request.getCollectionId());
     final Version version = Version.virtualVersion(Action.VERSION);
     for (final NakshaFeature feature : features) {
       if (feature == null) {
@@ -235,10 +235,10 @@ public class HttpStorageReadSession implements IReadSession {
     return (String) rawId;
   }
 
-  private static @NotNull String requireNonEmpty(@Nullable String value, @NotNull String name) {
-    if (value == null || value.isBlank()) {
-      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, name + " must be non-empty");
+  private static @NotNull String requireCollectionId(@Nullable String collectionId) {
+    if (collectionId == null || collectionId.isBlank()) {
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "collectionId must be non-empty");
     }
-    return value;
+    return collectionId;
   }
 }
