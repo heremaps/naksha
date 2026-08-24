@@ -440,14 +440,14 @@ SELECT basics.*, procs.* FROM basics, procs;
                         logger.info("Holding advisory lock now")
                         val c2 = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
                         c2.use {
-                            txn = cursor["txn"]
-                            postgresClock = cursor["time"]
+                            txn = c2["txn"]
+                            postgresClock = c2["time"]
                             postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
                             postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
                             year = postgresDate.year
                             month = postgresDate.month.number
                             day = postgresDate.day
-                            versionNumber = cursor["version"]
+                            versionNumber = c2["version"]
                             version = Version(versionNumber)
                         }
                         if (version.isBehind(year, month, day)) {
