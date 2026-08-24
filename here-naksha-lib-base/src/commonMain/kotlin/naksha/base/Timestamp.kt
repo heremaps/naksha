@@ -50,8 +50,8 @@ class Timestamp(
             return Timestamp(
                 Int64(instant.toEpochMilliseconds()),
                 ldt.year,
-                ldt.monthNumber,
-                ldt.dayOfMonth,
+                ldt.month.number,
+                ldt.day,
                 ldt.hour,
                 ldt.minute,
                 ldt.second,
