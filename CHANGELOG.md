@@ -1,5 +1,5 @@
 ## Naksha_2.2.24
-- Bypass actor-level concurrency checks for extension-loading tasks by running them in super-user context.
+- Apply configured request limits before extension loading to avoid startup `TooManyTasks` errors.
 
 ## Naksha_2.2.23
 - Enforced write authorization checks to deny write operations for read-only URM tokens.
@@ -72,4 +72,3 @@
 ## Naksha_1.0.0
 
 - *[MCPODS-4933](https://devzone.it.here.com/jira/browse/MCPODS-4933)* - First PoC version, demo'ed in E2E, as an alternative to DataHub APIs
-
