@@ -131,7 +131,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @since 3.0
      * @see newVirtualVersion
      */
-    protected open val nextVirtualVersion = Platform.newAtomicInt64(3L.toInt64())
+    protected open val nextVirtualVersion = Platform.newAtomicInt64(Version.now(0L.toInt64(), VERSION).number)
 
     /**
      * Creates a new JVM local unique transaction number, aka virtual version.
