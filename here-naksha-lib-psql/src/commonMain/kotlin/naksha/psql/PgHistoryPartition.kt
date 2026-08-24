@@ -53,9 +53,9 @@ class PgHistoryPartition(
         val NEXT_VERSION = collection.column(NextVersion)
 
         // HISTORY-PARTITION is NOT distribution partitioned.
-        if (partitions.isEmpty()) return """$CREATE_TABLE $quotedName 
+        if (partitions.isEmpty()) return """$CREATE_TABLE $quotedName
 PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
-FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
+FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
 CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn, $NEXT_VERSION) INCLUDE ($FnColumn, $ID);"""
 

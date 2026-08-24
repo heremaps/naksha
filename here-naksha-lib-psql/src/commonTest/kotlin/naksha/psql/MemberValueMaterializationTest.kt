@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.Int64
+import naksha.model.objects.IndexList
 import naksha.model.objects.JsonPath
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
@@ -69,6 +70,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, catalogId =
         val collection = NakshaCollection("member_materialization_test", catalog.id).apply {
             addMember(Member("label", MemberType.STRING, JsonPath("properties", "name")))
             addMember(Member("city", MemberType.STRING, JsonPath("properties", "address", "city")))
+            indices = IndexList()
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -102,6 +104,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, catalogId =
         // Given: a collection with a numeric member on properties.score
         val collection = NakshaCollection("member_typed_materialization_test", catalog.id).apply {
             addMember(Member("score", MemberType.INT64, JsonPath("properties", "score")))
+            indices = IndexList()
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
