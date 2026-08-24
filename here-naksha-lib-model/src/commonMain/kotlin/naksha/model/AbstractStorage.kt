@@ -1,13 +1,27 @@
 package naksha.model
 
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
+import kotlinx.datetime.toLocalDateTime
+import naksha.base.Action
+import naksha.base.Action.Action_C.VERSION
 import naksha.base.AtomicRef
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.base.NakshaException
+import naksha.base.TupleNumber
+import naksha.base.Version
+import naksha.base.toInt64
+import naksha.model.Naksha.NakshaCompanion.catalogNumber
+import naksha.model.Naksha.NakshaCompanion.collectionNumber
+import naksha.model.Naksha.NakshaCompanion.databaseNumber
+import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.objects.NakshaStorage
 import kotlin.reflect.KClass
+import kotlin.time.Clock
 
 /**
  * The base class for all storage implementations.
@@ -83,12 +97,62 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
             if (configRef.get() == null || create==true || upgrade==true) {
                 val _config = storage.proxy(configKlass)
                 this._id = storage.id
-                this._number = Naksha.featureNumber(storage.id)
+                this._number = featureNumber(storage.id)
                 this.hardCap = storage.hardCap
                 initStorage(_config, create, upgrade)
                 this.configRef.set(_config)
                 afterInit()
             }
+        }
+    }
+
+    /**
+     * Creates a new [TupleNumber] for a feature in this storage, in the given catalog and collection.
+     *
+     * You need a version for features belonging together to the same transaction. You may use [newVirtualVersion] for this purpose, but beware that this is only a helper for mocks or storages that do not really support tuple-number, and where the tuple-number is only used internally within the storage.
+     * @param catalogId the `id` of the catalog where the feature is contained.
+     * @param collectionId the `id` of the collection where the feature is contained.
+     * @param featureId the `id` of the feature being stored.
+     * @param version the version, see [Version.virtualVersion].
+     * @param action the action to encode in the [TupleNumber].
+     * @return the new [TupleNumber] for the given feature.
+     * @since 3.0
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     */
+    protected fun newVirtualTupleNumber(catalogId: String, collectionId: String, featureId: String, version: Int64, action: Action): TupleNumber {
+        val v = ((version.toLong() and -4L) or action.longValue).toInt64()
+        return TupleNumber(databaseNumber(id), catalogNumber(catalogId), collectionNumber(collectionId), featureNumber(featureId), v)
+    }
+
+    /**
+     * The atomic that tracks the current version JVM local.
+     *
+     * **This only works on a single JVM and resets when the JVM is restarted. Synchronization and range split must be done by the extending class, if wished.**
+     * @since 3.0
+     * @see newVirtualVersion
+     */
+    protected val nextVirtualVersion = Platform.newAtomicInt64(3L.toInt64())
+
+    /**
+     * Creates a new JVM local unique transaction number, aka virtual version.
+     *
+     * **Warning: This is a helper for virtual storages or mock-ups.**
+     * @return a new JVM local unique transaction version.
+     * @since 3.0
+     * @see nextVirtualVersion
+     */
+    protected fun newVirtualVersion(): Version {
+        while (true) { // more reliable tailrec
+            val now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+            val acquiredVersion = nextVirtualVersion.getAndAdd(4L.toInt64())
+            val version = Version(acquiredVersion)
+            if (version.year != now.year || version.month != now.month.number || version.day != now.day) {
+                val newVersion = Version.auto(now.year, now.month.number, now.day, 0L.toInt64(), VERSION)
+                if (nextVirtualVersion.compareAndSet(acquiredVersion + 4, newVersion.number + 4)) return newVersion
+                // Fail, concurrent increment, repeat.
+                continue
+            }
+            return version
         }
     }
 

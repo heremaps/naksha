@@ -153,9 +153,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         /**
          * Constructs a **manual** version.
          *
-         * The resulting [seq] must have its upper 21 bits (63–43) all zero, which means the effective
-         * value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since
-         * the lower 2 bits are reserved for [action].
+         * The resulting [seq] must have its upper 21 bits (63–43) all zero, which means the effective value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since the lower 2 bits are reserved for [action].
          *
          * @param seq    41-bit sequence value; must be in 0..0x1FF_FFFF_FFFF.
          * @param action the [Action] to encode in the lower 2 bits.

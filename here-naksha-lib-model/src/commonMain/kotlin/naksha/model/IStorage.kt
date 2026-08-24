@@ -41,24 +41,22 @@ interface IStorage : IDictReader {
      * The configuration object with which this storage was initialized.
      *
      * **Warning**: Modification of the returned configuration object will not have any impact on the storage, but it can provide wrong information to other callers of the function, so this should be avoided, apart from that the configuration object is not thread safe!
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if not initialized.
      * @since 3.0
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
     val config: NakshaStorage
 
     /**
      * The storage-id, optionally stored in the storage, must always be the same for the same physical storage.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @since 2.0.8
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
     val id: String
 
     /**
      * The storage-number, managed by environment, optionally stored in the storage, must always be the same for the same physical storage.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @since 3.0
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
     val number: Int64
 
