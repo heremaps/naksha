@@ -4,6 +4,7 @@
 package naksha.psql
 
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.Action
 import naksha.base.AtomicMap
@@ -416,47 +417,52 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @since 3.0.0
      */
     fun newTxn(conn: PgConnection): PgTxn {
-        val QUERY = "SELECT nextval($1) as version, (extract(epoch from transaction_timestamp())*1000)::int8 as time"
-        val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
-        cursor.use {
-            var number: Int64 = cursor["version"]
-            val time: Int64 = cursor["time"]
-            var version = Version(number)
-            val txInstant = Instant.fromEpochMilliseconds(time.toLong())
-            val txDate = txInstant.toLocalDateTime(TimeZone.UTC)
-            if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
-                logger.info("Transaction counter is in wrong day")
-                logger.info("Acquire advisory lock")
-                conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
-                try {
-                    val c2 = conn.execute("SELECT nextval($1) as version", arrayOf(versionSequenceOid)).fetch()
-                    c2.use {
-                        number = c2["version"]
-                        version = Version(number)
+        while (true) {
+            // Note: We read the current _(real)_ time from the server as `time`, not the transaction time, which
+            //       would be the start-time of the transaction.
+            val QUERY = "SELECT nextval($1) as version, (extract(epoch from clock_timestamp())*1000)::int8 as time"
+            val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
+            cursor.use {
+                val postgresClock: Int64 = cursor["time"]
+                val postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
+                val postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
+                var versionNumber: Int64 = cursor["version"]
+                var version = Version(versionNumber)
+                if (version.isBehind(postgresDate.year, postgresDate.month.number, postgresDate.day)) {
+                    logger.info("Transaction counter is in wrong day")
+                    logger.info("Acquire advisory lock")
+                    conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
+                    try {
+                        val c2 = conn.execute("SELECT nextval($1) as version", arrayOf(versionSequenceOid)).fetch()
+                        c2.use {
+                            versionNumber = c2["version"]
+                            version = Version(versionNumber)
+                        }
+                        if (version.year != postgresDate.year || version.month != postgresDate.monthNumber || version.day != postgresDate.dayOfMonth) {
+                            logger.info("Transaction counter is still at wrong day, rollover to next day")
+                            version =
+                                Version.auto(postgresDate.year, postgresDate.monthNumber, postgresDate.dayOfMonth, Int64(0), Action.VERSION)
+                            versionNumber = version.number
+                            conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, versionNumber + 4)).close()
+                        }
+                        logger.info("Release advisory lock")
+                        conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
+                    } catch (e: Throwable) {
+                        logger.error("Fatal exception while holding an advisory lock, terminating connection: {}", e)
+                        // This must not happen, to release the advisory lock, we need to terminate the connection!
+                        conn.terminate()
+                        throw NakshaException(
+                            EXCEPTION,
+                            "Failed to increment 'txn', exception while holding advisory lock, terminating connection"
+                        )
                     }
-                    if (version.year != txDate.year || version.month != txDate.monthNumber || version.day != txDate.dayOfMonth) {
-                        logger.info("Transaction counter is still at wrong day, rollover to next day")
-                        version = Version.auto(txDate.year, txDate.monthNumber, txDate.dayOfMonth, Int64(0), Action.VERSION)
-                        number = version.number
-                        conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, number + 4)).close()
-                    }
-                    logger.info("Release advisory lock")
-                    conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
-                } catch (e: Throwable) {
-                    logger.error("Fatal exception while holding an advisory lock, terminating connection: {}", e)
-                    // This must not happen, to release the advisory lock, we need to terminate the connection!
-                    conn.terminate()
-                    throw NakshaException(
-                        EXCEPTION,
-                        "Failed to increment 'txn', exception while holding advisory lock, terminating connection"
-                    )
                 }
+                // Note: We know, that we only get a new transaction number before we start a transaction.
+                //       Doing a commit here is necessary to avoid that we get a lock to the txn sequence!
+                //       Even while sequences are normally not locked, it can happen under circumstances.
+                conn.commit()
+                return PgTxn(versionNumber, postgresClock, version)
             }
-            // Note: We know, that we only get a new transaction number before we start a transaction.
-            //       Doing a commit here is necessary to avoid that we get a lock to the txn sequence!
-            //       Even while sequences are normally not locked, it can happen under circumstances.
-            conn.commit()
-            return PgTxn(number, time, version)
         }
     }
 

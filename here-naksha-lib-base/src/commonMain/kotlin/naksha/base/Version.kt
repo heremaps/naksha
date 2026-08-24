@@ -415,4 +415,25 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         }
         return s
     }
+
+    /**
+     * Tests if this version lags behind the given `year`, `month`, and `day`. If this is the case and the version was acquired from a dated sequence, the sequence needs a rollover to the given `year`, `month`, and `day`.
+     * @param year the year to test against.
+     * @param month the month to test against.
+     * @param day the day to test against.
+     * @return _true_ if this is a dated version, and it lags behind the given date; _false_ otherwise _(as well when this is a manual version)_.
+     * @since 3.0
+     */
+    fun isBehind(year: Int, month: Int, day: Int): Boolean {
+        if (isManualVersion()) return false
+
+        if (this.year > year) return false
+        if (this.year < year) return true
+
+        if (this.month < month) return true
+        if (this.month > month) return false
+
+        if (this.day < day) return true
+        return false // this.day >= day
+    }
 }

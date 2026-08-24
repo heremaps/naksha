@@ -119,7 +119,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @since 3.0
      * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    protected fun newVirtualTupleNumber(catalogId: String, collectionId: String, featureId: String, version: Int64, action: Action): TupleNumber {
+    protected open fun newVirtualTupleNumber(catalogId: String, collectionId: String, featureId: String, version: Int64, action: Action): TupleNumber {
         val v = ((version.toLong() and -4L) or action.longValue).toInt64()
         return TupleNumber(databaseNumber(id), catalogNumber(catalogId), collectionNumber(collectionId), featureNumber(featureId), v)
     }
@@ -131,7 +131,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @since 3.0
      * @see newVirtualVersion
      */
-    protected val nextVirtualVersion = Platform.newAtomicInt64(3L.toInt64())
+    protected open val nextVirtualVersion = Platform.newAtomicInt64(3L.toInt64())
 
     /**
      * Creates a new JVM local unique transaction number, aka virtual version.
@@ -141,14 +141,15 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @since 3.0
      * @see nextVirtualVersion
      */
-    protected fun newVirtualVersion(): Version {
-        while (true) { // more reliable tailrec
+    protected open fun newVirtualVersion(): Version {
+        // More reliable tailrec.
+        while (true) {
+            val version = Version(nextVirtualVersion.getAndAdd(4L.toInt64()) )
+            // getAndAdd uses a memory-fence, therefore `now` is guaranteed to be read after the version!
             val now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-            val acquiredVersion = nextVirtualVersion.getAndAdd(4L.toInt64())
-            val version = Version(acquiredVersion)
-            if (version.year != now.year || version.month != now.month.number || version.day != now.day) {
+            if (version.isBehind(now.year, now.month.number, now.day)) {
                 val newVersion = Version.auto(now.year, now.month.number, now.day, 0L.toInt64(), VERSION)
-                if (nextVirtualVersion.compareAndSet(acquiredVersion + 4, newVersion.number + 4)) return newVersion
+                if (nextVirtualVersion.compareAndSet(version.number + 4, newVersion.number + 4)) return newVersion
                 // Fail, concurrent increment, repeat.
                 continue
             }
