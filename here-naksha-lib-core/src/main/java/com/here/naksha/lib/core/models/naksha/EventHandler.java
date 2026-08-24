@@ -131,8 +131,8 @@ public class EventHandler extends Plugin<IEventHandler, EventHandler> {
       } else {
         ClassLoader extClassLoader = naksha.getClassLoader(this.extensionId);
         if (extClassLoader == null) {
-          throw new Exception("Extension '" + this.extensionId + "' is not loaded yet for event handler '"
-              + getId() + "' (className=" + getClassName() + ").");
+          throw new Exception(
+              "Extension " + this.extensionId + " is not loaded yet for event handler " + getId());
         }
         //noinspection unchecked
         constructor = (Fe3<IEventHandler, INaksha, EventHandler, EventTarget<?>>) getEventHandlerConstructor(
