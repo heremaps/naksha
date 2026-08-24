@@ -3,7 +3,7 @@ package naksha.base
 import org.slf4j.LoggerFactory
 
 class JvmLogger : PlatformLogger {
-    private val NAKSHA_DEBUG = "true".equals(System.getProperty("NAKSHA_DEBUG"), ignoreCase = true)
+    private val NAKSHA_DEBUG = "true".equals(System.getenv("NAKSHA_DEBUG"), ignoreCase = true)
     private val logger = LoggerFactory.getLogger("naksha.base")
     override fun debug(msg: String, vararg args: Any?) {
         if (NAKSHA_DEBUG) info(msg, *args)

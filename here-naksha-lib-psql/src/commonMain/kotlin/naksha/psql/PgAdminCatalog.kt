@@ -423,25 +423,35 @@ SELECT basics.*, procs.* FROM basics, procs;
             val QUERY = "SELECT nextval($1) as version, (extract(epoch from clock_timestamp())*1000)::int8 as time"
             val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
             cursor.use {
-                val postgresClock: Int64 = cursor["time"]
-                val postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
-                val postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
+                var postgresClock: Int64 = cursor["time"]
+                var postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
+                var postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
+                var year = postgresDate.year
+                var month = postgresDate.month.number
+                var day = postgresDate.day
                 var versionNumber: Int64 = cursor["version"]
                 var version = Version(versionNumber)
-                if (version.isBehind(postgresDate.year, postgresDate.month.number, postgresDate.day)) {
-                    logger.info("Transaction counter is in wrong day")
-                    logger.info("Acquire advisory lock")
+                if (version.isBehind(year, month, day)) {
+                    logger.info("Transaction sequence ({}/{}/{}-{}) lags behind real date ({}/{}/{}), acquire advisory lock",
+                        version.month, version.day, version.year, version.seq, month, day, year)
                     conn.execute("SELECT pg_advisory_lock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
                     try {
-                        val c2 = conn.execute("SELECT nextval($1) as version", arrayOf(versionSequenceOid)).fetch()
+                        logger.info("Holding advisory lock now")
+                        val c2 = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
                         c2.use {
-                            versionNumber = c2["version"]
+                            postgresClock = cursor["time"]
+                            postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
+                            postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
+                            year = postgresDate.year
+                            month = postgresDate.month.number
+                            day = postgresDate.day
+                            versionNumber = cursor["version"]
                             version = Version(versionNumber)
                         }
-                        if (version.year != postgresDate.year || version.month != postgresDate.monthNumber || version.day != postgresDate.dayOfMonth) {
-                            logger.info("Transaction counter is still at wrong day, rollover to next day")
-                            version =
-                                Version.auto(postgresDate.year, postgresDate.monthNumber, postgresDate.dayOfMonth, Int64(0), Action.VERSION)
+                        if (version.isBehind(year, month, day)) {
+                            logger.info("Transaction sequence ({}/{}/{}-{}) still lags behind real date ({}/{}/{}), acquire advisory lock, rollover to next day as we now hold the advisory lock",
+                                version.month, version.day, version.year, version.seq, month, day, year)
+                            version = Version.auto(year, month, day, Int64(0), Action.VERSION)
                             versionNumber = version.number
                             conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, versionNumber + 4)).close()
                         }
@@ -457,7 +467,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                         )
                     }
                 }
-                logger.debug("Transaction version: {} - {}.{}.{}", version, version.year, version.month, version.day)
+                logger.debug("Final transaction version is: {} - {}/{}/{}-{}", version, version.month, version.day, version.year, version.seq)
                 // Note: We know, that we only get a new transaction number before we start a transaction.
                 //       Doing a commit here is necessary to avoid that we get a lock to the txn sequence!
                 //       Even while sequences are normally not locked, it can happen under circumstances.
