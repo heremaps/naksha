@@ -455,7 +455,9 @@ SELECT basics.*, procs.* FROM basics, procs;
                                 version.month, version.day, version.year, version.seq, month, day, year)
                             version = Version.auto(year, month, day, Int64(0), Action.VERSION)
                             versionNumber = version.number
-                            conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, versionNumber + 4)).close()
+                            conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, versionNumber)).close()
+                            // SELECT setval($1, $2); — Next nextval will return $2 + Increment, currval will return $2, no need to add 4!
+                            // See: https://www.postgresql.org/docs/current/functions-sequence.html
                         }
                         logger.info("Release advisory lock")
                         conn.execute("SELECT pg_advisory_unlock($1)", arrayOf(PgUtil.TXN_LOCK_ID)).close()
