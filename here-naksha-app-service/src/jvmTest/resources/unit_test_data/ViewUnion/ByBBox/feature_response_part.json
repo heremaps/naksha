@@ -5,10 +5,7 @@
       "id": "1234",
       "type": "Feature",
       "properties": {
-        "speedLimit": "10",
-        "@ns:com:here:xyz": {
-          "uuid": "${uuid1234}"
-        }
+        "speedLimit": "10"
       },
       "geometry": {
         "type":"Point",
@@ -19,10 +16,7 @@
       "id": "5678",
       "type": "Feature",
       "properties": {
-        "speedLimit": "20",
-        "@ns:com:here:xyz": {
-          "uuid": "${uuid5678}"
-        }
+        "speedLimit": "20"
       },
       "geometry": {
         "type":"Point",
