@@ -18,11 +18,11 @@ PGPASSWORD='XprclPDUTMsWpHvvtusuVCNDWsJZPVTP' \
 NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
-CICD=true \
+NAKSHA_SUPPRESS_PERF_TEST=true \
 ./gradlew jvmTest
 ```
 
-The environment variable `CICD=true` will disable performance tests, remove it if full testing wanted.
+The environment variable `NAKSHA_SUPPRESS_PERF_TEST=true` will disable performance tests, remove it if full testing wanted.
 
 ## Run a specific test
 ```bash
@@ -31,7 +31,7 @@ PGPASSWORD='XprclPDUTMsWpHvvtusuVCNDWsJZPVTP' \
 NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
-CICD=true \
+NAKSHA_SUPPRESS_PERF_TEST=true \
 ./gradlew :here-naksha-lib-psql:jvmTest
 ```
 
