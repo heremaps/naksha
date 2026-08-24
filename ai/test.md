@@ -19,6 +19,7 @@ NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgre
 NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_SUPPRESS_PERF_TEST=true \
+NAKSHA_DEBUG=true \
 ./gradlew jvmTest
 ```
 
@@ -32,6 +33,7 @@ NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgre
 NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=$PGPASSWORD&ssl=false" \
 NAKSHA_SUPPRESS_PERF_TEST=true \
+NAKSHA_DEBUG=true \
 ./gradlew :here-naksha-lib-psql:jvmTest
 ```
 
