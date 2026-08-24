@@ -19,7 +19,7 @@ import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
 import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.StandardIndices
+import naksha.model.objects.XyzIndices
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
@@ -78,6 +78,14 @@ open class PgCollection internal constructor(
      */
     @JvmField
     val shift: Int = nakshaCollection.shift
+
+    /**
+     * Whether the collection is in backward-compatibility mode: the client declared no [members][NakshaCollection.members]
+     * (the raw property is `null`, before [NakshaCollection.useMembers] backfills the defaults). In that mode a `null`
+     * [indices][NakshaCollection.indices] list falls back to the standard [XyzIndices.ALL]. Captured up-front, because
+     * building [columns] materializes the default members and thereby clears the `null` state.
+     */
+    private val defaultXyz: Boolean = nakshaCollection.members == null
 
     /**
      * Returns the partition index of the [PgHistoryPartition] in which features can be found, that are modified in the given version.
@@ -178,11 +186,13 @@ open class PgCollection internal constructor(
     }
 
     private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
-        val indices = IndexList(StandardIndices.MANDATORY)
+        val indices = IndexList()
         val declared: IndexList? = nakshaCollection.indices
-        val requested: List<Index> =
-            if (declared != null) List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
-            else emptyList()
+        val requested: List<Index> = when {
+            declared != null -> List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
+            defaultXyz -> XyzIndices.ALL
+            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Collection '${nakshaCollection.id}' declares custom members but no indices; declare an index list (an empty list is allowed)")
+        }
         for (requestedIndex in requested) {
             if (!indices.contains(requestedIndex)) indices.add(requestedIndex)
         }

@@ -8,6 +8,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.objects.Index
+import naksha.model.objects.IndexList
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
@@ -95,7 +96,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun collectionShouldHaveIndices() {
-        val collection = NakshaCollection("check_db_indices_test", catalog.id).withXyzIndices()
+        val collection = NakshaCollection("check_db_indices_test", catalog.id)
         executeWrite(
             WriteRequest().add(
                 Write().createCollection(collection)
@@ -379,12 +380,13 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     // -------------------------------------------------------------------------
 
     /**
-     * When [NakshaCollection.members] is **null** (the default / undefined), the collection must be
-     * created with all default columns but **no** default optional indices — lib-psql injects none;
-     * applications declare the indices they need (e.g. via [NakshaCollection.withXyzIndices]).
+     * When [NakshaCollection.members] is **null** (the default / undefined), the collection is in
+     * backward-compatible mode: it must be created with all default XYZ columns **and** the default
+     * XYZ indices — no members or indices declared means the full default schema. The mandatory
+     * (intrinsic) indices are provided by the storage and are not part of this optional set.
      */
     @Test
-    fun membersUndefined_shouldCreateAllColumnsAndNoDefaultIndices() {
+    fun membersUndefined_shouldCreateAllColumnsAndDefaultIndices() {
         val collection = NakshaCollection("members_null_test", catalog.id)
         // members are null by default — do NOT set them, then they will automatically become XyzMember.ALL!
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
@@ -403,24 +405,22 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             )
             assertTrue(XyzMembers.ALL.all { XyzMembers.XyzTn eq it || it.name in columns })
 
-            val indexNames = mutableListOf<String>()
-            conn.execute(
-                "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(catalog.id, collection.id)
-            ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
-            assertNoOptionalIndices(indexNames, collection.id)
+            checkIndicesCreatedForTable(collection.id)
         }
     }
 
     /**
-     * When [NakshaCollection.members] is explicitly an **empty list**, the collection must be
-     * created with all standard head columns (full schema) and only the intrinsic indices
-     * (`$c_pkey`, `$c_id`, `$i_version`) — no default optional indices.
+     * When [NakshaCollection.members] is explicitly an **empty list** together with an explicitly
+     * empty [NakshaCollection.indices] list, the collection must be created with all standard head
+     * columns (full schema) and only the intrinsic indices (`$c_pkey`, `$c_id`, `$i_version`) — no
+     * default optional indices. (An empty members list opts out of the XYZ backward-compat default,
+     * so an explicit index list is required; here it is empty.)
      */
     @Test
     fun membersEmpty_shouldCreateOnlyMandatoryColumnsAndNoDefaultIndices() {
         val collection = NakshaCollection("members_empty_test", catalog.id).apply {
             members = MemberList() // explicitly empty
+            indices = IndexList()
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -553,6 +553,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             addMember(Member("h_f32",   MemberType.FLOAT32))
             addMember(Member("i_json",  MemberType.TAG_MAP))
             addMember(Member("j_tag_list", MemberType.TAG_LIST))
+            indices = IndexList()
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -590,7 +591,8 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     /** Asserts no optional/default indices (XYZ + pn/pt/gv) were auto-created; only declared ones are materialized. */
     private fun assertNoOptionalIndices(indexNames: List<String>, collectionId: String) {
-        for (idx in XyzIndices.ALL + StandardIndices.SPECIAL) {
+        val standardSpecial = listOf(StandardIndices.PublishNumber, StandardIndices.PublishTime, StandardIndices.GlobalVersion)
+        for (idx in XyzIndices.ALL + standardSpecial) {
             val forms = listOf(idx.name, "$collectionId\$i_${idx.name}", "$collectionId\$ci_${idx.name}")
             assertTrue(forms.none { it in indexNames }, "Unexpected optional index '${idx.name}', found: $indexNames")
         }
