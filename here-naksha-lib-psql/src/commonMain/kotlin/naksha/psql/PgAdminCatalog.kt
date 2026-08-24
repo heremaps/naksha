@@ -420,9 +420,10 @@ SELECT basics.*, procs.* FROM basics, procs;
         while (true) {
             // Note: We read the current _(real)_ time from the server as `time`, not the transaction time, which
             //       would be the start-time of the transaction.
-            val QUERY = "SELECT nextval($1) as version, (extract(epoch from clock_timestamp())*1000)::int8 as time"
+            val QUERY = "SELECT nextval($1) as version, (extract(epoch from clock_timestamp())*1000)::int8 as time, (extract(epoch from transaction_timestamp())*1000)::int8 as txn"
             val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
             cursor.use {
+                var txn: Int64 = cursor["txn"]
                 var postgresClock: Int64 = cursor["time"]
                 var postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
                 var postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
@@ -439,6 +440,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                         logger.info("Holding advisory lock now")
                         val c2 = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
                         c2.use {
+                            txn = cursor["txn"]
                             postgresClock = cursor["time"]
                             postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
                             postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
@@ -449,7 +451,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                             version = Version(versionNumber)
                         }
                         if (version.isBehind(year, month, day)) {
-                            logger.info("Transaction sequence ({}/{}/{}-{}) still lags behind real date ({}/{}/{}), acquire advisory lock, rollover to next day as we now hold the advisory lock",
+                            logger.info("Transaction sequence ({}/{}/{}-{}) still lags behind real date ({}/{}/{}), rollover to next day as we now hold the advisory lock",
                                 version.month, version.day, version.year, version.seq, month, day, year)
                             version = Version.auto(year, month, day, Int64(0), Action.VERSION)
                             versionNumber = version.number
@@ -472,7 +474,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                 //       Doing a commit here is necessary to avoid that we get a lock to the txn sequence!
                 //       Even while sequences are normally not locked, it can happen under circumstances.
                 conn.commit()
-                return PgTxn(versionNumber, postgresClock, version)
+                return PgTxn(versionNumber, txn, version)
             }
         }
     }
