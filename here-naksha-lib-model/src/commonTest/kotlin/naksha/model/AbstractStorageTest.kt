@@ -15,7 +15,9 @@ import kotlin.reflect.KClass
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 import kotlin.time.Clock
 
 class AbstractStorageTest {
@@ -92,6 +94,34 @@ class AbstractStorageTest {
         }
 
         assertEquals(UNINITIALIZED, exception.error.code)
+    }
+
+    @Test
+    fun newVirtualVersion() {
+        val storage = UnmodifiedTestStorage()
+        val v1 = storage.newVersion()
+        assertNotNull( v1 )
+        assertTrue(v1.isDated(), "Expected a dated version, but got manual version")
+
+        val v2 = storage.newVersion()
+        assertNotNull( v2 )
+        assertTrue(v2.isDated(), "Expected a dated version, but got manual version")
+
+        assertNotEquals(v1, v2)
+        assertEquals(v1.year, v2.year)
+        assertEquals(v1.month, v2.month)
+        assertEquals(v1.day, v2.day)
+        assertEquals(v1.seq, v2.seq - 1)
+    }
+
+    private class UnmodifiedTestStorage : AbstractStorage<NakshaStorage>() {
+        override val configKlass: KClass<NakshaStorage> = NakshaStorage::class
+        fun newVersion(): Version = super.newVirtualVersion()
+        override fun initStorage(config: NakshaStorage, create: Boolean?, upgrade: Boolean?) = Unit
+        override fun afterInit() = Unit
+        override fun shutdownStorage(dropCache: Boolean) = Unit
+        override fun newWriteSession(options: SessionOptions?): IWriteSession = error("Not used by this test")
+        override fun newReadSession(options: SessionOptions?): IReadSession = error("Not used by this test")
     }
 
     private class TestStorage : AbstractStorage<NakshaStorage>() {
