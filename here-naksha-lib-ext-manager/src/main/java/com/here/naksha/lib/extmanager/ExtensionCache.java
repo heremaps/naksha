@@ -18,8 +18,6 @@
  */
 package com.here.naksha.lib.extmanager;
 
-import static com.here.naksha.lib.core.NakshaContext.currentContext;
-
 import com.here.naksha.lib.core.IExtensionInit;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.SimpleTask;
@@ -70,8 +68,7 @@ public class ExtensionCache {
     List<Future<KVPair<Extension, File>>> futures = extensionConfig.getExtensions().stream()
         .filter(extension -> !this.isLoaderMappingExist(extension))
         .map(extension -> {
-          SimpleTask<KVPair<Extension, File>> task =
-              new SimpleTask<>(currentContext().withSuperUser(true));
+          SimpleTask<KVPair<Extension, File>> task = new SimpleTask<>();
           return task.start(() -> downloadJar(extension));
         })
         .toList();

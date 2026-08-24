@@ -119,11 +119,6 @@ public class NakshaHub implements INaksha {
       throw new RuntimeException("Server configuration not found! Neither in Admin storage nor a default file.");
     }
     this.nakshaHubConfig = finalCfg;
-    if (this.nakshaHubConfig.extensionConfigParams != null) {
-      this.extensionManager = ExtensionManager.getInstance(this);
-    } else {
-      logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
-    }
     // Setting Concurrency Thresholds
     logger.info("Value of maxParallelRequestsPerCPU is {}", nakshaHubConfig.maxParallelRequestsPerCPU);
     logger.info("Value of maxPctParallelRequestsPerActor is {}", nakshaHubConfig.maxPctParallelRequestsPerActor);
@@ -131,6 +126,11 @@ public class NakshaHub implements INaksha {
         nakshaHubConfig.maxParallelRequestsPerCPU, nakshaHubConfig.maxPctParallelRequestsPerActor);
     logger.info("Instance level limit is {}", requestLimitManager.getInstanceLevelLimit());
     AbstractTask.setConcurrencyLimitManager(requestLimitManager);
+    if (this.nakshaHubConfig.extensionConfigParams != null) {
+      this.extensionManager = ExtensionManager.getInstance(this);
+    } else {
+      logger.warn("ExtensionManager is not initialised due to extensionConfigParams not found.");
+    }
 
     logger.info("NakshaHub initialization done!");
   }
