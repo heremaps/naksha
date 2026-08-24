@@ -56,9 +56,9 @@ class AbstractStorageTest {
             listOf(nextDay, nextDay, previousDay),
             afterFirstAcquire = { competingVersion = storage.newVersion() },
         )
-        assertNotNull(competingVersion)
         val delayedVersion = storage.newVersion()
 
+        assertNotNull(competingVersion)
         assertEquals(nextDayVersion.number, competingVersion.number)
         assertEquals(nextDayVersion.number + 4, delayedVersion.number)
         assertEquals(delayedVersion.number + 4, storage.peekNextVirtualVersion())
