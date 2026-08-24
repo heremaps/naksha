@@ -457,6 +457,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                         )
                     }
                 }
+                logger.debug("Transaction version: {} - {}.{}.{}", version, version.year, version.month, version.day)
                 // Note: We know, that we only get a new transaction number before we start a transaction.
                 //       Doing a commit here is necessary to avoid that we get a lock to the txn sequence!
                 //       Even while sequences are normally not locked, it can happen under circumstances.
