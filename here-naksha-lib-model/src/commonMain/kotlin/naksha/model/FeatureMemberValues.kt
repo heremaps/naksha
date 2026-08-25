@@ -12,7 +12,6 @@ import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.TupleNumber
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
-import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaFeature
