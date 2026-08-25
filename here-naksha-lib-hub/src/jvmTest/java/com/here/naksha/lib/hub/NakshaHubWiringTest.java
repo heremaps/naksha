@@ -20,12 +20,15 @@ package com.here.naksha.lib.hub;
 
 import static com.here.naksha.lib.common.TestFileLoader.parseJsonFileOrFail;
 import static com.here.naksha.lib.common.TestNakshaContext.newTestNakshaContext;
+import static com.here.naksha.lib.core.HubInternalIdentifiers.ALL_HUB_INTERNAL_COLLECTIONS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.hub.mock.MockResult.mockResultWithFeature;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.argThat;
@@ -55,6 +58,8 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.SessionOptions;
+import naksha.model.objects.IndexList;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
@@ -101,6 +106,22 @@ class NakshaHubWiringTest extends AbstractTest {
     when(adminStorage.useWriteSession(any(), any())).thenCallRealMethod();
     doCallRealMethod().when(adminStorage).runInReadSession(any(), any());
     doCallRealMethod().when(adminStorage).runInWriteSession(any(), any());
+  }
+
+  @Test
+  @Order(0)
+  void adminCollectionsUseSlimIndices() {
+    final String adminMapId = "admin_map";
+    final WriteRequest request = NakshaHub.upsertAdminCollectionsRequest(adminMapId);
+
+    assertEquals(ALL_HUB_INTERNAL_COLLECTIONS.size(), request.getWrites().size());
+    for (int i = 0; i < request.getWrites().size(); i++) {
+      final NakshaCollection collection =
+          assertInstanceOf(NakshaCollection.class, request.getWrites().get(i).getFeature());
+      assertEquals(ALL_HUB_INTERNAL_COLLECTIONS.get(i), collection.getId());
+      assertEquals(adminMapId, collection.getCatalogId());
+      assertSlimIndices(collection);
+    }
   }
 
   @Test
@@ -168,6 +189,14 @@ class NakshaHubWiringTest extends AbstractTest {
     // Verify: admin storage writer finally gets the write request
     verify(adminStorageReader, times(1)).execute(reqCaptor.capture());
     assertTrue(reqCaptor.getValue() instanceof ReadFeatures);
+  }
+
+  private static void assertSlimIndices(NakshaCollection collection) {
+    final IndexList indices = collection.getIndices();
+    assertNotNull(indices);
+    assertEquals(2, indices.size());
+    assertEquals("tags", indices.get(0).getName());
+    assertEquals("geo", indices.get(1).getName());
   }
 
   @Test
