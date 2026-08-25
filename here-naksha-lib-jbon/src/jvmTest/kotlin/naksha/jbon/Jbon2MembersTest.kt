@@ -111,44 +111,45 @@ class Jbon2MembersTest {
      * at index 0 — exactly as it would be read from a PostgreSQL `bytea` column.
      * After decoding, `decoded["geometry"]` must be an [SpGeometry] with the original coordinates.
      */
-    @Test
-    fun testGeometryMembersRefFromByteArray() {
-        val lon = 13.4050
-        val lat = 52.5200
-
-        // Produce the TWKB bytes that would be stored in the PostgreSQL geo column
-        val twkbBytes = GeoUtil.toTWKB(SpPoint(lon, lat))!!
-        assertTrue(twkbBytes.isNotEmpty(), "TWKB bytes must not be empty")
-
-        // Build feature — geometry value doesn't matter, it will be short-circuited
-        val feature = AnyObject()
-        feature["id"] = "berlin"
-        feature["geometry"] = SpPoint(0.0, 0.0)  // placeholder; intercepted below
-
-        // Encode: replace "geometry" value with a reference to members slot 0
-        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
-            if (pathEnd > 0 && path[pathEnd - 1] == "geometry") 0 else -1
-        })
-        @Suppress("UNCHECKED_CAST")
-        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
-
-        // Members book: slot 0 → raw TWKB ByteArray (simulating PostgreSQL bytea column)
-        val membersDict = ListDict(listOf(twkbBytes))
-
-        val dec = JbDecoder2(membersDict = membersDict)
-        dec.mapBytes(tupleBytes)
-        val decoded = dec.toAnyObject()
-
-        val geom = decoded["geometry"]
-        assertNotNull(geom, "geometry must be present in decoded feature")
-        assertTrue(geom is SpGeometry,
-            "geometry from ByteArray members-ref must decode as SpGeometry, was: ${geom!!::class}")
-
-        val decodedPoint = geom as SpPoint
-        val coords = decodedPoint.getCoordinates()
-        assertEquals(lon, coords.getLongitude(), 1e-5, "decoded longitude must match")
-        assertEquals(lat, coords.getLatitude(),  1e-5, "decoded latitude must match")
-    }
+    // TODO add test elsewhere to reflect the change that memberbooks now hold SpGeometry, JbDecoder2 no longer converts from TWKB.
+//    @Test
+//    fun testGeometryMembersRefFromByteArray() {
+//        val lon = 13.4050
+//        val lat = 52.5200
+//
+//        // Produce the TWKB bytes that would be stored in the PostgreSQL geo column
+//        val twkbBytes = GeoUtil.toTWKB(SpPoint(lon, lat))!!
+//        assertTrue(twkbBytes.isNotEmpty(), "TWKB bytes must not be empty")
+//
+//        // Build feature — geometry value doesn't matter, it will be short-circuited
+//        val feature = AnyObject()
+//        feature["id"] = "berlin"
+//        feature["geometry"] = SpPoint(0.0, 0.0)  // placeholder; intercepted below
+//
+//        // Encode: replace "geometry" value with a reference to members slot 0
+//        val enc = JbEncoder2().withMemberEncoder(IMemberEncoder { path, pathEnd, _ ->
+//            if (pathEnd > 0 && path[pathEnd - 1] == "geometry") 0 else -1
+//        })
+//        @Suppress("UNCHECKED_CAST")
+//        val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
+//
+//        // Members book: slot 0 → raw TWKB ByteArray (simulating PostgreSQL bytea column)
+//        val membersDict = ListDict(listOf(twkbBytes))
+//
+//        val dec = JbDecoder2(membersDict = membersDict)
+//        dec.mapBytes(tupleBytes)
+//        val decoded = dec.toAnyObject()
+//
+//        val geom = decoded["geometry"]
+//        assertNotNull(geom, "geometry must be present in decoded feature")
+//        assertTrue(geom is SpGeometry,
+//            "geometry from ByteArray members-ref must decode as SpGeometry, was: ${geom!!::class}")
+//
+//        val decodedPoint = geom as SpPoint
+//        val coords = decodedPoint.getCoordinates()
+//        assertEquals(lon, coords.getLongitude(), 1e-5, "decoded longitude must match")
+//        assertEquals(lat, coords.getLatitude(),  1e-5, "decoded latitude must match")
+//    }
 
     // -----------------------------------------------------------------------
     // Test 3: string value via members-ref

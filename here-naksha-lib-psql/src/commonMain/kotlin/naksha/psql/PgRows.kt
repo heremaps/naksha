@@ -11,6 +11,8 @@ import naksha.base.NakshaException
 import naksha.base.TupleNumber
 import naksha.model.objects.MemberType
 import naksha.base.Version
+import naksha.geo.GeoUtil
+import naksha.model.objects.StandardMembers
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
@@ -289,7 +291,11 @@ internal class PgRows {
                 }
                 else -> {
                     val raw = getColumn(name)?.values?.get(row)
-                    val value = if (member.dataType == MemberType.TAG_LIST) toAnyListOrNull(raw) else raw
+                    val value = when (member.dataType) {
+                        MemberType.TAG_LIST -> toAnyListOrNull(raw)
+                        MemberType.SPATIAL -> GeoUtil.fromTWKB(raw as? ByteArray)
+                        else -> raw
+                    }
                     membersBook.put(name, value)
                 }
             }
@@ -315,7 +321,7 @@ internal class PgRows {
         val column = getColumn(columnName)
         if (column != null) {
             setMinRows(row)
-            column.values[row] = value
+            column.values[row] = if (MemberType.SPATIAL == column.pgColumn.memberType) GeoUtil.toTWKB(value as SpGeometry?) else value
             return true
         }
         return false
@@ -329,7 +335,8 @@ internal class PgRows {
             val memberName = membersBook.getNameAt(i) ?: continue
             val column = getColumn(memberName) ?: continue
             val value = membersBook[memberName]
-            column.values[row] = value
+            // Convert any geometry column to TWKB, because the geometry is a bytea in Postgres, but a SpGeometry in the members-book.
+            column.values[row] = if (MemberType.SPATIAL == column.pgColumn.memberType) GeoUtil.toTWKB(value as SpGeometry?) else value
         }
         // The members-book keeps the tuple-number as a single `_tn` entry; the table splits it into the
         // `_fn` and `_version` columns, so populate those from the tuple-number.
