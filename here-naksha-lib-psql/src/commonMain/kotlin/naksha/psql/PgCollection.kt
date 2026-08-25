@@ -105,9 +105,7 @@ open class PgCollection internal constructor(
      */
     private fun fromMember(member: Member, index: Int): PgColumn {
         val memberType = member.dataType
-        if ((Tn.name == member.name)
-            || (TUPLE_NUMBER == memberType)
-            ) throw NakshaException(INTERNAL_ERROR, "TUPLE_NUMBER member type can't be converted using PgCollection.fromMember()")
+        if (TUPLE_NUMBER == memberType) throw NakshaException(INTERNAL_ERROR, "TUPLE_NUMBER member type can't be converted using PgCollection.fromMember()")
         val memberName = member.name
         // These mandatory members get special storage handling.
         when (memberName) {
