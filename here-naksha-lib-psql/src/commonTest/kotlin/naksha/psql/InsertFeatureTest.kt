@@ -13,6 +13,11 @@ import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatF
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
+import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzId
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
+import naksha.model.request.ops.Equals
 import kotlin.test.*
 
 class InsertFeatureTest : PgTestBase() {
@@ -136,6 +141,18 @@ class InsertFeatureTest : PgTestBase() {
                     }
                     .hasTags(TagList("wicked"))
             }
+
+        executeRead(ReadFeatures().apply {
+            catalogId = collection.catalogId
+            collectionId = collection.id
+            queryMembers = Equals(XyzId, "$featureNumber")
+        }).apply {
+            assertEquals(1, features.size)
+            val f = assertNotNull(features[0])
+            assertEquals("$featureNumber", f.id)
+            val tn = assertNotNull( XyzTn.readTupleNumber(f) )
+            assertEquals(featureNumber, tn.featureNumber.toLong())
+        }
     }
 
     @Test

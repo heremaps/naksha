@@ -35,15 +35,25 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
      */
     fun build(): PgQueryWhereClause? {
         var op: Op? = request.queryMembers
-        if (op == null) op = QueryConverter.convert(request.query)
-        // Only read everything when there is no filter at all — featureIds/guids apply even when op is null.
-        if (op == null && request.featureIds.isEmpty() && request.guids.isEmpty()) return null
-        if (op != null) applyOp(op)
-        if (request.featureIds.isNotEmpty()) { // TODO backward compatibility for feature IDs read requests, to be removed
-            whereFeatureId()
-        }
-        if (request.guids.isNotEmpty()) { // TODO backward compatibility for GUIDs read requests, remove if nowhere else is using it
-            whereGuids()
+        if (op == null) {
+            // Note: ReadFeatures clearly states, that `queryMembers` always wins, so we only recognize if op is null!
+            op = QueryConverter.convert(request.query)
+            // Only read everything when there is no filter at all — featureIds/guids apply even when op is null.
+            if (op == null && request.featureIds.isEmpty() && request.guids.isEmpty()) return null
+            if (request.featureIds.isNotEmpty()) { // TODO backward compatibility for feature IDs read requests, to be removed
+                whereFeatureId()
+            }
+            if (request.guids.isNotEmpty()) { // TODO backward compatibility for GUIDs read requests, remove if nowhere else is using it
+                whereGuids()
+            }
+        } else {
+            if (request.query.isNotEmpty())
+                throw illegalArg("Old 'query' option must not be combined with new 'queryMember'")
+            if (request.featureIds.isNotEmpty())
+                throw illegalArg("Old 'featureIds' option must not be combined with new 'queryMember'")
+            if (request.guids.isNotEmpty())
+                throw illegalArg("Old 'guids' option must not be combined with new 'queryMember'")
+            applyOp(op)
         }
         return PgQueryWhereClause(collection, where.toString(), argValues, argTypes)
     }
@@ -169,11 +179,11 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             }
             is TagMapHasAnyOf -> {
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb").append(" ??| ").append(placeholderForArg(op.tagKeys, PgType.STRING_ARRAY)).append(" ")
+                where.append(at).append("::jsonb").append(" ??| ").append(placeholderForArg(op.tagKeys)).append(" ")
             }
             is TagMapHasAllOf -> {
                 if (negate) where.append("NOT ")
-                where.append(at).append("::jsonb").append(" ??& ").append(placeholderForArg(op.tagKeys, PgType.STRING_ARRAY)).append(" ")
+                where.append(at).append("::jsonb").append(" ??& ").append(placeholderForArg(op.tagKeys)).append(" ")
             }
             is TagIsNull -> {
                 // ( foo::jsonb ? $1 AND ((foo::jsonb)->>$1) IS [NOT ]NULL)
@@ -188,7 +198,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 = $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
+                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
                     .append("=").append(placeholderForArg(value, pgType))
             }
             is TagGt -> {
@@ -197,7 +207,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 > $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
+                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
                     .append(">").append(placeholderForArg(value, pgType))
             }
             is TagGte -> {
@@ -206,7 +216,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 >= $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
+                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
                     .append(">=").append(placeholderForArg(value, pgType))
             }
             is TagLt -> {
@@ -215,7 +225,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 < $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
+                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
                     .append("<").append(placeholderForArg(value, pgType))
             }
             is TagLte -> {
@@ -224,15 +234,17 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 if (negate) where.append("NOT ")
                 // [NOT ]((foo::jsonb)->>$1)::int8 <= $2
                 where.append("((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(pgType)
+                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
                     .append("<=").append(placeholderForArg(value, pgType))
             }
             is TagStartsWith -> {
+                val pgType = PgType.ofValue(op.value) ?: throw illegalArg("The given value is no valid argument for ${op.op}}: ${op.value}")
+                val value = pgType.convertValue(op.value)
                 // [NOT ]starts_with(((foo::jsonb)->>$1), $2)
                 if (negate) where.append("NOT ")
                 where.append("starts_with(((").append(at).append("::jsonb)")
-                    .append("->>").append(placeholderForArg(op.key)).append(")::").append(PgType.STRING)
-                    .append(", ").append(placeholderForArg(op.value)).append(") ")
+                    .append("->>").append(placeholderForArg(op.key)).append("::").append(pgType).append(")")
+                    .append(", ").append(placeholderForArg(value, pgType)).append(") ")
             }
             is TagListContains -> {
                 // A tag list is stored as text[]; single-element membership: <tag> = ANY(tags) does not use GIN; tags @> ARRAY[<tags>] does use GIN
@@ -370,7 +382,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         }
     }
 
-        private fun whereFeatureId() {
+    private fun whereFeatureId() {
         // Partition into numeric IDs (fn >= 0, id stored as NULL in DB) and named IDs (fn < 0, id NOT NULL).
         val reqIds: StringList = request.featureIds
         val featureNumbers: MutableList<Int64> = mutableListOf()

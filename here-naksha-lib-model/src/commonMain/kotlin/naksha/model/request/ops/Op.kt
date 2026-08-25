@@ -15,6 +15,32 @@ import kotlin.jvm.JvmStatic
 /**
  * A member operation.
  * @since 3.0
+ * @see And
+ * @see Equals
+ * @see Gt
+ * @see Gte
+ * @see Intersects
+ * @see IsAnyOf
+ * @see IsFalse
+ * @see IsNull
+ * @see IsTrue
+ * @see Lt
+ * @see Lte
+ * @see Not
+ * @see Or
+ * @see StartsWith
+ * @see TagEquals
+ * @see TagGt
+ * @see TagGte
+ * @see TagIsNull
+ * @see TagListContains
+ * @see TagListContainsAllOf
+ * @see TagListContainsAnyOf
+ * @see TagMapHasAllOf
+ * @see TagMapHasAnyOf
+ * @see TagMapHasKey
+ * @see TagMatches
+ * @see TagStartsWith
  */
 @JsExport
 open class Op : AnyObject() {
