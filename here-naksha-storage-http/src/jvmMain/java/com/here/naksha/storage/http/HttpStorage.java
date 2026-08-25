@@ -21,9 +21,12 @@ package com.here.naksha.storage.http;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import kotlin.reflect.KClass;
+import naksha.base.Action;
 import naksha.base.Int64;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
+import naksha.base.TupleNumber;
+import naksha.base.Version;
 import naksha.jbon.JbDictionary;
 import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
@@ -83,7 +86,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
                     httpStorageProperties.getMaxRetries()
             ));
     return new HttpStorageReadSession(
-            NakshaContext.currentContext(), getId(), requestSender, httpStorageProperties.getProtocol());
+            NakshaContext.currentContext(), this, requestSender, httpStorageProperties.getProtocol());
   }
 
   @NotNull
@@ -104,13 +107,27 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
                     httpStorageProperties.getMaxRetries()
             ));
     return new HttpStorageWriteSession(
-            NakshaContext.currentContext(), getId(), requestSender, httpStorageProperties.getProtocol());
+            NakshaContext.currentContext(), this, requestSender, httpStorageProperties.getProtocol());
   }
 
   @NotNull
   @Override
   public String getId() {
     return defaultKeyProperties.getName();
+  }
+
+  @NotNull
+  Version allocateVirtualVersion() {
+    return super.newVirtualVersion();
+  }
+
+  @NotNull
+  TupleNumber createVirtualTupleNumber(
+      @NotNull String catalogId,
+      @NotNull String collectionId,
+      @NotNull String featureId,
+      @NotNull Version version) {
+    return super.newVirtualTupleNumber(catalogId, collectionId, featureId, version.number, Action.VERSION);
   }
 
   @Override

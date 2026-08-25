@@ -21,12 +21,10 @@ package com.here.naksha.storage.http;
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
 import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
-import naksha.base.Action;
 import naksha.model.IReadSession;
 import naksha.model.MemberProcessorMap;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
-import naksha.model.Naksha;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.base.TupleNumber;
@@ -57,18 +55,18 @@ public class HttpStorageReadSession implements IReadSession {
   private final RequestSender requestSender;
 
   @NotNull
-  private final String storageId;
+  private final HttpStorage storage;
 
   @NotNull
   private final HttpInterface httpInterface;
 
   HttpStorageReadSession(
       @Nullable NakshaContext context,
-      @NotNull String storageId,
+      @NotNull HttpStorage storage,
       @NotNull RequestSender requestSender,
       @NotNull HttpInterface httpInterface) {
     this.context = context == null ? NakshaContext.currentContext() : context;
-    this.storageId = storageId;
+    this.storage = storage;
     this.requestSender = requestSender;
     this.httpInterface = httpInterface;
   }
@@ -211,14 +209,14 @@ public class HttpStorageReadSession implements IReadSession {
     // HTTP storage schemas are optional; catalog number 0 is the documented default scope.
     final String catalogId = requestedCatalogId == null ? DEFAULT_VIRTUAL_CATALOG_ID : requestedCatalogId;
     final String collectionId = requireCollectionId(request.getCollectionId());
-    final Version version = Version.virtualVersion(Action.VERSION);
+    final Version version = storage.allocateVirtualVersion();
     for (final NakshaFeature feature : features) {
       if (feature == null) {
         continue;
       }
       final String featureId = requireFeatureId(feature);
-      final TupleNumber tupleNumber = Naksha.virtualTupleNumber(
-          storageId, catalogId, collectionId, featureId, version);
+      final TupleNumber tupleNumber = storage.createVirtualTupleNumber(
+          catalogId, collectionId, featureId, version);
       final FeatureTuple featureTuple = new FeatureTuple(tupleNumber, null);
       featureTuple.setFeature(feature);
       featureTuples.add(featureTuple);
