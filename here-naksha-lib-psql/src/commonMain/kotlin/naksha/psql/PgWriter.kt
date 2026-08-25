@@ -77,17 +77,21 @@ open class PgWriter internal constructor(
      * @return the response.
      */
     fun execute(writes: WriteList) : Response {
-        val tupleNumberList = executeWrites(writes.mapNotNull { it }.toMutableList())
-        return SuccessResponse().withTupleNumberList(tupleNumberList)
+        val featureTupleList = executeWrites(writes.mapNotNull { it }.toMutableList())
+        return SuccessResponse().withFeatureTupleList(featureTupleList)
     }
 
     /**
      * Performs the given writes.
+     *
+     * The returned [FeatureTupleList] carries the written tuples by hard reference (in input order), so
+     * the response keeps them reachable for as long as it is used, instead of relying on the soft-referenced
+     * cache retaining them.
      * @param writes the writes to perform.
-     * @return the tuple-numbers of the
+     * @return the written feature-tuples, in input order (writes without a tuple-number are skipped).
      */
-    private fun executeWrites(writes: MutableList<Write>) : TupleNumberList {
-        if (writes.isEmpty()) return TupleNumberList()
+    private fun executeWrites(writes: MutableList<Write>) : FeatureTupleList {
+        if (writes.isEmpty()) return FeatureTupleList()
         // Add the input-index.
         val pgWrites = ArrayList<PgWrite>(writes.size)
         for (i in 0 ..< writes.size) pgWrites.add(PgWrite(writes[i], i))
@@ -169,6 +173,7 @@ open class PgWriter internal constructor(
         // Reorder results to match input.
         val tupleNumbers = TupleNumberList()
         tupleNumbers.setCapacity(writes.size)
+        val tuplesByIndex = arrayOfNulls<Tuple>(writes.size)
         val tupleList = ArrayList<Tuple>(writes.size)
         val transaction = tx.nakshaTx
         var featuresModified = 0
@@ -176,6 +181,7 @@ open class PgWriter internal constructor(
             val tupleNumber = write.tupleNumber
             tupleNumbers[write.i] = tupleNumber
             val tuple = write.tuple
+            if (tuple != null) tuplesByIndex[write.i] = tuple
             if (write.isFeatureModification) {
                 val map = write.catalog
                 val col = write.collection
@@ -198,10 +204,16 @@ open class PgWriter internal constructor(
             if (tuple != null) tupleList.add(tuple)
         }
         transaction.featuresModified += featuresModified
-        // We do not put tuples into cache, before we are sure everything was successful!
-        // Adding all together into the cache reduces the effort to iterate above all caches multiple times.
         Naksha.cache.store(tupleList)
-        return tupleNumbers
+
+        val featureTuples = FeatureTupleList()
+        featureTuples.setCapacity(writes.size)
+        for (i in 0 until writes.size) {
+            val tupleNumber = tupleNumbers[i] ?: continue
+            val tuple = tuplesByIndex[i]
+            featureTuples.add(if (tuple != null) FeatureTuple(tupleNumber, tuple) else FeatureTuple(tupleNumber))
+        }
+        return featureTuples
     }
 
     // Ensure that the needed physical schema and tables are created.
