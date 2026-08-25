@@ -119,7 +119,10 @@ class XyzMembers private constructor() {
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzBaseTn = TupleNumberMember("base_tn", JsonPath("properties", "@ns:com:here:xyz", "base"))
+        //TODO we might consider this to be TupleNumberMember when 3 way merge is supported,
+        // and we want to left out duplicated data like db, catalog, collection,
+        // and that needs special handling similar to the default tn
+        val XyzBaseTn = ByteArrayMember("base_tn", JsonPath("properties", "@ns:com:here:xyz", "base"))
 
         /**
          * `app_id` — identifier of the application that wrote this tuple. Default member.
