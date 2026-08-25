@@ -228,31 +228,6 @@ open class PgSession(
     internal var tx: PgTx? = null
         private set
 
-    private val preparedPartitions = mutableMapOf<PgCollection, MutableSet<Int>>()
-
-    internal fun isPartitionPrepared(collection: PgCollection, partitionNumber: Int): Boolean =
-        preparedPartitions[collection]?.contains(partitionNumber) == true
-
-    internal fun markPartitionPrepared(collection: PgCollection, partitionNumber: Int) {
-        preparedPartitions.getOrPut(collection) { mutableSetOf() }.add(partitionNumber)
-    }
-
-    internal fun snapshotPreparedPartitions(): Map<PgCollection, Set<Int>> =
-        preparedPartitions.mapValues { it.value.toSet() }
-
-    internal fun restorePreparedPartitions(snapshot: Map<PgCollection, Set<Int>>) {
-        preparedPartitions.clear()
-        for ((collection, set) in snapshot) preparedPartitions[collection] = set.toMutableSet()
-    }
-
-    private fun promotePreparedPartitions() {
-        if (preparedPartitions.isEmpty()) return
-        for ((collection, set) in preparedPartitions) {
-            val historyTable = collection.historyTable
-            for (partitionNumber in set) historyTable.addPartition(partitionNumber)
-        }
-    }
-
     /**
      * Return the current transaction, if no transaction started yet, starts a new one.
      * @return the current transaction.
@@ -319,7 +294,6 @@ open class PgSession(
     private fun clear() {
         error = null
         tx = null
-        preparedPartitions.clear()
         try {
             pgConnection?.close()
         } catch (ignore: Throwable) {
@@ -354,7 +328,6 @@ open class PgSession(
             } catch (t: Throwable) {
                 throw generalException("Failed to commit transaction", cause = t)
             }
-            promotePreparedPartitions()
             clear()
         }
     }
@@ -522,7 +495,11 @@ SELECT * FROM from_hst"""
         return found
     }
 
-    override fun getCatalogById(catalogId: String): NakshaCatalog? = getPgCatalogById(catalogId)?.head
+    override fun getCatalogById(catalogId: String, allowTombstone: Boolean): NakshaCatalog? {
+        val catalog = getPgCatalogById(catalogId)?.head ?: return null
+        if (!allowTombstone && (catalog.tupleNumber?.isDeleted ?: false)) return null
+        return catalog
+    }
 
     /**
      * Returns the [PgCatalog] for the given id.
@@ -539,7 +516,11 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getCatalogByNumber(catalogNumber: Int): NakshaCatalog? = getPgCatalogByNumber(catalogNumber)?.head
+    override fun getCatalogByNumber(catalogNumber: Int, allowTombstone: Boolean): NakshaCatalog? {
+        val catalog = getPgCatalogByNumber(catalogNumber)?.head ?: return null
+        if (!allowTombstone && (catalog.tupleNumber?.isDeleted ?: false)) return null
+        return catalog
+    }
 
     /**
      * Returns the [PgCatalog] for the given number.
@@ -556,9 +537,11 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getCollectionById(catalog: NakshaCatalog, collectionId: String): NakshaCollection? {
+    override fun getCollectionById(catalog: NakshaCatalog, collectionId: String, allowTombstone: Boolean): NakshaCollection? {
         val pgCatalog = getPgCatalogById(catalog.id) ?: return null
-        return getPgCollectionById(pgCatalog, collectionId)?.head
+        val collection = getPgCollectionById(pgCatalog, collectionId)?.head ?: return null
+        if (!allowTombstone && (collection.tupleNumber?.isDeleted ?: false)) return null
+        return collection
     }
 
     /**
@@ -576,9 +559,11 @@ SELECT * FROM from_hst"""
         }
     }
 
-    override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int): NakshaCollection? {
+    override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int, allowTombstone: Boolean): NakshaCollection? {
         val pgCatalog = getPgCatalogById(catalog.id) ?: return null
-        return getPgCollectionByNumber(pgCatalog, collectionNumber)?.head
+        val collection = getPgCollectionByNumber(pgCatalog, collectionNumber)?.head ?: return null
+        if (!allowTombstone && (collection.tupleNumber?.isDeleted ?: false)) return null
+        return collection
     }
 
     /**

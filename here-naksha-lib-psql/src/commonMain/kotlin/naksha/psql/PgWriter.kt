@@ -9,6 +9,7 @@ import naksha.base.collectionNotFound
 import naksha.base.forbidden
 import naksha.base.illegalArg
 import naksha.base.illegalState
+import naksha.base.internalError
 import naksha.base.mapExists
 import naksha.base.mapNotFound
 import naksha.model.*
@@ -94,7 +95,7 @@ open class PgWriter internal constructor(
         var partitionSnapshot: Map<PgCollection, Set<Int>>? = null
         try {
             // This can be time-consuming, unless the connection is already open, try not to open it before we do this!
-            prepareWrite(pgWrites)
+            val updateCache = prepareWrite(pgWrites)
 
             // Order by:
             // - catalog-number ASC
@@ -124,7 +125,6 @@ open class PgWriter internal constructor(
             conn = this.conn
             if (useSavepoint) {
                 conn.execute("SAVEPOINT \"$savepointId\"").close()
-                partitionSnapshot = session.snapshotPreparedPartitions()
             }
             var start = 0
             for (i in 1..pgWrites.size) {
@@ -137,12 +137,30 @@ open class PgWriter internal constructor(
                     start = i
                 }
             }
-            // If everything worked out as expected, we can drop the savepoint, if there is any.
+            // If everything worked out as expected
+            if (updateCache != null) {
+                for (pgWrite in updateCache) {
+                    val id = pgWrite.id
+                    val catalogId = pgWrite.catalog.id
+                    if (pgWrite.isCollectionModification) {
+                        val pgCatalog = session.getPgCatalogById(pgWrite.catalog.id)
+                            ?: throw internalError("The collection '$id' was modified, but the parent catalog '$catalogId' does not exist")
+                        pgCatalog.invalidateCollection(pgWrite.featureNumber.toInt())
+                    } else if (pgWrite.isCatalogModification) {
+                        val pgAdminCatalog = session.getPgCatalogById(pgWrite.catalog.id) as? PgAdminCatalog
+                            ?: throw internalError("The catalog '$id' was modified, but the parent catalog is not the admin-catalog")
+                        pgAdminCatalog.invalidateCatalog(pgWrite.featureNumber.toInt())
+                    } else {
+                        throw internalError("A cache update for '${pgWrite.id}' was reported, but does not match catalog or collection")
+                    }
+                }
+            }
+
+            // We can drop the savepoint, if there is any.
             if (useSavepoint) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
         } catch (t: Throwable) {
             if (conn != null && useSavepoint) {
                 conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
-                if (partitionSnapshot != null) session.restorePreparedPartitions(partitionSnapshot)
             }
             throw PgExceptionMapper.map(t)
         }
@@ -188,7 +206,8 @@ open class PgWriter internal constructor(
     // Ensure that the needed physical schema and tables are created.
     // Ensure that the PgTupleWrite data class is ready for action.
     // After this has run, only the `tuple` is missing!
-    private fun prepareWrite(pgWrites: ArrayList<PgWrite>) {
+    private fun prepareWrite(pgWrites: ArrayList<PgWrite>): ArrayList<PgWrite>? {
+        var updateCaches: ArrayList<PgWrite>? = null
         for (pgWrite in pgWrites) {
             val featureId = pgWrite.id
             val op = pgWrite.op
@@ -209,6 +228,10 @@ open class PgWriter internal constructor(
             if (pgWrite.isCatalogModification) {
                 var targetCatalog = storage.adminCatalog.getPgCatalogById(null, pgWrite.id)
                     ?: storage.adminCatalog.getPgCatalogById(conn, pgWrite.id)
+                if (targetCatalog != null && targetCatalog.head.tupleNumber?.isDeleted == true) {
+                    // The catalog is in deleted state, so it does not really exist.
+                    targetCatalog = null
+                }
 
                 val nakshaMap: NakshaCatalog?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
@@ -234,11 +257,17 @@ open class PgWriter internal constructor(
                 }
                 pgWrite.asPgCatalog = targetCatalog
                 pgWrite.asNakshaMap = nakshaMap
+                if (updateCaches == null) updateCaches = ArrayList()
+                updateCaches.add(pgWrite)
             }
 
             // If this operation modifies a collection.
             if (pgWrite.isCollectionModification) {
                 var targetCollection = pgCatalog.getPgCollectionById(null, pgWrite.id) ?: pgCatalog.getPgCollectionById(conn, pgWrite.id)
+                if (targetCollection != null && targetCollection.head.tupleNumber?.isDeleted == true) {
+                    // The collection is in deleted state, so it does not really exist.
+                    targetCollection = null
+                }
 
                 val nakshaCollection: NakshaCollection?
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
@@ -273,6 +302,8 @@ open class PgWriter internal constructor(
                 }
                 pgWrite.asPgCollection = targetCollection
                 pgWrite.asNakshaCollection = nakshaCollection
+                if (updateCaches == null) updateCaches = ArrayList()
+                updateCaches.add(pgWrite)
             }
             when (op) {
                 WriteOp.CREATE -> {
@@ -317,6 +348,7 @@ open class PgWriter internal constructor(
                 }
             }
         }
+        return updateCaches
     }
 
     /**
@@ -330,7 +362,6 @@ open class PgWriter internal constructor(
         // All writes in [start, end) share one catalog and collection (the caller grouped them) and are
         // ordered by op; dispatch each contiguous op-block to its writer.
         val pgCollection = pgWrites[start].collection
-        pgCollection.prepareWrite(conn, tx.version.number, session)
         var s = start
         var e = start
 
@@ -384,9 +415,14 @@ open class PgWriter internal constructor(
 
     private fun seedHistoryPartitions(collection: PgCollection) {
         if (!collection.storeHistory) return
+        val historyTable = collection.historyTable
+        // TODO This creation of history partitions upfront by 3 years is a temporary hack, to be replaced when pg_partman is used
+        // This partition number is correctly the year, only when NakshaCollection.shift = 41 by default,
+        // else this number will have a different meaning
         val year = collection.historyPartitionNumberOf(tx.version.number)
-        collection.ensureHistoryPartition(conn, year, session)
-        collection.ensureHistoryPartition(conn, year + 1, session)
+        historyTable.createPartition(conn, year)
+        historyTable.createPartition(conn, year + 1)
+        historyTable.createPartition(conn, year + 2)
     }
 
     /**

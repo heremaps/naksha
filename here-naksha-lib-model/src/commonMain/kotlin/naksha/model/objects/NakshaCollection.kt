@@ -372,7 +372,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Returns the validated members list.
      *
-     * If the member list is currently `null`, it creates it from [XyzMembers.ALL]. If the list does not contain the mandatory members, they will be added.
+     * If the member list is currently `null`, the collection is in backward-compatible default mode: the members are created from [XyzMembers.ALL], and — so the persisted collection stays consistent across reloads — a still-`null` [indices] list is defaulted to [XyzIndices.ALL] as well. If the list does not contain the mandatory members, they will be added.
      * @return the members list of this collection.
      * @since 3.0
      * @throws NakshaException with [ILLEGAL_STATE]
@@ -383,6 +383,7 @@ open class NakshaCollection() : NakshaFeature() {
         if (list == null) {
             list = MemberList(XyzMembers.ALL)
             write = true
+            if (this.indices == null) this.indices = IndexList(XyzIndices.ALL)
         }
         // Ensure that the list does not contain null or duplicates.
         list.validate()
@@ -438,7 +439,7 @@ open class NakshaCollection() : NakshaFeature() {
      *
      * Each [Index] declares a name, an [IndexType] ([IndexType.BTREE] / [IndexType.SPATIAL] / [IndexType.TAG_MAP] / [IndexType.TAG_LIST]), the column(s) to index, an optional include-list (for [IndexType.BTREE]), and a `unique` flag.
      *
-     * Indices are applied to every variant of the collection (head, history, deleted, meta) by the storage. Mandatory and default indices are injected by the storage; clients only need to declare additional custom indices here.
+     * Indices are applied to every variant of the collection (head, history, deleted, meta) by the storage. The storage indexes the mandatory members implicitly. Following [members], when this list is `null` and no members are declared either, the storage falls back to the default [XyzIndices.ALL] (backward-compatible mode); once members are declared, an index list must be provided here (an empty list is allowed).
      * @since 3.0
      */
     var indices: IndexList? by INDICES

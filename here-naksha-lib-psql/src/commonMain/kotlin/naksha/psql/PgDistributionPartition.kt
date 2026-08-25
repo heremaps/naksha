@@ -54,18 +54,18 @@ class PgDistributionPartition private constructor(
         val NEXT_VERSION = collection.column(NextVersion)
 
         // partition of HEAD.
-        if (parent is PgHeadTable) return """$CREATE_TABLE $quotedName 
+        if (parent is PgHeadTable) return """$CREATE_TABLE $quotedName
 PARTITION OF ${parent.quotedName} (${parent.CONSTRAINT(name, partitionIndex)})
-FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
+FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
 WITH (fillfactor=50,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
 CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn) INCLUDE ($FnColumn, $ID);"""
 
         // partition of HISTORY-PARTITION.
         if (parent is PgHistoryPartition) {
             val root = parent.parent as PgHistoryTable
-            return """$CREATE_TABLE $quotedName 
+            return """$CREATE_TABLE $quotedName
 PARTITION OF ${parent.quotedName} (${root.CONSTRAINT(name, parent.partitionIndex, partitionIndex)})
-FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1}) 
+FOR VALUES FROM ($partitionIndex) TO (${partitionIndex+1})
 WITH (fillfactor=100,toast_tuple_target=$toast_tuple_target)$TABLESPACE;
 CREATE INDEX IF NOT EXISTS ${quoteIdent(name, "\$i_version")} ON $quotedName USING btree ($VersionColumn, $NEXT_VERSION) INCLUDE ($FnColumn, $ID);"""
         }

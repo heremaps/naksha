@@ -8,6 +8,7 @@ import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.StoreMode
 import naksha.model.objects.Index
+import naksha.model.objects.IndexList
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
@@ -379,8 +380,10 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     // -------------------------------------------------------------------------
 
     /**
-     * When [NakshaCollection.members] is **null** (the default / undefined), the collection must be
-     * created with all default columns and all default optional indices — backward-compatible behaviour.
+     * When [NakshaCollection.members] is **null** (the default / undefined), the collection is in
+     * backward-compatible mode: it must be created with all default XYZ columns **and** the default
+     * XYZ indices — no members or indices declared means the full default schema. The mandatory
+     * (intrinsic) indices are provided by the storage and are not part of this optional set.
      */
     @Test
     fun membersUndefined_shouldCreateAllColumnsAndDefaultIndices() {
@@ -402,28 +405,22 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             )
             assertTrue(XyzMembers.ALL.all { XyzMembers.XyzTn eq it || it.name in columns })
 
-            // Indices: must include all default optional indices on the HEAD table.
-            val indexNames = mutableListOf<String>()
-            conn.execute(
-                "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(catalog.id, collection.id)
-            ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
-            for (index in XyzIndices.ALL) {
-                val expected = "${collection.id}\$ci_${index.name}"
-                assertTrue(expected in indexNames, "Expected index '$expected' to be present, found: $indexNames")
-            }
+            checkIndicesCreatedForTable(collection.id)
         }
     }
 
     /**
-     * When [NakshaCollection.members] is explicitly an **empty list**, the collection must be
-     * created with all standard head columns (full schema) and no default optional indices —
-     * only the internal indices (`id_unique`, `version`).
+     * When [NakshaCollection.members] is explicitly an **empty list** together with an explicitly
+     * empty [NakshaCollection.indices] list, the collection must be created with all standard head
+     * columns (full schema) and only the intrinsic indices (`$c_pkey`, `$c_id`, `$i_version`) — no
+     * default optional indices. (An empty members list opts out of the XYZ backward-compat default,
+     * so an explicit index list is required; here it is empty.)
      */
     @Test
     fun membersEmpty_shouldCreateOnlyMandatoryColumnsAndNoDefaultIndices() {
         val collection = NakshaCollection("members_empty_test", catalog.id).apply {
             members = MemberList() // explicitly empty
+            indices = IndexList()
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -556,6 +553,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             addMember(Member("h_f32",   MemberType.FLOAT32))
             addMember(Member("i_json",  MemberType.TAG_MAP))
             addMember(Member("j_tag_list", MemberType.TAG_LIST))
+            indices = IndexList()
         }
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
@@ -593,7 +591,8 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     /** Asserts no optional/default indices (XYZ + pn/pt/gv) were auto-created; only declared ones are materialized. */
     private fun assertNoOptionalIndices(indexNames: List<String>, collectionId: String) {
-        for (idx in XyzIndices.ALL + StandardIndices.SPECIAL) {
+        val standardSpecial = listOf(StandardIndices.PublishNumber, StandardIndices.PublishTime, StandardIndices.GlobalVersion)
+        for (idx in XyzIndices.ALL + standardSpecial) {
             val forms = listOf(idx.name, "$collectionId\$i_${idx.name}", "$collectionId\$ci_${idx.name}")
             assertTrue(forms.none { it in indexNames }, "Unexpected optional index '${idx.name}', found: $indexNames")
         }

@@ -6,8 +6,6 @@ import naksha.base.PlatformUtil
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.conflict
-import naksha.base.featureNotFound
-import naksha.base.generalException
 import naksha.model.objects.MemberType
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
@@ -62,22 +60,31 @@ internal class PgWriterDelete(
   SELECT * FROM UNNEST($1, $2) AS t($FnColumn, expected_version)
 )"""
 
-        // Select id and version of all rows matching query.id — used for conflict detection.
-        val head_select = """, head_select AS (
+        // Select `fn` and `version` of all existing rows matching query.`fn`
+        val head_exists = """, head_exists AS (
   SELECT head.$FnColumn AS $FnColumn, head.$VersionColumn AS $VersionColumn
   FROM $headIdent AS head, query
   WHERE head.$FnColumn = query.$FnColumn
 )"""
 
-        // Select the HEAD rows to act on:
-        // - Optional atomic version check (expected_version).
-        // - Skip rows already deleted ((version & 3) >= 2) — idempotent.
+        // Note:
+        // The client can request to delete a feature that actually is already in DELETE state.
+        // If he does this atomically, the operation should always fail.
+        // If he does this non-atomically, we should not move the tombstone into history, because if we would,
+        // we would need to create a new tombstone. However, the feature is already deleted, deleting an already
+        // deleted feature should not fail, but either move the existing HEAD into history.
+        // Removing a tombstone is a PURGE operation, only this will move a tombstone into history and clear
+        // the HEAD.
+        //
+        // Therefore: Select the HEAD rows that are valid to act on:
+        // - Skip rows already deleted ((version & 3) >= 2) - As explained above, a delete must never move tombstones into history!
+        // - If atomic, `expected_version` must match head.`version`, otherwise the row is not legal to operate upon.
         val head_row = """, head_row AS (
   SELECT ${pgCollection.joinColumns { column -> "head.$column AS $column" }}
   FROM $headIdent AS head, query
   WHERE head.$FnColumn = query.$FnColumn
-    AND (query.expected_version IS NULL OR (query.expected_version & -4) = (head.$VersionColumn & -4))
     AND (head.$VersionColumn & 3) < 2
+    AND (query.expected_version IS NULL OR (query.expected_version & -4) = (head.$VersionColumn & -4))
 )"""
 
         // Archive the current HEAD row into history (identical to how UPDATE does it).
@@ -121,7 +128,7 @@ internal class PgWriterDelete(
 
         // The returned row for DELETE is the updated HEAD row (same data, new version/cc).
         // We reconstruct it from head_row overriding the two changed columns.
-        val SQL = """$query$head_select$head_row$head_to_history$head_updated$head_deleted$history_tombstone
+        val SQL = """$query$head_exists$head_row$head_to_history$head_updated$head_deleted$history_tombstone
 SELECT
     head_row.$FnColumn AS $FnColumn,
     $deleted_version AS $VersionColumn,
@@ -130,18 +137,16 @@ SELECT
     ${pgCollection.joinColumns { col -> if (col eq CC || col eq FnColumn || col eq VersionColumn || col eq NextVersionColumn) null else "head_row.$col AS $col" }},
     ${if (head_to_history.isNotEmpty()) "head_to_history.$VersionColumn AS head_history_version," else "null AS head_history_version,"}
     ${if (history_tombstone.isNotEmpty()) "history_tombstone.version AS history_version," else "null AS history_version,"}
-    head_select.$FnColumn AS select_fn,
-    head_select.$VersionColumn AS select_version,
-    head_row.$VersionColumn AS head_version,
+    head_exists.$FnColumn AS existing_fn,
+    head_exists.$VersionColumn AS existing_version,
     ${if (!purge) "head_updated.$VersionColumn AS deleted_version," else "head_deleted.$VersionColumn AS deleted_version,"}
-    query.$FnColumn AS query_fn,
-    query.expected_version AS query_expected_version
+    head_row.$VersionColumn AS head_row_version
 FROM query
 LEFT JOIN head_row ON head_row.$FnColumn = query.$FnColumn
 ${if (!purge) "LEFT JOIN head_updated ON head_updated.$FnColumn = query.$FnColumn" else ""}
 ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_history.$FnColumn = query.$FnColumn" else ""}
 ${if (history_tombstone.isNotEmpty()) "LEFT JOIN history_tombstone ON history_tombstone.$FnColumn = query.$FnColumn" else ""}
-LEFT JOIN head_select ON head_select.$FnColumn = query.$FnColumn
+LEFT JOIN head_exists ON head_exists.$FnColumn = query.$FnColumn
 ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn" else ""}
 ;"""
         val typeNames = inRows.typeNames()
@@ -154,12 +159,10 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
         val outRows = PgRows().withCollection(pgCollection)
         outRows.addColumn("head_history_version", MemberType.INT64)
             .addColumn("history_version", MemberType.INT64)
-            .addColumn("select_fn", MemberType.INT64)
-            .addColumn("select_version", MemberType.INT64)
-            .addColumn("head_version", MemberType.INT64)
+            .addColumn("existing_fn", MemberType.INT64)
+            .addColumn("existing_version", MemberType.INT64)
             .addColumn("deleted_version", MemberType.INT64)
-            .addColumn("query_fn", MemberType.INT64)
-            .addColumn("query_expected_version", MemberType.INT64)
+            .addColumn("head_row_version", MemberType.INT64)
         val plan = plan(conn)
         val array = inRows.values()
         if (PlatformUtil.ENABLE_INFO) {
@@ -183,33 +186,55 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
         cursor.fetch().use { cursor ->
             outRows.readAll(cursor)
             for (row in 0 until outRows.size) {
-                val write = pgWrites[this.start + row]
-                // query_fn is an int8 column, read as Int64; used only for diagnostics below.
-                val fn = outRows.getInt64(row, "query_fn") ?: throw generalException("Missing 'query_fn' in result")
+                // Take values from input
+                val pgWrite = pgWrites[this.start + row]
+                val id = pgWrite.id
+                //val op = pgWrite.op
+                //val fn = pgWrite.featureNumber
+                val expected_version = pgWrite.version?.number
 
-                val select_fn = outRows.getInt64(row, "select_fn")
-                val select_version = outRows.getInt64(row, "select_version")
-                if (select_fn == null || select_version == null) {
-                    if (write.version != null) {
-                        throw featureNotFound(
-                            "Expected feature '$fn' in version '${write.version}', but no such feature exists"
-                        )
+                // `existing_fn` and `existing_version` are existing rows in HEAD, no matter in what state.
+                // val existing_fn = outRows.getInt64(row, "existing_fn")
+                val existing_version = outRows.getInt64(row, "existing_version")
+
+                // `head_row` selects features that are not in DELETE state and match the expected version.
+                // These are the actual rows the query act upon.
+                // head_row.`version` is the version that was selected from HEAD.
+                // It is NULL:
+                // - If the feature exists, but is DELETE
+                // - If the feature exists, but the client provided `expected_version` and the head_row.`version` differs.
+                val head_row_version = outRows.getInt64(row, "head_row_version")
+                if (head_row_version == null) {
+                    // Nothing was done. This can indicate an error, but not in 100% of the cases.
+
+                    // If the operation was atomic, the client expected a specific state.
+                    if (expected_version != null) {
+                        // As we generally exclude tombstones from processing, to prevent duplicate tombstones in history, the only
+                        // way this is OK is when the existing tombstone is exactly the version the client expected.
+                        // We do not delete the tombstone, only PURGE will do, but we treat this as success still and do not return
+                        // anything.
+                        if (expected_version == existing_version) continue
+
+                        // In all other cases, this is a conflict (unexpected state, failed delete).
+                        if (existing_version == null)
+                            throw conflict("DELETE [$id] failed: Expected feature in version '$expected_version', but no such feature exists")
+                        throw conflict("DELETE [$id] failed: Expected feature in version '$expected_version', but found it in $existing_version")
                     }
+
+                    // The client did not expect any version, non-atomic DELETE operation.
+                    // This means, HEAD is either a soft-delete aka a tombstone or does not exist.
+                    // In both cases this is okay and we return nothing.
                     continue
                 }
-                val head_version = outRows.getInt64(row, "head_version")
-                if (head_version == null || select_version != head_version) {
-                    throw conflict(
-                        "The feature '$fn' was expected in version '${write.version}', but found in '${Version(select_version)}'"
-                    )
-                }
 
+                // We have deleted something and inserted a tombstone into HEAD.
+                // Let's return the deleted feature.
                 val tuple = outRows[row]
-                if (tuple != null) write.tuple = tuple
+                if (tuple != null) pgWrite.tuple = tuple
 
                 val tombstone_fn = outRows.getInt64(row, FnColumn)
                 val tombstone_version = outRows.getInt64(row, VersionColumn)
-                write.tupleNumber = if (tombstone_fn != null && tombstone_version != null) {
+                pgWrite.tupleNumber = if (tombstone_fn != null && tombstone_version != null) {
                     TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
                 } else null
             }

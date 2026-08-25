@@ -19,14 +19,13 @@ import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
 import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
-import naksha.model.objects.StandardIndices
+import naksha.model.objects.XyzIndices
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
 import naksha.model.objects.StoreMode
-import naksha.model.objects.XyzIndices
 import naksha.psql.PgColumn.PgColumn_C.EXTENDED
 import naksha.psql.PgColumn.PgColumn_C.EXTERNAL
 import naksha.psql.PgColumn.PgColumn_C.MAIN
@@ -80,6 +79,12 @@ open class PgCollection internal constructor(
     @JvmField
     val shift: Int = nakshaCollection.shift
 
+    /**
+     * Whether the collection is in backward-compatibility mode: the client declared no [members][NakshaCollection.members]
+     * (the raw property is `null`, before [NakshaCollection.useMembers] backfills the defaults). In that mode a `null`
+     * [indices][NakshaCollection.indices] list falls back to the standard [XyzIndices.ALL]. Captured up-front, because
+     * building [columns] materializes the default members and thereby clears the `null` state.
+     */
     private val defaultXyz: Boolean = nakshaCollection.members == null
 
     /**
@@ -184,12 +189,12 @@ open class PgCollection internal constructor(
     }
 
     private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
-        val indices = IndexList(StandardIndices.MANDATORY)
+        val indices = IndexList()
         val declared: IndexList? = nakshaCollection.indices
         val requested: List<Index> = when {
             declared != null -> List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
-            defaultXyz -> XyzIndices.ALL //TODO
-            else -> emptyList()
+            defaultXyz -> XyzIndices.ALL
+            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Collection '${nakshaCollection.id}' declares custom members but no indices; declare an index list (an empty list is allowed)")
         }
         for (requestedIndex in requested) {
             if (!indices.contains(requestedIndex)) indices.add(requestedIndex)
@@ -229,7 +234,13 @@ open class PgCollection internal constructor(
             } else {
                 include = null
             }
-            PgIndex(indexName, on.toTypedArray(), include?.toTypedArray() ?: emptyArray())
+            PgIndex(
+                indexName,
+                on.toTypedArray(),
+                include?.toTypedArray() ?: emptyArray(),
+                unique = index.isUnique(),
+                partial = index.isConditional()
+            )
         }
     }
 
@@ -353,27 +364,6 @@ open class PgCollection internal constructor(
      */
     @JvmField
     val internal: Boolean = id.startsWith("naksha~")
-
-    /**
-     * Ensures that the [PgHistoryPartition] for the given version exists.
-     * @param conn the connection to use to create the partition, if needed.
-     * @param version the version to be written.
-     * @param session the write session.
-     * @since 3.0
-     */
-    fun prepareWrite(conn: PgConnection, version: Int64, session: PgSession) {
-        if (!storeHistory) return
-        ensureHistoryPartition(conn, historyPartitionNumberOf(version), session)
-    }
-
-    fun ensureHistoryPartition(conn: PgConnection, partitionNumber: Int, session: PgSession) {
-        if (!storeHistory) return
-        if (historyTable.partitions.containsKey(partitionNumber)) return
-        if (session.isPartitionPrepared(this, partitionNumber)) return
-        catalog.setSearchPath(conn)
-        historyTable.createPartition(conn, partitionNumber)
-        session.markPartitionPrepared(this, partitionNumber)
-    }
 
     /**
      * Verify the given new _HEAD_ state, ensure that none of the following values is modified:

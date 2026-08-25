@@ -2,11 +2,14 @@
 
 package naksha.base
 
+import naksha.base.Action.Action_C.CREATE
+import naksha.base.Action.Action_C.DELETE
+import naksha.base.Action.Action_C.UPDATE
+import naksha.base.Action.Action_C.VERSION
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 // TODO: @AI: Fix the documentation, it does not match the actual one.
@@ -154,9 +157,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         /**
          * Constructs a **manual** version.
          *
-         * The resulting [seq] must have its upper 21 bits (63–43) all zero, which means the effective
-         * value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since
-         * the lower 2 bits are reserved for [action].
+         * The resulting [seq] must have its upper 21 bits (63–43) all zero, which means the effective value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since the lower 2 bits are reserved for [action].
          *
          * @param seq    41-bit sequence value; must be in 0..0x1FF_FFFF_FFFF.
          * @param action the [Action] to encode in the lower 2 bits.
@@ -185,6 +186,20 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
             val now = Timestamp.now()
             return auto(now.year, now.month, now.day, seq, action)
         }
+
+        private val seq = AtomicInt64(Int64(0))
+
+        /**
+         * Creates a new virtual version with the given action. Guarantees a unique version number like storages will do.
+         *
+         * **This function is for testing or Mockup only, the sequence restarts with JVM!**
+         * @param action the action to encode in the version.
+         * @return the new virtual unique version.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun virtualVersion(action: Action): Version = now(seq.addAndGet(Int64(1)), action)
 
         /**
          * Turns the given version into a real version, so setting the lower two bit to two, and ensure that the value is a valid version number.
@@ -221,7 +236,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MIN_AUTO = auto(16, 1, 1, Int64(0), Action.CREATE)
+        val MIN_AUTO = auto(16, 1, 1, Int64(0), CREATE)
         // 0n + (0n << 2n) + (1n << 32n) + (1n << (32n+5n)) + (16n << (32n+5n+4n)) = 35326106009600n
         // bitwise: 0x0000_2021_0000_0000
 
@@ -231,7 +246,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MAX_AUTO = auto(4095, 12, 31, Int64(1_073_741_823), Action.VERSION)
+        val MAX_AUTO = auto(4095, 12, 31, Int64(1_073_741_823), VERSION)
         // 3n + (1073741823n << 2n) + (31n << 32n) + (12n << (32n+5n)) + (4095n << (32n+5n+4n)) = 9006786937880575n
         // bitwise: 0x001f_ff9f_ffff_ffff
 
@@ -241,7 +256,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MIN_MANUAL = manual(Int64(1), Action.CREATE)
+        val MIN_MANUAL = manual(Int64(1), CREATE)
 
         /**
          * The maximum valid manual version (seq=2,199,023,255,551, action=VERSION).
@@ -249,7 +264,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
          */
         @JvmField
         @JsStatic
-        val MAX_MANUAL = manual(MANUAL_SEQ_MASK, Action.CREATE)
+        val MAX_MANUAL = manual(MANUAL_SEQ_MASK, CREATE)
 
         /**
          * The absolute minimum version number _(3)_.
@@ -292,6 +307,46 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         @JvmField
         @JsStatic
         val SEQ_INC: Int64 = Int64(1) shl 2
+
+        /**
+         * Tests if the given version encodes the [CREATE] action.
+         * @param version the version to test.
+         * @return _true_ if the encoded [Action] is [CREATE].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun isCREATE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == CREATE.intValue
+
+        /**
+         * Tests if the given version encodes the [UPDATE] action.
+         * @param version the version to test.
+         * @return _true_ if the encoded [Action] is [UPDATE].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun isUPDATE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == UPDATE.intValue
+
+        /**
+         * Tests if the given version encodes the [DELETE] action.
+         * @param version the version to test.
+         * @return _true_ if the encoded [Action] is [DELETE].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun isDELETE(version: Int64): Boolean = (version.toLong() and 3L).toInt() == DELETE.intValue
+
+        /**
+         * Tests if the given version encodes the [VERSION] action.
+         * @param version the version to test.
+         * @return _true_ if the encoded [Action] is [VERSION].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun isVERSION(version: Int64): Boolean = (version.toLong() and 3L).toInt() == VERSION.intValue
     }
 
     private var _year = -1
@@ -403,5 +458,26 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
             _string = s
         }
         return s
+    }
+
+    /**
+     * Tests if this version lags behind the given `year`, `month`, and `day`. If this is the case and the version was acquired from a dated sequence, the sequence needs a rollover to the given `year`, `month`, and `day`.
+     * @param year the year to test against.
+     * @param month the month to test against.
+     * @param day the day to test against.
+     * @return _true_ if this is a dated version, and it lags behind the given date; _false_ otherwise _(as well when this is a manual version)_.
+     * @since 3.0
+     */
+    fun isBehind(year: Int, month: Int, day: Int): Boolean {
+        if (isManualVersion()) return false
+
+        if (this.year > year) return false
+        if (this.year < year) return true
+
+        if (this.month < month) return true
+        if (this.month > month) return false
+
+        if (this.day < day) return true
+        return false // this.day >= day
     }
 }

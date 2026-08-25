@@ -21,8 +21,9 @@ import kotlin.js.JsName
  * - [IndexType.TAG_MAP]: inverted index over a tags member ([MemberType.TAG_MAP] or [MemberType.TAG_MAP_FROM_ARRAY]) supporting key/value containment queries. [on] must contain exactly one member.
  * - [IndexType.TAG_LIST]: inverted index over a tag-list member ([MemberType.TAG_LIST]) supporting element containment queries. [on] must contain exactly one member.
  *
- * When [internal] is `true` the index is storage-managed (e.g. primary key, id_unique). The storage
- * injects these into the [NakshaCollection.indices] list; clients must not declare them manually.
+ * When [internal] is `true` the index is storage-managed (an index the storage maintains itself to keep
+ * its own bookkeeping fast). The storage injects these into the [NakshaCollection.indices] list; clients
+ * must not declare them manually.
  * @since 3.0
  */
 @JsExport
@@ -129,9 +130,34 @@ open class Index() : AnyObject() {
     }
 
     /**
-     * Whether this index is storage-managed (internal). When `true`, the storage controls the DDL
-     * for this index (e.g. PRIMARY KEY, UNIQUE with a partial WHERE clause) and clients must not
-     * attempt to recreate or drop it. Defaults to `false`.
+     * Whether the index is conditional: the client declares that only the subset of rows where the
+     * leading [on] member has a value needs to be indexed. Defaults to `false`.
+     *
+     * This is only an intent, not a directive: the storage decides whether and how to honour it
+     * (for example by indexing fewer rows). The client never says how the index is built.
+     * @since 3.0
+     */
+    private var conditional: Boolean by CONDITIONAL
+
+    /** True iff this index is [conditional]. */
+    fun isConditional(): Boolean = conditional
+
+    /** Remove [conditional] from the underlying map; returns this for chaining. */
+    internal fun removeConditional(): Index {
+        removeRaw("conditional")
+        return this
+    }
+
+    /** Fluent setter for [conditional]; returns this for chaining. */
+    internal fun withConditional(value: Boolean): Index {
+        conditional = value
+        return this
+    }
+
+    /**
+     * Whether this index is storage-managed (internal). When `true`, the storage fully controls this
+     * index — it decides how to create and maintain it — and clients must not attempt to recreate or
+     * drop it. Defaults to `false`.
      * @since 3.0
      */
     private var internal: Boolean by INTERNAL
@@ -156,6 +182,7 @@ open class Index() : AnyObject() {
         private val ON       = NotNullProperty<Index, StringList>(StringList::class)
         private val INCLUDE  = NullableProperty<Index, StringList>(StringList::class)
         private val UNIQUE   = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
+        private val CONDITIONAL = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
         private val INTERNAL = NotNullProperty<Index, Boolean>(Boolean::class) { _, _ -> false }
     }
 }
