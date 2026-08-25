@@ -11,7 +11,7 @@ import naksha.base.PlatformList
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.TupleNumber
-import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
+import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
 import naksha.geo.SpGeometry
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaFeature
@@ -171,15 +171,12 @@ object FeatureMemberValues {
     }
 
     /**
-     * Coerce a spatial value to TWKB bytes.
-     *
-     * The expected input is a [SpGeometry] (which may be a [naksha.geo.SpPoint] or any other geometry subclass).
-     * The geometry is encoded as TWKB and returned as a [ByteArray].
+     * Coerce a spatial value to a [SpGeometry].
      */
-    private fun coerceSpatial(value: Any, featureId: String, memberName: String): ByteArray? = when (value) {
-        is SpGeometry -> toTWKB(value)
-        is ByteArray -> value
-        is MapProxy<*, *> -> toTWKB(value.proxy(SpGeometry::class))
+    private fun coerceSpatial(value: Any, featureId: String, memberName: String): SpGeometry? = when (value) {
+        is SpGeometry -> value
+        is ByteArray -> fromTWKB(value)
+        is MapProxy<*, *> -> value.proxy(SpGeometry::class)
         else -> { warnMismatch(featureId, memberName, "spatial", value); null }
     }
 

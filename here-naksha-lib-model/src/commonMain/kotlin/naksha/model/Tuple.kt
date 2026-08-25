@@ -122,7 +122,6 @@ data class Tuple @JvmOverloads constructor(
             val nextVersionMember = collection.useMember(StandardMembers.NextVersion)
             val globalBookFnMember = collection.useMember(StandardMembers.GlobalBookFeatureNumber)
             val originMember = collection.findMember(StandardMembers.Origin)
-            val changeCountMember = collection.findMember(StandardMembers.ChangeCount)
 
             // Read members.
             val id = idMember.readString(feature) ?: throw illegalArg("Missing 'id' in NakshaFeature")

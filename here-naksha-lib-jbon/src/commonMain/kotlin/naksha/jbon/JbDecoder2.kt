@@ -347,7 +347,6 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
      */
     private fun resolveMembersRef(index: Int): Any? {
         val value = membersDict?.get(index) ?: return null
-        if (value is ByteArray) return GeoUtil.fromTWKB(value)
         return value
     }
 

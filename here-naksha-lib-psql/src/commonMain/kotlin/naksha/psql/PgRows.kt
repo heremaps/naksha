@@ -2,15 +2,22 @@ package naksha.psql
 
 import naksha.base.AnyList
 import naksha.base.Int64
+import naksha.base.ListProxy
+import naksha.base.MapProxy
 import naksha.geo.SpGeometry
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
 import naksha.model.*
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
+import naksha.base.PlatformList
+import naksha.base.PlatformMap
 import naksha.base.TupleNumber
 import naksha.model.objects.MemberType
 import naksha.base.Version
+import naksha.base.illegalArg
+import naksha.base.illegalState
+import naksha.geo.GeoUtil
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
@@ -285,7 +292,17 @@ internal class PgRows {
                 }
                 else -> {
                     val raw = getColumn(name)?.values?.get(row)
-                    val value = if (member.dataType == MemberType.TAG_LIST) toAnyListOrNull(raw) else raw
+                    val value = when (member.dataType) {
+                        MemberType.TAG_LIST -> toAnyListOrNull(raw)
+                        MemberType.SPATIAL -> GeoUtil.fromTWKB(raw as? ByteArray)
+                        MemberType.TAG_MAP_FROM_ARRAY -> when (raw) {
+                            is TagMap -> raw
+                            is MapProxy<*,*> -> raw.proxy(TagMap::class)
+                            is PlatformMap -> raw.proxy(TagMap::class)
+                            else -> throw illegalState("Cannot convert value of type ${raw?.let { it::class.simpleName } ?: "null"} to TagMap")
+                        }
+                        else -> raw
+                    }
                     membersBook.put(name, value)
                 }
             }
@@ -311,7 +328,7 @@ internal class PgRows {
         val column = getColumn(columnName)
         if (column != null) {
             setMinRows(row+1)
-            column.values[row] = value
+            column.values[row] = if (MemberType.SPATIAL == column.pgColumn.memberType) GeoUtil.toTWKB(value as SpGeometry?) else value
             return true
         }
         return false
@@ -325,7 +342,18 @@ internal class PgRows {
             val memberName = membersBook.getNameAt(i) ?: continue
             val column = getColumn(memberName) ?: continue
             val value = membersBook[memberName]
-            column.values[row] = value
+            column.values[row] = when (column.pgColumn.memberType) {
+                // Convert any geometry column to TWKB, because the geometry is a bytea in Postgres, but a SpGeometry in the members-book.
+                MemberType.SPATIAL -> GeoUtil.toTWKB(value as SpGeometry?)
+                MemberType.TAG_MAP_FROM_ARRAY -> when (value) {
+                    is TagList -> value.toTagMap()
+                    is ListProxy<*> -> value.proxy(TagList::class).toTagMap()
+                    is TagMap -> value
+                    is PlatformList -> value.proxy(TagList::class).toTagMap()
+                    else -> throw illegalArg("Cannot convert value of type ${value?.let { it::class.simpleName } ?: "null"} to TagMap")
+                }
+                else -> value
+            }
         }
         // The members-book keeps the tuple-number as a single `_tn` entry; the table splits it into the
         // `_fn` and `_version` columns, so populate those from the tuple-number.

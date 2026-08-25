@@ -104,7 +104,8 @@ open class PgCollection internal constructor(
      * @since 3.0
      */
     private fun fromMember(member: Member, index: Int): PgColumn {
-        if (Tn.name == member.name) throw NakshaException(INTERNAL_ERROR, "The tuple-number can't be converted using fromMember")
+        val memberType = member.dataType
+        if (TUPLE_NUMBER == memberType) throw NakshaException(INTERNAL_ERROR, "TUPLE_NUMBER member type can't be converted using PgCollection.fromMember()")
         val memberName = member.name
         // These mandatory members get special storage handling.
         when (memberName) {
@@ -112,7 +113,7 @@ open class PgCollection internal constructor(
             Id.name -> return PgColumn(index, memberName, STRING, "STORAGE $PLAIN COLLATE \"C\"")
             FeatureBytes.name -> return PgColumn(index, memberName, BYTE_ARRAY, "STORAGE $EXTERNAL")
         }
-        val memberType = member.dataType
+
         return when (memberType) {
             //TUPLE_NUMBER is already handled differently (split into PgColumn.FnColumn and PgColumn.VersionColumn), where this method is called
             BYTE_ARRAY -> PgColumn(index, memberName, memberType, "STORAGE $EXTENDED")
