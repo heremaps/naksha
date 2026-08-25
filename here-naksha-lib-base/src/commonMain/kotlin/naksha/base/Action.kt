@@ -52,6 +52,7 @@ class Action : JsEnum() {
         @JvmField
         val CREATE = defIgnoreCase(Action::class, CREATE_STRING) { self ->
             self.intValue = CREATE_VALUE
+            self.longValue = CREATE_VALUE.toLong()
             self.shortId = CREATE_SHORT
         }
 
@@ -63,6 +64,7 @@ class Action : JsEnum() {
         @JvmField
         val UPDATE = defIgnoreCase(Action::class, UPDATE_STRING) { self ->
             self.intValue = UPDATE_VALUE
+            self.longValue = UPDATE_VALUE.toLong()
             self.shortId = UPDATE_SHORT
         }
 
@@ -74,6 +76,7 @@ class Action : JsEnum() {
         @JvmField
         val DELETE = defIgnoreCase(Action::class, DELETE_STRING) { self ->
             self.intValue = DELETE_VALUE
+            self.longValue = DELETE_VALUE.toLong()
             self.shortId = DELETE_SHORT
         }
 
@@ -87,6 +90,7 @@ class Action : JsEnum() {
         @JvmField
         val VERSION = defIgnoreCase(Action::class, VERSION_STRING) { self ->
             self.intValue = VERSION_VALUE
+            self.longValue = VERSION_VALUE.toLong()
             self.shortId = VERSION_SHORT
         }
 
@@ -133,6 +137,14 @@ class Action : JsEnum() {
      * @see [fromValue]
      */
     var intValue: Int = VERSION_VALUE
+        private set
+
+    /**
+     * The action value.
+     * @since 1.0.0
+     * @see [fromValue]
+     */
+    var longValue: Long = VERSION_VALUE.toLong()
         private set
 
     /**

@@ -157,7 +157,8 @@ class PsqlAdminCatalog internal constructor(
         )
         logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
         // For a version number, the lower two bit must be always set.
-        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_VERSION_SEQ AS ${PgType.INT64} START 3 INCREMENT BY 4 CACHE 40;").close()
+        val START_VERSION = Version.now(0.toInt64(), Action.VERSION)
+        conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_VERSION_SEQ AS ${PgType.INT64} START ${START_VERSION.number} INCREMENT BY 4 CACHE 1;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
         createPgCollection(conn, collections) // 0

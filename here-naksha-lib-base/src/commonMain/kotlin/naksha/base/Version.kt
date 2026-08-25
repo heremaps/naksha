@@ -10,7 +10,6 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 // TODO: @AI: Fix the documentation, it does not match the actual one.
@@ -158,9 +157,7 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
         /**
          * Constructs a **manual** version.
          *
-         * The resulting [seq] must have its upper 21 bits (63–43) all zero, which means the effective
-         * value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since
-         * the lower 2 bits are reserved for [action].
+         * The resulting [seq] must have its upper 21 bits (63–43) all zero, which means the effective value fits in 43 bits. The [seq] therefore must be in 0..0x1FF_FFFF_FFFF (41 bits), since the lower 2 bits are reserved for [action].
          *
          * @param seq    41-bit sequence value; must be in 0..0x1FF_FFFF_FFFF.
          * @param action the [Action] to encode in the lower 2 bits.
@@ -189,6 +186,20 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
             val now = Timestamp.now()
             return auto(now.year, now.month, now.day, seq, action)
         }
+
+        private val seq = AtomicInt64(Int64(0))
+
+        /**
+         * Creates a new virtual version with the given action. Guarantees a unique version number like storages will do.
+         *
+         * **This function is for testing or Mockup only, the sequence restarts with JVM!**
+         * @param action the action to encode in the version.
+         * @return the new virtual unique version.
+         * @since 3.0
+         */
+        @JvmStatic
+        @JsStatic
+        fun virtualVersion(action: Action): Version = now(seq.addAndGet(Int64(1)), action)
 
         /**
          * Turns the given version into a real version, so setting the lower two bit to two, and ensure that the value is a valid version number.
@@ -447,5 +458,26 @@ open class Version(@JvmField val number: Int64) : Comparable<Version> {
             _string = s
         }
         return s
+    }
+
+    /**
+     * Tests if this version lags behind the given `year`, `month`, and `day`. If this is the case and the version was acquired from a dated sequence, the sequence needs a rollover to the given `year`, `month`, and `day`.
+     * @param year the year to test against.
+     * @param month the month to test against.
+     * @param day the day to test against.
+     * @return _true_ if this is a dated version, and it lags behind the given date; _false_ otherwise _(as well when this is a manual version)_.
+     * @since 3.0
+     */
+    fun isBehind(year: Int, month: Int, day: Int): Boolean {
+        if (isManualVersion()) return false
+
+        if (this.year > year) return false
+        if (this.year < year) return true
+
+        if (this.month < month) return true
+        if (this.month > month) return false
+
+        if (this.day < day) return true
+        return false // this.day >= day
     }
 }
