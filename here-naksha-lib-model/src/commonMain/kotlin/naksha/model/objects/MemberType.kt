@@ -141,7 +141,8 @@ class MemberType : JsEnum() {
         /**
          * A string-array using Naksha tag syntax that is expanded into a [TAG_MAP] map at write time.
          * Provided for downward compatibility with XYZ Hub and previous Naksha v2 clients that send
-         * tags as arrays rather than maps.
+         * tags as arrays rather than maps. The order of the array is **not** preserved when reading the feature back,
+         * because the values are split into key/value pairs and stored in a map.
          *
          * Input is `["key=value", "name:=42"]`; materialized form is `{"key":"value","name":42}`.
          * Stored in the same flat key/value representation as [TAG_MAP].

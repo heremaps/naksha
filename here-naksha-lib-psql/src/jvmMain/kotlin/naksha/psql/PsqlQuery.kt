@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.ListProxy
+import naksha.base.MapProxy
 import naksha.base.Platform
 import naksha.base.illegalArg
 import naksha.psql.PgType.Companion.BOOLEAN
@@ -92,6 +93,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
             // Note: `index` starts with 1, NOT 0 !!!
             val index = indices[i++]
             when (arg) {
+                null -> stmt.setNull(index, 0)
                 is Boolean -> stmt.setBoolean(index, arg)
                 is Short -> stmt.setShort(index, arg)
                 is Int -> stmt.setInt(index, arg)
@@ -159,7 +161,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                     }
                 }
                 is ListProxy<*> -> setArgument(stmt, arg.toArray(), indices)
-                null -> stmt.setNull(index, 0)
+                is MapProxy<*, *> -> stmt.setString(index, Platform.toJSON(arg))
                 else -> throw illegalArg("Unable to set argument: args[${index - 1}], unknown type: ${arg.javaClass.name}")
             }
         }
