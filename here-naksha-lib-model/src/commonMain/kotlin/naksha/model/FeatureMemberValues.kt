@@ -180,23 +180,22 @@ object FeatureMemberValues {
         else -> { warnMismatch(featureId, memberName, "spatial", value); null }
     }
 
-    private fun coerceTags(value: Any, featureId: String, memberName: String): String? {
+    private fun coerceTags(value: Any, featureId: String, memberName: String): TagMap? {
         if (value !is AnyObject) {
             warnMismatch(featureId, memberName, "tags", value)
             return null
         }
-        return try { toJSON(value) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags", value); null }
+        return value.proxy(TagMap::class)
     }
 
-    private fun coerceTagsFromArray(value: Any, featureId: String, memberName: String): String? {
+    private fun coerceTagsFromArray(value: Any, featureId: String, memberName: String): TagMap? {
         val tagList = when (value) {
             is TagList -> value
             is AnyList -> value.proxy(TagList::class)
             is AnyObject -> value.proxy(TagList::class)
             else -> { warnMismatch(featureId, memberName, "tags_from_array", value); return null }
         }
-        val tagMap = tagList.toTagMap()
-        return try { toJSON(tagMap) } catch (_: Exception) { warnMismatch(featureId, memberName, "tags_from_array", value); null }
+        return tagList.toTagMap()
     }
 
     private fun coerceTagListToJsonArray(value: Any, featureId: String, memberName: String): String? {

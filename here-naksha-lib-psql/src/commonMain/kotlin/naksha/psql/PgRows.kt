@@ -297,9 +297,10 @@ internal class PgRows {
                         MemberType.SPATIAL -> GeoUtil.fromTWKB(raw as? ByteArray)
                         MemberType.TAG_MAP_FROM_ARRAY -> when (raw) {
                             is TagMap -> raw
+                            null -> null
                             is MapProxy<*,*> -> raw.proxy(TagMap::class)
                             is PlatformMap -> raw.proxy(TagMap::class)
-                            else -> throw illegalState("Cannot convert value of type ${raw?.let { it::class.simpleName } ?: "null"} to TagMap")
+                            else -> throw illegalState("Cannot convert value of type ${raw.let { it::class.simpleName } ?: "null"} to TagMap")
                         }
                         else -> raw
                     }
@@ -348,9 +349,10 @@ internal class PgRows {
                 MemberType.TAG_MAP_FROM_ARRAY -> when (value) {
                     is TagList -> value.toTagMap()
                     is ListProxy<*> -> value.proxy(TagList::class).toTagMap()
+                    null -> null
                     is TagMap -> value
                     is PlatformList -> value.proxy(TagList::class).toTagMap()
-                    else -> throw illegalArg("Cannot convert value of type ${value?.let { it::class.simpleName } ?: "null"} to TagMap")
+                    else -> throw illegalArg("Cannot convert value of type ${value.let { it::class.simpleName } ?: "null"} to TagMap")
                 }
                 else -> value
             }
