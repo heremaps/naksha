@@ -27,12 +27,18 @@ import naksha.jbon.JbDecoder2
 import naksha.jbon.JbEncoder2
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
+import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.UNDEFINED
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
+import naksha.base.PlatformObject
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.illegalArg
 import naksha.base.illegalState
 import naksha.base.internalError
+import naksha.model.objects.JsonPath
 import naksha.model.objects.MemberType
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -82,7 +88,7 @@ data class Tuple @JvmOverloads constructor(
          * Encodes the given [NakshaFeature] into JBON2 bytes and members book.
          *
          * ### Note
-         * Does not modify the given Feature; on demand convert the returned tuple into a new NakshaFeature!
+         * Does not modify the given Feature, unless `mutateInput` is `true`; on demand convert the returned tuple into a new NakshaFeature!
          *
          * @param feature the feature to encode.
          * @param collection the collection for which to encode the feature; declares the members.
@@ -90,6 +96,7 @@ data class Tuple @JvmOverloads constructor(
          * @param globalBook the global book to use for encoding; if any.
          * @param requestedAction an action the client wants to perform; if `null`, auto-decided.
          * @param atomic a hint if the operation **must** be atomic; if `null`, auto-decided.
+         * @param mutateInput if `true`, the given feature could be mutated, if false then we guarantee the inputs are not mutated. Default is `false`.
          * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
          * @since 3.0
          * @throws NakshaException if any error happens when encoding.
@@ -103,7 +110,8 @@ data class Tuple @JvmOverloads constructor(
             session: IWriteSession,
             globalBook: IBook? = null,
             requestedAction: Action? = null,
-            atomic: Boolean? = null
+            atomic: Boolean? = null,
+            mutateInput: Boolean = false
         ): Tuple {
             val members = collection.useMembers()
             val processors = session.processors
@@ -206,12 +214,11 @@ data class Tuple @JvmOverloads constructor(
                 globalBookTn = null
             }
 
-            // TODO: We must not modify the given feature, we do it for the sake of downward compatibility here.
-            //       We need to fix this!
-            originMember?.write(feature, origin)
-            tnMember.write(feature, newTn)
-            nextVersionMember.write(feature, UNDEFINED)
-            globalBookFnMember.write(feature, globalBookTn?.featureNumber ?: UNDEFINED)
+            val f = if (mutateInput) feature else copyOnWrite(feature, XyzMembers.XYZ_JSON_PATH)
+            originMember?.write(f, origin)
+            tnMember.write(f, newTn)
+            nextVersionMember.write(f, UNDEFINED)
+            globalBookFnMember.write(f, globalBookTn?.featureNumber ?: UNDEFINED)
 
             // Create the members book with member in the order as defined in the NakshaCollection.
             // This is important, because references are positional indices into the members book,
@@ -226,13 +233,13 @@ data class Tuple @JvmOverloads constructor(
                     NEXT_VERSION -> null
                     ORIGIN -> origin
                     GLOBAL_BOOK_FN -> globalBookTn?.featureNumber
-                    CHANGE_COUNT -> (member.readInt64(feature) ?: Int64(0)) + 1
-                    else -> member.read(feature)
+                    CHANGE_COUNT -> (member.readInt64(f) ?: Int64(0)) + 1
+                    else -> member.read(f)
                 }
                 val procs = processors[memberName]
                 if (procs != null) {
                     for (proc in procs) {
-                        memberValue = proc.processMember(session, collection, feature, member, memberValue)
+                        memberValue = proc.processMember(session, collection, f, member, memberValue)
                     }
                 }
                 memberValue = FeatureMemberValues.coerce(memberValue, member.dataType, id, memberName)
@@ -261,7 +268,7 @@ data class Tuple @JvmOverloads constructor(
             }
 
             // Encode the feature.
-            val raw = encoder.buildTupleFromMap(feature)
+            val raw = encoder.buildTupleFromMap(f)
 
             // Optionally GZIP.
             if (raw.size >= 1000) {
@@ -271,6 +278,32 @@ data class Tuple @JvmOverloads constructor(
                 }
             }
             return Tuple(raw, membersBook, prevTn)
+        }
+
+        /**
+         * Copy-on-write view of [feature]: every container along the [naksha.model.objects.Member.path]
+         * is replaced by a shallow copy, everything else is shared with [feature].
+         * Member writes into the result therefore never touch [feature].
+         */
+        fun copyOnWrite(original: NakshaFeature, path: JsonPath): NakshaFeature {
+            val root = Platform.copy(original.platformObject(), false) as PlatformMap
+            var current: PlatformObject = root
+            for (i in 0 until path.size - 1) {
+                val key = path[i]
+                val parent = current
+                val child = when (parent) {
+                    is PlatformMap if key is String -> map_get(parent, key)
+                    is PlatformList if key is Number -> array_get(parent, key.toInt())
+                    else -> null
+                }
+                // Absent or scalar: nothing to protect, setPath()/delete() will create it inside the copy.
+                if (child !is PlatformMap && child !is PlatformList) break
+                val childCopy = Platform.copy(child, false) as PlatformObject
+                if (parent is PlatformMap) map_set(parent, key as String, childCopy)
+                else array_set(parent as PlatformList, (key as Number).toInt(), childCopy)
+                current = childCopy
+            }
+            return root.proxy(NakshaFeature::class)
         }
 
         private fun isGzipped(bytes: ByteArray): Boolean =
