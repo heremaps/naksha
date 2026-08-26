@@ -3,14 +3,6 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Platform
-import naksha.base.PlatformList
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
-import naksha.base.PlatformMap
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
-import naksha.base.PlatformObject
 import naksha.base.PlatformUtil
 import naksha.base.collectionExists
 import naksha.base.collectionNotFound
@@ -21,13 +13,12 @@ import naksha.base.internalError
 import naksha.base.mapExists
 import naksha.base.mapNotFound
 import naksha.model.*
-import naksha.model.objects.Member
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaProperties
 import naksha.model.objects.NakshaTx
 import naksha.model.objects.StandardMembers
+import naksha.model.objects.XyzMembers
 import naksha.model.request.*
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -337,9 +328,9 @@ open class PgWriter internal constructor(
                     // TODO: Remove this hack and remove UPSERT completely from storage.
                     val original: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
                     val uuidMember = pgWrite.collection.head.useMember(StandardMembers.Tn)
-                    val f = copyOnWrite(original, uuidMember)
+                    val f = Tuple.copyOnWrite(original, XyzMembers.XYZ_JSON_PATH)
                     uuidMember.delete(f)
-                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.CREATE, null)
+                    val tuple = Tuple.encodeFeature(f, pgCollection.head, session, null, Action.CREATE, null, true)
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                 }
@@ -353,34 +344,6 @@ open class PgWriter internal constructor(
             }
         }
         return updateCaches
-    }
-
-    /**
-     * Creates a copy-on-write view of [original] that is safe to mutate at the path of [member].
-     *
-     * Only the containers along `member.path` are shallow-copied; every other value stays shared with [original].
-     * Reads are done on the raw platform objects, so no proxy getter can auto-create a missing container in [original].
-     */
-    private fun copyOnWrite(original: NakshaFeature, member: Member): NakshaFeature {
-        val path = member.path
-        val root = Platform.copy(original.platformObject(), false) as PlatformMap
-        var current: PlatformObject = root
-        for (i in 0 until path.size - 1) {
-            val key = path[i]
-            val parent = current
-            val child = when (parent) {
-                is PlatformMap if key is String -> map_get(parent, key)
-                is PlatformList if key is Number -> array_get(parent, key.toInt())
-                else -> null
-            }
-            // Absent or scalar: nothing to protect, setPath()/delete() will create it inside the copy.
-            if (child !is PlatformMap && child !is PlatformList) break
-            val childCopy = Platform.copy(child, false) as PlatformObject
-            if (parent is PlatformMap) map_set(parent, key as String, childCopy)
-            else array_set(parent as PlatformList, (key as Number).toInt(), childCopy)
-            current = childCopy
-        }
-        return root.proxy(NakshaFeature::class)
     }
 
     /**

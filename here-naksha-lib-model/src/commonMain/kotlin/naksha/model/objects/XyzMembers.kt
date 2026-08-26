@@ -16,6 +16,9 @@ import kotlin.jvm.JvmField
 class XyzMembers private constructor() {
 
     companion object XyzMembers_C {
+
+        val XYZ_JSON_PATH = JsonPath("properties", "@ns:com:here:xyz")
+
         // -------------------------------------------------------------------------
         // Mandatory members — storage-managed, always present.
         // -------------------------------------------------------------------------
