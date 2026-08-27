@@ -535,8 +535,9 @@ internal class PgRows {
     fun newRowProjection(): String = columns.joinToString(", ") {
         val ident = PgUtil.quoteIdent(it.alias)
         if (it.pgColumn.memberType == MemberType.TAG_LIST)
-            "CASE WHEN $ident IS NULL THEN NULL ELSE ARRAY(SELECT jsonb_array_elements_text($ident)) END AS $ident"
-        else ident
+            "CASE WHEN $ident IS NULL THEN NULL ELSE ARRAY(SELECT json_array_elements_text($ident::json)) END AS $ident"
+        else
+            ident
     }
 
     /**
