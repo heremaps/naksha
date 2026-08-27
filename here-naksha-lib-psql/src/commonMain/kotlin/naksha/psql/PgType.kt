@@ -2,8 +2,14 @@
 
 package naksha.psql
 
+import naksha.base.AnyList
+import naksha.base.Int64
 import naksha.base.JsEnum
 import naksha.base.ListProxy
+import naksha.base.Platform.PlatformCompanion.toJSON
+import naksha.base.illegalArg
+import naksha.base.internalError
+import naksha.base.proxy
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import kotlin.js.JsExport
@@ -20,110 +26,157 @@ import kotlin.reflect.KClass
 class PgType : JsEnum() {
     companion object {
         // https://www.postgresql.org/docs/current/datatype.html
+
+        /**
+         * The PostgresSQ data type for `null`, being `null`.
+         * @since 3.0
+         */
         @JvmField
         @JsStatic
         val NULL = defIgnoreCase(PgType::class, "null") {
             it.byteSize = 0
         }
 
+        /**
+         * The PostgresSQ data type for [Boolean], being `boolean`.
+         * @since 3.0
+         */
         @JvmField
         @JsStatic
         val BOOLEAN = defIgnoreCase(PgType::class, "boolean") {
             it.byteSize = 1
+            it.klass = Boolean::class
         }.alias<PgType>("bool")
 
         @JvmField
         @JsStatic
         val BOOLEAN_ARRAY = defIgnoreCase(PgType::class, "boolean[]") {
-            it.isArray = true
-            it.childType = BOOLEAN
+            it.componentType = BOOLEAN
+            it.klass = BooleanArray::class
         }.alias<PgType>("bool[]")
 
+        /**
+         * The PostgresSQ data type for [Short], being `int2`.
+         * @since 3.0
+         */
         @JvmField
         @JsStatic
         val SHORT = defIgnoreCase(PgType::class, "int2") {
             it.byteSize = 2
+            it.klass = Short::class
         }.alias<PgType>("smallint")
 
         @JvmField
         @JsStatic
         val SHORT_ARRAY = defIgnoreCase(PgType::class, "int2[]") {
-            it.isArray = true
-            it.childType = SHORT
+            it.componentType = SHORT
+            it.klass = ShortArray::class
         }.alias<PgType>("smallint[]")
 
+        /**
+         * The PostgresSQ data type for [Int], being `int4`.
+         * @since 3.0
+         */
         @JvmField
         @JsStatic
         val INT = defIgnoreCase(PgType::class, "int4") {
             it.byteSize = 4
+            it.klass = Int::class
         }.alias<PgType>("int").alias<PgType>("integer")
 
         @JvmField
         @JsStatic
         val INT_ARRAY = defIgnoreCase(PgType::class, "int4[]") {
-            it.isArray = true
-            it.childType = INT
+            it.componentType = INT
+            it.klass = IntArray::class
         }.alias<PgType>("int[]").alias<PgType>("integer[]")
 
+        /**
+         * The PostgresSQ data type for [Long], being `int8`.
+         * @since 3.0
+         */
         @JvmField
         @JsStatic
         val INT64 = defIgnoreCase(PgType::class, "int8") {
             it.byteSize = 8
+            it.klass = Long::class
         }.alias<PgType>("bigint")
 
         @JvmField
         @JsStatic
         val INT64_ARRAY = defIgnoreCase(PgType::class, "int8[]") {
-            it.isArray = true
-            it.childType = INT64
+            it.componentType = INT64
+            it.klass = LongArray::class
         }.alias<PgType>("bigint[]")
 
+        /**
+         * The PostgresSQ data type for [Float], being `float4`.
+         * @since 3.0
+         */
         @JvmField
         @JsStatic
         val FLOAT = defIgnoreCase(PgType::class, "float4") {
             it.byteSize = 4
+            it.klass = Float::class
         }.alias<PgType>("real")
 
         @JvmField
         @JsStatic
         val FLOAT_ARRAY = defIgnoreCase(PgType::class, "float4[]") {
-            it.isArray = true
-            it.childType = FLOAT
+            it.componentType = FLOAT
+            it.klass = FloatArray::class
         }.alias<PgType>("real[]")
 
+        /**
+         * The PostgresSQ data type for [Double], being `float8`.
+         * @since 3.0
+         */
         @JvmField
         @JsStatic
         val DOUBLE = defIgnoreCase(PgType::class, "float8") {
             it.byteSize = 8
+            it.klass = Double::class
         }.alias<PgType>("double precision")
 
         @JvmField
         @JsStatic
         val DOUBLE_ARRAY = defIgnoreCase(PgType::class, "float8[]") {
-            it.isArray = true
-            it.childType = DOUBLE
+            it.componentType = DOUBLE
+            it.klass = DoubleArray::class
         }.alias<PgType>("double precision[]")
 
+        /**
+         * The PostgresSQ data type for [String], being `text`.
+         * @since 3.0
+         */
         @JvmField
         @JsStatic
-        val STRING = defIgnoreCase(PgType::class, "text")
-
-        @JvmField
-        @JsStatic
-        val STRING_ARRAY = defIgnoreCase(PgType::class, "text[]") {
-            it.isArray = true
-            it.childType = STRING
+        val STRING = defIgnoreCase(PgType::class, "text") {
+            it.klass = String::class
         }
 
         @JvmField
         @JsStatic
-        val BYTE_ARRAY = defIgnoreCase(PgType::class, "bytea")
+        val STRING_ARRAY = defIgnoreCase(PgType::class, "text[]") {
+            it.componentType = STRING
+            it.klass = Array::class
+        }
+
+        /**
+         * The PostgresSQ data type for [ByteArray], being `bytea`.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val BYTE_ARRAY = defIgnoreCase(PgType::class, "bytea") {
+            it.klass = ByteArray::class
+        }
 
         @JvmField
         @JsStatic
         val BYTE_ARRAY_ARRAY = defIgnoreCase(PgType::class, "bytea[]") {
-            it.isArray = true
-            it.childType = BYTE_ARRAY
+            it.componentType = BYTE_ARRAY
+            it.klass = Array::class
         }
 
         /**
@@ -134,7 +187,9 @@ class PgType : JsEnum() {
          */
         @JvmField
         @JsStatic
-        val JSONB = defIgnoreCase(PgType::class, "jsonb")
+        val JSONB = defIgnoreCase(PgType::class, "jsonb") {
+            it.klass = String::class
+        }
 
         /**
          * `jsonb[]` array type. Element values are JSON text strings (the on-wire form Postgres accepts for `jsonb`).
@@ -144,8 +199,8 @@ class PgType : JsEnum() {
         @JvmField
         @JsStatic
         val JSONB_ARRAY = defIgnoreCase(PgType::class, "jsonb[]") {
-            it.isArray = true
-            it.childType = JSONB
+            it.componentType = JSONB
+            it.klass = Array::class
         }
 
         /**
@@ -159,13 +214,19 @@ class PgType : JsEnum() {
 
         /**
          * Detects the [PgType] of the given value, if it has any.
+         *
+         * If the given `value` is `null`, then [NULL] is returned, the value `null` means that the detection failed.
+         *
+         * ### WARNING
+         * This method is unable to detect [JSONB] type!
          * @param value the value for which to detect the [PgType]
-         * @return the matching [PgType] or `null`, if none matches.
+         * @return the matching [PgType] or `null` if none matches.
          */
         @JsStatic
         @JvmStatic
         fun ofValue(value: Any?): PgType? {
             when (value) {
+                null -> return NULL
                 is Boolean -> return BOOLEAN
                 is Byte -> return SHORT
                 is Short -> return SHORT
@@ -175,7 +236,8 @@ class PgType : JsEnum() {
                 is Double -> return DOUBLE
                 is String -> return STRING
                 is ByteArray -> return BYTE_ARRAY
-                is List<*>, is ListProxy<*> -> {
+                is List<*>,
+                is ListProxy<*> -> {
                     val elementType = value.firstOrNull()?.let { ofValue(it) } ?: return null
                     return when (elementType) {
                         BOOLEAN -> BOOLEAN_ARRAY
@@ -236,26 +298,35 @@ class PgType : JsEnum() {
     override fun initClass() {}
 
     /**
+     * The [KClass] of the type.
+     *
+     * ### Warning
+     * Kotlin sadly does not support real typed arrays, so for example for `Array<String>` is not supported, you will get `Array::class`!
+     * @since 3.0
+     */
+    var klass: KClass<*>? = null
+        private set
+
+    /**
      * The size of the type, when being stored and not _null_, or `-1`, if the type has a dynamic
      * @since 3.0
      */
     var byteSize: Int = -1
-        get() = if (field == null) -1 else field
+        get() = if (field == null) -1 else field // Note: JavaScript hack!
         private set
 
     /**
      * If this type is an array.
      * @since 3.0
      */
-    var isArray: Boolean = false
-        get() = if (field == null) false else field
-        private set
+    val isArray: Boolean
+        get() = componentType != null
 
     /**
-     * If this is an array, the child type.
+     * If this is an array, the type of the elements _(aka component type)_.
      * @since 3.0
      */
-    var childType: PgType? = null
+    var componentType: PgType? = null
         private set
 
     /**
@@ -264,13 +335,42 @@ class PgType : JsEnum() {
      * For example, converts a `List<String>` into a `String[]`.
      * @param value the value to convert into this type.
      * @return the value so that it can be used with JDBC.
+     * @throws naksha.base.NakshaException if the value can't be converted.
      */
     fun convertValue(value: Any?): Any? {
-        // TODO: We need to convert certain values to postgres valid ones
-        //       For lists, we need to convert them into typed arrays.
-        return when (value) {
-            is ListProxy<*>, is List<*> -> value.toTypedArray()
-            else -> value
+        return when (this) {
+            NULL -> null
+            BOOLEAN -> value as? Boolean?
+                    ?: throw illegalArg("The given value is not a boolean: $value")
+            SHORT, INT -> (value as? Number?)?.toInt()
+                    ?: throw illegalArg("The given value is no number: $value")
+            INT64 -> if (value is Number) value.toLong() else if (value is Int64) value.toLong()
+                    else throw illegalArg("The given value is no number: $value")
+            FLOAT -> (value as? Number?)?.toFloat()
+                    ?: throw illegalArg("The given value is no number: $value")
+            DOUBLE -> (value as? Number?)?.toDouble()
+                    ?: throw illegalArg("The given value is no number: $value")
+            STRING -> value as? String?
+                ?: throw illegalArg("The given value is not a string: $value")
+            BYTE_ARRAY -> value as? ByteArray?
+                ?: throw illegalArg("The given value is not a string: $value")
+            JSONB -> toJSON(value)
+
+            BOOLEAN_ARRAY -> value as? BooleanArray ?: (value.proxy(AnyList::class)?.toBooleanArray(true)
+                    ?: throw illegalArg("The given value is not an list: $value"))
+            SHORT_ARRAY -> value as? ShortArray ?: value.proxy(AnyList::class)?.toShortArray(true)
+                ?: throw illegalArg("The given value is not an list: $value")
+            INT_ARRAY -> value as? IntArray ?: value.proxy(AnyList::class)?.toIntArray(true)
+                ?: throw illegalArg("The given value is not an list: $value")
+            INT64_ARRAY -> value as? LongArray ?: value.proxy(AnyList::class)?.toLongArray(true)
+                ?: throw illegalArg("The given value is not an list: $value")
+            // We do not support Array<ByteArray>, it's hard to detect cross-platform!
+            BYTE_ARRAY_ARRAY -> value.proxy(AnyList::class)?.toByteArrayArray(true)
+                    ?: throw illegalArg("The given value is not an list: $value")
+            // We do not support Array<String>, it's hard to detect cross-platform!
+            JSONB_ARRAY -> value.proxy(AnyList::class)?.toJsonArray()
+                ?: throw illegalArg("The given value is not an list: $value")
+            else -> throw internalError("Missing when-case for this Postgres Type: $this")
         }
     }
 }
