@@ -6,6 +6,7 @@
 package naksha.base
 
 import kotlin.reflect.KClass
+import kotlin.reflect.cast
 
 inline fun Int64(value: Long) = Platform.longToInt64(value)
 inline fun Int64(value: Int) = Platform.toInt64(value)
@@ -72,6 +73,20 @@ inline fun AtomicInt64(initialValue: Long = 0): AtomicInt64 = Platform.newAtomic
 inline fun <T : Any> AtomicRef(referee: T?): AtomicRef<T> = Platform.newAtomicRef(referee)
 inline fun <T : Any> AtomicNonNullRef(referee: T): AtomicNonNullRef<T> = Platform.newAtomicNonNullRef(referee)
 inline fun <T : Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(referee)
+
+/**
+ * Cast this, if possible, into the given proxy.
+ * @param klass the proxy class to return.
+ * @return this as the requested proxy or `null`.
+ * @since 3.0
+ */
+inline fun <T : Proxy> Any?.proxy(klass: KClass<T>): T? {
+    if (this == null) return null
+    if (klass.isInstance(this)) return klass.cast(this)
+    if (this is PlatformMap) return this.proxy(klass)
+    if (this is Proxy) return this.proxy(klass)
+    return null
+}
 
 /**
  * Create a proxy or return the existing proxy.
