@@ -198,8 +198,7 @@ class MemberType : JsEnum() {
      * @return `true` if the value is of this type; false otherwise.
      */
     fun isInstance(value: Any?): Boolean {
-        if (value == null) return false
-        return when (this) {
+        return value != null && when (this) {
             BOOLEAN -> value is Boolean
             INT8 -> value is Byte
             INT16 -> value is Byte || value is Short
@@ -211,8 +210,8 @@ class MemberType : JsEnum() {
             BYTE_ARRAY -> value is ByteArray
             TUPLE_NUMBER -> value is TupleNumber
             SPATIAL -> value is SpGeometry
-            TAG_MAP, TAG_MAP_FROM_ARRAY -> value is TagMap
-            TAG_LIST -> value is List<*>
+            TAG_MAP -> value is TagMap
+            TAG_MAP_FROM_ARRAY, TAG_LIST -> value is List<*>
             else -> false
         }
     }
