@@ -282,8 +282,8 @@ open class PgSession(
             }
             return response
         } catch (t: Throwable) {
+            logger.info("PgSession: execute failed", t)
             val nakshaException = PgExceptionMapper.map(t)
-            nakshaException.error.print()
             return ErrorResponse(nakshaException.error)
         }
     }
