@@ -8,7 +8,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Tests if the tag [key] on the member at [at] starts with the given [value].
+ * Tests if the value of the tag [key] on the member [at] is a string and starts with the given [value].
  * @since 3.0
  */
 @JsExport

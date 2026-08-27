@@ -9,7 +9,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Tests if the tag [key] on the member at [at] equals the given [value].
+ * Tests if the value of the tag [key] on the member [at] equals the given [value]. The value may be `null`, in that case this is the same as [TagIsNull].
  * @since 3.0
  */
 @JsExport
