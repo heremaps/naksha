@@ -11,7 +11,6 @@ import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
-import naksha.base.Version.VersionCompanion.virtualVersion
 import naksha.model.NakshaVersion.Companion.CURRENT
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
@@ -179,22 +178,16 @@ class Naksha private constructor() {
         /**
          * A method to calculate a valid database-number from the database-id.
          *
+         * The method simply invokes [featureNumber].
+         *
          * @param id the id, from which to extract the database-number.
          * @return the database-number.
          * @since 3.0
-         * @see [hashId]
+         * @see [featureNumber]
          */
         @JsStatic
         @JvmStatic
-        fun databaseNumber(id: String): Int64 {
-            if (id == "0" || is63BitUnsigned.matches(id)) {
-                try {
-                    return id.toLong(10).toInt64()
-                } catch (_: Exception) {}
-            }
-            val md5 = hashId(id)
-            return md5.getInt64(8) or INT64_SIGN_BIT
-        }
+        fun databaseNumber(id: String): Int64 = featureNumber(id)
 
        /**
          * A method to calculate a valid catalog-number from the catalog-id.
@@ -242,7 +235,9 @@ class Naksha private constructor() {
         /**
          * A method to calculate the feature-number (`fn`) from the feature-id.
          *
-         * Actually, this method will try to detect if the feature-id is a 63-bit unsigned integer, if that is the case, it will convert this string into the corresponding positive 64-bit integer, and return it.
+         * Actually, this method will try to detect if the feature-id is a 63-bit unsigned integer using [featureNumberAsLong], if that is the case, it will convert this string into the corresponding positive 64-bit integer, and return it. If [featureNumberAsLong] returns `-1`, so the `id` is no valid positive numeric identifier, it will invoke [featureNumberAsHash] to convert the `id` into a 64-bit hash identifier, which is guaranteed to be a negative number.
+         *
+         * Applications may have performance advantages when they process identifiers in a loop to apply this logic themself to avoid unnecessary hashing or duplicate number parsing/detection.
          *
          * Otherwise, it uses the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being cleared, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
          *
@@ -259,19 +254,43 @@ class Naksha private constructor() {
          *
          * @param id the feature-id, from which to extract the feature-number.
          * @return the feature-number.
-         * @see [hashId]
-         * @see [alternativeInt64]
+         * @see [featureNumberAsLong]
+         * @see [featureNumberAsHash]
          */
         @JsStatic
         @JvmStatic
         fun featureNumber(id: String): Int64 {
+            val numericId = featureNumberAsLong(id)
+            return if (numericId >= 0L) numericId.toInt64() else featureNumberAsHash(id)
+        }
+
+        /**
+         * Converts the given feature `id` into a 64-bit positive feature-number if the given `id` is a valid positive integer in the supported range.
+         *
+         * This method is faster than [featureNumber] if the feature-number is only needed, when it is positive. Internally used when detecting numeric identifies in query building. This method does not apply an [MD5](https://en.wikipedia.org/wiki/MD5) hash.
+         * @param id the feature-id as string.
+         * @return the feature-id as positive number, when being a positive number; `-1` otherwise.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun featureNumberAsLong(id: String): Long {
             val internalNumber = internalIdToNumber[id]
-            if (internalNumber != null) return internalNumber.toInt64()
+            if (internalNumber != null) return internalNumber.toLong()
             if (id == "0" || is63BitUnsigned.matches(id)) {
                 try {
-                    return id.toLong(10).toInt64()
+                    return id.toLong(10)
                 } catch (_: Exception) {}
             }
+            return -1L
+        }
+
+        /**
+         *
+         */
+        @JsStatic
+        @JvmStatic
+        fun featureNumberAsHash(id: String): Int64 {
             val md5 = hashId(id)
             return md5.getInt64(8) or INT64_SIGN_BIT
         }
