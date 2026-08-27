@@ -35,43 +35,38 @@ class PgReader(
         get() = session.useTransaction().version
 
     fun execute(): Response {
-        try {
-            val session = this.session
-            val query = PgQueryBuilder(session, request).build()
-            val conn = session.useConnection()
-            session.storage.adminCatalog.setSearchPath(conn)
-            if (PlatformUtil.ENABLE_INFO) {
-                if (session.logQueries) {
-                    session.logAtInfo(query.sql)
-                }
-                if (session.logExplain) {
-                    val explain = session.explain(conn, false, query.sql, query.argTypes, query.argValues)
-                    session.logAtInfo(explain)
+        val session = this.session
+        val query = PgQueryBuilder(session, request).build()
+        val conn = session.useConnection()
+        session.storage.adminCatalog.setSearchPath(conn)
+        if (PlatformUtil.ENABLE_INFO) {
+            if (session.logQueries) {
+                session.logAtInfo(query.sql)
+            }
+            if (session.logExplain) {
+                val explain = session.explain(conn, false, query.sql, query.argTypes, query.argValues)
+                session.logAtInfo(explain)
+            }
+        }
+        conn.prepare(query.sql, query.argTypes).use { plan ->
+            // Start allocating around 8 KiB
+            val featureTuples = FeatureTupleList()
+            featureTuples.setCapacity(1024)
+            // Note: We know that each result is only 12 or 20 byte
+            plan.setFetchSize(1_000_000) // Set very high to encourage parallelism on server side
+            // https://www.cybertec-postgresql.com/en/parallel-query-postgresql-problems-jdbc-dbeaver/
+            plan.execute(query.argValues).use { cursor ->
+                val storageNumber = query.storageNumber
+                val mapNumber = query.mapNumber
+                val collectionNumber = query.collectionNumber
+                while (cursor.next()) {
+                    val col_num: Int = collectionNumber ?: cursor["col_num"]
+                    val fn: naksha.base.Int64 = cursor["fn"]
+                    val version: naksha.base.Int64 = cursor["version"]
+                    featureTuples.add(FeatureTuple(TupleNumber(storageNumber, mapNumber, col_num, fn, version)))
                 }
             }
-            conn.prepare(query.sql, query.argTypes).use { plan ->
-                // Start allocating around 8 KiB
-                val featureTuples = FeatureTupleList()
-                featureTuples.setCapacity(1024)
-                // Note: We know that each result is only 12 or 20 byte
-                plan.setFetchSize(1_000_000) // Set very high to encourage parallelism on server side
-                // https://www.cybertec-postgresql.com/en/parallel-query-postgresql-problems-jdbc-dbeaver/
-                plan.execute(query.argValues).use { cursor ->
-                    val storageNumber = query.storageNumber
-                    val mapNumber = query.mapNumber
-                    val collectionNumber = query.collectionNumber
-                    while (cursor.next()) {
-                        val col_num: Int = collectionNumber ?: cursor["col_num"]
-                        val fn: naksha.base.Int64 = cursor["fn"]
-                        val version: naksha.base.Int64 = cursor["version"]
-                        featureTuples.add(FeatureTuple(TupleNumber(storageNumber, mapNumber, col_num, fn, version)))
-                    }
-                }
-                return SuccessResponse().withFeatureTupleList(featureTuples)
-            }
-        } catch (e: Exception) {
-            val nakshaException = PgExceptionMapper.map(e)
-            return ErrorResponse(nakshaException)
+            return SuccessResponse().withFeatureTupleList(featureTuples)
         }
     }
 }
