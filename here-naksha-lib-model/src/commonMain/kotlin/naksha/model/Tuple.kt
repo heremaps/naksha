@@ -642,7 +642,7 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      * @throws NakshaException if any error occurs.
      */
-    fun decodeFeature(globalBook: IBook?): NakshaFeature { // TODO: Java: After switching back to Java, we can allow arbitrary return types.
+    fun decodeFeature(globalBook: IBook?): NakshaFeature {
         val rawBytes = if (isGzipped(featureBytes)) gzipInflate(featureBytes) else featureBytes
         val decoder = JbDecoder2(globalBook, membersBook)
         decoder.mapBytes(rawBytes)

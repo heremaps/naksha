@@ -9,7 +9,7 @@ import naksha.jbon.HeapBook
 import naksha.model.*
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
-import naksha.base.Platform
+import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.PlatformList
 import naksha.base.PlatformMap
 import naksha.base.TupleNumber
@@ -17,7 +17,12 @@ import naksha.model.objects.MemberType
 import naksha.base.Version
 import naksha.base.illegalArg
 import naksha.base.illegalState
+import naksha.base.proxy
 import naksha.geo.GeoUtil
+import naksha.model.objects.MemberType.MemberType_C.SPATIAL
+import naksha.model.objects.MemberType.MemberType_C.TAG_LIST
+import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
+import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
@@ -275,6 +280,7 @@ internal class PgRows {
                 val value = getColumn(name)?.values?.get(row)
                 if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
                 featureBytes = value
+                continue
             }
             if (member.isVirtual()) continue
             when (name) {
@@ -293,9 +299,10 @@ internal class PgRows {
                 else -> {
                     val raw = getColumn(name)?.values?.get(row)
                     val value = when (member.dataType) {
-                        MemberType.TAG_LIST -> toAnyListOrNull(raw)
-                        MemberType.SPATIAL -> GeoUtil.fromTWKB(raw as? ByteArray)
-                        MemberType.TAG_MAP_FROM_ARRAY, MemberType.TAG_MAP -> when (raw) {
+                        TAG_LIST -> toAnyListOrNull(raw)
+                        SPATIAL -> GeoUtil.fromTWKB(raw as? ByteArray)
+                        TAG_MAP, TAG_MAP_FROM_ARRAY -> when (raw) {
+                            is String -> fromJSON(raw).proxy(TagMap::class)
                             is TagMap -> raw
                             null -> null
                             is MapProxy<*,*> -> raw.proxy(TagMap::class)
@@ -329,7 +336,7 @@ internal class PgRows {
         val column = getColumn(columnName)
         if (column != null) {
             setMinRows(row+1)
-            column.values[row] = if (MemberType.SPATIAL == column.pgColumn.memberType) GeoUtil.toTWKB(value as SpGeometry?) else value
+            column.values[row] = if (SPATIAL == column.pgColumn.memberType) GeoUtil.toTWKB(value as SpGeometry?) else value
             return true
         }
         return false
@@ -345,12 +352,14 @@ internal class PgRows {
             val value = membersBook[memberName]
             column.values[row] = when (column.pgColumn.memberType) {
                 // Convert any geometry column to TWKB, because the geometry is a bytea in Postgres, but a SpGeometry in the members-book.
-                MemberType.SPATIAL -> GeoUtil.toTWKB(value as SpGeometry?)
-                MemberType.TAG_MAP_FROM_ARRAY, MemberType.TAG_MAP -> when (value) {
+                SPATIAL -> GeoUtil.toTWKB(value as SpGeometry?)
+                TAG_MAP_FROM_ARRAY -> when (value) {
                     null -> null
-                    is TagMap -> Platform.toJSON(value)
-                    is PlatformList -> Platform.toJSON(value.proxy(TagList::class).toTagMap())
-                    else -> throw illegalArg("Cannot convert value of type ${value.let { it::class.simpleName } ?: "null"} to TagMap")
+                    is TagList -> value.toTagMap()
+                    is ListProxy<*> -> value.proxy(TagList::class).toTagMap()
+                    is TagMap -> value
+                    is PlatformList -> value.proxy(TagList::class).toTagMap()
+                    else -> throw illegalArg("Cannot convert value of type ${value?.let { it::class.simpleName } ?: "null"} to TagMap")
                 }
                 else -> value
             }
@@ -528,16 +537,21 @@ internal class PgRows {
     fun typeNames(): Array<String> = Array(columns.size) {
         val col = columns[it].pgColumn
         // A text[] column can't ride the batch UNNEST (would be text[][]); carry it as jsonb, converted back in newRowProjection().
-        if (col.memberType == MemberType.TAG_LIST) PgType.JSONB.text + "[]"
+        if (col.memberType == TAG_LIST) PgType.JSONB.text + "[]"
         else col.pgType.text + "[]"
     }
 
     fun newRowProjection(): String = columns.joinToString(", ") {
         val ident = PgUtil.quoteIdent(it.alias)
-        if (it.pgColumn.memberType == MemberType.TAG_LIST)
-            "CASE WHEN $ident IS NULL THEN NULL ELSE ARRAY(SELECT json_array_elements_text($ident::json)) END AS $ident"
-        else
-            ident
+        when (it.pgColumn.memberType) {
+            TAG_LIST -> {
+                "CASE WHEN $ident IS NULL THEN NULL ELSE ARRAY(SELECT json_array_elements_text($ident::json)) END AS $ident"
+            }
+            TAG_MAP, TAG_MAP_FROM_ARRAY -> {
+                "$ident::jsonb"
+            }
+            else -> ident
+        }
     }
 
     /**
