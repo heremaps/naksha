@@ -24,6 +24,7 @@ import naksha.model.objects.XyzMembers.XyzMembers_C.XyzUpdatedAt
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -729,7 +730,8 @@ class XyzNs : AnyObject() {
      * @param tags      The tags to set.
      * @param normalize `true` if the given tags should be normalized; `false`, if they are already normalized.
      */
-    fun setTags(tags: TagList?, normalize: Boolean): XyzNs {
+    @JvmOverloads
+    fun setTags(tags: TagList?, normalize: Boolean = true): XyzNs {
         if (normalize) {
             if (tags != null ) {
                 for ((i, tag) in tags.withIndex()) {
