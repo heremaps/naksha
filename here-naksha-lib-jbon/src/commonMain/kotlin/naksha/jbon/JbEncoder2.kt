@@ -223,7 +223,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
     }
 
     /** Write a 64-bit integer using the smallest JBON2 encoding. */
-    fun encodeInt64(value: Int64): Int {
+    fun encodeInt64(value: Long): Int {
         if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
             return encodeInt32(value.toInt())
         }
@@ -265,10 +265,10 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * @param value The value to write; only the lower 56 bits are stored.
      * @return The offset of the value written.
      */
-    fun encodeUInt56(value: Int64): Int {
+    fun encodeUInt56(value: Long): Int {
         val pos = end
-        val masked = value and Platform.toInt64(JB2_MASK_56_LOW)
-        val packed = (Platform.toInt64(JB2_UINT56.toLong()) shl 56) or masked
+        val masked = value and JB2_MASK_56_LOW
+        val packed = (JB2_UINT56.toLong() shl 56) or masked
         writeInt64(packed)
         return pos
     }
@@ -291,10 +291,10 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * @param value The timestamp to write.
      * @return The offset of the value written.
      */
-    fun encodeTimestamp(value: Int64): Int {
+    fun encodeTimestamp(value: Long): Int {
         val pos = end
-        val masked = value and Platform.toInt64(JB2_MASK_56_LOW)
-        val packed = (Platform.toInt64(JB2_TIMESTAMP.toLong()) shl 56) or masked
+        val masked = value and JB2_MASK_56_LOW
+        val packed = (JB2_TIMESTAMP.toLong() shl 56) or masked
         writeInt64(packed)
         return pos
     }
@@ -315,11 +315,11 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
      * @return The offset of the value written.
      */
     fun encodeTupleNumber(
-        databaseNumber: Int64,
+        databaseNumber: Long,
         catalogNumber: Int,
         collectionNumber: Int,
-        featureNumber: Int64,
-        version: Int64
+        featureNumber: Long,
+        version: Long
     ): Int {
         val pos = end
         writeInt8(JB2_TUPLE_NUMBER.toByte())
@@ -866,8 +866,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
             is Byte -> encodeInt32(value.toInt())
             is Short -> encodeInt32(value.toInt())
             is Int -> encodeInt32(value)
-            is Long -> encodeInt64(value.toInt64())
-            is Int64 -> encodeInt64(value)
+            is Long -> encodeInt64(value)
             is Float -> encodeFloat32(value)
             is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
             is SpGeometry -> encodeGeometry(value)

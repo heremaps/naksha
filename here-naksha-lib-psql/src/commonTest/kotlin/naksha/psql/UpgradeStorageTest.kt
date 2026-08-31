@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
@@ -14,8 +13,8 @@ class UpgradeStorageTest : PgTestBase() {
         // Ensure that the current version is what we expect.
         storage.adminConnection().use { conn ->
             conn.execute("SELECT naksha_version() AS v").fetch().use { cursor ->
-                val installedVersion: Int64 = cursor["v"]
-                assertEquals(expect.toInt64(), installedVersion)
+                val installedVersion: Long = cursor["v"]
+                assertEquals(expect.toLong(), installedVersion)
             }
         }
     }

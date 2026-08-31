@@ -4,7 +4,6 @@
 package naksha.psql
 
 import kotlinx.js.JsPlainObject
-import naksha.base.Int64
 import naksha.model.Tuple
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -24,12 +23,12 @@ internal const val TG_LEVEL_STATEMENT = "STATEMENT"
  */
 @JsPlainObject
 external interface Plv8Row {
-    var created_at: Int64?
-    var updated_at: Int64?
-    var author_ts: Int64?
-    var txn_next: Int64?
-    var txn: Int64?
-    var ptxn: Int64?
+    var created_at: Long?
+    var updated_at: Long?
+    var author_ts: Long?
+    var txn_next: Long?
+    var txn: Long?
+    var ptxn: Long?
     var uid: Int?
     var puid: Int?
     var hash: Int?

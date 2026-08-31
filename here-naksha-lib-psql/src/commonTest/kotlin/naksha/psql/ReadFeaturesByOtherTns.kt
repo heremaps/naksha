@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardMembers
@@ -39,7 +38,7 @@ class ReadFeaturesByOtherTns : PgTestBase(
         val updateResp = executeWrite(update)
 
         // And: the shared `next_version` of all updated features (all 5 updates ran in one transaction).
-        val updatedVersion: Int64 = updateResp.features[0]!!.properties.xyz.guid!!.tupleNumber.version
+        val updatedVersion: Long = updateResp.features[0]!!.properties.xyz.guid!!.tupleNumber.version
 
         // When: querying for features whose `next_version` matches that version
         val byNextTnResp = executeRead(ReadFeatures().apply {

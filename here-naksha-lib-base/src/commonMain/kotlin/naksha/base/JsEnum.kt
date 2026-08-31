@@ -64,7 +64,7 @@ abstract class JsEnum : CharSequence {
     private object NULL
 
     /**
-     * The value, either [String], [Int], [Int64], [Double], [Boolean] or _null_.
+     * The value, either [String], [Int], [Long], [Double], [Boolean] or _null_.
      */
     var value: Any? = null
         private set
@@ -91,8 +91,7 @@ abstract class JsEnum : CharSequence {
                 is Byte -> value.toInt()
                 is Short -> value.toInt()
                 is Int -> value
-                is Long -> Int64(value)
-                is Int64 -> value
+                is Long -> value
                 is String -> value
                 is Float -> value.toDouble()
                 is Double -> value
@@ -210,7 +209,7 @@ abstract class JsEnum : CharSequence {
         @JvmStatic
         @JsStatic
         fun <ENUM : JsEnum> def(enumKlass: KClass<ENUM>, value: Any?, init: Fx1<ENUM>? = null): ENUM {
-            require(value === null || value is String || value is Number || value is Int64) {
+            require(value === null || value is String || value is Number) {
                 "Invalid enumeration value, require null, String or Number"
             }
             val e = __get(value, enumKlass, false)

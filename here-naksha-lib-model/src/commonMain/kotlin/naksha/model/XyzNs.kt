@@ -198,7 +198,7 @@ class XyzNs : AnyObject() {
         private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
         private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
         private val _INT_NULL = NullableProperty<XyzNs, Int>(Int::class, autoRemove = true)
-        private val _UPDATED_AT = NotNullProperty<XyzNs, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
+        private val _UPDATED_AT = NotNullProperty<XyzNs, Long>(Long::class) { _, _ -> Platform.currentMillis() }
         private val _DOUBLE_NULL = NullableProperty<XyzNs, Double>(Double::class, autoRemove = true)
         private val _TAGS = NotNullProperty<XyzNs, TagList>(TagList::class) { _, _ -> TagList() }
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
@@ -457,10 +457,10 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 1.0
      */
-    val createdAt: Int64
+    val createdAt: Long
         get() {
             val raw = getRaw("createdAt")
-            if (raw is Int64) return raw
+            if (raw is Long) return raw
             return updatedAt
         }
 
@@ -527,7 +527,7 @@ class XyzNs : AnyObject() {
         get() {
             // Downward compatibility hack.
             val raw = getRaw("version")
-            if (raw is Int64 && raw >= Version.MIN_AUTO) return Version(raw)
+            if (raw is Long && raw >= Version.MIN_AUTO.number) return Version(raw)
             val version = guid?.tupleNumber?.version
             return if (version != null) Version(version) else null
         }
@@ -536,7 +536,7 @@ class XyzNs : AnyObject() {
      * The transaction-number of the feature, basically the same as [version], just as 64-bit integer.
      * @since 2.0
      */
-    val txn: Int64?
+    val txn: Long?
         get() = guid?.tupleNumber?.version
 
     /**
@@ -590,10 +590,10 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 3.0
      */
-    val authorTs: Int64
+    val authorTs: Long
         get() {
             val raw = getRaw("authorTs")
-            if (raw is Int64) return raw
+            if (raw is Long) return raw
             return updatedAt
         }
 

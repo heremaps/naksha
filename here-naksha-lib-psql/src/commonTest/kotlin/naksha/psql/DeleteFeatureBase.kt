@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Int64
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -91,8 +90,8 @@ abstract class DeleteFeatureBase(
     @Test
     fun tombstoneVersionMustCarryDeleteTransactionAndDeletedActionBits() {
         val featureId = "feature_version_bits_check"
-        val ACTION_MASK = Int64(3L)         // lower 2 bits
-        val ACTION_CLEAR = Int64(-4L)       // clear lower 2 bits
+        val ACTION_MASK = 3L         // lower 2 bits
+        val ACTION_CLEAR = -4L       // clear lower 2 bits
 
         // CREATE — capture the create-transaction's version (txn with lower 2 bits = 0 = CREATED).
         val createdTn = assertNotNull(

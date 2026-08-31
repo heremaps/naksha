@@ -8,68 +8,25 @@ package naksha.base
 import kotlin.reflect.KClass
 import kotlin.reflect.cast
 
-inline fun Int64(value: Long) = Platform.longToInt64(value)
-inline fun Int64(value: Int) = Platform.toInt64(value)
-inline fun Int64(value: Double, rawBits: Boolean = false) = if (rawBits) Platform.toInt64RawBits(value) else Platform.toInt64(value)
-fun asInt64(any: Any?): Int64 = any as Int64
+fun asInt64(any: Any?): Long = any as Long
 
-inline infix fun Short.eq(other: Int64): Boolean = other eq this
-inline infix fun Int.eq(other: Int64): Boolean = other eq this
-inline infix fun Double.eq(other: Int64): Boolean = other eq this
+const val INT_TO_UNSIGNED_INT64_MASK = 0xffff_ffffL
 
-inline operator fun Short.plus(other: Int64): Int64 = other + this
-inline operator fun Int.plus(other: Int64): Int64 = other + this
-inline operator fun Double.plus(other: Int64): Double = this + Platform.toDouble(other)
-
-inline operator fun Short.minus(other: Int64): Int64 = other + (-this)
-inline operator fun Int.minus(other: Int64): Int64 = other + (-this)
-inline operator fun Double.minus(other: Int64): Double = this - Platform.toDouble(other)
-
-inline operator fun Short.times(other: Int64): Int64 = other * this
-inline operator fun Int.times(other: Int64): Int64 = other * this
-inline operator fun Double.times(other: Int64): Double = this * Platform.toDouble(other)
-
-inline operator fun Short.rem(other: Int64): Int64 = Platform.toInt64(this) % other
-inline operator fun Int.rem(other: Int64): Int64 = Platform.toInt64(this) % other
-inline operator fun Double.rem(other: Int64): Double = this % Platform.toDouble(other)
-
-inline operator fun Short.div(other: Int64): Int64 = Platform.toInt64(this) / other
-inline operator fun Int.div(other: Int64): Int64 = Platform.toInt64(this) / other
-inline operator fun Double.div(other: Int64): Double = this / Platform.toDouble(other)
-
-inline operator fun Short.compareTo(other: Int64): Int {
-    val diff = this - other
-    return if (diff eq 0) 0 else if (diff < 0) -1 else 1
-}
-
-inline operator fun Int.compareTo(other: Int64): Int {
-    val diff = this - other
-    return if (diff eq 0) 0 else if (diff < 0) -1 else 1
-}
-
-inline operator fun Double.compareTo(other: Int64): Int {
-    val diff = this - other
-    return if (diff == 0.0) 0 else if (diff <= 0.0) -1 else 1
-}
-
-val INT_TO_UNSIGNED_INT64_MASK = Int64(0xffff_ffff)
-
-inline fun Double.toInt64RawBits(): Int64 = Platform.toInt64RawBits(this)
-inline fun Double.toLongRawBits(): Long = Platform.toInt64RawBits(this).toLong()
-inline fun Double.toInt64(): Int64 = Platform.toInt64(this)
-inline fun Long.toInt64(): Int64 = Platform.longToInt64(this)
-inline fun Int.toInt64(): Int64 = Platform.toInt64(this)
+inline fun Double.toInt64RawBits(): Long = toRawBits()
+inline fun Double.toLongRawBits(): Long = toRawBits()
+inline fun Double.toInt64(): Long = Platform.toInt64(this)
+inline fun Long.toInt64(): Long = this
+inline fun Int.toInt64(): Long = toLong()
 
 /**
  * Convert the integer into an unsigned 64-bit integer, so `-1` becomes `4294967295` _(aka `0xffffffff`)_.
  */
-inline fun Int.toUnsignedInt64(): Int64 = Platform.toInt64(this) and INT_TO_UNSIGNED_INT64_MASK
+inline fun Int.toUnsignedInt64(): Long = toLong() and INT_TO_UNSIGNED_INT64_MASK
 
 inline fun <K : Any, V : Any> AtomicMap(): AtomicMap<K, V> = Platform.newAtomicMap()
 inline fun AtomicBool(initialValue: Boolean = false): AtomicBool = Platform.newAtomicBool(initialValue)
 inline fun AtomicInt(initialValue: Int = 0): AtomicInt = Platform.newAtomicInt(initialValue)
-inline fun AtomicInt64(initialValue: Int64): AtomicInt64 = Platform.newAtomicInt64(initialValue)
-inline fun AtomicInt64(initialValue: Long = 0): AtomicInt64 = Platform.newAtomicInt64(initialValue.toInt64())
+inline fun AtomicInt64(initialValue: Long = 0): AtomicInt64 = Platform.newAtomicInt64(initialValue)
 inline fun <T : Any> AtomicRef(referee: T?): AtomicRef<T> = Platform.newAtomicRef(referee)
 inline fun <T : Any> AtomicNonNullRef(referee: T): AtomicNonNullRef<T> = Platform.newAtomicNonNullRef(referee)
 inline fun <T : Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(referee)

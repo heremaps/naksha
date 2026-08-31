@@ -80,7 +80,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0
      * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
      */
-    val databaseNumber: Int64
+    val databaseNumber: Long
         get() = tupleNumber?.databaseNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
 
     /**
@@ -534,7 +534,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * @see [maxAge]
      */
-    open fun withMaxAge(value: Int64): NakshaCollection {
+    open fun withMaxAge(value: Long): NakshaCollection {
         this.maxAge = value
         return this
     }
@@ -557,13 +557,13 @@ open class NakshaCollection() : NakshaFeature() {
      * The estimated amount of features stored within a collection, read-only property only set by the storage.
      * @since 3.0
      */
-    val estimatedFeatureCount: Int64 by _ESTIMATED_FEATURE_COUNT
+    val estimatedFeatureCount: Long by _ESTIMATED_FEATURE_COUNT
 
     /**
      * The estimated amount of deleted features within a collection, read-only property only set by the storage.
      * @since 3.0
      */
-    val estimatedDeletedFeatures: Int64 by _ESTIMATED_DELETED_FEATURES
+    val estimatedDeletedFeatures: Long by _ESTIMATED_DELETED_FEATURES
 
     companion object NakshaCollection_C {
         /**
@@ -680,7 +680,7 @@ open class NakshaCollection() : NakshaFeature() {
          */
         @JvmStatic
         @JsStatic
-        val UNKNOWN = Int64(-1)
+        val UNKNOWN = -1L
 
         private val DATABASE_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val CATALOG_ID = NullableProperty<NakshaCollection, String>(String::class)
@@ -690,10 +690,10 @@ open class NakshaCollection() : NakshaFeature() {
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val MEMBERS = NullableProperty<NakshaCollection, MemberList>(MemberList::class)
         private val INDICES = NullableProperty<NakshaCollection, IndexList>(IndexList::class)
-        private val MAX_AGE = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> Int64(-1) }
+        private val MAX_AGE = NotNullProperty<NakshaCollection, Long>(Long::class) { _, _ -> -1L }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
-        private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
-        private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Int64>(Int64::class) { _, _ -> UNKNOWN }
+        private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Long>(Long::class) { _, _ -> UNKNOWN }
+        private val _ESTIMATED_DELETED_FEATURES =  NotNullProperty<NakshaCollection, Long>(Long::class) { _, _ -> UNKNOWN }
         private val STORE_HISTORY = NotNullEnum<NakshaCollection, StoreMode>(StoreMode::class) { self, _ ->
             // For downward compatibility with Naksha version 2
             val old = self.getRaw("disableHistory")

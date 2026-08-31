@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -43,7 +42,7 @@ open class StoreNumberBits {
          */
         @JvmField
         @JsStatic
-        val PART_NUM_MASK = ((Int64(1) shl PART_NUM_BITS) - Int64(1)) shl PART_NUM_SHIFT
+        val PART_NUM_MASK = ((1L shl PART_NUM_BITS) - 1L) shl PART_NUM_SHIFT
 
         /**
          * The bitmask to AND combine with [StoreNumber] to clear the value from the [StoreNumber].
@@ -76,7 +75,7 @@ open class StoreNumberBits {
          */
         @JvmField
         @JsStatic
-        val COL_NUM_MASK = ((Int64(1) shl COL_NUM_BITS) - Int64(1)) shl COL_NUM_SHIFT
+        val COL_NUM_MASK = ((1L shl COL_NUM_BITS) - 1L) shl COL_NUM_SHIFT
 
         /**
          * The bitmask to AND combine with [StoreNumber] to clear the value from the [StoreNumber].
@@ -107,7 +106,7 @@ open class StoreNumberBits {
          */
         @JvmField
         @JsStatic
-        val MAP_NUM_MASK = ((Int64(1) shl MAP_NUM_BITS) - Int64(1)) shl MAP_NUM_SHIFT
+        val MAP_NUM_MASK = ((1L shl MAP_NUM_BITS) - 1L) shl MAP_NUM_SHIFT
 
         /**
          * The bitmask to AND combine with [StoreNumber] to clear the value from the [StoreNumber].

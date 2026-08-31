@@ -807,7 +807,7 @@ class JbCoreTest {
     @Test
     fun testJbonTimestamp() {
         val nowLong = 1707491351417L
-        val nowBigInt64 = Int64(nowLong)
+        val nowBigInt64 = nowLong
         val builder = JbEncoder(1024)
         val reader = JbDecoder().mapBinary(builder, 0, 1024)
         builder.encodeTimestamp(nowBigInt64)
@@ -817,14 +817,14 @@ class JbCoreTest {
         assertEquals(nowLong.toInt(), builder.getInt32(reader.pos + 3))
         assertTrue(reader.isTimestamp())
         val ts = reader.decodeTimestamp()
-        assertEquals(nowLong, ts.toLong())
+        assertEquals(nowLong, ts)
         assertEquals(7, reader.unitSize())
         assertEquals(7, builder.clear())
     }
 
     @Test
     fun testTimestamp() {
-        val millis = Int64(1707985967244)
+        val millis = 1707985967244L
         val ts = Timestamp.fromMillis(millis)
         assertEquals(millis, ts.ts)
         assertEquals(2024, ts.year)

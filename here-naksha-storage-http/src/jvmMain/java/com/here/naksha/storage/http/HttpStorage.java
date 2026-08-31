@@ -22,7 +22,6 @@ import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import kotlin.reflect.KClass;
 import naksha.base.Action;
-import naksha.base.Int64;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.base.TupleNumber;
@@ -136,7 +135,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
   }
 
   @Override
-  public @NotNull Int64 getNumber() {
+  public long getNumber() {
     throw new NotImplementedException("Not supported by HTTP storage");
   }
 

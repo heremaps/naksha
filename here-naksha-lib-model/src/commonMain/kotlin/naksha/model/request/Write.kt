@@ -183,7 +183,7 @@ open class Write : AnyObject() {
         return this
     }
 
-    private var versionRaw: Int64? = null
+    private var versionRaw: Long? = null
     private var versionValue: Version? = null
 
     /**
@@ -199,11 +199,11 @@ open class Write : AnyObject() {
         get() {
             var raw = getRaw("version")
             if (raw is Double) {
-                raw = raw.toInt64()
+                raw = raw.toLong()
                 setRaw("version", raw)
             }
-            if (raw is Int64) {
-                if (raw === versionRaw) return versionValue
+            if (raw is Long) {
+                if (raw == versionRaw) return versionValue
                 versionRaw = raw
                 versionValue = Version(raw)
                 return versionValue
@@ -334,7 +334,7 @@ open class Write : AnyObject() {
     }
 
     private var featureNumberId: String? = null
-    private var featureNumberValue: Int64? = null
+    private var featureNumberValue: Long? = null
 
     /**
      * The **feature-number** to operate upon.
@@ -345,15 +345,15 @@ open class Write : AnyObject() {
      * @since 3.0
      */
     @Suppress("SENSELESS_COMPARISON")
-    var featureNumber: Int64
+    var featureNumber: Long
         get() {
             val raw = getRaw("featureNumber")
-            if (raw is Int64) return raw
+            if (raw is Long) return raw
 
             // TODO: This is a hack, we need to change this.
             //       Without the collection, we normally do not know where the tuple-number is located within a feature.
             val feature = this.feature
-            var fn: Int64? = null
+            var fn: Long? = null
             if (feature != null) {
                 fn = XyzMembers.XyzTn.readTupleNumber(feature)?.featureNumber
                 if (fn == null) fn = StandardMembers.Tn.readTupleNumber(feature)?.featureNumber
@@ -384,7 +384,7 @@ open class Write : AnyObject() {
      * This method allows to reset the [featureNumber] to `null`, which means "go back to default behavior".
      * @see [featureNumber]
      */
-    fun withFeatureNumber(value: Int64?): Write {
+    fun withFeatureNumber(value: Long?): Write {
         if (value == null) removeRaw("featureNumber") else setRaw("featureNumber", value)
         return this
     }
@@ -397,7 +397,7 @@ open class Write : AnyObject() {
      */
     @JsName("withFeatureNumber32")
     fun withFeatureNumber(value: Int?): Write {
-        val featureNumber = if (value == null) null else value.toInt64() and Naksha.INT64_CLEAR_HIGH32
+        val featureNumber = if (value == null) null else value.toLong() and Naksha.INT64_CLEAR_HIGH32
         withFeatureNumber(featureNumber)
         return this
     }

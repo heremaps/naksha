@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.model.objects.IndexList
 import naksha.model.objects.JsonPath
 import naksha.model.objects.Member
@@ -39,7 +38,6 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, catalogId =
     private fun asLong(value: Any?): Long {
         assertNotNull(value, "expected a numeric column value, got null")
         return when (value) {
-            is Int64 -> value.toLong()
             is Number -> value.toLong()
             else -> error("expected a numeric column value, got ${value::class.simpleName}")
         }

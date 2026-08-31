@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
@@ -31,7 +30,7 @@ internal class PgWriterUpdate(
 
     // All columns that are BYTE_ARRAYs (can be empty)
     private val byteArrayCols = pgCollection.columns.filter { it.memberType == MemberType.BYTE_ARRAY }
-    private val writeByFn = mutableMapOf<Int64, PgWrite>()
+    private val writeByFn = mutableMapOf<Long, PgWrite>()
     init {
         inRows.addColumns(pgCollection.columns)
         inRows.addColumn("expected_version", MemberType.INT64) // needed to do atomic updates
@@ -161,7 +160,7 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
                 val version = outRows.getLong(row, VersionColumn) ?: throw illegalState("Column '$VersionColumn' in result must not be null")
                 val newTn = TupleNumber(storageNumber, catalogNumber, collectionNumber, fn, version)
                 val pgWrite = writeByFn[fn] ?: throw illegalState("Missing write record for feature-number: $fn")
-                val expected_version: Int64? = pgWrite.version?.number
+                val expected_version: Long? = pgWrite.version?.number
 
                 // Feature should have existed.
                 val existing_fn = outRows.getLong(row, "_existing_fn")
@@ -178,7 +177,7 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
                 // We should have updated the feature
                 val inserted_fn = outRows.getLong(row, "_inserted_fn") ?: {
                     // The only defined reason is that the expected version did not match.
-                    if (expected_version != null && (expected_version and Int64(-4)) != (existing_version and Int64(-4))) {
+                    if (expected_version != null && (expected_version and -4L) != (existing_version and -4L)) {
                         throw conflict("Atomic update failed, feature '${pgWrite.id}' was expected in version $existing_version, but found to be in $existing_version")
                     }
                     // Otherwise, there is an internal error.

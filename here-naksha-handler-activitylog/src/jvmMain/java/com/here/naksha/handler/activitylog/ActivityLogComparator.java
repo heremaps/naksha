@@ -38,7 +38,7 @@ public class ActivityLogComparator implements Comparator<NakshaFeature> {
   }
 
   private static long updatedAt(NakshaFeature feature) {
-    return xyzNamespace(feature).getUpdatedAt().toLong();
+    return xyzNamespace(feature).getUpdatedAt();
   }
 
   private static XyzNs xyzNamespace(NakshaFeature feature) {

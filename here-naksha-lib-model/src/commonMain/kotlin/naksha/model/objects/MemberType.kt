@@ -2,7 +2,6 @@
 
 package naksha.model.objects
 
-import naksha.base.Int64
 import naksha.base.JsEnum
 import naksha.geo.SpGeometry
 import naksha.base.NakshaError.NakshaErrorCompanion.INITIALIZATION_FAILED
@@ -246,7 +245,7 @@ class MemberType : JsEnum() {
             INT8 -> value is Byte
             INT16 -> value is Byte || value is Short
             INT32 -> value is Byte || value is Short || value is Int
-            INT64 -> value is Byte || value is Short || value is Int || value is Long || value is Int64
+            INT64 -> value is Byte || value is Short || value is Int || value is Long
             FLOAT32 -> value is Float
             FLOAT64 -> value is Float || value is Double
             STRING -> value is String
@@ -268,12 +267,12 @@ class MemberType : JsEnum() {
      */
     @JvmOverloads
     fun convert(value: Any?, normalize: Boolean = true): Any? = when (this) {
-        INT8 -> if (value is Number) value.toByte() else if (value is Int64) value.toByte() else null
-        INT16 -> if (value is Number) value.toShort() else if (value is Int64) value.toShort() else null
-        INT32 -> if (value is Number) value.toInt() else if (value is Int64) value.toInt() else null
-        INT64 -> if (value is Number) value.toLong() else if (value is Int64) value.toLong() else null
-        FLOAT32 -> if (value is Number) value.toFloat() else if (value is Int64) value.toFloat() else null
-        FLOAT64 -> if (value is Number) value.toDouble() else if (value is Int64) value.toDouble() else null
+        INT8 -> if (value is Number) value.toByte() else null
+        INT16 -> if (value is Number) value.toShort() else null
+        INT32 -> if (value is Number) value.toInt() else null
+        INT64 -> if (value is Number) value.toLong() else null
+        FLOAT32 -> if (value is Number) value.toFloat() else null
+        FLOAT64 -> if (value is Number) value.toDouble() else null
         STRING -> value as? String ?: if (value is Char || value is CharSequence) value.toString() else null
         BYTE_ARRAY -> value as? ByteArray
         TUPLE_NUMBER -> value as? TupleNumber ?:

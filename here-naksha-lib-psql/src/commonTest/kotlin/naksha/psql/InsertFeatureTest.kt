@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Int64
 import naksha.base.NakshaError
 import naksha.base.Platform
 import naksha.base.Version
@@ -124,8 +123,8 @@ class InsertFeatureTest : PgTestBase() {
         // And:
         val retrievedFeature = retrievedFeatures.find { it?.id == featureToCreate.id }
         assertNotNull(retrievedFeature, "Missing feature with id: ${featureToCreate.id}")
-        assertEquals(Int64(featureNumber), retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
-        assertEquals(Int64(featureNumber), retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
+        assertEquals(featureNumber, retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
+        assertEquals(featureNumber, retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
         assertThatFeature(retrievedFeature)
             .isIdenticalTo(
                 other = featureToCreate,

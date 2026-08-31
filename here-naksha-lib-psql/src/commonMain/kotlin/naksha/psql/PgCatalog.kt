@@ -97,7 +97,7 @@ open class PgCatalog internal constructor(
                 val collectionsColNumber = c.collectionNumber
                 c.head.tupleNumber = TupleNumber(
                     storage.number, catalogNumber, collectionsColNumber,
-                    Int64(collectionsColNumber.toLong()), Int64(1)
+                    collectionsColNumber.toLong(), 1L
                 )
                 _collections = c
             }
@@ -123,7 +123,7 @@ open class PgCatalog internal constructor(
 
             val existing = collectionCache[collectionNumber]
             val existingTn = existing?.head?.tupleNumber
-            val existingVersion: Int64? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
+            val existingVersion: Long? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
             if (existingVersion != null && existingVersion > newVersion) {
                 logger.debug("Do not update collection '$id', the existing version ($existingVersion) is newer than the new ($newVersion)")
                 break

@@ -2,7 +2,6 @@
 
 package naksha.model.request
 
-import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
@@ -151,7 +150,7 @@ open class ReadFeatures : ReadRequest() {
     var versions: Int
         get() {
             val raw = getRaw("versions")
-            if (raw is Int64) return max(1, raw.toInt())
+            if (raw is Long) return max(1, raw.toInt())
             if (raw is Number) return max(1, raw.toInt())
             return 1
         }
@@ -166,12 +165,12 @@ open class ReadFeatures : ReadRequest() {
      * If the underlying JSON map contains a values that is not a number or invalid, the default value `null` will be used.
      * @since 3.0
      */
-    var minVersion: Int64?
+    var minVersion: Long?
         get() {
             val raw = getRaw("minVersion")
-            if (raw is Int64) return if (raw < Version.MIN.number || raw > Version.HEAD.number) null else raw
+            if (raw is Long) return if (raw < Version.MIN.number || raw > Version.HEAD.number) null else raw
             if (raw is Number) {
-                val value = Int64(raw.toLong())
+                val value = raw.toLong()
                 return if (value < Version.MIN.number || value > Version.HEAD.number) null else value
             }
             return null
@@ -187,7 +186,7 @@ open class ReadFeatures : ReadRequest() {
      * @see minVersion
      */
     @JsName("withMinVersionInt64")
-    fun withMinVersion(minVersion: Int64?): ReadFeatures {
+    fun withMinVersion(minVersion: Long?): ReadFeatures {
         this.minVersion = minVersion
         return this
     }
@@ -202,15 +201,6 @@ open class ReadFeatures : ReadRequest() {
     }
 
     /**
-     * @see minVersion
-     */
-    @JsName("withMinVersionLong")
-    fun withMinVersion(minVersion: Long?): ReadFeatures {
-        this.minVersion = if (minVersion != null) Int64(minVersion) else null
-        return this
-    }
-
-    /**
      * Limit the read to states at or before the given maximum version, `null` if no limit _(read up to [HEAD][Version.VersionCompanion.HEAD] aka up until latest state)_.
      *
      * This effectively requests a specific historical snapshot when no [minVersion] is set and [versions] is `1`, which is the default for both parameters.
@@ -218,11 +208,11 @@ open class ReadFeatures : ReadRequest() {
      * If the underlying JSON map contains a values that is not a number or invalid, the default value `null` will be used.
      * @since 3.0
      */
-    var version: Int64?
+    var version: Long?
         get() {
             val raw = getRaw("version")
-            if (raw is Int64) return raw
-            if (raw is Number) return Int64(raw.toLong())
+            if (raw is Long) return raw
+            if (raw is Number) return raw.toLong()
             return null
         }
         set(value) {
@@ -233,7 +223,7 @@ open class ReadFeatures : ReadRequest() {
      * @see version
      */
     @JsName("withVersionInt64")
-    fun withVersion(version: Int64?): ReadFeatures {
+    fun withVersion(version: Long?): ReadFeatures {
         this.version = version
         return this
     }
@@ -244,15 +234,6 @@ open class ReadFeatures : ReadRequest() {
     @JsName("withVersion")
     fun withVersion(version: Version?): ReadFeatures {
         this.version = version?.number
-        return this
-    }
-
-    /**
-     * @see version
-     */
-    @JsName("withVersionLong")
-    fun withVersion(version: Long?): ReadFeatures {
-        this.version = if (version != null) Int64(version) else null
         return this
     }
 

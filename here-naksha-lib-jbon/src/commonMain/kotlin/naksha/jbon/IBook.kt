@@ -2,7 +2,6 @@
 
 package naksha.jbon
 
-import naksha.base.Int64
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -56,18 +55,18 @@ interface IBook {
      * The database-number of the book, if this is a global book stored in a database.
      * @since 3.0
      */
-    val databaseNumber: Int64?
+    val databaseNumber: Long?
 
     /**
      * The feature-number of the book, if this is a global book stored in a database.
      * @since 3.0
      */
-    val featureNumber: Int64?
+    val featureNumber: Long?
 
     /**
      * Returns the element at the given index. If no such index exists, returns _null_.
      * @param index the index to query.
-     * @return the value being one of: `null`, `Boolean`, `Int`, `Int64`, `Double`, `String`, `Map<String,Any?>`, or `List<Any?>`.
+     * @return the value being one of: `null`, `Boolean`, `Int`, `Long`, `Double`, `String`, `Map<String,Any?>`, or `List<Any?>`.
      * @since 3.0
      */
     @JsName("getByIndex")

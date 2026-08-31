@@ -21,7 +21,7 @@ public class JvmParser extends JsonParser {
   @Override
   protected @NotNull Object newLong(long value) {
     if (value < Integer.MIN_VALUE ||  value > Integer.MAX_VALUE) {
-      return NumberUtil.boxInt64(value);
+      return value;
     }
     return NumberUtil.boxInt((int)value);
   }

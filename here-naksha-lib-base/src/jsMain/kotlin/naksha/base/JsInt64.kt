@@ -94,7 +94,7 @@ class JsInt64 internal constructor(): Int64 {
 
     override fun toDouble(): Double = js("Number(this.valueOf())").unsafeCast<Double>()
 
-    override fun toDoubleRawBits(): Double = Platform.toDoubleRawBits(this)
+    override fun toDoubleRawBits(): Double = Double.fromBits(toLong())
 
     override fun hashCode(): Int {
         val u: dynamic = js("BigInt.asUintN(64, this.valueOf())")

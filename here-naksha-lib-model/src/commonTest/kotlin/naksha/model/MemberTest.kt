@@ -93,7 +93,6 @@ class MemberTest {
         assertNotNull(MemberType.BYTE_ARRAY)
         // Virtual / jsonb.
         assertNotNull(MemberType.TAG_MAP)
-        assertNotNull(MemberType.TAG_MAP_FROM_TAG_LIST)
         assertNotNull(MemberType.TAG_LIST)
     }
 

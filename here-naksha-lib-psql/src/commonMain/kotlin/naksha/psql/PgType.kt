@@ -3,7 +3,6 @@
 package naksha.psql
 
 import naksha.base.AnyList
-import naksha.base.Int64
 import naksha.base.JsEnum
 import naksha.base.ListProxy
 import naksha.base.Platform.PlatformCompanion.toJSON
@@ -331,8 +330,8 @@ class PgType : JsEnum() {
                     ?: throw illegalArg("The given value is not a boolean: $value")
             SHORT, INT -> (value as? Number?)?.toInt()
                     ?: throw illegalArg("The given value is no number: $value")
-            INT64 -> if (value is Number) value.toLong() else if (value is Int64) value.toLong()
-                    else throw illegalArg("The given value is no number: $value")
+            INT64 -> (value as? Number?)?.toLong()
+                    ?: throw illegalArg("The given value is no number: $value")
             FLOAT -> (value as? Number?)?.toFloat()
                     ?: throw illegalArg("The given value is no number: $value")
             DOUBLE -> (value as? Number?)?.toDouble()

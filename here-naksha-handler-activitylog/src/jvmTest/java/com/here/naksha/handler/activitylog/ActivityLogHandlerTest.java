@@ -29,8 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import naksha.base.AnyList;
-import naksha.base.Int64;
-import naksha.base.JvmInt64;
 import naksha.base.Timestamp;
 import naksha.base.Action;
 import naksha.base.Guid;
@@ -69,8 +67,8 @@ import org.mockito.MockitoAnnotations;
 class ActivityLogHandlerTest {
 
   private static final String SPACE_ID = "test_activity_space";
-  private static final JvmInt64 T0 = new JvmInt64(1749477141945L);
-  private static final JvmInt64 T1 = new JvmInt64(1749477141955L);
+  private static final long T0 = 1749477141945L;
+  private static final long T1 = 1749477141955L;
 
   @Mock
   INaksha naksha;
@@ -160,8 +158,8 @@ class ActivityLogHandlerTest {
   void shouldComposeActivityFeatures() throws Exception {
     // Given: features uuid
     String featureId = "featureId";
-    Guid initialUuid = guid(featureId, Version.now(new JvmInt64(1),Action.CREATE));
-    Guid newUuid = guid(featureId, Version.now(new JvmInt64(2),Action.UPDATE));
+    Guid initialUuid = guid(featureId, Version.now(1L, Action.CREATE));
+    Guid newUuid = guid(featureId, Version.now(2L, Action.UPDATE));
 
     // And: old version of feature
     NakshaFeature oldFeature = nakshaFeature(featureId)
@@ -232,7 +230,7 @@ class ActivityLogHandlerTest {
   void shouldNotCalculateReversePatchAfterCreation() throws Exception {
     // Given
     String featureId = "featureId";
-    Guid createdGuid = guid(featureId, Version.now(new JvmInt64(0), Action.CREATE));
+    Guid createdGuid = guid(featureId, Version.now(0L, Action.CREATE));
 
     // And: space storage that returns only some feature with 'CREATE' action
     configureSpaceStorage(
@@ -265,8 +263,8 @@ class ActivityLogHandlerTest {
     String featureId = "featureId";
     Timestamp ts0 = Timestamp.fromMillis(T0);
     Timestamp ts1 = Timestamp.fromMillis(T1);
-    Version createdVersion = Version.auto(ts0.getYear(), ts0.getMonth(), ts0.getDay(), new JvmInt64(0), Action.CREATE);
-    Version deletedVersion = Version.auto(ts1.getYear(), ts1.getMonth(), ts1.getDay(), new JvmInt64(1), Action.DELETE);
+    Version createdVersion = Version.auto(ts0.getYear(), ts0.getMonth(), ts0.getDay(), 0L, Action.CREATE);
+    Version deletedVersion = Version.auto(ts1.getYear(), ts1.getMonth(), ts1.getDay(), 1L, Action.DELETE);
     Guid createdGuid = guid(featureId, createdVersion);
     Guid deletedGuid = guid(featureId, deletedVersion);
 
@@ -467,7 +465,7 @@ class ActivityLogHandlerTest {
     Op metaQuery = readFeatures.getQueryMembers();
     if (metaQuery instanceof Or or) {
       OpList orChildren = or.getChildren();
-      List<Int64> versions = new java.util.ArrayList<>();
+      List<Long> versions = new java.util.ArrayList<>();
       if (orChildren.getSize() == 0) return false;
       for (int i = 0; i < orChildren.getSize(); i++) {
         Object child = orChildren.get(i);
@@ -492,7 +490,7 @@ class ActivityLogHandlerTest {
         }
 
         Object val = nextEq.getValue();
-        if (!(val instanceof Int64 v)) return false;
+        if (!(val instanceof Long v)) return false;
         versions.add(v);
       }
 
@@ -504,13 +502,13 @@ class ActivityLogHandlerTest {
     }
     if (!(metaQuery instanceof IsAnyOf op)) return false;
     if (!StandardMembers.NextVersion.getName().equals(op.getAt())) return false;
-    // next_version is an int8 column — the IsAnyOf items hold the Int64 version values.
+    // next_version is an int8 column, so the IsAnyOf items hold Long version values.
     AnyList items = op.getItems();
     if (expectedTns.length == 0) return items.getSize() > 0;
-    List<Int64> versions = new java.util.ArrayList<>();
+    List<Long> versions = new java.util.ArrayList<>();
     for (int i = 0; i < items.getSize(); i++) {
       Object item = items.get(i);
-      if (item instanceof Int64 v) versions.add(v);
+      if (item instanceof Long v) versions.add(v);
       else return false;
     }
     if (versions.size() != expectedTns.length) return false;

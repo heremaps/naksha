@@ -155,14 +155,14 @@ actual class Platform {
          * @return The maximum value of a 64-bit integer.
          */
         @JvmField
-        actual val INT64_MAX_VALUE: Int64 = JvmInt64(Long.MAX_VALUE)
+        actual val INT64_MAX_VALUE: Long = Long.MAX_VALUE
 
         /**
          * The minimum value of a 64-bit integer.
          * @return The minimum value of a 64-bit integer.
          */
         @JvmField
-        actual val INT64_MIN_VALUE: Int64 = JvmInt64(Long.MIN_VALUE)
+        actual val INT64_MIN_VALUE: Long = Long.MIN_VALUE
 
         /**
          * The minimum integer that can safely stored in a double.
@@ -320,10 +320,7 @@ actual class Platform {
         actual fun newAtomicInt(startValue: Int): AtomicInt = JvmAtomicInt(startValue)
 
         @JvmStatic
-        actual fun newAtomicInt64(startValue: Int64): AtomicInt64 = JvmAtomicInt64(startValue)
-
-        @JvmStatic
-        fun newAtomicInt64(startValue: Long): AtomicInt64 = JvmAtomicInt64(startValue)
+        actual fun newAtomicInt64(startValue: Long): AtomicInt64 = JvmAtomicInt64(startValue)
 
         @JvmStatic
         actual fun newList(vararg entries: Any?): PlatformList = JvmList(*entries)
@@ -364,9 +361,9 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun toInt64(value: Any): Int64 = when (value) {
-            is Number -> longToInt64(value.toLong())
-            is String -> longToInt64(java.lang.Long.parseLong(value))
+        actual fun toInt64(value: Any): Long = when (value) {
+            is Number -> value.toLong()
+            is String -> java.lang.Long.parseLong(value)
             else -> throw IllegalArgumentException("Failed to convert object to 64-bit integer")
         }
 
@@ -378,7 +375,7 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun toDoubleRawBits(i: Int64): Double = java.lang.Double.longBitsToDouble(i.toLong())
+        actual fun toDoubleRawBits(i: Long): Double = java.lang.Double.longBitsToDouble(i)
 
         @JvmStatic
         fun toLong(value: Any): Long = when (value) {
@@ -388,32 +385,16 @@ actual class Platform {
         }
 
         @JvmStatic
-        actual fun toInt64RawBits(d: Double): Int64 = longToInt64(java.lang.Double.doubleToRawLongBits(d))
+        actual fun toInt64RawBits(d: Double): Long = java.lang.Double.doubleToRawLongBits(d)
 
         @JvmStatic
-        actual fun intToInt64(value: Int): Int64 {
-            if (value >= -1024 && value < 1024) return int64Cache[(value shl 21) ushr 21]
-            return longToInt64(value.toLong())
-        }
+        actual fun intToInt64(value: Int): Long = value.toLong()
 
         @JvmStatic
-        actual fun longToInt64(value: Long): Int64 {
-            if (value >= -1024 && value < 1024) return int64Cache[(value.toInt() shl 21) ushr 21]
-            if (value == INT64_MAX_VALUE.toLong()) return INT64_MAX_VALUE
-            if (value == INT64_MIN_VALUE.toLong()) return INT64_MIN_VALUE
-            // This is a very simple hash-based cache, it is helpful for example for currentMillis.
-            val cache = this.int64ValueCache
-            val cacheMask = cache.size - 1
-            val i = (value.toInt() xor (value ushr 32).toInt()) and cacheMask
-            var instance = cache[i]
-            if (instance != null && instance.value == value) return instance
-            instance = JvmInt64(value)
-            cache[i] = instance
-            return instance
-        }
+        actual fun longToInt64(value: Long): Long = value
 
         @JvmStatic
-        actual fun int64ToLong(value: Int64): Long = value.toLong()
+        actual fun int64ToLong(value: Long): Long = value
 
         @JvmStatic
         actual fun isNumber(o: Any?): Boolean = o is Number
@@ -422,7 +403,7 @@ actual class Platform {
         actual fun isScalar(o: Any?): Boolean = o == null || o is Number || o is String || o is Boolean
 
         @JvmStatic
-        actual fun isInteger(o: Any?): Boolean = o is Byte || o is Short || o is Int || o is Long || o is JvmInt64
+        actual fun isInteger(o: Any?): Boolean = o is Byte || o is Short || o is Int || o is Long
 
         @JvmStatic
         actual fun isDouble(o: Any?): Boolean = o is Double
@@ -465,7 +446,6 @@ actual class Platform {
                 is Short -> obj
                 is Int -> obj
                 is Long -> obj
-                is Int64 -> obj
                 is Float -> obj
                 is Double -> obj
                 is String -> obj
@@ -571,10 +551,10 @@ actual class Platform {
         actual val intKlass: KClass<Int> = Int::class
 
         /**
-         * The KClass for [Int64].
+         * The KClass for [Long].
          */
         @JvmField
-        actual val int64Klass: KClass<Int64> = Int64::class
+        actual val int64Klass: KClass<Long> = Long::class
 
         /**
          * The KClass for [Double].
@@ -717,20 +697,20 @@ actual class Platform {
          * @return The current epoch milliseconds.
          */
         @JvmStatic
-        actual fun currentMillis(): Int64 = longToInt64(System.currentTimeMillis())
+        actual fun currentMillis(): Long = System.currentTimeMillis()
 
         /**
          * Returns the current epoch microseconds.
          * @return current epoch microseconds.
          */
         @JvmStatic
-        actual fun currentMicros(): Int64 = longToInt64(epochMicros + ((System.nanoTime() - startNanos) / 1000))
+        actual fun currentMicros(): Long = epochMicros + ((System.nanoTime() - startNanos) / 1000)
 
         /**
          * Returns the current epoch nanoseconds.
          * @return current epoch nanoseconds.
          */
-        actual fun currentNanos(): Int64 = longToInt64(epochNanos + (System.nanoTime() - startNanos))
+        actual fun currentNanos(): Long = epochNanos + (System.nanoTime() - startNanos)
 
         /**
          * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).

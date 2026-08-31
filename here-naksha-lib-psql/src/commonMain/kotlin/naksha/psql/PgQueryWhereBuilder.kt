@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.AnyList
-import naksha.base.Int64
 import naksha.base.StringList
 import naksha.model.Naksha
 import naksha.base.NakshaError
@@ -396,7 +395,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     }
 
     private fun _TagGt(negate: Boolean, memberName: String, key: String, value: Any?) {
-        if (value !is Number && value !is Int64) {
+        if (value !is Number) {
             throw illegalArg("TagGt: The given value is number: '$value'")
         }
         val expression = if (negate) "@ <= $value" else "@ > $value"
@@ -404,7 +403,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     }
 
     private fun _TagGte(negate: Boolean, memberName: String, key: String, value: Any?) {
-        if (value !is Number && value !is Int64) {
+        if (value !is Number) {
             throw illegalArg("TagGte: The given value is number: '$value'")
         }
         val expression = if (negate) "@ < $value" else "@ >= $value"
@@ -412,7 +411,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     }
 
     private fun _TagLt(negate: Boolean, memberName: String, key: String, value: Any?) {
-        if (value !is Number && value !is Int64) {
+        if (value !is Number) {
             throw illegalArg("TagLt: The given value is no number: '$value'")
         }
         val expression = if (negate) "@ >= $value" else "@ < $value"
@@ -420,7 +419,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     }
 
     private fun _TagLte(negate: Boolean, memberName: String, key: String, value: Any?) {
-        if (value !is Number && value !is Int64) {
+        if (value !is Number) {
             throw illegalArg("The given value is no valid tag value (number expected): $value")
         }
         val expression = if (negate) "@ > $value" else "@ <= $value"
@@ -565,7 +564,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             is Short -> PgType.SHORT
             is Int -> PgType.INT
             is Long -> PgType.INT64
-            is Int64 -> PgType.INT64
             is Float -> PgType.FLOAT
             is Double -> PgType.DOUBLE
             is ByteArray -> PgType.BYTE_ARRAY
@@ -578,7 +576,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
 
     /**
      * Returns a placeholder string like `$1` for the given value, and add the values and its type into the value and type arrays.
-     * @param value any number _(including `Int64`)_
+     * @param value any number
      * @return
      */
     private fun placeholderForNumber(value: Any?): String {
@@ -664,12 +662,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     private fun whereFeatureId() {
         // Partition into numeric IDs (fn >= 0, id stored as NULL in DB) and named IDs (fn < 0, id NOT NULL).
         val reqIds: StringList = request.featureIds
-        val featureNumbers: MutableList<Int64> = mutableListOf()
+        val featureNumbers: MutableList<Long> = mutableListOf()
         val featureIds: MutableList<String> = mutableListOf()
         for (id in reqIds) {
             if (id == null) continue
             val fn = Naksha.featureNumber(id)
-            if (fn >= Int64(0)) {
+            if (fn >= 0L) {
                 featureNumbers.add(fn)
             } else {
                 featureIds.add(id)

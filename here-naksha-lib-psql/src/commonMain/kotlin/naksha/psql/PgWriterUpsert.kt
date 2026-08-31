@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
@@ -29,7 +28,7 @@ internal class PgWriterUpsert(
 
     // All columns that are BYTE_ARRAYs (can be empty)
     private val byteArrayCols = pgCollection.columns.filter { it.memberType == MemberType.BYTE_ARRAY }
-    private val writeByFn = mutableMapOf<Int64, PgWrite>()
+    private val writeByFn = mutableMapOf<Long, PgWrite>()
     init {
         inRows.addColumns(pgCollection.columns)
         loadAllTuple { _, tuple, pgWrite -> writeByFn[tuple.tupleNumber.featureNumber] = pgWrite }

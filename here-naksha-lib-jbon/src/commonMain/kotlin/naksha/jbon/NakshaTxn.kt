@@ -2,7 +2,6 @@
 
 package naksha.jbon
 
-import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
@@ -15,22 +14,22 @@ import kotlin.js.JsExport
  */
 @JsExport
 @Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
-class NakshaTxn(val value: Int64) : Comparable<NakshaTxn> {
+class NakshaTxn(val value: Long) : Comparable<NakshaTxn> {
     companion object NakshaTxnCompanion {
         /**
          * The minimum value of the sequence, so just zero.
          */
-        val SEQ_MIN = Int64(0)
+        const val SEQ_MIN = 0L
 
         /**
          * The maximum value for the sequence, can be used as well as bitmask.
          */
-        val SEQ_MAX = Int64(0x0000_03ff_ffff_ffff)
+        const val SEQ_MAX = 0x0000_03ff_ffff_ffffL
 
         /**
          * The value to be added to calculate the end of a day.
          */
-        val SEQ_NEXT = Int64(0x0000_0400_0000_0000)
+        const val SEQ_NEXT = 0x0000_0400_0000_0000L
 
         /**
          * Create a transaction number from its parts.
@@ -39,8 +38,8 @@ class NakshaTxn(val value: Int64) : Comparable<NakshaTxn> {
          * @param day The day to encode, between 1 and 31.
          * @param seq The sequence in the day, between 0 and 2^42-1.
          */
-        fun of(year: Int, month: Int, day: Int, seq: Int64): NakshaTxn =
-                NakshaTxn((Int64(year) shl 51) or (Int64(month) shl 47) or (Int64(day) shl 42) + seq)
+        fun of(year: Int, month: Int, day: Int, seq: Long): NakshaTxn =
+                NakshaTxn((year.toLong() shl 51) or (month.toLong() shl 47) or ((day.toLong() shl 42) + seq))
     }
 
     private var _year = -1
@@ -61,8 +60,8 @@ class NakshaTxn(val value: Int64) : Comparable<NakshaTxn> {
         return _day
     }
 
-    private var _seq: Int64? = null
-    fun seq(): Int64 {
+    private var _seq: Long? = null
+    fun seq(): Long {
         if (_seq == null) _seq = value and SEQ_MAX
         return _seq!!
     }
@@ -81,14 +80,13 @@ class NakshaTxn(val value: Int64) : Comparable<NakshaTxn> {
     }
 
     override fun equals(other: Any?): Boolean {
-        if (other is Int64) return value eq other
-        if (other is NakshaTxn) return value eq other.value
+        if (other is Long) return value == other
+        if (other is NakshaTxn) return value == other.value
         return false
     }
 
     override fun compareTo(other: NakshaTxn): Int {
-        val diff = value - other.value
-        return if (diff eq 0) 0 else if (diff < 0) -1 else 1
+        return value.compareTo(other.value)
     }
 
     override fun hashCode(): Int {

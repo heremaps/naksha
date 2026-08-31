@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.base.Version
 import naksha.base.collectionNotFound
 import naksha.base.illegalArg
@@ -80,7 +79,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val WHERE = StringBuilder()
         var version = req.version
         if (version != null) {
-            version = version or Int64(3)
+            version = version or 3L
             if (version == Version.HEAD.number) {
                 version = null // HEAD
             } else {
@@ -90,7 +89,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         }
         var minVersion = req.minVersion
         if (minVersion != null) {
-            minVersion = minVersion or Int64(3)
+            minVersion = minVersion or 3L
             if (WHERE.isNotEmpty()) WHERE.append(" AND ")
             WHERE.append("($VERSION >= ").append(minVersion).append(")")
         }

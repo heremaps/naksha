@@ -57,11 +57,11 @@ actual class PlatformDataViewApi {
             (view as JvmDataView).setInt32(pos, value, littleEndian)
 
         @JvmStatic
-        actual fun dataview_get_int64(view: PlatformDataView, pos: Int, littleEndian: Boolean): Int64 =
+        actual fun dataview_get_int64(view: PlatformDataView, pos: Int, littleEndian: Boolean): Long =
             (view as JvmDataView).getInt64(pos, littleEndian)
 
         @JvmStatic
-        actual fun dataview_set_int64(view: PlatformDataView, pos: Int, value: Int64, littleEndian: Boolean) =
+        actual fun dataview_set_int64(view: PlatformDataView, pos: Int, value: Long, littleEndian: Boolean) =
             (view as JvmDataView).setInt64(pos, value, littleEndian)
     }
 }

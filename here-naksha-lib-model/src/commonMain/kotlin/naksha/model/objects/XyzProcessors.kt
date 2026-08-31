@@ -1,7 +1,6 @@
 package naksha.model.objects
 
 import naksha.base.Fnv1a32
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.geo.HereTile
 import naksha.base.Action
@@ -40,7 +39,6 @@ class XyzProcessors private constructor() {
         val xyzCreatedAt = IMemberProcessor { _, collection, feature, _, value ->
             when (value) {
                 is Long -> value
-                is Int64 -> value.toLong()
                 is Number -> value.toLong()
                 else -> {
                     val action = collection.useMember(StandardMembers.Tn).readTupleNumber(feature)?.action
@@ -77,7 +75,6 @@ class XyzProcessors private constructor() {
         @JvmStatic
         val xyzAuthorTimestamp = IMemberProcessor { session, _, _, _, value ->
             if (session.options.author != null) Platform.currentMillis().toLong()
-            else if (value is Int64) value.toLong()
             else value as? Long ?: if (value is Number) value.toLong() else null
         }
 
