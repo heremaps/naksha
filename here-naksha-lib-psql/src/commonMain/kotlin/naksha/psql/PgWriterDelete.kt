@@ -42,8 +42,8 @@ internal class PgWriterDelete(
         var row = 0
         for (i in start until end) {
             val pgWrite = pgWrites[i]
-            inRows.setColumn(row, FnColumn.ident, pgWrite.featureNumber)
-            inRows.setColumn(row, "expected_version", pgWrite.version?.number)
+            inRows.setColumn(FnColumn.ident, row, pgWrite.featureNumber)
+            inRows.setColumn("expected_version", row, pgWrite.version?.number)
             row++
         }
         check(row == (end-start))

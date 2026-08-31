@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.StringList
+import naksha.base.illegalArg
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -19,10 +20,32 @@ class TagList() : StringList() {
     /**
      * Create a tag list from the given arguments; the tags are normalized.
      * @param tags the tags.
+     * @param skipNormalize if normalization should be skipped; expects then that the given values are already normalized.
      */
+    @JvmOverloads
     @JsName("of")
-    constructor(vararg tags: String): this() {
-        addTags(listOf(*tags), false)
+    constructor(vararg tags: String, skipNormalize: Boolean = false): this() {
+        setCapacity(tags.size)
+        for (tag in tags) addTag(tag, !skipNormalize)
+    }
+
+    /**
+     * Create a tag list from the given list; the tags are normalized.
+     * @param tags the tags.
+     * @param skipInvalid if invalid values in the given should be skipped; otherwise an exception is raised.
+     * @param skipNormalize if normalization should be skipped; expects then that the given values are already normalized.
+     * @throws naksha.base.NakshaException with error [ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] if the given list contains `null` or valus not being `String` and [skipInvalid] is _false_.
+     */
+    @JvmOverloads
+    @JsName("ofList")
+    constructor(tags: List<*>, skipInvalid: Boolean = false, skipNormalize: Boolean = false): this() {
+        setCapacity(tags.size)
+        for (i in 0 until tags.size) {
+            val tag = tags[i]
+            if (tag is String) addTag(tag, skipInvalid)
+            else if (tag is Char || tag is CharSequence) addTag(tag.toString(), !skipNormalize)
+            else if (!skipInvalid) throw illegalArg("The tag $i is no string: $tag")
+        }
     }
 
     /**
@@ -158,18 +181,22 @@ class TagList() : StringList() {
         /**
          * Create a tag list from the given array. Values being `null` or no [String] are ignored.
          * @param tags the tags.
-         * @param normalize if the values should be normalized.
+         * @param skipInvalid if invalid values in the given should be skipped; otherwise an exception is raised.
+         * @param skipNormalize if normalization should be skipped; expects then that the given values are already normalized.
+         * @throws naksha.base.NakshaException with error [ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] if the given list contains `null` or valus not being `String` and [skipInvalid] is _false_.
          * @return the tag-list.
          * @since 3.0
          */
         @JvmStatic
         @JsStatic
         @JvmOverloads
-        fun fromArray(tags: Array<*>, normalize: Boolean = true): TagList = TagList().apply {
+        fun fromArray(tags: Array<*>, skipInvalid: Boolean = false, skipNormalize: Boolean = false): TagList = TagList().apply {
             setCapacity(tags.size)
-            for (tag in tags) {
-                if (tag is String) addTag(tag, normalize)
-                else if (tag is Char || tag is CharSequence) addTag(tag.toString(), normalize)
+            for (i in 0 until tags.size) {
+                val tag = tags[i]
+                if (tag is String) addTag(tag, !skipNormalize)
+                else if (tag is Char || tag is CharSequence) addTag(tag.toString(), !skipNormalize)
+                else if (!skipInvalid) throw illegalArg("The tag #$i is no string: $tag")
             }
         }
 

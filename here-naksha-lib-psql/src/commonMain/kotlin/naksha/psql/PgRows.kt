@@ -12,6 +12,7 @@ import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.TupleNumber
 import naksha.model.objects.MemberType
 import naksha.base.Version
+import naksha.base.illegalArg
 import naksha.base.internalError
 import naksha.base.proxy
 import naksha.geo.GeoUtil
@@ -32,6 +33,7 @@ import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
+import kotlin.math.max
 
 /**
  * Helper class to convert rows into arrays of column-data and vice versa.
@@ -63,22 +65,31 @@ internal class PgRows {
      */
     var size: Int = 0
         set(value) {
-            if (field != value) {
-                for (column in columns) {
-                    column.values.size = value
-                }
+            if (value > field) withMinCapacity(value)
+            field = max(0, value)
+        }
+
+    /**
+     * The capacity of the columns, can't shrink.
+     * @since 3.0
+     */
+    var capacity: Int = 0
+        set (value) {
+            if (value > field) {
+                val new_capacity = max(4, (value * 1.25).toInt())
+                for (column in columns) column.values = column.values.copyOf(new_capacity)
                 field = value
             }
         }
 
     /**
-     * Ensures that all columns have at least this amount of values, if too short, adds `null` values until the minimal size is reached.
+     * Ensures that all columns have minimally this capacity.
+     * @param minCapacity the minimal amount of rows, so minimal size of each column values.
+     * @return this.
      * @since 3.0
      */
-    fun setMinRows(rowsCount: Int): PgRows {
-        if (this.size < rowsCount) {
-            this.size = rowsCount
-        }
+    fun withMinCapacity(minCapacity: Int): PgRows {
+        if (capacity < minCapacity) capacity = minCapacity
         return this
     }
 
@@ -95,7 +106,7 @@ internal class PgRows {
                 catalogNumber = collection.catalog.catalogNumber
                 databaseNumber = collection.catalog.storage.number
                 for (pgColumn in collection.columns) {
-                    columns.add(PgColumnWithValues(pgColumn))
+                    columns.add(PgColumnWithValues(this, this.columns.size, pgColumn))
                 }
             }
             field = collection
@@ -173,7 +184,7 @@ internal class PgRows {
             val alias = column.name
             val existing = getColumn(alias)
             if (existing != null) continue
-            this.columns.add(PgColumnWithValues(column, alias).withSize(size))
+            this.columns.add(PgColumnWithValues(this, this.columns.size, column, alias))
         }
         return this
     }
@@ -182,8 +193,7 @@ internal class PgRows {
         clearCache()
         val existing = getColumn(alias)
         if (existing == null) {
-            val column = PgColumnWithValues(column, alias).withSize(size)
-            columns.add(column)
+            columns.add(PgColumnWithValues(this, this.columns.size, column, alias))
         }
         return this
     }
@@ -191,8 +201,8 @@ internal class PgRows {
         clearCache()
         val existing = getColumn(alias)
         if (existing == null) {
-            val column = PgColumnWithValues(PgColumn(-1, alias, type)).withSize(size)
-            columns.add(column)
+            val pgColumn = PgColumn(-1, alias, type)
+            columns.add(PgColumnWithValues(this, this.columns.size, pgColumn))
         }
         return this
     }
@@ -206,7 +216,7 @@ internal class PgRows {
     fun hasColumn(index: Int): Boolean = getColumn(index) != null
 
 
-    fun getAny(row: Int, alias: String): Any? = getColumn(alias)?.values?.get(row)
+    fun getAny(row: Int, alias: String): Any? = getColumn(alias)?.get(row)
     fun getAny(row: Int, column: PgColumn): Any? = getAny(row, column.name)
     fun getInt(row: Int, alias: String): Int? = getAny(row, alias) as? Int
     fun getInt(row: Int, column: PgColumn): Int? = getInt(row, column.name)
@@ -242,14 +252,8 @@ internal class PgRows {
         // Stored as text[], therefore returned by JDBC as Array.
         val raw = getArray(row, alias) ?: return null
         return try {
-            val tagList = TagList()
-            tagList.setCapacity(raw.size)
-            for (tag in raw) {
-                if (tag !is String) continue
-                // We know that we read back data we serialized, tags are normalized!
-                tagList.addTag(tag, false)
-            }
-            tagList
+            // We know that we read back data we serialized, tags are normalized!
+            TagList.fromArray(raw, skipInvalid = true, skipNormalize = true)
         } catch (_: Exception) {
             null
         }
@@ -296,7 +300,7 @@ internal class PgRows {
             val member = members[i] ?: continue
             val name = member.name
             if (name == FeatureBytes.name) {
-                val value = getColumn(name)?.values?.get(row)
+                val value = getAny(row, name)
                 if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
                 featureBytes = value
                 continue
@@ -304,19 +308,18 @@ internal class PgRows {
             if (member.isVirtual()) continue
             when (name) {
                 Tn.name -> {
-                    val fn = getColumn(PgColumn.FnColumn.name)?.values?.get(row) as? Long
-                    val ver = getColumn(PgColumn.VersionColumn.name)?.values?.get(row) as? Long
+                    val fn = getLong(row, PgColumn.FnColumn)
+                    val ver = getLong(row, PgColumn.VersionColumn)
                     val db = databaseNumber; val cat = catalogNumber; val col = collectionNumber
                     val tn = if (fn != null && ver != null && db != null && cat != null && col != null)
                         TupleNumber(db, cat, col, fn, ver) else null
                     membersBook.put(name, tn)
                 }
                 NextVersion.name -> {
-                    val raw = getColumn(name)?.values?.get(row) as? Long
-                    membersBook.put(name, raw ?: Version.HEAD.number)
+                    membersBook.put(name, getLong(row, name) ?: Version.HEAD.number)
                 }
                 else -> {
-                    val pg_value = getColumn(name)?.values?.get(row)
+                    val pg_value = getAny(row, name)
                     val value = member.dataType.convert(pg_value)
                     membersBook.put(name, value)
                 }
@@ -341,11 +344,12 @@ internal class PgRows {
 
     // TODO: The current usage luckily avoids setting structured types with special encoding.
     //       However, theoretically we need to handle TagMap and TagList!
-    fun setColumn(row: Int, columnName: String, value: Any?): Boolean {
+    fun setColumn(columnName: String, row: Int, value: Any?): Boolean {
         val column = getColumn(columnName)
         if (column != null) {
-            setMinRows(row+1)
-            column.values[row] = if (SPATIAL == column.pgColumn.memberType) GeoUtil.toTWKB(value as SpGeometry?) else value
+            withMinCapacity(row + 1)
+            val memberType = column.pgColumn.memberType
+            column[row] = if (SPATIAL == memberType && value is SpGeometry) GeoUtil.toTWKB(value) else value
             return true
         }
         return false
@@ -354,20 +358,21 @@ internal class PgRows {
     operator fun set(row: Int, tuple: Tuple) = setRow(row, tuple)
 
     fun setRow(row: Int, tuple: Tuple) {
-        setMinRows(row+1)
+        withMinCapacity(row+1)
         val membersBook = tuple.membersBook
         val END = membersBook.namesLength()
         for (i in 0 until END) {
             val memberName = membersBook.getNameAt(i) ?: continue
             val column = getColumn(memberName) ?: continue
+            val memberType = column.pgColumn.memberType
             val member_value = membersBook[memberName]
             // Note: The members book is required to contain correctly typed values.
             // We convert these values into what is stored in PostgresQL.
-            column.values[row] = when (val member_type = column.pgColumn.memberType) {
+            val pg_value = when (memberType) {
                 BOOLEAN -> member_value as? Boolean
                 INT8 -> member_value as? Byte
                 INT16 -> member_value as? Short
-                INT32 -> member_value as? Byte
+                INT32 -> member_value as? Int
                 INT64 -> member_value as? Long
                 FLOAT32 -> member_value as? Float
                 FLOAT64 -> member_value as? Double
@@ -381,21 +386,22 @@ internal class PgRows {
                 TAG_MAP -> if (member_value is TagMap) toJSON(member_value) else null
                 // Stored as text[]
                 TAG_LIST -> if (member_value is TagList) member_value.toStringArray(true) else null
-                else -> throw internalError("PgRows: Unknown member type in member book: $member_type")
+                else -> throw internalError("PgRows: Unknown member type in member book: $memberType")
             }
+            column[row] = pg_value
         }
         // The members-book keeps the tuple-number as a single `_tn` entry; the table splits it into the
         // `_fn` and `_version` columns, so populate those from the tuple-number.
         val tn = tuple.tupleNumber
-        getColumn(PgColumn.FnColumn.name)?.let { it.values[row] = tn.featureNumber }
-        getColumn(PgColumn.VersionColumn.name)?.let { it.values[row] = tn.version }
+        getColumn(PgColumn.FnColumn.name)?.let { it[row] = tn.featureNumber }
+        getColumn(PgColumn.VersionColumn.name)?.let { it[row] = tn.version }
         // HEAD rows store next_version as NULL; translate the encoder's HEAD sentinel into NULL.
-        getColumn(PgColumn.NextVersionColumn.name)?.let { if (it.values[row] == Version.HEAD.number) it.values[row] = null }
+        getColumn(PgColumn.NextVersionColumn.name)?.let { if (it[row] == Version.HEAD.number) it[row] = null }
         // `_id` is materialized only when it is not derivable from the feature-number: fn < 0 => hashed
         // id, fn >= 0 => id equals fn so `_id` stays NULL (a CHECK enforces both cases).
-        getColumn(Id.name)?.let { it.values[row] = if (tn.featureNumber < 0L) membersBook[Id.name] else null }
+        getColumn(Id.name)?.let { it[row] = if (tn.featureNumber < 0L) membersBook[Id.name] else null }
         val featureColumn = getColumn(FeatureBytes.name) ?: return
-        featureColumn.values[row] = tuple.featureBytes
+        featureColumn[row] = tuple.featureBytes
     }
 
     /**
@@ -406,13 +412,12 @@ internal class PgRows {
      */
     operator fun set(row: Int, cursor: PgCursor) {
         if (!cursor.isRow()) return
-        // Grow to hold index `row` (size must be row + 1) so appended read rows are retained.
-        setMinRows(row + 1)
+        withMinCapacity(row + 1)
         val columnNames = cursor.columnNames()
         for (columnName in columnNames) {
             val column = getColumn(columnName) ?: continue
             val value = cursor.column(columnName)
-            column.values[row] = value
+            column[row] = value
         }
     }
 

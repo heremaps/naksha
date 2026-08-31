@@ -354,7 +354,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         //   Do any of the strings in the text array exist as top-level keys or array elements?
         //   '{"a":1, "b":2, "c":3}'::jsonb ?| array['b', 'd'] → t
         if (negate) where.append("NOT ")
-        where.append(memberName).append(" ??| ").append(_keys_array_).append(" ")
+        where.append(memberName).append(" ??| ").append(_keys_array_).append("::text[] ")
     }
 
     private fun _TagMapHasAllOf(negate: Boolean, memberName: String, keys: StringList) {
@@ -365,7 +365,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         //   Do all of the strings in the text array exist as top-level keys or array elements?
         //   '["a", "b", "c"]'::jsonb ?& array['a', 'b'] → t
         if (negate) where.append("NOT ")
-        where.append(memberName).append(" ??& ").append(_keys_array_).append(" ")
+        where.append(memberName).append(" ??& ").append(_keys_array_).append("::text[] ")
     }
 
     private fun _TagIsNull(negate: Boolean, memberName: String, key: String) {
@@ -511,14 +511,14 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
      */
     private fun evaluateJsonPath(memberName: String, key: String, expression: String) {
         val _jsonpath_ = placeholderForArg(
-            "$.${quoteString(key)} ?? ($expression)",
+            "$.${quoteString(key)} ? ($expression)",
             PgType.STRING
         )
         // jsonb @? jsonpath → boolean
         //   Does JSON path return any item for the specified JSON value?
         //   '{"a":5}'::jsonb @? '$.a ? (@ > 2)' → t
         //   '{"a":[1,2,3,4,5]}'::jsonb @? '$.a[*] ? (@ > 2)' → t
-        where.append(memberName).append(" @?? ").append(_jsonpath_)
+        where.append(memberName).append(" @?? ").append(_jsonpath_).append("::jsonpath ")
     }
 
     /**
