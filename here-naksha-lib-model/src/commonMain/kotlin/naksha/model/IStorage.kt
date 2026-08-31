@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.PlatformLock
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fx1
@@ -58,7 +57,7 @@ interface IStorage : IDictReader {
      * @since 3.0
      * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    val number: Int64
+    val number: Long
 
     /**
      * The hard-cap _(max result size)_ of the storage. No result-set every can become bigger than this amount of features.

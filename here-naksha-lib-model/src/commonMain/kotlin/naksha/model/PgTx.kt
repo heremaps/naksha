@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.Version
 import naksha.jbon.IDictReader
 import naksha.model.objects.*
@@ -32,7 +31,7 @@ open class PgTx private constructor(
      * @since 3.0
      * @see [NakshaStorage.number]
      */
-    val storageNumber: Int64,
+    val storageNumber: Long,
 
     /**
      * The unique version of the transaction. This value **should be** unique to this transaction.
@@ -72,7 +71,7 @@ open class PgTx private constructor(
 
     @JsName("storageTxWithStorageNumber")
     constructor(
-        storageNumber: Int64,
+        storageNumber: Long,
         version: Version,
         appId: String,
         author: String?,
@@ -100,6 +99,6 @@ open class PgTx private constructor(
      * The `updated_at` value being used for all [Tuple] created, basically just reads `transaction.time`.
      * @since 3.0
      */
-    open val updatedAt: Int64
+    open val updatedAt: Long
         get() = nakshaTx.time
 }

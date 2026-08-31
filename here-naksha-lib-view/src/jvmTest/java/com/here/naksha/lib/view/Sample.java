@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import static naksha.base.LibBaseKt.Int64;
 import static naksha.model.RandomFeatures.randomFeature;
 
 import naksha.base.Action;
@@ -33,7 +32,7 @@ import naksha.model.request.FeatureTupleList;
 public class Sample {
 
   public static FeatureTuple featureTuple(NakshaFeature feature) {
-    TupleNumber tupleNumber = new TupleNumber(Int64(1), 0, 0, Naksha.featureNumber(feature.getId()), Int64(1));
+    TupleNumber tupleNumber = new TupleNumber(1L, 0, 0, Naksha.featureNumber(feature.getId()), 1L);
     feature.getProperties().getXyz().setRaw("uuid", tupleNumber.toString());
     FeatureTuple featureTuple = new FeatureTuple(tupleNumber, (Tuple) null);
     featureTuple.setFeature(feature);

@@ -3,7 +3,6 @@
 package naksha.model
 
 import naksha.base.ITagMap
-import naksha.base.Int64
 import naksha.base.MapProxy
 import naksha.base.NakshaError
 import naksha.base.NakshaException

@@ -7,14 +7,12 @@ import kotlinx.datetime.toLocalDateTime
 import naksha.base.Action
 import naksha.base.Action.Action_C.VERSION
 import naksha.base.AtomicRef
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
 import naksha.base.Version
-import naksha.base.toInt64
 import naksha.model.Naksha.NakshaCompanion.catalogNumber
 import naksha.model.Naksha.NakshaCompanion.collectionNumber
 import naksha.model.Naksha.NakshaCompanion.databaseNumber
@@ -50,7 +48,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      */
     protected var configRef: AtomicRef<CONFIG> = AtomicRef(null)
     private var _id: String? = null
-    private var _number: Int64? = null
+    private var _number: Long? = null
 
     override val config: CONFIG
         get() = configRef.get() ?: throwUninitialized()
@@ -58,7 +56,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
     override val id: String
         get() = _id ?: throwUninitialized()
 
-    override val number: Int64
+    override val number: Long
         get() = _number ?: throwUninitialized()
 
     override var hardCap: Int = 16777216
@@ -119,8 +117,8 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @since 3.0
      * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    protected open fun newVirtualTupleNumber(catalogId: String, collectionId: String, featureId: String, version: Int64, action: Action): TupleNumber {
-        val v = ((version.toLong() and -4L) or action.longValue).toInt64()
+    protected open fun newVirtualTupleNumber(catalogId: String, collectionId: String, featureId: String, version: Long, action: Action): TupleNumber {
+        val v = (version and -4L) or action.longValue
         return TupleNumber(databaseNumber(id), catalogNumber(catalogId), collectionNumber(collectionId), featureNumber(featureId), v)
     }
 
@@ -131,7 +129,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @since 3.0
      * @see newVirtualVersion
      */
-    protected open val nextVirtualVersion = Platform.newAtomicInt64(Version.now(0L.toInt64(), VERSION).number)
+    protected open val nextVirtualVersion = Platform.newAtomicInt64(Version.now(0L, VERSION).number)
 
     /**
      * Creates a new JVM local unique transaction number, aka virtual version.
@@ -144,11 +142,11 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
     protected open fun newVirtualVersion(): Version {
         // More reliable tailrec.
         while (true) {
-            val version = Version(nextVirtualVersion.getAndAdd(4L.toInt64()) )
+            val version = Version(nextVirtualVersion.getAndAdd(4L))
             // getAndAdd uses a memory-fence, therefore `now` is guaranteed to be read after the version!
             val now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)
             if (version.isBehind(now.year, now.month.number, now.day)) {
-                val newVersion = Version.auto(now.year, now.month.number, now.day, 0L.toInt64(), VERSION)
+                val newVersion = Version.auto(now.year, now.month.number, now.day, 0L, VERSION)
                 if (nextVirtualVersion.compareAndSet(version.number + 4, newVersion.number + 4)) return newVersion
                 // Fail, concurrent increment, repeat.
                 continue

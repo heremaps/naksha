@@ -139,7 +139,7 @@ expect class PlatformDataViewApi {
          * @return the read value.
          * @since 3.0.0
          */
-        fun dataview_get_int64(view: PlatformDataView, pos: Int, littleEndian: Boolean = false): Int64
+        fun dataview_get_int64(view: PlatformDataView, pos: Int, littleEndian: Boolean = false): Long
 
         /**
          * Write a 64-bit integer into the view.
@@ -149,7 +149,7 @@ expect class PlatformDataViewApi {
          * @param littleEndian _true_ if little-endian encoding should be used.
          * @since 3.0.0
          */
-        fun dataview_set_int64(view: PlatformDataView, pos: Int, value: Int64, littleEndian: Boolean = false)
+        fun dataview_set_int64(view: PlatformDataView, pos: Int, value: Long, littleEndian: Boolean = false)
     }
 }
 

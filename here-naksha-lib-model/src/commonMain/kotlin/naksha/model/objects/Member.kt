@@ -3,7 +3,6 @@
 package naksha.model.objects
 
 import naksha.base.AnyObject
-import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.MapProxy
 import naksha.base.NotNullEnum
@@ -277,7 +276,6 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun readLong(feature: MapProxy<*,*>): Long? {
         val raw = feature.getPath(path)
         if (raw is Long) return raw
-        if (raw is Int64) return raw.toLong()
         if (raw is Number) return raw.toLong()
         return null
     }
@@ -392,7 +390,6 @@ open class Member() : AnyObject(), Comparator<Member> {
     @JsName("getInt64FromTuple")
     fun readLong(tuple: Tuple): Long? {
         val raw = tuple.getMember(this)
-        if (raw is Int64) return raw.toLong()
         if (raw is Long) return raw
         if (raw is Number) return raw.toLong()
         return null

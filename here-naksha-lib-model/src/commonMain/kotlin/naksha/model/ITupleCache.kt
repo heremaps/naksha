@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.TupleNumber
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
@@ -30,7 +29,7 @@ interface ITupleCache {
      *
      * @since 3.0
      */
-    val latencyInMicros: Int64
+    val latencyInMicros: Long
 
     /**
      * Tries to read a single tuple from the cache.
@@ -105,7 +104,7 @@ interface ITupleCache {
      * @param storageNumber the storage-number of the storage from which to query dictionaries.
      * @return the [dictionary reader][IDictReader] for the requested storage, if any is available.
      */
-    fun getDictReader(storageNumber: Int64): IDictReader?
+    fun getDictReader(storageNumber: Long): IDictReader?
 
     /**
      * Removes all cache entries (clear the cache).

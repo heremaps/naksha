@@ -2,7 +2,6 @@
 
 package naksha.model.mom
 
-import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
@@ -15,7 +14,7 @@ class MomDeltaNs : AnyObject() {
         private val STRING_NULL = NullableProperty<MomDeltaNs, String>(String::class)
         private val CHANGE_STATE = NotNullProperty<MomDeltaNs, String>(String::class) { _, _ -> MomChangeState.CREATED.text }
         private val REVIEW_STATE = NotNullProperty<MomDeltaNs, String>(String::class) { _, _ -> MomReviewState.UNPUBLISHED.text }
-        private val INT64 = NotNullProperty<MomDeltaNs, Int64>(Int64::class) { _, _ -> Int64(0) }
+        private val INT64 = NotNullProperty<MomDeltaNs, Long>(Long::class) { _, _ -> 0L }
     }
 
     /**
@@ -41,13 +40,13 @@ class MomDeltaNs : AnyObject() {
      * whatever value he wants; normal users may not explicitly set this property, therefore for them the value is kept as it is, when not
      * existing, it is set 0 for normal users.
      */
-    var potentialValue: Int64 by INT64
+    var potentialValue: Long by INT64
 
     /**
      * The priority category assigned to this edit. A value between 0 (no priority, no SLA) and 9. It is never valid to decrease the value
      * (see <a href="https://devzone.it.here.com/jira/browse/CMECMSSUP-1945">CMECMSSUP-1945</a>)!
      */
-    var priorityCategory: Int64 by INT64
+    var priorityCategory: Long by INT64
 
     /**
      * The UNIX epoch timestamp in milliseconds of the time until when the edit must be taken care of. This property is only set automatically

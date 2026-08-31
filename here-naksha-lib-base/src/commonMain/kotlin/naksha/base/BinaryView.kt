@@ -271,7 +271,7 @@ interface BinaryView {
      * @return The read value.
      * @throws IndexOutOfBoundsException If the [pos] is at [byteLength] or reading would require to read [byteLength].
      */
-    fun getInt64(pos: Int, littleEndian: Boolean = false): Int64
+    fun getInt64(pos: Int, littleEndian: Boolean = false): Long
 
     /**
      * Writes into the [byteArray].
@@ -279,7 +279,7 @@ interface BinaryView {
      * @param littleEndian If the data should be stored in [little-endian](https://en.wikipedia.org/wiki/Endianness) in the [byteArray].
      * @throws IndexOutOfBoundsException If [resize] is _false_ and the [end] is at [byteLength] or writing would require to write at [byteLength].
      */
-    fun setInt64(pos: Int, value: Int64, littleEndian: Boolean = false)
+    fun setInt64(pos: Int, value: Long, littleEndian: Boolean = false)
 
     /**
      * Read from the [byteArray] at [pos] and increment the position.
@@ -287,13 +287,13 @@ interface BinaryView {
      * @return The read value.
      * @throws IndexOutOfBoundsException If the [pos] is at [end] or reading would require to read [end].
      */
-    fun readInt64(littleEndian: Boolean = false): Int64
+    fun readInt64(littleEndian: Boolean = false): Long
 
     /**
      * Writes into the [byteArray] at [end] and increment the end.
      * @param littleEndian If the data should be stored in [little-endian](https://en.wikipedia.org/wiki/Endianness) in the [byteArray].
      * @throws IndexOutOfBoundsException If [resize] is _false_ and the [end] is at [byteLength] or writing would require to write at [byteLength].
      */
-    fun writeInt64(value: Int64, littleEndian: Boolean = false)
+    fun writeInt64(value: Long, littleEndian: Boolean = false)
 
 }

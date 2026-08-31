@@ -2,7 +2,6 @@
 
 package naksha.model.objects
 
-import naksha.base.Int64
 import naksha.base.NullableProperty
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
@@ -70,7 +69,7 @@ open class NakshaCatalog() : NakshaFeature() {
      * @since 3.0
      * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
      */
-    val databaseNumber: Int64
+    val databaseNumber: Long
         get() = tupleNumber?.databaseNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
 
     /**

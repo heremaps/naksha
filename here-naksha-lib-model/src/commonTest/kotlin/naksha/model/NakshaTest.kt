@@ -1,7 +1,6 @@
 package naksha.model
 
 import naksha.base.Binary
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
 import naksha.model.Naksha.NakshaCompanion.INT64_SIGN_BIT
@@ -36,24 +35,24 @@ class NakshaTest {
     @Test
     fun shouldConvertNumericIdsToFeatureNumber() {
         // expect
-        assertEquals(Int64(0L), Naksha.featureNumber("0"))
-        assertEquals(Int64(1L), Naksha.featureNumber("1"))
-        assertEquals(Int64(5000L), Naksha.featureNumber("5000"))
-        assertEquals(Int64(9223372036854775807L), Naksha.featureNumber("9223372036854775807"))
+        assertEquals(0L, Naksha.featureNumber("0"))
+        assertEquals(1L, Naksha.featureNumber("1"))
+        assertEquals(5000L, Naksha.featureNumber("5000"))
+        assertEquals(9223372036854775807L, Naksha.featureNumber("9223372036854775807"))
     }
 
     @Test
     fun shouldNotConvertNegativeNumericIdsToFeatureNumber() {
         // expect
-        assertNotEquals(Int64(-1L), Naksha.featureNumber("-1"))
-        assertNotEquals(Int64(-100L), Naksha.featureNumber("-100"))
+        assertNotEquals(-1L, Naksha.featureNumber("-1"))
+        assertNotEquals(-100L, Naksha.featureNumber("-100"))
     }
 
     @Test
     fun shouldNotConvertNumericIdsWithLeadingZeroToFeatureNumber() {
         // expect
-        assertNotEquals(Int64(0L), Naksha.featureNumber("00"))
-        assertNotEquals(Int64(1L), Naksha.featureNumber("01"))
+        assertNotEquals(0L, Naksha.featureNumber("00"))
+        assertNotEquals(1L, Naksha.featureNumber("01"))
     }
 
     @Test
@@ -91,41 +90,41 @@ class NakshaTest {
          * A map between a feature-id and its feature-number, partition-number.
          */
         val featureNumbers = mapOf(
-            Pair("apple", Pair(Int64(-5484511280634489473), 38271)),
-            Pair("mountain", Pair(Int64(-7643729615383602773), 22955)),
-            Pair("river", Pair(Int64(-8583638578235004148), 43788)),
-            Pair("sunshine", Pair(Int64(-4226617501311062128), 44944)),
-            Pair("thunderstorm", Pair(Int64(-1662902383593395660), 59956)),
-            Pair("ocean", Pair(Int64(-814082869712769487), 11825)),
-            Pair("whisper", Pair(Int64(-3749626363697139386), 28998)),
-            Pair("horizon", Pair(Int64(-7642222644562628650), 61398)),
-            Pair("galaxy", Pair(Int64(-883295718727625417), 54583)),
-            Pair("waterfall", Pair(Int64(-7660642750086972487), 64441)),
-            Pair("adventure", Pair(Int64(-7128644326194761764), 45020)),
-            Pair("brilliant", Pair(Int64(-5335221019134199366), 63930)),
-            Pair("cinnamon", Pair(Int64(-2248730746238684729), 45511)),
-            Pair("discover", Pair(Int64(-6128714515268687570), 10542)),
-            Pair("elephant", Pair(Int64(-7157438305210013553), 59535)),
-            Pair("friendship", Pair(Int64(-6290951814662559583), 26785)),
-            Pair("grateful", Pair(Int64(-700925958107943057), 12143)),
-            Pair("happiness", Pair(Int64(-4386989945280691918), 33074)),
-            Pair("inspire", Pair(Int64(-2792765718126701116), 21956)),
-            Pair("journey", Pair(Int64(-5734938501861003441), 12111)),
-            Pair("kindness", Pair(Int64(-432081468076469306), 54214)),
-            Pair("lighthouse", Pair(Int64(-2138142157099628800), 1792)),
-            Pair("marvelous", Pair(Int64(-4532173556937446518), 11146)),
-            Pair("nostalgia", Pair(Int64(-8803792262422751274), 38870)),
-            Pair("optimistic", Pair(Int64(-5230136328746208797), 29155)),
-            Pair("peaceful", Pair(Int64(-5292427495373678802), 55086)),
-            Pair("question", Pair(Int64(-5073713729616654471), 20345)),
-            Pair("remarkable", Pair(Int64(-3533350706736017749), 52907)),
-            Pair("timeless", Pair(Int64(-8277156549585841745), 20911)),
-            Pair("universe", Pair(Int64(-1692936746790842146), 37086)),
-            Pair("victorious", Pair(Int64(-6472092707646497588), 40140)),
-            Pair("wonderful", Pair(Int64(-284636615007774547), 22701)),
-            Pair("zephyr", Pair(Int64(-6766911163183497362), 32622)),
-            Pair("A7l9RsIxWZCp2I6i3wXo", Pair(Int64(-6293233423437375615), 22401)),
-            Pair("A6ixOLtAZF8IhKez25zY", Pair(Int64(-318328739946057960), 44824)),
+            Pair("apple", Pair(-5484511280634489473L, 38271)),
+            Pair("mountain", Pair(-7643729615383602773L, 22955)),
+            Pair("river", Pair(-8583638578235004148L, 43788)),
+            Pair("sunshine", Pair(-4226617501311062128L, 44944)),
+            Pair("thunderstorm", Pair(-1662902383593395660L, 59956)),
+            Pair("ocean", Pair(-814082869712769487L, 11825)),
+            Pair("whisper", Pair(-3749626363697139386L, 28998)),
+            Pair("horizon", Pair(-7642222644562628650L, 61398)),
+            Pair("galaxy", Pair(-883295718727625417L, 54583)),
+            Pair("waterfall", Pair(-7660642750086972487L, 64441)),
+            Pair("adventure", Pair(-7128644326194761764L, 45020)),
+            Pair("brilliant", Pair(-5335221019134199366L, 63930)),
+            Pair("cinnamon", Pair(-2248730746238684729L, 45511)),
+            Pair("discover", Pair(-6128714515268687570L, 10542)),
+            Pair("elephant", Pair(-7157438305210013553L, 59535)),
+            Pair("friendship", Pair(-6290951814662559583L, 26785)),
+            Pair("grateful", Pair(-700925958107943057L, 12143)),
+            Pair("happiness", Pair(-4386989945280691918L, 33074)),
+            Pair("inspire", Pair(-2792765718126701116L, 21956)),
+            Pair("journey", Pair(-5734938501861003441L, 12111)),
+            Pair("kindness", Pair(-432081468076469306L, 54214)),
+            Pair("lighthouse", Pair(-2138142157099628800L, 1792)),
+            Pair("marvelous", Pair(-4532173556937446518L, 11146)),
+            Pair("nostalgia", Pair(-8803792262422751274L, 38870)),
+            Pair("optimistic", Pair(-5230136328746208797L, 29155)),
+            Pair("peaceful", Pair(-5292427495373678802L, 55086)),
+            Pair("question", Pair(-5073713729616654471L, 20345)),
+            Pair("remarkable", Pair(-3533350706736017749L, 52907)),
+            Pair("timeless", Pair(-8277156549585841745L, 20911)),
+            Pair("universe", Pair(-1692936746790842146L, 37086)),
+            Pair("victorious", Pair(-6472092707646497588L, 40140)),
+            Pair("wonderful", Pair(-284636615007774547L, 22701)),
+            Pair("zephyr", Pair(-6766911163183497362L, 32622)),
+            Pair("A7l9RsIxWZCp2I6i3wXo", Pair(-6293233423437375615L, 22401)),
+            Pair("A6ixOLtAZF8IhKez25zY", Pair(-318328739946057960L, 44824)),
         )
     }
 
@@ -134,7 +133,7 @@ class NakshaTest {
             append(byte.toUByte().toString(16).padStart(2, '0'))
         }
     }
-    private fun printPairIfIncorrect(id: String, fn: Int64, pn: Int) {
+    private fun printPairIfIncorrect(id: String, fn: Long, pn: Int) {
         val bytes = Platform.md5(id)
         // To compare: https://www.md5hashgenerator.com/
         val hex = toHex(bytes)
@@ -143,7 +142,7 @@ class NakshaTest {
         val signedLower = lower or INT64_SIGN_BIT
         val lower16 = signedLower.toInt() and 65535
         if (signedLower != fn || lower16 != pn) {
-            println("Pair(\"$id\", Pair(Int64($signedLower), ${lower16})),")
+            println("Pair(\"$id\", Pair(${signedLower}L, ${lower16})),")
         }
     }
     private fun generate() {

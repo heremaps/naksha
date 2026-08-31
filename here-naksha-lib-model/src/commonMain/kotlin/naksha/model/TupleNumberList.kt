@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.Platform
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
@@ -68,10 +67,10 @@ class TupleNumberList : ListProxy<TupleNumber>(TupleNumber::class) {
         //   if the tuple-numbers share storage-, map-, collection-, and/or feature-number
         // Note, this code is not thread safe, no other thread must modify the list while we iterate it.
         var variant: TupleNumberVariant? = null
-        var storageNumber: Int64? = null
+        var storageNumber: Long? = null
         var mapNumber: Int? = -1
         var collectionNumber: Int? = -1
-        var featureNumber: Int64? = null
+        var featureNumber: Long? = null
         for (tupleNumber in this) {
             if (tupleNumber == null) {
                 length--

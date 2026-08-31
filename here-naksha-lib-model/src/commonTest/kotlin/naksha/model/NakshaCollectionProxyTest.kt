@@ -1,6 +1,5 @@
 package naksha.model
 
-import naksha.base.Int64
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StoreMode
 import kotlin.test.Test
@@ -18,7 +17,7 @@ class NakshaCollectionProxyTest {
             storeDeleted = StoreMode.SUSPEND,
             storeHistory = StoreMode.OFF
         )
-        collection.maxAge = Int64(42)
+        collection.maxAge = 42L
 
         // expect
         assertEquals("ID", collection.id)

@@ -30,7 +30,7 @@ data class TupleNumber(
      * The database-number, uniquely identifies the storage where the tuple is stored.
      * @since 3.0
      */
-    @JvmField val databaseNumber: Int64,
+    @JvmField val databaseNumber: Long,
 
     /**
      * The catalog-number of the map in which the tuple is stored within the storage.
@@ -48,7 +48,7 @@ data class TupleNumber(
      * The feature-number.
      * @since 3.0
      */
-    @JvmField val featureNumber: Int64,
+    @JvmField val featureNumber: Long,
 
     /**
      * The version _(transaction)_ of which the [naksha.model.Tuple] is part of.
@@ -56,7 +56,7 @@ data class TupleNumber(
      * @since 3.0
      * @see [Version.HEAD]
      */
-    @JvmField val version: Int64,
+    @JvmField val version: Long,
 ) : Comparable<TupleNumber> {
     /**
      * The partition-number of the [naksha.model.Tuple], a value between `0` and `65536` _(exclusive)_.
@@ -286,11 +286,11 @@ data class TupleNumber(
         @JvmOverloads
         fun copy(
             tn: TupleNumber,
-            version: Int64? = null,
-            featureNumber: Int64? = null,
+            version: Long? = null,
+            featureNumber: Long? = null,
             collectionNumber: Int? = null,
             mapNumber: Int? = null,
-            storageNumber: Int64? = null,
+            storageNumber: Long? = null,
         ) = TupleNumber(
             storageNumber ?: tn.databaseNumber,
             mapNumber ?: tn.catalogNumber,
@@ -305,7 +305,7 @@ data class TupleNumber(
          * This happens for various reasons, for example when a [naksha.model.Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a valid tuple-number.
          * @since 3.0
          */
-        val HEAD = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD.number)
+        val HEAD = TupleNumber(0, 0, 0, 0, Version.HEAD.number)
 
         /**
          * Restore a [TupleNumber] from a binary encoding.
@@ -326,13 +326,13 @@ data class TupleNumber(
 
         fun fromB256(bytes: ByteArray)
                 = fromByteArray(bytes, 0, TupleNumberVariant.B256)
-        fun fromB192(bytes: ByteArray, storageNumber: Int64)
+        fun fromB192(bytes: ByteArray, storageNumber: Long)
                 = fromByteArray(bytes, 0, TupleNumberVariant.B192, storageNumber)
-        fun fromB160(bytes: ByteArray, storageNumber: Int64, mapNumber: Int)
+        fun fromB160(bytes: ByteArray, storageNumber: Long, mapNumber: Int)
                 = fromByteArray(bytes, 0, TupleNumberVariant.B160, storageNumber, mapNumber)
-        fun fromB128(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int)
+        fun fromB128(bytes: ByteArray, storageNumber: Long, mapNumber: Int, collectionNumber: Int)
                 = fromByteArray(bytes, 0, TupleNumberVariant.B128, storageNumber, mapNumber, collectionNumber)
-        fun fromB64(bytes: ByteArray, storageNumber: Int64, mapNumber: Int, collectionNumber: Int, featureNumber: Int64)
+        fun fromB64(bytes: ByteArray, storageNumber: Long, mapNumber: Int, collectionNumber: Int, featureNumber: Long)
                 = fromByteArray(bytes, 0, TupleNumberVariant.B64, storageNumber, mapNumber, collectionNumber, featureNumber)
 
         /**
@@ -352,10 +352,10 @@ data class TupleNumber(
             bytes: ByteArray,
             offset: Int = 0,
             variant: TupleNumberVariant = TupleNumberVariant.fromValue(bytes.size - offset),
-            storageNumber: Int64? = null,
+            storageNumber: Long? = null,
             mapNumber: Int? = null,
             collectionNumber: Int? = null,
-            featureNumber: Int64? = null
+            featureNumber: Long? = null
         ): TupleNumber = fromBinary(Binary(bytes, offset), variant, storageNumber, mapNumber, collectionNumber, featureNumber)
 
         /**
@@ -374,10 +374,10 @@ data class TupleNumber(
         fun fromBinary(
             binary: Binary,
             variant: TupleNumberVariant,
-            storageNumber: Int64? = null,
+            storageNumber: Long? = null,
             mapNumber: Int? = null,
             collectionNumber: Int? = null,
-            featureNumber: Int64? = null
+            featureNumber: Long? = null
         ): TupleNumber {
             val storage_num = if (variant.encodeStorageNumber()) binary.readInt64() else storageNumber
                 ?: throw illegalArg("Missing storage-number for given tuple-number variant $variant")
@@ -460,10 +460,10 @@ data class TupleNumber(
             if (offset < 0 || (offset + ALL_PARTS) > parts.size) {
                 throw illegalArg("Invalid tuple-number: $parts")
             }
-            val storageNumber = Int64(parts[offset + STORAGE_NUMBER].toLong(10))
+            val storageNumber = parts[offset + STORAGE_NUMBER].toLong(10)
             val mapNumber = parts[offset + MAP_NUMBER].toInt(10)
             val colNumber = parts[offset + COLLECTION_NUMBER].toInt(10)
-            val featureNumber = Int64(parts[offset + FEATURE_NUMBER].toLong(10))
+            val featureNumber = parts[offset + FEATURE_NUMBER].toLong(10)
             val version = Version.fromString(parts[offset + VERSION]).number
             return TupleNumber(storageNumber, mapNumber, colNumber, featureNumber, version)
         }

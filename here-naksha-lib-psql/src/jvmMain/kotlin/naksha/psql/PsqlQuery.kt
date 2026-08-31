@@ -1,7 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
-import naksha.base.JvmInt64
 import naksha.base.ListProxy
 import naksha.base.MapProxy
 import naksha.base.Platform
@@ -100,7 +98,6 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
             is Short -> for (index in indices) stmt.setShort(index, arg)
             is Int -> for (index in indices) stmt.setInt(index, arg)
             is Long -> for (index in indices) stmt.setLong(index, arg)
-            is Int64 -> for (index in indices) stmt.setLong(index, arg.toLong())
             is Float -> for (index in indices) stmt.setFloat(index, arg)
             is Double -> for (index in indices) stmt.setDouble(index, arg)
             is String -> for (index in indices) stmt.setString(index, arg)
@@ -119,26 +116,20 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                 // https://jdbc.postgresql.org/documentation/server-prepare/#arrays
                 var componentType = arg.javaClass.componentType!!
                 var array: Array<*> = arg
-                if (componentType == Any::class.java || componentType == Int64::class.java || componentType == JvmInt64::class.java) {
+                if (componentType == Any::class.java) {
                     // Special handling for `Array<Any>`:
                     // Array of objects need to be turned either into a `java.sql.Array` or converted into a `Array<Type>`.
                     // The reason is that the driver only accepts arrays with same content, and if the content is null,
                     // it still needs to know the type.
-                    // We treat Int64 as Long until we switched finally!
-                    if (componentType == Int64::class.java || componentType == JvmInt64::class.java) {
-                        componentType = Long::class.javaObjectType
-                    } else for (value in arg) {
+                    for (value in arg) {
                         if (value == null) continue
                         componentType = value.javaClass
-                        if (componentType == Int64::class.java || componentType == JvmInt64::class.java) {
-                            componentType = Long::class.javaObjectType
-                        }
                         break
                     }
                     if (componentType == Any::class.java) {
                         // Try to detect the component type from what the client provided in the prepared statement.
                         if (typeName != null) {
-                            val pgType = PgType.of(typeName)
+                            val pgType = PgType.of(typeName) ?: PgType.of(typeName.removeSuffix("[]"))
                             if (pgType != null) {
                                 val klass: KClass<*>? = if (pgType.isArray) pgType.componentType?.klass else pgType.klass
                                 if (klass != null) componentType = klass.javaObjectType
@@ -163,8 +154,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                             v
                         }
                         Long::class.javaObjectType -> Array(array.size) {
-                            var v = arg[it]
-                            if (v is Int64) v = v.toLong()
+                            val v = arg[it]
                             if (v != null && v !is Long) throw illegalArg("Illegal value in Long array at $it: '$v'")
                             v
                         }

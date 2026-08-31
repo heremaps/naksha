@@ -1,13 +1,10 @@
 package com.here.naksha.handler.activitylog;
 
 import java.util.Random;
-import naksha.base.JvmInt64;
 import naksha.base.Action;
 import naksha.base.Guid;
 import naksha.base.TupleNumber;
 import naksha.base.Version;
-
-import static naksha.base.LibBaseKt.Int64;
 
 public final class GuidUtil {
   private static final Random random = new Random();
@@ -15,12 +12,12 @@ public final class GuidUtil {
   private GuidUtil(){}
 
   public static Version randomVersion() {
-    return Version.now(Int64(random.nextLong() & Version.SEQ_MAX.toLong()), Action.VERSION);
+    return Version.now(random.nextLong() & Version.SEQ_MAX, Action.VERSION);
   }
 
   public static Guid guid(String featureId, Version version) {
     return new Guid(featureId, new TupleNumber(
-        new JvmInt64(0), 0, 0, new JvmInt64(0), version.number
+        0L, 0, 0, 0L, version.number
     ));
   }
 }

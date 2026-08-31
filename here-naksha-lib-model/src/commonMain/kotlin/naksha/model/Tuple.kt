@@ -6,7 +6,6 @@ import naksha.base.Action
 import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Guid
-import naksha.base.Int64
 import naksha.base.ListProxy
 import naksha.base.MapProxy
 import naksha.base.Platform.PlatformCompanion.fromJSON
@@ -137,8 +136,8 @@ data class Tuple @JvmOverloads constructor(
             // Read members.
             val id = idMember.readString(feature) ?: throw illegalArg("Missing 'id' in NakshaFeature")
             val featureNumber = when (collection.id) {
-                Naksha.COLLECTIONS_COL_ID -> Int64(Naksha.collectionNumber(id))
-                Naksha.CATALOGS_COL_ID -> Int64(Naksha.catalogNumber(id))
+                Naksha.COLLECTIONS_COL_ID -> Naksha.collectionNumber(id).toLong()
+                Naksha.CATALOGS_COL_ID -> Naksha.catalogNumber(id).toLong()
                 else -> Naksha.featureNumber(id)
             }
             var prevTn: TupleNumber?
@@ -164,7 +163,7 @@ data class Tuple @JvmOverloads constructor(
                 if (colTn.databaseNumber != prevTn.databaseNumber ||
                     colTn.catalogNumber != prevTn.catalogNumber ||
                     // Note: The feature-number of the collection is the collection-number of the feature stored in it!
-                    colTn.featureNumber != Int64(prevTn.collectionNumber) ||
+                    colTn.featureNumber != prevTn.collectionNumber.toLong() ||
                     featureNumber != prevTn.featureNumber)
                 {
                     // FORK: Client copied a feature from another collection or changed the `id`.
@@ -198,7 +197,7 @@ data class Tuple @JvmOverloads constructor(
 
             // The transaction version carries the VERSION sentinel (=3) in its low two action bits; each
             // feature records its OWN action (CREATE/UPDATE/DELETE) there so the row reads as live.
-            val version = (session.useTransaction().version.number and Int64(-4)) or Int64(action.intValue)
+            val version = (session.useTransaction().version.number and -4L) or action.longValue
             val newTn = TupleNumber(
                 colTn.databaseNumber,
                 colTn.catalogNumber,
@@ -415,9 +414,7 @@ data class Tuple @JvmOverloads constructor(
             return asLong.toInt()
         }
 
-        // TODO: Needs to become Long!
         private fun coerceInt64(value: Any, featureId: String, memberName: String): Long? = when (value) {
-            is Int64 -> value.toLong()
             is Int -> value.toLong()
             is Long -> value
             is Short -> value.toLong()
@@ -434,7 +431,6 @@ data class Tuple @JvmOverloads constructor(
             is Double -> value.toFloat()
             is Int -> value.toFloat()
             is Long -> value.toFloat()
-            is Int64 -> value.toLong().toFloat()
             is Short -> value.toFloat()
             is Byte -> value.toFloat()
             else -> null
@@ -451,7 +447,6 @@ data class Tuple @JvmOverloads constructor(
             is Float -> value.toDouble()
             is Int -> value.toDouble()
             is Long -> value.toDouble()
-            is Int64 -> value.toLong().toDouble()
             is Short -> value.toDouble()
             is Byte -> value.toDouble()
             else -> null
@@ -538,7 +533,6 @@ data class Tuple @JvmOverloads constructor(
             is Short -> value.toLong()
             is Int -> value.toLong()
             is Long -> value
-            is Int64 -> value.toLong()
             is Float -> if (value.isFinite() && value == value.toLong().toFloat()) value.toLong() else null
             is Double -> if (value.isFinite() && value == value.toLong().toDouble()) value.toLong() else null
             else -> null
@@ -583,9 +577,9 @@ data class Tuple @JvmOverloads constructor(
      * The next-version at which this tuple was superseded. `NULL`-sentinel indicates the tuple is the current _([Version.HEAD])_ state.
      * @since 3.0
      */
-    var nextVersion: Int64
-        get() = membersBook[StandardMembers.NextVersion.name] as Int64? ?: Version.HEAD.number
-        set(version: Int64) {
+    var nextVersion: Long
+        get() = membersBook[StandardMembers.NextVersion.name] as Long? ?: Version.HEAD.number
+        set(version: Long) {
             val members = this.membersBook
             if (members is HeapBook) {
                 members.put(StandardMembers.NextVersion.name, version)
@@ -622,7 +616,7 @@ data class Tuple @JvmOverloads constructor(
             val globalBookTn = _globalBookTn
             if (globalBookTn != null) return globalBookTn
             val raw = getMember(StandardMembers.GlobalBookFeatureNumber)
-            if (raw is Int64 || raw is Long) {
+            if (raw is Long) {
                 TODO("Use the global book number as feature-number, combine with storage-number from tuple, and with admin-catalog, book-collection, version is always HEAD, books are immutable and can not be versioned")
             }
             _globalBookTn = globalBookTn
@@ -703,12 +697,11 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      */
     @JvmOverloads
-    fun getLong(member: Member, alt: Int64 = Int64(0L)): Int64 =
+    fun getLong(member: Member, alt: Long = 0L): Long =
         rawMember(member)?.let { v ->
             when (v) {
-                is Int64 -> v
-                is Long -> Int64(v)
-                is Number -> Int64(v.toLong())
+                is Long -> v
+                is Number -> v.toLong()
                 else -> alt
             }
         } ?: alt
@@ -766,11 +759,10 @@ data class Tuple @JvmOverloads constructor(
     fun getMember(member: Member): Any? {
         return when (val raw = rawMember(member)) {
             is String -> raw
-            is Int64 -> raw
-            is Byte -> Int64(raw.toInt())
-            is Short -> Int64(raw.toInt())
-            is Int -> Int64(raw)
-            is Long -> Int64(raw)
+            is Byte -> raw.toLong()
+            is Short -> raw.toLong()
+            is Int -> raw.toLong()
+            is Long -> raw
             is Float -> raw.toDouble()
             is Double -> raw
             is ByteArray -> raw

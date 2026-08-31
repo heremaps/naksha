@@ -280,7 +280,7 @@ open class JbDecoder2(var globalBook: IBook? = null, var membersBook: IBook? = n
             JB2_INT64 -> view.getInt64(at + 1)
             JB2_FLOAT32 -> view.getFloat32(at + 1)
             JB2_FLOAT64 -> view.getFloat64(at + 1)
-            JB2_TIMESTAMP, JB2_UINT56 -> view.getInt64(at) and Platform.toInt64(JB2_MASK_56_LOW)
+            JB2_TIMESTAMP, JB2_UINT56 -> view.getInt64(at) and JB2_MASK_56_LOW
             JB2_UINT24 -> view.getInt32(at) and JB2_MASK_24_LOW
             JB2_TUPLE_NUMBER -> {
                 // lead-in at `at`, data starts at `at + 1`: 8 + 4 + 4 + 8 + 8 = 32 bytes

@@ -35,7 +35,6 @@ import com.here.naksha.lib.hub.EventPipelineFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import naksha.base.Int64;
 import naksha.base.PlatformLock;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
@@ -128,7 +127,7 @@ public class NHSpaceStorage implements IStorage {
   }
 
   @Override
-  public @NotNull Int64 getNumber() {
+  public long getNumber() {
     throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 

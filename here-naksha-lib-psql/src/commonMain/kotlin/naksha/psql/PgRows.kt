@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.AnyList
-import naksha.base.Int64
 import naksha.geo.SpGeometry
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
@@ -118,7 +117,7 @@ internal class PgRows {
      * If all rows are coming from the same storage, the storage-number of it.
      * @since 3.0
      */
-    var databaseNumber: Int64? = null
+    var databaseNumber: Long? = null
         set(value) {
             collection = null
             field = value
@@ -127,7 +126,7 @@ internal class PgRows {
     /**
      * @see [databaseNumber]
      */
-    fun withDatabaseNumber(value: Int64): PgRows {
+    fun withDatabaseNumber(value: Long): PgRows {
         databaseNumber = value
         return this
     }
@@ -255,7 +254,7 @@ internal class PgRows {
             null
         }
     }
-    fun getB64(row: Int, columnName: String, featureNumber: Int64): TupleNumber? {
+    fun getB64(row: Int, columnName: String, featureNumber: Long): TupleNumber? {
         val raw = getByteArray(row, columnName) ?: return null
         val storageNumber = this.databaseNumber ?: return null
         val mapNumber = this.catalogNumber ?: return null
@@ -305,15 +304,15 @@ internal class PgRows {
             if (member.isVirtual()) continue
             when (name) {
                 Tn.name -> {
-                    val fn = getColumn(PgColumn.FnColumn.name)?.values?.get(row) as? Int64
-                    val ver = getColumn(PgColumn.VersionColumn.name)?.values?.get(row) as? Int64
+                    val fn = getColumn(PgColumn.FnColumn.name)?.values?.get(row) as? Long
+                    val ver = getColumn(PgColumn.VersionColumn.name)?.values?.get(row) as? Long
                     val db = databaseNumber; val cat = catalogNumber; val col = collectionNumber
                     val tn = if (fn != null && ver != null && db != null && cat != null && col != null)
                         TupleNumber(db, cat, col, fn, ver) else null
                     membersBook.put(name, tn)
                 }
                 NextVersion.name -> {
-                    val raw = getColumn(name)?.values?.get(row) as? Int64
+                    val raw = getColumn(name)?.values?.get(row) as? Long
                     membersBook.put(name, raw ?: Version.HEAD.number)
                 }
                 else -> {
@@ -394,7 +393,7 @@ internal class PgRows {
         getColumn(PgColumn.NextVersionColumn.name)?.let { if (it.values[row] == Version.HEAD.number) it.values[row] = null }
         // `_id` is materialized only when it is not derivable from the feature-number: fn < 0 => hashed
         // id, fn >= 0 => id equals fn so `_id` stays NULL (a CHECK enforces both cases).
-        getColumn(Id.name)?.let { it.values[row] = if (tn.featureNumber.toLong() < 0L) membersBook[Id.name] else null }
+        getColumn(Id.name)?.let { it.values[row] = if (tn.featureNumber < 0L) membersBook[Id.name] else null }
         val featureColumn = getColumn(FeatureBytes.name) ?: return
         featureColumn.values[row] = tuple.featureBytes
     }

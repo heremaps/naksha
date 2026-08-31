@@ -186,7 +186,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun databaseNumber(id: String): Int64 = featureNumber(id)
+        fun databaseNumber(id: String): Long = featureNumber(id)
 
        /**
          * A method to calculate a valid catalog-number from the catalog-id.
@@ -258,9 +258,9 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun featureNumber(id: String): Int64 {
+        fun featureNumber(id: String): Long {
             val numericId = featureNumberAsLong(id)
-            return if (numericId >= 0L) numericId.toInt64() else featureNumberAsHash(id)
+            return if (numericId >= 0L) numericId else featureNumberAsHash(id)
         }
 
         /**
@@ -289,7 +289,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun featureNumberAsHash(id: String): Int64 {
+        fun featureNumberAsHash(id: String): Long {
             val md5 = hashId(id)
             return md5.getInt64(8) or INT64_SIGN_BIT
         }
@@ -312,49 +312,43 @@ class Naksha private constructor() {
         @JsName("isAutoNumber64")
         @JsStatic
         @JvmStatic
-        fun isAutoNumber(number: Int64): Boolean = (number and INT64_SIGN_BIT) == INT64_SIGN_BIT
+        fun isAutoNumber(number: Long): Boolean = (number and INT64_SIGN_BIT) == INT64_SIGN_BIT
 
         /**
          * `0x8000_0000_0000_0000`, should be `-9223372036854775808`, but this does not work in Kotlin, only `-9223372036854775807 -1`?
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_SIGN_BIT = Int64(Long.MIN_VALUE)
+        internal const val INT64_SIGN_BIT = Long.MIN_VALUE
 
         /**
          * `0x7fff_ffff_ffff_ffff`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_SIGN_BIT = Int64(0x7fff_ffff_ffff_ffff)
+        internal const val INT64_CLEAR_SIGN_BIT = 0x7fff_ffff_ffff_ffffL
 
         /**
          * `0x0000_0000_0000_ffff`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH48 = Int64(0x0000_0000_0000_ffff)
+        internal const val INT64_CLEAR_HIGH48 = 0x0000_0000_0000_ffffL
 
         /**
          * `0x0000_0000_ffff_ffff` aka `4294967295`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH32 = Int64(4294967295)
+        internal const val INT64_CLEAR_HIGH32 = 4294967295L
 
         /**
          * `0xff00_0000_0000_0000` aka `-72057594037927936`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH8 = Int64(-72057594037927936)
+        internal const val INT64_CLEAR_HIGH8 = -72057594037927936L
 
         /**
          * `0xffff_ffff_ffff_0000` aka `-65536`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_LOW16 = Int64(-65536)
+        internal const val INT64_CLEAR_LOW16 = -65536L
 
         /**
          * Returns the partition-number from the given feature-id.
@@ -379,7 +373,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun partitionNumber(featureNumber: Int64): Int = featureNumber.toInt() and 0xffff
+        fun partitionNumber(featureNumber: Long): Int = featureNumber.toInt() and 0xffff
 
         /**
          * Increment a 64-bit number _(storage- or feature-number)_ programmatically in case of collision, and return the _alternative_ number, derived deterministically from the given number. This method implements the same behavior as the SQL function `naksha_alt64`.
@@ -395,7 +389,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun alternativeInt64(number: Int64): Int64
+        fun alternativeInt64(number: Long): Long
             = ((number + 65536) and INT64_CLEAR_LOW16) or (number and INT64_CLEAR_HIGH48) or INT64_SIGN_BIT
 
         /**
@@ -475,7 +469,7 @@ class Naksha private constructor() {
          * @since 3.0
          */
         @JvmField
-        internal val storagesByNumber = AtomicMap<Int64, AbstractStorage<*>>()
+        internal val storagesByNumber = AtomicMap<Long, AbstractStorage<*>>()
 
         /**
          * All registered storages by [storage-id][IStorage.id].
@@ -521,7 +515,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun getStorageByNumber(storageNumber: Int64): IStorage? = storagesByNumber[storageNumber]
+        fun getStorageByNumber(storageNumber: Long): IStorage? = storagesByNumber[storageNumber]
 
         /**
          * Returns the storage for the given tuple-number.
@@ -628,7 +622,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun useStorageByNumber(storageNumber: Int64): IStorage = storagesByNumber[storageNumber]
+        fun useStorageByNumber(storageNumber: Long): IStorage = storagesByNumber[storageNumber]
             ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-number: $storageNumber")
 
         /**

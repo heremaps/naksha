@@ -4,7 +4,6 @@ package naksha.psql
 
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.Platform.PlatformCompanion.longToInt64
 import naksha.base.Platform.PlatformCompanion.newAtomicInt64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import naksha.model.*
@@ -50,8 +49,8 @@ open class PgSession(
 ) : IWriteSession, IReadSession, ISession {
 
     companion object PgSession_C {
-        private val nextSessionId = newAtomicInt64(longToInt64(0L))
-        private val ONE = longToInt64(1L)
+        private val nextSessionId = newAtomicInt64(0L)
+        private const val ONE = 1L
 
         // Decodes each 16-byte entry of `$1::bytea[]` into `(fn, version)` bigints (big-endian halves).
         private const val TUPLE_LOOKUP_CTE: String =
@@ -83,7 +82,7 @@ open class PgSession(
      * A unique numerical identifier for the session.
      * @since 3.0
      */
-    val id: Int64 = nextSessionId.getAndAdd(ONE)
+    val id: Long = nextSessionId.getAndAdd(ONE)
 
     override val storage = pgStorage
 
@@ -200,7 +199,7 @@ open class PgSession(
      * If a connection is backing this session currently, return the [id][PgConnection.id] of the [connection][PgConnection], otherwise `null`.
      * @since 3.0
      */
-    val connectionId: Int64?
+    val connectionId: Long?
         get() = pgConnection?.id
 
     /**

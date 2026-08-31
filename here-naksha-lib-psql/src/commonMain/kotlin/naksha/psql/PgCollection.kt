@@ -92,7 +92,7 @@ open class PgCollection internal constructor(
      * @return the partition index of the [PgHistoryPartition] into which _HEAD_ features will be moved, when modified in the given version.
      * @since 3.0
      */
-    fun historyPartitionNumberOf(version: Int64): Int = (version shr shift).toInt()
+    fun historyPartitionNumberOf(version: Long): Int = (version shr shift).toInt()
 
     /**
      * Convert the given member into a [PgColumn], only fails for the standard member [Tn].

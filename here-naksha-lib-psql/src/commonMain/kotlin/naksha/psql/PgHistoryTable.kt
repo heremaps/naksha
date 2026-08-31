@@ -2,7 +2,6 @@
 
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
@@ -70,11 +69,11 @@ $TABLESPACE"""
      * @return the calculated partition-number.
      * @since 3.0
      */
-    fun partitionNumber(nextVersion: Int64): Int = (nextVersion shr collection.shift).toInt()
+    fun partitionNumber(nextVersion: Long): Int = (nextVersion shr collection.shift).toInt()
 
-    operator fun get(nextVersion: Int64): PgHistoryPartition? = partitions[partitionNumber(nextVersion)]
+    operator fun get(nextVersion: Long): PgHistoryPartition? = partitions[partitionNumber(nextVersion)]
 
-    operator fun set(nextVersion: Int64, partition: PgHistoryPartition) {
+    operator fun set(nextVersion: Long, partition: PgHistoryPartition) {
         partitions[partitionNumber(nextVersion)] = partition
     }
 

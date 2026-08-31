@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_byte_array
@@ -63,10 +62,10 @@ data class TupleNumberBinaryArray(
 
     private val length: Int = BinaryUtil.getLength(view)
     private val contentOffset: Int
-    private val sharedStorageNumber: Int64?
+    private val sharedStorageNumber: Long?
     private val sharedMapNumber: Int?
     private val sharedCollectionNumber: Int?
-    private val sharedFeatureNumber: Int64?
+    private val sharedFeatureNumber: Long?
     private val entrySize: Int
     private val dataOffset: Int
     private val storageNumberOffset: Int
@@ -234,7 +233,7 @@ data class TupleNumberBinaryArray(
      * @return the storage-number.
      * @since 3.0
      */
-    fun getStorageNumber(index: Int): Int64 {
+    fun getStorageNumber(index: Int): Long {
         val offset = offset(index)
         if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
         return sharedStorageNumber ?: dataview_get_int64(view, offset + storageNumberOffset)
@@ -270,7 +269,7 @@ data class TupleNumberBinaryArray(
      * @return the feature-number.
      * @since 3.0
      */
-    fun getFeatureNumber(index: Int): Int64 {
+    fun getFeatureNumber(index: Int): Long {
         val offset = offset(index)
         if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
         return sharedFeatureNumber ?: dataview_get_int64(view, offset + featureNumberOffset)
@@ -290,7 +289,7 @@ data class TupleNumberBinaryArray(
      * @return the transaction-number.
      * @since 3.0
      */
-    fun getTxn(index: Int): Int64 {
+    fun getTxn(index: Int): Long {
         val offset = offset(index)
         if (offset < 0 || offset > last) throw IndexOutOfBoundsException()
         return dataview_get_int64(view, offset + txnOffset)
