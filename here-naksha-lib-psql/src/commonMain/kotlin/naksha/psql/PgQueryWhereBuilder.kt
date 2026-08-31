@@ -63,14 +63,19 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         if (op == null) {
             // When no `queryMembers` is given, we apply backward compatibility.
             op = QueryConverter.convert(request.query)
-            if (op == null && request.featureIds.isEmpty() && request.guids.isEmpty()) return null
-            if (request.featureIds.isNotEmpty()) whereFeatureId()
-            if (request.guids.isNotEmpty()) whereGuids()
+            if (request.featureIds.isNotEmpty()) {
+                val ids = request.featureIds.toStringArray(true)
+                if (ids.isNotEmpty()) {
+                    op = if (op != null) And(op, IsAnyOf(Id, *ids)) else IsAnyOf(Id, *ids)
+                }
+            }
+            if (op == null && request.guids.isEmpty()) return null
             if (op != null) applyOp(op)
+            if (request.guids.isNotEmpty()) whereGuids() // Evil hack as there is no translations!
         } else {
             // ReadFeatures clearly states that you have to use either the new syntax or the old, not mix them!
             // Note: We want to get people to switch to new syntax, not start improving old queries with new features!
-            if (request.query.isNotEmpty())
+            if (!request.query.hasNoConditions())
                 throw illegalArg("Old 'query' option must not be combined with new 'queryMember'")
             if (request.featureIds.isNotEmpty())
                 throw illegalArg("Old 'featureIds' option must not be combined with new 'queryMember'")
@@ -99,15 +104,15 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
      *
      * The method treats a `null` value as always valid, it is up to the caller to decide if `null` is acceptable in the concrete situation.
      * @param memberName the name of the member.
-     * @param opName the name of the operation to perform.
+     * @param op the operation to perform.
      * @param value the value to test.
      * @param memberType the data-type of the member, which much match that of the given value.
      * @return the real column name to query and the real valid value to query against.
      * @throws NakshaException if the given value is not of the desired member-type.
      */
-    private fun columnAndValue(memberName: String, opName: String, value: Any?, memberType: MemberType): Pair<String, Any?> {
+    private fun columnAndValue(memberName: String, op: Op, value: Any?, memberType: MemberType): Pair<String, Any?> {
         if (value != null && !memberType.isInstance(value)) {
-            throw illegalArg("The value for '$memberName' $opName '$value' is not the correct type, excepted: $memberType")
+            throw illegalArg("The value for '$memberName' ${op.op} '$value' is not the correct type, excepted: $memberType")
         }
         return if (memberName == Id.name) {
             val numeric = featureNumberAsLong(value as String)
@@ -122,30 +127,31 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
      * @since 3.0
      */
     private fun applyOp(rawOp: Op, negate: Boolean = false) {
-        val opName = rawOp.getRaw("op") as? String? ?: throw illegalArg("Unknown operation, 'op' property is no string")
         val op = Op.detect(rawOp)
         when (op) {
             is And -> {
-                if (negate) where.append(" NOT ")
                 val children = op.children
+                if (children.isEmpty()) return
+                if (negate) where.append("NOT ")
                 if (children.size > 1) where.append('(')
                 var first = true
                 for (child in children) {
                     if (child == null) continue
-                    if (first) first = false else where.append(" AND ")
+                    if (first) first = false else where.append("AND ")
                     applyOp(child)
                 }
                 if (children.size > 1) where.append(") ") else where.append(" ")
                 return
             }
             is Or -> {
-                if (negate) where.append(" NOT ")
                 val children = op.children
+                if (children.isEmpty()) return
+                if (negate) where.append("NOT ")
                 if (children.size > 1) where.append('(')
                 var first = true
                 for (child in children) {
                     if (child == null) continue
-                    if (first) first = false else where.append(" OR ")
+                    if (first) first = false else where.append("OR ")
                     applyOp(child)
                 }
                 if (children.size > 1) where.append(") ") else where.append(" ")
@@ -156,7 +162,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                 return
             }
         }
-        val memberName: String = op.at ?: throw illegalArg("Missing 'at' (member name) for operation '$opName'")
+        val memberName: String = op.at ?: throw illegalArg("Missing 'at' (member name) for operation '${op.op}'")
         val memberType = collection.column(memberName)?.memberType ?: when (memberName) {
             Action.name -> MemberType.INT32
             FeatureVersion.name -> MemberType.INT64
@@ -165,16 +171,16 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             else -> throw illegalArg("PgQueryWhereBuilder: Unknown member '$memberName' in collection '${collection.id}'")
         }
         when (op) {
-            is IsNull -> _IsNull(negate, memberName, opName, memberType)
-            is IsTrue -> _IsTrue(negate, memberName, opName, memberType)
-            is IsFalse -> _IsFalse(negate, memberName, opName, memberType)
-            is Equals -> _Equals(negate, memberName, opName, op.value, memberType)
-            is Gt -> _Gt(negate, memberName, opName, op.value, memberType)
-            is Gte -> _Gte(negate, memberName, opName, op.value, memberType)
-            is Lt -> _Lt(negate, memberName, opName, op.value, memberType)
-            is Lte -> _Lte(negate, memberName, opName, op.value, memberType)
-            is StartsWith -> _StartsWith(negate, memberName, opName, op.value, memberType)
-            is IsAnyOf -> _IsAnyOf(negate, memberName, opName, op.items, memberType)
+            is IsNull -> _IsNull(negate, memberName, op, memberType)
+            is IsTrue -> _IsTrue(negate, memberName, op, memberType)
+            is IsFalse -> _IsFalse(negate, memberName, op, memberType)
+            is Equals -> _Equals(negate, memberName, op, op.value, memberType)
+            is Gt -> _Gt(negate, memberName, op, op.value, memberType)
+            is Gte -> _Gte(negate, memberName, op, op.value, memberType)
+            is Lt -> _Lt(negate, memberName, op, op.value, memberType)
+            is Lte -> _Lte(negate, memberName, op, op.value, memberType)
+            is StartsWith -> _StartsWith(negate, memberName, op, op.value, memberType)
+            is IsAnyOf -> _IsAnyOf(negate, memberName, op, op.items, memberType)
             is TagMapHasKey -> _TagMapHasKey(negate, memberName, op.key)
             is TagMapHasAnyOf -> _TagMapHasAnyOf(negate, memberName, op.tagKeys)
             is TagMapHasAllOf -> _TagMapHasAllOf(negate, memberName, op.tagKeys)
@@ -194,32 +200,32 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         }
     }
 
-    private fun _IsNull(negate: Boolean, memberName: String, opName: String, memberType: MemberType) {
-        val (at, _) = columnAndValue(memberName, opName, null, memberType)
+    private fun _IsNull(negate: Boolean, memberName: String, op: Op, memberType: MemberType) {
+        val (at, _) = columnAndValue(memberName, op, null, memberType)
         if (negate)
             where.append(at).append(" IS NOT NULL").append(' ')
         else
             where.append(at).append(" IS NULL").append(' ')
     }
 
-    private fun _IsTrue(negate: Boolean, memberName: String, opName: String, memberType: MemberType) {
-        val (at, _) = columnAndValue(memberName, opName, null, memberType)
+    private fun _IsTrue(negate: Boolean, memberName: String, op: Op, memberType: MemberType) {
+        val (at, _) = columnAndValue(memberName, op, null, memberType)
         if (negate)
             where.append(at).append('=').append(placeholderForArg(false, PgType.BOOLEAN)).append(' ')
         else
             where.append(at).append('=').append(placeholderForArg(true, PgType.BOOLEAN)).append(' ')
     }
 
-    private fun _IsFalse(negate: Boolean, memberName: String, opName: String, memberType: MemberType) {
-        val (at, _) = columnAndValue(memberName, opName, null, memberType)
+    private fun _IsFalse(negate: Boolean, memberName: String, op: Op, memberType: MemberType) {
+        val (at, _) = columnAndValue(memberName, op, null, memberType)
         if (negate)
             where.append(at).append('=').append(placeholderForArg(true, PgType.BOOLEAN)).append(' ')
         else
             where.append(at).append('=').append(placeholderForArg(false, PgType.BOOLEAN)).append(' ')
     }
 
-    private fun _Equals(negate: Boolean, memberName: String, opName: String, opValue: Any?, memberType: MemberType) {
-        val (at, value) = columnAndValue(memberName, opName, opValue, memberType)
+    private fun _Equals(negate: Boolean, memberName: String, op: Op, opValue: Any?, memberType: MemberType) {
+        val (at, value) = columnAndValue(memberName, op, opValue, memberType)
         if (value == null) {
             if (negate) where.append(at).append(" IS NOT NULL ") else where.append(at).append(" IS NULL ")
         } else {
@@ -231,41 +237,41 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         }
     }
 
-    private fun _Gt(negate: Boolean, memberName: String, opName: String, opValue: Any?, memberType: MemberType) {
-        val (at, value) = columnAndValue(memberName, opName, opValue, memberType)
+    private fun _Gt(negate: Boolean, memberName: String, op: Op, opValue: Any?, memberType: MemberType) {
+        val (at, value) = columnAndValue(memberName, op, opValue, memberType)
         if (negate) // NOT Greater Than
             where.append(at).append("<=").append(placeholderForArg(value, at)).append(' ')
         else // Greater Than
             where.append(at).append(">").append(placeholderForArg(value, at)).append(' ')
     }
 
-    private fun _Gte(negate: Boolean, memberName: String, opName: String, opValue: Any?, memberType: MemberType) {
-        val (at, value) = columnAndValue(memberName, opName, opValue, memberType)
+    private fun _Gte(negate: Boolean, memberName: String, op: Op, opValue: Any?, memberType: MemberType) {
+        val (at, value) = columnAndValue(memberName, op, opValue, memberType)
         if (negate) // NOT Greater Than or Equal to
             where.append(at).append("<").append(placeholderForArg(value, at)).append(' ')
         else // Greater Than or Equal to
             where.append(at).append(">=").append(placeholderForArg(value, at)).append(' ')
     }
 
-    private fun _Lt(negate: Boolean, memberName: String, opName: String, opValue: Any?, memberType: MemberType) {
-        val (at, value) = columnAndValue(memberName, opName, opValue, memberType)
+    private fun _Lt(negate: Boolean, memberName: String, op: Op, opValue: Any?, memberType: MemberType) {
+        val (at, value) = columnAndValue(memberName, op, opValue, memberType)
         if (negate) // NOT Less Than
             where.append(at).append(">=").append(placeholderForArg(value, at)).append(' ')
         else // Less Than
             where.append(at).append("<").append(placeholderForArg(value, at)).append(' ')
     }
 
-    private fun _Lte(negate: Boolean, memberName: String, opName: String, opValue: Any?, memberType: MemberType) {
-        val (at, value) = columnAndValue(memberName, opName, opValue, memberType)
+    private fun _Lte(negate: Boolean, memberName: String, op: Op, opValue: Any?, memberType: MemberType) {
+        val (at, value) = columnAndValue(memberName, op, opValue, memberType)
         if (negate) // NOT Less Than or Equal to
             where.append(at).append(">").append(placeholderForArg(value, at)).append(' ')
         else // Less Than or Equal to
             where.append(at).append("<=").append(placeholderForArg(value, at)).append(' ')
     }
 
-    private fun _StartsWith(negate: Boolean, memberName: String, opName: String, opValue: Any?, memberType: MemberType) {
+    private fun _StartsWith(negate: Boolean, memberName: String, op: Op, opValue: Any?, memberType: MemberType) {
         if (memberType != MemberType.STRING) throw illegalArg("StartsWith: The operation can only target String members")
-        val (at, value) = columnAndValue(memberName, opName, opValue, memberType)
+        val (at, value) = columnAndValue(memberName, op, opValue, memberType)
         if (value is Number) {
             // TODO: This happens for `id`.
             //       We store identifiers as fature-number, when they are positive numbers.
@@ -282,42 +288,47 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         where.append("starts_with(").append(at).append(", ").append(placeholderForArg(value, at)).append(") ")
     }
 
-    private fun _IsAnyOf(negate: Boolean, memberName: String, opName: String, items: AnyList, memberType: MemberType) {
-        if (items.isEmpty()) return
+    private fun _IsAnyId(negate: Boolean, items: AnyList) {
+        // First detect which identifiers need to be search in `id` and which in `fn`
+        val fn_array = LongArray(items.size)
+        var fn_end = 0
+        val id_array = arrayOfNulls<String>(items.size)
+        var id_end = 0
+        for (item in items) {
+            // We simply ignore invalid types.
+            if (item !is String) continue
+            val numeric = featureNumberAsLong(item)
+            if (numeric >= 0L) {
+                fn_array[fn_end++] = numeric
+            } else {
+                id_array[id_end++] = item
+            }
+        }
+        if (fn_end == 0 && id_end == 0) return // Only invalid values.
+        val hasBoth = fn_end > 0 && id_end > 0
+        if (negate) where.append("NOT ")
+        if (hasBoth) where.append('(')
+        if (fn_end > 0) {
+            val placeholder = if (fn_array.size == fn_end) placeholderForArg(fn_array, PgType.INT64_ARRAY)
+            else placeholderForArg(fn_array.copyOf(fn_end), PgType.INT64_ARRAY)
+            where.append(FeatureNumber.name).append("=ANY(").append(placeholder).append(")")
+        }
+        if (hasBoth) where.append(" OR ")
+        if (id_end > 0) {
+            val placeholder = if (id_array.size == id_end) placeholderForArg(id_array, PgType.STRING_ARRAY)
+            else placeholderForArg(id_array.copyOf(id_end), PgType.STRING_ARRAY)
+            where.append(Id.name).append("=ANY(").append(placeholder).append(")")
+        }
+        if (hasBoth) where.append(") ") else where.append(' ')
+    }
 
+    private fun _IsAnyOf(negate: Boolean, memberName: String, op: Op, items: AnyList, memberType: MemberType) {
+        if (items.isEmpty()) return
         // For `id` we can have a mixture of strings and numbers.
-        // We simply ignore invalid values being in the array.
         if (memberName == Id.name) {
-            val fn_array = LongArray(items.size)
-            var fn_end = 0
-            val id_array = arrayOfNulls<String>(items.size)
-            var id_end = 0
-            for (item in items) {
-                if (item !is String) continue
-                val numeric = featureNumberAsLong(item)
-                if (numeric >= 0L) {
-                    fn_array[fn_end++] = numeric
-                } else {
-                    id_array[id_end++] = item
-                }
-            }
-            if (negate) where.append("NOT ")
-            where.append('(')
-            if (fn_end > 0) {
-                val placeholder = if (fn_array.size == fn_end) placeholderForArg(fn_array, PgType.INT64_ARRAY)
-                                else placeholderForArg(fn_array.copyOf(fn_end), PgType.INT64_ARRAY)
-                where.append(FeatureNumber.name).append("= ANY(").append(placeholder).append(")")
-            }
-            if (id_end > 0) {
-                if (fn_end > 0) where.append(" OR ")
-                val placeholder = if (id_array.size == id_end) placeholderForArg(id_array, PgType.STRING_ARRAY)
-                else placeholderForArg(id_array.copyOf(id_end), PgType.STRING_ARRAY)
-                where.append(Id.name).append("= ANY(").append(placeholder).append(")")
-            }
-            where.append(") ")
+            _IsAnyId(negate, items)
             return
         }
-
         // For all other members the values are uniform and only one column is queried.
         val at = memberColumn(memberName)
         val (values, arrayType) = when(memberType) {
@@ -329,7 +340,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             MemberType.FLOAT64 -> Pair(items.toDoubleArray(true), PgType.DOUBLE_ARRAY)
             MemberType.STRING -> Pair(items.toStringArray(true), PgType.STRING_ARRAY)
             MemberType.BYTE_ARRAY -> Pair(items.toByteArrayArray(true), PgType.BYTE_ARRAY_ARRAY)
-            else -> throw illegalArg("The member '$memberName' can't be used for $opName")
+            else -> throw illegalArg("The member '$memberName' can't be used for ${op.op}")
         }
         val placeholder = placeholderForArg(values, arrayType)
         if (negate) where.append("NOT ")
@@ -488,7 +499,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         val geometryToCompare = if (transformers.isEmpty()) basicGeometry
                                 else resolveTransformation(transformers, basicGeometry)
         if (negate) where.append("NOT ")
-        where.append("ST_Intersects(naksha_2d($memberName), $geometryToCompare)")
+        where.append("ST_Intersects(naksha_2d($memberName), $geometryToCompare) ")
     }
 
     /**
@@ -659,63 +670,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         }
     }
 
-    private fun whereFeatureId() {
-        // Partition into numeric IDs (fn >= 0, id stored as NULL in DB) and named IDs (fn < 0, id NOT NULL).
-        val reqIds: StringList = request.featureIds
-        val featureNumbers: MutableList<Long> = mutableListOf()
-        val featureIds: MutableList<String> = mutableListOf()
-        for (id in reqIds) {
-            if (id == null) continue
-            val fn = Naksha.featureNumber(id)
-            if (fn >= 0L) {
-                featureNumbers.add(fn)
-            } else {
-                featureIds.add(id)
-            }
-        }
-        if (featureNumbers.isEmpty() && featureIds.isEmpty()) return
-
-        // For each collection:
-        if (where.isNotEmpty()) where.append(" AND ")
-
-        where.append("( ")
-        if (featureIds.isNotEmpty()) {
-            val op = IsAnyOf(at = StandardMembers.Id, items = featureIds.toTypedArray())
-            applyOp(op)
-        }
-        if (featureNumbers.isNotEmpty()) {
-            if (featureIds.isNotEmpty()) where.append(" OR ")
-
-            val op = IsAnyOf(at = StandardMembers.FeatureNumber, items = featureNumbers.toTypedArray())
-            applyOp(op)
-        }
-        where.append(")")
-    }
-
-    // TODO: Do we need this, and if so, how do we integrate into changed code?
-//    private fun whereRefTiles() {
-//        val hereTiles = request.query.refTiles
-//            .filterNotNull()
-//            .map { HereTile(it) }
-//        if (hereTiles.isNotEmpty()) {
-//            if (where.isNotEmpty()) {
-//                where.append(" AND (")
-//            } else {
-//                where.append(" (")
-//            }
-//            where.append(refPointInAnyOfTiles(hereTiles))
-//            where.append(")")
-//        }
-//    }
-//
-//    private fun refPointInAnyOfTiles(hereTiles: List<HereTile>): String {
-//        return hereTiles.joinToString(separator = " OR ") { hereTile ->
-//            refPointInTile(hereTile)
-//        }
-//    }
-
-    // --------------------------------------------------------< OLD CODE >-------------------------------------------------------------
-//
     private fun whereGuids() {
         val tupleNumbers = request.guids.mapNotNull { it?.tupleNumber }
         if (tupleNumbers.isNotEmpty()) {
@@ -732,380 +686,4 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             where.append("($FnColumn, $VersionColumn) IN (SELECT * FROM unnest($featureNumbersArg::int8[], $versionsArg::int8[]))")
         }
     }
-//
-//    private fun whereVersion() {
-//        val version = request.version
-//        if (version != null) {
-//            if (where.isNotEmpty()) where.append(" AND ")
-//            where.append("$VERSION <= ${version.toInt()}")
-//        }
-//        val minVersion = request.minVersion
-//        if (minVersion != null) {
-//            if (where.isNotEmpty()) where.append(" AND ")
-//            where.append("$VERSION >= ${minVersion.toInt()}")
-//        }
-//    }
-//
-//    private fun whereSpatial() {
-//        val spatialQuery = request.query.spatial
-//        if (spatialQuery != null) {
-//            if (where.isNotEmpty()) {
-//                where.append(" AND (")
-//            } else {
-//                where.append(" (")
-//            }
-//            whereNestedSpatial(spatialQuery)
-//            where.append(")")
-//        }
-//    }
-//
-//    private fun whereNestedSpatial(spatial: ISpatialQuery) {
-//        when (spatial) {
-//            is SpNot -> not(
-//                subClause = spatial.query,
-//                subClauseResolver = this::whereNestedSpatial
-//            )
-//
-//            is SpAnd -> and(
-//                subClauses = spatial.filterNotNull(),
-//                subClauseResolver = this::whereNestedSpatial
-//            )
-//
-//            is SpOr -> or(
-//                subClauses = spatial.filterNotNull(),
-//                subClauseResolver = this::whereNestedSpatial
-//            )
-//
-//            is SpIntersects -> {
-//                val queryGeometry = nakshaGeometry(spatial.geometry)
-//                val geometryToCompare = when (val transformation = spatial.transformation) {
-//                    null -> queryGeometry
-//                    else -> resolveTransformation(transformation, queryGeometry)
-//                }
-//                where.append("ST_Intersects(naksha_2d(${StandardMembers.Geometry}), $geometryToCompare)")
-//            }
-//
-//            is SpRefInHereTile -> {
-//                where.append(refPointInTile(spatial.getHereTile()))
-//            }
-//
-//            else -> throw NakshaException(
-//                NakshaError.ILLEGAL_ARGUMENT,
-//                "Invalid spatial query found: $spatial"
-//            )
-//        }
-//    }
-//
-//
-//    private fun whereRefTiles() {
-//        val hereTiles = request.query.refTiles
-//            .filterNotNull()
-//            .map { HereTile(it) }
-//        if (hereTiles.isNotEmpty()) {
-//            if (where.isNotEmpty()) {
-//                where.append(" AND (")
-//            } else {
-//                where.append(" (")
-//            }
-//            where.append(refPointInAnyOfTiles(hereTiles))
-//            where.append(")")
-//        }
-//    }
-//
-//    private fun refPointInAnyOfTiles(hereTiles: List<HereTile>): String {
-//        return hereTiles.joinToString(separator = " OR ") { hereTile ->
-//            refPointInTile(hereTile)
-//        }
-//    }
-//
-//    private fun refPointInTile(hereTile: HereTile): String {
-//        val lowerBoundPlaceholder = placeholderForArg(
-//            hereTile.maxLevelLowerBound().intKey,
-//            PgType.INT
-//        )
-//        val upperBoundPlaceholder = placeholderForArg(
-//            hereTile.maxLevelUpperBound().intKey,
-//            PgType.INT
-//        )
-//        return "(${StandardMembers.HereTile} >= $lowerBoundPlaceholder AND ${StandardMembers.HereTile} <= $upperBoundPlaceholder)"
-//    }
-//
-//    private fun whereMetadata() {
-//        val metaQuery = request.query.members
-//        if (metaQuery != null) {
-//            if (where.isNotEmpty()) {
-//                where.append(" AND (")
-//            } else {
-//                where.append(" (")
-//            }
-//            whereNestedMetadata(metaQuery)
-//            where.append(")")
-//        }
-//    }
-//
-//    private fun whereNestedMetadata(metaQuery: IMemberQuery) {
-//        when (metaQuery) {
-//            is MemberNot -> not(
-//                subClause = metaQuery.query,
-//                subClauseResolver = this::whereNestedMetadata
-//            )
-//
-//            is MemberAnd -> and(
-//                subClauses = metaQuery.filterNotNull(),
-//                subClauseResolver = this::whereNestedMetadata
-//            )
-//
-//            is MemberOr -> or(
-//                subClauses = metaQuery.filterNotNull(),
-//                subClauseResolver = this::whereNestedMetadata
-//            )
-//
-//            is MemberQuery -> {
-//                val isActionQuery = metaQuery.member == MetaColumn.action()
-//                val pgColumn =
-//                    if (isActionQuery) {
-//                        StandardMembers.Version
-//                    } else {
-//                        PgColumn.ofRowColumn(metaQuery.member) ?: throw NakshaException(
-//                            NakshaError.ILLEGAL_STATE,
-//                            "Couldn't find PgColumn for TupleColumn: ${metaQuery.member.name}"
-//                        )
-//                    }
-//                val leftOperand = if (isActionQuery) {
-//                    "(${PgColumn.version.name} & 3)::int4"
-//                } else if (pgColumn == PgColumn.created_at || pgColumn == PgColumn.author_ts) {
-//                    "COALESCE(${pgColumn.name}, ${PgColumn.updated_at.name})"
-//                } else {
-//                    pgColumn.name
-//                }
-//                // Action lives in the lower 2 bits of `version`; the comparison value is a small int.
-//                val placeholderType = if (isActionQuery) PgType.INT else pgColumn.type
-//                val resolvedQuery = when (val op = metaQuery.op) {
-//                    is StringOp -> {
-//                        val placeholder = placeholderForArg(metaQuery.value, placeholderType)
-//                        resolveStringOp(op, leftOperand, placeholder)
-//                    }
-//                    is DoubleOp -> {
-//                        val placeholder = placeholderForArg(metaQuery.value, placeholderType)
-//                        resolveDoubleOp(op, leftOperand, placeholder)
-//                    }
-//                    is AnyOp.IS_ANY_OF -> {
-//                        val placeholder = placeholderForArg(metaQuery.value, arrayTypeFor(placeholderType))
-//                        "$leftOperand = ANY($placeholder)"
-//                    }
-//                    else -> throw illegalArg("Unknown op type: ${op::class.simpleName}")
-//                }
-//                where.append(resolvedQuery)
-//            }
-//
-//            else -> throw NakshaException(
-//                NakshaError.ILLEGAL_ARGUMENT,
-//                "Unknown metadata query type: ${metaQuery::class.simpleName}"
-//            )
-//        }
-//    }
-//
-//    private fun arrayTypeFor(pgType: PgType): PgType {
-//        return when (pgType) {
-//            PgType.BOOLEAN -> PgType.BOOLEAN_ARRAY
-//            PgType.SHORT -> PgType.SHORT_ARRAY
-//            PgType.INT -> PgType.INT_ARRAY
-//            PgType.INT64 -> PgType.INT64_ARRAY
-//            PgType.FLOAT -> PgType.FLOAT_ARRAY
-//            PgType.DOUBLE -> PgType.DOUBLE_ARRAY
-//            PgType.STRING -> PgType.STRING_ARRAY
-//            PgType.BYTE_ARRAY -> PgType.BYTE_ARRAY_ARRAY
-//            else -> throw illegalArg("Unknown array type for PgType: ${pgType::class.simpleName}")
-//        }
-//    }
-//
-//    private fun whereTags() {
-//        val tagQuery = request.query.tags
-//        if (tagQuery != null) {
-//            if (where.isNotEmpty()) {
-//                where.append(" AND (")
-//            } else {
-//                where.append(" (")
-//            }
-//            whereNestedTags(tagQuery)
-//            where.append(")")
-//        }
-//    }
-//
-//    private fun whereNestedTags(tagQuery: ITagQuery) {
-//        when (tagQuery) {
-//            is TagSetContains -> resolveTagSetContains(tagQuery)
-//            is TagNot -> not(tagQuery.query, this::whereNestedTags)
-//            is TagOr -> {
-//                if(containsOnlyTagExists(tagQuery)){
-//                    // for tags without values we can utilize top-level-key based '?|' operand
-//                    // https://www.postgresql.org/docs/current/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
-//                    val tagNames = tagQuery.filterIsInstance<TagMapHasKey>().map { it.name }
-//                    resolveTagNamesArrayOperation(
-//                        jsonbOperator = "?|", // 'jsonb_exists_any' is equivalent but will not hit the GIN index
-//                        tagNames = tagNames
-//                    )
-//                } else {
-//                    or(tagQuery.filterNotNull(), this::whereNestedTags)
-//                }
-//            }
-//            is TagAnd -> {
-//                if(containsOnlyTagExists(tagQuery)){
-//                    // for tags without values we can utilize top-level-key based '?&' operand
-//                    // https://www.postgresql.org/docs/current/functions-json.html#FUNCTIONS-JSONB-OP-TABLE
-//                    val tagNames = tagQuery.filterIsInstance<TagMapHasKey>().map { it.name }
-//                    resolveTagNamesArrayOperation(
-//                        jsonbOperator = "?&", // 'jsonb_exists_all' is equivalent but MIGHT not hit the GIN index
-//                        tagNames = tagNames
-//                    )
-//                } else {
-//                    and(tagQuery.filterNotNull(), this::whereNestedTags)
-//                }
-//            }
-//            is TagQuery -> resolveSingleTagQuery(tagQuery)
-//        }
-//    }
-//
-//    private fun containsOnlyTagExists(container: ListProxy<ITagQuery>): Boolean =
-//        container.all { it == null || it is TagMapHasKey }
-//
-//    /**
-//     * Element containment on a set-form tags column (jsonb array): `tags @> '[<element>]'::jsonb`.
-//     * The `@>` operator matches the element in its type (string, boolean, number) and is supported
-//     * by the GIN index over the column.
-//     */
-//    private fun resolveTagSetContains(tagQuery: TagSetContains) {
-//        val element = AnyList()
-//        element.add(tagQuery.element)
-//        val placeholder = placeholderForArg(toJSON(element), PgType.STRING)
-//        where.append("$tagsAsJsonb @> $placeholder::jsonb")
-//    }
-//
-//    private fun resolveTagNamesArrayOperation(jsonbOperator: String, tagNames: List<String>) {
-//        val tagKeysArray = tagNames.toTypedArray()
-//        val tagKeysPlaceholder = placeholderForArg(tagKeysArray, PgType.STRING_ARRAY)
-//        where.append("$tagsAsJsonb ?$jsonbOperator $tagKeysPlaceholder")
-//    }
-//
-//    private fun resolveSingleTagQuery(tagQuery: TagQuery) {
-//        when (tagQuery) {
-//            is TagMapHasKey -> {
-//                val tagNamePlaceholder = placeholderForArg(tagQuery.name, PgType.STRING)
-//                where.append("$tagsAsJsonb ?? $tagNamePlaceholder")
-//            }
-//
-//            is TagValueIsNull -> {
-//                val tagValuePlaceholder = placeholderForArg(selectTagValue(tagQuery), PgType.STRING)
-//                where.append("$tagValuePlaceholder IS NULL")
-//            }
-//
-//            is TagValueIsBool -> {
-//                if (tagQuery.value) {
-//                    where.append(selectTagValue(tagQuery, PgType.BOOLEAN))
-//                } else {
-//                    where.append("not(${selectTagValue(tagQuery, PgType.BOOLEAN)})")
-//                }
-//            }
-//
-//            is TagValueIsDouble -> {
-//                val queryValuePlaceholder = placeholderForArg(tagQuery.value, PgType.DOUBLE)
-//                val doubleOp = resolveDoubleOp(
-//                    tagQuery.op,
-//                    selectTagValue(tagQuery, PgType.DOUBLE),
-//                    queryValuePlaceholder
-//                )
-//                where.append(doubleOp)
-//            }
-//
-//            is TagValueIsString -> {
-//                val queryValuePlaceholder = placeholderForArg(tagQuery.value, PgType.STRING)
-//                val stringEquals = resolveStringOp(
-//                    StringOp.EQUALS,
-//                    selectTagValue(tagQuery, PgType.STRING),
-//                    queryValuePlaceholder
-//                )
-//                where.append(stringEquals)
-//            }
-//
-//            is TagValueMatches -> {
-//                val jsonPathPlaceholder = placeholderForArg(
-//                    "\$.${tagQuery.name} ? (@ like_regex \"${tagQuery.regex}\")",
-//                    PgType.STRING
-//                )
-//                where.append("$tagsAsJsonb @?? $jsonPathPlaceholder::jsonpath")
-//            }
-//        }
-//    }
-//
-//    private fun selectTagValue(tagQuery: TagQuery, castTo: PgType? = null): String {
-//        val tagKeyPlaceholder = placeholderForArg(tagQuery.name, PgType.STRING)
-//        return when (castTo) {
-//            null -> "$tagsAsJsonb->$tagKeyPlaceholder"
-//            PgType.STRING -> "$tagsAsJsonb->>$tagKeyPlaceholder"
-//            else -> "($tagsAsJsonb->$tagKeyPlaceholder)::${castTo.value}"
-//        }
-//    }
-//
-//    private fun <T : IQuery> not(subClause: T, subClauseResolver: (T) -> Unit) {
-//        where.append(" NOT (")
-//        subClauseResolver(subClause)
-//        where.append(") ")
-//    }
-//
-//    private fun <T : IQuery> and(subClauses: List<T>, subClauseResolver: (T) -> Unit) =
-//        multiClause("AND", subClauses, subClauseResolver)
-//
-//    private fun <T : IQuery> or(subClauses: List<T>, subClauseResolver: (T) -> Unit) =
-//        multiClause("OR", subClauses, subClauseResolver)
-//
-//    private fun <T : IQuery> multiClause(
-//        operand: String,
-//        subClauses: List<T>,
-//        subClauseResolver: (T) -> Unit
-//    ) {
-//        where.append(" (")
-//        subClauses.forEachIndexed { index, subClause ->
-//            if (index > 0) {
-//                where.append(" $operand ")
-//            }
-//            subClauseResolver(subClause)
-//        }
-//        where.append(") ")
-//    }
-//
-//
-//    private fun resolveStringOp(
-//        stringOp: StringOp,
-//        leftOperand: String,
-//        rightOperand: String
-//    ): String {
-//        return when (stringOp) {
-//            StringOp.EQUALS -> "$leftOperand = $rightOperand"
-//            StringOp.NOT_EQUALS -> "$leftOperand != $rightOperand"
-//            StringOp.STARTS_WITH -> "starts_with($leftOperand, $rightOperand)"
-//            else -> throw NakshaException(
-//                NakshaError.ILLEGAL_ARGUMENT,
-//                "Unknown StringOp: $stringOp"
-//            )
-//        }
-//    }
-//
-//    private fun resolveDoubleOp(
-//        doubleOp: DoubleOp,
-//        leftOperand: String,
-//        rightOperand: String
-//    ): String {
-//        return when (doubleOp) {
-//            DoubleOp.EQ -> "$leftOperand = $rightOperand"
-//            DoubleOp.NE -> "$leftOperand != $rightOperand"
-//            DoubleOp.GT -> "$leftOperand > $rightOperand"
-//            DoubleOp.GTE -> "$leftOperand >= $rightOperand"
-//            DoubleOp.LT -> "$leftOperand < $rightOperand"
-//            DoubleOp.LTE -> "$leftOperand <= $rightOperand"
-//            else -> throw NakshaException(
-//                NakshaError.ILLEGAL_ARGUMENT,
-//                "Unknown DoubleOp: $doubleOp"
-//            )
-//        }
-//    }
 }
