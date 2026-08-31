@@ -7,6 +7,7 @@ import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -155,16 +156,21 @@ class TagList() : StringList() {
 
     companion object TagList_C {
         /**
-         * Create a tag list from the given array; the tags are normalized.
+         * Create a tag list from the given array. Values being `null` or no [String] are ignored.
          * @param tags the tags.
+         * @param normalize if the values should be normalized.
          * @return the tag-list.
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic
-        fun fromArray(tags: Array<String>): TagList {
-            val list = TagList()
-            list.addAndNormalizeTags(*tags)
-            return list
+        @JvmOverloads
+        fun fromArray(tags: Array<*>, normalize: Boolean = true): TagList = TagList().apply {
+            setCapacity(tags.size)
+            for (tag in tags) {
+                if (tag is String) addTag(tag, normalize)
+                else if (tag is Char || tag is CharSequence) addTag(tag.toString(), normalize)
+            }
         }
 
         /**
