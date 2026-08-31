@@ -83,24 +83,24 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
             if (version == Version.HEAD.number) {
                 version = null // HEAD
             } else {
-                if (WHERE.isNotEmpty()) WHERE.append(" AND ")
-                WHERE.append("($VERSION <= ").append(version).append(")")
+                if (WHERE.isNotEmpty()) WHERE.append("AND ")
+                WHERE.append("($VERSION <= ").append(version).append(") ")
             }
         }
         var minVersion = req.minVersion
         if (minVersion != null) {
             minVersion = minVersion or 3L
-            if (WHERE.isNotEmpty()) WHERE.append(" AND ")
-            WHERE.append("($VERSION >= ").append(minVersion).append(")")
+            if (WHERE.isNotEmpty()) WHERE.append("AND ")
+            WHERE.append("($VERSION >= ").append(minVersion).append(") ")
         }
         val readHistory = req.queryHistory && pgCollection.storeHistory
         val versions = req.versions
         if (readHistory && versions == 1 && version != null) { // Return latest version only, but involve history.
-            if (WHERE.isNotEmpty()) WHERE.append(" AND ")
+            if (WHERE.isNotEmpty()) WHERE.append("AND ")
             WHERE.append("($NEXT_VERSION > ").append(version).append(" OR $NEXT_VERSION IS NULL) ")
         }
         if (whereQuery.isNotEmpty()) {
-            if (WHERE.isNotEmpty()) WHERE.append(" AND ")
+            if (WHERE.isNotEmpty()) WHERE.append("AND ")
             WHERE.append(whereQuery)
         }
         val where = if (WHERE.isEmpty()) "" else " WHERE $WHERE"
@@ -108,7 +108,7 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val headWhere = if (req.queryDeleted) where else {
             val hw = StringBuilder(WHERE)
             if (hw.isNotEmpty()) hw.append(" AND ")
-            hw.append("($VERSION & 3) < 2 ")
+            hw.append("(($VERSION & 3) < 2)")
             " WHERE $hw"
         }
 
@@ -117,11 +117,11 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         val selectCols = (baseCols + extraCols).joinToString(", ")
 
         // The query starts with select all tuple-numbers of matching tuple.
-        val query = if (readHistory) """query AS
-( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere
-  UNION ALL
-  SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.historyTable.quotedName}$where )""" else """query AS
-( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere )"""
+        val query = if (readHistory) """query AS (
+(SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere)
+UNION ALL
+(SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.historyTable.quotedName}$where)
+)""" else """query AS (SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere)"""
 
         // If history is queried, and only a certain amount of versions should be returned,
         // or we want only the latest version, but no specific version target is given, then
