@@ -5,6 +5,7 @@ import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationU
 import static com.here.naksha.handler.activitylog.GuidUtil.guid;
 import static com.here.naksha.handler.activitylog.GuidUtil.randomVersion;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +46,26 @@ class ActivityLogRequestTranslationUtilTest {
     // And: there is a single requested FeatureNumber + Version combo passed from original featureId
     Op op = readFeatures.getQueryMembers();
     checkOpIsUuidRequest(op, List.of(guid.tupleNumber.version));
+  }
+
+  private void checkOpIsIdRequest(Op op, List<String> ids) {
+    final IsAnyOf featureIdsOp = assertInstanceOf(IsAnyOf.class, op);
+    assertNotNull(featureIdsOp);
+    var items = featureIdsOp.getItems();
+    assertEquals(ids.size(), items.size());
+    for (var id : ids) assertTrue(items.contains(id));
+  }
+
+  private void checkOpIsUuidAndIdRequest(final Op op, final List<Object> versions, final List<String> ids) {
+    // We assume that op is Or(versions, ids)
+    final And andOp = assertInstanceOf(And.class, op);
+    assertEquals(2, andOp.getChildren().size());
+
+    // First uuid's
+    checkOpIsUuidRequest(andOp.getChildren().getFirst(), versions);
+
+    // second ids
+    checkOpIsIdRequest(andOp.getChildren().get(1), ids);
   }
 
   private void checkOpIsUuidRequest(final Op op, final List<Object> versions) {
@@ -124,15 +145,10 @@ class ActivityLogRequestTranslationUtilTest {
     assertNull(readFeatures.getVersion());
 
     // And: there is a single featureId withing the request
-    StringList featureIds = readFeatures.getFeatureIds();
-    assertEquals(1, featureIds.getSize());
-    assertEquals(featureId, featureIds.get(0));
+    checkOpIsIdRequest(readFeatures.getQueryMembers(), List.of(featureId));
 
     // And:
     assertNull(readFeatures.getQuery().getProperties());
-
-    // And: there are no guids (nothing was declared in original featureIds)
-      assertNull(readFeatures.getQueryMembers());
   }
 
   @Test
@@ -154,15 +170,10 @@ class ActivityLogRequestTranslationUtilTest {
     verifyAllHistoricalVersionsInCollection(readFeatures);
 
     // And: all ids defined in AcitvityLogNs are now part of featureIds
-    StringList featureIds = readFeatures.getFeatureIds();
-    assertEquals(2, featureIds.getSize());
-    assertTrue(featureIds.containsAll(List.of(firstId, secondId)));
+    checkOpIsIdRequest(readFeatures.getQueryMembers(), List.of(firstId, secondId));
 
     // And: the pQuery left is effectively dead
     assertNull(readFeatures.getQuery().getProperties());
-
-    // And: there are no guids (nothing was declared in original featureIds)
-    assertNull(readFeatures.getQueryMembers());
   }
 
   @Test
@@ -185,14 +196,8 @@ class ActivityLogRequestTranslationUtilTest {
     // Then: request will reach correct collection and history
     verifyAllHistoricalVersionsInCollection(readFeatures);
 
-    // And: feature ids are populated from ActivityLogNs
-    StringList finalFeatureIds = readFeatures.getFeatureIds();
-    assertEquals(1, finalFeatureIds.getSize());
-    assertEquals(activityLogId, finalFeatureIds.get(0));
-
-    // And: guuids are populated from original feature ids
-    Op op = readFeatures.getQueryMembers();
-    checkOpIsUuidRequest(op, List.of(version));
+    // And: uuid's and ids are populated from original request
+    checkOpIsUuidAndIdRequest(readFeatures.getQueryMembers(), List.of(version), List.of(activityLogId));
   }
 
   private void verifyAllHistoricalVersionsInCollection(ReadFeatures readFeatures) {
