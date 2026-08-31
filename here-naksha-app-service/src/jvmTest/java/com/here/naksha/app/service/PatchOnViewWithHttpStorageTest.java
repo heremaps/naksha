@@ -27,7 +27,6 @@ import java.util.UUID;
 
 import naksha.geo.SpFeatureCollection;
 import naksha.model.objects.NakshaFeature;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -65,13 +64,11 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
           if ("my-custom-id-01".equals(id)) {
             final var f = javaProxy(feature, NakshaFeature.class);
             assertNotNull(f, "Failed to cast feature to NakshaFeature");
-            uuid1 = f.getProperties().getXyz().getUuid();
-            assertNotNull(f, "Feature does not contain 'properties->@ns:com:here:xyz->uuid' property'");
+            final String uuid1 = f.getProperties().getXyz().getUuid();
+            assertNotNull(uuid1, "Feature does not contain 'properties->@ns:com:here:xyz->uuid' property'");
           }
         }
     }
-
-    private static String uuid1;
 
     @Test
     void tc01_testPatchForFeatureOnlyInBase() throws Exception {
@@ -113,8 +110,7 @@ public class PatchOnViewWithHttpStorageTest extends ApiTest {
         // Given: input patch feature request and final expected response body
         final String streamId = UUID.randomUUID().toString();
         final String featureId = "my-custom-id-01";
-        final String patchRequestJson = loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/patch_request.json")
-            .replace("${uuid1}", uuid1);
+        final String patchRequestJson = loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/patch_request.json");
         final String expectedBodyPart = loadFileOrFail("PatchOnViewWithHttpStorage/TC02_patchFeatureOnlyInDelta/response_body_part.json");
 
         // Given: Mock Http Response from Base space (no record found)

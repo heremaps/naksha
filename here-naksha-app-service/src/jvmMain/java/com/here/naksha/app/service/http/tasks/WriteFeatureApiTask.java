@@ -336,11 +336,6 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       } else {
         // Feature exists - prepare patch for update (atomic == true, we want version validation)
         // that means, if no UUID in feature JSON in request, currently always accept the request, regardless of concurrency issue
-        final var requestedUuid = featureFromRequest.getProperties().getXyz().getUuid();
-        if ((requestedUuid != null) &&(!requestedUuid.equals(correspondingExistingFeature.getProperties().getXyz().getUuid()))) {
-          // TODO CASL-1198 Should we get failed features IDs in naskha errors.
-          return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.CONFLICT, "Error encountered while writing the patched features to storage"));
-        }
         NakshaFeature patchedFeature = patchedFeature(featureFromRequest, correspondingExistingFeature);
         preProcessor.preProcess(featureFromRequest);
         insertsAndUpdates.add(new Write().updateFeature(null, spaceId, patchedFeature, true));

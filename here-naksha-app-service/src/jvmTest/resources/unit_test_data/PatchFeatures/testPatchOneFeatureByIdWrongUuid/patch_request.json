@@ -4,7 +4,7 @@
   "properties": {
     "new": 123,
     "@ns:com:here:xyz": {
-      "uuid": "urn:naksha:guid:feature-123:1:10:5:987654321:42"
+      "uuid": "${uuid}"
     }
   }
 }

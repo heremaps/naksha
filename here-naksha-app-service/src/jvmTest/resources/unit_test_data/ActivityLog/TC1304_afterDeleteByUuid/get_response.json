@@ -13,9 +13,9 @@
     "@ns:com:here:xyz": {
       "action": "DELETE",
       "tags": [
-        "five",
+        "three",
         "four",
-        "three"
+        "five"
       ]
     },
     "@ns:com:here:xyz:log": {

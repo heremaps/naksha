@@ -730,6 +730,7 @@
       "tid": "urn:here::here:Topology-Transaction:1879125",
       "owner": "topology_adapter_service",
       "sourceId": "TMOB",
+      "operation": "CREATED",
       "modelVersion": "2.96.0",
       "lastUpdatedBy": "topology_adapter_service",
       "updatedByUser": "topology_adapter_service"
