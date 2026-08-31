@@ -182,25 +182,13 @@ class PgType : JsEnum() {
         /**
          * JSONB column type, bound as text (JSON).
          *
-         * Used by storages to materialize [naksha.model.objects.MemberType.TAG_MAP], [naksha.model.objects.MemberType.TAG_MAP_FROM_ARRAY] (JSON object), and [naksha.model.objects.MemberType.TAG_LIST] (JSON array) members.
+         * Used by storages to materialize [TagMap][naksha.model.TagMap].
          * @since 3.0
          */
         @JvmField
         @JsStatic
         val JSONB = defIgnoreCase(PgType::class, "jsonb") {
             it.klass = String::class
-        }
-
-        /**
-         * `jsonb[]` array type. Element values are JSON text strings (the on-wire form Postgres accepts for `jsonb`).
-         *
-         * @since 3.0
-         */
-        @JvmField
-        @JsStatic
-        val JSONB_ARRAY = defIgnoreCase(PgType::class, "jsonb[]") {
-            it.componentType = JSONB
-            it.klass = Array::class
         }
 
         /**
@@ -283,7 +271,6 @@ class PgType : JsEnum() {
             MemberType.FLOAT64 -> DOUBLE
             MemberType.STRING -> STRING
             MemberType.TAG_MAP -> JSONB
-            MemberType.TAG_MAP_FROM_ARRAY -> JSONB
             MemberType.TAG_LIST -> STRING_ARRAY
             // MemberType.BYTE_ARRAY -> BYTE_ARRAY
             // MemberType.TUPLE_NUMBER -> BYTE_ARRAY
@@ -367,9 +354,6 @@ class PgType : JsEnum() {
             // We do not support Array<ByteArray>, it's hard to detect cross-platform!
             BYTE_ARRAY_ARRAY -> value.proxy(AnyList::class)?.toByteArrayArray(true)
                     ?: throw illegalArg("The given value is not an list: $value")
-            // We do not support Array<String>, it's hard to detect cross-platform!
-            JSONB_ARRAY -> value.proxy(AnyList::class)?.toJsonArray()
-                ?: throw illegalArg("The given value is not an list: $value")
             else -> throw internalError("Missing when-case for this Postgres Type: $this")
         }
     }

@@ -16,7 +16,6 @@ import naksha.model.objects.MemberType.MemberType_C.SPATIAL
 import naksha.model.objects.MemberType.MemberType_C.STRING
 import naksha.model.objects.MemberType.MemberType_C.TAG_LIST
 import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
-import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.XyzIndices
@@ -115,10 +114,11 @@ open class PgCollection internal constructor(
         }
 
         return when (memberType) {
-            //TUPLE_NUMBER is already handled differently (split into PgColumn.FnColumn and PgColumn.VersionColumn), where this method is called
-            BYTE_ARRAY -> PgColumn(index, memberName, memberType, "STORAGE $EXTENDED")
+            // The standard tuple-number (tn) is handled differently, split into feature-number and version
+            // Other tuple-numbers are currently not supported, but they will be, we will store them as byte-array
+            BYTE_ARRAY, TUPLE_NUMBER -> PgColumn(index, memberName, memberType, "STORAGE $EXTENDED")
             STRING -> PgColumn(index, memberName, STRING, "STORAGE $MAIN COLLATE \"C\"")
-            TAG_MAP, TAG_MAP_FROM_ARRAY, TAG_LIST -> PgColumn(index, memberName, memberType, "STORAGE $MAIN")
+            TAG_MAP, TAG_LIST -> PgColumn(index, memberName, memberType, "STORAGE $MAIN")
             SPATIAL -> PgColumn(index, memberName, memberType, "STORAGE $EXTERNAL")
             else -> PgColumn(index, memberName, memberType, "STORAGE $PLAIN")
         }
