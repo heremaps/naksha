@@ -75,8 +75,6 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         } else {
             // ReadFeatures clearly states that you have to use either the new syntax or the old, not mix them!
             // Note: We want to get people to switch to new syntax, not start improving old queries with new features!
-            // ReadFeatures clearly states that you have to use either the new syntax or the old, not mix them!
-            // Note: We want to get people to switch to new syntax, not start improving old queries with new features!
             if (!request.query.hasNoConditions())
                 throw illegalArg("Old 'query' option must not be combined with new 'queryMember'")
             if (request.featureIds.isNotEmpty())
