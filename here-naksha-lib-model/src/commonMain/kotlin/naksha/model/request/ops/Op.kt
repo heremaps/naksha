@@ -50,7 +50,37 @@ import kotlin.jvm.JvmStatic
 open class Op : AnyObject() {
     companion object MemberOp_C {
         private val OP_STRING = NotNullProperty<Op, String>(String::class) { self, name ->
-            throw illegalArg("Missing '$name' property or no valid string: ${toJSON(self)}")
+            when (self) {
+                is And -> AND
+                is Or -> OR
+                is Not -> NOT
+                is IsNull -> IS_NULL
+                is IsTrue -> IS_TRUE
+                is IsFalse -> IS_FALSE
+                is Equals -> EQ
+                is Gt -> GT
+                is Gte -> GTE
+                is Lt -> LT
+                is Lte -> LTE
+                is StartsWith -> STARTS_WITH
+                is IsAnyOf -> IS_ANY_OF
+                is Intersects -> INTERSECTS
+                is TagMapHasKey -> TAGMAP_HAS_KEY
+                is TagMapHasAnyOf -> TAGMAP_HAS_ANY_OF
+                is TagMapHasAllOf -> TAGMAP_HAS_ALL_OF
+                is TagIsNull -> TAG_IS_NULL
+                is TagEquals -> TAG_EQ
+                is TagGt -> TAG_GT
+                is TagGte -> TAG_GTE
+                is TagLt -> TAG_LT
+                is TagLte -> TAG_LTE
+                is TagStartsWith -> TAG_STARTS_WITH
+                is TagMatches -> TAG_MATCHES
+                is TagListContains -> TAGLIST_CONTAINS
+                is TagListContainsAnyOf -> TAGLIST_CONTAINS_ANY_OF
+                is TagListContainsAllOf -> TAGLIST_CONTAINS_ALL_OF
+                else -> throw illegalArg("Missing '$name' property or no valid string: ${toJSON(self)}")
+            }
         }
         private val STRING_OR_NULL = NullableProperty<Op, String>(String::class)
 
@@ -98,6 +128,8 @@ open class Op : AnyObject() {
         fun detect(op: Any?): Op {
             val realOp = op as? Op? ?: op.proxy(Op::class)
                 ?: throw illegalArg("The given operation is not detectable: ${toJSON(op)}")
+            // If op is already a concrete type.
+            if (realOp::class !== Op::class) return realOp
             val opName = realOp.op
             val opProxy = when(opName) {
                 AND -> op as? And ?: op.proxy(And::class)
