@@ -5,7 +5,6 @@ package naksha.model
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.md5
-import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
@@ -416,54 +415,12 @@ class Naksha private constructor() {
         fun alternativeInt32(number: Int): Int = (number + 1) or -2147483648
 
         /**
-         * Decode Naksha tags from their binary representation.
-         * @param bytes the bytes to decode.
-         * @param dictReader the dictionary manager to use for decoding; if any.
-         * @return the Naksha tags.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun decodeTags(json: String?): TagMap? {
-            if (json.isNullOrBlank()) return null
-            val decoded = fromJSON(json)
-            return if (decoded is PlatformMap) decoded.proxy(TagMap::class) else null
-        }
-
-        /**
-         * Encodes the given tags into their binary representation.
-         * @param tags the tags to encode.
-         * @return the JSON text representation, or _null_ if [tags] is _null_ / empty.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun encodeTags(tags: TagMap?): String? {
-            if (tags.isNullOrEmpty()) return null
-            return toJSON(tags)
-        }
-
-        /**
-         * Encodes the given tag-list into the [tag_list][naksha.model.objects.MemberType.TAG_LIST]
-         * representation: a JSON array, with the element order preserved.
-         * @param tags the tags to encode.
-         * @return the JSON array text representation, or _null_ if [tags] is _null_ / empty.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun encodeTagList(tags: TagList?): String? {
-            if (tags.isNullOrEmpty()) return null
-            return toJSON(tags)
-        }
-
-        /**
          * Decodes Naksha tags from their JSON text representation into a [TagList].
          *
          * Supports both persisted forms:
          * - a JSON array ([tag_list][naksha.model.objects.MemberType.TAG_LIST], the default) is returned
          *   unmodified, preserving the element order;
-         * - a JSON object ([naksha.model.objects.MemberType.TAG_MAP_FROM_ARRAY]) is re-flattened via
+         * - a JSON object ([naksha.model.objects.MemberType.TAG_MAP_FROM_TAG_LIST]) is re-flattened via
          *   [TagMap.toTagList], in which case the original order is not guaranteed.
          * @param json the JSON text to decode (value of the `tags` member).
          * @return the decoded tag-list, or _null_ if [json] is _null_, blank, or neither an array nor an object.
