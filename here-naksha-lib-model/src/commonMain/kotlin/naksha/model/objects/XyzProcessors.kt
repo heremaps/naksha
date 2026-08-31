@@ -39,8 +39,9 @@ class XyzProcessors private constructor() {
         @JvmStatic
         val xyzCreatedAt = IMemberProcessor { _, collection, feature, _, value ->
             when (value) {
-                is Int64 -> value
-                is Number -> Int64(value.toLong())
+                is Long -> value
+                is Int64 -> value.toLong()
+                is Number -> value.toLong()
                 else -> {
                     val action = collection.useMember(StandardMembers.Tn).readTupleNumber(feature)?.action
                     if (action == Action.CREATE) null else feature.properties.xyz.createdAt
@@ -53,7 +54,7 @@ class XyzProcessors private constructor() {
          * @since 3.0
          */
         @JvmStatic
-        val xyzUpdatedAt = IMemberProcessor { _, _, _, _, _ -> Platform.currentMillis() }
+        val xyzUpdatedAt = IMemberProcessor { _, _, _, _, _ -> Platform.currentMillis().toLong() }
 
         /**
          * Ensures that [XyzAppId][naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId] is set correctly.
@@ -75,7 +76,9 @@ class XyzProcessors private constructor() {
          */
         @JvmStatic
         val xyzAuthorTimestamp = IMemberProcessor { session, _, _, _, value ->
-            if (session.options.author != null) Platform.currentMillis() else value as Int64?
+            if (session.options.author != null) Platform.currentMillis().toLong()
+            else if (value is Int64) value.toLong()
+            else value as? Long ?: if (value is Number) value.toLong() else null
         }
 
         /**

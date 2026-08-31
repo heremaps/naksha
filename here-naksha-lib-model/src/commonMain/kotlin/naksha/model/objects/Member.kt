@@ -274,11 +274,11 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param feature The feature to read from.
      * @return the read value or `null`, if the feature does not store a valid value at the member path.
      */
-    fun readInt64(feature: MapProxy<*,*>): Int64? {
+    fun readLong(feature: MapProxy<*,*>): Long? {
         val raw = feature.getPath(path)
-        if (raw is Int64) return raw
-        if (raw is Long) return Int64(raw)
-        if (raw is Number) return Int64(raw.toLong())
+        if (raw is Long) return raw
+        if (raw is Int64) return raw.toLong()
+        if (raw is Number) return raw.toLong()
         return null
     }
 
@@ -390,11 +390,11 @@ open class Member() : AnyObject(), Comparator<Member> {
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getInt64FromTuple")
-    fun readInt64(tuple: Tuple): Int64? {
+    fun readLong(tuple: Tuple): Long? {
         val raw = tuple.getMember(this)
-        if (raw is Int64) return raw
-        if (raw is Long) return Int64(raw)
-        if (raw is Number) return Int64(raw.toLong())
+        if (raw is Int64) return raw.toLong()
+        if (raw is Long) return raw
+        if (raw is Number) return raw.toLong()
         return null
     }
 
@@ -515,7 +515,7 @@ open class Member() : AnyObject(), Comparator<Member> {
             MemberType.BYTE_ARRAY -> proxy(ByteArrayMember::class)
             MemberType.TUPLE_NUMBER -> proxy(TupleNumberMember::class)
             MemberType.SPATIAL -> proxy(SpatialMember::class)
-            MemberType.TAG_MAP, MemberType.TAG_MAP_FROM_ARRAY -> proxy(TagMapMember::class)
+            MemberType.TAG_MAP -> proxy(TagMapMember::class)
             MemberType.TAG_LIST -> proxy(TagListMember::class)
             else -> this
         }

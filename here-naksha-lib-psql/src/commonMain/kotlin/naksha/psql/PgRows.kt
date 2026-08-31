@@ -2,7 +2,6 @@ package naksha.psql
 
 import naksha.base.AnyList
 import naksha.base.Int64
-import naksha.base.MapProxy
 import naksha.geo.SpGeometry
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
@@ -10,26 +9,35 @@ import naksha.model.*
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.base.Platform.PlatformCompanion.fromJSON
-import naksha.base.PlatformList
-import naksha.base.PlatformMap
+import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.TupleNumber
 import naksha.model.objects.MemberType
 import naksha.base.Version
-import naksha.base.illegalArg
-import naksha.base.illegalState
+import naksha.base.internalError
 import naksha.base.proxy
 import naksha.geo.GeoUtil
+import naksha.model.objects.MemberType.MemberType_C.BOOLEAN
+import naksha.model.objects.MemberType.MemberType_C.BYTE_ARRAY
+import naksha.model.objects.MemberType.MemberType_C.FLOAT32
+import naksha.model.objects.MemberType.MemberType_C.FLOAT64
+import naksha.model.objects.MemberType.MemberType_C.INT16
+import naksha.model.objects.MemberType.MemberType_C.INT32
+import naksha.model.objects.MemberType.MemberType_C.INT64
+import naksha.model.objects.MemberType.MemberType_C.INT8
 import naksha.model.objects.MemberType.MemberType_C.SPATIAL
+import naksha.model.objects.MemberType.MemberType_C.STRING
 import naksha.model.objects.MemberType.MemberType_C.TAG_LIST
 import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
-import naksha.model.objects.MemberType.MemberType_C.TAG_MAP_FROM_ARRAY
+import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
 
 /**
- * Helper class to convert rows into arrays of column-data and vice versa. The main purpose is to read and write full tuples, but it supports basically as well virtual columns.
+ * Helper class to convert rows into arrays of column-data and vice versa.
+ *
+ * The main purpose is to read and write tuples, but it supports basically as well virtual columns. This class translates the correct member [book][naksha.jbon.IBook] _HEAD_ values into what the storage expects. For example, the encoder will place into the member [book][naksha.jbon.IBook] the reference to [TagList] or [TagMap], and this class will know the physical representation. For example a [TagList] need to be encoded as `text[]`, while a [TagMap] need to be encoded as `JSONB`, which effectively is a `JSON` string. This class will do the serialization and deserialization.
  * @since 3.0
  */
 internal class PgRows {
@@ -203,15 +211,18 @@ internal class PgRows {
     fun getAny(row: Int, column: PgColumn): Any? = getAny(row, column.name)
     fun getInt(row: Int, alias: String): Int? = getAny(row, alias) as? Int
     fun getInt(row: Int, column: PgColumn): Int? = getInt(row, column.name)
-    fun getInt64(row: Int, alias: String): Int64? = getAny(row, alias) as Int64?
-    fun getInt64(row: Int, column: PgColumn): Int64? = getInt64(row, column.name)
+    fun getLong(row: Int, alias: String): Long? = getAny(row, alias) as Long?
+    fun getLong(row: Int, column: PgColumn): Long? = getLong(row, column.name)
     fun getDouble(row: Int, alias: String): Double? = getAny(row, alias) as Double?
     fun getDouble(row: Int, column: PgColumn): Double? = getDouble(row, column.name)
     fun getString(row: Int, alias: String): String? = getAny(row, alias) as String?
     fun getString(row: Int, column: PgColumn): String? = getString(row, column.name)
     fun getByteArray(row: Int, alias: String): ByteArray? = getAny(row, alias) as ByteArray?
     fun getByteArray(row: Int, column: PgColumn): ByteArray? = getByteArray(row, column.name)
+    fun getArray(row: Int, alias: String): Array<*>? = getAny(row, alias) as Array<*>?
+    fun getArray(row: Int, column: PgColumn): Array<*>? = getArray(row, column.name)
     fun getSpatial(row: Int, alias: String): SpGeometry? {
+        // Stored as bytea, therefore returned by JDBC as ByteArray.
         val raw = getByteArray(row, alias) ?: return null
         return try {
             Naksha.decodeGeometry(raw)
@@ -219,18 +230,27 @@ internal class PgRows {
             null
         }
     }
-    fun getTags(row: Int, alias: String): TagMap? {
+    fun getTagMap(row: Int, alias: String): TagMap? {
+        // Stored as JSONB, therefore returned by JDBC as string.
         val raw = getString(row, alias) ?: return null
         return try {
-            Naksha.decodeTags(raw)
+            fromJSON(raw).proxy(TagMap::class)
         } catch (_: Exception) {
             null
         }
     }
     fun getTagList(row: Int, alias: String): TagList? {
-        val raw = getString(row, alias) ?: return null
+        // Stored as text[], therefore returned by JDBC as Array.
+        val raw = getArray(row, alias) ?: return null
         return try {
-            Naksha.decodeTagList(raw)
+            val tagList = TagList()
+            tagList.setCapacity(raw.size)
+            for (tag in raw) {
+                if (tag !is String) continue
+                // We know that we read back data we serialized, tags are normalized!
+                tagList.addTag(tag, false)
+            }
+            tagList
         } catch (_: Exception) {
             null
         }
@@ -297,20 +317,8 @@ internal class PgRows {
                     membersBook.put(name, raw ?: Version.HEAD.number)
                 }
                 else -> {
-                    val raw = getColumn(name)?.values?.get(row)
-                    val value = when (member.dataType) {
-                        TAG_LIST -> toAnyListOrNull(raw)
-                        SPATIAL -> GeoUtil.fromTWKB(raw as? ByteArray)
-                        TAG_MAP, TAG_MAP_FROM_ARRAY -> when (raw) {
-                            is String -> fromJSON(raw).proxy(TagMap::class)
-                            is TagMap -> raw
-                            null -> null
-                            is MapProxy<*,*> -> raw.proxy(TagMap::class)
-                            is PlatformMap -> raw.proxy(TagMap::class)
-                            else -> throw illegalState("Cannot convert value of type ${raw.let { it::class.simpleName } ?: "null"} to TagMap")
-                        }
-                        else -> raw
-                    }
+                    val pg_value = getColumn(name)?.values?.get(row)
+                    val value = member.dataType.convert(pg_value)
                     membersBook.put(name, value)
                 }
             }
@@ -332,7 +340,9 @@ internal class PgRows {
 
     operator fun get(row: Int): Tuple? = getTuple(row)
 
-    fun set(row: Int, columnName: String, value: Any?): Boolean {
+    // TODO: The current usage luckily avoids setting structured types with special encoding.
+    //       However, theoretically we need to handle TagMap and TagList!
+    fun setColumn(row: Int, columnName: String, value: Any?): Boolean {
         val column = getColumn(columnName)
         if (column != null) {
             setMinRows(row+1)
@@ -342,26 +352,37 @@ internal class PgRows {
         return false
     }
 
-    operator fun set(row: Int, tuple: Tuple) {
+    operator fun set(row: Int, tuple: Tuple) = setRow(row, tuple)
+
+    fun setRow(row: Int, tuple: Tuple) {
         setMinRows(row+1)
         val membersBook = tuple.membersBook
         val END = membersBook.namesLength()
         for (i in 0 until END) {
             val memberName = membersBook.getNameAt(i) ?: continue
             val column = getColumn(memberName) ?: continue
-            val value = membersBook[memberName]
-            column.values[row] = when (column.pgColumn.memberType) {
-                // Convert any geometry column to TWKB, because the geometry is a bytea in Postgres, but a SpGeometry in the members-book.
-                SPATIAL -> GeoUtil.toTWKB(value as SpGeometry?)
-                TAG_MAP_FROM_ARRAY -> when (value) {
-                    null -> null
-                    is TagList -> value.toTagMap()
-                    is ListProxy<*> -> value.proxy(TagList::class).toTagMap()
-                    is TagMap -> value
-                    is PlatformList -> value.proxy(TagList::class).toTagMap()
-                    else -> throw illegalArg("Cannot convert value of type ${value?.let { it::class.simpleName } ?: "null"} to TagMap")
-                }
-                else -> value
+            val member_value = membersBook[memberName]
+            // Note: The members book is required to contain correctly typed values.
+            // We convert these values into what is stored in PostgresQL.
+            column.values[row] = when (val member_type = column.pgColumn.memberType) {
+                BOOLEAN -> member_value as? Boolean
+                INT8 -> member_value as? Byte
+                INT16 -> member_value as? Short
+                INT32 -> member_value as? Byte
+                INT64 -> member_value as? Long
+                FLOAT32 -> member_value as? Float
+                FLOAT64 -> member_value as? Double
+                STRING -> member_value as? String
+                BYTE_ARRAY -> member_value as? ByteArray
+                // Stored as bytea
+                TUPLE_NUMBER -> (member_value as? TupleNumber)?.toB256()
+                // Stored as TWKB bytea
+                SPATIAL -> if (member_value is SpGeometry) GeoUtil.toTWKB(member_value) else null
+                // Stored as JSONB string
+                TAG_MAP -> if (member_value is TagMap) toJSON(member_value) else null
+                // Stored as text[]
+                TAG_LIST -> if (member_value is TagList) member_value.toStringArray(true) else null
+                else -> throw internalError("PgRows: Unknown member type in member book: $member_type")
             }
         }
         // The members-book keeps the tuple-number as a single `_tn` entry; the table splits it into the
@@ -424,56 +445,6 @@ internal class PgRows {
         return this
     }
 
-//    /**
-//     * Read all rows from cursor, expects the cursor to be at first result and that for each column, there is an array of values, so an aggregate generated via `ARRAY_AGG`.
-//     * @since 3.0
-//     */
-//    fun addAggregated(cursor: PgCursor): PgRows {
-//        if (cursor.isRow()) {
-//            for (column in columns) {
-//                if (cursor.contains(column.name)) {
-//                    val values = cursor.column(column.name)
-//                    if (values is Array<*>) {
-//                        withMinRows(values.size)
-//                        for (i in 0 until values.size) {
-//                            set(i, column.name, values[i])
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        return this
-//    }
-
-//    /**
-//     * Returns the names of all columns as comma separated string, surrounded with aggregation instruction, _(like `ARRAY_AGG(id)`)_, usage:
-//     *
-//     * ```kotlin
-//     * val rows = PgColumnRows().addColumns(allColumns)
-//     * val SQL = """SELECT ${rows.aliasesAggregate()}
-//     * FROM "naksha~admin".${collections.head.quotedName}
-//     * WHERE id = ANY($1)"""
-//     * val plan = conn.prepare(SQL, rows.typeNames())
-//     * val cursor = plan.execute(rows.valuesExecutable())
-//     * ```
-//     *
-//     * @return the aliases of all columns as comma separated string, surrounded with aggregation instruction, example:
-//     * ```sql
-//     * ARRAY_AGG("foo") AS "foo", ARRAY_AGG("bar") AS "bar", ...
-//     * ```
-//     * @since 3.0
-//     */
-//    fun aliasesAggregate(): String {
-//        val cached = this.namesAggregate
-//        if (cached != null) return cached
-//        val names = columns.joinToString(", ") {
-//            val q = PgUtil.quoteIdent(it.alias)
-//            "ARRAY_AGG($q) AS $q"
-//        }
-//        this.namesAggregate = names
-//        return names
-//    }
-
     /**
      * Returns the aliases of all columns as comma separated string, optionally quoted.
      * @return the aliases of all columns as comma separated string.
@@ -492,7 +463,7 @@ internal class PgRows {
      *
      * ```kotlin
      * val sql = """WITH new_row AS (
-     *   SELECT * FROM UNNEST(${rows.placeholders()})
+     *   SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()})
      *   AS t(${rows.names()})
      * )
      * INSERT INTO ${collection.head.quotedName} (${rows.aliases()})
@@ -503,6 +474,10 @@ internal class PgRows {
      *
      * @return the placeholders of all columns as comma separated string.
      * @since 3.0
+     * @see decodedColumns
+     * @see placeholders
+     * @see typeNames
+     * @see values
      */
     fun placeholders(): String {
         var placeholders = this.placeholders
@@ -523,7 +498,7 @@ internal class PgRows {
      *
      * ```kotlin
      * val sql = """WITH new_row AS (
-     *   SELECT * FROM UNNEST(${rows.placeholders()})
+     *   SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()})
      *   AS t(${rows.names()})
      * )
      * INSERT INTO ${collection.head.quotedName} (${rows.aliases()})
@@ -533,6 +508,10 @@ internal class PgRows {
      * ```
      * @return the array type-names of all columns.
      * @since 3.0
+     * @see decodedColumns
+     * @see placeholders
+     * @see typeNames
+     * @see values
      */
     fun typeNames(): Array<String> = Array(columns.size) {
         val col = columns[it].pgColumn
@@ -541,15 +520,22 @@ internal class PgRows {
         else col.pgType.text + "[]"
     }
 
-    fun newRowProjection(): String = columns.joinToString(", ") {
+    /**
+     * Used by [PgWriterInsert], [PgWriterUpdate], and [PgWriterUpsert]. This method returns the columns with some decode hacks when send to the storage as array and decoded using `unnest`.
+     * @see decodedColumns
+     * @see placeholders
+     * @see typeNames
+     * @see values
+     */
+    fun decodedColumns(): String = columns.joinToString(", ") {
         val ident = PgUtil.quoteIdent(it.alias)
         when (it.pgColumn.memberType) {
-            TAG_LIST -> {
-                "CASE WHEN $ident IS NULL THEN NULL ELSE ARRAY(SELECT json_array_elements_text($ident::json)) END AS $ident"
-            }
-            TAG_MAP, TAG_MAP_FROM_ARRAY -> {
-                "$ident::jsonb"
-            }
+            // We have serialized the text[] as JSON to workaround UNNEST limits.
+            // When selecting from the UNNEST we need to restore the text[] fron the JSON.
+            TAG_LIST -> "(CASE WHEN $ident IS NULL THEN NULL ELSE ARRAY(SELECT json_array_elements_text($ident::json)) END)::text[] AS $ident"
+            // We serialized to String, but PostgresQL expects JSONB, a simple cast does the trick.
+            TAG_MAP -> "$ident::jsonb"
+            // The rest is as PostgresQL expects it.
             else -> ident
         }
     }
@@ -559,7 +545,7 @@ internal class PgRows {
      *
      * ```kotlin
      * val sql = """WITH new_row AS (
-     *   SELECT * FROM UNNEST(${rows.placeholders()})
+     *   SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()})
      *   AS t(${rows.names()})
      * )
      * INSERT INTO ${collection.head.quotedName} (${rows.aliases()})
@@ -570,7 +556,11 @@ internal class PgRows {
      * Beware that the array really is two-dimensional: `Array<Array<Any?>>`.
      * @return the values of all columns as `Array<Any?>`.
      * @since 3.0
+     * @see decodedColumns
+     * @see placeholders
+     * @see typeNames
+     * @see values
      */
     @Suppress("UNCHECKED_CAST")
-    fun values(): Array<Any?> = Array(columns.size) { columns[it].anyArray() } as Array<Any?>
+    fun values(): Array<Any?> = Array(columns.size) { columns[it].toArray() } as Array<Any?>
 }
