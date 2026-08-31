@@ -234,7 +234,7 @@ data class Tuple @JvmOverloads constructor(
                     TN -> newTn
                     NEXT_VERSION -> null
                     ORIGIN -> origin
-                    GLOBAL_BOOK_FN -> globalBookTn?.featureNumber?.toLong()
+                    GLOBAL_BOOK_FN -> globalBookTn?.featureNumber
                     CHANGE_COUNT -> (member.readLong(f) ?: 0L) + 1L
                     else -> member.read(f)
                 }
@@ -511,10 +511,9 @@ data class Tuple @JvmOverloads constructor(
         private fun coerceTagList(value: Any, featureId: String, memberName: String): TagList? {
             val list = when (value) {
                 is TagList -> value
-                is Array<*> -> TagList().apply {
-                    setCapacity(value.size)
-                    for (v in value) if (v is String) addTag(v, true)
-                }
+                is PlatformList -> value.proxy(TagList::class)
+                is Array<*> -> TagList.fromArray(value)
+                is List<*> -> TagList(value)
                 else -> value.proxy(TagList::class)
             }
             if (list != null) return list

@@ -159,8 +159,8 @@ internal abstract class PgWriterBase protected constructor(
      * @return the number of rows loaded.
      */
     protected fun loadAllTuple(lambda: Fx3<Int, Tuple, PgWrite>? = null): Int {
-        var row = 0
-        inRows.setMinRows(inRows.size + (end - start))
+        var row = inRows.size
+        inRows.withMinCapacity(inRows.size + (end - start))
         for (i in start ..< end) {
             val pgWrite = pgWrites[i]
             val tuple = pgWrite.tuple ?: throw illegalArg("The write #$i has no tuple, failed to load all tuple")

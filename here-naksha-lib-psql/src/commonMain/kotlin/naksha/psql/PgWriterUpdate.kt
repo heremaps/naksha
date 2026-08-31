@@ -37,7 +37,7 @@ internal class PgWriterUpdate(
         loadAllTuple { row, tuple, pgWrite ->
             writeByFn[tuple.tupleNumber.featureNumber] = pgWrite
             // Separate column for the expected HEAD version.
-            inRows.setColumn(row, "expected_version", pgWrite.version?.number)
+            inRows.setColumn("expected_version", row, pgWrite.version?.number)
         }
     }
 

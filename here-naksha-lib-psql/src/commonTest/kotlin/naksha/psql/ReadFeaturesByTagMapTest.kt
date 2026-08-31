@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.model.Naksha
 import naksha.model.RandomFeatures
 import naksha.model.TagMap
 import naksha.model.objects.Index
@@ -163,11 +162,11 @@ class ReadFeaturesByTagMapTest : PgTestBase(
             other.id,
             missing.id,
         )
-        assertReturnedIds(
-            And(TagMapHasKey(SEARCH_TAGS_MEMBER, "negation_scope"), Not(TagGt(SEARCH_TAGS_MEMBER, "negation_number", 5))),
-            other.id,
-            missing.id,
-        )
+        // Note: When a tag does not exist, we treat its value as NaN or NULL and by definition that never matches anything.
+        assertReturnedIds(And(
+            TagMapHasKey(SEARCH_TAGS_MEMBER, "negation_scope"),
+            Not(TagGt(SEARCH_TAGS_MEMBER, "negation_number", 5)
+        )), other.id)
     }
 
     @Test
