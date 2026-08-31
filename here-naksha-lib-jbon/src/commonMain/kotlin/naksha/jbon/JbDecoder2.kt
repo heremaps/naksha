@@ -19,17 +19,17 @@ import kotlin.jvm.JvmStatic
  * The decoder maps a single top-level unit. To decode a stored tuple, call [mapBytes] which will
  * skip the file header (if present), descend into the [Tuple], and expose the feature [Object].
  *
- * @property globalDict The global book used to resolve global references; if any.
- * @property membersDict The members book used to resolve member references ([JB2_REF_BOOK_MEMBERS]);
+ * @property globalBook The global book used to resolve global references; if any.
+ * @property membersBook The members book used to resolve member references ([JB2_REF_BOOK_MEMBERS]);
  *   if any. Entries are arbitrary `Any?` values assembled by the caller (e.g. from database columns).
  *   If an entry is a [ByteArray] it is interpreted as raw TWKB bytes and converted to [SpGeometry]
  *   via [GeoUtil.fromTWKB] before being returned to the caller.
  *   Embedded members books inside a [Tuple] are **not** loaded automatically; the caller must
- *   supply [membersDict] explicitly before decoding.
+ *   supply [membersBook] explicitly before decoding.
  */
 @Suppress("MemberVisibilityCanBePrivate", "OPT_IN_USAGE", "DuplicatedCode")
 @JsExport
-open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = null) {
+open class JbDecoder2(var globalBook: IBook? = null, var membersBook: IBook? = null) {
 
     /** The underlying binary view. */
     var view: BinaryView = Binary()
@@ -103,9 +103,9 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
             offset: Int,
             end: Int,
             sb: StringBuilder,
-            globalStrings: List<String>? = null,
+            globalBook: IBook? = null,
             localStrings: List<String>? = null,
-            memberStrings: List<String>? = null
+            memberBook: IBook? = null
         ) {
             var i = offset
             while (i < end) {
@@ -123,13 +123,12 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
                         i += 4
                     }
                     val bb = (lead and JB2_SREF_BOOK_MASK) ushr JB2_SREF_BOOK_SHIFT
-                    val strings = when (bb) {
-                        JB2_BOOK_GLOBAL -> globalStrings
-                        JB2_BOOK_LOCAL -> localStrings
-                        JB2_BOOK_MEMBERS -> memberStrings
+                    val s = when (bb) {
+                        JB2_BOOK_GLOBAL -> globalBook?.getStringAt(index)
+                        JB2_BOOK_LOCAL -> localStrings?.get(index)
+                        JB2_BOOK_MEMBERS -> memberBook?.getStringAt(index)
                         else -> null // const book holds no addressable strings here
                     }
-                    val s = strings?.getOrNull(index)
                     if (s != null) sb.append(s)
                     val add = (lead and JB2_SREF_ADD_MASK) ushr JB2_SREF_ADD_SHIFT
                     val ch = JB2_ADD_CHAR[add]
@@ -305,9 +304,9 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
             else -> view.getInt32(at + 1)
         }
         return when (lead and JB2_REF_BOOK_MASK) {
-            JB2_REF_BOOK_GLOBAL -> globalDict?.get(index)
+            JB2_REF_BOOK_GLOBAL -> globalBook?.get(index)
             JB2_REF_BOOK_LOCAL -> localStrings?.getOrNull(index)
-            JB2_REF_BOOK_MEMBERS -> resolveMembersRef(index)
+            JB2_REF_BOOK_MEMBERS -> membersBook?.get(index)
             else -> null // const
         }
     }
@@ -316,39 +315,10 @@ open class JbDecoder2(var globalDict: IBook? = null, var membersDict: IBook? = n
         val hs = stringHeaderSize(at)
         val total = stringUnitSize(at)
         val sb = StringBuilder()
-        readSubstring(view, at + hs, at + total, sb, globalStringsList(), localStrings, memberStringsList())
+        readSubstring(view, at + hs, at + total, sb, globalBook, localStrings, membersBook)
         return sb.toString()
     }
 
-    private fun globalStringsList(): List<String>? {
-        val g = globalDict ?: return null
-        // Materialise lazily via IBook.get is expensive; only used for sref resolution. Build once.
-        val len = g.length
-        return List(len) { g.get(it)?.toString() ?: "" }
-    }
-
-    /**
-     * Materialise the members book as a flat string list for use inside string-reference resolution.
-     * Members are plain values stored in PostgreSQL columns (text, int, etc.) — no nested references.
-     * Non-string entries are converted via [toString]; null entries become empty strings.
-     */
-    private fun memberStringsList(): List<String>? {
-        val m = membersDict ?: return null
-        val len = m.length
-        return List(len) { m.get(it)?.toString() ?: "" }
-    }
-
-    /**
-     * Resolve a [JB2_REF_BOOK_MEMBERS] reference at the given [index].
-     *
-     * The entry is retrieved from [membersDict]. If the returned value is a [ByteArray] it is
-     * treated as raw TWKB bytes and converted to [SpGeometry] via [GeoUtil.fromTWKB]. All other
-     * types are returned as-is.
-     */
-    private fun resolveMembersRef(index: Int): Any? {
-        val value = membersDict?.get(index) ?: return null
-        return value
-    }
 
     private fun decodeStructAt(at: Int): Any? {
         val type = leadIn(at) and JB2_STRUCT_TYPE_MASK
