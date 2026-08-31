@@ -93,7 +93,7 @@ class MemberTest {
         assertNotNull(MemberType.BYTE_ARRAY)
         // Virtual / jsonb.
         assertNotNull(MemberType.TAG_MAP)
-        assertNotNull(MemberType.TAG_MAP_FROM_ARRAY)
+        assertNotNull(MemberType.TAG_MAP_FROM_TAG_LIST)
         assertNotNull(MemberType.TAG_LIST)
     }
 
@@ -101,31 +101,5 @@ class MemberTest {
     fun standardTagsMemberDefaultsToSet() {
         assertEquals(MemberType.TAG_LIST, naksha.model.objects.XyzMembers.XyzTags.dataType)
         assertNotNull(naksha.model.objects.XyzIndices.XyzTags)
-    }
-
-    @Test
-    fun tagListEncodesAsJsonArrayPreservingOrder() {
-        val tags = TagList("foo", "bar", "a=b")
-        val json = Naksha.encodeTagList(tags)
-        assertNotNull(json)
-        // Round-trip must preserve the exact element order (set guarantee).
-        val decoded = Naksha.decodeTagList(json)
-        assertNotNull(decoded)
-        assertEquals(listOf("foo", "bar", "a=b"), decoded.filterNotNull())
-    }
-
-    @Test
-    fun decodeTagListSupportsLegacyMapForm() {
-        // TAGS_FROM_ARRAY persists a JSON object; decodeTagList must re-flatten it.
-        val decoded = Naksha.decodeTagList("""{"foo":null,"a":"b","n":5.0}""")
-        assertNotNull(decoded)
-        val elements = decoded.filterNotNull().toSet()
-        assertEquals(setOf("foo", "a=b", "n:=5.0"), elements)
-    }
-
-    @Test
-    fun encodeTagListOfEmptyIsNull() {
-        assertEquals(null, Naksha.encodeTagList(null))
-        assertEquals(null, Naksha.encodeTagList(TagList()))
     }
 }

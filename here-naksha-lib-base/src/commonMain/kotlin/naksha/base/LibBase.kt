@@ -80,9 +80,10 @@ inline fun <T : Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(refer
  * @return this as the requested proxy or `null`.
  * @since 3.0
  */
+@Suppress("UNCHECKED_CAST")
 inline fun <T : Proxy> Any?.proxy(klass: KClass<T>): T? {
     if (this == null) return null
-    if (klass.isInstance(this)) return klass.cast(this)
+    if (klass.isInstance(this)) return this as T
     if (this is PlatformMap) return this.proxy(klass)
     if (this is Proxy) return this.proxy(klass)
     return null
