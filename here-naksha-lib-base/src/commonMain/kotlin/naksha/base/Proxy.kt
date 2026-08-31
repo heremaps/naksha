@@ -265,7 +265,7 @@ abstract class Proxy : PlatformObject {
         }
         if (current is PlatformMap) return Platform.proxy(current, AnyObject::class)
         if (current is PlatformList) return Platform.proxy(current, AnyList::class)
-        if (current is PlatformDataView) return Platform.proxy(current, DataViewProxy::class)
+        if (current is Int64) return current.toLong()
         return current
     }
 

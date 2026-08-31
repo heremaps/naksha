@@ -4,7 +4,6 @@ import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.base.TupleNumber
-import naksha.base.Version
 import naksha.base.conflict
 import naksha.model.objects.MemberType
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
@@ -43,8 +42,8 @@ internal class PgWriterDelete(
         var row = 0
         for (i in start until end) {
             val pgWrite = pgWrites[i]
-            inRows.set(row, FnColumn.ident, pgWrite.featureNumber)
-            inRows.set(row, "expected_version", pgWrite.version?.number)
+            inRows.setColumn(row, FnColumn.ident, pgWrite.featureNumber)
+            inRows.setColumn(row, "expected_version", pgWrite.version?.number)
             row++
         }
         check(row == (end-start))
@@ -195,7 +194,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
 
                 // `existing_fn` and `existing_version` are existing rows in HEAD, no matter in what state.
                 // val existing_fn = outRows.getInt64(row, "existing_fn")
-                val existing_version = outRows.getInt64(row, "existing_version")
+                val existing_version = outRows.getLong(row, "existing_version")
 
                 // `head_row` selects features that are not in DELETE state and match the expected version.
                 // These are the actual rows the query act upon.
@@ -203,7 +202,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
                 // It is NULL:
                 // - If the feature exists, but is DELETE
                 // - If the feature exists, but the client provided `expected_version` and the head_row.`version` differs.
-                val head_row_version = outRows.getInt64(row, "head_row_version")
+                val head_row_version = outRows.getLong(row, "head_row_version")
                 if (head_row_version == null) {
                     // Nothing was done. This can indicate an error, but not in 100% of the cases.
 
@@ -232,8 +231,8 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
                 val tuple = outRows[row]
                 if (tuple != null) pgWrite.tuple = tuple
 
-                val tombstone_fn = outRows.getInt64(row, FnColumn)
-                val tombstone_version = outRows.getInt64(row, VersionColumn)
+                val tombstone_fn = outRows.getLong(row, FnColumn)
+                val tombstone_version = outRows.getLong(row, VersionColumn)
                 pgWrite.tupleNumber = if (tombstone_fn != null && tombstone_version != null) {
                     TupleNumber(storageNumber, catalogNumber, collectionNumber, tombstone_fn, tombstone_version)
                 } else null
