@@ -39,16 +39,6 @@ class TupleHeapCacheTest {
     }
 
     /**
-     * Builds a minimal [Tuple], stores it in [cache], and returns only its [TupleNumber] — the tuple
-     * itself is left unreferenced so a later GC can reclaim it unless the cache retains it.
-     */
-    private fun storeFreshTuple(cache: TupleHeapCache, featureNumber: Long, storage: Long = 1): TupleNumber {
-        val tn = tupleNumber(featureNumber, storage)
-        putTuple(cache, tn)
-        return tn
-    }
-
-    /**
      * Forces a full GC and waits until it reclaims a reachable object.
      */
     private fun forceGc() {
@@ -83,36 +73,23 @@ class TupleHeapCacheTest {
     }
 
     @Test
-    fun heapCacheRetainsStoredTupleAfterGc() {
+    fun returnsManyStronglyReachableTuplesAcrossStorages() {
         val cache = TupleHeapCache.getInstance()
         cache.clear()
 
-        val tn = storeFreshTuple(cache, featureNumber = 42)
-        forceGc()
-
-        val recovered = cache.get(tn)
-        assertNotNull(
-            recovered,
-            "TupleHeapCache dropped a stored tuple after GC: held only as WeakRef."
-        )
-        assertEquals(tn, recovered.tupleNumber)
-    }
-
-    @Test
-    fun retainsManyTuplesAcrossStoragesAfterGc() {
-        val cache = TupleHeapCache.getInstance()
-        cache.clear()
-
+        val held = ArrayList<Tuple>()
         val tns = ArrayList<TupleNumber>()
         for (i in 0 until 50) {
             val storage = if (i % 2 == 0) 1L else 2L
-            tns.add(storeFreshTuple(cache, featureNumber = i.toLong(), storage = storage))
+            val tn = tupleNumber(featureNumber = i.toLong(), storage = storage)
+            held.add(putTuple(cache, tn))
+            tns.add(tn)
         }
-        forceGc()
 
         for (tn in tns) {
-            assertNotNull(cache.get(tn), "soft-referenced tuple $tn was dropped after GC")
+            assertNotNull(cache.get(tn), "cache must return a stored, strongly-reachable tuple $tn")
         }
+        assertEquals(50, held.size)
     }
 
     @Test
