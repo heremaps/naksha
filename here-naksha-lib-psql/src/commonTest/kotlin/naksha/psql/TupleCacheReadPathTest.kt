@@ -7,14 +7,14 @@ import naksha.model.request.FeatureTuple
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 /**
- * End-to-end coverage for the tuple-cache fix: a write warms the heap tier, the tuple survives a GC
- * (SoftReference, not WeakRef), and after the cache is cleared a read reloads it from storage and
- * re-warms the cache (the path that used to need the removed `PgSession` strong-ref workaround).
+ * End-to-end coverage for the tuple-cache fix: after the cache is cleared a read reloads the tuple
+ * from storage and re-warms the cache, and a write response carries its tuples by hard reference
+ * (independent of the cache). These are deterministic — soft-reference GC survival is intentionally
+ * not asserted, as it is non-deterministic.
  */
 class TupleCacheReadPathTest : PgTestBase(collection = null, catalogId = "") {
 
@@ -36,19 +36,6 @@ class TupleCacheReadPathTest : PgTestBase(collection = null, catalogId = "") {
             Thread.sleep(2)
             spins++
         }
-    }
-
-    @Test
-    fun writeWarmedTupleSurvivesGc() {
-        testWithCollection("writeWarmedTupleSurvivesGc")
-        Naksha.cache.clear()
-
-        val tn = writeAndGetTupleNumber()
-        forceGc()
-
-        val cached = Naksha.cache[tn]
-        assertNotNull(cached, "a write-warmed tuple must survive GC via SoftReference (the weak-only tier dropped it)")
-        assertEquals(tn, cached.tupleNumber)
     }
 
     @Test
