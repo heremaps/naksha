@@ -6,7 +6,7 @@ import naksha.base.AtomicRef
  * A cache entry for a [PgCollection].
  * @since 3.0
  */
-data class PsqlCollection(val psqlMap: PsqlMap, val id: String, val number: Number) {
+data class PsqlCollection(val psqlCatalog: PsqlCatalog, val id: String, val number: Number) {
     /**
      * Tests if the underlying [PgCollection] exist.
      * @return `true` if the collection exists; `false` if this is a tombstone cache entry.

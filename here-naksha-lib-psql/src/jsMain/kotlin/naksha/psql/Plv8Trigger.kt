@@ -20,7 +20,7 @@ internal const val TG_LEVEL_ROW = "ROW"
 internal const val TG_LEVEL_STATEMENT = "STATEMENT"
 
 /**
- * The raw row as returned by PostgresQL triggers. Check [PgColumn.allColumns], it should match this.
+ * The raw row as returned by PostgresQL triggers. Check [PgColumn_C.allColumns], it should match this.
  */
 @JsPlainObject
 external interface Plv8Row {
@@ -35,12 +35,11 @@ external interface Plv8Row {
     var hash: Int?
     var change_count: Int?
     var geo_grid: Int?
-    var flags: Int?
     var id: String?
     var app_id: String?
     var author: String?
     var type: String?
-    var tags: ByteArray?
+    var tags: String?
     var geo_ref: ByteArray?
     var geo: ByteArray?
     var feature: ByteArray?

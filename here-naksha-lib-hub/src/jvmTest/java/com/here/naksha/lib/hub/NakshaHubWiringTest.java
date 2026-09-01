@@ -142,7 +142,7 @@ class NakshaHubWiringTest extends AbstractTest {
   @Order(2)
   void testGetStoragesRequestWiring() throws Exception {
     // Given: Read Storage request
-    final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
+    final ReadFeatures request = new ReadFeatures().withCollectionId(STORAGES);
 
     // And: spies and captors in place
     final EventPipeline spyPipeline = spy(spyPipelineFactory.eventPipeline());
@@ -184,14 +184,14 @@ class NakshaHubWiringTest extends AbstractTest {
     final IStorage spyStorageImpl = spy(storageImpl);
     when(adminStorageReader.execute(argThat(readRequest -> {
       if (readRequest instanceof ReadFeatures rr) {
-        return Objects.equals(rr.getCollectionIds().get(0), SPACES);
+        return Objects.equals(rr.getCollectionId(), SPACES);
       }
       return false;
     })))
         .thenReturn(mockResultWithFeature(space));
     when(adminStorageReader.execute(argThat(readRequest -> {
       if (readRequest instanceof ReadFeatures rr) {
-        return Objects.equals(rr.getCollectionIds().get(0), EVENT_HANDLERS);
+        return Objects.equals(rr.getCollectionId(), EVENT_HANDLERS);
       }
       return false;
     })))
@@ -235,7 +235,7 @@ class NakshaHubWiringTest extends AbstractTest {
     verify(spyWriter, times(3)).execute(reqCaptor.capture());
     assertTrue(reqCaptor.getValue() instanceof WriteRequest);
     final List<WriteRequest> requests = reqCaptor.getAllValues();
-    final String collectionId = ((Map) space.getProperties().get("collection"))
+    final String collectionId = ((Map) space.getProperties().getPath("collection"))
         .get("id")
         .toString(); // TODO: this is ambiguous (see Space::getCollectionId), discuss
     // Verify: WriteFeature into collection got called

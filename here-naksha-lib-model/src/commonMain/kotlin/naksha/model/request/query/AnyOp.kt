@@ -26,8 +26,16 @@ open class AnyOp : JsEnum() {
     }
 
     companion object QOpCompanion {
+        // TODO: Update so that it works for members.
+        //       Actually, we need operations that fit to the dedicated member types.
+        //       CONTAINS_KEY @ Tags
+        //       CONTAINS_ENTRY @ Tags
+        //       CONTAINS @ Set
+        //       IS_ANY_OF @ Primitives, like Int, Long, Double, String
+        //       ...
+
         /**
-         * Tests if the property exists.
+         * Tests if the field exists.
          * @since 3.0.0
          */
         @JsStatic

@@ -38,7 +38,7 @@ import naksha.model.AbstractStorage;
 import naksha.model.IReadSession;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -167,11 +167,6 @@ public class NHAdminMock extends AbstractStorage<Config> {
 
   @Override
   public @NotNull Int64 getNumber() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
-  }
-
-  @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 

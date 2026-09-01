@@ -58,7 +58,7 @@ open class SpGeometry() : AnyObject() {
      * @return the coordinates of the geometry.
      */
     open fun getCoordinates(): ICoordinates {
-        val type = this.type ?: throw IllegalStateException("Missing 'type' in geometry")
+        val type = this.type
         val coordinates = getRaw("coordinates") ?: throw IllegalStateException("Missing 'coordinates' in geometry")
         if (coordinates !is PlatformList) throw IllegalStateException("Invalid 'coordinates' in geometry, expect to be an array")
         enforceDoubles(coordinates)

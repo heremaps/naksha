@@ -4,41 +4,20 @@ package naksha.model
 
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.fromJSON
-import naksha.base.Platform.PlatformCompanion.gzipDeflate
-import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.Platform.PlatformCompanion.md5
 import naksha.base.Platform.PlatformCompanion.toJSON
-import naksha.geo.GeoUtil.GeoUtil_C.fromEWKB
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
-import naksha.geo.GeoUtil.GeoUtil_C.fromWKB
-import naksha.geo.GeoUtil.GeoUtil_C.toEWKB
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
-import naksha.geo.GeoUtil.GeoUtil_C.toWKB
 import naksha.geo.SpGeometry
-import naksha.jbon.*
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JBON_GZIP
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON
-import naksha.model.FeatureEncoding.FeatureEncoding_C.JSON_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.EWKB
-import naksha.model.GeoEncoding.GeoEncoding_C.EWKB_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON
-import naksha.model.GeoEncoding.GeoEncoding_C.GEO_JSON_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB
-import naksha.model.GeoEncoding.GeoEncoding_C.TWKB_GZIP
-import naksha.model.GeoEncoding.GeoEncoding_C.WKB
-import naksha.model.GeoEncoding.GeoEncoding_C.WKB_GZIP
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
+import naksha.base.Version.VersionCompanion.virtualVersion
 import naksha.model.NakshaVersion.Companion.CURRENT
-import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaProperties
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
-import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
@@ -56,72 +35,95 @@ class Naksha private constructor() {
         const val INTERNAL_PREFIX = "naksha~"
 
         /**
-         * The identifier of the administration map _(`naksha~admin`)_.
+         * The identifier of the administration catalog, fixed to `naksha~admin`. It can be found in any database under Naksha control.
+         *
+         * **Note**: The feature of the administration catalog is an immutable feature needed to bootstrap a Naksha controlled database, therefore it is not peristed anywhere.
          * @since 3.0
          */
-        const val ADMIN_MAP = "naksha~admin"
+        const val ADMIN_CATALOG_ID = "naksha~admin"
 
         /**
-         * The number of the administration map _(`0`)_.
+         * The identifier of the administration catalog, fixed to `0`. It can be found in any database under Naksha control.
          * @since 3.0
          */
-        const val ADMIN_MAP_NUMBER = 0
+        const val ADMIN_CATALOG_FN = 0
 
         /**
-         * The identifier of the virtual collection in which the collections of a map are managed, located within each map _(`naksha~collections`)_.
+         * The identifier of the collections-collection, the collection in which the collection-features of each catalog are persisted.
+         *
+         * This collection exists in every catalog under Naksha management. The identifier of the collection itself is fixed to `naksha~collections`. The feature of the collections-collection is an immutable feature. It is needed to bootstrap a new catalog.
          * @since 3.0
          */
-        const val COLLECTIONS_COL = "naksha~collections"
+        const val COLLECTIONS_COL_ID = "naksha~collections"
 
         /**
-         * The collection-number of the virtual collection in which the collections of a map are managed, located within each map _(`0`)_ .
+         * The collection-number of the collections-collection in which the collection-features of each catalog are persisted, it has the fixed feature-number _(`0`)_.
          * @since 3.0
          */
-        const val COLLECTIONS_COL_NUMBER = 0
+        const val COLLECTIONS_COL_FN = 0
 
         /**
-         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~transactions`)_.
+         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~transactions`)_.
          * @since 3.0
          * @see [naksha.model.objects.NakshaTx]
          */
-        const val TRANSACTIONS_COL = "naksha~transactions"
+        const val TRANSACTIONS_COL_ID = "naksha~transactions"
 
         /**
-         * The collection-number of the collection in which transactions are stored, located in the [admin-map][ADMIN_MAP] _(`1`)_.
+         * The collection-number of the collection in which transactions are stored, located in the [admin-catalog][ADMIN_CATALOG_ID]. The feature-number of this collection is fixed to `1`.
          * @since 3.0
          */
-        const val TRANSACTIONS_COL_NUMBER = 1
+        const val TRANSACTIONS_COL_FN = 1
 
         /**
-         * The identifier of the collection in which maps are stored, located only within the [admin-map][ADMIN_MAP] _(`naksha~maps`)_.
-         * @see [naksha.model.objects.NakshaMap]
+         * The identifier of the collection in which catalogs (maps) are stored, located only within the [admin-map][ADMIN_CATALOG_ID] _(`naksha~catalogs`)_.
+         * @see [naksha.model.objects.NakshaCatalog]
          * @since 3.0
          */
-        const val MAPS_COL = "naksha~maps"
+        const val CATALOGS_COL_ID = "naksha~catalogs"
 
         /**
-         * The collection-number of the collection in which maps are stored, located in the [admin-map][ADMIN_MAP] _(`2`)_.
+         * The collection-number of the collection in which catalogs (maps) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`2`)_.
          * @since 3.0
          */
-        const val MAPS_COL_NUMBER = 2
+        const val CATALOGS_COL_FN = 2
 
         /**
-         * The identifier of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP] _(`naksha~dictionaries`)_.
+         * The identifier of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~books`)_.
          * @since 3.0
          */
-        const val DICTIONARIES_COL = "naksha~dictionaries"
+        const val BOOKS_COL_ID = "naksha~books"
 
         /**
-         * The collection-number of the collection in which dictionaries are stored, located in the [admin-map][ADMIN_MAP] _(`3`)_.
+         * The collection-number of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`3`)_.
          * @since 3.0
          */
-        const val DICTIONARIES_COL_NUMBER = 3
+        const val BOOKS_COL_FN = 3
 
         /**
-         * The maximum length of identifiers _(`42`)_ .
+         * The maximum length of identifiers _(`42`)_.
          * @since 3.0
          */
         const val MAX_ID_LENGTH = 42 // The answer to everything ;-)
+
+        /**
+         * The maximum length of internal identifiers.
+         * @since 3.0
+         */
+        const val MAX_INTERNAL_ID_LENGTH = 63
+
+        // TODO: This shows why we really need a special TupleNumberArray next to TupleNumberList, which stores all tuple-numbers in a single
+        //       byte-array, compressed by adding the database-number, catalog-number and collection-number upfront, then followed by all the
+        //       tuple-numbers. It will reduce memory consumption from 1 GiB to around 256 MiB.
+
+        /**
+         * The maximum amount of tuple that can be fetched using normal query methods.
+         *
+         * This protects the database and client for too big data. When reading tuples, each tuple-number is actually returned from the storage as 16-byte value, so feature-number and version. The Java client then adds database-number, catalog-number and collection-number. Therefore, the maximum amount of data transferred when fetching this amount of tuple is roughly `HARD_READ_LIMIT * 16`. This can already be huge, but when we copy this onto the JVM heap, we expand it, because we add the database-number _(8 byte)_, catalog-number _(4 byte)_ and collection-number _(4 byte)_ to it, plus the overhead of the [TupleNumber] instance (16-byte per instance). Then there is the array into which they are added, this array holds a reference for each [TupleNumber], so another 8-byte. In total, for JVM heap usage, we need to multiple this value with around 56 _(16+16+8+4+4+8)_. For the default value of 16,777,216 this already means around 1 GiB of heap usage, not even thinking about how much more memory will be used, when we start loading all these tuple!
+         * @since 3.0
+         */
+        @JvmStatic
+        var HARD_TUPLE_LIMIT = 16_777_216
 
         /**
          * An immutable map between the identifier of an internal collection to the number of that collection.
@@ -130,21 +132,19 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         val internalIdToNumber = mapOf(
-            Pair(ADMIN_MAP, ADMIN_MAP_NUMBER),
-            Pair(COLLECTIONS_COL, COLLECTIONS_COL_NUMBER),
-            Pair(TRANSACTIONS_COL, TRANSACTIONS_COL_NUMBER),
-            Pair(MAPS_COL, MAPS_COL_NUMBER),
-            Pair(DICTIONARIES_COL, DICTIONARIES_COL_NUMBER),
+            Pair(ADMIN_CATALOG_ID, ADMIN_CATALOG_FN),
+            Pair(COLLECTIONS_COL_ID, COLLECTIONS_COL_FN),
+            Pair(TRANSACTIONS_COL_ID, TRANSACTIONS_COL_FN),
+            Pair(CATALOGS_COL_ID, CATALOGS_COL_FN),
+            Pair(BOOKS_COL_ID, BOOKS_COL_FN),
         )
 
         /**
-         * Default flags recommended for storing data, being:
-         * - Encode [geometry][NakshaFeature.geometry] in `TWKB`, _[Tine-Well-Known-Binary](https://github.com/TWKB/Specification/blob/master/twkb.md)_
-         * - Encode the [tags][XyzNs.tags] as [JSON](https://en.wikipedia.org/wiki/Json), and compress them using [GZIP](https://en.wikipedia.org/wiki/Gzip).
-         * - Encode the feature into `JBON` _(Java Binary Object Notation)_, and compress it using [GZIP](https://en.wikipedia.org/wiki/Gzip).
+         * Default feature encoding used by all storages when nothing else is configured.
+
          */
         @JvmField
-        var DEFAULT_FLAGS = Flags(TWKB, JBON_GZIP, TagsEncoding.JSON)
+        var DEFAULT_DATA_ENCODING: DataEncoding = DataEncoding.DEFAULT
 
         /**
          * Decides about the default log-level used when creating new [SessionOptions].
@@ -152,88 +152,6 @@ class Naksha private constructor() {
          */
         @JvmField
         var DEFAULT_SESSION_LOG_LEVEL: String? = null
-
-        /**
-         * Tests if the given **id** is a valid identifier, so matches:
-         *
-         * `[a-z][a-z0-9_:-]{42}`
-         *
-         * **Beware**: Identifiers must not contain upper-case letters, because many storages does not make a difference between upper- and lower-cased letters.
-         * @param id the identifier.
-         * @return _true_ if the identifier is valid; _false_ otherwise.
-         * @since 3.0
-         * @see [verifyId]
-         * @see [MAX_ID_LENGTH]
-         */
-        @JsStatic
-        @JvmStatic
-        fun isValidId(id: String?): Boolean {
-            if (id.isNullOrEmpty() || "naksha" == id || id.length > MAX_ID_LENGTH) return false
-            var i = 0
-            var c = id[i++]
-            // First character must be a-z
-            if (c.code < 'a'.code || c.code > 'z'.code) return false
-            while (i < id.length) {
-                c = id[i++]
-                when (c.code) {
-                    in 'a'.code..'z'.code -> continue
-                    in '0'.code..'9'.code -> continue
-                    '_'.code, ':'.code, '-'.code -> continue
-                    else -> return false
-                }
-            }
-            return true
-        }
-
-        /**
-         * Tests if the given **id** is a valid identifier, so matches:
-         *
-         * `[a-z][a-z0-9_:-]{31}`
-         *
-         * If the given identifier is invalid, the methods throws [NakshaError.ILLEGAL_ID].
-         * @param id the identifier to test.
-         * @return the given identifier, tested.
-         * @since 3.0
-         * @see [isValidId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun verifyId(id: String?): String {
-            if (id.isNullOrEmpty()) {
-                throw illegalId("The given identifier is null or empty")
-            }
-            if (id == "naksha") {
-                throw illegalId("The identifier 'naksha' is forbidden")
-            }
-            if (id.length > MAX_ID_LENGTH) {
-                throw illegalId("The identifier '$id' is too long: ${id.length}, must be maximal $MAX_ID_LENGTH")
-            }
-            var i = 0
-            var c = id[i++]
-            if (c.code < 'a'.code || c.code > 'z'.code) {
-                throw illegalId("The first character must be a-z, but was $c")
-            }
-            while (i < id.length) {
-                c = id[i++]
-                when (c.code) {
-                    in 'a'.code..'z'.code -> continue
-                    in '0'.code..'9'.code -> continue
-                    '_'.code, ':'.code, '-'.code -> continue
-                    else -> throw illegalId("Invalid character at index $i: '$c', expected [a-z0-9_:-]")
-                }
-            }
-            return id
-        }
-
-        /**
-         * Tests if the given identifier is an internal one.
-         * @param id the identifier to test.
-         * @return _true_ if this is an internal identifier; _false_ otherwise.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun isInternalId(id: String?): Boolean = id != null && id.startsWith(INTERNAL_PREFIX)
 
         /**
          * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.
@@ -247,28 +165,28 @@ class Naksha private constructor() {
         }
 
         /**
-         * A regular expression to test if a string contains potentially a 63-bit unsigned integer (`0 .. 9,223,372,036,854,775,807`).
+         * A regular expression to test if a string contains potentially a 63-bit unsigned integer (`1 .. 9,223,372,036,854,775,807`).
          * @since 3.0
          */
         private val is63BitUnsigned = Regex("^[1-9][0-9]{0,18}$")
 
         /**
-         * A regular expression to test if a string contains potentially a 31-bit unsigned integer (`0 .. 2,147,483,647`).
+         * A regular expression to test if a string contains potentially a 31-bit unsigned integer (`1 .. 2,147,483,647`).
          * @since 3.0
          */
         private val is31BitUnsigned = Regex("^[1-9][0-9]{0,9}\$")
 
         /**
-         * A method to calculate a valid storage-number from the storage-id.
+         * A method to calculate a valid database-number from the database-id.
          *
-         * @param id the id, from which to extract the storage-number.
-         * @return the storage-number.
+         * @param id the id, from which to extract the database-number.
+         * @return the database-number.
          * @since 3.0
          * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun storageNumber(id: String): Int64 {
+        fun databaseNumber(id: String): Int64 {
             if (id == "0" || is63BitUnsigned.matches(id)) {
                 try {
                     return id.toLong(10).toInt64()
@@ -279,17 +197,17 @@ class Naksha private constructor() {
         }
 
        /**
-         * A method to calculate a valid map-number from the map-id.
+         * A method to calculate a valid catalog-number from the catalog-id.
          *
-         * @param id the map-id, from which to extract the map-number.
-         * @return the map-number.
+         * @param id the catalog-id, from which to extract the catalog-number.
+         * @return the catalog-number.
          * @since 3.0
          * @see [hashId]
          */
         @JsStatic
         @JvmStatic
-        fun mapNumber(id: String): Int {
-           if (id == ADMIN_MAP) return ADMIN_MAP_NUMBER
+        fun catalogNumber(id: String): Int {
+           if (id == ADMIN_CATALOG_ID) return ADMIN_CATALOG_FN
            if (id == "0" || is31BitUnsigned.matches(id)) {
                try {
                    return id.toUInt(10).toInt()
@@ -311,7 +229,7 @@ class Naksha private constructor() {
         @JvmStatic
         fun collectionNumber(id: String): Int {
             val internalNumber = internalIdToNumber[id]
-            if (id != ADMIN_MAP && internalNumber != null) return internalNumber
+            if (id != ADMIN_CATALOG_ID && internalNumber != null) return internalNumber
             if (id == "0" || is31BitUnsigned.matches(id)) {
                 try {
                     return id.toUInt(10).toInt()
@@ -329,26 +247,12 @@ class Naksha private constructor() {
          * Otherwise, it uses the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being cleared, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
          *
          * ### Collision handling
-         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the lower 16-bit, which we use as [partition-number][partitionNumber]. The generally programming way is
+         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the lower 16-bit, which we use as [partition-number][partitionNumber]. The general approach is:
          * ```
          * new_fn = ((fn + 65536) & 0xffff_ffff_ffff_0000)
          *        | (fn & 0xffff) | 0x8000_0000_0000_0000
          * ```
-         * Within SQL, this looks generally like:
-         * ```
-         * WITH t AS (SELECT -1::bigint as fn)
-         * SELECT ((t.fn + 65536::bigint) & (-65536)::bigint)
-         *      | (t.fn & 65536::bigint)
-         *      | (-9223372036854775808)::bigint
-         * AS new_fn, t.fn as old_fn FROM t;
-         * ```
-         * Naksha adds a SQL function to simplify the increase, named `naksha_alt64`, which returns the incremented feature-number. Eventually, to find the next not colliding number, the following query can be used:
-         *
-         * ```sql
-         * SELECT naksha_alt64(t1.fn) AS fn FROM "table" t1
-         * LEFT JOIN "table" t2 ON naksha_alt64(t1.fn) = t2.fn
-         *   WHERE t2.fn IS NULL ORDER BY t1.fn LIMIT 1;
-         * ```
+         * A storage may provide a helper (e.g. `naksha_alt64`) that encapsulates this increment.
          *
          * ### Note
          * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^63)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^64) )`, which results in around 6 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^64) )` to around 63.2 percent, reaching 99.99% for around 147 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
@@ -493,246 +397,94 @@ class Naksha private constructor() {
         fun alternativeInt32(number: Int): Int = (number + 1) or -2147483648
 
         /**
-         * Decode the [Naksha feature][NakshaFeature] from the given [tuple][Tuple].
-         *
-         * This method will query the [cache] to get the [dictionary-manager][IDictManager].
-         * - Throws [NakshaError.DICT_MANAGER_NOT_FOUND], if a [dictionary-manager][IDictManager] is needed to decode the [Tuple], but not available in [cache].
-         * @param tuple the tuple to decode.
-         * @param dictionaryReader the dictionary reader to use, if _null_, then the storage or cache are used.
-         * @return the Naksha feature, _null_ if decoding failed or _null_ was given.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        @JvmOverloads
-        fun decodeTuple(tuple: Tuple, dictionaryReader: IDictReader? = null): NakshaFeature {
-            val sn = tuple.storageNumber
-            val meta = tuple.meta
-            val dictReader = dictionaryReader ?: getStorageByNumber(sn) ?: cache.getDictReader(sn)
-            val feature = decodeFeature(tuple.feature, meta.flags, dictReader) ?: NakshaFeature()
-            feature.properties.xyz = XyzNs.fromMetadata(meta)
-            val xyz = feature.properties.xyz
-            val tags = tuple.tags
-            if (tags != null) xyz.tags = decodeTags(tuple.tags, meta.flags, dictReader)?.toTagList() ?: TagList()
-            val geo = tuple.geo
-            if (geo != null) feature.geometry = decodeGeometry(geo, meta.flags)
-            return feature
-        }
-
-        /**
-         * Encode the given [NakshaFeature] into a [Tuple].
-         * @param feature the feature to encode.
-         * @param attachment the attachment to encode; if any.
-         * @param dictionary the [dictionary][IDict] to use to encode the feature; _null_ if encoding should be done storage agnostic.
-         * @param flags the encoding flags or _null_, if [DEFAULT_FLAGS] should be used.
-         * @return the encoded [Tuple].
-         * @since 3.0
-         * @see [IStorage.getEncodingDictionary]
-         */
-        @JsStatic
-        @JvmStatic
-        @JvmOverloads
-        fun encodeTuple(
-            feature: NakshaFeature,
-            attachment: ByteArray? = null,
-            dictionary: IDict? = null,
-            flags: Flags? = null
-        ): Tuple {
-            val xyz = feature.properties.xyz
-            val meta = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
-            val storage = getStorageByNumber(feature.tupleNumber.storageNumber)
-            val flagsOrDefault = flags ?: xyz.flags ?: storage?.getEncodingFlags(feature) ?: DEFAULT_FLAGS
-            val dict = dictionary ?: storage?.getDictionary(feature.id)
-            val featureBytes = encodeFeature(feature, flagsOrDefault, dict)
-            val geoBytes = encodeGeometry(feature.geometry, flagsOrDefault)
-            val refPoint = encodeGeometry(feature.referencePoint, TWKB)
-            val tagsBytes = encodeTags(xyz.tags.toTagMap(), flagsOrDefault, dict)
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
-        }
-
-        /**
-         * Encode the given [NakshaFeature] into a [Tuple] for the given [storage][IStorage].
-         *
-         * @param feature the feature to encode.
-         * @param attachment the attachment to encode; if any.
-         * @param storage the [storage][IStorage] for which to encode the feature.
-         * @return the encoded [Tuple].
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        @JsName("encodeTupleForStorage")
-        fun encodeTuple(
-            feature: NakshaFeature,
-            attachment: ByteArray?,
-            storage: IStorage
-        ): Tuple {
-            val xyz = feature.properties.xyz
-            val meta = Metadata.fromXyzNs(feature.id, feature.featureType, xyz) ?: Metadata.UNDEFINED
-            val dict = storage.getEncodingDictionary(feature)
-            val flags = storage.getEncodingFlags(feature)
-            val featureBytes = encodeFeature(feature, flags, dict)
-            val geoBytes = encodeGeometry(feature.geometry, flags)
-            val refPoint = encodeGeometry(feature.referencePoint, TWKB)
-            val tagsBytes = encodeTags(xyz.tags.toTagMap(), flags, dict)
-            return Tuple(meta, featureBytes, geoBytes, refPoint, tagsBytes, attachment, true)
-        }
-
-        /**
-         * Encodes the given [NakshaFeature] into bytes, skipping over the [geometry][NakshaFeature.geometry], and the [XYZ-namespace][XyzNs].
-         * @param feature the feature to encode.
-         * @param flags the codec flags.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded feature.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: IDict?): ByteArray? {
-            if (feature.isNullOrEmpty()) return null
-            val encoding = flags.featureEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                // We do not want to encode geometry.
-                val f = feature.copy<NakshaFeature>(false)
-                f.removeRaw(NakshaFeature.GEOMETRY)
-                // We do not want to encode properties.@ns:com:here:xyz.
-                val p = feature.properties.copy<NakshaProperties>(false)
-                p.removeRaw(NakshaProperties.XYZ_KEY)
-                val encoded = toJSON(f)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == JBON || encoding == JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                byteArray = encoder.buildFeatureFromMap(feature)
-            }
-            if (flags.featureGzip() && byteArray != null) byteArray = gzipDeflate(byteArray)
-            return byteArray
-        }
-
-        /**
-         * Decode the Naksha feature.
+         * Decode Naksha tags from their binary representation.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
-         * @param dictReader the dictionary manager to use for decoding; if any.
-         * @return the Naksha feature.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictReader: IDictReader?): NakshaFeature? {
-            if (bytes == null || bytes.isEmpty()) return null
-            var raw = bytes
-            if (flags.featureGzip()) raw = gzipInflate(bytes)
-            val encoding = flags.featureEncoding()
-            if (encoding == JBON || encoding == JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictReader)
-                decoder.mapBytes(raw)
-                return decoder.toAnyObject().proxy(NakshaFeature::class)
-            }
-            if (encoding == JSON || encoding == JSON_GZIP) {
-                val decoded = fromJSON(bytes.decodeToString())
-                if (decoded is PlatformMap) return decoded.proxy(NakshaFeature::class)
-            }
-            return null
-        }
-
-        /**
-         * Decode the Naksha tags.
-         * @param bytes the bytes to decode.
-         * @param flags the codec flags.
          * @param dictReader the dictionary manager to use for decoding; if any.
          * @return the Naksha tags.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeTags(bytes: ByteArray?, flags: Flags, dictReader: IDictReader?): TagMap? {
-            if (bytes == null || bytes.isEmpty()) return null
-            var raw = bytes
-            if (flags.tagsGzip()) raw = gzipInflate(bytes)
-            val encoding = flags.tagsEncoding()
-            if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val decoder = JbFeatureDecoder(dictReader)
-                decoder.mapBytes(raw)
-                return decoder.toAnyObject().proxy(TagMap::class)
-            }
-            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val text = raw.decodeToString()
-                val decoded = fromJSON(text)
-                if (decoded is PlatformMap) return decoded.proxy(TagMap::class)
-            }
-            return null
+        fun decodeTags(json: String?): TagMap? {
+            if (json.isNullOrBlank()) return null
+            val decoded = fromJSON(json)
+            return if (decoded is PlatformMap) decoded.proxy(TagMap::class) else null
         }
 
         /**
-         * Encodes the given tags into bytes.
+         * Encodes the given tags into their binary representation.
          * @param tags the tags to encode.
-         * @param flags the codec flags.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded tags.
+         * @return the JSON text representation, or _null_ if [tags] is _null_ / empty.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun encodeTags(tags: TagMap?, flags: Flags, dict: IDict?): ByteArray? {
+        fun encodeTags(tags: TagMap?): String? {
             if (tags.isNullOrEmpty()) return null
-            val encoding = flags.tagsEncoding()
-            var byteArray: ByteArray? = null
-            if (encoding == TagsEncoding.JSON || encoding == TagsEncoding.JSON_GZIP) {
-                val encoded = toJSON(tags)
-                byteArray = encoded.encodeToByteArray()
-            } else if (encoding == TagsEncoding.JBON || encoding == TagsEncoding.JBON_GZIP) {
-                val encoder = JbEncoder(dict)
-                encoder.encodeMap(tags)
-                byteArray = encoder.buildFeature(null, FEATURE_VARIANT_TAGS)
-            }
-            if (flags.tagsGzip() && byteArray != null) byteArray = gzipDeflate(byteArray)
-            return byteArray
+            return toJSON(tags)
         }
 
         /**
-         * Decode a GeoJSON geometry from encoded bytes.
+         * Encodes the given tag-list into the [tag_list][naksha.model.objects.MemberType.TAG_LIST]
+         * representation: a JSON array, with the element order preserved.
+         * @param tags the tags to encode.
+         * @return the JSON array text representation, or _null_ if [tags] is _null_ / empty.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun encodeTagList(tags: TagList?): String? {
+            if (tags.isNullOrEmpty()) return null
+            return toJSON(tags)
+        }
+
+        /**
+         * Decodes Naksha tags from their JSON text representation into a [TagList].
+         *
+         * Supports both persisted forms:
+         * - a JSON array ([tag_list][naksha.model.objects.MemberType.TAG_LIST], the default) is returned
+         *   unmodified, preserving the element order;
+         * - a JSON object ([naksha.model.objects.MemberType.TAG_MAP_FROM_ARRAY]) is re-flattened via
+         *   [TagMap.toTagList], in which case the original order is not guaranteed.
+         * @param json the JSON text to decode (value of the `tags` member).
+         * @return the decoded tag-list, or _null_ if [json] is _null_, blank, or neither an array nor an object.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun decodeTagList(json: String?): TagList? {
+            if (json.isNullOrBlank()) return null
+            return when (val decoded = fromJSON(json)) {
+                is PlatformList -> decoded.proxy(TagList::class)
+                is PlatformMap -> decoded.proxy(TagMap::class).toTagList()
+                else -> null
+            }
+        }
+
+        /**
+         * Decode a GeoJSON geometry from its binary representation.
          * @param bytes the bytes to decode.
-         * @param flags the codec flags.
          * @return the geometry.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? {
+        fun decodeGeometry(bytes: ByteArray?): SpGeometry? {
             if (bytes == null || bytes.isEmpty()) return null
-            val encoding = flags.geoEncoding()
-            val rawBytes = if (encoding.geoGzip()) gzipInflate(bytes) else bytes
-            return when(encoding) {
-                TWKB, TWKB_GZIP -> fromTWKB(rawBytes)
-                WKB, WKB_GZIP -> fromWKB(rawBytes)
-                EWKB, EWKB_GZIP -> fromEWKB(rawBytes)
-                GEO_JSON, GEO_JSON_GZIP -> (fromJSON(rawBytes.decodeToString()) as PlatformMap).proxy(SpGeometry::class)
-                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
-            }
-
+            return fromTWKB(bytes)
         }
 
         /**
-         * Encodes the given GeoJSON geometry into bytes.
+         * Encodes the given GeoJSON geometry into its binary representation.
          * @param geometry the geometry to encode.
-         * @param flags the codec flags.
          * @return the encoded GeoJSON geometry.
          * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? {
+        fun encodeGeometry(geometry: SpGeometry?): ByteArray? {
             if (geometry == null) return null
-            val encoding = flags.geoEncoding()
-            val bytes = when(encoding) {
-                TWKB, TWKB_GZIP -> toTWKB(geometry)
-                WKB, WKB_GZIP -> toWKB(geometry)
-                EWKB, EWKB_GZIP -> toEWKB(geometry)
-                GEO_JSON, GEO_JSON_GZIP -> toJSON(geometry).encodeToByteArray()
-                else -> throw NakshaException(ILLEGAL_ARGUMENT, "Unknown geometry encoding")
-            }
-            return if (encoding.geoGzip() && bytes != null) gzipDeflate(bytes) else bytes
+            return toTWKB(geometry)
         }
 
         /**
@@ -772,7 +524,7 @@ class Naksha private constructor() {
         @JvmStatic
         @JsStatic
         fun getStorage(storage: NakshaStorage): IStorage? {
-            val s = storagesByNumber[storage.number] ?: return null
+            val s = storagesByNumber[storage.databaseNumber] ?: return null
             val s2 = storagesById[storage.id] ?: return null
             return if (s!==s2 || s.config != storage) null else s
          }
@@ -802,7 +554,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun getStorageByTupleNumber(tupleNumber: TupleNumber): IStorage? = storagesByNumber[tupleNumber.storageNumber]
+        fun getStorageByTupleNumber(tupleNumber: TupleNumber): IStorage? = storagesByNumber[tupleNumber.databaseNumber]
 
         /**
          * Set up the storage with the given configuration, enforces an [initStorage][AbstractStorage.initStorage] invocation that is forced to `create` or `upgrade` the storage.
@@ -839,16 +591,16 @@ class Naksha private constructor() {
         fun useStorage(config: NakshaStorage): IStorage = _useStorage(config, null)
 
         private fun _useStorage(config: NakshaStorage, forceCreateOrUpgrade: Boolean?): IStorage {
-            var s = storagesByNumber[config.number]
+            var s = storagesByNumber[config.databaseNumber]
             var s2 = storagesById[config.id]
             if (s !== s2) {
                 lock.acquire().use {
-                    s = storagesByNumber[config.number]
+                    s = storagesByNumber[config.databaseNumber]
                     s2 = storagesById[config.id]
                     if (s !== s2) {
                         throw NakshaException(
                             ILLEGAL_ARGUMENT,
-                            "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                            "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
                     }
                 }
             }
@@ -859,12 +611,12 @@ class Naksha private constructor() {
                 return localS
             }
             lock.acquire().use {
-                var storage = storagesByNumber[config.number]
+                var storage = storagesByNumber[config.databaseNumber]
                 val storage2 = storagesById[config.id]
                 if (storage !== storage2) {
                     throw NakshaException(
                         ILLEGAL_ARGUMENT,
-                        "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                        "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
                 }
                 if (storage != null) {
                     if (storage.config.configEquals(config)) {
@@ -876,7 +628,7 @@ class Naksha private constructor() {
                 storage = Platform.newInstanceOf(klass)
                 storage.invokeInitStorage(config, create = forceCreateOrUpgrade, upgrade = forceCreateOrUpgrade)
                 storagesById[config.id] = storage
-                storagesByNumber[config.number] = storage
+                storagesByNumber[config.databaseNumber] = storage
                 return storage
             }
         }
@@ -916,19 +668,19 @@ class Naksha private constructor() {
         @JvmStatic
         @JsStatic
         fun removeStorage(config: NakshaStorage): IStorage? {
-            val s = storagesByNumber[config.number]
+            val s = storagesByNumber[config.databaseNumber]
             if (s == null || s.config != config) return null
             lock.acquire().use {
-                val storage = storagesByNumber[config.number]
+                val storage = storagesByNumber[config.databaseNumber]
                 if (storage == null || storage.config != config) return null
                 val storage2 = storagesById[config.id]
                 if (storage !== storage2) {
                     throw NakshaException(
                         ILLEGAL_ARGUMENT,
-                        "The storage-id (${config.id}) and -number (${config.number}) belong to different storages")
+                        "The storage-id (${config.id}) and -number (${config.databaseNumber}) belong to different storages")
                 }
                 storagesById.remove(config.id)
-                storagesByNumber.remove(config.number)
+                storagesByNumber.remove(config.databaseNumber)
                 storage.invokeShutdownStorage(true)
                 return storage
             }
@@ -970,7 +722,7 @@ class Naksha private constructor() {
                 var options = _adminOptions.get()
                 while (options == null) {
                     options = SessionOptions(
-                        appName = "lib-psql/$CURRENT",
+                        appName = "naksha/$CURRENT",
                         appId = NakshaContext.appId(),
                         author = NakshaContext.author(),
                         parallel = false,
@@ -991,5 +743,23 @@ class Naksha private constructor() {
             set(value) {
                 _adminOptions.set(value)
             }
+
+
+        /**
+         * Creates a new virtual [TupleNumber] for a feature in the given storage, catalog, collection.
+         *
+         * You need a new version number for features belonging together to the same virtual transaction, therefore, you need to query this via [Version.virtualVersion] before invoking this method. This method is for testing and Mockups only!
+         * @param storageId the `id` of the storage where the feature is contained.
+         * @param catalogId the `id` of the catalog where the feature is contained.
+         * @param collectionId the `id` of the collection where the feature is contained.
+         * @param featureId the `id` of the feature being stored.
+         * @param version the version, see [Version.virtualVersion].
+         * @return the new virtual feature-number.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun virtualTupleNumber(storageId: String, catalogId: String, collectionId: String, featureId: String, version: Version): TupleNumber
+            = TupleNumber(databaseNumber(storageId), catalogNumber(catalogId), collectionNumber(collectionId), featureNumber(featureId), version.number)
     }
 }

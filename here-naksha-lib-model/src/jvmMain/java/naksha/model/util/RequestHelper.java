@@ -44,8 +44,8 @@ public class RequestHelper {
       final @Nullable String collectionName,
       final @NotNull String featureId
   ) {
-    final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
-    readFeatures.setMapId(mapId);
+    final ReadFeatures readFeatures = new ReadFeatures().withCollectionId(collectionName);
+    readFeatures.setCatalogId(mapId);
     readFeatures.getFeatureIds().add(featureId);
     return readFeatures;
   }
@@ -62,8 +62,8 @@ public class RequestHelper {
       final @Nullable String collectionName,
       final @NotNull List<String> featureIds
   ) {
-    final ReadFeatures readFeatures = new ReadFeatures().addCollectionId(collectionName);
-    readFeatures.setMapId(mapId);
+    final ReadFeatures readFeatures = new ReadFeatures().withCollectionId(collectionName);
+    readFeatures.setCatalogId(mapId);
     readFeatures.getFeatureIds().addAll(featureIds);
     return readFeatures;
   }

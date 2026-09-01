@@ -27,17 +27,17 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import naksha.geo.ProxyGeoUtil;
 import naksha.geo.SpGeometry;
-import naksha.jbon.JbDictionary;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.model.MemberProcessorMap;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.TagMap;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.ReadFeatures;
@@ -63,8 +63,6 @@ import naksha.model.request.query.TagValueIsString;
 import naksha.model.request.query.TagValueMatches;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static naksha.model.LibModelKt.FETCH_ALL;
 
 public class NHAdminReaderMock implements IReadSession {
 
@@ -95,17 +93,17 @@ public class NHAdminReaderMock implements IReadSession {
   }
 
   protected @NotNull Response executeReadFeatures(@NotNull ReadFeatures rf) {
-    List<NakshaFeature> features = getFeatures(rf.getCollectionIds(), rf.getFeatureIds(), rf.getQuery());
+    List<NakshaFeature> features = getFeatures(rf.getCollectionId(), rf.getFeatureIds(), rf.getQuery());
     SuccessResponse response = new SuccessResponse();
     response.setFeatures(NakshaFeatureList.fromList(features));
     return response;
   }
 
-  private List<NakshaFeature> getFeatures(List<String> collectionIds, List<String> featureIds, RequestQuery query) {
-    if (query.getProperties() != null || query.getMetadata() != null || !query.getRefTiles().isEmpty()) {
+  private List<NakshaFeature> getFeatures(String collectionId, List<String> featureIds, RequestQuery query) {
+    if (query.getProperties() != null || !query.getRefTiles().isEmpty()) {
       throw new NakshaException(new NakshaError(NakshaError.ILLEGAL_ARGUMENT, "Mock supports only tags and spatial query"));
     }
-    final List<NakshaFeature> allFeaturesFromCollections = getAllFeaturesFromCollections(collectionIds);
+    final List<NakshaFeature> allFeaturesFromCollections = getAllFeaturesFromCollections(collectionId);
     if (featureIds == null || featureIds.isEmpty()) {
       return allFeaturesFromCollections;
     }
@@ -127,17 +125,15 @@ public class NHAdminReaderMock implements IReadSession {
     return featureStream.toList();
   }
 
-  private List<NakshaFeature> getAllFeaturesFromCollections(List<String> collectionIds) {
+  private List<NakshaFeature> getAllFeaturesFromCollections(String collectionId) {
     List<NakshaFeature> features = new ArrayList<>();
-    for (final String collectionId : collectionIds) {
-      if (mockCollection.get(collectionId) == null) {
-        throw new NakshaException(new NakshaError(
-            NakshaError.COLLECTION_NOT_FOUND,
-            "Collection " + collectionId + " not found!"
-        ));
-      }
-      features.addAll(mockCollection.get(collectionId).values());
+    if (mockCollection.get(collectionId) == null) {
+      throw new NakshaException(new NakshaError(
+          NakshaError.COLLECTION_NOT_FOUND,
+          "Collection " + collectionId + " not found!"
+      ));
     }
+    features.addAll(mockCollection.get(collectionId).values());
     return features;
   }
 
@@ -280,32 +276,39 @@ public class NHAdminReaderMock implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
   @Override
-  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+  public @Nullable NakshaCollection getCollectionById(
+      @NotNull NakshaCatalog map,
+      @NotNull String collectionId,
+      boolean allowTombstone) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(
+      @NotNull NakshaCatalog catalog,
+      int collectionNumber,
+      boolean allowTombstone) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
     throw new NakshaException(new NakshaError(NakshaError.UNSUPPORTED_OPERATION, "Not supported by mock yet"));
   }
 
+  @NotNull
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
+  public MemberProcessorMap getProcessors() {
+    return new MemberProcessorMap();
   }
 }

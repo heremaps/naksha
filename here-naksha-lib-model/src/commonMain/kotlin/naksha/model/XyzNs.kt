@@ -3,24 +3,42 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthor
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthorTimestamp
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzChangeCount
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCreatedAt
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomString0
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomString1
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomString2
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomString3
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomValue0
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomValue1
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomValue2
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCustomValue3
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzHash
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzHereTile
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzOrigin
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTarget
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzUpdatedAt
 import kotlin.DeprecationLevel.WARNING
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
 
 /**
- * The XYZ namespace stored in [properties.@ns:com:here:xyz][naksha.model.object.NakshaProperties.XYZ] of the [NakshaFeature][naksha.model.object.NakshaFeature].
+ * The XYZ namespace stored in [properties.@ns:com:here:xyz][naksha.model.object.NakshaProperties.XYZ] of the [NakshaFeature][naksha.model.objects.NakshaFeature].
  *
- * This represents the external Naksha view of the low-level [metadata][IMetadata]. When a [Tuple] is returned by a storage, and then converted for example by Naksha-Hub into a [NakshaFeature][naksha.model.objects.NakshaFeature], the [uuid] is set to the stringified [Guid] of the [Tuple], so to the [tuple-number][Metadata.tupleNumber] combined with the [feature id][Metadata.id].
+ * This represents the external Naksha view of tuple metadata. When a [Tuple] is returned by a storage, and then converted for example by Naksha-Hub into a [NakshaFeature][naksha.model.objects.NakshaFeature], the [uuid] is set to the stringified [Guid] of the [Tuple], so to the [tuple-number][TupleNumber] combined with the [feature id][naksha.model.objects.StandardMembers.Id].
  *
  * If a client wants to change a feature, the following concepts should be followed:
  *
  * - **Create**: Clients should create features without an XYZ namespace, except for the [tags].
  * - **Delete**: The content of the feature is ignored for deletes.
  * - **Update**: If the client wants to update a feature, it should read the feature, then modify it, and then send the modified feature back, without changing the XYZ namespace, except for the [tags]. When it does operate like this, the change is performed atomically safe, because the [uuid] will hint the server which version was modified by the client, and is expected to be current _HEAD_. If the feature was updated meanwhile by another client, the server can try to perform an auto-merge, otherwise it will respond with a conflict (which is what the low-level storage will do).
- * - **Fork**: If the client reads a feature, and then writes it into another storage, map, or collection, or when the client modifies the ID of the feature, and then sends the feature to a service, without modifying the XYZ namespace, the storage will be able to detect that this is a **fork**. Forking means, that a feature is moved between storages, maps, or collections, or is re-identified. The storage will turn the action into [CREATED][Action.CREATED], and copy the [uuid] (which refers to the modified foreign state) into the [origin]. When the feature, that was forked, is modified later, it is possible to find all forks in all storages, maps, and collections, and to update them doing a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). This process is called rebase.
- * - **Split**: If the client need to split a feature into parts, for example a Topology into two, it is required that it clones the original feature, and then modifies the copies, while deleting the original feature that was split. This will allow the _storage_ to identify the [operation] as [SPLIT][Operation.SPLIT], because all features being part of the split will have the same [uuid], and this [uuid] does not match their previous state, therefore it will copy the [uuid] into the [origin]. Additionally, it will automatically ensure that the split (_deleted_) feature has [action] set to [DELETED][Action.DELETED], and the new parts have [action] set to [CREATED][Action.CREATED], while all participating features have [operation] set to [SPLIT][Operation.SPLIT]. This allows to perform automatic rebasing later, should the [origin] be modified, including automatic [three-way-merging](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge), when rebasing. The features of a split can be found, by searching for all features that have [operation] set to `SPLIT`, and that have the same [origin].
- * - **Join**: If the client need to join multiple features into a single one, it is required to create a new (_merged_) feature, and to delete all features joined into this new one. It is important that the client set the [target] of all features being part of the join to the [_HEAD_ Guid][Guid.headOf] of the _created_ (_new_) feature. The [_HEAD_ Guid][Guid.headOf] is simply the [Guid] without the [tuple-number][TupleNumber], so basically `urn:here:naksha:guid:{feature-id}`. This will allow the _storage_ to identify the modifications as join, and it will automatically replace the [_HEAD_ Guid][Guid.headOf] with the final [Guid] of the new joined _HEAD_ [Tuple]. It as well will ensure that the new feature has [action] set to [CREATED][Action.CREATED], and all deleted features have [action] set to [CREATED][Action.CREATED], while [operation] of all participating features is set to [SPLIT][Operation.SPLIT]. This allows automatic rebasing later. The _storage_ will copy the [uuid] of the deleted features into the [origin], if they come from another storage, map, or collection. It will raise an error, when the _ID_ was changed. The features of a join can be found, by searching for all features that have [operation] set to `JOIN`, and that have the same [target].
+ * - **Fork**: If the client reads a feature, and then writes it into another storage, map, or collection, or when the client modifies the ID of the feature, and then sends the feature to a service, without modifying the XYZ namespace, the storage will be able to detect that this is a **fork**. Forking means, that a feature is moved between storages, maps, or collections, or is re-identified. The storage will turn the action into [CREATED][Action.CREATE], and copy the [uuid] (which refers to the modified foreign state) into the [origin]. When the feature, that was forked, is modified later, it is possible to find all forks in all storages, maps, and collections, and to update them doing a [three-way-merge](https://en.wikipedia.org/wiki/Merge_(version_control)#Three-way_merge). This process is called rebase.
+ * - **Split**: If the client need to split a feature into parts, for example a Topology into two, it is required that it clones the original feature, and then modifies the copies, while deleting the original feature that was split. All features being part of the split will have the same [uuid]. The feature that was split is expected to be deleted with [action] set to [DELETED][Action.DELETE], and the new parts are created with [action] set to [CREATED][Action.CREATE].
+ * - **Join**: If the client need to join multiple features into a single one, it is required to create a new (_merged_) feature, and to delete all features joined into this new one. It is important that the client set the [target] of all features being part of the join to the [_HEAD_ Guid][Guid.headOf] of the _created_ (_new_) feature. The [_HEAD_ Guid][Guid.headOf] is simply the [Guid] without the [tuple-number][TupleNumber], so basically `urn:here:naksha:guid:{feature-id}`.
  * @since 3.0
  */
 @JsExport
@@ -33,12 +51,6 @@ class XyzNs : AnyObject() {
          * @since 3.0
          */
         const val UUID = "uuid"
-
-        /**
-         * The key of the [puuid] property.
-         * @since 3.0
-         */
-        const val PUUID = "puuid"
 
         /**
          * The key of the [muuid] property.
@@ -79,12 +91,6 @@ class XyzNs : AnyObject() {
         const val CHANGE_COUNT = "changeCount"
 
         /**
-         * The key of the [operation] property.
-         * @since 3.0
-         */
-        const val OPERATION = "operation"
-
-        /**
          * The key of the [action] property.
          * @since 3.0
          */
@@ -109,10 +115,10 @@ class XyzNs : AnyObject() {
         const val AUTHOR_TS = "authorTs"
 
         /**
-         * The key of the [flags] property.
+         * The key of the [dataEncoding] property.
          * @since 3.0
          */
-        const val FLAGS = "flags"
+        const val DATA_ENCODING = "dataEncoding"
 
         /**
          * The key of the [hash] property.
@@ -186,8 +192,8 @@ class XyzNs : AnyObject() {
          */
         const val CS3 = "cs3"
 
-        private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATED }
-        private val _OPERATION = NotNullEnum<XyzNs, Operation>(Operation::class) { _, _ -> Operation.CREATED }
+        private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATE }
+        private val _DATA_ENCODING_NULL = NullableEnum<XyzNs, DataEncoding>(DataEncoding::class)
         private val _APP_ID = NotNullProperty<XyzNs, String>(String::class) { _, _ -> NakshaContext.appId() }
         private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
         private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
@@ -198,46 +204,66 @@ class XyzNs : AnyObject() {
         private var AS_IS: CharArray = CharArray(128 - 32) { (it + 32).toChar() }
         private var TO_LOWER: CharArray = CharArray(128 - 32) { (it + 32).toChar().lowercaseChar() }
 
+
         /**
-         * Create the XZY-namespace from the given [Metadata].
-         * @param meta the [Metadata]
+         * Create a [Guid] from the given [Tuple].
+         * @param tuple the [Tuple] for which to generate a [Guid].
+         * @return the created [Guid].
+         * @since 3.0.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun guidFromTuple(tuple: Tuple): Guid = Guid(tuple.id, tuple.tupleNumber)
+
+        /**
+         * Create the XYZ-namespace from the given [Tuple].
+         * @param tuple the [Tuple]
          * @return the [XYZ namespace][XyzNs].
-         * @see [Metadata.fromXyzNs]
          */
         @JvmStatic
         @JsStatic
-        fun fromMetadata(meta: Metadata): XyzNs {
-            val tn = meta.tupleNumber
-            val guid = Guid(meta.id, tn)
-            val next_tn = meta.nextTupleNumber
-            val prev_tn = meta.prevTupleNumber
-            val base_tn = meta.baseTupleNumber
+        fun fromTuple(tuple: Tuple): XyzNs {
+            val tn = tuple.tupleNumber
+            val id = tuple.id
+            val guid = guidFromTuple(tuple)
+            val updatedAt = tuple.getLong(XyzUpdatedAt, Platform.currentMillis())
+            val createdAt = tuple.getLong(XyzCreatedAt, updatedAt)
+            val authorTs = tuple.getLong(XyzAuthorTimestamp,updatedAt)
+            val nextTn = tuple.nextTupleNumber
             return AnyObject().apply {
                 setRaw(UUID, guid.toString())
-                if (next_tn != null) setRaw(NUUID, Guid(meta.id, next_tn).toString())
-                if (prev_tn != null) setRaw(PUUID, Guid(meta.id, prev_tn).toString())
-                if (base_tn != null) setRaw(MUUID, Guid(meta.id, base_tn).toString())
-                if (meta.createdAt != meta.updatedAt) setRaw(CREATED_AT, meta.createdAt)
-                if (meta.authorTs != meta.updatedAt) setRaw(AUTHOR_TS, meta.authorTs)
-                setRaw(UPDATED_AT, meta.updatedAt)
-                setRaw(CHANGE_COUNT, meta.changeCount)
-                setRaw(APP_ID, meta.appId)
-                if (meta.author != null) setRaw(AUTHOR, meta.author)
-                setRaw(FLAGS, meta.flags)
-                setRaw(OPERATION, meta.flags.operationEnum().toString())
-                setRaw(ACTION, meta.flags.actionEnum().toString())
-                setRaw(HASH, meta.hash)
-                setRaw(HERE_TILE, meta.hereTile)
-                if (meta.origin != null) setRaw(ORIGIN, meta.origin)
-                if (meta.target != null) setRaw(TARGET, meta.target)
-                if (meta.cv0 != null) setRaw(CV0, meta.cv0)
-                if (meta.cv1 != null) setRaw(CV1, meta.cv1)
-                if (meta.cv2 != null) setRaw(CV2, meta.cv2)
-                if (meta.cv3 != null) setRaw(CV3, meta.cv3)
-                if (meta.cs0 != null) setRaw(CS0, meta.cs0)
-                if (meta.cs1 != null) setRaw(CS1, meta.cs1)
-                if (meta.cs2 != null) setRaw(CS2, meta.cs2)
-                if (meta.cs3 != null) setRaw(CS3, meta.cs3)
+                if (nextTn != null) setRaw(NUUID, Guid(id, nextTn).toString())
+                else if (tn.action == Action.DELETE) setRaw(NUUID, guid.toString())
+                setRaw(UPDATED_AT, updatedAt)
+                if (createdAt != updatedAt) setRaw(CREATED_AT, createdAt)
+                if (authorTs != updatedAt) setRaw(AUTHOR_TS, authorTs)
+                setRaw(CHANGE_COUNT, tuple.getInt(XyzChangeCount, 1))
+                setRaw(APP_ID, tuple.getString(XyzAppId))
+                val author = tuple.getString(XyzAuthor)
+                if (author != null) setRaw(AUTHOR, author)
+                setRaw(ACTION, tn.action.toString())
+                setRaw(HASH, tuple.getInt(XyzHash))
+                setRaw(HERE_TILE, tuple.getInt(XyzHereTile))
+                val origin = tuple.getString(XyzOrigin)
+                if (origin != null) setRaw(ORIGIN, origin)
+                val target = tuple.getString(XyzTarget)
+                if (target != null) setRaw(TARGET, target)
+                val cv0: Double = tuple.getDouble(XyzCustomValue0)
+                if (cv0 == cv0) setRaw(CV0, cv0)
+                val cv1: Double = tuple.getDouble(XyzCustomValue1)
+                if (cv1 == cv1) setRaw(CV1, cv1)
+                val cv2: Double = tuple.getDouble(XyzCustomValue2)
+                if (cv2 == cv2) setRaw(CV2, cv2)
+                val cv3: Double = tuple.getDouble(XyzCustomValue3)
+                if (cv3 == cv3) setRaw(CV3, cv3)
+                val cs0 = tuple.getString(XyzCustomString0)
+                if (cs0 != null) setRaw(CS0, cs0)
+                val cs1 = tuple.getString(XyzCustomString1)
+                if (cs1 != null) setRaw(CS1, cs1)
+                val cs2 = tuple.getString(XyzCustomString2)
+                if (cs2 != null) setRaw(CS2, cs2)
+                val cs3 = tuple.getString(XyzCustomString3)
+                if (cs3 != null) setRaw(CS3, cs3)
             }.proxy(XyzNs::class)
         }
 
@@ -296,48 +322,15 @@ class XyzNs : AnyObject() {
         }
 
     /**
-     * The universal unique identifier of the previous state of a feature.
-     *
-     * This field is populated by Interactive API, Data Hub, XYZ Hub and Naksha.
-     * - **Interactive API**: This field is set, when history is enabled for the layer.
-     * - **Data Hub**: This field is set, when history or UUID is enabled for the space.
-     * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
-     * - **Naksha**: This field is set for updated, deletion, and merge, but is a [Guid] (global unique identifier), not a [UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier).
-     *
-     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0
-     */
-    val puuid by _STRING_NULL
-    private var _puuid: String? = null
-    private var _pguid: Guid? = null
-
-    /**
-     * Returns the [puuid] as [Guid].
-     * @return the [puuid] as [Guid].
-     * @since 3.0
-     */
-    val pguid: Guid?
-        get() {
-            var pguid = _pguid
-            var puuid = _puuid
-            if (puuid === this.puuid) return pguid
-            puuid = this.puuid
-            pguid = try { if (puuid == null) null else Guid.fromString(puuid) } catch (_: Exception) { null }
-            this._puuid = puuid
-            this._pguid = pguid
-            return pguid
-        }
-
-    /**
      * The universal unique identifier of the state of the feature that was used to merge with the previous state to produce this state.
      *
      * This happens when concurrent modifications are done, but an automatic merge was possible. This field is populated by Interactive API, Data Hub or XYZ Hub.
      * - **Interactive API**: This field is set when history is enabled for the layer.
      * - **Data Hub**: This field is set when history or UUID is enabled for the space.
      * - **XYZ Hub**: This field is set when history or UUID is enabled for the space.
-     * - **Naksha**: Set when an auto-merge is done, stores the [Guid] of the base-version, so which version the previous-version ([puuid]), and this version ([uuid]) share as base
+     * - **Naksha**: Set when an auto-merge is done, stores the [Guid] of the base-version that the previous version and this version share as base.
      *
-     * In **Naksha** the [muuid] can be used to calculate the changes the client originally did, which are not persisted anywhere in the case of an auto-merge. This is done by first creating a total difference, so what was changed between the current version ([uuid]), and the _base_ version ([muuid]). Then the changes that other clients did can be calculated as difference between the previous state ([puuid]), and the _base_ state ([muuid]). Now this difference need to be subtracted from the total difference. The resulting difference is what the client originally modified, when being applied as patch to the _base_ state ([muuid]), then the feature, that originally was created by the client, can be calculated, even while it was not persisted anywhere.
+     * In **Naksha** the [muuid] can be used to calculate the changes the client originally did, which are not persisted anywhere in the case of an auto-merge. This is done by first creating a total difference, so what was changed between the current version ([uuid]), and the _base_ version ([muuid]). Then the changes that other clients did can be calculated as difference between the previous state and the _base_ state ([muuid]). Now this difference need to be subtracted from the total difference. The resulting difference is what the client originally modified, when being applied as patch to the _base_ state ([muuid]), then the feature, that originally was created by the client, can be calculated, even while it was not persisted anywhere.
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 1.0
@@ -423,11 +416,11 @@ class XyzNs : AnyObject() {
         }
 
     /**
-     * The target of a [join][Operation.JOINED].
+     * The target of a join operation.
      *
-     * The value is a [Guid] as defined by **Naksha**, and refers to the outcome of a [join][Operation.JOINED].
+     * The value is a [Guid] as defined by **Naksha**, and refers to the outcome of a join.
      *
-     * This field **must** be set by clients, when the join features into a new one, all features involved into the join require the [target] to be set to the [Guid] of the new feature, **including** the new feature itself! As the client may not know the real [Guid] of the new feature, it is okay, when it just inserts the _HEAD_ [Guid], so `urn:here:naksha:guid:{feature-id}`.
+     * This field **must** be set by clients, when joining features into a new one, all features involved into the join require the [target] to be set to the [Guid] of the new feature, **including** the new feature itself! As the client may not know the real [Guid] of the new feature, it is okay, when it just inserts the _HEAD_ [Guid], so `urn:here:naksha:guid:{feature-id}`.
      * @since 3.0
      */
     val target by _STRING_NULL
@@ -534,8 +527,9 @@ class XyzNs : AnyObject() {
         get() {
             // Downward compatibility hack.
             val raw = getRaw("version")
-            if (raw is Int64 && raw >= Version.MIN) return Version(raw)
-            return guid?.tupleNumber?.version
+            if (raw is Int64 && raw >= Version.MIN_AUTO) return Version(raw)
+            val version = guid?.tupleNumber?.version
+            return if (version != null) Version(version) else null
         }
 
     /**
@@ -543,14 +537,14 @@ class XyzNs : AnyObject() {
      * @since 2.0
      */
     val txn: Int64?
-        get() = guid?.tupleNumber?.txn
+        get() = guid?.tupleNumber?.version
 
     /**
-     * The `uid` (unique transaction local identity) of the [Tuple] within the [transaction][naksha.model.objects.NakshaTx].
+     * The action of the [Tuple], encoded as the lower 2 bits of the transaction number.
      * @since 3.0
      */
     val uid: Int?
-        get() = guid?.tupleNumber?.uid
+        get() = guid?.tupleNumber?.action?.intValue
 
     /**
      * The change-count, so how often the feature has been changed since it was created. The value starts with 1.
@@ -570,15 +564,6 @@ class XyzNs : AnyObject() {
      * @see [Action]
      */
     val action by _ACTION
-
-    /**
-     * The operation that was done.
-     *
-     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 1.0
-     * @see [Operation]
-     */
-    val operation by _OPERATION
 
     /**
      * The identifier of the application that modified the feature the last.
@@ -613,12 +598,12 @@ class XyzNs : AnyObject() {
         }
 
     /**
-     * The flags, calculated server side, a bitmask with encoding information about the [Tuple]. It encodes the [action], and the [operation] in binary form, but as well if the payload is GZIP compressed, which encoding is used for the geometry, and information like this.
+     * The serialization format of the feature payload, calculated server-side from the collection's [naksha.model.objects.NakshaCollection.dataEncoding].
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 3.0
      */
-    val flags by _INT_NULL
+    val dataEncoding by _DATA_ENCODING_NULL
 
     /**
      * The hash above the feature, calculated server side.

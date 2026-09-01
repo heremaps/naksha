@@ -3,16 +3,12 @@
 package naksha.psql
 
 import naksha.base.*
-import naksha.geo.SpGeometry
-import naksha.jbon.*
-import naksha.model.*
-import naksha.model.Naksha.NakshaCompanion.ADMIN_MAP
-import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL
-import naksha.model.Naksha.NakshaCompanion.DICTIONARIES_COL
-import naksha.model.Naksha.NakshaCompanion.MAPS_COL
-import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.objects.NakshaFeature
+import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
+import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
+import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
+import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
+import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_ident
 import naksha.psql.PgPlatform.PgPlatformCompanion.quote_literal
 import kotlin.js.JsExport
@@ -32,7 +28,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_MAP_QUOTED = quoteIdent(ADMIN_MAP)
+        val ADMIN_MAP_QUOTED = quoteIdent(ADMIN_CATALOG_ID)
 
         /**
          * The quoted identifier of the collection in which transactions are stored.
@@ -40,23 +36,23 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(TRANSACTIONS_COL)
+        val ADMIN_TRANSACTIONS_COL_QUOTED = quoteIdent(TRANSACTIONS_COL_ID)
 
         /**
-         * The quoted identifier of the virtual maps collection to be used in queries.
+         * The quoted identifier of the virtual catalogs collection to be used in queries.
          * @since 3.0.0
          */
         @JvmField
         @JsStatic
-        val ADMIN_MAPS_COL_QUOTED = quoteIdent(MAPS_COL)
+        val ADMIN_CATALOGS_COL_QUOTED = quoteIdent(CATALOGS_COL_ID)
 
         /**
-         * The quoted identifier of the virtual collection in which the dictionaries are stored.
+         * The quoted identifier of the virtual collection in which the books (global JBON2 dictionaries) are stored.
          * @since 3.0.0
          */
         @JvmField
         @JsStatic
-        val ADMIN_DICT_COL_QUOTED = quoteIdent(DICTIONARIES_COL)
+        val ADMIN_BOOKS_COL_QUOTED = quoteIdent(BOOKS_COL_ID)
 
         /**
          * The quoted identifier of the virtual collections collection to be used in queries.
@@ -64,7 +60,7 @@ class PgUtil private constructor() {
          */
         @JvmField
         @JsStatic
-        val COLLECTIONS_COL_QUOTED = quoteIdent(COLLECTIONS_COL)
+        val COLLECTIONS_COL_QUOTED = quoteIdent(COLLECTIONS_COL_ID)
 
         /**
          * Array to query the partition name from the partition number (resolves 0 to "000", 1 to "001", ..., 255 to "256").
@@ -205,105 +201,5 @@ class PgUtil private constructor() {
         @JsStatic
         @JvmStatic
         fun lockId(name: String): Int64 = Fnv1a64.string(Fnv1a64.start(), name)
-
-        /**
-         * Decode the Naksha feature.
-         * @param bytes the bytes to decode.
-         * @param flags the codec flags.
-         * @param dictManager the dictionary manager to use for decoding; if any.
-         * @return the Naksha feature.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        @Deprecated(
-            message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeFeature(bytes, flags, dictManager)"),
-            level = DeprecationLevel.WARNING
-        )
-        fun decodeFeature(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): NakshaFeature? = Naksha.decodeFeature(bytes, flags, dictManager)
-
-        /**
-         * Encodes the given [NakshaFeature] into bytes.
-         * @param feature the feature to encode.
-         * @param flags the codec flags.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded feature.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        @Deprecated(
-            message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeFeature(feature, flags, dict)"),
-            level = DeprecationLevel.WARNING
-        )
-        fun encodeFeature(feature: NakshaFeature?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeFeature(feature, flags, dict)
-
-        /**
-         * Decode the Naksha tags.
-         * @param bytes the bytes to decode.
-         * @param flags the codec flags.
-         * @param dictManager the dictionary manager to use for decoding; if any.
-         * @return the Naksha tags.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        @Deprecated(
-            message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeTags(raw, bytes, flags, dictManager)"),
-            level = DeprecationLevel.WARNING
-        )
-        fun decodeTags(bytes: ByteArray?, flags: Flags, dictManager: IDictManager? = null): TagMap? = Naksha.decodeTags(bytes, flags, dictManager)
-
-        /**
-         * Encodes the given tags into bytes.
-         * @param tags the tags to encode.
-         * @param flags the codec flags.
-         * @param dict the dictionary to use for encoding; if any.
-         * @return the encoded tags.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        @Deprecated(
-            message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeTags(tags, flags, dict)"),
-            level = DeprecationLevel.WARNING
-        )
-        fun encodeTags(tags: TagMap?, flags: Flags, dict: JbDictionary? = null): ByteArray? = Naksha.encodeTags(tags, flags, dict)
-
-        /**
-         * Decode a GeoJSON geometry from encoded bytes.
-         * @param bytes the bytes to decode.
-         * @param flags the codec flags.
-         * @return the geometry.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        @Deprecated(
-            message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.decodeGeometry(bytes, flags)"),
-            level = DeprecationLevel.WARNING
-        )
-        fun decodeGeometry(bytes: ByteArray?, flags: Flags): SpGeometry? = Naksha.decodeGeometry(bytes, flags)
-
-        /**
-         * Encodes the given GeoJSON geometry into bytes.
-         * @param geometry the geometry to encode.
-         * @param flags the codec flags.
-         * @return the encoded GeoJSON geometry.
-         * @since 3.0.0
-         */
-        @JsStatic
-        @JvmStatic
-        @Deprecated(
-            message = "Please use Naksha class instead",
-            replaceWith = ReplaceWith("Naksha.encodeGeometry(geometry, flags)"),
-            level = DeprecationLevel.WARNING
-        )
-        fun encodeGeometry(geometry: SpGeometry?, flags: Flags): ByteArray? = Naksha.encodeGeometry(geometry, flags)
     }
 }

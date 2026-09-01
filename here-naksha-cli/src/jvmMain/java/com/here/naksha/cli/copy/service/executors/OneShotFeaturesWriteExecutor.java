@@ -5,7 +5,7 @@ import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutor;
 import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorException;
 import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorInfo;
 import naksha.model.IStorage;
-import naksha.model.NakshaException;
+import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;

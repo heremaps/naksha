@@ -12,7 +12,7 @@ import static org.junit.jupiter.params.provider.Arguments.arguments;
 import com.here.naksha.app.service.http.ops.PropertyQueryUtil;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import java.util.stream.Stream;
-import naksha.model.NakshaException;
+import naksha.base.NakshaException;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.DoubleOp;
 import naksha.model.request.query.IPropertyQuery;

@@ -9,6 +9,7 @@ import kotlin.js.JsExport
  * @since 3.0
  */
 @JsExport
+@Deprecated("To be removed")
 interface IDictReader {
     /**
      * Retrieve the dictionary with the given identifier.
@@ -16,7 +17,7 @@ interface IDictReader {
      * @return The global dictionary with the given identifier; _null_ when no such dictionary exists.
      * @since 3.0
      */
-    fun getDictionary(id: String): JbDictionary?
+    fun getDictionary(id: String): JbDictionary? = null
 
     /**
      * The best dictionary to encode the given feature.

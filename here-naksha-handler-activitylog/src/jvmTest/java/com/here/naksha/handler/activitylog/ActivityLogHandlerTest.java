@@ -7,7 +7,6 @@ import static com.here.naksha.handler.activitylog.NakshaFeatureBuilder.nakshaFea
 import static com.here.naksha.handler.activitylog.assertions.ActivityLogSuccessResultAssertions.assertThatResult;
 import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -30,20 +29,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import naksha.base.AnyList;
+import naksha.base.Int64;
 import naksha.base.JvmInt64;
-import naksha.model.Action;
-import naksha.model.Guid;
-import naksha.model.GuidList;
+import naksha.base.Timestamp;
+import naksha.base.Action;
+import naksha.base.Guid;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.TupleNumber;
-import naksha.model.TupleNumberVariant;
-import naksha.model.Version;
+import naksha.base.NakshaError;
+import naksha.base.TupleNumber;
+import naksha.base.Version;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
+import naksha.model.objects.StandardMembers;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadCollections;
 import naksha.model.request.ReadFeatures;
@@ -53,10 +53,7 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
-import naksha.model.request.query.AnyOp;
-import naksha.model.request.query.IMetaQuery;
-import naksha.model.request.query.MetaColumn;
-import naksha.model.request.query.MetaQuery;
+import naksha.model.request.ops.*;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -96,7 +93,8 @@ class ActivityLogHandlerTest {
     doCallRealMethod().when(spaceStorage).useWriteSession(any(), any());
     doCallRealMethod().when(spaceStorage).runInWriteSession(any(), any());
     handler = handlerForSpaceId(SPACE_ID);
-    NakshaContext.currentContext().withAppId("test-app");
+    final String test_app = "test-app";
+    NakshaContext.currentContext().withAppId(test_app);
   }
 
   @AfterEach
@@ -162,15 +160,14 @@ class ActivityLogHandlerTest {
   void shouldComposeActivityFeatures() throws Exception {
     // Given: features uuid
     String featureId = "featureId";
-    Guid initialUuid = guid(featureId, new Version(1));
-    Guid newUuid = guid(featureId, new Version(2));
+    Guid initialUuid = guid(featureId, Version.now(new JvmInt64(1),Action.CREATE));
+    Guid newUuid = guid(featureId, Version.now(new JvmInt64(2),Action.UPDATE));
 
     // And: old version of feature
     NakshaFeature oldFeature = nakshaFeature(featureId)
         .withUuid(initialUuid.toString())
-        .withPuuid(null)
         .withNuuid(newUuid.toString())
-        .withAction(Action.CREATED)
+        .withAction(Action.CREATE)
         .withCustomProperties(
             Map.of(
                 "op", "old feature",
@@ -181,9 +178,8 @@ class ActivityLogHandlerTest {
     // And: new version of feature
     NakshaFeature newFeature = nakshaFeature(featureId)
         .withUuid(newUuid.toString())
-        .withPuuid(initialUuid.toString())
         .withNuuid(null)
-        .withAction(Action.UPDATED)
+        .withAction(Action.UPDATE)
         .withCustomProperties(Map.of(
             "op", "new feature",
             "magicBoolean", true
@@ -205,7 +201,7 @@ class ActivityLogHandlerTest {
             singleFeature -> singleFeature
                 .hasId(uuid(newFeature))
                 .hasActivityLogId(featureId)
-                .hasAction(Action.UPDATED.toString())
+                .hasAction(Action.UPDATE.toString())
                 .hasReversePatch("""
                     {
                       "add": 1,
@@ -236,15 +232,14 @@ class ActivityLogHandlerTest {
   void shouldNotCalculateReversePatchAfterCreation() throws Exception {
     // Given
     String featureId = "featureId";
-    Guid createdGuid = guid(featureId, new Version(0));
+    Guid createdGuid = guid(featureId, Version.now(new JvmInt64(0), Action.CREATE));
 
     // And: space storage that returns only some feature with 'CREATE' action
     configureSpaceStorage(
         initialHistoryAwareRequestReturns(List.of(
             nakshaFeature(featureId)
                 .withUuid(createdGuid.toString())
-                .withPuuid(null)
-                .withAction(Action.CREATED)
+                .withAction(Action.CREATE)
                 .build())
         ),
         requestForMissingPredecessorsReturns(emptyList())
@@ -256,7 +251,7 @@ class ActivityLogHandlerTest {
     // Then: result does not bear any reverse patch
     assertThatResult(result)
         .hasActivityFeatures(feature -> feature
-            .hasAction(Action.CREATED.toString())
+            .hasAction(Action.CREATE.toString())
             .hasId(createdGuid.toString())
             .hasActivityLogId(featureId)
             .hasReversePatch(null)
@@ -266,17 +261,21 @@ class ActivityLogHandlerTest {
   @Test
   void shouldNotCalculateDiffAfterDeletion() throws Exception {
     // Given
+    //TODO is this still relevant? Are deleted features still stored?
     String featureId = "featureId";
-    Guid createdGuid = guid(featureId, new Version(0));
-    Guid deletedGuid = guid(featureId, new Version(1));
+    Timestamp ts0 = Timestamp.fromMillis(T0);
+    Timestamp ts1 = Timestamp.fromMillis(T1);
+    Version createdVersion = Version.auto(ts0.getYear(), ts0.getMonth(), ts0.getDay(), new JvmInt64(0), Action.CREATE);
+    Version deletedVersion = Version.auto(ts1.getYear(), ts1.getMonth(), ts1.getDay(), new JvmInt64(1), Action.DELETE);
+    Guid createdGuid = guid(featureId, createdVersion);
+    Guid deletedGuid = guid(featureId, deletedVersion);
 
     // And: space storage that returns features with 'DELETE' and `CREATE` actions
     configureSpaceStorage(
         initialHistoryAwareRequestReturns(List.of(
             nakshaFeature(featureId)
                 .withUuid(deletedGuid.toString())
-                .withPuuid(createdGuid.toString())
-                .withAction(Action.DELETED)
+                .withAction(Action.DELETE)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T1)
                 .build()
@@ -284,8 +283,8 @@ class ActivityLogHandlerTest {
         requestForMissingPredecessorsReturns(List.of(
             nakshaFeature("featureId")
                 .withUuid(createdGuid.toString())
-                .withPuuid(null)
-                .withAction(Action.CREATED)
+                .withNuuid(deletedGuid.toString())
+                .withAction(Action.CREATE)
                 .withCreatedAt(T0)
                 .withUpdatedAt(T0)
                 .build()
@@ -299,7 +298,7 @@ class ActivityLogHandlerTest {
     assertThatResult(result)
         .hasActivityFeatures(
             feature -> feature
-                .hasAction(Action.DELETED.toString())
+                .hasAction(Action.DELETE.toString())
                 .hasId(deletedGuid.toString())
                 .hasActivityLogId(featureId)
                 .hasReversePatch(null)
@@ -355,28 +354,8 @@ class ActivityLogHandlerTest {
   }
 
   @Test
-  void shouldFetchSuccessorsDirectlyByVersionIfPossible() {
-    // Given
-    List<ReadRequest> predecessorRequests = new ArrayList<>();
-    Guid puuid = guid("sample_feature", randomVersion());
-    configureSpaceStorage(
-        initialHistoryAwareRequestReturns(List.of(featureWithPuuidOnly(puuid.toString()))),
-        capturingOnlyPredecessorRequest(predecessorRequests)
-    );
-
-    // When: handler processes event bearing such request
-    handler.processEvent(eventWith(new ReadFeatures()));
-
-    // Then:
-    assertEquals(1, predecessorRequests.size());
-    ReadFeatures predecessorReq = assertInstanceOf(ReadFeatures.class, predecessorRequests.get(0));
-    assertTrue(containsGuuidQuery(predecessorReq, puuid));
-    assertFalse(containsNextVersionMetaQuery(predecessorReq));
-  }
-
-  @Test
-  void shouldFetchSuccessorIndirectlyByNextTnAsFallback() {
-    // Given
+  void shouldFetchPredecessorViaNextVersionLookup() {
+    // Given: one root feature missing its predecessor in the initial fetch
     List<ReadRequest> predecessorRequests = new ArrayList<>();
     Guid uuid = guid("sample_feature", randomVersion());
     configureSpaceStorage(
@@ -387,23 +366,22 @@ class ActivityLogHandlerTest {
     // When: handler processes event bearing such request
     handler.processEvent(eventWith(new ReadFeatures()));
 
-    // Then:
+    // Then: a single next_version meta-query is issued with the root's own version
     assertEquals(1, predecessorRequests.size());
     ReadFeatures predecessorReq = assertInstanceOf(ReadFeatures.class, predecessorRequests.get(0));
-    assertFalse(containsGuuidQuery(predecessorReq));
     assertTrue(containsNextVersionMetaQuery(predecessorReq, uuid.tupleNumber));
   }
 
   @Test
-  void shouldCombineDirectAndIndirectSuccessorsRetrieval() {
-    // Given
+  void shouldBundleAllMissingPredecessorLookupsIntoSingleQuery() {
+    // Given: two root features, neither paired via nuuid in the initial fetch
     List<ReadRequest> predecessorRequests = new ArrayList<>();
-    Guid firstFeatureUuid = guid("sample_feature_1", randomVersion());
-    Guid secondFeaturePuid = guid("sample_feature_2", randomVersion());
+    Guid firstUuid = guid("sample_feature_1", randomVersion());
+    Guid secondUuid = guid("sample_feature_2", randomVersion());
     configureSpaceStorage(
         initialHistoryAwareRequestReturns(List.of(
-            featureWithUuidOnly(firstFeatureUuid.toString()),
-            featureWithPuuidOnly(secondFeaturePuid.toString())
+            featureWithUuidOnly(firstUuid.toString()),
+            featureWithUuidOnly(secondUuid.toString())
         )),
         capturingOnlyPredecessorRequest(predecessorRequests)
     );
@@ -411,16 +389,10 @@ class ActivityLogHandlerTest {
     // When: handler processes event bearing such request
     handler.processEvent(eventWith(new ReadFeatures()));
 
-    // Then:
-    assertEquals(2, predecessorRequests.size());
-    assertTrue(predecessorRequests.stream().anyMatch(req -> containsGuuidQuery((ReadFeatures) req, secondFeaturePuid)));
-    assertTrue(predecessorRequests.stream().anyMatch(req -> containsNextVersionMetaQuery((ReadFeatures) req, firstFeatureUuid.tupleNumber)));
-  }
-
-  private NakshaFeature featureWithPuuidOnly(String puuid) {
-    return featureWithXyzFields(Map.of(
-        XyzNs.PUUID, puuid
-    ));
+    // Then: both predecessors are looked up in ONE next_version query
+    assertEquals(1, predecessorRequests.size());
+    ReadFeatures predecessorReq = assertInstanceOf(ReadFeatures.class, predecessorRequests.get(0));
+    assertTrue(containsNextVersionMetaQuery(predecessorReq, firstUuid.tupleNumber, secondUuid.tupleNumber));
   }
 
   private NakshaFeature featureWithUuidOnly(String uuid) {
@@ -476,52 +448,75 @@ class ActivityLogHandlerTest {
 
   private ArgumentMatcher<ReadRequest> initialRequestMatcher() {
     return readRequest -> isHistoryAwareReadFeatures(readRequest)
-                          && !containsNextVersionMetaQuery((ReadFeatures) readRequest)
-                          && !containsGuuidQuery((ReadFeatures) readRequest);
+                          && !containsNextVersionMetaQuery((ReadFeatures) readRequest);
   }
 
   private ArgumentMatcher<ReadRequest> predecessorRequestMatcher() {
     return readRequest -> isHistoryAwareReadFeatures(readRequest)
-                          && (
-                              containsNextVersionMetaQuery((ReadFeatures) readRequest)
-                              || containsGuuidQuery((ReadFeatures) readRequest)
-                          );
+                          && containsNextVersionMetaQuery((ReadFeatures) readRequest);
   }
 
   private boolean isHistoryAwareReadFeatures(ReadRequest readRequest) {
     if (readRequest instanceof ReadFeatures rf) {
-      return rf.getQueryHistory() && rf.getCollectionIds().size() == 1;
+      return rf.getQueryHistory();
     }
     return false;
   }
 
-  private boolean containsGuuidQuery(ReadFeatures readFeatures, Guid... expectedGuids) {
-    GuidList guids = readFeatures.getGuids();
-    if (expectedGuids.length == 0) {
-      return !guids.isEmpty();
-    } else {
-      return guids.getSize() == expectedGuids.length && guids.containsAll(Arrays.asList(expectedGuids));
-    }
-  }
+  private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedTns) {
+    Op metaQuery = readFeatures.getQueryMembers();
+    if (metaQuery instanceof Or or) {
+      OpList orChildren = or.getChildren();
+      List<Int64> versions = new java.util.ArrayList<>();
+      if (orChildren.getSize() == 0) return false;
+      for (int i = 0; i < orChildren.getSize(); i++) {
+        Object child = orChildren.get(i);
+        if (!(child instanceof And and)) return false;
+        OpList andChildren = and.getChildren();
+        if (andChildren.getSize() != 2) return false;
 
-  private boolean containsNextVersionMetaQuery(ReadFeatures readFeatures, TupleNumber... expectedNextTns) {
-    IMetaQuery metaQuery = readFeatures.getQuery().getMetadata();
-    if (metaQuery instanceof MetaQuery mq) {
-      boolean basicCheck = mq.getColumn().equals(MetaColumn.nextVersion())
-                           && mq.getOp().equals(AnyOp.IS_ANY_OF)
-                           && mq.getValue() instanceof AnyList;
-      if (basicCheck && expectedNextTns.length > 0) {
-        List queryNextTns = ((AnyList) mq.getValue()).asList();
-        return queryNextTns.size() == expectedNextTns.length
-               && Arrays.stream(expectedNextTns)
-                   .map(tn -> tn.toByteArray(TupleNumberVariant.B96))
-                   .allMatch(expectedTnAsBytes -> queryNextTns.stream()
-                       .anyMatch(queryTnAsBytes -> Arrays.equals(expectedTnAsBytes, (byte[]) queryTnAsBytes))
-                   );
+        Object first = andChildren.get(0);
+        Object second = andChildren.get(1);
+        if (!(first instanceof Equals eqA) || !(second instanceof Equals eqB)) return false;
+
+        // Determine which Equals is NextVersion and which is FeatureNumber (order may vary)
+        Equals nextEq;
+        if (StandardMembers.NextVersion.getName().equals(eqA.getAt())
+                && StandardMembers.FeatureNumber.getName().equals(eqB.getAt())) {
+          nextEq = eqA;
+        } else if (StandardMembers.NextVersion.getName().equals(eqB.getAt())
+                && StandardMembers.FeatureNumber.getName().equals(eqA.getAt())) {
+          nextEq = eqB;
+        } else {
+          return false;
+        }
+
+        Object val = nextEq.getValue();
+        if (!(val instanceof Int64 v)) return false;
+        versions.add(v);
       }
-      return basicCheck;
+
+      if (expectedTns.length == 0) return versions.size() > 0;
+      if (versions.size() != expectedTns.length) return false;
+      return Arrays.stream(expectedTns)
+              .map(tn -> tn.version)
+              .allMatch(expected -> versions.stream().anyMatch(expected::equals));
     }
-    return false;
+    if (!(metaQuery instanceof IsAnyOf op)) return false;
+    if (!StandardMembers.NextVersion.getName().equals(op.getAt())) return false;
+    // next_version is an int8 column — the IsAnyOf items hold the Int64 version values.
+    AnyList items = op.getItems();
+    if (expectedTns.length == 0) return items.getSize() > 0;
+    List<Int64> versions = new java.util.ArrayList<>();
+    for (int i = 0; i < items.getSize(); i++) {
+      Object item = items.get(i);
+      if (item instanceof Int64 v) versions.add(v);
+      else return false;
+    }
+    if (versions.size() != expectedTns.length) return false;
+    return Arrays.stream(expectedTns)
+        .map(tn -> tn.version)
+        .allMatch(expected -> versions.stream().anyMatch(expected::equals));
   }
 
   private IReadSession mockReadSession(ReadBehavior... readBehavior) {

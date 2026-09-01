@@ -97,7 +97,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
     /**
      * The names of the columns, indexed from 0, while in a SQL statement the index starts with 1.
      */
-    private fun columnNames(): Array<String> =
+    override fun columnNames(): Array<String> =
         columnNames ?: throw IllegalStateException("Initialization error: Missing column names array")
 
     /**
@@ -225,7 +225,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
             "timestamp" -> valueOrNull(rs, longToInt64(rs.getTimestamp(index).toInstant().toEpochMilli()))
             "date" -> valueOrNull(rs, longToInt64(rs.getDate(index).toInstant().toEpochMilli()))
             "bytea" -> valueOrNull(rs, rs.getBytes(index))
-            "jsonb" -> Platform.fromJSON(rs.getString(index))
+            "jsonb" -> rs.getString(index)?.let { Platform.fromJSON(it) }
             else -> rs.getObject(index)
         }
     }

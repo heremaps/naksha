@@ -8,8 +8,12 @@
         "speedLimit": "10"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -19,8 +23,12 @@
         "speedLimit": "20"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -30,8 +38,12 @@
         "speedLimit": "30"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -41,8 +53,12 @@
         "speedLimit": "40"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -52,8 +68,12 @@
         "speedLimit": "50"
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -86,8 +106,12 @@
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6578, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6578,
+          50.1234,
+          0.0
+        ]
       }
     }
   ]

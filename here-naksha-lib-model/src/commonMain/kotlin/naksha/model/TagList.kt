@@ -2,9 +2,7 @@
 
 package naksha.model
 
-import naksha.base.ListProxy
-import naksha.base.NormalizerForm
-import naksha.base.Platform
+import naksha.base.StringList
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -15,7 +13,7 @@ import kotlin.jvm.JvmStatic
  * A list of tags.
  */
 @JsExport
-open class TagList() : ListProxy<String>(String::class) {
+class TagList() : StringList() {
 
     /**
      * Create a tag list from the given arguments; the tags are normalized.

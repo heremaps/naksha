@@ -18,9 +18,9 @@
  */
 package com.here.naksha.lib.core.exceptions;
 
-import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.base.NakshaError.EXCEPTION;
 
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.NakshaVersion;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
 import org.jetbrains.annotations.NotNull;

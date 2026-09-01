@@ -149,7 +149,7 @@ public class SourceIdHandler extends AbstractEventHandler {
       final TagAnd tagAnd = new TagAnd();
       // List of successfully transformed property queries to be removed at the end, so as not to disrupt the loop
       final List<IPropertyQuery> toRemove = new ArrayList<>();
-      final int size = pAnd.size();
+      final int size = pAnd.getSize();
       for (int i = 0; i < size; i++) {
         final IPropertyQuery propertyComponent = pAnd.get(i);
         final Optional<ITagQuery> tagComponent = transformPropertyOperation(propertyComponent);
@@ -168,7 +168,7 @@ public class SourceIdHandler extends AbstractEventHandler {
       pAnd.removeAll(toRemove);
       if (tagAnd.isEmpty()) {
         return Optional.empty();
-      } else if (tagAnd.size() == 1) {
+      } else if (tagAnd.getSize() == 1) {
         // Unwrap this one single query in an AND clause
         return Optional.of(tagAnd.get(0));
       }
@@ -204,8 +204,8 @@ public class SourceIdHandler extends AbstractEventHandler {
   }
 
   private static boolean propertyReferenceEqualsSourceId(Property pRef) {
-    List<@NotNull String> path = pRef.getPath();
-    return path.size() == PREF_PATHS_SIZE && path.containsAll(List.of(NakshaProperties.META_KEY, SOURCE_ID));
+    naksha.model.objects.JsonPath jp = pRef.getPath();
+    return jp.getSize() == PREF_PATHS_SIZE && jp.containsAll(List.of(NakshaProperties.META_KEY, SOURCE_ID));
   }
 
   private static boolean sourceIdTransformationCapable(PQuery propertyOperation) {

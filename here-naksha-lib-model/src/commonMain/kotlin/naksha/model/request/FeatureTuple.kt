@@ -4,7 +4,13 @@ package naksha.model.request
 
 import naksha.base.Platform
 import naksha.model.*
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaException
+import naksha.base.TupleNumber
+import naksha.model.objects.Member
+import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmField
@@ -12,7 +18,7 @@ import kotlin.jvm.JvmField
 /**
  * A feature tuple is a wrapper for a [Tuple], and its in-memory representation, the [NakshaFeature]. It allows to lazy load the data of the [Tuple], to cache the [NakshaFeature], and is part of the cache subsystem. A feature tuple is not thread-safe, it is for thread local processing.
  *
- * Assume for example, there are 500,000 tuples part of a bounding box query result. It is most often not useful to load all of them into memory, but we need at least the identifiers of them, the [tuple-numbers][TupleNumber], to know that they are part of the result-set. Then we can process step-wise through the result-set, and stop, when enough have been processed, for example after 1,000. Actually, loading [Tuple] by [Tuple] from the cache does not make sense either, we should load in chunks, because of this, the [caches][ITupleCache] do only allow loading of multiple [FeatureTuple].
+ * Assume for example, there are 500,000 tuples part of a bounding box query result. It is most often not useful to load all of them into memory, but we need at least the identifiers of them, the [tuple-numbers][naksha.base.TupleNumber], to know that they are part of the result-set. Then we can process step-wise through the result-set, and stop, when enough have been processed, for example after 1,000. Actually, loading [Tuple] by [Tuple] from the cache does not make sense either, we should load in chunks, because of this, the [caches][ITupleCache] do only allow loading of multiple [FeatureTuple].
  * @since 3.0
  */
 @JsExport
@@ -36,9 +42,20 @@ open class FeatureTuple(
      * @param feature the [NakshaFeature] from which to create this [FeatureTuple].
      * @since 3.0
      */
-    @JsName("fromNakshaFeature")
+    @JsName("fromFeatureAndCollection")
     @Suppress("LeakingThis")
-    constructor(feature: NakshaFeature) : this(feature.tupleNumber) {
+    constructor(feature: NakshaFeature, collection: NakshaCollection) : this(feature, collection.useMember(StandardMembers.Tn))
+
+    /**
+     * Create a feature-tuple from a [NakshaFeature].
+     * @param feature the [NakshaFeature] from which to create this [FeatureTuple].
+     * @since 3.0
+     */
+    @JsName("fromFeatureAndMember")
+    @Suppress("LeakingThis")
+    constructor(feature: NakshaFeature, tupleNumberMember: Member) :
+    this(tupleNumberMember.readTupleNumber(feature) ?: throw NakshaException(ILLEGAL_ARGUMENT, "Failed to get tuple-number of feature"))
+    {
         this.feature = feature
     }
 
@@ -54,7 +71,11 @@ open class FeatureTuple(
      * @since 3.0
      */
     val id: String?
-        get() = tuple?.meta?.id ?: feature?.id
+        get() {
+            val member = tuple?.getString(StandardMembers.Id)
+            if (member != null) return member
+            return feature?.id
+        }
 
     private var doNotAutoUpdate: Boolean = false
     private var cachedTuple: Tuple? = null
@@ -68,14 +89,14 @@ open class FeatureTuple(
      * - Setting the value to an explicit [NakshaFeature] will disable the automatic cache updates, when the [tuple] is modified.
      * - **Beware**: If the returned feature is modified, this will as well modify the cached version.
      * @since 3.0
-     * @see [Tuple.toNakshaFeature]
-     * @see [Tuple.attachment]
+     * @see [Tuple.decodeFeature]
      */
     open var feature: NakshaFeature?
         get() {
             var feature = cachedFeature
             val tuple = this.tuple
             if (tuple != null && tuple !== cachedTuple && !doNotAutoUpdate) {
+                // TODO: We need a global book for decoding, we should make Tuples explicit for clients!
                 feature = tuple.toNakshaFeature()
                 cachedFeature = feature
                 cachedJson = null
@@ -112,5 +133,5 @@ open class FeatureTuple(
      * @return a new copy of the tuple converted into a feature.
      * @since 3.0
      */
-    open fun newFeature(): NakshaFeature? = tuple?.toNakshaFeature()
+    open fun newFeature(): NakshaFeature? = tuple?.toNakshaFeature() // TODO: Same as above, we need to change this generally!
 }

@@ -4,8 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import naksha.base.StringList;
-import naksha.model.NakshaError;
-import naksha.model.Version;
+import naksha.base.NakshaError;
+import naksha.base.Version;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -151,8 +151,8 @@ class DeleteFeatureByVersionTest extends PgTestBase {
 
   private NakshaFeatureList getFeatureByIds(String... ids) {
     ReadFeatures readAll = new ReadFeatures()
-        .withMapId(getCollection().getMapId())
-        .addCollectionId(getCollection().getId());
+        .withCatalogId(getCollection().getCatalogId())
+        .withCollectionId(getCollection().getId());
     readAll.setFeatureIds(StringList.of(ids));
     return executeRead(readAll, newSessionOptions()).getFeatures();
   }
@@ -176,6 +176,6 @@ class DeleteFeatureByVersionTest extends PgTestBase {
   }
 
   private Version versionOf(NakshaFeature nakshaFeature) {
-    return nakshaFeature.getTupleNumber().version;
+    return new Version(nakshaFeature.getProperties().getXyz().getGuid().tupleNumber.version);
   }
 }

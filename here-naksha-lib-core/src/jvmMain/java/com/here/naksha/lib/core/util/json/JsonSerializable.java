@@ -33,7 +33,7 @@ import java.util.Formatter;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Scanner;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.request.ErrorResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;

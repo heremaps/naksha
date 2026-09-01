@@ -127,7 +127,7 @@ class HttpStoragePropertiesTest {
         final HttpStorageProperties properties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
         assertNotNull(properties);
 
-        final Object rawHeaders = properties.get("headers");
+        final Object rawHeaders = properties.getPath("headers");
         assertInstanceOf(Map.class, rawHeaders);
         assertFalse(rawHeaders instanceof HttpStorageProperties.HeaderMap);
 

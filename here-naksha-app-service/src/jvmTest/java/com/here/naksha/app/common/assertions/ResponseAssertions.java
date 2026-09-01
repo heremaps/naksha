@@ -48,6 +48,7 @@ public class ResponseAssertions {
 
   public static JSONComparator STRICT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.STRICT);
   public static JSONComparator LENIENT_JSON_COMPARISON = new CustomComparator(JSONCompareMode.LENIENT);
+  public static JSONComparator STRICT_ORDERED_JSON_COMPARISON = new CustomComparator(JSONCompareMode.STRICT_ORDER);
   // TODO: CASL-681 discuss
   public static JSONComparator IGNORE_XYZ = new CustomComparator(JSONCompareMode.LENIENT, new Customization("features[*].properties.@ns:com:here:xyz", (left, right) -> true));
 
@@ -96,7 +97,7 @@ public class ResponseAssertions {
     String actualBody = subject.body();
     Assertions.assertNotNull(actualBody, "Response body is null");
     try {
-      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody, strictChecking ? STRICT_JSON_COMPARISON : LENIENT_JSON_COMPARISON);
+      JSONAssert.assertEquals(failureMessage, expectedJsonBody, actualBody, strictChecking ? STRICT_ORDERED_JSON_COMPARISON : LENIENT_JSON_COMPARISON);
     } catch (JSONException e) {
       Assertions.fail("Unable to parse response body", e);
     }

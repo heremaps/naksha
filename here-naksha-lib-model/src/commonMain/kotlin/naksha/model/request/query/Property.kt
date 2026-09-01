@@ -2,15 +2,15 @@
 
 package naksha.model.request.query
 
-import naksha.base.NotNullProperty
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
-import naksha.base.StringList
 import naksha.base.fn.Fn1
+import naksha.model.objects.JsonPath
+import naksha.model.objects.Member
+import naksha.model.objects.MemberType
+import naksha.model.objects.StandardMembers
 import kotlin.js.JsExport
 import kotlin.js.JsName
-import kotlin.js.JsStatic
-import kotlin.jvm.JvmStatic
 
 /**
  * The reference to a property within a feature.
@@ -18,11 +18,10 @@ import kotlin.jvm.JvmStatic
  * **Warning:** You should not search for the `id`, `geometry`, or anything from [`properties->@ns:com:here:xyz`][naksha.model.XyzNs] using this query, because there are specialized, and optimized, dedicated queries available. So avoid things like `PQuery(Property("id"), StringOp.EQUALS, "foo"`.
  * @see naksha.model.request.ReadFeatures.featureIds
  * @see ISpatialQuery
- * @see IMetaQuery
  * @see ITagQuery
  */
 @JsExport
-open class Property() : MetaColumn(FEATURE) {
+open class Property() : Member(StandardMembers.FeatureBytes.name, MemberType.STRING, JsonPath()) {
 
     /**
      * Create a property from a path given as variable argument list.
@@ -45,14 +44,7 @@ open class Property() : MetaColumn(FEATURE) {
         const val XYZ = "@ns:com:here:xyz"
 
         const val TAGS = "tags"
-
-        private val PATH = NotNullProperty<Property, StringList>(StringList::class)
     }
-
-    /**
-     * The path inside the feature.
-     */
-    val path by PATH
 
     private var array: Array<String>? = null
     private var string: String? = null

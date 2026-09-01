@@ -27,7 +27,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import naksha.base.AnyObject;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.Action;
+import naksha.base.Action;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -97,12 +97,12 @@ public class XyzActivityLog extends AnyObject {
   }
 
   public boolean isDeleted() {
-    return Action.DELETED.toString().equals(getAction());
+    return Action.DELETE.toString().equals(getAction());
   }
 
   public void setDeleted(boolean deleted) {
     if (deleted) {
-      setAction(Action.DELETED);
+      setAction(Action.DELETE);
     }
   }
 

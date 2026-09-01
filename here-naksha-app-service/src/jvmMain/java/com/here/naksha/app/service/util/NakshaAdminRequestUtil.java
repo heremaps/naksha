@@ -48,8 +48,8 @@ public class NakshaAdminRequestUtil {
 
   private static ReadFeatures getAdminResourcesRequest(INaksha naksha, String resourceCollection) {
     ReadFeatures readFeatures = new ReadFeatures();
-    readFeatures.setMapId(naksha.getAdminMapId());
-    readFeatures.addCollectionId(resourceCollection);
+    readFeatures.setCatalogId(naksha.getAdminMapId());
+    readFeatures.withCollectionId(resourceCollection);
     return readFeatures;
   }
 

@@ -46,7 +46,7 @@ public class TagFilterHandlerProperties extends NakshaProperties {
    * {@link naksha.model.request.WriteRequest} operations.
    */
   public @Nullable List<String> getAdd() {
-    return JvmBoxingUtil.box(get(ADD_VALUES), StringList.class);
+    return JvmBoxingUtil.box(getPath(ADD_VALUES), StringList.class);
   }
 
   public void setAdd(@Nullable final List<String> add) {
@@ -58,7 +58,7 @@ public class TagFilterHandlerProperties extends NakshaProperties {
    * {@link naksha.model.request.WriteRequest} operations. This is applied before {@link #getAdd()} operation.
    */
   public @Nullable List<String> getRemoveWithPrefixes() {
-    return JvmBoxingUtil.box(get(REMOVE_W_PREFIXES), StringList.class);
+    return JvmBoxingUtil.box(getPath(REMOVE_W_PREFIXES), StringList.class);
   }
 
   public void setRemoveWithPrefixes(final @Nullable List<String> removeWithPrefixes) {
@@ -70,7 +70,7 @@ public class TagFilterHandlerProperties extends NakshaProperties {
    * handler.
    */
   public @Nullable List<String> getContains() {
-    return JvmBoxingUtil.box(get(CONTAINS_VALUES), StringList.class);
+    return JvmBoxingUtil.box(getPath(CONTAINS_VALUES), StringList.class);
   }
 
   public void setContains(@Nullable List<String> contains) {

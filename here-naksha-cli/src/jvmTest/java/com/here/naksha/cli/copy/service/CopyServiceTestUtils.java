@@ -1,9 +1,12 @@
 package com.here.naksha.cli.copy.service;
 
+import naksha.base.Platform;
 import naksha.model.ISession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
+import naksha.base.TupleNumber;
+import naksha.base.Version;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.*;
 import org.mockito.ArgumentCaptor;
@@ -38,8 +41,17 @@ public final class CopyServiceTestUtils {
     }
 
     public static FeatureTupleList nakshaFeatureListToFeatureTupleList(List<NakshaFeature> nakshaFeatures) {
-        SuccessResponse successResponse = new SuccessResponse(nakshaFeatures);
-        return successResponse.getFeatureTupleList();
+        FeatureTupleList featureTuples = new FeatureTupleList();
+        featureTuples.setCapacity(nakshaFeatures.size());
+        TupleNumber dummyTupleNumber = new TupleNumber(
+                Platform.intToInt64(0), 0, 0, Platform.intToInt64(0), Version.HEAD.number
+        );
+        for (NakshaFeature feature : nakshaFeatures) {
+            FeatureTuple featureTuple = new FeatureTuple(dummyTupleNumber, null);
+            featureTuple.setFeature(feature);
+            featureTuples.add(featureTuple);
+        }
+        return featureTuples;
     }
 
     public static IWriteSession createWriteSessionForStorageReturningSuccessResponse(IStorage storage, SessionOptions sessionOptions) {
@@ -108,7 +120,7 @@ public final class CopyServiceTestUtils {
         assertEquals(target.getCollectionId(), w.getCollectionId(),
                 "Every write Collection ID should match target Collection ID"
         );
-        assertEquals(target.getMapId(), w.getMapId(),
+        assertEquals(target.getMapId(), w.getCatalogId(),
                 "Every write Map ID should match target Map ID"
         );
     }

@@ -1,9 +1,8 @@
 package com.here.naksha.lib.view.missing;
 
-import naksha.base.Int64;
-import naksha.base.Platform;
 import naksha.model.*;
 import com.here.naksha.lib.view.MissingIdResolver;
+import com.here.naksha.lib.view.Sample;
 import com.here.naksha.lib.view.ViewLayer;
 import com.here.naksha.lib.view.ViewLayerFeature;
 import naksha.model.objects.NakshaFeature;
@@ -16,8 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static naksha.base.Platform.intToInt64;
-import static naksha.model.FlagsKt.withAction;
 import static naksha.psql.PgTest.TEST_MAP_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -28,52 +25,6 @@ import static org.mockito.Mockito.mock;
 
 public class ObligatoryLayersResolverTest {
 
-  private @NotNull Metadata mockMetadata(String id) {
-    final Int64 storageNumber = intToInt64(1);
-    final TupleNumber tupleNumber = new TupleNumber(
-        storageNumber,
-        0,
-        0,
-        Naksha.featureNumber(id),
-        Version.of(2024,1,1, intToInt64(0)),
-        0
-    );
-    final Int64 updatedAt = Platform.currentMillis();
-    return new Metadata(
-        tupleNumber,
-        withAction(0, Action.CREATED),
-        null,
-        updatedAt, null, null,
-        null,
-        null,
-        1,
-        0,
-        0,
-        id,
-        "test",
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null,
-        null
-    );
-  }
-
-  private @NotNull FeatureTuple mockFeatureTuple(@NotNull NakshaFeature feature) {
-    final Metadata metadata = mockMetadata(feature.getId());
-    final byte[] bytesFeature = Naksha.encodeFeature(feature, metadata.getFlags(), null);
-    final Tuple tuple = new Tuple(metadata, bytesFeature, null, null, null, null, false);
-    final FeatureTuple featureTuple = new FeatureTuple(metadata.getTupleNumber(), tuple);
-    return featureTuple;
-  }
-
   @Test
   void shouldPrepareLayerIdToFetchWhenMissing() {
     // given
@@ -81,7 +32,7 @@ public class ObligatoryLayersResolverTest {
     ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     ViewLayer otherLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     final NakshaFeature feature = new NakshaFeature();
-    final FeatureTuple featureTuple = new FeatureTuple(feature);
+    final FeatureTuple featureTuple = Sample.featureTuple(feature);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
     singleRowFeatures.add(new ViewLayerFeature(featureTuple, 0, otherLayer));
@@ -103,7 +54,7 @@ public class ObligatoryLayersResolverTest {
     IStorage storage = mock(IStorage.class);
     ViewLayer obligatoryLayer = new ViewLayer(storage, TEST_MAP_ID, "collection1");
     final NakshaFeature feature = new NakshaFeature();
-    final FeatureTuple featureTuple = new FeatureTuple(feature);
+    final FeatureTuple featureTuple = Sample.featureTuple(feature);
 
     List<ViewLayerFeature> singleRowFeatures = new ArrayList<>();
     singleRowFeatures.add(new ViewLayerFeature(featureTuple, 0, obligatoryLayer));

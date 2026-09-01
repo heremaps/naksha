@@ -22,7 +22,6 @@ open class NakshaTx : NakshaFeature() {
 
     override fun featureTypeDefaultValue(): String = "naksha.Tx"
     override fun withId(value: String): NakshaTx = super.withId(value) as NakshaTx
-    override fun withFeatureNumber(value: Int64): NakshaTx = super.withFeatureNumber(value) as NakshaTx
     override fun withType(value: String): NakshaTx = super.withType(value) as NakshaTx
     override fun withFeatureType(value: String): NakshaTx = super.withFeatureType(value) as NakshaTx
     override fun withBbox(value: SpBoundingBox?): NakshaTx = super.withBbox(value) as NakshaTx
@@ -46,7 +45,7 @@ open class NakshaTx : NakshaFeature() {
      */
     @JvmOverloads
     fun setEpoch(epoch: Timestamp, seq: Int64 = Int64(0)): NakshaTx {
-        val version = Version.of(epoch.year, epoch.month, epoch.day, seq)
+        val version = Version.auto(epoch.year, epoch.month, epoch.day, seq, Action.VERSION)
         setRaw("id", version.toString())
         setRaw("time", epoch.ts)
         return this
@@ -96,7 +95,7 @@ open class NakshaTx : NakshaFeature() {
     override var id: String
         get() = getAs("id", String::class) ?: throw illegalState("The property 'id' must be a valid string")
         set(value) {
-            val txn = Int64(value.toLong())
+            val txn = Int64(value.toLong(10))
             setVersion(Version(txn))
         }
 
@@ -155,7 +154,7 @@ open class NakshaTx : NakshaFeature() {
      * @since 3.0
      */
     val txn: Int64
-        get() = version.txn
+        get() = version.number
 
     /**
      * Number of features modified in the transaction - total number of features from all touched collections.
@@ -200,7 +199,7 @@ open class NakshaTx : NakshaFeature() {
      * @since 3.0
      */
     @JvmOverloads
-    fun useMap(id: String, number: Int, action: Action? = null): NakshaTxMap {
+    fun useCatalog(id: String, number: Int, action: Action? = null): NakshaTxMap {
         val existing = maps[id]
         if (existing != null) {
             if (action != null) existing.action = action

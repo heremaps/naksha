@@ -7,12 +7,18 @@
       "properties": {
         "speedLimit": "10",
         "@ns:com:here:xyz": {
-          "tags": [ "one" ]
+          "tags": [
+            "one"
+          ]
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -21,12 +27,19 @@
       "properties": {
         "speedLimit": "20",
         "@ns:com:here:xyz": {
-          "tags": [ "one", "two" ]
+          "tags": [
+            "one",
+            "two"
+          ]
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -35,12 +48,20 @@
       "properties": {
         "speedLimit": "30",
         "@ns:com:here:xyz": {
-          "tags": [ "one", "two", "three" ]
+          "tags": [
+            "one",
+            "two",
+            "three"
+          ]
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6123, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6123,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -73,8 +94,12 @@
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6578, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6578,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -108,8 +133,12 @@
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6578, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6578,
+          50.1234,
+          0.0
+        ]
       }
     },
     {
@@ -143,8 +172,12 @@
         }
       },
       "geometry": {
-        "type":"Point",
-        "coordinates":[ 8.6578, 50.1234, 0.0 ]
+        "type": "Point",
+        "coordinates": [
+          8.6578,
+          50.1234,
+          0.0
+        ]
       }
     }
   ]

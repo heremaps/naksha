@@ -4,9 +4,8 @@ package naksha.model.request.notification
 
 import naksha.base.NotNullProperty
 import naksha.model.IStorage
-import naksha.model.NakshaError
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 import naksha.model.request.Request
 import kotlin.js.JsExport
 import kotlin.js.JsName

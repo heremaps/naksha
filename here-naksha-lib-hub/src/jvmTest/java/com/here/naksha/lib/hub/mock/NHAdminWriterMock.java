@@ -23,12 +23,11 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
-import naksha.base.AtomicInt;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaTx;
 import naksha.model.request.ErrorResponse;
@@ -52,7 +51,7 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
     if (request instanceof WriteRequest wr) {
       for (Write write : wr.getWrites()) {
         Response singularResponse;
-        if (Naksha.COLLECTIONS_COL.equals(write.getCollectionId())) {
+        if (Naksha.COLLECTIONS_COL_ID.equals(write.getCollectionId())) {
           singularResponse = executeWriteCollection(write);
         } else {
           singularResponse = executeWriteFeature(write);
@@ -236,11 +235,6 @@ public class NHAdminWriterMock extends NHAdminReaderMock implements IWriteSessio
   @Override
   public void rollback() {
     // do nothing
-  }
-
-  @Override
-  public @NotNull AtomicInt getUid() {
-    return null;
   }
 
   @Override

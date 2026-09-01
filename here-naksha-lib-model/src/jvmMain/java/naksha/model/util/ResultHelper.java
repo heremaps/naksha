@@ -19,18 +19,13 @@
 package naksha.model.util;
 
 import static java.util.Collections.emptyList;
-import static naksha.base.Platform.javaProxy;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmMapProxy;
-import naksha.model.Action;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
 import naksha.model.request.Response;

@@ -5,13 +5,12 @@ import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorInf
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
-import naksha.base.StringList;
 import naksha.model.IStorage;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
@@ -112,10 +111,8 @@ public final class CopyService {
 
     private ReadFeatures createReadFeaturesRequest(CopyElement source) {
         ReadFeatures readFeatures = new ReadFeatures();
-        readFeatures.setCollectionIds(
-                StringList.of(source.getCollectionId())
-        );
-        readFeatures.setMapId(source.getMapId());
+        readFeatures.setCollectionId(source.getCollectionId());
+        readFeatures.setCatalogId(source.getMapId());
 
         return readFeatures;
     }
@@ -158,7 +155,7 @@ public final class CopyService {
             );
             case ErrorResponse errorResponse -> {
                 NakshaError nakshaError = errorResponse.getError();
-                if (!nakshaError.getCode().equals(NakshaError.MAP_EXISTS)) {
+                if (!nakshaError.getCode().equals(NakshaError.CATALOG_EXISTS)) {
                     throw new CopyServiceException("Problem with creating map!", new NakshaException(nakshaError));
                 }
                 logger.info("Map(id: \"{}\") is already present on storage(id: \"{}\")!", mapId, storage.getId());
@@ -225,7 +222,7 @@ public final class CopyService {
 
     private WriteRequest buildCreateMapRequest(String mapId) {
         WriteRequest writeRequest = new WriteRequest();
-        NakshaMap map = new NakshaMap(mapId);
+        NakshaCatalog map = new NakshaCatalog(mapId);
         Write write = new Write().createMap(map);
         writeRequest.add(write);
         return writeRequest;
@@ -234,7 +231,7 @@ public final class CopyService {
     private WriteRequest buildCreateCollectionRequest(CopyElement target) {
         WriteRequest writeRequest = new WriteRequest();
         NakshaCollection collection = new NakshaCollection(target.getCollectionId())
-                .withMapId(target.getMapId());
+                .withCatalogId(target.getMapId());
         Write write = new Write().createCollection(collection);
         writeRequest.add(write);
         return writeRequest;

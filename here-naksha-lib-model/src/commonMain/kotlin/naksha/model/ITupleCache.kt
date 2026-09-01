@@ -3,6 +3,7 @@
 package naksha.model
 
 import naksha.base.Int64
+import naksha.base.TupleNumber
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
 import kotlin.js.JsExport
@@ -36,7 +37,7 @@ interface ITupleCache {
      *
      * ### Note
      * This method is only invoked, if the [latency][latencyInMicros] is zero.
-     * @param tupleNumber the [tuple-number][TupleNumber] of the [Tuple] to fetch.
+     * @param tupleNumber the [tuple-number][naksha.base.TupleNumber] of the [Tuple] to fetch.
      * @return the fetched [Tuple]; _null_ if either the method is not supported or the requested [Tuple] is not in the cache.
      * @since 3.0
      */

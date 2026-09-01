@@ -24,15 +24,16 @@ import com.here.naksha.lib.core.models.geojson.WebMercatorTile;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
+
+import naksha.base.Platform;
 import naksha.base.StringList;
-import naksha.common.test.CommonTestConstants;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Request;
@@ -44,6 +45,7 @@ import naksha.model.request.WriteRequest;
 import naksha.model.request.query.SpIntersects;
 import naksha.model.request.query.SpOr;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -57,7 +59,7 @@ class PsqlCopyTest {
         "id": "%s",
         "className": "naksha.psql.PsqlTestStorage"
         }
-        """.formatted(CommonTestConstants.getTestStorageId()));
+        """.formatted(Platform.getTestStorageId()));
     private IStorage psqlStorage;
 
     @BeforeEach
@@ -67,6 +69,7 @@ class PsqlCopyTest {
         psqlStorage = Naksha.useStorage(storageConfig);
     }
 
+  @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenGeneratingStorageAndPostgres(FeaturesWriteExecutor featuresWriteExecutor) {
@@ -95,6 +98,7 @@ class PsqlCopyTest {
         }
     }
 
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCopyFeaturesBetweenMapsOnTheSameStorage(FeaturesWriteExecutor featuresWriteExecutor) {
@@ -126,6 +130,7 @@ class PsqlCopyTest {
         assertSameFeatures(sourceFeatures, targetFeatures);
     }
 
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @ParameterizedTest
     @MethodSource("featuresWriteExecutors")
     void shouldCreateMapAndCollectionThenCopy(FeaturesWriteExecutor featuresWriteExecutor) {
@@ -165,12 +170,16 @@ class PsqlCopyTest {
     }
 
     private CopyElement createCopyElementWithNoExistingMapAndCollection(IStorage storage) {
-        String mapId = UUID.randomUUID().toString();
-        String collectionId = UUID.randomUUID().toString();
+        String mapId = uniqueId("map");
+        String collectionId = uniqueId("col");
         return new CopyElement.Builder(storage.getConfig())
                 .setMapId(mapId)
                 .setCollectionId(collectionId)
                 .build();
+    }
+
+    private static String uniqueId(String prefix) {
+        return prefix + "-" + UUID.randomUUID();
     }
 
     private CopyElement copyElementForGeneratingStorage(IStorage storage) {
@@ -286,10 +295,8 @@ class PsqlCopyTest {
 
     private ReadFeatures createReadFeaturesRequest(String mapId, String collectionId) {
         ReadFeatures readFeatures = new ReadFeatures();
-        readFeatures.setCollectionIds(
-                StringList.of(collectionId)
-        );
-        readFeatures.setMapId(mapId);
+        readFeatures.setCollectionId(collectionId);
+        readFeatures.setCatalogId(mapId);
 
         return readFeatures;
     }
@@ -306,7 +313,7 @@ class PsqlCopyTest {
     }
 
     private String createUniqueMap(IStorage storage, SessionOptions sessionOptions) {
-        String mapId = UUID.randomUUID().toString();
+        String mapId = uniqueId("map");
         addMapToTheStorage(storage, mapId, sessionOptions);
         return mapId;
     }
@@ -314,7 +321,7 @@ class PsqlCopyTest {
     private void addMapToTheStorage(IStorage storage, String mapId, SessionOptions sessionOptions) {
         WriteRequest writeRequest = new WriteRequest();
 
-        NakshaMap map = new NakshaMap().withId(mapId);
+        NakshaCatalog map = new NakshaCatalog().withId(mapId);
         Write createMap = new Write().createMap(map);
         writeRequest.add(createMap);
 

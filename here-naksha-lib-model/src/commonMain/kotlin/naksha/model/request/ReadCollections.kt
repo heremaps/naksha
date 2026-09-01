@@ -8,7 +8,6 @@ import naksha.base.StringList
 import naksha.model.Naksha
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
-import kotlin.js.JsName
 
 /**
  * A request to read [collection features][naksha.model.objects.NakshaCollection] from a map of the storage.
@@ -81,8 +80,8 @@ open class ReadCollections : ReadRequest() {
      */
     fun toReadFeatures(): ReadFeatures {
         val req = ReadFeatures()
-        req.mapId = mapId
-        req.collectionIds.add(Naksha.COLLECTIONS_COL)
+        req.catalogId = mapId
+        req.collectionId = Naksha.COLLECTIONS_COL_ID
         req.featureIds.addAll(collectionIds)
         return req
     }

@@ -209,7 +209,7 @@ class UpdateFeatureTest extends ApiTest {
     Assertions.assertNotNull(responseFeatureCollection);
     final NakshaFeature updatedFeature =
         responseFeatureCollection.getFeatures().get(0);
-    Assertions.assertEquals("30", updatedFeature.getProperties().get("speedLimit"));
+    Assertions.assertEquals("30", updatedFeature.getProperties().getPath("speedLimit"));
 
     // Execute request, outdated UUID, should fail
     feature.setProperties(newPropsOutdatedUuid);
@@ -243,7 +243,7 @@ class UpdateFeatureTest extends ApiTest {
     final XyzFeatureCollection featureCollection = parseJson(responseOverriding.body(), XyzFeatureCollection.class);
     Assertions.assertNotNull(featureCollection);
     final NakshaFeature overridenFeature = featureCollection.getFeatures().get(0);
-    Assertions.assertEquals("yesyesyes", overridenFeature.getProperties().get("overriden"));
+    Assertions.assertEquals("yesyesyes", overridenFeature.getProperties().getPath("overriden"));
     // Old properties like speedLimit should no longer be available
     // The feature has been completely overwritten by the PUT request with null UUID
     Assertions.assertFalse(overridenFeature.getProperties().containsKey("speedLimit"));
@@ -278,8 +278,8 @@ class UpdateFeatureTest extends ApiTest {
 
     // And: update properties match
     final NakshaFeature updatedFeature = parseJson(responseUpdateSuccess.body(), NakshaFeature.class);
-    Assertions.assertEquals("30", updatedFeature.getProperties().get("speedLimit"));
-    Assertions.assertEquals("tc_506", updatedFeature.getProperties().get("this_test_id"));
+    Assertions.assertEquals("30", updatedFeature.getProperties().getPath("speedLimit"));
+    Assertions.assertEquals("tc_506", updatedFeature.getProperties().getPath("this_test_id"));
 
     // When: trying to update with outdated UUID
     final NakshaProperties newPropsOutdatedUuid = newPropsOldUuid.copy(true);
@@ -302,7 +302,7 @@ class UpdateFeatureTest extends ApiTest {
     // Then: update suceeds
     assertThat(responseOverriding).hasStatus(200);
     final NakshaFeature overridenFeature = parseJson(responseOverriding.body(), NakshaFeature.class);
-    Assertions.assertEquals("yesyesyes", overridenFeature.getProperties().get("overriden"));
+    Assertions.assertEquals("yesyesyes", overridenFeature.getProperties().getPath("overriden"));
     // Old properties like isImportant should no longer be available
     // The feature has been completely overwritten by the PUT request with null UUID
     Assertions.assertFalse(overridenFeature.getProperties().containsKey("this_test_id"));

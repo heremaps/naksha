@@ -3,8 +3,7 @@ package com.here.naksha.lib.view;
 import naksha.base.StringList;
 import naksha.geo.PointCoord;
 import naksha.geo.SpPoint;
-import naksha.model.Action;
-import naksha.model.Naksha;
+import naksha.base.Action;
 import naksha.model.SessionOptions;
 import naksha.model.Tuple;
 import naksha.model.objects.NakshaCollection;
@@ -110,8 +109,8 @@ public class ViewWriteSessionTests extends PsqlTests {
     NakshaFeature feature = response1.getFeatures().get(0);
     assertEquals(1d, ((PointCoord) feature.getGeometry().getCoordinates()).getLongitude());
     assertTrue(feature.getProperties().containsKey("testProperty"));
-    assertEquals("test", feature.getProperties().get("testProperty").toString());
-    assertSame(Action.UPDATED, response1.getFeatureTupleList().get(0).tuple.meta.action());
+    assertEquals("test", feature.getProperties().getPath("testProperty").toString());
+    assertSame(Action.UPDATE, response1.getFeatureTupleList().get(0).tuple.tupleNumber.getAction());
 
     writeSession.commit();
 
@@ -124,7 +123,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     NakshaFeature updatedFeature = list.get(0);
     assertEquals(1d, ((PointCoord) updatedFeature.getGeometry().getCoordinates()).getLongitude());
     assertTrue(updatedFeature.getProperties().containsKey("testProperty"));
-    assertEquals("test", updatedFeature.getProperties().get("testProperty").toString());
+    assertEquals("test", updatedFeature.getProperties().getPath("testProperty").toString());
   }
 
   @Test
@@ -153,7 +152,7 @@ public class ViewWriteSessionTests extends PsqlTests {
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
     //THEN
     assertNotNull(response.getFeatureTupleList().get(0));
-    assertSame(Action.CREATED, response.getFeatureTupleList().get(0).tuple.meta.action());
+    assertSame(Action.CREATE, response.getFeatureTupleList().get(0).tuple.tupleNumber.getAction());
     writeSession.commit();
 
     //GIVEN Verify the feature was actually created in the top layer (collection_0)
@@ -208,7 +207,7 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     SuccessResponse response = (SuccessResponse) writeSession.execute(writeRequest);
     assertNotNull(response.getFeatureTupleList().get(0));
-    assertSame(Action.CREATED, response.getFeatureTupleList().get(0).tuple.meta.action());
+    assertSame(Action.CREATE, response.getFeatureTupleList().get(0).tuple.tupleNumber.getAction());
     writeSession.commit();
 
     //check if the newly added feature found on layer
@@ -241,20 +240,15 @@ public class ViewWriteSessionTests extends PsqlTests {
 
     @NotNull FeatureTupleList featureTupleList = ok.getFeatureTupleList();
     assertEquals(1, featureTupleList.size());
-    // TODO: We need replace this code with: writeSession.loadTuples(featureTupleList);
     writeSession.commit();
-    Naksha.cache.load(featureTupleList);
-    // TODO: End of code to replace
+    writeSession.loadTuples(featureTupleList, 0, featureTupleList.size());
     FeatureTuple featureTuple = featureTupleList.get(0);
     assertNotNull(featureTuple);
     Tuple tuple = featureTuple.tuple;
     assertNotNull(tuple);
 
-    assertSame(Action.DELETED, tuple.meta.action());
+    assertSame(Action.DELETE, tuple.tupleNumber.getAction());
     assertEquals("feature_id_view1", featureTuple.getId());
-
-    // TODO: Ones we have the loadTuples available, do:
-    // writeSession.commit();
 
     //check if the newly added feature found on layer
     ReadFeatures readRequest = new ReadFeatures();

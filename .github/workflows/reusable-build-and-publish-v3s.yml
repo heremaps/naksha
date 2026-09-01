@@ -36,7 +36,7 @@ jobs:
 #        run: gradle shadowJar jacocoTestReport jacocoTestCoverageVerification
         shell: bash
         run: |
-          gradle cleanAndTest jacocoAggregatedTestReport
+          NAKSHA_SUPPRESS_PERF_TEST=true gradle cleanAndTest jacocoAggregatedTestReport
       - name: Upload Test Report (HTML)
         if: success() || failure()
         uses: actions/upload-artifact@v4

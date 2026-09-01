@@ -23,7 +23,7 @@ import static com.here.naksha.lib.core.HubInternalIdentifiers.CONFIGS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
-import static naksha.model.Action.CREATED;
+import static naksha.base.Action.CREATE;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.createFeatureRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
@@ -60,13 +60,13 @@ import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -199,7 +199,7 @@ public class NakshaHub implements INaksha {
   }
 
   private NakshaContext setupMapAndContext(String mapId) {
-    NakshaMap map = new NakshaMap().withId(mapId);
+    NakshaCatalog map = new NakshaCatalog().withId(mapId);
     Write createMap = new Write().upsertMap(map, false);
     NakshaContext initialContext = NakshaContext.currentContext().withAuthor(NakshaHubConfig.defaultAppName());
     psqlStorage.runInWriteSession(SessionOptions.from(initialContext), writer -> {
@@ -235,7 +235,7 @@ public class NakshaHub implements INaksha {
         NakshaFeatureList createdCollections = successResponse.getFeatures();
         for (NakshaFeature createdCollection : createdCollections) {
           if (Objects.equals(
-              CREATED.getValue(),
+              CREATE.getValue(),
               createdCollection.getProperties().getXyz().getAction())) {
             logger.info("Collection {} successfully created.", createdCollection.getId());
           }
@@ -387,7 +387,7 @@ public class NakshaHub implements INaksha {
 
   @Override
   public @NotNull ExtensionConfig getExtensionConfig() {
-    final ReadFeatures readRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS).withMapId(adminMapId);
+    final ReadFeatures readRequest = new ReadFeatures().withCollectionId(EVENT_HANDLERS).withCatalogId(adminMapId);
     final PQuery pQueryExists = new PQuery(new Property(EXTN_ID_PROP_PATH), AnyOp.EXISTS);
     final PQuery pQueryNotNull = new PQuery(new Property(EXTN_ID_PROP_PATH), AnyOp.IS_NOT_NULL);
     final IPropertyQuery propertyQuery = new PAnd(pQueryExists, pQueryNotNull);

@@ -1,23 +1,16 @@
+@file:OptIn(ExperimentalJsExport::class)
+
 package naksha.jbon
 
+import naksha.base.Int64
+import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 
-// TODO: Implement IDict
-// TODO: Create a JbDictBuilder, that implements IDictBuilder and change JbEncoder to use an IDictBuilder for the local dictionary!
-// TODO: We should improve the JbEncoder, so that it can better compress using global and local dictionaries.
-// TODO: We should be able to detect not only strings, but as well objects in dictionaries.
-// TODO: We need to add compression level to encoder, if high, we should try to insert whole objects into local dictionaries.
-// TODO: We need a training mode, so that we can create an dictionary build, then use the encoder to try to insert all objects
-//       into the global dictionary, count the number of times we find them, then eventually, reorder the global dictionary and
-//       compact it, so that we get the best compression.
-
-/**
- * A dictionary reader.
- * @constructor Create a new dictionary reader.
- */
-@Suppress("DuplicatedCode", "OPT_IN_USAGE")
 @JsExport
-class JbDictionary : JbStructDecoder<JbDictionary>(), IDict {
+class JbDictionary(override val bookType: BookType = BookType.LOCAL_BOOK,) : JbStructDecoder<JbDictionary>(), IBook {
+    override var databaseNumber: Int64? = null
+    override var featureNumber: Int64? = null
+
     /**
      * Cached ID of the dictionary, if any.
      */
@@ -123,11 +116,11 @@ class JbDictionary : JbStructDecoder<JbDictionary>(), IDict {
         return content[index]
     }
 
-    override fun stringAt(index: Int): String? {
+    override fun getStringAt(index: Int): String? {
         TODO("Not yet implemented")
     }
 
-    override fun find(hash: Int): List<DictEntry> {
+    override fun getAllWithHash(hash: Int): List<DictEntry> {
         TODO("Not yet implemented")
     }
 
@@ -136,7 +129,7 @@ class JbDictionary : JbStructDecoder<JbDictionary>(), IDict {
      * as a side effect invoke [loadAll].
      * @return The index of the given string or -1.
      */
-    override fun indexOf(string: String): Int {
+    override fun indexOfString(string: String): Int {
         loadAll()
         val content = this.content
         val length = content.size

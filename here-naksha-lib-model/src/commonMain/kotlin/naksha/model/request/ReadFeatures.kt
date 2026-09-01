@@ -2,14 +2,19 @@
 
 package naksha.model.request
 
+import naksha.base.Int64
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
 import naksha.model.GuidList
-import naksha.model.Version
+import naksha.base.Version
+import naksha.base.illegalArg
+import naksha.model.request.ops.Op
 import naksha.model.request.query.IPropertyQuery
 import naksha.model.request.query.ITagQuery
 import kotlin.js.JsExport
+import kotlin.js.JsName
+import kotlin.math.max
 
 /**
  * Read features from a collection of a map of a storage.
@@ -23,30 +28,26 @@ open class ReadFeatures : ReadRequest() {
 
     companion object ReadFeatures_C {
         private val STRING_OR_NULL = NullableProperty<ReadRequest, String>(String::class)
-        private val BOOLEAN_OR_FALSE =
-            NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
-        private val BOOLEAN_OR_TRUE =
-            NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> true }
-        private val INT_OR_1 = NotNullProperty<ReadRequest, Int>(Int::class) { _, _ -> 1 }
-        private val VERSION_OR_NULL = NullableProperty<ReadRequest, Version>(Version::class)
-        private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class)
+        private val STRING_LIST = NotNullProperty<ReadRequest, StringList>(StringList::class) { _, _ -> StringList() }
+        private val BOOLEAN_OR_FALSE = NotNullProperty<ReadRequest, Boolean>(Boolean::class) { _, _ -> false }
         private val ORDER_BY_OR_NULL = NullableProperty<ReadRequest, OrderBy>(OrderBy::class)
         private val GUID_LIST = NotNullProperty<ReadRequest, GuidList>(GuidList::class)
         private val QUERY = NotNullProperty<ReadRequest, RequestQuery>(RequestQuery::class)
+        private val OP_OR_NULL = NullableProperty<ReadRequest, Op>(Op::class)
     }
 
     /**
-     * The id of the map from which to read.
+     * The id of the catalog from which to read.
      *
      * @since 3.0
      */
-    var mapId by STRING_OR_NULL
+    var catalogId by STRING_OR_NULL
 
     /**
-     * @see [mapId]
+     * @see [catalogId]
      */
-    open fun withMapId(value: String?): ReadFeatures {
-        mapId = value
+    open fun withCatalogId(value: String?): ReadFeatures {
+        catalogId = value
         return this
     }
 
@@ -59,6 +60,7 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
+    @Deprecated("Remove, need always to be done on the client using post-filtering", replaceWith = ReplaceWith("op"))
     open fun withPropertyQuery(pQuery: IPropertyQuery?): ReadFeatures {
         this.query.properties = pQuery
         this.resultFilters.removeAll { it is PropertyFilter }
@@ -75,6 +77,7 @@ open class ReadFeatures : ReadRequest() {
      * This method comes handy if [IPropertyQuery] was mutated outside of this class scope,
      * in such cases we need to populate the filter once again so it will be in sync with the query
      */
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
     fun refreshPropertyFilter() {
         this.resultFilters.removeAll { it is PropertyFilter }
         if(query.properties != null) {
@@ -91,6 +94,7 @@ open class ReadFeatures : ReadRequest() {
      *
      * @since 3.0
      */
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
     open fun withTagQuery(tQuery: ITagQuery?): ReadFeatures {
         this.query.tags = tQuery
         return this
@@ -100,116 +104,179 @@ open class ReadFeatures : ReadRequest() {
      * Ids of collections to read.
      * @since 3.0
      */
-    var collectionIds by STRING_LIST
+    var collectionId: String? by STRING_OR_NULL
 
     /**
-     * Adds the given collection-id into [collectionIds], if it is not already in it.
-     * @param collectionId the collection-id to add.
+     * Sets the collection-id into [collectionId].
+     * @param collectionId the collection-id to set.
      * @return this.
      * @since 3.0
      */
-    open fun addCollectionId(collectionId: String?): ReadFeatures {
-        if (!collectionIds.contains(collectionId)) collectionIds.add(collectionId)
+    open fun withCollectionId(collectionId: String?): ReadFeatures {
+        this.collectionId = collectionId
         return this
     }
 
     /**
-     * Adds the given collection-ids into [collectionIds], if it is not already in it.
-     * @param collectionIds the collection-ids to add.
-     * @return this.
-     * @since 3.0
+     * Extend the request to include features that are in a deleted state _(defaults to `false`)_.
      */
-    open fun addCollectionIds(vararg collectionIds: String): ReadFeatures {
-        val ids = this.collectionIds
-        @Suppress("SENSELESS_COMPARISON")
-        if (collectionIds != null && collectionIds.isNotEmpty()) {
-            for (id in collectionIds) if (!ids.contains(id)) ids.add(id)
-        }
-        return this
-    }
-
-    /**
-     * Extend the request to search through lately deleted features _(defaults to `false`)_.
-     *
-     * Actually, unless explicitly disabled, deleted features are stored in a shadow table, this information is used in views, so that a feature being deleted in a higher level layer, can be removed from the view, rather than to show their deleted counterpart read from a lower level layer. In other words, `lib-view` will always enable this, and won't work correctly, unless the deleted features are available.
-     *
-     * ### Note
-     * This option is totally distinct form [queryHistory], and ignored ones [queryHistory] is `true`. The reason the two switches behave differently is, that entries in the _shadow_ table can be deleted, while the history is really immutable. This is important to rollback a delete (restore the original shadowed state), what is exactly what the [PURGE][WriteOp.PURGE] write operation is good for.
-     */
-    var queryDeleted by BOOLEAN_OR_FALSE
+    var queryDeleted: Boolean by BOOLEAN_OR_FALSE
 
     /**
      * Extend the request to search through historic states of features _(defaults to `false`)_.
      *
-     * Setting this to `true` will cause deleted states to be returned as well. When the history is queried without specifying any specific ordering, and [versions] is bigger than `1`, then the results shall be ordered automatically by the storage in reverse of their `version`, so the latest [Tuple][naksha.model.Tuple] should be the first one returned.
+     * Setting this to `true` adds past states from the **HISTORY** section to the result set. When [versions] is greater than `1`, results are ordered automatically by the storage in reverse version order, so the most recent state is returned first.
      */
-    var queryHistory by BOOLEAN_OR_FALSE
+    var queryHistory: Boolean by BOOLEAN_OR_FALSE
 
     /**
-     * Defines how many rows (versions) of each matching feature should be returned.
+     * Defines how many states (versions) of each matching feature should be returned _(defaults to `1`)_.
      *
-     * The defaults to 1, which means only the latest version, being closest to the given maximal [version] should be returned, if no [version] given, the latest version is meant.
+     * - A value of `1` _(the default)_ means only the single latest state closest to the given maximal [version] is returned.
+     * - If the underlying JSON map contains a values that is not a number or invalid, the default value `1` will be used.
      *
-     * This parameter is ignored for queries to a [Guid][naksha.model.Guid], because a [Guid][naksha.model.Guid] already identifies an exact version. The query requires that [queryHistory] is `true`.
-     *
-     * If set to anything not being `1` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
-     *
-     * If multiple versions are requested, the execution may become drastically slower, therefore this feature should be used with care!
+     * Requesting multiple versions can have a significant performance impact and should be used with care.
      * @since 3.0.0
      */
-    var versions by INT_OR_1
+    var versions: Int
+        get() {
+            val raw = getRaw("versions")
+            if (raw is Int64) return max(1, raw.toInt())
+            if (raw is Number) return max(1, raw.toInt())
+            return 1
+        }
+        set(value) {
+            if (value < 1) throw illegalArg("versions must not be a value less than 1")
+            set("versions", value)
+        }
 
     /**
-     * Limit the read to all rows with the given minimal version, `null` if no limit.
+     * Limit the read to all states at or after the given minimum version, `null` if no limit.
      *
-     * If set to anything not being `null` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
+     * If the underlying JSON map contains a values that is not a number or invalid, the default value `null` will be used.
      * @since 3.0.0
      */
-    var minVersion by VERSION_OR_NULL
+    var minVersion: Int64?
+        get() {
+            val raw = getRaw("minVersion")
+            if (raw is Int64) return if (raw < Version.MIN.number || raw > Version.HEAD.number) null else raw
+            if (raw is Number) {
+                val value = Int64(raw.toLong())
+                return if (value < Version.MIN.number || value > Version.HEAD.number) null else value
+            }
+            return null
+        }
+        set(value) {
+            if (value != null && (value < Version.MIN.number || value > Version.HEAD.number)) {
+                throw illegalArg("minVersion must be a value between ${Version.MIN} and ${Version.HEAD}, but was $value")
+            }
+            set("minVersion", value)
+        }
+
+    @JsName("withMinVersionInt64")
+    fun withMinVersion(minVersion: Int64?): ReadFeatures {
+        this.minVersion = minVersion
+        return this
+    }
+
+    @JsName("withMinVersion")
+    fun withMinVersion(minVersion: Version?): ReadFeatures {
+        this.minVersion = minVersion?.number
+        return this
+    }
+
+    @JsName("withMinVersionLong")
+    fun withMinVersion(minVersion: Long?): ReadFeatures {
+        this.minVersion = if (minVersion != null) Int64(minVersion) else null
+        return this
+    }
 
     /**
-     * Limit the read to all features with a specific maximum version, `null` if no limit _(latest/HEAD version)_.
+     * Limit the read to states at or before the given maximum version, `null` if no limit _([HEAD][Version.VersionCompanion.HEAD])_.
      *
-     * This effectively is a request for a specific version, if no [minVersion] is set, and [versions] is default or explicitly `1`.
+     * This effectively requests a specific historical snapshot, when no [minVersion] is set and [versions] is `1`, which is the default for both parameters.
      *
-     * If set to anything not being `null` _(the default)_ and [queryHistory] is `false`, the request will be rejected with [ILLEGAL_ARGUMENT][naksha.model.NakshaError.ILLEGAL_ARGUMENT].
+     * If the underlying JSON map contains a values that is not a number or invalid, the default value `null` will be used.
      * @since 3.0.0
      */
-    var version by VERSION_OR_NULL
+    var version: Int64?
+        get() {
+            val raw = getRaw("version")
+            if (raw is Int64) return raw
+            if (raw is Number) return Int64(raw.toLong())
+            return null
+        }
+        set(value) {
+            set("version", value)
+        }
+
+    @JsName("withVersionInt64")
+    fun withVersion(version: Int64?): ReadFeatures {
+        this.version = version
+        return this
+    }
+
+    @JsName("withVersion")
+    fun withVersion(version: Version?): ReadFeatures {
+        this.version = version?.number
+        return this
+    }
+
+    @JsName("withVersionLong")
+    fun withVersion(version: Long?): ReadFeatures {
+        this.version = if (version != null) Int64(version) else null
+        return this
+    }
+
 
     /**
      * Order the result-set like given; this is an expensive operation and should be avoided.
      *
      * If an order is required, but no specific one, then it is strongly recommended to stick with the [deterministic order][OrderBy.deterministic], which is produced by creating a blank empty [OrderBy] object or through the static helper method [OrderBy.deterministic]. Ordering by anything else can have a drastic performance impact.
      */
-    var orderBy by ORDER_BY_OR_NULL
+    var orderBy: OrderBy? by ORDER_BY_OR_NULL
 
     /**
      * Add all features that match the given IDs into the result-set.
      * @since 3.0.0
      */
-    //TODO CASL-1149 should support custom queries
-    var featureIds by STRING_LIST
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
+    var featureIds: StringList by STRING_LIST
 
     /**
-     * Add all features that match the given [GUIDs][naksha.model.Guid] into the result-set.
+     * Add all features that match the given [GUIDs][naksha.base.Guid] into the result-set.
      *
      * This can be used to load features in specific states.
      * @since 3.0.0
      */
-    var guids by GUID_LIST
+    // TODO: We should replace this with `tupleNumbers`, because that is what we will encode into `uuid` and that is what the clients need.
+    //       Is there any use-case for the GUID any longer?
+    @Deprecated("Replace with load by tuple-number, should not be part of the query!", replaceWith = ReplaceWith("op"))
+    var guids: GuidList by GUID_LIST
 
     /**
      * Add all features that match the given query into the result-set.
      * @since 3.0.0
      */
-    var query by QUERY
+    @Deprecated("Replaced with op", replaceWith = ReplaceWith("op"))
+    var query: RequestQuery by QUERY
 
     /**
-     * Tests whether this request is effectively a query for all features in _HEAD/latest_ state, so it has no actual conditions, does only request one version of each feature, and does not touch history or deletion table.
+     * The [operations][Op] to execute to query members.
      *
-     * The method ignores optionally provided [ordering][orderBy].
-     * @return _true_ if the query is effectively reading of all _HEAD/latest_ states of all features; _false_ otherwise.
+     * This replaces [query] and must not be used together with [query]. It actually allows to query for any member value. In doubt, [queryMembers] always wins.
+     * @since 3.0
+     */
+    var queryMembers: Op? by OP_OR_NULL
+
+    /**
+     * Tests whether this request is effectively a query for all features in their current **HEAD** state,
+     * i.e. it has no conditions, requests only one state per feature, and does not extend into deleted
+     * or historic states.
+     *
+     * The method ignores an optionally provided [ordering][orderBy].
+     * @return `true` if the query is effectively reading all current HEAD states of all features;
+     * `false` otherwise.
      */
     fun isReadAllFromHead(): Boolean = minVersion == null
             && !queryDeleted

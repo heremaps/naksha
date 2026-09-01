@@ -1,13 +1,12 @@
 package naksha.psql
 
-import naksha.model.Action
-import naksha.model.objects.NakshaCollection
+import naksha.base.Action
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
 import naksha.model.request.OrderBy
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.model.request.query.MetaColumn
 import naksha.model.request.query.SortOrder
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
@@ -29,7 +28,7 @@ class ReadOrderedTest : PgTestBase() {
         val featuresToCreate = randomFeatures(COUNT)
         val writeFeaturesReq = WriteRequest().apply {
             featuresToCreate.forEach { featureToCreate ->
-                add(Write().createFeature(collection.mapId, collection.id, featureToCreate))
+                add(Write().createFeature(collection.catalogId, collection.id, featureToCreate))
             }
         }
         val writeFeaturesResp = executeWrite(writeFeaturesReq)
@@ -37,7 +36,7 @@ class ReadOrderedTest : PgTestBase() {
         for (feature in writeFeaturesResp.features) {
             assertNotNull(feature)
             assertNull(allFeatures[feature.id])
-            assertEquals(Action.CREATED, feature.properties.xyz.action)
+            assertEquals(Action.CREATE, feature.properties.xyz.action)
             allFeatures[feature.id] = feature
             allFeaturesOrderedByIdAsc.add(feature)
             allFeaturesOrderedByIdDesc.add(feature)
@@ -49,8 +48,8 @@ class ReadOrderedTest : PgTestBase() {
     @Test
     fun searchOrderedById() {
         executeRead(ReadFeatures().apply {
-            mapId = TEST_MAP_ID
-            collectionIds += collection.id
+            catalogId = TEST_MAP_ID
+            collectionId = collection.id
             orderBy = OrderBy.id()
             limit = ORDER_BY_ID_LIMIT
         }).apply {
@@ -63,9 +62,9 @@ class ReadOrderedTest : PgTestBase() {
         }
 
         executeRead(ReadFeatures().apply {
-            mapId = TEST_MAP_ID
-            collectionIds += collection.id
-            orderBy = OrderBy(MetaColumn.id(), order = SortOrder.ASCENDING)
+            catalogId = TEST_MAP_ID
+            collectionId = collection.id
+            orderBy = OrderBy(StandardMembers.Id, order = SortOrder.ASCENDING)
             limit = ORDER_BY_ID_LIMIT
         }).apply {
             assertEquals(ORDER_BY_ID_LIMIT, features.size)

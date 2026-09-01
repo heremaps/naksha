@@ -1,9 +1,12 @@
 package naksha.psql
 
+import naksha.base.Action
+import naksha.base.TupleNumber
+import naksha.base.Version
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.model.request.Write
 import naksha.model.request.WriteOp
 
@@ -18,26 +21,20 @@ internal data class PgWrite(val original: Write, val i: Int) {
     /**
      * The map into which to write.
      *
-     * - If a map is modified, this is [Naksha.ADMIN_MAP][naksha.model.Naksha.ADMIN_MAP], [asPgMap] and [asNakshaMap] will be set.
-     * - If a collection is modified, this is the map in which [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL] is located, [asPgCollection] and [asNakshaCollection] will be set.
+     * - If a map is modified, this is [Naksha.ADMIN_MAP][naksha.model.Naksha.ADMIN_CATALOG_ID], [asPgCatalog] and [asNakshaMap] will be set.
+     * - If a collection is modified, this is the map in which [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL_ID] is located, [asPgCollection] and [asNakshaCollection] will be set.
      * @since 3.0
      */
-    lateinit var map: PgMap
+    lateinit var catalog: PgCatalog
 
     /**
      * The collection into which to write.
      *
-     * - If a map is modified, this is [Naksha.MAPS_COL][naksha.model.Naksha.MAPS_COL], [asPgMap] and [asNakshaMap] will be set.
-     * - If a collection is modified, this is [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL], [asPgCollection] and [asNakshaCollection] will be set.
+     * - If a map is modified, this is [Naksha.CATALOGS_COL][naksha.model.Naksha.CATALOGS_COL_ID], [asPgCatalog] and [asNakshaMap] will be set.
+     * - If a collection is modified, this is [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL_ID], [asPgCollection] and [asNakshaCollection] will be set.
      * @since 3.0
      */
     lateinit var collection: PgCollection
-
-    /**
-     * The `uid` (unique transaction local identifier) of the tombstone state, if this is a [DELETE][WriteOp.DELETE] or [PURGE][WriteOp.PURGE].
-     * @since 3.0
-     */
-    var final_uid: Int? = null
 
     /**
      * The write operation to perform, [WriteOp.CREATE], [WriteOp.UPDATE], [WriteOp.UPSERT], [WriteOp.DELETE], or [WriteOp.PURGE].
@@ -47,15 +44,21 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.op
 
     /**
-     * After the feature has been persisted, this shows the final [Action] that has been performed, initially the value is guessed.
+     * After the feature has been persisted, this shows the final [naksha.base.Action] that has been performed, initially the value is guessed.
      * @since 3.0
      */
     var action: Action = when (original.op) {
-        WriteOp.CREATE, WriteOp.UPSERT -> Action.CREATED
-        WriteOp.UPDATE -> Action.UPDATED
-        WriteOp.DELETE, WriteOp.PURGE -> Action.DELETED
-        else -> Action.UNDEFINED
+        WriteOp.CREATE, WriteOp.UPSERT -> Action.CREATE
+        WriteOp.UPDATE -> Action.UPDATE
+        WriteOp.DELETE, WriteOp.PURGE -> Action.DELETE
+        else -> Action.VERSION
     }
+
+    /**
+     * If the operation should be performed atomic.
+     * @since 3.0
+     */
+    var atomic: Boolean = original.atomic
 
     /**
      * The identifier of the feature to modify.
@@ -65,14 +68,35 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.id
 
     /**
-     * The partition-number in which the feature is located, this is a value between `0` and `65535`.
+     * The feature-number (`fn`) derived from [id].
+     *
+     * - Named features (`id` is a non-numeric string): `fn < 0` — lower 16 bits of the MD5 hash with the sign bit set.
+     * - Numeric features (`id` is a valid 63-bit unsigned decimal): `fn >= 0` — `Long.parseLong(id)`.
+     *
+     * This is the authoritative routing key for physical partition assignment.
+     * @since 3.0
+     */
+    val featureNumber: naksha.base.Int64 = when (original.collectionId) {
+        Naksha.COLLECTIONS_COL_ID -> naksha.base.Int64(Naksha.collectionNumber(id))
+        Naksha.CATALOGS_COL_ID -> naksha.base.Int64(Naksha.catalogNumber(id))
+        else -> Naksha.featureNumber(id)
+    }
+
+    /**
+     * The partition-number for this feature, derived from the lower 16 bits of [featureNumber].
+     *
+     * Always computed from [featureNumber] (i.e. from `fn`), never directly from the [id] string.
+     * Value is between `0` and `65535` (inclusive).
      * @since 3.0
      * @see [partition]
      */
-    val partitionNumber: Int = Naksha.partitionNumber(id)
+    val partitionNumber: Int = Naksha.partitionNumber(featureNumber)
 
     /**
      * The partition-index, being `-1` if the collection does not have any performance-partitions, otherwise a value between `0` and `collection.partitions` _(exclusive)_. Must not be called unless [collection] has been initialized _(as it is a `lateinit` variable)_.
+     *
+     * Routing is always by [featureNumber] (`fn`). Both named and numeric features are routed identically
+     * via the lower 16 bits of `fn`.
      * @since 3.0
      * @see [partitionNumber]
      */
@@ -80,19 +104,15 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = if (collection.partitions > 1) partitionNumber % collection.partitions else -1
 
     /**
-     * The attachment from the [Write] instruction, can be [Write.UNDEFINED]. If the attachment is [Write.UNDEFINED], an existing attachment should be retained.
-     * @since 3.0
-     */
-    val attachment: ByteArray?
-        get() = original.attachment
-
-    /**
      * If the operation is atomic, the version in which the _HEAD_ is expected to be; otherwise `null`.
      * @since 3.0
      */
     val version: Version?
         get() = if (original.atomic && op != WriteOp.CREATE && op != WriteOp.UPSERT)
-            original.version ?: original.tupleNumber?.version
+        // Expected prior HEAD version: explicit version/tuple-number, else the one captured at encode time.
+            original.version
+                ?: original.tupleNumber?.let { Version(it.version) }
+                ?: tuple?.previousTupleNumber?.let { Version(it.version) }
         else
             null
 
@@ -104,27 +124,27 @@ internal data class PgWrite(val original: Write, val i: Int) {
      */
     var tuple: Tuple? = null
 
-    val isMapModification: Boolean
+    val isCatalogModification: Boolean
         get() = original.isMapModification()
     val isCollectionModification: Boolean
         get() = original.isCollectionModification()
     val isTransactionModification: Boolean
-        get() = Naksha.ADMIN_MAP == map.id && Naksha.TRANSACTIONS_COL == collection.id
+        get() = Naksha.ADMIN_CATALOG_ID == catalog.id && Naksha.TRANSACTIONS_COL_ID == collection.id
     // This variant differs from write.isFeatureModification, because it includes dictionaries, which are just features for us!
     val isFeatureModification: Boolean
-        get() = !isTransactionModification && !isMapModification && !isCollectionModification
+        get() = !isTransactionModification && !isCatalogModification && !isCollectionModification
 
     /**
-     * If the feature is a map, the [PgMap] representation.
+     * If the feature is a map, the [PgCatalog] representation.
      * @since 3.0
      */
-    var asPgMap: PgMap? = null
+    var asPgCatalog: PgCatalog? = null
 
     /**
-     * If this modifies a map, the feature cast to [NakshaMap].
+     * If this modifies a map, the feature cast to [NakshaCatalog].
      * @since 3.0
      */
-    var asNakshaMap: NakshaMap? = null
+    var asNakshaMap: NakshaCatalog? = null
 
     /**
      * If the feature is a collection, the [PgCollection] representation.
@@ -148,9 +168,9 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = asNakshaMap ?: asNakshaCollection ?: original.feature
 
     /**
-     * If the operation was performed, this will be the [TupleNumber] of the new state.
+     * If the operation was performed, this will be the [naksha.base.TupleNumber] of the new state.
      *
-     * For [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE] this will be `null`, if the feature did not exist, and no atomic delete was request, otherwise it will be the [TupleNumber] of the tombstone state; deleting a feature does actually produce a new tombstone state.
+     * For [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE] this will be `null`, if the feature did not exist, and no atomic delete was request, otherwise it will be the [naksha.base.TupleNumber] of the tombstone state; deleting a feature does actually produce a new tombstone state.
      * @since 3.0
      */
     var tupleNumber: TupleNumber? = null

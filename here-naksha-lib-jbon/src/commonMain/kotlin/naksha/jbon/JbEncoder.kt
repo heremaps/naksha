@@ -13,7 +13,7 @@ import kotlin.math.floor
  */
 @Suppress("DuplicatedCode", "MemberVisibilityCanBePrivate", "OPT_IN_USAGE")
 @JsExport
-open class JbEncoder(var global: IDict? = null) : Binary() {
+open class JbEncoder(var global: IBook? = null) : Binary() {
 
     /**
      * Create a new resizable editor with a new byte-array of the given size backing it.
@@ -22,7 +22,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forSize")
-    constructor(size: Int, global: IDict? = null) : this(global) {
+    constructor(size: Int, global: IBook? = null) : this(global) {
         view = Platform.newDataView(ByteArray(size))
         this.readOnly = false
         this.resize = true
@@ -37,7 +37,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
      */
     @Suppress("LeakingThis")
     @JsName("forBinary")
-    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: IDict? = null) : this(global) {
+    constructor(binaryView: BinaryView, pos: Int = binaryView.pos, end: Int = binaryView.end, global: IBook? = null) : this(global) {
         this.view = binaryView.view
         this.pos = pos
         this.end = end
@@ -533,7 +533,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
                     val isGlobal: Boolean
                     var index = -1
                     if (global != null) {
-                        index = global.indexOf(subString)
+                        index = global.indexOfString(subString)
                         if (index < 0) {
                             // Let's try for URNs, which are for example "urn:here:mom:Topology:123456".
                             // In that case, "urn:here:mom:Topology:" is always the same.
@@ -547,7 +547,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
                                     sb.clear()
                                     JbDecoder.readSubstring(this, wordStart, reversePos, sb)
                                     val prefix = sb.toString()
-                                    index = global.indexOf(prefix)
+                                    index = global.indexOfString(prefix)
                                     if (index >= 0) {
                                         // Found the prefix in the global dict, now we encode the prefix as reference.
                                         pos = encodeStringRef(wordStart, index, true, ADD_COLON)
@@ -775,7 +775,7 @@ open class JbEncoder(var global: IDict? = null) : Binary() {
         val global = this.global
         var index: Int
         if (global != null) {
-            index = global.indexOf(key)
+            index = global.indexOfString(key)
             if (index >= 0) {
                 encodeRef(index, true)
                 return start

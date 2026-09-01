@@ -3,9 +3,20 @@ package naksha.model
 import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Proxy
-import naksha.jbon.JbEncoder
+import naksha.base.TupleNumber
+import naksha.base.Version
+import naksha.jbon.BookType
+import naksha.jbon.HeapBook
+import naksha.jbon.JbEncoder2
 import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
+import naksha.model.objects.XyzMembers
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthor
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzId
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzUpdatedAt
 import naksha.model.request.FeatureTuple
 import naksha.model.request.PropertyFilter
 import naksha.model.request.ReadFeatures
@@ -456,31 +467,29 @@ class PropertyFilterTest {
     companion object {
         private fun wrapInTuple(featureJson: String): FeatureTuple {
             val feature = Proxy.box(Platform.fromJSON(featureJson), NakshaFeature::class)!!
-            val encoder = JbEncoder()
-            val featureBytes = encoder.buildFeatureFromMap(feature)
+            val encoder = JbEncoder2()
+            val featureBytes = encoder.buildTupleFromMap(feature)
             val storageNumber = Int64(1)
             val mapNumber = 0
             val collectionNumber = 0
             val version = Version(0)
-            val flags = Flags()
             val tupleNumber = TupleNumber(
                 storageNumber,
                 mapNumber,
                 collectionNumber,
                 featureNumber(feature.id),
-                version,
-                0
+                version.number
             )
+            val members = HeapBook(BookType.MEMBER_BOOK)
+            members.put(XyzTn.name, tupleNumber)
+            members.put(XyzUpdatedAt.name, Int64(0))
+            members.put(XyzId.name, feature.id)
+            members.put(XyzAppId.name, "")
+            members.put(XyzAuthor.name, null)
+            members.put("data_encoding", DataEncoding.JBON.toString())
             val tuple = Tuple(
-                meta = Metadata(
-                    tupleNumber = tupleNumber,
-                    updatedAt = Int64(0),
-                    id = feature.id,
-                    appId = "",
-                    author = null,
-                    flags = flags,
-                ),
-                feature = featureBytes
+                membersBook = members,
+                featureBytes = featureBytes
             )
             return FeatureTuple(tupleNumber, tuple)
         }

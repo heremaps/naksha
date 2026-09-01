@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.NakshaError
+import naksha.base.NakshaError
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.ErrorResponse
 import naksha.model.request.Write
@@ -17,7 +17,7 @@ class PsqlErrorMappingTest : PgTestBase() {
     fun shouldReturnMissingCollectionError() {
         // Given
         val writeFeatureToMissingCollection = WriteRequest().add(
-            Write().createFeature(map.id, "missing_collection", randomFeature())
+            Write().createFeature(catalog.id, "missing_collection", randomFeature())
         )
 
         // When
@@ -34,7 +34,7 @@ class PsqlErrorMappingTest : PgTestBase() {
     fun shouldReturnConflictingCollectionError() {
         // Given
         val createAlreadyExistingCollection = WriteRequest().add(
-            Write().createCollection(NakshaCollection(collection.id, collection.mapId))
+            Write().createCollection(NakshaCollection(collection.id, collection.catalogId))
         )
 
         // When

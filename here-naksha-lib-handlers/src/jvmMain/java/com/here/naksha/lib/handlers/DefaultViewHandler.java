@@ -34,8 +34,9 @@ import com.here.naksha.lib.view.missing.IgnoreMissingResolver;
 import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.IStorage;
+import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -103,16 +104,14 @@ public class DefaultViewHandler extends AbstractEventHandler {
         logger.info("Using storage implementation [{}]", storageImpl.getClass().getName());
 
         if (storageImpl instanceof IView) {
-            IView view = (IView) storageImpl;
-            if (properties.getSpaceIds() == null || properties.getSpaceIds().isEmpty()) {
+          final IView view = (IView) storageImpl;
+          final var spaceIds = properties.getSpaceIds();
+          if (spaceIds == null || spaceIds.isEmpty()) {
                 logger.error("No spaces present in view's properties - unable to process this request");
                 return new ErrorResponse(NakshaError.NOT_FOUND, "No spaces defined in properties of handler: '" + eventHandler.getId() + "'");
             } else {
-
-                view.setViewLayerCollection(
-                        prepareViewLayerCollection(nakshaHub().getSpaceStorage(), properties.getSpaceIds()));
-                // TODO MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set
-                // method.
+                view.setViewLayerCollection(prepareViewLayerCollection(nakshaHub().getSpaceStorage(), spaceIds));
+                // TODO: MCPODS-7046 Replace the way how view is created. Should be immutable without need to use set method.
                 return processRequest(ctx, view, request);
             }
         } else {
@@ -123,18 +122,20 @@ public class DefaultViewHandler extends AbstractEventHandler {
 
     private Response processRequest(NakshaContext ctx, IView view, Request request) {
         if (request instanceof ReadFeatures) {
-            ReadFeatures rf = (ReadFeatures) request;
-            return forwardReadFeatures(ctx, view, rf);
+          final ReadFeatures rf = (ReadFeatures) request;
+          return forwardReadFeatures(ctx, view, rf);
         } else if (request instanceof WriteRequest) {
-            WriteRequest wr = (WriteRequest) request;
-            return forwardWriteFeatures(ctx, view, wr);
+          final WriteRequest wr = (WriteRequest) request;
+          return forwardWriteFeatures(ctx, view, wr);
         } else {
-            return notImplemented(request);
+          return notImplemented(request);
         }
     }
 
     private Response forwardWriteFeatures(NakshaContext ctx, IView view, WriteRequest wr) {
-        return view.useWriteSession(SessionOptions.from(ctx, null, true), writeSession -> writeSession.execute(wr));
+      try (final IWriteSession writeSession = view.newWriteSession(SessionOptions.from(ctx, null, true))) {
+        return writeSession.execute(wr);
+      }
     }
 
     private Response forwardReadFeatures(NakshaContext ctx, IView view, ReadFeatures rf) {
@@ -146,8 +147,9 @@ public class DefaultViewHandler extends AbstractEventHandler {
             final Set<ViewLayer> obligatoryLayers = getObligatoryLayers(view.getViewCollection());
             resolver = new ObligatoryLayersResolver(obligatoryLayers);
         }
-        return view.useReadSession(SessionOptions.from(ctx),
-                readSession -> ((ViewReadSession) readSession).executeReadFeatures(rf, new MergeByStoragePriority(), resolver));
+        try (final var session = (ViewReadSession) view.newReadSession(SessionOptions.from(ctx))) {
+          return session.executeReadFeatures(rf, new MergeByStoragePriority(), resolver);
+        }
     }
 
     private ViewLayerCollection prepareViewLayerCollection(IStorage nhStorage, List<String> spaceIds) {

@@ -5,10 +5,10 @@ package naksha.model.request
 import naksha.base.NotNullEnum
 import naksha.base.NullableProperty
 import naksha.base.AnyObject
-import naksha.model.request.query.MetaColumn
+import naksha.model.objects.Member
+import naksha.model.objects.StandardMembers
 import naksha.model.request.query.SortOrder
 import naksha.model.request.query.SortOrder.SortOrderCompanion.ANY
-import naksha.model.request.query.SortOrder.SortOrderCompanion.DESCENDING
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -18,27 +18,39 @@ import kotlin.jvm.JvmStatic
 /**
  * Describes a sort order in a [result-set][naksha.model.request.IResultSet].
  *
- * **Warning**: Using custom ordering may not be supported by the storage. The best is to only use the pre-defined sort orders:
- * - [deterministic]
- * - [version]
- * - [id]
- * - [author]
- *
- * @constructor Creating an ordering, where the details
+ * @constructor Create an ordering.
  */
 @JsExport
 class OrderBy() : AnyObject() {
 
     /**
-     * Create a new order.
-     * @param column the column by which to order by, if _null_, any column is okay, just a deterministic order is requested.
+     * Create an order.
+     *
+     * If [member] is `null`, [next] must be `null` as well.
+     * @param member the member by which to order by, if _null_, any member is accepted, only a deterministic order is requested.
      * @param order the sort order, if [ANY][SortOrder.ANY] is given, then the storage can pick whatever is faster.
-     * @param next if a second-level order is requested, for example order by `id` and then by `txn`, and finally by `uid`.
+     * @param next if a second-level order is requested; i.e. order by `id`, then by `version`.
+     */
+    @JsName("ofMember")
+    @JvmOverloads
+    constructor(member: Member?, order: SortOrder = ANY, next: OrderBy? = null) : this() {
+        this.member = member?.name
+        this.sortOrder = order
+        this.next = next
+    }
+
+    /**
+     * Create an order.
+     *
+     * If [member] is `null`, [next] must be `null` as well.
+     * @param memberName the name fo the member by which to order by, if _null_, any member is accepted, only a deterministic order is requested.
+     * @param order the sort order, if [ANY][SortOrder.ANY] is given, then the storage can pick whatever is faster.
+     * @param next if a second-level order is requested; i.e. order by `id`, then by `version`.
      */
     @JsName("of")
     @JvmOverloads
-    constructor(column: MetaColumn?, order: SortOrder = ANY, next: OrderBy? = null) : this() {
-        this.column = column
+    constructor(memberName: String?, order: SortOrder = ANY, next: OrderBy? = null) : this() {
+        this.member = memberName
         this.sortOrder = order
         this.next = next
     }
@@ -56,45 +68,48 @@ class OrderBy() : AnyObject() {
          */
         @JsStatic
         @JvmStatic
-        fun version(): OrderBy = OrderBy(MetaColumn.version())
+        fun version(): OrderBy = OrderBy(StandardMembers.FeatureVersion)
 
         /**
          * Supported ordering by `tuple-number` _(so by storage, map, collection, feature, version, uid).
          */
         @JsStatic
         @JvmStatic
-        fun tupleNumber(): OrderBy = OrderBy(column=MetaColumn.tupleNumber())
+        fun tupleNumber(): OrderBy = OrderBy(StandardMembers.Tn)
 
         /**
          * Supported ordering by `id` and `version`.
          */
         @JsStatic
         @JvmStatic
-        fun id(): OrderBy = OrderBy(MetaColumn.id(), next = version())
+        fun id(): OrderBy = OrderBy(StandardMembers.Id, next = version())
 
-        /**
-         * Supported ordering by `author`, `updatedAt`, `id`, and `version`.
-         */
-        @JsStatic
-        @JvmStatic
-        fun author(): OrderBy = OrderBy(MetaColumn.author(), next = OrderBy(MetaColumn.updatedAt(), DESCENDING, id()))
-
-        private val COLUMN_OR_NULL = NullableProperty<OrderBy, MetaColumn>(MetaColumn::class)
+        private val STRING_OR_NULL = NullableProperty<OrderBy, String>(String::class)
         private val SORT_ORDER = NotNullEnum<OrderBy, SortOrder>(SortOrder::class) { _, _ -> ANY }
         private val NEXT_OR_NULL = NullableProperty<OrderBy, OrderBy>(OrderBy::class)
     }
 
     /**
-     * The [MetaColumn] by which to order, if `null`, then deterministic ordering is requested.
+     * The name of the [Member] by which to order, if `null`, then deterministic ordering is requested.
      * @since 3.0
      */
-    var column by COLUMN_OR_NULL
+    var member: String? by STRING_OR_NULL
 
     /**
-     * @see [column]
+     * @see [member]
      */
-    fun withColumn(value: MetaColumn?): OrderBy {
-        column = value
+    @JsName("withMember")
+    fun withMember(member: Member?): OrderBy {
+        this.member = member?.name
+        return this
+    }
+
+    /**
+     * @see [member]
+     */
+    @JsName("withMemberName")
+    fun withMember(name: String?): OrderBy {
+        this.member = name
         return this
     }
 
@@ -113,7 +128,7 @@ class OrderBy() : AnyObject() {
     }
 
     /**
-     * Optionally next order, so after ordering by this [MetaColumn], order those that are equal by the given next one. If `null`, the order will switch to just be deterministic, when the [MetaColumn] values are equal so far _(internally storages are recommended to use the [TupleNumber][naksha.model.TupleNumber] to the final ordering)_.
+     * Optionally next order, so after ordering by this [Member], order those that are equal by the given next one. If `null`, the order will switch to just be deterministic, when the [Member] values are equal so far _(internally storages are recommended to use the [TupleNumber][naksha.base.TupleNumber] to the final ordering)_.
      * @since 3.0
      */
     var next by NEXT_OR_NULL
@@ -130,20 +145,16 @@ class OrderBy() : AnyObject() {
      * Tests if this represents deterministic ordering, which means that no specific column is selected (`null`), the order is [Any], and no other conditions are given ([next] = `null`).
      * @return `true` if this represents the deterministic order; `false` otherwise.
      */
-    fun isDeterministic(): Boolean = column == null && sortOrder == ANY && next == null
+    fun isDeterministic(): Boolean = member == null && sortOrder == ANY && next == null
 
     override fun equals(other: Any?): Boolean {
         if (other !is OrderBy) return false
-        return column == other.column
+        return member == other.member
             && sortOrder == other.sortOrder
             && next == other.next
     }
 
     override fun hashCode(): Int = super.hashCode()
 
-    override fun toString(): String {
-        val col = column ?: return ""
-        val next = this.next
-        return "${col.name} $sortOrder${if (next != null) ", $next" else ""}"
-    }
+    override fun toString(): String = "OrderBy(member=$member, sortOrder=$sortOrder, next=$next)"
 }

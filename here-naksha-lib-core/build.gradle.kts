@@ -4,16 +4,8 @@ plugins {
 
 description = gatherDescription()
 
-java {
-    setSourceCompatibility(11)
-    setTargetCompatibility(11)
-}
-
 kotlin {
     jvm {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
     }
     sourceSets {
         jvmMain {
@@ -21,22 +13,19 @@ kotlin {
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-jbon"))
                 api(project(":here-naksha-lib-model"))
-                api(libs.jetbrains.annotations)
 
                 // Can we get rid of this?
+                api(libs.bundles.spatial)
                 implementation(libs.google.guava)
                 implementation(libs.google.findbugs.jsr305)
                 implementation(libs.commons.lang3)
                 implementation(libs.google.flatbuffers)
-                implementation(libs.bundles.spatial)
                 implementation(libs.bundles.jackson)
-
-                // This is required for testFixtures
-                api(libs.junit.jupiter.api)
             }
         }
         jvmTest {
             dependencies {
+                implementation(kotlin("test-junit5"))
                 implementation(libs.bundles.testing)
                 runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }

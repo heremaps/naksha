@@ -33,10 +33,9 @@ import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
 import com.here.naksha.storage.http.connector.pop.IPropertyQueryToPropertiesQuery;
 import com.here.naksha.storage.http.connector.pop.ITagQueryToTagsQuery;
-import naksha.base.StringList;
 import naksha.geo.SpBoundingBox;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.request.RequestQuery;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.NotNull;
@@ -167,17 +166,12 @@ public class ConnectorInterfaceReadExecute {
         }
     }
 
-    private static String firstCollectionIdOrThrow(ReadFeaturesProxyWrapper request) {
-        StringList ids = request.getCollectionIds();
-        if (ids == null || ids.isEmpty()) {
-            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
-                    "collectionIds must contain at least one non-empty id");
-        }
-        String id0 = ids.get(0);
-        if (id0 == null || id0.isBlank()) {
-            throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
-                    "First collectionId must be non-empty");
-        }
-        return id0;
+ private static String firstCollectionIdOrThrow(ReadFeaturesProxyWrapper request) {
+    String id = request.getCollectionId();
+    if (id == null || id.isBlank()) {
+      throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT,
+              "collectionId must be non-empty");
     }
+    return id;
+  }
 }

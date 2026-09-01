@@ -25,11 +25,11 @@ open class ReturnColumns() : AnyObject() {
      * @param attachment if the attachment should be returned.
      */
     @JsName("of")
-    constructor(feature: Boolean, geometry: Boolean, refPoint: Boolean, meta: Boolean, tags: Boolean, attachment: Boolean) : this() {
+    constructor(feature: Boolean, geometry: Boolean, refPoint: Boolean, members: Boolean, tags: Boolean, attachment: Boolean) : this() {
         this.feature = feature
         this.geometry = geometry
         this.refPoint = refPoint
-        this.meta = meta
+        this.members = members
         this.tags = tags
         this.attachment = attachment
     }
@@ -41,11 +41,11 @@ open class ReturnColumns() : AnyObject() {
          */
         @JvmStatic
         @JsStatic
-        fun all(): ReturnColumns = ReturnColumns(feature = true, geometry = true, refPoint = true, meta = true, tags = true, attachment = true)
+        fun all(): ReturnColumns = ReturnColumns(feature = true, geometry = true, refPoint = true, members = true, tags = true, attachment = true)
 
         /**
-         * Create new return-options with all columns being disabled (only returns [naksha.model.TupleNumber]).
-         * @return new return-options with all columns being disabled (only returns [naksha.model.TupleNumber]).
+         * Create new return-options with all columns being disabled (only returns [naksha.base.TupleNumber]).
+         * @return new return-options with all columns being disabled (only returns [naksha.base.TupleNumber]).
          */
         @JvmStatic
         @JsStatic
@@ -84,18 +84,18 @@ open class ReturnColumns() : AnyObject() {
         return this
     }
 
-    /**
-     * If explicitly _true_, the feature [metadata][naksha.model.Metadata] will be returned in the response, this means the feature will not have an XYZ namespace (`feature.properties.@ns:com:here:xyz` attribute).
-     */
-    var meta by BOOLEAN
+  /**
+      * If explicitly _true_, the feature [members][Tuple.members] will be returned in the response, this means the feature will not have an XYZ namespace (`feature.properties.@ns:com:here:xyz` attribute).
+      */
+     var members by BOOLEAN
 
-    fun withMeta(enabled: Boolean): ReturnColumns {
-        this.meta = enabled
-        return this
-    }
+     fun withMembers(enabled: Boolean): ReturnColumns {
+         this.members = enabled
+         return this
+     }
 
     /**
-     * If explicitly _true_, the feature tags will be returned in the response, not as [ByteArray], nor in the XYZ namespace (`feature.properties.@ns:com:here:xyz.tags` attribute).
+     * If explicitly _true_, the feature tags will be returned in the response as raw `jsonb` text, not in the XYZ namespace (`feature.properties.@ns:com:here:xyz.tags` attribute).
      */
     var tags by BOOLEAN
 

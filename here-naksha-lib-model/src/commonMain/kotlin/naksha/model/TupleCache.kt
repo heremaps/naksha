@@ -6,6 +6,7 @@ import naksha.base.AtomicBool
 import naksha.base.AtomicInt64
 import naksha.base.AtomicRef
 import naksha.base.Int64
+import naksha.base.TupleNumber
 import naksha.base.fn.Fn1
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
@@ -110,7 +111,7 @@ class TupleCache internal constructor() {
     /**
      * Read a single tuple from cache with zero latency.
      *
-     * @param tupleNumber the [TupleNumber] of the [Tuple] to read.
+     * @param tupleNumber the [naksha.base.TupleNumber] of the [Tuple] to read.
      * @return the [Tuple], if it is in the cache, `null` otherwise.
      * @since 3.0
      * @see [getAll]
@@ -198,7 +199,7 @@ class TupleCache internal constructor() {
                     it != null && it.tuple == null && it.feature == null
                 else
                     it != null && it.tuple == null
-            }.filterNotNull().groupBy { it.tupleNumber.storageNumber }
+            }.filterNotNull().groupBy { it.tupleNumber.databaseNumber }
             for (entry in byStorage) {
                 val storageNumber = entry.key
                 val toLoad = entry.value
@@ -218,7 +219,7 @@ class TupleCache internal constructor() {
      * @since 3.0
      */
     fun store(tuple: Tuple) {
-        forEachCache { if (it.latencyInMicros eq 0 && tuple.complete) it.put(tuple) }
+        forEachCache { if (it.latencyInMicros eq 0) it.put(tuple) }
     }
 
     /**
@@ -232,7 +233,7 @@ class TupleCache internal constructor() {
         forEachCache {
             if (it.latencyInMicros eq 0) {
                 for (tuple in tuples) {
-                    if (tuple.complete) it.put(tuple)
+                    it.put(tuple)
                 }
             }
         }
@@ -252,7 +253,7 @@ class TupleCache internal constructor() {
         forEachCache {
             if (it.latencyInMicros eq 0) {
                 for (tuple in tuples) {
-                    if (tuple != null && tuple.complete) {
+                    if (tuple != null) {
                         it.put(tuple)
                     }
                 }
@@ -272,7 +273,7 @@ class TupleCache internal constructor() {
             if (it.latencyInMicros eq 0) {
                 for (f in featureTuples) {
                     val tuple = f?.tuple ?: continue
-                    if (tuple.complete) it.put(tuple)
+                    it.put(tuple)
                 }
             }
         }
@@ -317,7 +318,7 @@ class TupleCache internal constructor() {
      */
     @JsName("getDictReaderForTuple")
     fun getDictReader(tuple: Tuple): IDictReader?
-        = getDictReader(tuple.tupleNumber.storageNumber)
+        = getDictReader(tuple.tupleNumber.databaseNumber)
 
     /**
      * A method to query for a dictionary reader.
@@ -327,7 +328,7 @@ class TupleCache internal constructor() {
     @JsName("getDictReaderForFeatureTuple")
     fun getDictReader(featureTuple: FeatureTuple): IDictReader? {
         val tuple = featureTuple.tuple ?: return null
-        return getDictReader(tuple.tupleNumber.storageNumber)
+        return getDictReader(tuple.tupleNumber.databaseNumber)
     }
 
     /**

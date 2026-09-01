@@ -28,7 +28,8 @@ import com.here.naksha.lib.handlers.DefaultViewHandlerProperties;
 import com.here.naksha.lib.handlers.TagFilterHandler;
 import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
@@ -59,6 +60,7 @@ import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_V
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
+import static naksha.base.Platform.javaProxy;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
 public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<EventHandlerConfig> {
@@ -124,10 +126,11 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       return storageValidation;
     }
 
-    DefaultViewHandlerProperties viewHandlerProperties =
-        JvmBoxingUtil.box(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
-
-    List<String> spaceIds = viewHandlerProperties.getSpaceIds();
+    final DefaultViewHandlerProperties viewHandlerProperties = javaProxy(eventHandler.getProperties(), DefaultViewHandlerProperties.class);
+    if (viewHandlerProperties == null) {
+      return new ErrorResponse(NakshaError.ILLEGAL_STATE, "The handler has no properties");
+    }
+    final List<String> spaceIds = viewHandlerProperties.getSpaceIds();
     if (spaceIds == null || spaceIds.isEmpty()) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,
@@ -215,7 +218,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
 
   private @NotNull Response storageValidation(
       @NotNull EventHandlerConfig eventHandler, @NotNull String storagePropertyName) {
-    Object storageIdProp = eventHandler.getProperties().get(storagePropertyName);
+    Object storageIdProp = eventHandler.getProperties().getPath(storagePropertyName);
     if (storageIdProp == null) {
       return new ErrorResponse(
           NakshaError.ILLEGAL_ARGUMENT,
@@ -261,8 +264,8 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     // Scan through all spaces with JSON property "eventHandlerIds" containing the targeted handler ID
     final Property pRef = new Property(EVENT_HANDLER_IDS);
     final PQuery activeSpacesPOp = new PQuery(pRef, AnyOp.CONTAINS, handlerId);
-    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(SPACES)
-            .withMapId(nakshaHub.getAdminMapId())
+    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().withCollectionId(SPACES)
+            .withCatalogId(nakshaHub.getAdminMapId())
             .withPropertyQuery(activeSpacesPOp);
 
     return nakshaHub().getAdminStorage().useReadSession(new SessionOptions(), readSession -> {

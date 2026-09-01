@@ -98,7 +98,7 @@ public final class IPropertyQueryToPropertiesQuery {
         AnyOp anyOp = leaf.getOp();
         Object value = leaf.getValue();
 
-        String key = String.join(".", leaf.getProperty().getPath().asList());
+        String key = leaf.getProperty().getPath().stream().map(Object::toString).collect(java.util.stream.Collectors.joining("."));
         String op = normalizeOp(anyOp);
 
         switch (op) {

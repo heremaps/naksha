@@ -4,17 +4,8 @@ plugins {
 
 description = gatherDescription()
 
-java {
-    setSourceCompatibility(11)
-    setTargetCompatibility(11)
-}
-
 kotlin {
-    jvm {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
+    jvm { }
     sourceSets {
         jvmMain {
             dependencies {

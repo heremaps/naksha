@@ -4,6 +4,7 @@ package naksha.model
 
 import naksha.base.AtomicMap
 import naksha.base.Int64
+import naksha.base.TupleNumber
 import naksha.base.WeakRef
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
@@ -24,7 +25,7 @@ actual class TupleHeapCache : ITupleCache {
     private var tuplesByStorage = AtomicMap<Int64, AtomicMap<TupleNumber, WeakRef<Tuple>>>()
 
     actual override fun get(tupleNumber: TupleNumber): Tuple?
-        = tuplesByStorage[tupleNumber.storageNumber]?.get(tupleNumber)?.deref()
+        = tuplesByStorage[tupleNumber.databaseNumber]?.get(tupleNumber)?.deref()
 
     actual override fun load(featureTuples: List<FeatureTuple?>, from: Int, to: Int, acceptFeature: Boolean): Int {
         var loaded = 0
@@ -46,17 +47,15 @@ actual class TupleHeapCache : ITupleCache {
     }
 
     actual override fun put(tuple: Tuple) {
-        if (tuple.isComplete()) {
-            val tupleNumber = tuple.tupleNumber
-            val storageNumber = tupleNumber.storageNumber
-            var storageTuples = tuplesByStorage[storageNumber]
-            if (storageTuples == null) {
-                storageTuples = AtomicMap()
-                val existing = tuplesByStorage.putIfAbsent(storageNumber, storageTuples)
-                if (existing != null) storageTuples = existing
-            }
-            storageTuples[tupleNumber] = tuple.weakRef
+        val tupleNumber = tuple.tupleNumber
+        val storageNumber = tupleNumber.databaseNumber
+        var storageTuples = tuplesByStorage[storageNumber]
+        if (storageTuples == null) {
+            storageTuples = AtomicMap()
+            val existing = tuplesByStorage.putIfAbsent(storageNumber, storageTuples)
+            if (existing != null) storageTuples = existing
         }
+        storageTuples[tupleNumber] = tuple.weakRef
     }
 
     actual override fun store(tuples: List<Tuple>) {

@@ -54,7 +54,7 @@ public class IndexProperty extends NakshaFeature {
    * Optionally decide if {@code null} values should be ordered first or last. If not explicitly defined, automatically decided.
    */
   public Nulls getNulls() {
-    return JvmBoxingUtil.box(get(NULLS), Nulls.class);
+    return JvmBoxingUtil.box(getPath(NULLS), Nulls.class);
   }
 
   public void setNulls(Nulls nulls) {

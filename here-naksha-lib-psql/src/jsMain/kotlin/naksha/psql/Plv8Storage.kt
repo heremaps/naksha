@@ -4,7 +4,7 @@ package naksha.psql
 
 import naksha.base.fn.Fx2
 import naksha.jbon.JbDictionary
-import naksha.model.Flags
+import naksha.model.DataEncoding
 import naksha.model.SessionOptions
 import kotlin.reflect.KClass
 
@@ -33,10 +33,6 @@ class Plv8Storage : PgStorage() {
     }
 
     override fun shutdownStorage(dropCache: Boolean) {
-        TODO("Not yet implemented")
-    }
-
-    override fun getEncodingFlags(feature: Any?, context: Any?): Flags {
         TODO("Not yet implemented")
     }
 

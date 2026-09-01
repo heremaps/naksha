@@ -32,7 +32,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;

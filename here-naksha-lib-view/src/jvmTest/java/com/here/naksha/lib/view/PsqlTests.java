@@ -18,14 +18,13 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.common.test.CommonTestConstants;
 import naksha.base.Platform;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
@@ -67,7 +66,7 @@ abstract class PsqlTests {
   public static final String TEST_APP_ID = "test_app";
   public static final String TEST_AUTHOR = "test_author";
   static IStorage storage;
-  static NakshaMap map;
+  static NakshaCatalog map;
   static @Nullable NakshaContext nakshaContext;
 
   protected static @NotNull SuccessResponse assertSuccess(@NotNull Response response) {
@@ -98,7 +97,7 @@ abstract class PsqlTests {
       NakshaStorage.fromJSON(
         String.format(
           "{\"id\":\"%s\",\"className\":\"naksha.psql.PsqlTestStorage\"}",
-          CommonTestConstants.getTestStorageId())
+          Platform.getTestStorageId())
         )
     );
     assertNotNull(storage);
@@ -107,10 +106,10 @@ abstract class PsqlTests {
     executeWrite(new WriteRequest().add(new Write().deleteMapById(TEST_MAP_ID)));
 
     // Create the map.
-    SuccessResponse response = executeWrite(new WriteRequest().add(new Write().createMap(new NakshaMap(TEST_MAP_ID))));
+    SuccessResponse response = executeWrite(new WriteRequest().add(new Write().createMap(new NakshaCatalog(TEST_MAP_ID))));
     assertEquals(1, response.getFeatures().size());
     NakshaFeature raw = response.getFeatures().get(0);
     assertNotNull(raw);
-    map = javaProxy(raw, NakshaMap.class);
+    map = javaProxy(raw, NakshaCatalog.class);
   }
 }

@@ -25,12 +25,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.here.naksha.lib.core.util.json.Json;
-import com.here.naksha.lib.core.util.json.JsonSerializable;
+
 import java.io.IOException;
 
 import naksha.base.*;
-import naksha.model.NakshaError;
 import naksha.model.objects.NakshaFeature;
 import org.junit.jupiter.api.Test;
 
@@ -45,8 +43,8 @@ public class JsonMappingTest {
     final NakshaFeature obj = jvmMap.proxy(Platform.klassFor(NakshaFeature.class));
     assertNotNull(obj);
 
-    assertEquals(5, (int) obj.getProperties().get("x"));
-    assertEquals("123", obj.get("otherProperty"));
+    assertEquals(5, (int) obj.getProperties().getPath("x"));
+    assertEquals("123", obj.getPath("otherProperty"));
   }
 
   @Test

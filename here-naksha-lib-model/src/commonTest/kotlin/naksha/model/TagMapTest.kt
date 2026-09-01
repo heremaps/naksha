@@ -1,5 +1,6 @@
 package naksha.model
 
+import naksha.base.NakshaException
 import kotlin.test.*
 
 class TagMapTest {

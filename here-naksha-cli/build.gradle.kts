@@ -21,39 +21,33 @@ configurations.all {
     exclude(group = "org.slf4j", module = "slf4j-simple")
 }
 
-java {
-    setSourceCompatibility(23)
-    setTargetCompatibility(23)
-}
-
 kotlin {
-
     jvm {
+        @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
         mainRun {
             mainClass.set(mainCliClass)
-        }
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_23)
         }
     }
 
     sourceSets {
         jvmMain {
             dependencies {
+                api(project(":here-naksha-lib-base"))
+                api(project(":here-naksha-lib-model"))
+                api(project(":here-naksha-lib-psql"))
+                api(project(":here-naksha-lib-core"))
+
                 implementation(libs.picocli)
                 implementation(libs.bundles.logging)
-                implementation(project(":here-naksha-lib-base"))
-                implementation(project(":here-naksha-lib-model"))
-                implementation(project(":here-naksha-lib-psql"))
-                implementation(project(":here-naksha-lib-core"))
             }
         }
         jvmTest {
             dependencies {
-                implementation(project(":here-naksha-common-test"))
+                implementation(kotlin("test-junit5"))
                 implementation(libs.bundles.testing)
-                implementation(libs.test.containers)
                 runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
+
+                implementation(libs.test.containers)
             }
         }
     }

@@ -339,8 +339,8 @@ class DifferenceCalculatorTest {
     @Test
     fun shouldCalculateDiffForSimpleArrays() {
         // Given:
-        val shorter = arrayOf(0, 1, 2)
-        val longer = arrayOf(0, "one", 2, "three")
+        val shorter = arrayOf<Any>(0, 1, 2)
+        val longer = arrayOf<Any>(0, "one", 2, "three")
 
         // When: diffing from shorter with longer
         val shorterToLongerDiff = calculateDifference(shorter, longer)

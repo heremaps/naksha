@@ -63,7 +63,7 @@ public class Index extends NakshaFeature {
 
   /** All properties that should be included in this index. */
   public List<IndexProperty> getIndexProperties() {
-    return JvmBoxingUtil.box(getProperties().get(NESTED_INDEX_PROPS), IndexProperties.class);
+    return JvmBoxingUtil.box(getProperties().getPath(NESTED_INDEX_PROPS), IndexProperties.class);
   }
 
   public void setProperties(List<IndexProperty> properties) {

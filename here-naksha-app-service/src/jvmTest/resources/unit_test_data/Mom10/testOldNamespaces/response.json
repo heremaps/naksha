@@ -29,7 +29,6 @@
         },
         "@ns:com:here:xyz": {
           "action": "UPDATE",
-          "operation": "UPDATED",
           "appId": "naksha",
           "author": "master-test-user",
           "changeCount": 2

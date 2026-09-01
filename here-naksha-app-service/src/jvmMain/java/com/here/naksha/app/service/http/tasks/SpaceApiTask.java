@@ -34,8 +34,8 @@ import naksha.base.JvmBoxingUtil;
 import naksha.base.Platform;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
@@ -132,16 +132,16 @@ public class SpaceApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   private @NotNull XyzResponse executeGetSpaces() {
-    final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
-    request.setMapId(naksha().getAdminMapId());
+    final ReadFeatures request = new ReadFeatures().withCollectionId(SPACES);
+    request.setCatalogId(naksha().getAdminMapId());
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzCollectionResponse(response, Space.class, 0, DEF_ADMIN_FEATURE_LIMIT, null, null);
   }
 
   private @NotNull XyzResponse executeGetSpaceById() {
     final String spaceId = extractMandatoryPathParam(routingContext, SPACE_ID);
-    final ReadFeatures request = new ReadFeatures().addCollectionId(SPACES);
-    request.setMapId(naksha().getAdminMapId());
+    final ReadFeatures request = new ReadFeatures().withCollectionId(SPACES);
+    request.setCatalogId(naksha().getAdminMapId());
     request.setFeatureIds(StringList.of(spaceId));
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzFeatureResponse(response, Space.class, NOT_FOUND_ON_NO_ELEMENTS);

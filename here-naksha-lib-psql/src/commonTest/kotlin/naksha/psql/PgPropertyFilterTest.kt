@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.NakshaError
+import naksha.base.NakshaError
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.request.ErrorResponse
 import naksha.model.request.FeatureTuple
@@ -33,8 +33,8 @@ class PgPropertyFilterTest: PgTestBase() {
 
         // And: A read request is created with the property query.
         val readRequest = ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
         }.withPropertyQuery(pQuery)
         // When: read request is executed
         val response = executeRead(readRequest)
@@ -65,8 +65,8 @@ class PgPropertyFilterTest: PgTestBase() {
 
         // And: A read request is made with the custom filter manually added.
         val readRequest = ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             resultFilters.add(IdContainsFilter("keep_this"))
         }
         // When: read request is executed
@@ -123,8 +123,8 @@ class PgPropertyFilterTest: PgTestBase() {
     fun shouldNotTriggerFilteringForRequestWithErrorResponse() {
         // Given: A read request that is designed to fail by targeting a non-existent collection.
         val readRequest = ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += "non_existent_collection"
+            catalogId = collection.catalogId
+            collectionId = "non_existent_collection"
         }
 
         // When: The failing request is executed.
@@ -145,8 +145,8 @@ class PgPropertyFilterTest: PgTestBase() {
 
         // When: A read request is made to fetch that specific feature by ID, with no result filters.
         val readRequest = ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             featureIds += feature.id
         }
         val response = storage.newReadSession(newSessionOptions()).use { session ->

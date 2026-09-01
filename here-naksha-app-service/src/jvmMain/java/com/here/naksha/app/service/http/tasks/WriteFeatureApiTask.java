@@ -52,8 +52,8 @@ import naksha.diff.DifferenceCalculator;
 import naksha.diff.DifferenceFilter;
 import naksha.diff.Patcher;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaFeatureList;
@@ -303,12 +303,13 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     if (existingFeaturesResp instanceof SuccessResponse successResponse) {
       existingFeaturesById = ResultHelper.extractAndGroupAllFeaturesById(successResponse, NakshaFeature.class);
     } else if (existingFeaturesResp instanceof ErrorResponse errorResponse) {
-      logger.error("Error encountered while reading features from storage. Feature ids: {}, error: {}", requestFeaturesIds,
-          errorResponse.getError());
+      logger.error("Error encountered while reading features from storage. Feature ids: {}, error: {}", requestFeaturesIds, errorResponse.getError());
       return verticle.sendErrorResponse(routingContext, errorResponse.getError());
     } else {
-      logger.error("Unexpected response while reading features from storage. Feature ids: {}, unknown response: {}", requestFeaturesIds,
-          existingFeaturesResp);
+      logger.error("Unexpected response while reading features from storage. Feature ids: {}, unknown response: {}",
+          requestFeaturesIds,
+          existingFeaturesResp
+      );
       return verticle.sendErrorResponse(routingContext,
           new NakshaError(NakshaError.EXCEPTION, "Unexpected response while reading features from storage: " + existingFeaturesResp));
     }
@@ -327,13 +328,14 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     // Prepare WriteRequest - separating insert from updates and keeping the order of the features from the request
     WriteRequest insertsAndUpdates = new WriteRequest();
     for (NakshaFeature featureFromRequest : featuresFromRequest) {
-      NakshaFeature correspondingExistingFeature = existingFeaturesById.get(featureFromRequest.getId());
+      NakshaFeature correspondingExistingFeature = (NakshaFeature) existingFeaturesById.getPath(featureFromRequest.getId());
       if (correspondingExistingFeature == null) {
         // Feature not yet persisted - just insert
         preProcessor.preProcess(featureFromRequest);
         insertsAndUpdates.add(new Write().createFeature(null, spaceId, featureFromRequest));
       } else {
         // Feature exists - prepare patch for update (atomic == true, we want version validation)
+        // that means, if no UUID in feature JSON in request, currently always accept the request, regardless of concurrency issue
         NakshaFeature patchedFeature = patchedFeature(featureFromRequest, correspondingExistingFeature);
         preProcessor.preProcess(featureFromRequest);
         insertsAndUpdates.add(new Write().updateFeature(null, spaceId, patchedFeature, true));

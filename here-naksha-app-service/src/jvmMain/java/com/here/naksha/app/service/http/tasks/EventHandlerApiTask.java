@@ -33,8 +33,8 @@ import io.vertx.ext.web.RoutingContext;
 import naksha.base.JvmJsonUtil;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.WriteRequest;
@@ -106,8 +106,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
 
   private @NotNull XyzResponse executeGetHandlers() {
     // Create ReadFeatures Request to read all handlers from Admin DB
-    final ReadFeatures request = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
-    request.setMapId(naksha().getAdminMapId());
+    final ReadFeatures request = new ReadFeatures().withCollectionId(EVENT_HANDLERS);
+    request.setCatalogId(naksha().getAdminMapId());
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);
     // transform Response to Http FeatureCollection response
@@ -117,8 +117,8 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   private @NotNull XyzResponse executeGetHandlerById() {
     // Create ReadFeatures Request to read the handler with the specific ID from Admin DB
     final String handlerId = routingContext.pathParam(HANDLER_ID);
-    final ReadFeatures request = new ReadFeatures().addCollectionId(EVENT_HANDLERS);
-    request.setMapId(naksha().getAdminMapId());
+    final ReadFeatures request = new ReadFeatures().withCollectionId(EVENT_HANDLERS);
+    request.setCatalogId(naksha().getAdminMapId());
     request.setFeatureIds(StringList.of(handlerId));
     // Submit request to NH Space Storage
     Response response = executeReadRequestFromSpaceStorage(request);

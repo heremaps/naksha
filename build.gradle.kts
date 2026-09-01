@@ -1,4 +1,9 @@
-import com.vanniktech.maven.publish.SonatypeHost
+import org.gradle.api.plugins.JavaPlugin
+import org.gradle.jvm.toolchain.JavaLanguageVersion
+import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
+import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import java.net.URI
 
@@ -6,7 +11,7 @@ plugins {
     // Shared plugins
     alias(libs.plugins.kotlin.multiplatform) apply false
     alias(libs.plugins.kotlin.js.plain.objects) apply false
-    alias(libs.plugins.foojay) apply false
+    // foojay resolver applied in settings.gradle.kts
     alias(libs.plugins.vanniktechMavenPublish)
 
     // Only need within root
@@ -74,11 +79,31 @@ enum class PublishModule {
     CONFIG_ONLY
 }
 
+// Modules that compile to JavaScript. The JS target configuration is centralized here.
+@Suppress("ArrayInDataClass")
+data class JsModuleConfig(
+    val _moduleName: String,
+    val _enableTests: Boolean = false,
+    val _dependencies: Array<String> = emptyArray()
+)
+val jsModules = mapOf(
+    Pair("here-naksha-lib-base", JsModuleConfig("naksha_base")),
+    Pair("here-naksha-lib-auth", JsModuleConfig("naksha_auth")),
+    Pair("here-naksha-lib-geo", JsModuleConfig("naksha_geo")),
+    Pair("here-naksha-lib-jbon", JsModuleConfig("naksha_jbon")),
+    Pair("here-naksha-lib-model", JsModuleConfig("naksha_model")),
+    Pair("here-naksha-lib-psql", JsModuleConfig("naksha_psql", _dependencies = arrayOf(
+        ":here-naksha-lib-base:jsNodeProductionLibraryDistribution",
+        ":here-naksha-lib-geo:jsNodeProductionLibraryDistribution",
+        ":here-naksha-lib-jbon:jsNodeProductionLibraryDistribution",
+        ":here-naksha-lib-model:jsNodeProductionLibraryDistribution"))),
+    Pair("here-naksha-lib-diff", JsModuleConfig("naksha_diff", _enableTests = true)),
+)
+
 val allModules = mapOf(
     Pair("naksha", Pair(CleanAndTest.OFF, PublishModule.CONFIG_ONLY)),
     Pair("here-naksha-app-service", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-common-http", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
-    Pair("here-naksha-common-test", Pair(CleanAndTest.OFF, PublishModule.YES)),
     Pair("here-naksha-handler-activitylog", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-auth", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-base", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
@@ -98,7 +123,7 @@ val allModules = mapOf(
 )
 
 fun Project.configureVanniktechMavenPublish() {
-    println("\tConfigure publishing")
+    println("[$name] --> Configure publishing")
 //    val keyId = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKeyId")
 //    val key = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKey")
 //    val keyPwd = System.getenv("ORG_GRADLE_PROJECT_signingInMemoryKeyPassword")
@@ -108,7 +133,7 @@ fun Project.configureVanniktechMavenPublish() {
     val projectRepoURI = "github.com/heremaps/naksha"
     val here = getMvnInfo("here")
     if (here != null) {
-        println("\tAdd 'HereMaven' repository, ${here.user}:***@${here.url}")
+        println("[$name] --> Add 'HereMaven' repository, ${here.user}:***@${here.url}")
         publishing {
             repositories {
                 maven {
@@ -124,12 +149,12 @@ fun Project.configureVanniktechMavenPublish() {
     val portal = getMavenCentralInfo()
     mavenPublishing {
         if (sign != null && portal != null) {
-            println("\tAdd 'MavenCentral' repository, ${portal.user}:***@${portal.url}")
-            println("\tConfigure mavenPublishing for 'local' and '${SonatypeHost.CENTRAL_PORTAL}'")
-            publishToMavenCentral(SonatypeHost.CENTRAL_PORTAL, true)
+            println("[$name] --> Add 'MavenCentral' repository, ${portal.user}:***@${portal.url}")
+            println("[$name] --> Configure mavenPublishing for 'local' and 'CENTRAL_PORTAL'")
+            publishToMavenCentral()
             signAllPublications()
         } else {
-            println("\tConfigure mavenPublishing for 'local'")
+            println("[$name] --> Configure mavenPublishing for 'local'")
         }
         coordinates(group.toString(), name, version.toString())
         pom {
@@ -194,9 +219,146 @@ allprojects {
         mavenLocal()
     }
 
-    println("Configure $name ---------> $group:$name:$version")
-    val info = allModules[name]
+    println("[$name] --> $group:$name:$version")
+    val _name = name
+    if (project !== rootProject) {
+        println("[$_name] --> Apply KMP plugin")
+        apply(plugin = "org.jetbrains.kotlin.multiplatform")
+
+        tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+            val jvmTargetName = getJvmTargetName(this@allprojects)
+            println("[$_name] --> Configure Kotlin to $jvmTargetName")
+            val target = JvmTarget.entries.find { it.name == jvmTargetName } ?: throw IllegalStateException(
+                "Invalid JVM target version '${getJvmTargetVersion(this@allprojects)}' defined in gradle.properties " +
+                        "(property 'jvm.target'). The Kotlin compiler does not provide a constant for '$jvmTargetName'. " +
+                        "Please choose a supported version (e.g., 21, 17, 11)."
+            )
+            compilerOptions.jvmTarget.set(target)
+        }
+        val jvmTargetVersion: String = getJvmTargetVersion(this@allprojects)
+        val jvmToolchainVersion: String = getJvmToolchainVersion( this@allprojects )
+        plugins.withType<JavaPlugin> {
+            extensions.configure<JavaPluginExtension> {
+                println("[$_name] --> Configure JavaPlugin to JDK $jvmTargetVersion")
+                toolchain { languageVersion.set(JavaLanguageVersion.of(jvmToolchainVersion.toInt())) }
+                sourceCompatibility = JavaVersion.toVersion(jvmTargetVersion)
+                targetCompatibility = JavaVersion.toVersion(jvmTargetVersion)
+            }
+        }
+        tasks.withType<JavaCompile>().configureEach {
+            options.release.set(jvmTargetVersion.toInt())
+        }
+        tasks.withType<Jar> {
+            from(rootProject.file("HERE_NOTICE"))
+            into("")
+            from(rootProject.file("LICENSE"))
+            into("")
+        }
+        val jsNoduleConfig = jsModules[_name]
+        pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
+            extensions.configure<KotlinMultiplatformExtension> {
+                jvm {}
+                jvmToolchain(jvmToolchainVersion.toInt())
+                if (jsNoduleConfig != null) {
+                    val _moduleName = jsNoduleConfig._moduleName
+                    println("[$_name] --> Configure JavaScript, moduleName=${_moduleName}")
+                    js {
+                        outputModuleName = _moduleName
+                        useEsModules()
+                        compilerOptions {
+                            target = "es2015"
+                            freeCompilerArgs.add("-Xes-long-as-bigint")
+                            freeCompilerArgs.add("-XXLanguage:+JsAllowLongInExportedDeclarations")
+                        }
+                        nodejs {
+                            compilerOptions {
+                                moduleKind = JsModuleKind.MODULE_ES
+                                moduleName = _moduleName
+                                sourceMap = true
+                                useEsClasses = true
+                                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
+                                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
+                            }
+                            generateTypeScriptDefinitions()
+                            binaries.library()
+                            binaries.executable()
+                        }
+                    }
+                }
+                project.tasks {
+                    getByName<Test>("jvmTest") {
+                        useJUnitPlatform()
+                        maxHeapSize = "8g"
+                        val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+                        if (dbUrl != null) environment("NAKSHA_TEST_PSQL_DB_URL", dbUrl)
+                    }
+                }
+
+                // We patch the build so that the JavaScript files are included into the JAR!
+                if (jsNoduleConfig != null) {
+                    val _dependencies = jsNoduleConfig._dependencies
+                    val _enableTests = jsNoduleConfig._enableTests
+                    println("[$_name] --> Configure JavaScript dependencies: ${_dependencies.contentToString()} and tests: $_enableTests")
+                    project.tasks {
+                        getByName<Task>("jsNodeProductionLibraryDistribution") {
+                            dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
+                        }
+                        // Release
+                        getByName<ProcessResources>("jvmProcessResources") {
+                            dependsOn(_dependencies + "jsNodeProductionLibraryDistribution") // "jsBrowserDistribution"
+                        }
+                        getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
+                        // Test
+                        getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
+                    }
+                    project.tasks.matching { it.name == "jsNodeTest" }.configureEach {
+                        enabled = _enableTests
+                    }
+                }
+            }
+        }
+
+        if(allModules[_name]?.first == CleanAndTest.KOTLIN) {
+            println("[$_name] --> Configure Kotlin tests, including Jacoco reports")
+            apply(plugin = "jacoco")
+
+            jacoco {
+                toolVersion = rootProject.libs.versions.jacoco.get()
+                reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
+            }
+
+            tasks {
+                val jacocoTestReport = register<JacocoReport>("jacocoTestReport") {
+                    group = "jacoco"
+
+                    dependsOn("jvmTest")
+                    configureJacocoForKmp(project)
+                    reports {
+                        xml.required = true
+                    }
+                }
+                register<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+                    group = "jacoco"
+                    dependsOn(jacocoTestReport)
+                    val reportTask = jacocoTestReport.get()
+                    sourceDirectories.setFrom(reportTask.sourceDirectories)
+                    classDirectories.setFrom(reportTask.classDirectories)
+                    executionData.setFrom(reportTask.executionData)
+                    violationRules {
+                        rule {
+                            limit {
+                                minimum = getOverallCoverage().toBigDecimal()
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    val info = allModules[_name]
     if (info != null && info.second == PublishModule.YES) {
+        println("[$_name] --> Configure publication")
         apply(plugin = "com.vanniktech.maven.publish")
         configureVanniktechMavenPublish()
     }
@@ -205,45 +367,6 @@ allprojects {
 jacoco {
     toolVersion = rootProject.libs.versions.jacoco.get()
     reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
-}
-
-subprojects {
-    if(allModules[name]?.first == CleanAndTest.KOTLIN) {
-        apply(plugin = "jacoco")
-
-        jacoco {
-            toolVersion = rootProject.libs.versions.jacoco.get()
-            reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
-        }
-
-        tasks {
-            val jacocoTestReport by registering(JacocoReport::class) {
-                group = "jacoco"
-
-                dependsOn("jvmTest")
-                configureJacocoForKmp(project)
-                reports {
-                    xml.required = true
-                }
-            }
-
-            val jacocoTestCoverageVerification by registering(JacocoCoverageVerification::class) {
-                group = "jacoco"
-                dependsOn(jacocoTestReport)
-                val reportTask = jacocoTestReport.get()
-                sourceDirectories.setFrom(reportTask.sourceDirectories)
-                classDirectories.setFrom(reportTask.classDirectories)
-                executionData.setFrom(reportTask.executionData)
-                violationRules {
-                    rule {
-                        limit {
-                            minimum = getOverallCoverage().toBigDecimal()
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 // Helper, run as `gradle cleanAndTestAll`

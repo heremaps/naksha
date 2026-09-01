@@ -3,7 +3,9 @@
 package naksha.psql
 
 import naksha.base.JsEnum
-import naksha.base.PlatformUtil
+import naksha.base.ListProxy
+import naksha.model.objects.Member
+import naksha.model.objects.MemberType
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -125,6 +127,28 @@ class PgType : JsEnum() {
         }
 
         /**
+         * JSONB column type, bound as text (JSON).
+         *
+         * Used by storages to materialize [naksha.model.objects.MemberType.TAG_MAP], [naksha.model.objects.MemberType.TAG_MAP_FROM_ARRAY] (JSON object), and [naksha.model.objects.MemberType.TAG_LIST] (JSON array) members.
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val JSONB = defIgnoreCase(PgType::class, "jsonb")
+
+        /**
+         * `jsonb[]` array type. Element values are JSON text strings (the on-wire form Postgres accepts for `jsonb`).
+         *
+         * @since 3.0
+         */
+        @JvmField
+        @JsStatic
+        val JSONB_ARRAY = defIgnoreCase(PgType::class, "jsonb[]") {
+            it.isArray = true
+            it.childType = JSONB
+        }
+
+        /**
          * Returns the [PgType] from the given string.
          * @param name the name, for example `"int"`.
          * @return the matching [PgType] or `null`, if none matches.
@@ -132,6 +156,78 @@ class PgType : JsEnum() {
         @JsStatic
         @JvmStatic
         fun of(name: String?): PgType? = getDefined(name, PgType::class)
+
+        /**
+         * Detects the [PgType] of the given value, if it has any.
+         * @param value the value for which to detect the [PgType]
+         * @return the matching [PgType] or `null`, if none matches.
+         */
+        @JsStatic
+        @JvmStatic
+        fun ofValue(value: Any?): PgType? {
+            when (value) {
+                is Boolean -> return BOOLEAN
+                is Byte -> return SHORT
+                is Short -> return SHORT
+                is Int -> return INT
+                is Long -> return INT64
+                is Float -> return FLOAT
+                is Double -> return DOUBLE
+                is String -> return STRING
+                is ByteArray -> return BYTE_ARRAY
+                is List<*>, is ListProxy<*> -> {
+                    val elementType = value.firstOrNull()?.let { ofValue(it) } ?: return null
+                    return when (elementType) {
+                        BOOLEAN -> BOOLEAN_ARRAY
+                        SHORT -> SHORT_ARRAY
+                        INT -> INT_ARRAY
+                        INT64 -> INT64_ARRAY
+                        FLOAT -> FLOAT_ARRAY
+                        DOUBLE -> DOUBLE_ARRAY
+                        STRING -> STRING_ARRAY
+                        BYTE_ARRAY -> BYTE_ARRAY_ARRAY
+                        else -> null
+                    }
+                }
+            }
+            return null
+        }
+
+        /**
+         * Returns the database column type to be used for a specific [Member].
+         * @param member the [Member] to lookup.
+         * @return the database column type to be used for a specific [Member].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun ofMember(member: Member): PgType = ofMemberType(member.dataType)
+
+        /**
+         * Returns the database column type to be used for a specific [MemberType].
+         * @param memberType the [MemberType] to lookup.
+         * @return the database column type to be used for a specific [MemberType].
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun ofMemberType(memberType: MemberType): PgType = when (memberType) {
+            MemberType.BOOLEAN -> BOOLEAN
+            MemberType.INT8 -> SHORT
+            MemberType.INT16 -> SHORT
+            MemberType.INT32 -> INT
+            MemberType.INT64 -> INT64
+            MemberType.FLOAT32 -> FLOAT
+            MemberType.FLOAT64 -> DOUBLE
+            MemberType.STRING -> STRING
+            MemberType.TAG_MAP -> JSONB
+            MemberType.TAG_MAP_FROM_ARRAY -> JSONB
+            MemberType.TAG_LIST -> STRING_ARRAY
+            // MemberType.BYTE_ARRAY -> BYTE_ARRAY
+            // MemberType.TUPLE_NUMBER -> BYTE_ARRAY
+            // MemberType.SPATIAL -> BYTE_ARRAY (TWKB)
+            else -> BYTE_ARRAY
+        }
     }
 
     @Suppress("NON_EXPORTABLE_TYPE")
@@ -161,4 +257,20 @@ class PgType : JsEnum() {
      */
     var childType: PgType? = null
         private set
+
+    /**
+     * Converts the given value in this type, so that it can be given to JDBC.
+     *
+     * For example, converts a `List<String>` into a `String[]`.
+     * @param value the value to convert into this type.
+     * @return the value so that it can be used with JDBC.
+     */
+    fun convertValue(value: Any?): Any? {
+        // TODO: We need to convert certain values to postgres valid ones
+        //       For lists, we need to convert them into typed arrays.
+        return when (value) {
+            is ListProxy<*>, is List<*> -> value.toTypedArray()
+            else -> value
+        }
+    }
 }

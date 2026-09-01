@@ -29,7 +29,7 @@ import com.here.naksha.app.service.http.ops.TagQueryUtil;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
-import naksha.model.NakshaException;
+import naksha.base.NakshaException;
 import naksha.model.request.query.ITagQuery;
 import naksha.model.request.query.TagAnd;
 import naksha.model.request.query.TagExists;

@@ -18,8 +18,6 @@
  */
 package com.here.naksha.lib.view;
 
-import naksha.base.AtomicInt;
-import naksha.base.StringList;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.SessionOptions;
@@ -54,7 +52,7 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   public @NotNull Response execute(@NotNull Request request) {
     ensureSessionInitialized();
     if (request instanceof WriteRequest) {
-      final WriteRequest writeRequest = (WriteRequest) request;
+      final var writeRequest = (WriteRequest) request;
       for (Write write : writeRequest.getWrites()) {
         if(write.getOp().equals(WriteOp.UPDATE)){
           write.withOp(WriteOp.UPSERT);
@@ -64,8 +62,8 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
       }
     } else if (request instanceof ReadFeatures) {
       final ReadFeatures readFeatures = (ReadFeatures) request;
-      readFeatures.setMapId(writeLayer.getMapId());
-      readFeatures.setCollectionIds(new StringList(writeLayer.getCollectionId()));
+      readFeatures.setCatalogId(writeLayer.getMapId());
+      readFeatures.setCollectionId(writeLayer.getCollectionId());
     } else {
       throw new IllegalArgumentException("Unsupported request type: " + request.getClass());
     }
@@ -117,10 +115,5 @@ public class ViewWriteSession extends ViewReadSession implements IWriteSession {
   @Override
   public @Nullable NakshaTx getTransaction() {
     return getSession().getTransaction();
-  }
-
-  @Override
-  public @NotNull AtomicInt getUid() {
-    return getSession().getUid();
   }
 }

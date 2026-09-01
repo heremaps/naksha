@@ -175,11 +175,13 @@ class SpaceApiTest extends ApiTest {
     final String updateSpaceJson = loadFileOrFail("SpaceApi/TC0260_updateSpace/update_space.json");
     final String expectedRespBody = loadFileOrFail("SpaceApi/TC0260_updateSpace/response.json");
     final String streamId = UUID.randomUUID().toString();
-    getNakshaClient().post("hub/spaces", createSpaceJson, streamId);
+    final var createSpaceResponse = nakshaClient.post("hub/spaces", createSpaceJson, streamId);
+    assertThat(createSpaceResponse)
+      .hasStatus(200)
+      .hasStreamIdHeader(streamId);
 
     // When: updating existing space
-    final HttpResponse<String> response =
-        getNakshaClient().put("hub/spaces/tc_260_test_space", updateSpaceJson, streamId);
+    final HttpResponse<String> response = nakshaClient.put("hub/spaces/tc_260_test_space", updateSpaceJson, streamId);
 
     // Then: space got updated
     assertThat(response)

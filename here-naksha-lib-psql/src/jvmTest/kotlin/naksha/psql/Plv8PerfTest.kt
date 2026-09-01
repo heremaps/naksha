@@ -1,6 +1,5 @@
 package naksha.psql
 
-import kotlinx.coroutines.runBlocking
 import naksha.base.JvmMap
 import naksha.base.Platform
 import naksha.base.PlatformUtil
@@ -19,34 +18,29 @@ import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
 import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
-import org.openjdk.jmh.annotations.BenchmarkMode
-import org.openjdk.jmh.annotations.Mode
-import org.openjdk.jmh.annotations.OutputTimeUnit
+import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertIs
 
 @Suppress("HasPlatformType", "MayBeConstant")
-@BenchmarkMode(Mode.AverageTime) // Measures average execution time
-@OutputTimeUnit(TimeUnit.MILLISECONDS)
 class Plv8PerfTest : PgTestBase(
     NakshaCollection(
         id = "",
         partitions = NUM_OF_PARTITIONS,
         storeHistory = StoreMode.ON,
         storeDeleted = StoreMode.ON
-    ).withIndices(ID_IDX, GIST_IDX, TAGS_IDX, HERE_TILE_IDX)//.withIndices(ID_IDX)
+    )// closed-enum opt-in list removed; default indices applied automatically
 ) {
     companion object {
         val featureSource = JSON_TOPOLOGY_SMALL
         val NUM_OF_PARTITIONS = 4
-        val OVERLOAD_FACTOR = 4
+        val OVERLOAD_FACTOR = 1
         val BATCHES_PER_WORKER = 3
         val FEATURES_PER_BATCH = 100
         val numberOfBatches = NUM_OF_PARTITIONS * BATCHES_PER_WORKER * OVERLOAD_FACTOR
@@ -65,7 +59,7 @@ class Plv8PerfTest : PgTestBase(
     fun shouldBeIgnored() {
     }
 
-    //@Ignore
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldInsertManyFeatures() {
         // Prepare
@@ -85,7 +79,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
-    //@Ignore
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldUpsertManyFeatures() {
         // Prepare
@@ -106,7 +100,7 @@ class Plv8PerfTest : PgTestBase(
         executeParallel(concurrency, batchRequests)
     }
 
-    //@Ignore
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldInsertGroupedByPartition() {
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
@@ -136,7 +130,7 @@ class Plv8PerfTest : PgTestBase(
 //        val group = mutableMapOf<Int, List<NakshaFeature>>()
 //    }
 
-    //@Ignore
+    @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldUpsertGroupedByPartition() {
         val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
@@ -171,7 +165,7 @@ class Plv8PerfTest : PgTestBase(
         }
     }
 
-    private fun executeParallel(concurrency: Int, batchRequests: List<WriteRequest>) = runBlocking {
+    private fun executeParallel(concurrency: Int, batchRequests: List<WriteRequest>) {
         val stats = Collections.synchronizedList(mutableListOf<Stats>())
         val threadPool = Executors.newFixedThreadPool(concurrency)
         val context = NakshaContext.currentContext()
@@ -199,7 +193,8 @@ class Plv8PerfTest : PgTestBase(
     }
 
     private fun featureCopy(feature: NakshaFeature): NakshaFeature {
-        val copyF = feature.copy<NakshaFeature>()
+        // Deep copy: a shallow copy shares `properties`, which encode mutates (writes xyz.uuid).
+        val copyF = feature.copy<NakshaFeature>(recursive = true)
         copyF.id = PlatformUtil.randomString(20)
         return copyF
     }

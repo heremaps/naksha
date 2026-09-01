@@ -4,7 +4,7 @@ package naksha.jbon
  * An interface of a mutable in-memory dictionary.
  * @since 3.0.0
  */
-interface IDictBuilder : IDict {
+interface IDictBuilder : IBook {
     /**
      * Append the given value to the end of the dictionary. If the value is already in the dictionary, return the index.
      * @param value the value to add, must be any of `null`, `Boolean`, `Int`, `Int64`, `Double`, `String`, `Map<String,Any?>`, or `List<Any?>`.

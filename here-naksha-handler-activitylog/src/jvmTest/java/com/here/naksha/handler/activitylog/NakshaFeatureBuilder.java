@@ -9,7 +9,7 @@ import static naksha.model.XyzNs.NUUID;
 
 import java.util.Map;
 import naksha.base.JvmInt64;
-import naksha.model.Action;
+import naksha.base.Action;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaProperties;
@@ -39,6 +39,11 @@ class NakshaFeatureBuilder {
     return this;
   }
 
+  /**
+   * `puuid` is no longer populated by Naksha {@code lib-psql}, it will just be a custom JSON attribute assigned by users.
+   * @deprecated since 3.0.0-beta.41
+   */
+  @Deprecated(since = "3.0.0-beta.41")
   NakshaFeatureBuilder withPuuid(String puuid) {
     feature.getProperties().getXyz().put(PUUID, puuid);
     return this;

@@ -40,6 +40,7 @@ import naksha.base.PlatformLock;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
 import naksha.jbon.JbDictionary;
+import naksha.model.DataEncoding;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -131,8 +132,7 @@ public class NHSpaceStorage implements IStorage {
     throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 
-  @Override
-  public int getEncodingFlags(@Nullable Object feature, @Nullable Object context) {
+  public @NotNull DataEncoding getDataEncoding(@Nullable Object feature, @Nullable Object context) {
     throw new UnsupportedOperationException("Unsupported by NHSpaceStorage");
   }
 

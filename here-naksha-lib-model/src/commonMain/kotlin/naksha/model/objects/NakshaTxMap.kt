@@ -5,7 +5,7 @@ package naksha.model.objects
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
-import naksha.model.Action
+import naksha.base.Action
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads

@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
+
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -33,7 +34,6 @@ public class ViewTypeUnionTest extends ApiTest {
     private static final String VIEW_SPACE_ID = "view_union_view_space";
 
     private static final String ENDPOINT = "/view_union/test/bbox";
-
 
     @BeforeAll
     static void setup() throws URISyntaxException, IOException, InterruptedException {
@@ -59,10 +59,8 @@ public class ViewTypeUnionTest extends ApiTest {
 
         // Given: Features By BBox request (against view space)
         final String bboxQueryParam = "west=12.79&south=53.59&east=12.82&north=53.62";
-        final String httpStorageMockResponse =
-                loadFileOrFail("ViewUnion/ByBBox/http_storage_response.json");
-        final String expectedViewResponse =
-                loadFileOrFail("ViewUnion/ByBBox/feature_response_part.json");
+        final String httpStorageMockResponse = loadFileOrFail("ViewUnion/ByBBox/http_storage_response.json");
+        final String expectedViewResponse = loadFileOrFail("ViewUnion/ByBBox/feature_response_part.json");
         String streamId = UUID.randomUUID().toString();
 
         final UrlPattern endpointPath = urlPathEqualTo(ENDPOINT);

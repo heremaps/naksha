@@ -41,7 +41,7 @@ public class Mom10Transformation {
     }
 
     NakshaProperties properties = feature.getProperties();
-    Map<String, Object> meta = (Map<String, Object>) properties.get(META);
+    Map<String, Object> meta = (Map<String, Object>) properties.getPath(META);
     if (meta != null && !meta.isEmpty()) {
       MomDeltaNs deltaNs = deltaNs(meta);
       properties.setDelta(deltaNs);

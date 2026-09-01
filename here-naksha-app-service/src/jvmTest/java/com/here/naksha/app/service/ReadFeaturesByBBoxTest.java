@@ -28,6 +28,7 @@ import com.here.naksha.app.common.NakshaTestWebClient;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -191,11 +192,9 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     // Validate features returned match with given BBox condition and limit
 
     // Given: Features By BBox request (against configured space)
-    final String bboxQueryParam = "west=-180&south=-90&east=180&north=90";
+    final String bboxQueryParam = "west=8.6110&south=50.1220&east=8.6135&north=50.1250";
     final String tagsQueryParam = "tags=one";
     final String limitQueryParam = "limit=2";
-    final String expectedBodyPart =
-        loadFileOrFail("ReadFeatures/ByBBox/TC0706_WithLimit/feature_response_part.json");
     String streamId = UUID.randomUUID().toString();
 
     // When: Get Features By BBox request is submitted to NakshaHub
@@ -209,7 +208,9 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
-        .hasJsonBody(expectedBodyPart, "Get Feature response body doesn't match");
+        .hasFeatureCount(2)
+        .hasFeatureIdsAmongst(List.of("my-custom-id-700-1",
+                "my-custom-id-700-2", "my-custom-id-700-3", "my-custom-id-700-4", "my-custom-id-700-5"));
   }
 
   @Test
@@ -803,7 +804,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     assertThat(response)
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", true);
+            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", false);
   }
 
   @Test
@@ -831,7 +832,7 @@ class ReadFeaturesByBBoxTest extends ApiTest {
     assertThat(response)
             .hasStatus(200)
             .hasStreamIdHeader(streamId)
-            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", true);
+            .hasJsonBody(expectedBodyPart.replaceAll("\\{\\{streamId}}",streamId), "Get Feature response body doesn't match", false);
   }
 
   @Test

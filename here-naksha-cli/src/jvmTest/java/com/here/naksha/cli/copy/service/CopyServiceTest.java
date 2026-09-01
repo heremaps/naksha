@@ -6,9 +6,10 @@ import com.here.naksha.cli.copy.service.executors.model.FeaturesWriteExecutorInf
 import com.here.naksha.cli.results.CommandFailure;
 import com.here.naksha.cli.results.CommandResult;
 import com.here.naksha.cli.results.CommandSuccess;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.*;
 import naksha.model.objects.NakshaFeature;
-import naksha.model.objects.NakshaFeatureList;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.*;
 import org.junit.jupiter.api.BeforeAll;
@@ -160,7 +161,7 @@ class CopyServiceTest {
     void shouldSucceedWithAutoCreateTargetAndAbsentTargetCollection() throws FeaturesWriteExecutorException {
         // Given: valid target storage with write sessions
         IStorage targetStorage = createTargetStorage(sessionOptions);
-        IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.MAP_EXISTS);
+        IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.CATALOG_EXISTS);
         IWriteSession createCollectionWriteSession = createWriteSessionReturningSuccessResponse();
         when(targetStorage.newWriteSession(sessionOptions))
                 .thenReturn(createMapWriteSession)
@@ -220,7 +221,7 @@ class CopyServiceTest {
     void shouldSucceedWithAutoCreateTargetAndExistingTargetMapAndCollection() throws FeaturesWriteExecutorException {
         // Given: valid target storage with write sessions
         IStorage targetStorage = createTargetStorage(sessionOptions);
-        IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.MAP_EXISTS);
+        IWriteSession createMapWriteSession = createWriteSessionReturningErrorResponse(NakshaError.CATALOG_EXISTS);
         IWriteSession createCollectionWriteSession = createWriteSessionReturningErrorResponse(NakshaError.COLLECTION_EXISTS);
         when(targetStorage.newWriteSession(sessionOptions))
                 .thenReturn(createMapWriteSession)
@@ -773,7 +774,7 @@ class CopyServiceTest {
         when(storage.newReadSession(sessionOptions)).thenReturn(readSession);
         when(readSession.execute(any())).thenReturn(
                 new SuccessResponse(
-                        NakshaFeatureList.fromList(features)
+                        nakshaFeatureListToFeatureTupleList(features)
                 )
         );
         return readSession;
@@ -796,9 +797,9 @@ class CopyServiceTest {
     private void assertReadFeatures(List<ReadFeatures> readFeaturesList) {
         assertEquals(1, readFeaturesList.size());
         ReadFeatures readFeatures = readFeaturesList.getFirst();
-        assertEquals(1, readFeatures.getCollectionIds().getSize());
-        assertEquals(srcCopyElement.getCollectionId(), readFeatures.getCollectionIds().getFirst());
-        assertEquals(srcCopyElement.getMapId(), readFeatures.getMapId());
+        assertNotNull(readFeatures.getCollectionId());
+        assertEquals(srcCopyElement.getCollectionId(), readFeatures.getCollectionId());
+        assertEquals(srcCopyElement.getMapId(), readFeatures.getCatalogId());
     }
 
     private IStorage createFailingSrcStorage() {
@@ -839,16 +840,16 @@ class CopyServiceTest {
     }
 
     private void assertCreateMapWrite(Write write) {
-        assertEquals(Naksha.ADMIN_MAP, write.getMapId());
-        assertEquals(Naksha.MAPS_COL, write.getCollectionId());
+        assertEquals(Naksha.ADMIN_CATALOG_ID, write.getCatalogId());
+        assertEquals(Naksha.CATALOGS_COL_ID, write.getCollectionId());
         assertEquals(WriteOp.CREATE, write.getOp());
         assertNotNull(write.getFeature());
         assertEquals(targetCopyElement.getMapId(), write.getFeature().getId());
     }
 
     private void assertCreateCollectionWrite(Write write) {
-        assertEquals(targetCopyElement.getMapId(), write.getMapId());
-        assertEquals(Naksha.COLLECTIONS_COL, write.getCollectionId());
+        assertEquals(targetCopyElement.getMapId(), write.getCatalogId());
+        assertEquals(Naksha.COLLECTIONS_COL_ID, write.getCollectionId());
         assertEquals(WriteOp.CREATE, write.getOp());
         assertNotNull(write.getFeature());
         assertEquals(targetCopyElement.getCollectionId(), write.getFeature().getId());

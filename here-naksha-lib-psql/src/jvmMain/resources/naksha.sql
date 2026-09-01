@@ -129,68 +129,68 @@ AS $$
   SELECT ${storageNumber}
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_288(storage_num int8, map_num int4, col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_256(storage_num int8, map_num int4, col_num int4, feature_num int8, txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int8send(storage_num) || int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+  SELECT int8send(storage_num) || int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_224(map_num int4, col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_192(map_num int4, col_num int4, feature_num int8, txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+  SELECT int4send(map_num) || int4send(col_num) || int8send(feature_num) || int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_192(col_num int4, feature_num int8, txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_160(col_num int4, feature_num int8, txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int4send(col_num) || int8send(feature_num) || int8send(txn) || int4send(uid)
+  SELECT int4send(col_num) || int8send(feature_num) || int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_160(feature_num int8, txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_128(feature_num int8, txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int8send(feature_num) || int8send(txn) || int4send(uid)
+  SELECT int8send(feature_num) || int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_96(txn int8, uid int4) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_64(txn int8) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT int8send(txn) || int4send(uid)
+  SELECT int8send(txn)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tn_96(any_tn bytea) RETURNS bytea
+CREATE OR REPLACE FUNCTION naksha_tn_64(any_tn bytea) RETURNS bytea
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT substring(any_tn FROM length(any_tn) - 11 FOR 12)
+  SELECT substring(any_tn FROM length(any_tn) - 7 FOR 8)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_storage_number(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int8recv(tn, length(tn) - 36)
+  SELECT int8recv(tn, length(tn) - 32)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_map_number(tn bytea) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int4recv(tn, length(tn) - 28)
+  SELECT int4recv(tn, length(tn) - 24)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_collection_number(tn bytea) RETURNS int
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-    SELECT int4recv(tn, length(tn) - 24)
+    SELECT int4recv(tn, length(tn) - 20)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_feature_number(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int8recv(tn, length(tn) - 20)
+  SELECT int8recv(tn, length(tn) - 16)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_partition_number(tn bytea) RETURNS int4
@@ -198,7 +198,7 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   -- The partition-number is the same as the lower 16-bit in the feature-number.
-  SELECT int2recv(tn, length(tn) - 14)::int4 & 65535
+  SELECT int2recv(tn, length(tn) - 10)::int4 & 65535
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_partition_index(tn bytea, partitions int4) RETURNS int4
@@ -206,14 +206,14 @@ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
   -- The partition-number is the same as the lower 16-bit in the feature-number.
-  SELECT (int2recv(tn, length(tn) - 14)::int4 & 65535) % partitions
+  SELECT (int2recv(tn, length(tn) - 10)::int4 & 65535) % partitions
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_version(tn bytea) RETURNS int8
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int8recv(tn, length(tn) - 12)
+  SELECT int8recv(tn, length(tn) - 8)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_year(tn bytea) RETURNS int4
@@ -225,21 +225,14 @@ AS $$
   -- So, we read the 16-bit, shift right by one, then set all top bit to zero,
   --     because PostgresQL does only have arithmetic shift right (>>), but no
   --     logical shift right (>>>)
-  SELECT ((int2recv(tn, length(tn) - 11)::int4) >> 1) & 32767
-$$;
-
-CREATE OR REPLACE FUNCTION naksha_tn_uid(tn bytea) RETURNS int4
-LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
-AS $$
-  SELECT int4recv(tn, length(tn) - 4)
+  SELECT ((int2recv(tn, length(tn) - 7)::int4) >> 1) & 32767
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_tn_action(tn bytea) RETURNS int4
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT int4recv(tn, length(tn) - 4) & 3
+  SELECT (int8recv(tn, length(tn) - 8) & 3)::int4
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_feature_number(id text) RETURNS int8
@@ -407,103 +400,95 @@ AS $$
   SELECT naksha_jbon_map_to_json(jbon)::jsonb
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_tags(tags bytea, flags int4) RETURNS jsonb
-LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
+-- TODO: pass a members book once member-ref encoding done
+CREATE OR REPLACE FUNCTION naksha_jbon2_feature_to_json(jbon bytea) RETURNS json
+LANGUAGE 'plv8' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-DECLARE
-  encoding int4;
-  gzip boolean;
-BEGIN
-  -- Because the function is strict, the null check is a duplicate, still
-  if (tags is null OR length(tags) = 0) then
-     return null;
-  end if;
-  encoding = (flags >> 8) & 15;
-  gzip = (encoding & 1) = 1;
-  if (gzip) then
-    tags = gunzip(tags);
-    encoding = encoding & 14;
-  end if;
-  if (encoding = 0) then -- JBON
-    return naksha_jbon_map_to_jsonb(tags);
-  elsif (encoding = 2) then -- JSON
-    return convert_from(tags, 'utf-8')::jsonb;
-  end if;
-  -- Unknown encoding
-  return null;
-END $$;
+  if (typeof require !== "function") {
+    plv8.find_function("es_modules_init")();
+    if (typeof require !== "function") {
+      plv8.elog(ERROR, "Failed to initialize module system");
+    }
+  }
+  const { Platform } = require("naksha_base");
+  const { JbDecoder2 } = require("naksha_jbon");
+  let decoder = new JbDecoder2();
+  decoder.mapBytes(jbon);
+  return Platform.toJson(decoder.toAnyObject());
+$$;
 
-CREATE OR REPLACE FUNCTION naksha_feature(feature bytea, flags int4) RETURNS jsonb
+CREATE OR REPLACE FUNCTION naksha_jbon2_feature_to_jsonb(jbon bytea) RETURNS jsonb
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT naksha_jbon2_feature_to_json(jbon)::jsonb
+$$;
+-- TODO change or create this feature to also take member input (other DB columns) to obtain back jsonb feature, in use case where ad hoc admin task needs to be done in DB admin tool like DBeaver
+CREATE OR REPLACE FUNCTION naksha_feature(feature bytea) RETURNS jsonb
 LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
 DECLARE
-  encoding int4;
-  gzip boolean;
+  first_byte int4;
 BEGIN
-  encoding = (flags >> 4) & 15;
-  gzip = (encoding & 1) = 1;
-  if (gzip) then
+  -- gzip magic 1F 8B
+  IF length(feature) >= 2
+     AND get_byte(feature, 0) = 31
+     AND get_byte(feature, 1) = 139 THEN
     feature = gunzip(feature);
-    encoding = encoding & 14;
-  end if;
-  if (encoding = 0) then -- JBON
-    return naksha_jbon_feature_to_jsonb(feature);
-  elsif (encoding = 2) then -- JSON
-    return feature::text::jsonb;
-  end if;
-  -- Unknown encoding
-  return null;
+  END IF;
+
+  IF length(feature) < 1 THEN
+    RETURN NULL;
+  END IF;
+
+  first_byte = get_byte(feature, 0);
+
+  -- JBON2 magic '@JB\x02'
+  IF length(feature) >= 4
+     AND first_byte = 64
+     AND get_byte(feature, 1) = 74
+     AND get_byte(feature, 2) = 66
+     AND get_byte(feature, 3) = 2 THEN
+    RETURN naksha_jbon2_feature_to_jsonb(feature);
+  END IF;
+
+  -- JSON: '{', '[', or whitespace (space/tab/LF/CR)
+  IF first_byte IN (123, 91, 32, 9, 10, 13) THEN
+    RETURN convert_from(feature, 'UTF8')::jsonb;
+  END IF;
+
+  RETURN naksha_jbon_feature_to_jsonb(feature);
 END $$;
 
-CREATE OR REPLACE FUNCTION naksha_geometry(geo bytea, flags int4) RETURNS geometry
-LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE STRICT
-SET search_path FROM CURRENT
-AS $$
-DECLARE
-  encoding int4;
-  gzip boolean;
-BEGIN
-  encoding = flags & 15;
-  gzip = (encoding & 1) = 1;
-  if (gzip) then
-    geo = gunzip(geo);
-    encoding = encoding & 14;
-  end if;
-  if (encoding = 0) then
-    RETURN ST_SetSRID(ST_GeomFromTWKB(geo), 4326);
-  elsif (encoding = 2) then
-    RETURN ST_GeomFromWKB(geo, 4326);
-  elsif (encoding = 4) then
-    RETURN ST_GeomFromEWKB(geo);
-  elsif (encoding = 6) then
-    RETURN ST_SetSRID(ST_GeomFromGeoJSON(convert_from(geo, 'UTF8')), 4326);
-  end if;
-  -- Unknown encoding
-  return null;
-END;
-$$;
-
-CREATE OR REPLACE FUNCTION naksha_2d(geo bytea, flags int4) RETURNS geometry
+-- Geometries are always stored as raw `TWKB`.
+CREATE OR REPLACE FUNCTION naksha_geometry(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force2D(naksha_geometry(geo,flags))
+  SELECT ST_SetSRID(ST_GeomFromTWKB(geo), 4326)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_3d(geo bytea, flags int4) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_2d(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force3D(naksha_geometry(geo,flags), 0)
+  SELECT ST_Force2D(naksha_geometry(geo))
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_4d(geo bytea, flags int4) RETURNS geometry
+CREATE OR REPLACE FUNCTION naksha_3d(geo bytea) RETURNS geometry
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 SET search_path FROM CURRENT
 AS $$
-  SELECT ST_Force4D(naksha_geometry(geo,flags), 0, 0)
+  SELECT ST_Force3D(naksha_geometry(geo), 0)
+$$;
+
+CREATE OR REPLACE FUNCTION naksha_4d(geo bytea) RETURNS geometry
+LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
+SET search_path FROM CURRENT
+AS $$
+  SELECT ST_Force4D(naksha_geometry(geo), 0, 0)
 $$;
 
 CREATE OR REPLACE FUNCTION naksha_ref_point(ref_point bytea) RETURNS geometry
@@ -513,17 +498,18 @@ AS $$
   SELECT ST_SetSRID(ST_Force2D(ST_GeomFromTWKB(ref_point)), 4326)
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_flags_action(flags int4) RETURNS int2
+-- The action is encoded in the lower two bits of the `version` (txn).
+CREATE OR REPLACE FUNCTION naksha_version_action(version int8) RETURNS int2
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
   -- 0=CREATED; 1=UPDATED; 2=DELETED; 3=UNKNOWN
-  SELECT (flags >> 16) & 3
+  SELECT (version & 3)::int2
 $$;
 
-CREATE OR REPLACE FUNCTION naksha_flags_action_text(flags int4) RETURNS text
+CREATE OR REPLACE FUNCTION naksha_version_action_text(version int8) RETURNS text
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE STRICT
 AS $$
-  SELECT CASE ((flags >> 16) & 3)
+  SELECT CASE (version & 3)::int2
     WHEN 0 THEN 'CREATED'
     WHEN 1 THEN 'UPDATED'
     WHEN 2 THEN 'DELETED'

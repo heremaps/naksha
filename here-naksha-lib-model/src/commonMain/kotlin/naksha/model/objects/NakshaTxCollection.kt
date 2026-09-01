@@ -5,13 +5,13 @@ package naksha.model.objects
 import naksha.base.NotNullProperty
 import naksha.base.AnyObject
 import naksha.base.NullableProperty
-import naksha.model.Action
-import naksha.model.Action.Action_C.CREATED
-import naksha.model.Action.Action_C.DELETED
-import naksha.model.Action.Action_C.UPDATED
-import naksha.model.NakshaError
-import naksha.model.NakshaException
-import naksha.model.TupleNumber
+import naksha.base.Action
+import naksha.base.Action.Action_C.CREATE
+import naksha.base.Action.Action_C.DELETE
+import naksha.base.Action.Action_C.UPDATE
+import naksha.base.NakshaError
+import naksha.base.NakshaException
+import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -107,9 +107,9 @@ class NakshaTxCollection() : AnyObject() {
      */
     fun add(tupleNumber: TupleNumber, partitions: Int? = null): NakshaTxCollection {
         when (tupleNumber.action) {
-            CREATED -> this.created += 1
-            UPDATED -> this.updated += 1
-            DELETED -> this.deleted += 1
+            CREATE -> this.created += 1
+            UPDATE -> this.updated += 1
+            DELETE -> this.deleted += 1
         }
         if (partitions != null && partitions > 1) {
             var featuresByPartition = this.featuresByPartition

@@ -6,11 +6,9 @@ import naksha.base.*
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.NakshaContext
 import naksha.model.Naksha
-import naksha.model.NakshaError
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.model.NakshaException
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
+import naksha.base.NakshaException
 import kotlin.js.*
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
@@ -54,6 +52,7 @@ open class NakshaStorage() : NakshaFeature() {
         private val HARDCAP = NotNullProperty<NakshaStorage, Int>(Int::class) { _, _ -> 0 }
         private val CREATE = NotNullProperty<NakshaStorage, Boolean>(Boolean::class) { _, _ -> false }
         private val UPGRADE = NotNullProperty<NakshaStorage, Boolean>(Boolean::class) { _, _ -> false }
+        //private val DB_NUMBER = NotNullProperty<NakshaStorage, Int64>(Int64::class) { self, _ -> Naksha.featureNumber(self.id) }
 
         /**
          * Helper class to parse a JSON configuration into a [NakshaStorage].
@@ -78,7 +77,6 @@ open class NakshaStorage() : NakshaFeature() {
 
     override fun featureTypeDefaultValue(): String = FEATURE_TYPE
     override fun withId(value: String): NakshaStorage = super.withId(value) as NakshaStorage
-    override fun withFeatureNumber(value: Int64): NakshaStorage = super.withFeatureNumber(value) as NakshaStorage
     override fun withType(value: String): NakshaStorage = super.withType(value) as NakshaStorage
     override fun withFeatureType(value: String): NakshaStorage = super.withFeatureType(value) as NakshaStorage
     override fun withBbox(value: SpBoundingBox?): NakshaStorage = super.withBbox(value) as NakshaStorage
@@ -165,6 +163,17 @@ open class NakshaStorage() : NakshaFeature() {
         return this
     }
 
+    /**
+     * The database-number to which this storage is hard-wired _(until we support multi-databases per storage)_.
+     * @since 3.0
+     */
+    val databaseNumber: Int64
+        get() {
+            // TODO: We need to allow a custom database number, actually we need to decouple the storage from the database.
+            //       However, this is a much larger architectural change, so for now, the storage and the database are hard-wired the same!
+            return Naksha.featureNumber(id)
+        }
+
     override fun equals(other: Any?): Boolean {
         if (other is NakshaStorage) return super.contentDeepEquals(other)
         return false
@@ -177,15 +186,6 @@ open class NakshaStorage() : NakshaFeature() {
             upgrade.hashCode() xor
             hardCap.hashCode()
     }
-
-    override fun featureNumberOfId(id: String): Int64 = Naksha.storageNumber(id)
-
-    /**
-     * The number of the storage, which is basically [featureNumber].
-     * @since 3.0
-     */
-    val number: Int64
-        get() = featureNumber
 
     /**
      * Compares this configuration with another [NakshaStorage] instance.

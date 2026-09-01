@@ -7,11 +7,10 @@ import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
 import naksha.base.proxy
-import naksha.common.test.CommonTestConstants
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.NakshaMap
+import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaStorage
 import naksha.model.request.*
 import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
@@ -30,19 +29,19 @@ import kotlin.test.*
  * - safe collection initialization
  * - helper functions for writing and reading to reduce boilerplate
  * @param collection A shared collection to use for all tests. If an empty string _(`""`)_ is used as `id` for the collection _(default)_, then the `id` is changed into to the camel-cased name of this class (see [defaultName]). If explicitly set to `null`, then no shared collection is created.
- * @param mapId The `id` of the map to run all tests in. If `null` is given _(default)_, then [PgTest.TEST_MAP_ID] is used, so a shared map. If an empty string _(`""`)_ is given, then the camel-cased name of this class is used (see [defaultName]).
+ * @param catalogId The `id` of the map to run all tests in. If `null` is given _(default)_, then [PgTest.TEST_MAP_ID] is used, so a shared map. If an empty string _(`""`)_ is given, then the camel-cased name of this class is used (see [defaultName]).
  */
 abstract class PgTestBase(
     collection: NakshaCollection? = NakshaCollection(""),
-    mapId: String? = null,
+    catalogId: String? = null,
 ) {
-    private var _map: NakshaMap? = null
+    private var _catalog: NakshaCatalog? = null
 
     /**
      * The selected map, throws an exception, when read before initialized _(the constructor by default initialized this)_.
      */
-    val map: NakshaMap
-        get() = assertNotNull(_map, "Illegal state, no map used by the test")
+    val catalog: NakshaCatalog
+        get() = assertNotNull(_catalog, "Illegal state, no catalog used by the test")
 
     private var _collection: NakshaCollection? = null
 
@@ -53,8 +52,8 @@ abstract class PgTestBase(
         get() = assertNotNull(_collection, "Illegal state, no collection used by the test")
 
     init {
-        Naksha.verifyId(defaultName)
-        useMap(mapId)
+        NakshaIdType.COLLECTION.verify(defaultName)
+        useCatalog(catalogId)
         if (collection != null) {
             useCollection(collection)
         }
@@ -79,10 +78,10 @@ abstract class PgTestBase(
         }
 
     @Suppress("DEPRECATION")
-    private fun ensureMapId(mapId: String?): String = Naksha.verifyId(when (mapId) {
+    private fun ensureCatalogId(catalogId: String?): String = NakshaIdType.CATALOG.verify(when (catalogId) {
         null -> TEST_MAP_ID
         "" -> defaultName
-        else -> mapId
+        else -> catalogId
     })
 
     /**
@@ -90,69 +89,71 @@ abstract class PgTestBase(
      * @param mapId the `id` of the map to use within this test. If `null`, then [PgTest.TEST_MAP_ID] is used, if being an empty string _(`""`)_, then the camel-cased name of the test-class being used.
      * @return the map object.
      */
-    fun initMap(mapId: String?): NakshaMap {
-        val map_id = ensureMapId(mapId)
-        var mapRef = initializedMaps[map_id]
-        if (mapRef == null) {
+    fun initCatalog(mapId: String?): NakshaCatalog {
+        val catalog_id = ensureCatalogId(mapId)
+        var catalogRef = initializedMaps[catalog_id]
+        if (catalogRef == null) {
             lock.acquire().use {
-                mapRef = initializedMaps[map_id]
-                if (mapRef == null) {
-                    // Delete the map, should it be still there from previous test runs.
-                    dropMap(map_id)
+                catalogRef = initializedMaps[catalog_id]
+                if (catalogRef == null) {
+                    // Remove any stale registry entry left over from a previous run.
+                    // The schema itself was already dropped by cleanDatabase() at start-up, but
+                    // the naksha~admin catalogue may still hold a row for this map.
+                    dropCatalog(catalog_id)
 
                     // Create the map.
-                    var map = NakshaMap(map_id)
+                    var catalog = NakshaCatalog(catalog_id)
                     val request = WriteRequest()
-                    request.writes += Write().createMap(map)
+                    request.writes += Write().createMap(catalog)
                     val response = executeWrite(request)
                     val features = response.features
                     assertEquals(1, features.size)
                     val feature = features.first()
-                    map = assertNotNull(feature).proxy(NakshaMap::class)
-                    mapRef = MapAndCollections(map)
-                    initializedMaps[map_id] = assertNotNull(mapRef)
-                    logger.info("Created test map: '$map_id'")
+                    catalog = assertNotNull(feature).proxy(NakshaCatalog::class)
+                    catalogRef = MapAndCollections(catalog)
+                    initializedMaps[catalog_id] = assertNotNull(catalogRef)
+                    logger.info("Created test map: '$catalog_id'")
                 }
             }
         }
-        return assertNotNull(mapRef).map
+        return assertNotNull(catalogRef).map
     }
 
     /**
-     * Initializes the map, and select it, so assign to [map].
-     * @param mapId the `id` of the map to initialize and use.
+     * Initializes the map, and select it, so assign to [catalog].
+     * @param catalogId the `id` of the map to initialize and use.
      * @return the map object.
      */
-    fun useMap(mapId: String?): NakshaMap {
-        val map = initMap(mapId)
-        this._map = map
-        return map
+    fun useCatalog(catalogId: String?): NakshaCatalog {
+        val catalog = initCatalog(catalogId)
+        this._catalog = catalog
+        return catalog
     }
 
-    fun initCollection(mapId: String, collectionId: String): Pair<NakshaMap, NakshaCollection>
-        = initCollection(NakshaCollection(collectionId, mapId))
+    fun initCollection(catalogId: String, collectionId: String): Pair<NakshaCatalog, NakshaCollection>
+        = initCollection(NakshaCollection(collectionId, catalogId))
 
-    fun initCollection(collection: NakshaCollection): Pair<NakshaMap, NakshaCollection> {
+    fun initCollection(collection: NakshaCollection): Pair<NakshaCatalog, NakshaCollection> {
         if (collection.id == "") {
             collection.id = defaultName
         } else {
-            Naksha.verifyId(collection.id)
+            NakshaIdType.COLLECTION.verify(collection.id)
         }
-        if (collection.mapId == null || collection.mapId == "") {
-            collection.mapId = map.id
+        if (collection.catalogId == null || collection.catalogId == "") {
+            collection.catalogId = catalog.id
         } else {
-            Naksha.verifyId(collection.mapId)
+            NakshaIdType.CATALOG.verify(collection.catalogId)
         }
-        val mapId = collection.mapId
-        initMap(mapId)
-        val mapRef = assertNotNull(initializedMaps[mapId], "The map '$mapId' failed to initialized")
+        val catalogId = collection.catalogId
+        initCatalog(catalogId)
+        val mapRef = assertNotNull(initializedMaps[catalogId], "The map '$catalogId' failed to initialized")
         val colId = collection.id
         var existing = mapRef.collections[colId]
         if (existing == null) {
             lock.acquire().use {
                 existing = mapRef.collections[colId]
                 if (existing == null) {
-                    collection.mapId = mapId
+                    collection.catalogId = catalogId
                     val request = WriteRequest()
                     request.writes += Write().createCollection(collection)
                     storage.newWriteSession(newSessionOptions()).use { session ->
@@ -171,12 +172,12 @@ abstract class PgTestBase(
         return Pair(mapRef.map, assertNotNull(existing))
     }
 
-    fun useCollection(collectionId: String, mapId: String = map.id): Pair<NakshaMap, NakshaCollection>
+    fun useCollection(collectionId: String, mapId: String = catalog.id): Pair<NakshaCatalog, NakshaCollection>
             = useCollection(NakshaCollection(collectionId, mapId))
 
-    fun useCollection(collection: NakshaCollection): Pair<NakshaMap, NakshaCollection> {
+    fun useCollection(collection: NakshaCollection): Pair<NakshaCatalog, NakshaCollection> {
         val pair = initCollection(collection)
-        this._map = pair.first
+        this._catalog = pair.first
         this._collection = pair.second
         return pair
     }
@@ -192,7 +193,7 @@ abstract class PgTestBase(
      * ```
      */
     val SET_SEARTH_PATH_SQL
-        get() = """SET search_path="${map.id}","naksha~admin",topology,hint_plan,public;"""
+        get() = """SET search_path="${catalog.id}","naksha~admin",topology,hint_plan,public;"""
 
     protected fun insertFeature(
         feature: NakshaFeature,
@@ -214,6 +215,7 @@ abstract class PgTestBase(
     protected fun assertSuccess(response: Response): SuccessResponse {
         if (response is ErrorResponse) {
             response.error.print(logger)
+            fail("Expected SuccessResponse but got ErrorResponse: code=${response.error.code}, msg=${response.error.msg}")
         }
         assertIs<SuccessResponse>(response, "Response should be 'SuccessResponse', but is '${response::class.simpleName}'")
         return response
@@ -260,15 +262,18 @@ abstract class PgTestBase(
         }
     }
 
-    protected fun dropMap(mapId: String, options: SessionOptions = newSessionOptions()) {
+    protected fun dropCatalog(mapId: String, options: SessionOptions = newSessionOptions()) {
         val request = WriteRequest()
         request.add(Write().deleteMapById(mapId))
         storage.newWriteSession(options).use { session ->
             val response = session.execute(request)
-            assertTrue(response is SuccessResponse, "Failed to drop map with id '$mapId'")
+            if (response is ErrorResponse) {
+                response.error.print(logger)
+                fail("dropMap('$mapId') failed: ${response.error.code}: ${response.error.msg}")
+            }
             session.commit()
-            initializedMaps.remove(mapId)
         }
+        initializedMaps.remove(mapId)
     }
 
     protected fun dropCollection(mapId: String, collectionId: String, options: SessionOptions = newSessionOptions()) {
@@ -291,7 +296,7 @@ abstract class PgTestBase(
         /**
          * The map.
          */
-        val map: NakshaMap,
+        val map: NakshaCatalog,
 
         /**
          * All collections in the map, created for the tests by `id`.
@@ -304,6 +309,48 @@ abstract class PgTestBase(
             PlatformUtil.ENABLE_INFO = true
             NakshaContext.defaultAppName.set(PgTest.TEST_APP_NAME)
             NakshaContext.defaultAppId.set(PgTest.TEST_APP_ID)
+        }
+
+        /**
+         * The storage configuration used by default.
+         */
+        @JvmStatic
+        @JsStatic
+        val storageConfig = NakshaStorage.fromJSON("""{
+  "id": "${Platform.getTestStorageId()}",
+  "className": "naksha.psql.PsqlTestStorage"
+}""").proxy(PgConfig::class)
+
+        /**
+         * The test storage.
+         *
+         * **Note**: You can override the docker-config via environment variable `NAKSHA_TEST_PSQL_DB_URL`.
+         */
+        @JvmField
+        val storage = Naksha.useStorage(storageConfig) as PgStorage
+
+        init {
+            cleanDatabase()
+        }
+
+        /**
+         * Drop all test map schemas so each test run starts from a blank slate.
+         *
+         * Only schemas that are known test artefacts ([TestMap]) are removed — nothing else is
+         * touched.  `naksha~admin` is intentionally left alone so that the Naksha storage stays
+         * fully operational; stale map entries in its registry are cleaned up per-map via the
+         * normal [dropCatalog] call inside [initCatalog].
+         *
+         * The function is idempotent: `DROP SCHEMA IF EXISTS … CASCADE` is safe when the schemas
+         * do not exist (first ever run).
+         */
+        private fun cleanDatabase() {
+            storage.adminConnection().use { conn ->
+                for (tm in TestMap.entries) {
+                    conn.execute("""DROP SCHEMA IF EXISTS "${tm.id}" CASCADE""").close()
+                }
+                logger.info("Test database cleaned: dropped ${TestMap.entries.size} test schema(s)")
+            }
         }
 
         fun camelCase(simpleName: String): String {
@@ -333,16 +380,6 @@ abstract class PgTestBase(
         private val initializedMaps = AtomicMap<String, MapAndCollections>()
 
         /**
-         * The storage configuration used by default.
-         */
-        @JvmStatic
-        @JsStatic
-        val storageConfig = NakshaStorage.fromJSON("""{
-  "id": "${CommonTestConstants.getTestStorageId()}",
-  "className": "naksha.psql.PsqlTestStorage"
-}""").proxy(PgConfig::class)
-
-        /**
          * Create [SessionOptions] and mutate the current [NakshaContext] to actually use the [PgTest] constants for `appName`, `appId`, and `author`, to be used when opening new PostgresQL sessions via [PgStorage.newWriteSession] or [PgStorage.newReadSession].
          * @param appId the `appId`, if modified, otherwise [PgTest.TEST_APP_ID]
          * @param author the `author`, if modified, otherwise [PgTest.TEST_APP_AUTHOR]
@@ -368,14 +405,6 @@ abstract class PgTestBase(
                 logLevel = logLevel,
             )
         }
-
-        /**
-         * The test storage.
-         *
-         * **Note**: You can override the docker-config via environment variable `NAKSHA_TEST_PSQL_DB_URL`.
-         */
-        @JvmField
-        val storage = Naksha.useStorage(storageConfig) as PgStorage
 
         @JvmStatic
         @JsStatic

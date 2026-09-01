@@ -1,9 +1,10 @@
 package naksha.psql
 
-import naksha.base.AnyList
 import naksha.base.Int64
+import naksha.base.ListProxy
+import naksha.base.MapProxy
 import naksha.base.Platform
-import naksha.model.illegalArg
+import naksha.base.illegalArg
 import naksha.psql.PgType.Companion.BOOLEAN
 import naksha.psql.PgType.Companion.BOOLEAN_ARRAY
 import naksha.psql.PgType.Companion.BYTE_ARRAY
@@ -16,6 +17,8 @@ import naksha.psql.PgType.Companion.INT
 import naksha.psql.PgType.Companion.INT64
 import naksha.psql.PgType.Companion.INT64_ARRAY
 import naksha.psql.PgType.Companion.INT_ARRAY
+import naksha.psql.PgType.Companion.JSONB
+import naksha.psql.PgType.Companion.JSONB_ARRAY
 import naksha.psql.PgType.Companion.SHORT
 import naksha.psql.PgType.Companion.SHORT_ARRAY
 import naksha.psql.PgType.Companion.STRING
@@ -43,20 +46,39 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
         val sb = StringBuilder()
         var targetIndex = 1
         var charIndex = 0
+        var inDoubleQuote = false
+        var inSingleQuote = false
         while (charIndex < query.length) {
-            if (query[charIndex] == '$' && charIndex < query.length - 1 && query[charIndex + 1] in positiveNums) {
-                charIndex++
-                var gatheredNum = "${query[charIndex++]}"
-                while (charIndex < query.length && query[charIndex] in nums) {
-                    gatheredNum += query[charIndex++]
+            val c = query[charIndex]
+            when {
+                c == '"' && !inSingleQuote -> {
+                    inDoubleQuote = !inDoubleQuote
+                    sb.append(c)
+                    charIndex++
                 }
-                sb.append("?")
-                val dollar = gatheredNum.toInt()
-                dollarToIndices
-                    .computeIfAbsent(dollar) { ArrayList() }
-                    .add(targetIndex++)
-            } else {
-                sb.append(query[charIndex++])
+                c == '\'' && !inDoubleQuote -> {
+                    inSingleQuote = !inSingleQuote
+                    sb.append(c)
+                    charIndex++
+                }
+                c == '$' && !inDoubleQuote && !inSingleQuote
+                        && charIndex < query.length - 1
+                        && query[charIndex + 1] in positiveNums -> {
+                    charIndex++
+                    var gatheredNum = "${query[charIndex++]}"
+                    while (charIndex < query.length && query[charIndex] in nums) {
+                        gatheredNum += query[charIndex++]
+                    }
+                    sb.append("?")
+                    val dollar = gatheredNum.toInt()
+                    dollarToIndices
+                        .computeIfAbsent(dollar) { ArrayList() }
+                        .add(targetIndex++)
+                }
+                else -> {
+                    sb.append(c)
+                    charIndex++
+                }
             }
         }
         sql = sb.toString()
@@ -71,6 +93,7 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
             // Note: `index` starts with 1, NOT 0 !!!
             val index = indices[i++]
             when (arg) {
+                null -> stmt.setNull(index, 0)
                 is Boolean -> stmt.setBoolean(index, arg)
                 is Short -> stmt.setShort(index, arg)
                 is Int -> stmt.setInt(index, arg)
@@ -111,7 +134,8 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         INT64_ARRAY,
                         FLOAT_ARRAY,
                         DOUBLE_ARRAY,
-                        STRING_ARRAY -> {
+                        STRING_ARRAY,
+                        JSONB_ARRAY -> {
                             stmt.setArray(index, stmt.connection.createArrayOf(type.childType!!.text, arg))
                         }
                         BYTE_ARRAY_ARRAY -> {
@@ -130,13 +154,14 @@ class PsqlQuery(query: String, private val typeNames: Array<String>?) {
                         FLOAT,
                         DOUBLE,
                         STRING,
-                        BYTE_ARRAY -> throw illegalArg("The argument is $type, but an array was provided as value")
+                        BYTE_ARRAY,
+                        JSONB -> throw illegalArg("The argument is $type, but an array was provided as value")
                         null -> throw illegalArg("Failed to detect array type, no type-name was provided (null)")
                         else -> throw illegalArg("Failed to detect array type, and invalid type-name was provided: $typeName")
                     }
                 }
-                is AnyList -> setArgument(stmt, arg.toArray(), indices)
-                null -> stmt.setNull(index, 0)
+                is ListProxy<*> -> setArgument(stmt, arg.toArray(), indices)
+                is MapProxy<*, *> -> stmt.setString(index, Platform.toJSON(arg))
                 else -> throw illegalArg("Unable to set argument: args[${index - 1}], unknown type: ${arg.javaClass.name}")
             }
         }

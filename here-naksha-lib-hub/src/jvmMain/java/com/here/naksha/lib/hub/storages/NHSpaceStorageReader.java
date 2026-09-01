@@ -20,7 +20,6 @@ package com.here.naksha.lib.hub.storages;
 
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
-import static naksha.model.LibModelKt.FETCH_ALL;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static naksha.model.util.ResultHelper.readFeatureFromResponse;
@@ -40,20 +39,14 @@ import java.util.NoSuchElementException;
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
-import naksha.model.request.ErrorResponse;
-import naksha.model.request.FeatureTuple;
-import naksha.model.request.ReadCollections;
-import naksha.model.request.ReadFeatures;
-import naksha.model.request.Request;
-import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
+import naksha.model.objects.NakshaCatalog;
+import naksha.model.request.*;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -117,11 +110,7 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   private @NotNull Response executeReadFeatures(final @NotNull ReadFeatures rf) {
-    List<String> collectionIds = rf.getCollectionIds();
-    if (collectionIds.size() > 1) {
-      throw new UnsupportedOperationException("Reading from multiple spaces not supported!");
-    }
-    final String spaceId = collectionIds.get(0);
+    String spaceId = rf.getCollectionId();
     logger.info("ReadFeatures Request against spaceId={}", spaceId);
     addSpaceIdToStreamInfo(spaceId);
     if (virtualSpaces.containsKey(spaceId)) {
@@ -161,24 +150,13 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   private @NotNull Response executeReadFeaturesFromCustomSpaces(final @NotNull ReadFeatures rf) {
-    List<String> collectionIds = rf.getCollectionIds();
-    if (collectionIds.size() > 1) {
-      return new ErrorResponse(new NakshaError(
-          NakshaError.UNSUPPORTED_OPERATION,
-          "ReadFeatures from multiple collections not supported at present!"));
-    }
-    final String spaceId = collectionIds.get(0);
+    final String spaceId = rf.getCollectionId();
     final EventPipeline eventPipeline = pipelineFactory.eventPipeline();
     final Response response = setupEventPipelineForSpaceId(spaceId, eventPipeline);
     if (!(response instanceof SuccessResponse)) {
       return response;
     }
     return eventPipeline.sendEvent(rf);
-  }
-
-  @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
   }
 
   record SpaceAndHandlerConfigs(Space space, List<EventHandlerConfig> eventHandlerConfigs) {
@@ -337,27 +315,38 @@ public class NHSpaceStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 
   @Override
-  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+  public @NotNull naksha.model.MemberProcessorMap getProcessors() {
     throw NOT_SUPPORTED_ERROR;
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
+  public @Nullable NakshaCollection getCollectionById(
+      @NotNull NakshaCatalog map,
+      @NotNull String collectionId,
+      boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
+    throw NOT_SUPPORTED_ERROR;
+  }
+
+  @Override
+  public @Nullable NakshaCollection getCollectionByNumber(
+      @NotNull NakshaCatalog catalog,
+      int collectionNumber,
+      boolean allowTombstone) {
     throw NOT_SUPPORTED_ERROR;
   }
 

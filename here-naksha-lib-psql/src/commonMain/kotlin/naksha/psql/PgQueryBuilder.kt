@@ -1,10 +1,17 @@
 package naksha.psql
 
-import naksha.model.*
+import naksha.base.Int64
+import naksha.base.Version
+import naksha.base.collectionNotFound
+import naksha.base.illegalArg
+import naksha.base.mapNotFound
+import naksha.base.unsupportedOp
+import naksha.model.Naksha.NakshaCompanion.HARD_TUPLE_LIMIT
+import naksha.model.objects.StandardMembers.StandardMembers_C.FN
+import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
+import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
 import naksha.model.request.*
-import naksha.model.request.query.MetaColumn
-import naksha.model.request.query.SortOrder.SortOrderCompanion.ASCENDING
-import naksha.psql.PgColumn.PgColumnCompanion.next_tn
+import naksha.model.request.query.SortOrder
 import kotlin.math.max
 import kotlin.math.min
 
@@ -33,209 +40,118 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     private fun readFeatures(req: ReadFeatures): PgQuery {
         // Collect needed data
         val pgStorage = session.storage
-        val mapId = req.mapId ?: throw illegalArg("mapId is missing")
-        val pgMap = session.getPgMapById(mapId) ?: throw mapNotFound("Map with id '$mapId' does not exist")
-        // We select what the client wants, maximum is always 16777216
-        // Finally, the storage can limit result-size further down below 16777216 (normally we do not expect this to happen).
-        val REQ_LIMIT = min(max(0, req.limit ?: 16777216), session.storage.hardCap)
-        if (REQ_LIMIT == 0) throw illegalArg("Invalid limit given: ${req.limit}, must be 0 to 16777216")
-        val pgCollections: MutableList<PgCollection> = mutableListOf()
-        for (collectionId in req.collectionIds) {
-            if (collectionId == null) continue
-            val pgCollection = session.getPgCollectionById(pgMap, collectionId) ?:
-                throw collectionNotFound("Collection with id '$collectionId' not found in map '$mapId'")
-            pgCollections.add(pgCollection)
-        }
-        if (pgCollections.size <= 0) throw illegalArg("Empty collection-ids in request")
-        val version = req.version
-        if (version != null && !req.queryHistory) {
-            throw illegalArg("Setting 'version' to '$version' requires that 'queryHistory' is enabled!")
-        }
-        val minVersion = req.minVersion
-        if (minVersion != null && !req.queryHistory) {
-            throw illegalArg("Setting 'minVersion' to '$minVersion' requires that 'queryHistory' is enabled!")
-        }
-        val versions = req.versions
-        if (versions != 1 && !req.queryHistory) {
-            throw illegalArg("Setting 'versions' to $versions requires that 'queryHistory' is enabled!")
-        }
-        if (versions < 1) {
-            throw illegalArg("It is not possible to request less than one version of each feature")
-        }
+        val catalogId = req.catalogId ?: throw illegalArg("Request has not 'catalogId'")
+        val pgCatalog = session.getPgCatalogById(catalogId) ?: throw mapNotFound("Catalog with id '$catalogId' does not exist")
+        val REQ_LIMIT = min(max(0, req.limit ?: HARD_TUPLE_LIMIT), session.storage.hardCap)
+        if (REQ_LIMIT == 0) throw illegalArg("Invalid limit given: ${req.limit}, must be 0 to $HARD_TUPLE_LIMIT")
+        val collectionId: String = req.collectionId ?: throw illegalArg("Request has no 'collectionId'")
+        val pgCollection = session.getPgCollectionById(pgCatalog, collectionId) ?:
+            throw collectionNotFound("Collection with id '$collectionId' not found in catalog '$catalogId'")
 
-        val whereClause = PgQueryWhereBuilder(req).build()
+        val whereClause = PgQueryWhereBuilder(req, pgCollection).build()
         val whereQuery = whereClause?.where ?: ""
-        val thePgCollection = if (pgCollections.size == 1) pgCollections[0] else null
 
-        // Columns to select, so `col_num`, `tn`, and whatever is needed for ordering.
-        val select_cols = mutableListOf("col_num", "tn")
         // Column name and ordering (ASC | DESC) for customer order.
-        val order_by = mutableListOf<Pair<String,String>>()
-        req.orderBy?.also { orderBy ->
-            // The default order is descending by tuple-number, therefore we do not need
-            //   any special order, when the client asks for deterministic, or it asks
-            //   for tuple-number ordering (except he asks for ascending ordering)
-            if (!orderBy.isDeterministic()
-                && !(orderBy.column == MetaColumn.tupleNumber() && orderBy.sortOrder != ASCENDING && orderBy.next == null)
-            ) {
-                val selected_names = mutableListOf<String>()
-                var o: OrderBy? = orderBy
-                while (o != null) {
-                    val col = o.column
-                    if (col != null) {
-                        // TODO: Support all columns
-                        val col_name = col.name
-                        val pgColumn = when (col_name) {
-                            MetaColumn.ATTACHMENT -> PgColumn.attachment
-                            MetaColumn.ID -> PgColumn.id
-                            MetaColumn.VERSION -> PgColumn.tn
-                            MetaColumn.TUPLE_NUMBER -> PgColumn.tn
-                            MetaColumn.HASH -> PgColumn.hash
-                            MetaColumn.HERE_TILE -> PgColumn.here_tile
-                            MetaColumn.AUTHOR -> PgColumn.author
-                            MetaColumn.AUTHOR_TS -> PgColumn.author_ts
-                            MetaColumn.APP_ID -> PgColumn.app_id
-                            MetaColumn.CHANGE_COUNT -> PgColumn.cc
-                            MetaColumn.CV0 -> PgColumn.cv0
-                            MetaColumn.CV1 -> PgColumn.cv1
-                            MetaColumn.CV2 -> PgColumn.cv2
-                            MetaColumn.CV3 -> PgColumn.cv3
-                            MetaColumn.CS0 -> PgColumn.cs0
-                            MetaColumn.CS1 -> PgColumn.cs1
-                            MetaColumn.CS2 -> PgColumn.cs2
-                            MetaColumn.CS3 -> PgColumn.cs3
-                            else -> throw illegalArg("Invalid column for ordering: '$col_name'")
-                        }
-                        if (!selected_names.contains(col_name)) {
-                            selected_names.add(col_name)
-                            if (!select_cols.contains(pgColumn.name)) {
-                                select_cols.add(pgColumn.name)
-                            }
-                            val SORT = if (o.sortOrder == ASCENDING) "ASC" else "DESC"
-                            order_by.add(when (pgColumn) {
-                                PgColumn.author_ts -> Pair("COALESCE(${PgColumn.author_ts}, ${PgColumn.updated_at})", SORT)
-                                PgColumn.tn -> if (col_name == MetaColumn.VERSION)
-                                                Pair("naksha_tn_version(tn)", SORT)
-                                           else Pair("tn", SORT)
-                                else -> Pair(pgColumn.name, SORT)
-                            })
-                        }
+        var order_by: MutableList<Pair<String, String>>? = null
+        do { // scope
+            var orderBy = req.orderBy
+            if (orderBy != null) {
+                order_by = mutableListOf()
+                if (!orderBy.isDeterministic()) {
+                    var exit = 10
+                    while (orderBy != null && exit >= 0) {
+                        val memberName = orderBy.member ?: throw illegalArg("Missing member in orderBy")
+                        // ANY resolves to DESC (latest-first); only explicit ASCENDING gives ASC.
+                        val sortOrder = if (orderBy.sortOrder == SortOrder.ASCENDING) "ASC" else "DESC"
+                        order_by.add(Pair(memberName, sortOrder))
+                        orderBy = orderBy.next
+                        exit--
                     }
-                    o = o.next
+                    if (exit < 0) throw illegalArg("Too many orders in orderBy")
+                } else { // deterministic ordering is by `feature-number ASC, version DESC`
+                    order_by.add(Pair(FN, SortOrder.ASCENDING.toString()))
+                    order_by.add(Pair(VERSION, SortOrder.DESCENDING.toString()))
                 }
+            }
+        } while(false)
+
+        // TODO: We want to use placeholders!
+
+        val WHERE = StringBuilder()
+        var version = req.version
+        if (version != null) {
+            version = version or Int64(3)
+            if (version == Version.HEAD.number) {
+                version = null // HEAD
+            } else {
+                if (WHERE.isNotEmpty()) WHERE.append(" AND ")
+                WHERE.append("($VERSION <= ").append(version).append(")")
             }
         }
-
-        // Generate query.
-        val selects = StringBuilder()
-        for (entry in pgCollections.withIndex()) {
-            val pgCollection = entry.value
-            val map = pgCollection.map
-            val read = PgRead(pgMap, pgCollection)
-
-            // Note: To simplify queries, we actually always embed the collection-number internally,
-            //       eventually, before returning the result, we decide if we put it into the header
-            //       of the tuple-number-binary or individually into each row-identifier.
-            select_cols[0] = "${pgCollection.number} AS col_num"
-            val select_cols_string = select_cols.joinToString(", ")
-
-            val where = if (whereQuery.isEmpty()) "" else "WHERE $whereQuery"
-            for (head in read.headTables) {
-                if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${head.quotedName} $where)\n")
-            }
-
-            val deletedTables = read.shadowTables
-            if (!req.queryHistory && req.queryDeleted && deletedTables != null) {
-                for (deleted in deletedTables) {
-                    if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                    selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${deleted.quotedName} $where)\n")
-                }
-            }
-
-            val historyTables = read.historyTables
-            if (req.queryHistory && historyTables != null) {
-                // TODO: We need to improve, because we only want $versions variants!
-                // If only one version is requested, we can improve the query to only return this version!
-                val better_where = if (version != null && versions == 1)
-                    (if (where.isEmpty()) "WHERE " else "$where AND ") + "naksha_tn_version($next_tn) > $version"
-                else
-                    where
-                for (history in historyTables) {
-                    if (selects.isNotEmpty()) selects.append(" UNION ALL\n")
-                    selects.append("\t(SELECT $select_cols_string FROM ${map.quotedId}.${history.quotedName} $better_where)\n")
-                }
-            }
+        var minVersion = req.minVersion
+        if (minVersion != null) {
+            minVersion = minVersion or Int64(3)
+            if (WHERE.isNotEmpty()) WHERE.append(" AND ")
+            WHERE.append("($VERSION >= ").append(minVersion).append(")")
         }
-        // Restore original value for `col_num` selection.
-        select_cols[0] = "col_num"
+        val readHistory = req.queryHistory && pgCollection.storeHistory
+        val versions = req.versions
+        if (readHistory && versions == 1 && version != null) { // Return latest version only, but involve history.
+            if (WHERE.isNotEmpty()) WHERE.append(" AND ")
+            WHERE.append("($NEXT_VERSION > ").append(version).append(" OR $NEXT_VERSION IS NULL) ")
+        }
+        if (whereQuery.isNotEmpty()) {
+            if (WHERE.isNotEmpty()) WHERE.append(" AND ")
+            WHERE.append(whereQuery)
+        }
+        val where = if (WHERE.isEmpty()) "" else " WHERE $WHERE"
+        // The live-only filter applies to HEAD only; history queries must still return archived DELETE rows.
+        val headWhere = if (req.queryDeleted) where else {
+            val hw = StringBuilder(WHERE)
+            if (hw.isNotEmpty()) hw.append(" AND ")
+            hw.append("($VERSION & 3) < 2 ")
+            " WHERE $hw"
+        }
 
-        // The final tuple-number-binary to be returned, optimized for size!
-        val gzip = if (thePgCollection == null)
-        // If we select from multiple collections, we have to encode the collection-number in the tuple-number.
-        // This results in 128-bit per row, aka 16-byte per row, but 4 byte less in the header.
-        """(
-  int4send((0 << 28)|(2 << 24)|sum(1)::int)|| -- type (0), subtype (2), length
-  int4send(20 + sum(1)::int*16)|| -- byte-size
-  int8send(${pgStorage.number})|| -- shared storage-number
-  int4send(${pgMap.number})|| -- shared map-number
-  bytea_agg(int4send(col_num)||tn) -- aggregate all tuple-number, embed collection-number
-)""" else
-    // If we select only from exactly one table, we can embed the collection-number into the binary header.
-    // This reduces the encoding of each tuple-number to 96-bit (12-byte), but adds 4-byte into the header
-    // for the shared collection-number.
-    """(
-  int4send((0 << 28)|(3 << 24)|sum(1)::int)|| -- type (0), subtype (3), length
-  int4send(24 + sum(1)::int*12)|| -- byte-size
-  int8send(${pgStorage.number})|| -- shared storage-number
-  int4send(${pgMap.number})|| -- shared map-number
-  int4send(${thePgCollection.number})|| -- shared collection-number
-  bytea_agg(tn) -- aggregate all tuple-number
-)"""
+        val baseCols = listOf(FN, VERSION)
+        val extraCols = order_by?.map { it.first }?.filter { it !in baseCols }?.distinct() ?: emptyList()
+        val selectCols = (baseCols + extraCols).joinToString(", ")
 
-        // The columns we need until the last final result building.
-        val select_cols_string = select_cols.joinToString(", ")
+        // The query starts with select all tuple-numbers of matching tuple.
+        val query = if (readHistory) """query AS
+( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere
+  UNION ALL
+  SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.historyTable.quotedName}$where )""" else """query AS
+( SELECT $selectCols FROM ${pgCatalog.quotedId}.${pgCollection.headTable.quotedName}$headWhere )"""
 
-        // If history is queried, and only a certain amount of versions should be returned
-        // we need to partition the result, so that we can select have the requested amount of versions.
-        val part = if (req.queryHistory && versions > 1) """, query_with_v AS (
-  SELECT
-    $select_cols_string,
-    ROW_NUMBER() OVER (PARTITION BY col_num, naksha_tn_feature_number(tn) ORDER BY tn DESC) AS v
-  FROM query
-), part AS (
-  SELECT $select_cols_string
-  FROM query_with_v
-  WHERE v <= $versions
-)""" else ""
+        // If history is queried, and only a certain amount of versions should be returned,
+        // or we want only the latest version, but no specific version target is given, then
+        // we need to partition the result, so that we can select the requested amount of latest versions.
+        val all = if (readHistory && versions > 1) """, query_partitioned AS
+(SELECT $selectCols, ROW_NUMBER() OVER (PARTITION BY $FN ORDER BY $VERSION DESC) AS v FROM query)
+, all_versions AS
+(SELECT $selectCols FROM query_partitioned WHERE v <= $versions)""" else ""
 
         // `order_by` may be empty, if no custom ordering was requested.
-        val order_by_string = order_by.joinToString(", ") { "${it.first} ${it.second}" }
+        val order_by_string = order_by?.joinToString(", ") { "${it.first} ${it.second}" } ?: ""
 
         // apply limit and order, if given
-        val limited = """, limited AS (
-  SELECT $select_cols_string
-  FROM ${if (part.isNotEmpty()) "part" else "query"}
-  ${if (order_by_string.isNotEmpty()) "ORDER BY $order_by_string " // Explicit ordering.
-    else if (part.isNotEmpty()) "ORDER BY col_num DESC, tn DESC " // If multiple versions requested, order by version.
-    else "" // No explicit ordering, no multiple versions, use random oder
-  }LIMIT $REQ_LIMIT
-)"""
+        val limited = """, limited AS
+(SELECT $selectCols FROM ${if (all.isNotEmpty()) "all_versions" else "query"} ${if (order_by_string.isNotEmpty()) "ORDER BY $order_by_string "
+else if (all.isNotEmpty()) "ORDER BY $FN ASC, $VERSION DESC " else ""}LIMIT $REQ_LIMIT)"""
 
         // The final SQL query.
-        // We only need `col_num` and `tn`, the additional columns in limit were only for sorting!
-        // If we only select from a single collection (thePgCollection != null), then we only need
-        // the tuple-numbers, because we know the collection we read from!
-        val SQL = """WITH query AS (
-$selects)$part$limited
-SELECT ${if (thePgCollection == null) "col_num, tn" else "tn"} FROM limited"""
+        // We only need `col_num`, `fn`, and `version`; the additional columns in limit were only for sorting.
+        // If we only select from a single collection (thePgCollection != null), `col_num` is implicit.
+        val SQL = """WITH $query$all$limited
+SELECT $FN AS fn, $VERSION AS version FROM limited"""
         return PgQuery(
             sql = SQL,
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),
             argTypes = whereClause?.argTypeNames ?: emptyArray(),
             pgStorage.number,
-            pgMap.number,
-            thePgCollection?.number
+            pgCatalog.catalogNumber,
+            pgCollection.collectionNumber
         )
     }
 }

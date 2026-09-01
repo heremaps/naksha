@@ -4,24 +4,15 @@ plugins {
 
 description = gatherDescription()
 
-java {
-    setSourceCompatibility(11)
-    setTargetCompatibility(11)
-}
-
 kotlin {
-    jvm {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
+    jvm { }
     sourceSets {
         jvmMain {
             dependencies {
-                implementation(project(":here-naksha-lib-core"))
-                implementation(project(":here-naksha-lib-model"))
-                implementation(project(":here-naksha-lib-view"))
-                implementation(project(":here-naksha-storage-http"))
+                api(project(":here-naksha-lib-core"))
+                api(project(":here-naksha-lib-model"))
+                api(project(":here-naksha-lib-view"))
+                api(project(":here-naksha-storage-http"))
 
                 implementation(libs.commons.lang3)
                 implementation(libs.commons.dbutils)
@@ -30,9 +21,10 @@ kotlin {
         }
         jvmTest {
             dependencies {
+                implementation(kotlin("test-junit5"))
                 implementation(libs.bundles.testing)
-                //implementation(testFixtures(project(":here-naksha-lib-core")))
-                runtimeOnly(libs.junit.platform.launcher)  // https://github.com/gradle/gradle/issues/34512
+                // https://github.com/gradle/gradle/issues/34512
+                runtimeOnly(libs.junit.platform.launcher)
             }
         }
     }

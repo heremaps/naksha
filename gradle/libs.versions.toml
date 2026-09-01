@@ -1,134 +1,134 @@
 [versions]
-vertx = "4.5.0"
-netty = "4.1.90.Final"
-jackson = "2.15.2"
-aws = "2.25.19"
-jts = "1.19.0"
-geotools = "19.1"
+vertx = "4.5.14"
+netty = "4.1.121.Final"
+jackson = "2.19.0"
+aws = "2.46.7"
+jts = "1.20.0"
+geotools = "35.0"
 slf4j = "2.0.17"
-log4j = "2.25.1"
-junit = "5.9.2"
-test_containers = "1.20.6"
-kotlin = "2.1.20"
-jacoco = "0.8.14"
+log4j = "2.26.0"
+junit = "5.14.4"
+junit_platform = "1.14.4"
+test_containers = "1.21.4"
+kotlin = "2.4.10"
+jacoco = "0.8.15"
 fastdouble = "2.0.1"
 jmh = "1.37"
-gson = "2.13.2" # https://github.com/google/gson
-jsonio = "4.61.0" # https://github.com/jdereg/json-io
-fastjson = "2.0.31" # https://github.com/alibaba/fastjson
+gson = "2.14.0" # https://github.com/google/gson
+jsonio = "4.108.0" # https://github.com/jdereg/json-io
+fastjson = "2.0.57" # https://github.com/alibaba/fastjson
 simdjson = "0.4.0" # https://github.com/simdjson/simdjson-java
 
 [libraries]
-jetbrains_annotations = { module = "org.jetbrains:annotations", version = "26.0.2-1" }
+jetbrains_annotations       = { module = "org.jetbrains:annotations", version = "26.1.0" }
 
-vertx_core = { module = "io.vertx:vertx-core", version.ref = "vertx" }
-vertx_config = { module = "io.vertx:vertx-config", version.ref = "vertx" }
-vertx_auth_jwt = { module = "io.vertx:vertx-auth-jwt", version.ref = "vertx" }
-vertx_redis_client = { module = "io.vertx:vertx-redis-client", version.ref = "vertx" }
-vertx_jdbc_client = { module = "io.vertx:vertx-jdbc-client", version.ref = "vertx" }
-vertx_web = { module = "io.vertx:vertx-web", version.ref = "vertx" }
-vertx_web_openapi = { module = "io.vertx:vertx-web-openapi", version.ref = "vertx" }
-vertx_web_client = { module = "io.vertx:vertx-web-client", version.ref = "vertx" }
-vertx_web_templ = { module = "io.vertx:vertx-web-templ-handlebars", version.ref = "vertx" }
+vertx_core                  = { module = "io.vertx:vertx-core", version.ref = "vertx" }
+vertx_config                = { module = "io.vertx:vertx-config", version.ref = "vertx" }
+vertx_auth_jwt              = { module = "io.vertx:vertx-auth-jwt", version.ref = "vertx" }
+vertx_redis_client          = { module = "io.vertx:vertx-redis-client", version.ref = "vertx" }
+vertx_jdbc_client           = { module = "io.vertx:vertx-jdbc-client", version.ref = "vertx" }
+vertx_web                   = { module = "io.vertx:vertx-web", version.ref = "vertx" }
+vertx_web_openapi           = { module = "io.vertx:vertx-web-openapi", version.ref = "vertx" }
+vertx_web_client            = { module = "io.vertx:vertx-web-client", version.ref = "vertx" }
+vertx_web_templ             = { module = "io.vertx:vertx-web-templ-handlebars", version.ref = "vertx" }
 
-netty_transport_native_kqueue = { module = "io.netty:netty-transport-native-kqueue", version.ref = "netty" }
-netty_transport_native_epoll = { module = "io.netty:netty-transport-native-epoll", version.ref = "netty" }
+netty_native_kqueue         = { module = "io.netty:netty-transport-native-kqueue", version.ref = "netty" }
+netty_native_epoll          = { module = "io.netty:netty-transport-native-epoll", version.ref = "netty" }
 
-jackson_core = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
-jackson_core_annotations = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
-jackson_core_databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
-jackson_core_dataformat = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
-jackson_kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+jackson_core                = { module = "com.fasterxml.jackson.core:jackson-core", version.ref = "jackson" }
+jackson_core_annotations    = { module = "com.fasterxml.jackson.core:jackson-annotations", version.ref = "jackson" }
+jackson_core_databind       = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson_core_dataformat     = { module = "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml", version.ref = "jackson" }
+jackson_kotlin              = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
 
-google_flatbuffers = "com.google.flatbuffers:flatbuffers-java:23.5.9"
-google_protobuf = "com.google.protobuf:protobuf-java:3.16.3"
-google_guava = "com.google.guava:guava:33.4.8-jre"
-google_tink = "com.google.crypto.tink:tink:1.5.0"
-google_findbugs_jsr305 = "com.google.code.findbugs:jsr305:3.0.2"
+google_flatbuffers          = "com.google.flatbuffers:flatbuffers-java:25.2.10"
+google_protobuf             = "com.google.protobuf:protobuf-java:3.25.8"
+google_guava                = "com.google.guava:guava:33.4.8-jre"
+google_tink                 = "com.google.crypto.tink:tink:1.18.0"
+google_findbugs_jsr305      = "com.google.code.findbugs:jsr305:3.0.2"
 
-aws_bom = { module = "software.amazon.awssdk:bom", version.ref = "aws" }
-aws_s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws" }
+aws_bom                     = { module = "software.amazon.awssdk:bom", version.ref = "aws" }
+aws_s3                      = { module = "software.amazon.awssdk:s3", version.ref = "aws" }
 
-jts_core = { module = "org.locationtech.jts:jts-core", version.ref = "jts" }
-jts_io_common = { module = "org.locationtech.jts.io:jts-io-common", version.ref = "jts" }
+jts_core                    = { module = "org.locationtech.jts:jts-core", version.ref = "jts" }
+jts_io_common               = { module = "org.locationtech.jts.io:jts-io-common", version.ref = "jts" }
 
-gt_api = { module = "org.geotools:gt-api", version.ref = "geotools" }
-gt_referencing = { module = "org.geotools:gt-referencing", version.ref = "geotools" }
-gt_epsg_hsql = { module = "org.geotools:gt-epsg-hsql", version.ref = "geotools" }
-gt_epsg_extension = { module = "org.geotools:gt-epsg-extension", version.ref = "geotools" }
+gt_api                      = { module = "org.geotools:gt-api", version.ref = "geotools" }
+gt_referencing              = { module = "org.geotools:gt-referencing", version.ref = "geotools" }
+gt_epsg_hsql                = { module = "org.geotools:gt-epsg-hsql", version.ref = "geotools" }
+gt_epsg_extension           = { module = "org.geotools:gt-epsg-extension", version.ref = "geotools" }
 
-spatial4j = "org.locationtech.spatial4j:spatial4j:0.8"
+spatial4j                   = "org.locationtech.spatial4j:spatial4j:0.8"
 
-slf4j_api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
-slf4j_console = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
-jcl_slf4j = { module = "org.slf4j:jcl-over-slf4j", version.ref = "slf4j" }
+slf4j_api                   = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+slf4j_console               = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+jcl_slf4j                   = { module = "org.slf4j:jcl-over-slf4j", version.ref = "slf4j" }
 
-log4j_core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
-log4j_api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
-log4j_jcl = { module = "org.apache.logging.log4j:log4j-jcl", version.ref = "log4j" }
-log4j_slf4j = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
+log4j_core                  = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
+log4j_api                   = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
+log4j_jcl                   = { module = "org.apache.logging.log4j:log4j-jcl", version.ref = "log4j" }
+log4j_slf4j                 = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j" }
 
-postgres = "org.postgresql:postgresql:42.7.5"
-commons_dbutils = "commons-dbutils:commons-dbutils:1.7"
+postgres                    = "org.postgresql:postgresql:42.7.7"
+commons_dbutils             = "commons-dbutils:commons-dbutils:1.8.1"
 
-commons_lang3 = "org.apache.commons:commons-lang3:3.18.0"
-jodah_expiringmap = "net.jodah:expiringmap:0.5.10"
-caffinitas_ohc = "org.caffinitas.ohc:ohc-core:0.7.4"
-caffeine = "com.github.ben-manes.caffeine:caffeine:3.2.0"
-lmax_disruptor = "com.lmax:disruptor:3.4.4"
-mchange_commons = "com.mchange:mchange-commons-java:0.2.20"
-mchange_c3p0 = "com.mchange:c3p0:0.9.5.5"
+commons_lang3               = "org.apache.commons:commons-lang3:3.20.0"
+jodah_expiringmap           = "net.jodah:expiringmap:0.5.11"
+caffinitas_ohc              = "org.caffinitas.ohc:ohc-core:0.7.4"
+caffeine                    = "com.github.ben-manes.caffeine:caffeine:3.2.0"
+lmax_disruptor              = "com.lmax:disruptor:4.0.0"
+mchange_commons             = "com.mchange:mchange-commons-java:0.3.2"
+mchange_c3p0                = "com.mchange:c3p0:0.11.1"
 
-jayway_jsonpath = "com.jayway.jsonpath:json-path:2.9.0"
-rest_assured = "io.rest-assured:rest-assured:5.5.0"
-assertj_core = "org.assertj:assertj-core:3.24.2"
-awaitility = "org.awaitility:awaitility:4.2.0"
+jayway_jsonpath             = "com.jayway.jsonpath:json-path:2.9.0"
+rest_assured                = "io.rest-assured:rest-assured:5.5.2"
+assertj_core                = "org.assertj:assertj-core:3.27.3"
+awaitility                  = "org.awaitility:awaitility:4.3.0"
 
-junit_jupiter_api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
-junit_jupiter_engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
-junit_jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
-junit_params = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
-junit_platform_launcher = "org.junit.platform:junit-platform-launcher:1.10.1"
+junit_bom                   = { module = "org.junit:junit-bom", version.ref = "junit" }
+junit_params                = { module = "org.junit.jupiter:junit-jupiter-params", version.ref = "junit" }
+junit_platform_launcher     = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit_platform" }
+junit_vintage_engine        = { module = "org.junit.vintage:junit-vintage-engine", version.ref = "junit" }
+junit_jupiter_engine        = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+junit_jupiter_api           = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+junit_jupiter               = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 
+mockito_core                = "org.mockito:mockito-core:5.23.0"
+mockito_junit               = "org.mockito:mockito-junit-jupiter:5.23.0"
+mockito_kotlin              = "org.mockito.kotlin:mockito-kotlin:6.3.0"
+wiremock                    =  "org.wiremock:wiremock:3.13.2"
+kotlintest_runner_junit     = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.4.2" }
 
-mockito = "org.mockito:mockito-core:5.23.0"
-mockito_junit = "org.mockito:mockito-junit-jupiter:5.23.0"
-mockito_kotlin = "org.mockito.kotlin:mockito-kotlin:6.3.0"
-wiremock =  "org.wiremock:wiremock:3.3.1"
-kotlintest_runner_junit5 = { module = "io.kotlintest:kotlintest-runner-junit5", version = "3.3.2" }
+skyscreamer_jsonassert      = { module = "org.skyscreamer:jsonassert", version = "1.5.1" }
 
-test_containers = { module = "org.testcontainers:testcontainers", version.ref = "test_containers" }
-test_containers_postgres = { module = "org.testcontainers:postgresql", version.ref = "test_containers" }
+test_containers             = { module = "org.testcontainers:testcontainers", version.ref = "test_containers" }
+test_containers_postgres    = { module = "org.testcontainers:postgresql", version.ref = "test_containers" }
 
-flipkart_zjsonpatch = "com.flipkart.zjsonpatch:zjsonpatch:0.4.16"
-json_assert = "org.skyscreamer:jsonassert:1.5.1"
-resillience4j_retry = "io.github.resilience4j:resilience4j-retry:2.0.0"
-otel = "io.opentelemetry:opentelemetry-api:1.28.0"
-cytodynamics = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
-kotlinx_datetime = "org.jetbrains.kotlinx:kotlinx-datetime:0.6.2"
-lz4_java = "at.yawk.lz4:lz4-java:1.10.4"
+flipkart_zjsonpatch         = "com.flipkart.zjsonpatch:zjsonpatch:0.4.16"
+json_assert                 = "org.skyscreamer:jsonassert:1.5.3"
+resillience4j_retry         = "io.github.resilience4j:resilience4j-retry:2.3.0"
+otel                        = "io.opentelemetry:opentelemetry-api:1.51.0"
+cytodynamics                = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
+kotlinx_datetime            = "org.jetbrains.kotlinx:kotlinx-datetime:0.7.0"
+lz4_java                    = "at.yawk.lz4:lz4-java:1.11.1"
 
-picocli = { module = "info.picocli:picocli", version = "4.7.7" }
+picocli                     = { module = "info.picocli:picocli", version = "4.7.7" }
 
-fastdouble = { module = "ch.randelshofer:fastdoubleparser", version.ref = "fastdouble" }
+fastdouble                  = { module = "ch.randelshofer:fastdoubleparser", version.ref = "fastdouble" }
 
-jmh_core = { module = "org.openjdk.jmh:jmh-core", version.ref = "jmh" }
-jmh_ann = { module = "org.openjdk.jmh:jmh-generator-annprocess", version.ref = "jmh" }
-gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
-jsonio = { module = "com.cedarsoftware:json-io", version.ref = "jsonio" }
-fastjson = { module = "com.alibaba:fastjson", version.ref="fastjson" }
-simdjson = { module = "org.simdjson:simdjson-java", version.ref = "simdjson" }
+gson                        = { module = "com.google.code.gson:gson", version.ref = "gson" }
+jsonio                      = { module = "com.cedarsoftware:json-io", version.ref = "jsonio" }
+fastjson                    = { module = "com.alibaba:fastjson", version.ref="fastjson" }
+simdjson                    = { module = "org.simdjson:simdjson-java", version.ref = "simdjson" }
 
 [plugins]
-kotlin_multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlin_js_plain_objects = { id = "org.jetbrains.kotlin.plugin.js-plain-objects", version.ref = "kotlin" }
-foojay = { id = "org.gradle.toolchains.foojay-resolver-convention", version = "0.10.0" }
-shadow = { id = "com.gradleup.shadow", version = "9.4.1" }
-spotless = { id = "spotless", version = "6.22.0" }
-vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.31.0" }
-#vanniktechMavenPublish = { id = "com.vanniktech.maven.publish", version = "0.1.0-SNAPSHOT" }
-axion_release = { id = "pl.allegro.tech.build.axion-release", version = "1.20.1"}
-#jmh = { id = "me.champeau.jmh", version = "0.7.2"}
+kotlin_multiplatform        = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlin_js_plain_objects     = { id = "org.jetbrains.kotlin.plugin.js-plain-objects", version.ref = "kotlin" }
+foojay                      = { id = "org.gradle.toolchains.foojay-resolver-convention", version = "1.0.0" }
+shadow                      = { id = "com.gradleup.shadow", version = "9.5.1" }
+spotless                    = { id = "spotless", version = "8.8.0" }
+vanniktechMavenPublish      = { id = "com.vanniktech.maven.publish", version = "0.37.0" }
+axion_release               = { id = "pl.allegro.tech.build.axion-release", version = "1.21.2"}
 
 [bundles]
 vertx = [
@@ -149,12 +149,15 @@ spatial = [
     "gt_api", "gt_referencing", "gt_epsg_hsql", "gt_epsg_extension", #geotools
     "spatial4j"
 ]
-junit = ["junit_jupiter_api", "junit_jupiter_engine", "junit_jupiter", "junit_params"]
+junit = [ "junit_vintage_engine", "junit_jupiter_engine", "junit_jupiter", "junit_jupiter_api", "junit_params" ]
+mockito = [ "mockito_core", "mockito_junit", "mockito_kotlin" ]
 testing = [
-    "junit_jupiter_api", "junit_jupiter_engine", "junit_jupiter", "junit_params", # junit
-    "json_assert",
-    "mockito", "mockito_junit"
+    # junit
+    "junit_vintage_engine", "junit_jupiter_engine", "junit_jupiter", "junit_jupiter_api", "junit_params",
+    # mockito
+    "mockito_core", "mockito_junit", "mockito_kotlin",
+    # JSON assert, wiremock
+    "json_assert", "wiremock"
 ]
 jackson = ["jackson_core", "jackson_core_annotations", "jackson_core_databind", "jackson_core_dataformat", "jackson_kotlin"]
 logging = ["slf4j_api", "jcl_slf4j", "log4j_core", "log4j_api", "log4j_jcl", "log4j_slf4j"]
-#perftest = ["jmh_core", "jmh_ann", "gson"]

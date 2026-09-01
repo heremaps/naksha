@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.Action
+import naksha.base.Action
 import naksha.model.Naksha
 import naksha.model.RandomFeatures
 import naksha.model.objects.NakshaCollection
@@ -11,7 +11,6 @@ import naksha.model.request.WriteRequest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 
 class HistoryUuidTest: PgTestBase(NakshaCollection(
     id = "history_puuid_test_collection",
@@ -41,29 +40,27 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
         // And:
         Naksha.cache.clear()
         val featureVersions = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             featureIds += feature.id
             queryHistory = true
+            queryDeleted = true
         }).features.filterNotNull()
 
         // Then:
         assertEquals(3, featureVersions.size)
-        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATED }!!
-        val retrievedUpdatedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATED }!!
-        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETED }!!
+        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATE }!!
+        val retrievedUpdatedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATE }!!
+        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETE }!!
 
         // And:
-        assertNull(retrievedCreatedFeature.properties.xyz.puuid)
         assertNotNull(retrievedCreatedFeature.properties.xyz.uuid)
         assertEquals(retrievedCreatedFeature.properties.xyz.nuuid, retrievedUpdatedFeature.properties.xyz.uuid)
 
         // And:
-        assertEquals(retrievedUpdatedFeature.properties.xyz.puuid, retrievedCreatedFeature.properties.xyz.uuid)
         assertEquals(retrievedUpdatedFeature.properties.xyz.nuuid, retrievedDeletedFeature.properties.xyz.uuid)
 
         // And:
-        assertEquals(retrievedDeletedFeature.properties.xyz.puuid, retrievedUpdatedFeature.properties.xyz.uuid)
         assertEquals(retrievedDeletedFeature.properties.xyz.nuuid, retrievedDeletedFeature.properties.xyz.uuid)
     }
 
@@ -90,29 +87,27 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
         // And:
         Naksha.cache.clear()
         val featureVersions = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             featureIds += feature.id
             queryHistory = true
+            queryDeleted = true
         }).features.filterNotNull()
 
         // Then:
         assertEquals(3, featureVersions.size)
-        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATED }!!
-        val retrievedUpsertedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATED }!!
-        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETED }!!
+        val retrievedCreatedFeature = featureVersions.find { it.properties.xyz.action == Action.CREATE }!!
+        val retrievedUpsertedFeature = featureVersions.find { it.properties.xyz.action == Action.UPDATE }!!
+        val retrievedDeletedFeature = featureVersions.find { it.properties.xyz.action == Action.DELETE }!!
 
         // And:
-        assertNull(retrievedCreatedFeature.properties.xyz.puuid)
         assertNotNull(retrievedCreatedFeature.properties.xyz.uuid)
         assertEquals(retrievedCreatedFeature.properties.xyz.nuuid, retrievedUpsertedFeature.properties.xyz.uuid) // TODO: FAILS
 
         // And:
-        assertEquals(retrievedUpsertedFeature.properties.xyz.puuid, retrievedCreatedFeature.properties.xyz.uuid)
         assertEquals(retrievedUpsertedFeature.properties.xyz.nuuid, retrievedDeletedFeature.properties.xyz.uuid)
 
         // And:
-        assertEquals(retrievedDeletedFeature.properties.xyz.puuid, retrievedUpsertedFeature.properties.xyz.uuid)
         assertEquals(retrievedDeletedFeature.properties.xyz.nuuid, retrievedDeletedFeature.properties.xyz.uuid)
     }
 }

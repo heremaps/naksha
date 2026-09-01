@@ -33,8 +33,8 @@ import io.vertx.ext.web.RoutingContext;
 import naksha.base.JvmJsonUtil;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
@@ -103,16 +103,16 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   private @NotNull XyzResponse executeGetStorages() {
-    final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
-    request.setMapId(naksha().getAdminMapId());
+    final ReadFeatures request = new ReadFeatures().withCollectionId(STORAGES);
+    request.setCatalogId(naksha().getAdminMapId());
     Response response = executeReadRequestFromSpaceStorage(request);
     return transformResponseToXyzCollectionResponse(response, NakshaStorage.class, STORAGE_MASKING);
   }
 
   private @NotNull XyzResponse executeGetStorageById() {
     final String storageId = ApiParams.extractMandatoryPathParam(routingContext, STORAGE_ID);
-    final ReadFeatures request = new ReadFeatures().addCollectionId(STORAGES);
-    request.setMapId(naksha().getAdminMapId());
+    final ReadFeatures request = new ReadFeatures().withCollectionId(STORAGES);
+    request.setCatalogId(naksha().getAdminMapId());
     request.setFeatureIds(StringList.of(storageId));
     return transformedResponseTo(request);
   }

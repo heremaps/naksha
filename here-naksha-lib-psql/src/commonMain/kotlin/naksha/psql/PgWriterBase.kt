@@ -2,9 +2,15 @@ package naksha.psql
 
 import naksha.base.Int64
 import naksha.base.IntMutable
-import naksha.model.Version
-import naksha.model.illegalState
+import naksha.base.fn.Fx3
+import naksha.model.Tuple
+import naksha.base.Version
+import naksha.base.illegalArg
+import naksha.base.illegalState
 import naksha.model.objects.NakshaTx
+import naksha.model.objects.StandardMembers
+import kotlin.collections.mutableMapOf
+import kotlin.jvm.JvmStatic
 
 /**
  * Base class for all operations, so for:
@@ -20,37 +26,59 @@ internal abstract class PgWriterBase protected constructor(
      * The [writer][PgWriter] to which this write is bound.
      * @since 3.0
      */
-    val writer: PgWriter,
+    val pgWriter: PgWriter,
 
     /**
      * The collection to operate upon.
      * @since 3.0
      */
-    val collection: PgCollection,
-
-    /**
-     * The partition to write into, `-1` if writes should enter base table.
-     * @since 3.0
-     */
-    val partition: Int,
+    val pgCollection: PgCollection,
 
     /**
      * The list of writes to perform.
      * @since 3.0
      */
-    val writes: List<PgWrite>,
+    val pgWrites: List<PgWrite>,
+
+    /**
+     * The index of first [PgWrite] from the [pgWrites] list to process.
+     */
+    val start: Int,
+
+    /**
+     * The index of first [PgWrite] from the [pgWrites] list to **NOT** process.
+     */
+    val end: Int,
 ) {
+    companion object PgWriterBase_C {
+        @JvmStatic
+        protected val UNDEFINED: ByteArray = "undefined".encodeToByteArray()
+    }
+
     val session: PgSession
-        get() = writer.session
+        get() = pgWriter.session
 
     val storageNumber: Int64
-        get() = collection.storage.number
+        get() = pgCollection.storage.number
 
-    val mapNumber: Int
-        get() = collection.map.number
+    val catalogNumber: Int
+        get() = pgCollection.catalog.catalogNumber
 
     val collectionNumber: Int
-        get() = collection.number
+        get() = pgCollection.collectionNumber
+
+    /** The _HEAD_ table. */
+    val headTable = pgCollection.headTable
+    /** The quoted name of the _HEAD_ table. */
+    val headIdent = headTable.quotedName
+    /** The _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
+    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
+    /** The quoted name of the _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
+    val historyIdent = historyTable?.quotedName
+    /** The `id` column */
+    val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
+    /** The change-count column, if there is any defined. */
+    val CC: PgColumn? = pgCollection.column(StandardMembers.ChangeCount)
 
     /**
      * The transaction to operate upon.
@@ -66,17 +94,16 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     val transaction: NakshaTx
-        get() = tx.transaction
+        get() = tx.nakshaTx
 
     /**
      * The rows to write.
      * @since 3.0
      */
-    val inRows = PgColumnRows()
-        .withStorageNumber(storageNumber)
-        .withMapNumber(mapNumber)
+    val inRows = PgRows()
+        .withDatabaseNumber(storageNumber)
+        .withCatalogNumber(catalogNumber)
         .withCollectionNumber(collectionNumber)
-        .withMinSize(writes.size)
 
     /**
      * Generates a live mapping between the write instructions and the partition-index into which they will write.
@@ -87,10 +114,10 @@ internal abstract class PgWriterBase protected constructor(
      */
     val featureCountByPartition: Map<Int, IntMutable>
         get() {
-            val partitions = collection.head.partitions
+            val partitions = pgCollection.partitions
             val partIndices = mutableMapOf<Int, IntMutable>()
-            for (i in writes.indices) {
-                val write = writes[i]
+            for (i in start ..< end) {
+                val write = pgWrites[i]
                 val partIndex = write.tupleNumber?.partitionIndex(partitions) ?: -1
                 val existing = partIndices[partIndex]
                 if (existing != null) existing.plus(1) else partIndices[partIndex] = IntMutable(1)
@@ -112,72 +139,10 @@ internal abstract class PgWriterBase protected constructor(
      */
     val featureCountByPartitionJoined: String
         get() {
-            val partitions = collection.head.partitions
-            return if (partitions <= 1) "-1: ${writes.size}"
+            val partitions = pgCollection.head.partitions
+            return if (partitions <= 1) "-1: ${end - start}"
             else featureCountByPartition.entries.joinToString(", ") { "${it.key}=${it.value.value}" }
         }
-
-    /**
-     * If this write should be done into a partition.
-     */
-    val writeIntoPartition: Boolean = partition >= 0
-
-    /**
-     * The year when the transaction started, for transactions and history writes.
-     */
-    val year: Int = tx.version.year
-
-    private fun initHeadTable(): PgTable {
-        if (writeIntoPartition) {
-            return collection.headTable.partitions[partition]
-        }
-        if (collection.headTable is PgTransactions) {
-            val transactions = collection.headTable as PgTransactions
-            var table = transactions.years[year]
-            if (table == null) {
-                transactions.addYear(year)
-                table = transactions.years[year]
-                if (table == null) {
-                    throw illegalState("Internal error, failed to add transaction year $year")
-                }
-            }
-            return table
-        }
-        return collection.headTable
-    }
-
-    /**
-     * The head table to write into.
-     */
-    val headTable: PgTable = initHeadTable()
-
-    private fun initShadowTable(): PgTable? {
-        val deletedTable = collection.deletedTable ?: return null
-        return if (writeIntoPartition) deletedTable.partitions[partition] else deletedTable
-    }
-
-    /**
-     * The shadow table to write into.
-     */
-    val shadowTable: PgTable? = initShadowTable()
-
-    private fun initHistoryTable(): PgTable? {
-        val hst = collection.historyTable ?: return null
-        var yearTable: PgHistoryYear? = hst.years[year]
-        if (yearTable == null) {
-            hst.addYear(year)
-            yearTable = hst.years[year]
-            if (yearTable == null) {
-                throw illegalState("Internal error, failed to add history year $year")
-            }
-        }
-        return if (writeIntoPartition) yearTable.partitions[partition] else yearTable
-    }
-
-    /**
-     * The history table to write into, if any.
-     */
-    val historyTable: PgTable? = initHistoryTable()
 
     /**
      * Execute the operation.
@@ -185,8 +150,26 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     fun execute(conn: PgConnection) {
-        collection.map.setSearchPath(conn)
+        pgCollection.catalog.setSearchPath(conn)
         return doExecute(conn)
+    }
+
+    /**
+     * Add all tuple from [pgWrites], expects that the columns are prepared.
+     * @param lambda a lambda optionally being called after every imported tuple, with `row`, `tuple` and `pgWrite` as arguments.
+     * @return the number of rows loaded.
+     */
+    protected fun loadAllTuple(lambda: Fx3<Int, Tuple, PgWrite>? = null): Int {
+        var row = 0
+        inRows.setMinRows(inRows.size + (end - start))
+        for (i in start ..< end) {
+            val pgWrite = pgWrites[i]
+            val tuple = pgWrite.tuple ?: throw illegalArg("The write #$i has no tuple, failed to load all tuple")
+            inRows[row] = tuple
+            lambda?.call(row, tuple, pgWrite)
+            row++
+        }
+        return row
     }
 
     /**

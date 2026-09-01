@@ -3,8 +3,7 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static java.util.Collections.emptyList;
-import static naksha.model.NakshaError.ILLEGAL_ARGUMENT;
-import static naksha.model.NakshaError.NOT_FOUND;
+import static naksha.base.NakshaError.NOT_FOUND;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Named.named;
@@ -138,7 +137,7 @@ class IntHandlerForSpacesTest {
   private static Stream<Named<WriteRequest>> persistingSpaceWithoutValidHandlers() {
     Space space = space("space_id", "no_desc", "some_title", List.of("handler_1", "handler_2", "handler_3"));
     NakshaCollection collection = new NakshaCollection("test_collection");
-    collection.setMapId("tes_map_id");
+    collection.setCatalogId("tes_map_id");
     space.getProperties().setCollection(collection);
     return Stream.of(
         named("PUT Space without valid handlers", new WriteRequest().add(new Write().upsertFeature(null, SPACES, space))),
@@ -188,7 +187,7 @@ class IntHandlerForSpacesTest {
   }
 
   private ArgumentMatcher<ReadFeatures> anyReadHandlersRequest() {
-    return argument -> argument.getCollectionIds().size() == 1 && EVENT_HANDLERS.equals(argument.getCollectionIds().get(0));
+    return argument -> EVENT_HANDLERS.equals(argument.getCollectionId());
   }
 
   private static SuccessResponse successfulResponseWithIds(List<String> ids) {

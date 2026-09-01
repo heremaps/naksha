@@ -20,7 +20,6 @@ import kotlin.jvm.JvmField
  * - [naksha.model.request.query.SpOr] - logical OR for spatial conditions
  * - [naksha.model.request.query.TagOr] - logical OR for tag conditions
  * - [naksha.model.request.query.POr] - logical OR for property conditions
- * - [naksha.model.request.query.MetaOr] - logical OR for metadata conditions
  *
  * @since 3.0
  */
@@ -35,7 +34,6 @@ open class RequestQuery : AnyObject() {
         private val SPATIAL_QUERY_OR_NULL = NullableProperty<RequestQuery, ISpatialQuery>(ISpatialQuery::class)
         private val TAG_QUERY_OR_NULL = NullableProperty<RequestQuery, ITagQuery>(ITagQuery::class)
         private val PROPERTIES_QUERY_OR_NULL = NullableProperty<RequestQuery, IPropertyQuery>(IPropertyQuery::class)
-        private val METADATA_QUERY_OR_NULL = NullableProperty<RequestQuery, IMetaQuery>(IMetaQuery::class)
     }
 
     /**
@@ -43,6 +41,7 @@ open class RequestQuery : AnyObject() {
      * @since 3.0.0
      * @see ISpatialQuery
      */
+    @Deprecated("Use op queries, there can be multiple spatial members that can be searched and combined.")
     var spatial by SPATIAL_QUERY_OR_NULL
 
     /**
@@ -50,6 +49,7 @@ open class RequestQuery : AnyObject() {
      * @since 3.0.0
      * @see ITagQuery
      */
+    @Deprecated("Use op queries, there can be multiple tag-like members that can be searched and combined.")
     var tags by TAG_QUERY_OR_NULL
 
     /**
@@ -57,14 +57,8 @@ open class RequestQuery : AnyObject() {
      * @since 3.0.0
      * @see IPropertyQuery
      */
+    @Deprecated("Remove this completely, we only allow to actually search for members.")
     var properties by PROPERTIES_QUERY_OR_NULL
-
-    /**
-     * Search for features matching the given metadata query.
-     * @since 3.0.0
-     * @see IMetaQuery
-     */
-    var metadata by METADATA_QUERY_OR_NULL
 
     /**
      * Search for features that have a reference point in one of the given tiles.
@@ -72,6 +66,7 @@ open class RequestQuery : AnyObject() {
      * If the list is empty, no limit is applied.
      * @since 3.0.0
      */
+    @Deprecated("Use op queries, there can be multiple refTiles-like members that can be searched and combined.")
     var refTiles by INT_LIST
 
     /**
@@ -80,6 +75,7 @@ open class RequestQuery : AnyObject() {
      * @return this.
      * @since 3.0.0
      */
+    @Deprecated("Please use op queries instead")
     fun addRefTile(tile: HereTile): RequestQuery {
         refTiles.add(tile.intKey)
         return this
@@ -91,6 +87,7 @@ open class RequestQuery : AnyObject() {
      * @return this.
      * @since 3.0.0
      */
+    @Deprecated("Please use op queries instead")
     fun removeRefTile(tile: HereTile): RequestQuery {
         refTiles.remove(tile.intKey)
         return this
@@ -105,6 +102,5 @@ open class RequestQuery : AnyObject() {
                 && spatial == null
                 && tags == null
                 && properties == null
-                && metadata == null
     }
 }

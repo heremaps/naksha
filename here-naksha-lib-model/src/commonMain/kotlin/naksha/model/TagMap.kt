@@ -4,23 +4,24 @@ package naksha.model
 
 import naksha.base.Int64
 import naksha.base.MapProxy
+import naksha.base.NakshaError
+import naksha.base.NakshaException
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
  * Map of tags persisted as (key, value) pairs where values are nullable.
  * This class represents the persisted form of [TagList].
- * It is stored as byte_array and can be accessed in PG via `naksha_tags` function.
  *
  * It is advised to only construct it in one of two ways:
  * 1) Via [TagList]-based constructor
- * 2) By deserializing byte array fetched from DB
+ * 2) By deserializing bytes fetched from a storage
  *
  * If for some reason, one would like to use it otherwise, it is advised to properly prepare tags upfront
  * with use of [TagNormalizer] (that is used for example by [TagList])
  */
 @JsExport
-open class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
+class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
 
     @Suppress("LeakingThis")
     @JsName("of")

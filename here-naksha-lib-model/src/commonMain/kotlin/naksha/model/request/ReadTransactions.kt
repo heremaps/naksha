@@ -3,7 +3,7 @@
 package naksha.model.request
 
 import naksha.model.Naksha
-import naksha.model.Version
+import naksha.base.Version
 import kotlin.js.JsExport
 
 /**
@@ -13,8 +13,8 @@ import kotlin.js.JsExport
 @JsExport
 open class ReadTransactions : ReadFeatures() {
     init {
-        mapId = Naksha.ADMIN_MAP
-        collectionIds.add(Naksha.TRANSACTIONS_COL)
+        catalogId = Naksha.ADMIN_CATALOG_ID
+        collectionId = Naksha.TRANSACTIONS_COL_ID
     }
 
     /**

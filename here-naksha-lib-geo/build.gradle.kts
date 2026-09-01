@@ -1,111 +1,43 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
-import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
-import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
-
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
 
 description = gatherDescription()
 
-java {
-    setSourceCompatibility(11)
-    setTargetCompatibility(11)
-}
-
 kotlin {
-    jvm {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
+    jvm { }
+    js { }
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("stdlib"))
-                implementation(libs.kotlinx.datetime)
                 implementation(project(":here-naksha-lib-base"))
-            }
-        }
-        commonTest {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
-                implementation(libs.kotlinx.datetime)
             }
         }
         jvmMain {
             dependencies {
-                implementation(kotlin("stdlib-jdk8"))
-                implementation(project(":here-naksha-lib-base"))
                 implementation(libs.jts.core)
                 implementation(libs.jts.io.common)
             }
             resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
-        jvmTest {
+        jsMain {
+            dependencies {
+            }
+        }
+        commonTest {
             dependencies {
                 implementation(kotlin("test"))
+            }
+        }
+        jvmTest {
+            dependencies {
+                implementation(kotlin("test-junit5"))
                 implementation(libs.jts.io.common)
-                implementation(libs.kotlintest.runner.junit5)
-                runtimeOnly(libs.junit.jupiter.engine)
-                implementation(libs.junit.jupiter.api)
-                implementation(libs.junit.params)
+                implementation(libs.bundles.testing)
                 runtimeOnly(libs.junit.platform.launcher)  // https://github.com/gradle/gradle/issues/34512
             }
         }
-        jsMain {
-            dependencies {
-                implementation(kotlin("stdlib-js"))
-                implementation(project(":here-naksha-lib-base"))
-            }
-        }
-    }
-
-    js(IR) {
-        outputModuleName = "naksha_geo"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            target.set("es2015")
-        }
-        nodejs {
-            compilerOptions {
-                moduleKind = JsModuleKind.MODULE_ES
-                moduleName = "naksha_geo"
-                sourceMap = true
-                useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-            }
-            generateTypeScriptDefinitions()
-            binaries.library()
-            binaries.executable()
-        }
     }
 }
 
-configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
-tasks {
-    getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
-    }
-    // Release
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn("jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
-    }
-    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
-    // Test
-    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
-    getByName<Test>("jvmTest") {
-        useJUnitPlatform()
-        maxHeapSize = "8g"
-    }
-}
 setOverallCoverage(0.0) // only increasing allowed!

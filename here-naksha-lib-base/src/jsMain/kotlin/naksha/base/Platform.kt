@@ -832,8 +832,12 @@ return obj;
             initialize()
         }
 
+        @JsStatic
         actual fun fromJSON(utf8: ByteArray): Any? {
             TODO("Not yet implemented")
         }
+
+        @JsStatic
+        actual fun getTestStorageId(): String = "local_psql_test_storage"
     }
 }

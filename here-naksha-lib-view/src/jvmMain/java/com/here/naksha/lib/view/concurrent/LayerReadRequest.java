@@ -20,9 +20,11 @@ package com.here.naksha.lib.view.concurrent;
 
 import com.here.naksha.lib.view.ViewLayer;
 import naksha.base.StringList;
+import naksha.base.Version;
 import naksha.model.IReadSession;
 import naksha.model.request.ReadFeatures;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class LayerReadRequest {
 
@@ -34,8 +36,10 @@ public class LayerReadRequest {
     // Note: We need to copy the request, because we need to ignore the map/collection client asked for,
     //       because the view is always fixed to certain map/collection!
     this.request = request.copy(false);
-    this.request.setMapId(viewLayer.getMapId());
-    this.request.setCollectionIds(new StringList(viewLayer.getCollectionId()));
+    this.request.setCatalogId(viewLayer.getMapId());
+    this.request.setCollectionId(viewLayer.getCollectionId());
+    final var version = viewLayer.getVersion();
+    if (version != null) this.request.setVersion(version.number);
     this.viewLayer = viewLayer;
     this.session = session;
   }

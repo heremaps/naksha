@@ -7,7 +7,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
-class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
+class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, catalogId = "") {
 
     private val pragueCityHall = randomFeature().apply {
         referencePoint = SpPoint(PointCoord(
@@ -46,8 +46,8 @@ class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
 
         // Given:
         val getFeaturesFromZagrebAndPrague = ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection!!.id
+            catalogId = collection.catalogId
+            collectionId = collection!!.id
             query.refTiles += listOf(zagrebTileLv12.intKey, pragueTileLv12.intKey)
         }
 
@@ -67,8 +67,8 @@ class ReadFeaturesByRefTilesTest : PgTestBase(collection = null, mapId = "") {
 
         // Given:
         val getFeaturesFromBologna = ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             query.refTiles += bolognaTileLv12.intKey
         }
 

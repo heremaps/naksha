@@ -9,31 +9,24 @@ description = gatherDescription()
 val mainApiClass = "com.here.naksha.app.service.NakshaApp"
 val fatJarBaseName = "naksha-app-service"
 
-java {
-    setSourceCompatibility(23)
-    setTargetCompatibility(23)
-}
 kotlin {
     jvm {
+        @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)
         mainRun {
             this.mainClass.set(mainApiClass)
-        }
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_23)
         }
     }
     sourceSets {
         jvmMain {
             dependencies {
-                implementation(project(":here-naksha-lib-core"))
-                implementation(project(":here-naksha-lib-psql"))
-                implementation(project(":here-naksha-storage-http"))
-                //implementation(project(":here-naksha-lib-extension"))
-                implementation(project(":here-naksha-lib-hub"))
-                implementation(project(":here-naksha-common-http"))
-                implementation(project(":here-naksha-lib-diff"))
-                implementation(project(":here-naksha-handler-activitylog"))
-                implementation(project(":here-naksha-lib-mm-util"))
+                api(project(":here-naksha-lib-core"))
+                api(project(":here-naksha-lib-psql"))
+                api(project(":here-naksha-storage-http"))
+                api(project(":here-naksha-lib-hub"))
+                api(project(":here-naksha-common-http"))
+                api(project(":here-naksha-lib-diff"))
+                api(project(":here-naksha-handler-activitylog"))
+                api(project(":here-naksha-lib-mm-util"))
 
                 implementation(libs.commons.lang3)
                 implementation(libs.otel)
@@ -46,12 +39,9 @@ kotlin {
         }
         jvmTest {
             dependencies {
-                implementation(project(":here-naksha-lib-core"))
                 implementation(libs.bundles.testing)
                 implementation(libs.resillience4j.retry)
                 implementation(libs.test.containers)
-                //implementation(testFixtures(project(":here-naksha-lib-core")))
-                implementation(libs.wiremock)
                 runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }
         }

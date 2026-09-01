@@ -27,16 +27,15 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.base.JvmBoxingUtil;
-import naksha.base.StringList;
 import naksha.model.IStorage;
 import naksha.model.Naksha;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
 import naksha.model.StreamInfo;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -181,7 +180,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (operationData.getRequest() instanceof ReadFeatures) {
       return forwardReadFeatures(operationData, currentAttempt, storageTimer);
     } else if (operationData.getRequest() instanceof WriteRequest) {
-      WriteRequest wr = (WriteRequest) operationData.getRequest();
+      final WriteRequest wr = (WriteRequest) operationData.getRequest();
       if (isOnlyWriteCollections(wr)) {
         return forwardWriteCollections(operationData, currentAttempt, storageTimer);
       } else {
@@ -277,7 +276,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     Response response = measuredStorageSupplier(
         () -> performAtomicWriteFeatures(operationData.getSessionOptions(), operationData.getStorageImpl(), (WriteRequest) operationData.getRequest()), storageTimer);
     if (response instanceof ErrorResponse) {
-      ErrorResponse errorResponse = (ErrorResponse) response;
+      final ErrorResponse errorResponse = (ErrorResponse) response;
       return reattempt.call(errorResponse);
     } else {
       return response;
@@ -455,7 +454,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull SessionOptions sessionOptions,
       @NotNull IStorage storageImpl,
       @NotNull String mapId) {
-    WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaMap(mapId)));
+    WriteRequest createMapRequest = new WriteRequest().add(new Write().createMap(new NakshaCatalog(mapId)));
     return singleWrite(sessionOptions, storageImpl, createMapRequest);
   }
 
@@ -525,19 +524,19 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   ) {
     if (request instanceof ReadFeatures) {
       ReadFeatures rf = (ReadFeatures) request;
-      rf.setMapId(mapId);
-      rf.setCollectionIds(StringList.of(collectionId));
+      rf.setCatalogId(mapId);
+      rf.setCollectionId(collectionId);
     } else if (request instanceof WriteRequest) {
       WriteRequest wr = (WriteRequest) request;
       if (isOnlyWriteCollections(wr)) {
         collectionsFrom(wr).forEach(collectionFromRequest -> {
-          collectionFromRequest.setMapId(mapId);
+          collectionFromRequest.setCatalogId(mapId);
           collectionFromRequest.setId(collectionId);
         });
       }
-      String finalCollectionId = isOnlyWriteCollections(wr) ? Naksha.COLLECTIONS_COL : collectionId;
+      String finalCollectionId = isOnlyWriteCollections(wr) ? Naksha.COLLECTIONS_COL_ID : collectionId;
       wr.getWrites().forEach(write -> {
-        write.setMapId(mapId);
+        write.setCatalogId(mapId);
         write.setCollectionId(finalCollectionId);
       });
     }
@@ -640,12 +639,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
   /**
    * Immutable wrapper for data used in each operation attempt
-   *
-   * @param sessionOptions
-   * @param storageImpl
-   * @param mapId
-   * @param collectionId
-   * @param request
    */
   private static final class OperationData {
     private final SessionOptions sessionOptions;

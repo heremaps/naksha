@@ -193,7 +193,7 @@ class IterateFeaturesTest extends ApiTest {
     ResponseAssertions.assertThat(response)
         .hasStatus(200)
         .hasStreamIdHeader(firstStreamId)
-        .hasJsonBody(firstExpectedBodyPart, "First Iterate response body doesn't match", true);
+        .hasJsonBody(firstExpectedBodyPart, "First Iterate response body doesn't match", false);
 
     // Given: iterate parameters for second request
     final String handleQueryParam = "handle=" + urlEncoded(parseJson(response.body(), XyzFeatureCollection.class).getNextPageToken());

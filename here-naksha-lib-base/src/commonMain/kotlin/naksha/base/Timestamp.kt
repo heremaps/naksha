@@ -5,10 +5,11 @@ package naksha.base
 
 import kotlinx.datetime.*
 import kotlin.js.ExperimentalJsExport
-import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmStatic
+import kotlin.time.Clock
+import kotlin.time.Instant
 
 /**
  * A timestamp split into the values.
@@ -49,8 +50,8 @@ class Timestamp(
             return Timestamp(
                 Int64(instant.toEpochMilliseconds()),
                 ldt.year,
-                ldt.monthNumber,
-                ldt.dayOfMonth,
+                ldt.month.number,
+                ldt.day,
                 ldt.hour,
                 ldt.minute,
                 ldt.second,

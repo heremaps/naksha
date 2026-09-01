@@ -1,7 +1,3 @@
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
-import org.jetbrains.kotlin.gradle.dsl.JsModuleKind
-import org.jetbrains.kotlin.gradle.dsl.JsSourceMapEmbedMode
-import org.jetbrains.kotlin.gradle.dsl.JsSourceMapNamesPolicy
 import java.time.Instant
 
 plugins {
@@ -10,109 +6,39 @@ plugins {
 
 description = gatherDescription()
 
-java {
-    setSourceCompatibility(11)
-    setTargetCompatibility(11)
-}
-
 kotlin {
-    jvm {
-        compilerOptions {
-            freeCompilerArgs = listOf("-Xjvm-default=all")
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
-
-    js(IR) {
-        outputModuleName = "naksha_model"
-        useEsModules()
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
-        compilerOptions {
-            target.set("es2015")
-        }
-        nodejs {
-            compilerOptions {
-                moduleKind = JsModuleKind.MODULE_ES
-                moduleName = "naksha_model"
-                sourceMap = true
-                useEsClasses = true
-                sourceMapNamesPolicy = JsSourceMapNamesPolicy.SOURCE_MAP_NAMES_POLICY_SIMPLE_NAMES
-                sourceMapEmbedSources = JsSourceMapEmbedMode.SOURCE_MAP_SOURCE_CONTENT_ALWAYS
-            }
-            generateTypeScriptDefinitions()
-            binaries.library()
-            binaries.executable()
-        }
-    }
-
+    jvm { }
+    js { }
     sourceSets {
         commonMain {
             dependencies {
-                implementation(kotlin("stdlib"))
-                implementation(libs.kotlinx.datetime)
                 api(project(":here-naksha-lib-base"))
                 api(project(":here-naksha-lib-geo"))
                 api(project(":here-naksha-lib-jbon"))
                 api(project(":here-naksha-lib-auth"))
             }
         }
-        commonTest {
-            dependencies {
-                implementation(kotlin("test"))
-                implementation(kotlin("test-common"))
-                implementation(kotlin("test-annotations-common"))
-                implementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
-                implementation("org.mockito:mockito-core:5.13.0")
-                implementation(libs.kotlinx.datetime)
-            }
-        }
         jvmMain {
             dependencies {
-                implementation(kotlin("stdlib-jdk8"))
-                api(project(":here-naksha-lib-base"))
-                api(project(":here-naksha-lib-geo"))
-                api(project(":here-naksha-lib-jbon"))
-								api(project(":here-naksha-lib-auth"))
             }
             resources.setSrcDirs(resources.srcDirs + "${layout.buildDirectory}/dist/js/productionExecutable/")
         }
+        jsMain {
+            dependencies {
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation(kotlin("test"))
+            }
+        }
         jvmTest {
             dependencies {
-                implementation(libs.mockito)
+                implementation(kotlin("test-junit5"))
+                implementation(libs.bundles.testing)
                 runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
             }
         }
-        jsMain {
-            dependencies {
-                implementation(kotlin("stdlib-js"))
-                api(project(":here-naksha-lib-base"))
-                api(project(":here-naksha-lib-geo"))
-                api(project(":here-naksha-lib-jbon"))
-								api(project(":here-naksha-lib-auth"))
-            }
-        }
-    }
-}
-
-configure<JavaPluginExtension> {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-}
-
-tasks {
-    getByName<Task>("jsNodeProductionLibraryDistribution") {
-        dependsOn("jsProductionLibraryCompileSync", "jsProductionExecutableCompileSync")
-    }
-    // Release
-    getByName<ProcessResources>("jvmProcessResources") {
-        dependsOn("jsNodeProductionLibraryDistribution" ) // "jsBrowserDistribution"
-    }
-    getByName<Jar>("jvmJar") { dependsOn("jvmProcessResources") }
-    // Test
-    getByName<ProcessResources>("jvmTestProcessResources") { dependsOn("jvmProcessResources") }
-    getByName<Test>("jvmTest") {
-        useJUnitPlatform()
-        maxHeapSize = "8g"
     }
 }
 

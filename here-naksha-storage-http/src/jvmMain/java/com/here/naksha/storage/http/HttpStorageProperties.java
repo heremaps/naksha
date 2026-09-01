@@ -19,8 +19,8 @@
 package com.here.naksha.storage.http;
 
 import naksha.base.JvmMapProxy;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.ApiStatus.AvailableSince;
@@ -116,7 +116,7 @@ public class HttpStorageProperties extends NakshaProperties {
    * By default: 'Content-Type: application/json' and 'Accept-Encoding: gzip'
    */
   public @NotNull Map<String, String> getHeaders() {
-    final Object raw = get(HEADERS);
+    final Object raw = getPath(HEADERS);
     if (raw instanceof HeaderMap) {
       return (HeaderMap) raw;
     }

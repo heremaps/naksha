@@ -6,6 +6,10 @@ pluginManagement {
     }
 }
 
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
+
 rootProject.name = "naksha"
 
 include(":here-naksha-lib-base")
@@ -23,11 +27,9 @@ include(":here-naksha-lib-handlers")
 include(":here-naksha-lib-hub")
 include(":here-naksha-lib-view")
 include(":here-naksha-common-http")
-include(":here-naksha-common-test")
 include(":here-naksha-storage-http")
 include(":here-naksha-app-service")
 include(":here-naksha-lib-ext-manager")
 include(":here-naksha-lib-diff")
 include(":here-naksha-cli")
-include("here-naksha-lib-json")
 include(":here-naksha-lib-mm-util")

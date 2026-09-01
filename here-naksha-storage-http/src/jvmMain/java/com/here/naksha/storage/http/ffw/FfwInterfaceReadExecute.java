@@ -23,7 +23,7 @@ import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
 import naksha.base.StringList;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
@@ -179,6 +179,6 @@ public class FfwInterfaceReadExecute {
   }
 
   private static String baseEndpoint(ReadFeaturesProxyWrapper request) {
-    return request.getCollectionIds().get(0);
+    return request.getCollectionId();
   }
 }

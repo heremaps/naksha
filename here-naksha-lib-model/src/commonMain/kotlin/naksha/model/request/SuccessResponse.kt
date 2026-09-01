@@ -6,6 +6,7 @@ import naksha.geo.SpFeatureCollection
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaFeatureList
+import naksha.model.objects.XyzMembers
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -179,7 +180,12 @@ open class SuccessResponse() : Response() {
                 list.setCapacity(featureList.size)
                 for (feature in featureList) {
                     if (feature == null) continue
-                    list.add(FeatureTuple(feature))
+                    // TODO: We need to fix this, this is a very dirty hack, but we need to expose the tuple handling expilicty.
+                    //       So to say, lets remove the whole FeatureTuple context; a request returns a TupleNumberList.
+                    //       Then the user needs to turn this explicitly into a TupleList, and this into a FeatureList.
+                    //       We can offer a helper method that does all steps at ones, so turns a SuccessResponse into list of features.
+                    //       However, we want to expose the TupleNumber design explicitly.
+                    list.add(FeatureTuple(feature, XyzMembers.XyzTn))
                 }
             }
 
@@ -336,7 +342,7 @@ open class SuccessResponse() : Response() {
     }
 
     /**
-     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.model.TupleNumber] read from the [TupleNumberBinaryArray], encoded in the given [ByteArray]. Basically, this will automatically wrap the given [ByteArray] into an [TupleNumberBinaryArray], and then convert it into a [FeatureTupleList].
+     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.base.TupleNumber] read from the [TupleNumberBinaryArray], encoded in the given [ByteArray]. Basically, this will automatically wrap the given [ByteArray] into an [TupleNumberBinaryArray], and then convert it into a [FeatureTupleList].
      *
      * @since 3.0
      * @see [featureTupleList]
@@ -347,7 +353,7 @@ open class SuccessResponse() : Response() {
     }
 
     /**
-     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.model.TupleNumber] read from the given [TupleNumberBinaryArray].
+     * Sets the [featureTupleList] to the decoded [tuple-number's][naksha.base.TupleNumber] read from the given [TupleNumberBinaryArray].
      *
      * This constructor will convert the binary-array into a [FeatureTupleList].
      *

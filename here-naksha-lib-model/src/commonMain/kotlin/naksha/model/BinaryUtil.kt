@@ -8,6 +8,7 @@ import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int64
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
+import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmOverloads
@@ -57,7 +58,7 @@ class BinaryUtil private constructor() {
          * @param view the view into the binary.
          * @param offset the byte-offset in the view where the binary starts.
          * @param type the type to write, should be a value of [TYPE_TUPLE_NUMBER_ARRAY], [TYPE_METADATA_OBJECT], [TYPE_METADATA_ARRAY], [TYPE_TUPLE_OBJECT], or [TYPE_TUPLE_ARRAY].
-         * @param subtype the subtype to write, depends on type (see e.g. [TupleNumberVariant.subType]).
+         * @param subtype the subtype to write, depends on type (see e.g. [naksha.base.TupleNumberVariant.subType]).
          * @param length the length (number of entities).
          * @param size the size including the header (which is 8-byte), the client knows this, because it needs to allocate the buffer.
          * @return the offset where to start writing the content.
@@ -161,7 +162,7 @@ class BinaryUtil private constructor() {
                 (Int64(dataview_get_int32(view, offset + 2)) and Int64(0xffff_ffffL))
 
         /**
-         * Read a binary encoded [TupleNumber]; can be used to fetch four encodings:
+         * Read a binary encoded [naksha.base.TupleNumber]; can be used to fetch four encodings:
          * - 96-bit (12-byte), when storage-, map-, collection, and feature-number given.
          * - 160-bit (20-byte), when storage-, map-, and collection-number given.
          * - 192-bit (24-byte), when storage- and map-number given.
@@ -173,7 +174,7 @@ class BinaryUtil private constructor() {
          * @param mapNumber if the map-number is not encoded.
          * @param collectionNumber if the collection-number is not encoded.
          * @param featureNumber if the feature-number is not encoded.
-         * @return the decoded [TupleNumber]; _null_ if [offset] is negative.
+         * @return the decoded [naksha.base.TupleNumber]; _null_ if [offset] is negative.
          */
         @JsStatic
         @JvmStatic
@@ -211,8 +212,7 @@ class BinaryUtil private constructor() {
                 pos += 8
             } else fn = featureNumber
             val txn = dataview_get_int64(view, pos)
-            val uid = dataview_get_int32(view, pos + 8)
-            return TupleNumber(sn, mn, cn, fn, Version(txn), uid)
+            return TupleNumber(sn, mn, cn, fn, txn)
         }
     }
 }

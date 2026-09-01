@@ -1,14 +1,13 @@
 package naksha.psql
 
+import naksha.base.Int64
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.TupleNumberVariant
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StandardMembers
 import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
-import naksha.model.request.query.AnyOp
-import naksha.model.request.query.MetaColumn
-import naksha.model.request.query.MetaQuery
+import naksha.model.request.ops.IsAnyOf
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -39,30 +38,21 @@ class ReadFeaturesByOtherTns : PgTestBase(
         }
         val updateResp = executeWrite(update)
 
-        // And: tuple numbers of updated version
-        val selectedUpdatedFeatures = updateResp.features.subList(2, 4) // take 2 features from the middle
-        val selectedTns = selectedUpdatedFeatures.map { it!!.tupleNumber }
-        val serializedTns: Array<ByteArray> = selectedTns
-            .map { it.toByteArray(TupleNumberVariant.B96) } // `next_tn` is 96-bit encoded
-            .toTypedArray()
+        // And: the shared `next_version` of all updated features (all 5 updates ran in one transaction).
+        val updatedVersion: Int64 = updateResp.features[0]!!.properties.xyz.guid!!.tupleNumber.version
 
-        // When: querying for features which `nextTn` is specified
-        val nextTnQuery = MetaQuery(
-            MetaColumn.nextVersion(),
-            AnyOp.IS_ANY_OF,
-            serializedTns
-        )
+        // When: querying for features whose `next_version` matches that version
         val byNextTnResp = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
-            query.metadata = nextTnQuery
+            catalogId = collection.catalogId
+            collectionId = collection.id
+            queryMembers = IsAnyOf(StandardMembers.NextVersion, updatedVersion)
             queryHistory = true
         })
 
-        // Then: we fetched initial features based on `next_tn` pointing to updated features
+        // Then: all 5 initial features are returned — they share next_version since they were demoted together.
         val fetchedFeatures = byNextTnResp.features
-        assertEquals(2, fetchedFeatures.size)
-        val expectedIds = selectedUpdatedFeatures.map { it!!.id }.toSet()
+        assertEquals(5, fetchedFeatures.size)
+        val expectedIds = initialFeatures.map { it!!.id }.toSet()
         fetchedFeatures.forEach { fetchedPredecessor ->
             assertNotNull(fetchedPredecessor)
             assertTrue(fetchedPredecessor.id in expectedIds)

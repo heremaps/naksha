@@ -15,8 +15,6 @@ class TagValueMatches() : TagQuery() {
     /**
      * Tests if the value of a tag match the given regular expression.
      *
-     * This operation is equal to the GIN index operation [`@?`](https://www.postgresql.org/docs/current/functions-json.html) using a regular expression query.
-     *
      * Examples:
      *
      * ```Kotlin
@@ -46,4 +44,4 @@ class TagValueMatches() : TagQuery() {
      */
     var regex by REGEX
 
-} // -> naksha_tags(flags,tags) @? $[?(@.key=~/regex/)]
+}

@@ -24,7 +24,7 @@ import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
@@ -44,8 +44,8 @@ import java.util.stream.Collectors;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.handlers.internal.HttpStorageValidation.validateConfigForHttpStorage;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
-import static naksha.model.NakshaError.CONFLICT;
-import static naksha.model.NakshaError.EXCEPTION;
+import static naksha.base.NakshaError.CONFLICT;
+import static naksha.base.NakshaError.EXCEPTION;
 import static naksha.model.util.ResultHelper.extractResponseItems;
 
 public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<NakshaStorage> {
@@ -108,8 +108,8 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Naksha
     final Property property =
         new Property(NakshaFeature.PROPERTIES_KEY, DefaultStorageHandlerProperties.STORAGE_ID);
     final PQuery activeHandlersPOp = new PQuery(property, StringOp.EQUALS, storageId);
-    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().addCollectionId(EVENT_HANDLERS)
-            .withMapId(nakshaHub.getAdminMapId())
+    final ReadFeatures readActiveHandlersRequest = new ReadFeatures().withCollectionId(EVENT_HANDLERS)
+            .withCatalogId(nakshaHub.getAdminMapId())
             .withPropertyQuery(activeHandlersPOp);
     Response activeHandlersResponse = nakshaHub().getAdminStorage()
         .useReadSession(SessionOptions.from(NakshaContext.currentContext()), readSession -> readSession.execute(readActiveHandlersRequest));

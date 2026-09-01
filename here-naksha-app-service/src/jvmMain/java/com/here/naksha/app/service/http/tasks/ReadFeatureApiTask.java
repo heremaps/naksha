@@ -76,8 +76,8 @@ import naksha.geo.SpGeometry;
 import naksha.geo.SpPoint;
 import naksha.geo.SpPolygon;
 import naksha.model.NakshaContext;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
@@ -337,7 +337,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
         .withPropertyQuery(propertyQuery)
         .withTagQuery(tagQuery);
     rdRequest.setFeatureIds(suppliedFeatureIds);
-    rdRequest.setCollectionIds(StringList.of(spaceId));
+    rdRequest.setCollectionId(spaceId);
     rdRequest.setLimit(limit);
 
     // Forward request to NH Space Storage reader instance
@@ -422,7 +422,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     query.setTags(tagQuery);
     final ReadFeatures rdRequest = new ReadFeatures();
     rdRequest.setFeatureIds(suppliedFeatureIds);
-    rdRequest.setCollectionIds(StringList.of(spaceId));
+    rdRequest.setCollectionId(spaceId);
     rdRequest.setQuery(query);
     rdRequest.withPropertyQuery(propertyQuery);
 
@@ -502,7 +502,7 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     query.setSpatial(radiusQuery);
     query.setTags(tagQuery);
     final ReadFeatures rdRequest = new ReadFeatures();
-    rdRequest.setCollectionIds(StringList.of(spaceId));
+    rdRequest.setCollectionId(spaceId);
     rdRequest.setFeatureIds(suppliedFeatureIds);
     rdRequest.setQuery(query);
     rdRequest.withPropertyQuery(propertyQuery);

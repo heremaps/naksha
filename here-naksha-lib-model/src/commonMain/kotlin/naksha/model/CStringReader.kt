@@ -2,7 +2,8 @@ package naksha.model
 
 import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int8
-import naksha.model.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
+import naksha.base.NakshaException
 
 /**
  * A reader for C-strings, so ASCII-zero terminated string. Empty strings are represented as _null_.

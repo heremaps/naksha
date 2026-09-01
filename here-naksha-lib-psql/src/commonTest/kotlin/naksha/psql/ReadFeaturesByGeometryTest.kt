@@ -11,7 +11,7 @@ import naksha.psql.assertions.AnyObjectFluidAssertions.Companion.assertThatAnyOb
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import kotlin.test.*
 
-class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
+class ReadFeaturesByGeometryTest : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun shouldReturnSavedGeometry() {
@@ -33,8 +33,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         // And: reading feature
         val retrievedFeatures = executeRead(
             ReadFeatures().apply {
-                mapId = collection.mapId
-                collectionIds += collection.id
+                catalogId = collection.catalogId
+                collectionId = collection.id
                 featureIds += feature.id
             }
         ).features
@@ -66,8 +66,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
         // And: reading feature
         val retrievedFeatures = executeRead(
             ReadFeatures().apply {
-                mapId = collection.mapId
-                collectionIds += collection.id
+                catalogId = collection.catalogId
+                collectionId = collection.id
                 featureIds += feature.id
             }
         ).features
@@ -251,8 +251,8 @@ class ReadFeaturesByGeometryTest : PgTestBase(collection = null, mapId = "") {
 
     private fun executeSpatialQuery(spatialQuery: ISpatialQuery): SuccessResponse {
         return executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             query.spatial = spatialQuery
         })
     }

@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import naksha.model.NakshaError;
+import naksha.base.NakshaError;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;

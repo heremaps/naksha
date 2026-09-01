@@ -111,8 +111,7 @@ class ActivityLogApiTest extends ApiTest {
     assertThat(createResp).hasStatus(200);
 
     // And: This feature is updated
-    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson,
-        streamId);
+    HttpResponse<String> updateResp = nakshaClient.put("hub/spaces/" + REGULAR_SPACE_ID + "/features/" + featureId, updateFeatureJson, streamId);
     assertThat(updateResp).hasStatus(200);
     FeatureMetadata updatedFeature = featureMetadataFromFeatureResp(updateResp.body());
 
@@ -209,7 +208,7 @@ class ActivityLogApiTest extends ApiTest {
             "${puuid}", updatedFeature.uuid(),
             "\"${createdAt}\"", deletedFeature.createdAt(),
             "\"${updatedAt}\"", deletedFeature.updatedAt()
-        )));
+        )),"Actual and expected json body don't match",true);
   }
 
   @Test

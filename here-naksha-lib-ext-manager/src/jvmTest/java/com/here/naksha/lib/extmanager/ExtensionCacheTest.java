@@ -154,7 +154,7 @@ public class ExtensionCacheTest extends BaseSetup {
       Assertions.assertEquals(1, newCached.size());
 
       Extension updatedExt = newCached.get(0);
-      Assertions.assertEquals("child_extension_1", updatedExt.get("extensionId"));
+      Assertions.assertEquals("child_extension_1", updatedExt.getPath("extensionId"));
       Assertions.assertEquals("2.0", updatedExt.getVersion());
 
       String ext1KeyNew = updatedExt.getEnv() + ":" + updatedExt.getId();

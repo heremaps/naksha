@@ -5,7 +5,6 @@ import naksha.model.SessionOptions
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
-import naksha.psql.PgTest.PgTest_C.TEST_MAP_ID
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -13,7 +12,8 @@ import kotlin.test.assertTrue
 
 class PartitioningTest : PgTestBase() {
 
-    // TODO: If testing is successful, adjust this!
+    // TODO: Adjust this test to change the partition naming (low priority for now)
+    // Naming changes from "feature_partitioned$hst$y2025$p001" to "feature_partitioned$hst$2025$1", similar "feature_partitioned$p001" -> "feature_partitioned$1" (etc.)
     @Ignore
     @Test
     fun createCollectionWithPartitions() {
@@ -21,7 +21,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 8
         val partitionedCollection = NakshaCollection(
             id = "feature_partitioned",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -42,10 +42,10 @@ class PartitioningTest : PgTestBase() {
         // also: check history partitioning
         val hstTable = "${partitionedCollection.id}${PG_HST}"
         val createdHstPartitions = queryForTablePartitions(hstTable)
-        // first current year partition: like "feature_partitioned$hst$y2025"
-        assertEquals("\"feature_partitioned\$hst\$y${Epoch().year}\"", createdHstPartitions[0])
+        // first current year partition: like "feature_partitioned$hst$2025"
+        assertEquals("\"feature_partitioned\$hst\$${Epoch().year}\"", createdHstPartitions[0])
         // next year
-        assertEquals("\"feature_partitioned\$hst\$y${Epoch().year+1}\"", createdHstPartitions[1])
+        assertEquals("\"feature_partitioned\$hst\$${Epoch().year+1}\"", createdHstPartitions[1])
         for (hstPartition in createdHstPartitions) {
             val rawHstName = hstPartition.replace("\"", "")
             val createdHstSubPartitions = queryForTablePartitions(rawHstName)
@@ -64,7 +64,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 2
         val partitionedCollection = NakshaCollection(
             id = "feature_partitioned_insert_check",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -90,8 +90,8 @@ class PartitioningTest : PgTestBase() {
 
         // also - should be able to read
         val readRequest = ReadFeatures()
-        readRequest.mapId = partitionedCollection.mapId
-        readRequest.collectionIds.add(partitionedCollection.id)
+        readRequest.catalogId = partitionedCollection.catalogId
+        readRequest.collectionId = partitionedCollection.id
         readRequest.featureIds.add("f1")
         val readResponse = executeRead(readRequest)
         assertEquals(1, readResponse.features.size)
@@ -103,7 +103,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 0
         val partitionedCollection = NakshaCollection(
             id = "zero_partitions",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -122,7 +122,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 1
         val partitionedCollection = NakshaCollection(
             id = "one_partitions",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -141,7 +141,7 @@ class PartitioningTest : PgTestBase() {
         val numberOfPartitions = 65536
         val partitionedCollection = NakshaCollection(
             id = "to_many_partitions",
-            mapId = map.id,
+            mapId = catalog.id,
             partitions = numberOfPartitions
         )
         val writeOp = Write().createCollection(partitionedCollection)
@@ -158,7 +158,7 @@ class PartitioningTest : PgTestBase() {
     private fun queryForTablePartitions(table: String): List<String> {
         storage.newConnection(SessionOptions.from(null), true).use { pgConnection ->
             pgConnection.execute("""
-SET search_path TO "${map.id}", "naksha~admin", topology, hint_plan, public;
+SET search_path TO "${catalog.id}", "naksha~admin", topology, hint_plan, public;
 SELECT inhrelid::regclass AS partitioned_table FROM pg_inherits WHERE inhparent = $1::regclass ORDER BY partitioned_table;
 """,
                 arrayOf(table)

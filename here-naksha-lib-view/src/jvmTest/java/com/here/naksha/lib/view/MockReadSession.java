@@ -22,14 +22,13 @@ import naksha.model.IReadSession;
 import java.util.List;
 
 import naksha.model.IStorage;
+import naksha.model.MemberProcessorMap;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static naksha.model.LibModelKt.FETCH_ALL;
 
 public class MockReadSession implements IReadSession {
 
@@ -103,22 +102,28 @@ public class MockReadSession implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
     return null;
   }
 
   @Override
-  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
     return null;
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+  public @Nullable NakshaCollection getCollectionById(
+      @NotNull NakshaCatalog map,
+      @NotNull String collectionId,
+      boolean allowTombstone) {
     return null;
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(
+      @NotNull NakshaCatalog catalog,
+      int collectionNumber,
+      boolean allowTombstone) {
     return null;
   }
 
@@ -127,13 +132,14 @@ public class MockReadSession implements IReadSession {
     return null;
   }
 
+  @NotNull
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
-
+  public MemberProcessorMap getProcessors() {
+    return new MemberProcessorMap();
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
+
   }
 }

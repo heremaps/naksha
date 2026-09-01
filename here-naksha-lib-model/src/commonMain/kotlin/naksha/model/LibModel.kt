@@ -30,7 +30,6 @@ const val ACTION_DELETE = 2
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_STORAGE = Int64(200) * MILLISECOND * MILLIS_TO_MICROS
 
 /**
@@ -38,7 +37,6 @@ val LATENCY_STORAGE = Int64(200) * MILLISECOND * MILLIS_TO_MICROS
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_S3 = Int64(100) * MILLISECOND * MILLIS_TO_MICROS
 
 /**
@@ -46,7 +44,6 @@ val LATENCY_S3 = Int64(100) * MILLISECOND * MILLIS_TO_MICROS
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_REDIS_REMOTE = Int64(10) * MILLISECOND * MILLIS_TO_MICROS
 
 /**
@@ -54,7 +51,6 @@ val LATENCY_REDIS_REMOTE = Int64(10) * MILLISECOND * MILLIS_TO_MICROS
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_REDIS_LOCAL = Int64(1) * MILLISECOND * MILLIS_TO_MICROS
 
 /**
@@ -62,30 +58,20 @@ val LATENCY_REDIS_LOCAL = Int64(1) * MILLISECOND * MILLIS_TO_MICROS
  * @since 3.0
  */
 @JvmField
-@JsStatic
 val LATENCY_MEMORY = Int64(0)
 
 /**
- * The default flags to be used by all storages, being:
- * ```kotlin
- * Flags(
- *   GeoEncoding.TWKB,
- *   FeatureEncoding.JBON_GZIP,
- *   TagsEncoding.JSON_GZIP,
- *   ACTION_CREATE
- * )
- * ```
+ * The default feature encoding to be used by all storages — see [Naksha.DEFAULT_DATA_ENCODING].
  * @since 3.0.0
  */
-@Deprecated("Replaced with official DEFAULT_FLAGS in Naksha",
-    replaceWith = ReplaceWith("Naksha.DEFAULT_FLAGS"),
+@Deprecated("Replaced with official DEFAULT_DATA_ENCODING in Naksha",
+    replaceWith = ReplaceWith("Naksha.DEFAULT_DATA_ENCODING"),
     level = DeprecationLevel.WARNING)
 @JvmField
-@JsStatic
-val DEFAULT_FLAGS = Naksha.DEFAULT_FLAGS
+val DEFAULT_DATA_ENCODING = Naksha.DEFAULT_DATA_ENCODING
 
 /**
- * The [meta][Tuple.meta] bit.
+ * The [members][Tuple.membersBook] bit.
  * @since 3.0.0
  */
 const val META_BIT: FetchMode = 1
@@ -97,7 +83,7 @@ const val META_BIT: FetchMode = 1
 const val META_CLEAR: FetchMode = META_BIT.inv()
 
 /**
- * The _geometry_ bit, covering [geometry][Tuple.geo] and the [reference-point][Tuple.referencePoint].
+ * The _geometry_ bit, covering geometry and the reference-point.
  * @since 3.0.0
  */
 const val GEOMETRY_BIT: FetchMode = 2
@@ -109,7 +95,7 @@ const val GEOMETRY_BIT: FetchMode = 2
 const val GEOMETRY_CLEAR: FetchMode = GEOMETRY_BIT.inv()
 
 /**
- * The _feature_ bit, covers [feature][Tuple.feature] and [tags][Tuple.tags].
+ * The _feature_ bit, covers [feature][Tuple.featureBytes] and tags.
  * @since 3.0.0
  */
 const val FEATURE_BIT: FetchMode = 4
@@ -121,7 +107,7 @@ const val FEATURE_BIT: FetchMode = 4
 const val FEATURE_CLEAR: FetchMode = FEATURE_BIT.inv()
 
 /**
- * The [attachment][Tuple.attachment] bit.
+ * The attachment bit.
  * @since 3.0.0
  */
 const val ATTACHMENT_BIT: FetchMode = 8

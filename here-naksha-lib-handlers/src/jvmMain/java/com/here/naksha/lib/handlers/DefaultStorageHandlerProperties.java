@@ -64,7 +64,7 @@ public class DefaultStorageHandlerProperties extends NakshaProperties {
    * Details of the backend xyz collection to use. If undefined, the collection defined at the {@link SpaceProperties} level will be used.
    */
   public @Nullable NakshaCollection getCollection() {
-    return JvmBoxingUtil.box(get(COLLECTION), NakshaCollection.class);
+    return JvmBoxingUtil.box(getPath(COLLECTION), NakshaCollection.class);
   }
 
   public void setCollection(final @Nullable NakshaCollection collection) {

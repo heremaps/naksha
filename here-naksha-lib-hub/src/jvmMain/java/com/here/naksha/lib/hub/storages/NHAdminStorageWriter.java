@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import naksha.base.AtomicInt;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaVersion;
@@ -68,10 +67,5 @@ public class NHAdminStorageWriter extends NHAdminStorageReader implements IWrite
   @Override
   public @Nullable NakshaTx getTransaction() {
     return session.getTransaction();
-  }
-
-  @Override
-  public @NotNull AtomicInt getUid() {
-    return session.getUid();
   }
 }

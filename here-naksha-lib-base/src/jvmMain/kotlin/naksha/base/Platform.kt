@@ -209,6 +209,7 @@ actual class Platform {
             unsafeConstructor.isAccessible = true
             unsafe = unsafeConstructor.newInstance()
             val someByteArray = ByteArray(8)
+            @Suppress("removal")
             baseOffset = unsafe.arrayBaseOffset(someByteArray.javaClass)
             nonArgsConstuctorsCache = AtomicMap()
 
@@ -277,15 +278,19 @@ actual class Platform {
 
         /**
          * Java specific helper, that accepts a Java class to proxy.
+         * @param any Any object that implements [PlatformObject] interface.
          * @param javaClass The Java class.
          * @return the proxy.
          * @see [proxy]
          * @see [Proxy.proxy]
+         * @throws NakshaException with error [NakshaError.ILLEGAL_ARGUMENT] if the given object does not implement [PlatformObject].
          */
         @JvmStatic
-        fun <T : Proxy> javaProxy(any: PlatformObject?, javaClass: Class<T>): T? {
+        fun <T : Proxy> javaProxy(any: Any?, javaClass: Class<T>): T? {
             if (any == null) return null
-            return any.proxy(javaClass.kotlin)
+            if (javaClass.isInstance(any)) return javaClass.cast(any)
+            if (any is PlatformObject) return proxy(any, javaClass.kotlin)
+            throw illegalArg("The given object is no PlatformObject, failed to attach proxy")
         }
 
         /**
@@ -876,6 +881,12 @@ actual class Platform {
 
         init {
             initialize()
+        }
+
+        @JvmStatic
+        actual fun getTestStorageId(): String {
+            val id = System.getenv("NAKSHA_TEST_STORAGE_ID");
+            return if(id.isNullOrEmpty()) "local_psql_test_storage" else id
         }
     }
 }

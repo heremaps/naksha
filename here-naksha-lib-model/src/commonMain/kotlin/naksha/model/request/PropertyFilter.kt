@@ -3,13 +3,20 @@ package naksha.model.request
 import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.gzipInflate
+import naksha.base.Platform.PlatformCompanion.UNDEFINED
+import naksha.base.PlatformList
+import naksha.base.PlatformListApi
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.PlatformMap
+import naksha.base.PlatformMapApi
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_contains_key
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
 import naksha.base.PlatformUtil
 import naksha.base.Proxy
-import naksha.jbon.JbFeatureDecoder
-import naksha.model.Naksha.NakshaCompanion.cache
-import naksha.model.Naksha.NakshaCompanion.getStorageByNumber
-import naksha.model.featureGzip
+import naksha.model.objects.JsonPath
+
+import naksha.model.objects.NakshaFeature
 import naksha.model.request.query.*
 
 class PropertyFilter(val req: ReadFeatures) : ResultFilter {
@@ -21,55 +28,74 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
      */
     override fun filter(featureTuple: FeatureTuple): FeatureTuple? {
         val pSearch = req.query.properties ?: return featureTuple
-
-        val decoder = resolveFeatureAndDecoder(featureTuple) ?: return null
-
-        if (resolvePropsQuery(pSearch, decoder)) {
-            return featureTuple
-        }
-        return null
+        val feature = featureTuple.feature ?: return null
+        return if (resolvePropsQueryOnFeature(pSearch, feature)) featureTuple else null
     }
 
-    private fun resolveFeatureAndDecoder(featureTuple: FeatureTuple): JbFeatureDecoder? {
-        val tuple = featureTuple.tuple ?: return null
-        val feature = featureTuple.tuple?.feature ?: return null
-        val flags = tuple.meta.flags
-
-        var raw = feature
-        if (flags.featureGzip()) {
-            raw = gzipInflate(feature)
-        }
-
-        val sn = tuple.storageNumber
-        val dictReader = getStorageByNumber(sn) ?: cache.getDictReader(sn)
-
-        val decoder = JbFeatureDecoder(dictReader)
-        decoder.mapBytes(raw)
-        return decoder
-    }
-
-    private fun resolvePropsQuery(pQuery: IPropertyQuery?, decoder: JbFeatureDecoder): Boolean {
+    /**
+     * Resolve a property query on a decoded [NakshaFeature] by walking the property path directly.
+     */
+    private fun resolvePropsQueryOnFeature(pQuery: IPropertyQuery?, feature: NakshaFeature): Boolean {
         when (pQuery) {
             null -> return true
-            is PAnd -> return pQuery.all { resolvePropsQuery(it, decoder) }
-            is POr -> return pQuery.any { resolvePropsQuery(it, decoder) }
-            is PNot -> return !resolvePropsQuery(pQuery.query, decoder)
+            is PAnd -> return pQuery.all { resolvePropsQueryOnFeature(it, feature) }
+            is POr -> return pQuery.any { resolvePropsQueryOnFeature(it, feature) }
+            is PNot -> return !resolvePropsQueryOnFeature(pQuery.query, feature)
             is PQuery -> {
-                val propertyArray = pQuery.property.path.filterNotNull().toTypedArray()
-                val propFromFeature = decoder.get(*propertyArray)
-                val op = pQuery.op
-                return resolveEachOp(op,propFromFeature,pQuery.value)
+                val propValue = walkPath(feature, pQuery.property.path)
+                return resolveEachOp(pQuery.op, propValue, pQuery.value)
             }
         }
         throw IllegalArgumentException("Unknown query type for: $pQuery")
-        //TODO instead of throwing exceptions, implement a call-back handler customizable
-        //TODO to, for example, log the instance where an unknown query is used, so as not
-        //TODO to disrupt the flow of the request
+    }
+
+    /**
+     * Walk a property path on an object or array.
+     * @return [Platform.UNDEFINED] if the path does not exist.
+     */
+    private fun walkPath(objectOrArray: Any?, path: JsonPath): Any? {
+        var current: Any? = objectOrArray
+        for (key in path) {
+            if (key == null) return UNDEFINED
+            current = when (current) {
+                is AnyList -> {
+                    val index: Int = keyToListIndex(key) ?: return UNDEFINED
+                    if (index < 0 || index >= current.size) return UNDEFINED
+                    current[index]
+                }
+                is NakshaFeature -> {
+                    val raw = current.getRaw(key)
+                    if (raw === UNDEFINED) return UNDEFINED else raw
+                }
+                is AnyObject -> if (current.containsKey(key)) current[key] else return UNDEFINED
+                is PlatformList -> {
+                    val index: Int = keyToListIndex(key) ?: return UNDEFINED
+                    if (index < 0 || index >= array_get_length(current)) return UNDEFINED
+                    array_get(current, index)
+                }
+                is PlatformMap -> {
+                    if (key !is String) return UNDEFINED
+                    if (!map_contains_key(current, key)) return UNDEFINED
+                    map_get(current, key)
+                }
+                else -> return UNDEFINED
+            }
+        }
+        if (current is PlatformList) return current.proxy(AnyList::class)
+        if (current is PlatformMap) return current.proxy(AnyObject::class)
+        return current
+    }
+
+    /** A list index from a numeric path segment: a [Number], or a numeric [String] like `"2"`; else `null`. */
+    private fun keyToListIndex(key: Any?): Int? = when (key) {
+        is Number -> key.toInt()
+        is String -> key.toIntOrNull()
+        else -> null
     }
 
     private fun resolveEachOp(op: AnyOp, featureProperty: Any?, queryProperty: Any?) : Boolean {
         return when (op) {
-            AnyOp.EXISTS -> featureProperty != Platform.UNDEFINED
+            AnyOp.EXISTS -> featureProperty != UNDEFINED
             AnyOp.IS_NULL -> featureProperty == null
             AnyOp.IS_NOT_NULL -> featureProperty != null
             AnyOp.IS_TRUE -> featureProperty == true
@@ -147,7 +173,7 @@ class PropertyFilter(val req: ReadFeatures) : ResultFilter {
         return try {
             Proxy.box(Platform.fromJSON(json), Any::class)
         } catch (e: Exception) {
-            Platform.PlatformCompanion.logger.warn("JSON parsing failed for string that appeared to be JSON: $json")
+            Platform.logger.warn("JSON parsing failed for string that appeared to be JSON: $json")
             json
         }
     }

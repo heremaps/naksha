@@ -4,23 +4,14 @@ plugins {
 
 description = gatherDescription()
 
-java {
-    setSourceCompatibility(11)
-    setTargetCompatibility(11)
-}
-
 kotlin {
-    jvm {
-        compilerOptions {
-            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
-        }
-    }
+    jvm { }
     sourceSets {
         jvmMain {
             dependencies {
-                implementation(project(":here-naksha-lib-jbon"))
-                implementation(project(":here-naksha-lib-core"))
-                implementation(project(":here-naksha-common-http"))
+                api(project(":here-naksha-lib-jbon"))
+                api(project(":here-naksha-lib-core"))
+                api(project(":here-naksha-common-http"))
 
                 implementation(libs.commons.lang3)
                 implementation(libs.bundles.jackson)
@@ -28,10 +19,11 @@ kotlin {
         }
         jvmTest {
             dependencies {
+                implementation(kotlin("test-junit"))
                 implementation(libs.bundles.testing)
-                implementation(libs.rest.assured)
-                implementation(libs.wiremock)
                 runtimeOnly(libs.junit.platform.launcher) // https://github.com/gradle/gradle/issues/34512
+
+                implementation(libs.rest.assured)
             }
         }
     }

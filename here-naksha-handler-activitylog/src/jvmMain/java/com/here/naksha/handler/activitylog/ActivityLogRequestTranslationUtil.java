@@ -24,10 +24,16 @@ import static naksha.model.objects.NakshaFeature.PROPERTIES_KEY;
 import static naksha.model.objects.NakshaProperties.XYZ_ACTIVITY_LOG_NS;
 
 import java.util.Set;
+
 import naksha.base.StringList;
-import naksha.model.Guid;
-import naksha.model.GuidList;
+import naksha.base.Guid;
+import naksha.base.TupleNumber;
+import naksha.model.objects.StandardMembers;
 import naksha.model.request.ReadFeatures;
+import naksha.model.request.ops.And;
+import naksha.model.request.ops.Equals;
+import naksha.model.request.ops.OpList;
+import naksha.model.request.ops.Or;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
@@ -35,6 +41,11 @@ import naksha.model.request.query.StringOp;
 class ActivityLogRequestTranslationUtil {
 
   static final String UUID = "uuid";
+  /**
+   * `puuid` is no longer populated by Naksha {@code lib-psql}, it will just be a custom JSON attribute assigned by users.
+   * @deprecated since 3.0.0-beta.41
+   */
+  @Deprecated(since = "3.0.0-beta.41")
   static final String PUUID = "puuid";
   static final String ACTION = "action";
   static final String CREATED_AT = "createdAt";
@@ -56,15 +67,30 @@ class ActivityLogRequestTranslationUtil {
    */
   static void transformOriginalRequest(ReadFeatures readFeatures, String spaceId) {
     readFeatures.setQueryHistory(true);
+    readFeatures.setQueryDeleted(true);
     readFeatures.setVersions(Integer.MAX_VALUE);
-    readFeatures.setCollectionIds(StringList.of(spaceId));
+    readFeatures.setCollectionId(spaceId);
 
     // extract UUIDs from featureIds, reset featureIds
     StringList rawGuids = readFeatures.getFeatureIds();
     if (!rawGuids.isEmpty()) {
-      GuidList guids = new GuidList();
-      rawGuids.forEach(rawGuid -> guids.add(Guid.fromString(rawGuid)));
-      readFeatures.setGuids(guids);
+      Or or = new Or();
+      OpList orClauses = or.getChildren();
+      for (int i=0;i<rawGuids.getSize();i++) {
+        String rawGuid = rawGuids.get(i);
+        if (rawGuid != null) {
+          final TupleNumber tupleNumber = Guid.fromString(rawGuid).tupleNumber;
+          //TODO we prefer ISession.loadTuples(), but that does not make sense for now, because we are disabling cache, and we anyway have to support other form of read requests beside by UUID
+          //TODO and this is less efficient than the deprecated ReadFeatures.setGuids()
+          orClauses.add(
+                  new And(
+                          new Equals(StandardMembers.FeatureVersion.getName(), tupleNumber.version),
+                          new Equals(StandardMembers.FeatureNumber.getName(), tupleNumber.featureNumber)
+                  )
+          );
+        }
+      }
+      readFeatures.setQueryMembers(or);
     }
     StringList finalFeatureIds = new StringList();
 
@@ -74,13 +100,14 @@ class ActivityLogRequestTranslationUtil {
         ActivityLogRequestTranslationUtil::isSingleActivityLogIdEqualityQuery
     );
     if (!disabledActivityLogPOps.isEmpty()) {
-      disabledActivityLogPOps.forEach(activityLogOp -> finalFeatureIds.add(activityLogOp.getValue().toString()));
+      disabledActivityLogPOps.forEach(activityLogOp -> finalFeatureIds.add(String.valueOf(activityLogOp.getValue())));
       readFeatures.refreshPropertyFilter();
     }
     readFeatures.setFeatureIds(finalFeatureIds);
   }
 
   private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {
-    return StringOp.EQUALS.equals(pQuery.getOp()) && pQuery.getProperty().getPath().containsStringsInOrder(ACTIVITY_LOG_ID_PATH);
+    return StringOp.EQUALS.equals(pQuery.getOp())
+            && java.util.Arrays.equals(pQuery.getProperty().getPath().toArray(), ACTIVITY_LOG_ID_PATH);
   }
 }

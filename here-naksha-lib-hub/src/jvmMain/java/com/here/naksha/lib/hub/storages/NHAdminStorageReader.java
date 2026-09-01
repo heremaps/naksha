@@ -22,20 +22,18 @@ import java.util.List;
 
 import naksha.model.IReadSession;
 import naksha.model.IStorage;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.FeatureTuple;
 import naksha.model.request.Request;
 import naksha.model.request.Response;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import static naksha.model.LibModelKt.FETCH_ALL;
 
 public class NHAdminStorageReader implements IReadSession {
 
@@ -113,32 +111,38 @@ public class NHAdminStorageReader implements IReadSession {
   }
 
   @Override
-  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
-    return session.getMapById(mapId);
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
+    return session.getCatalogById(catalogId, allowTombstone);
   }
 
   @Override
-  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
-    return session.getMapByNumber(mapNumber);
+  public @NotNull naksha.model.MemberProcessorMap getProcessors() {
+    return session.getProcessors();
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
-    return session.getCollectionById(map, collectionId);
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
+    return session.getCatalogByNumber(catalogNumber, allowTombstone);
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
-    session.loadTuples(featureTuples, from, to, mode);
+  public @Nullable NakshaCollection getCollectionById(
+      @NotNull NakshaCatalog map,
+      @NotNull String collectionId,
+      boolean allowTombstone) {
+    return session.getCollectionById(map, collectionId, allowTombstone);
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
-    return session.getCollectionByNumber(map, collectionNumber);
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
+    session.loadTuples(featureTuples, from, to);
   }
 
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
+  public @Nullable NakshaCollection getCollectionByNumber(
+      @NotNull NakshaCatalog catalog,
+      int collectionNumber,
+      boolean allowTombstone) {
+    return session.getCollectionByNumber(catalog, collectionNumber, allowTombstone);
   }
 }

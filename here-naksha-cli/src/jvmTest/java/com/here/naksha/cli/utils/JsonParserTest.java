@@ -105,6 +105,6 @@ class JsonParserTest {
 
         // Then: key and value are present
         assertNotNull(object);
-        assertEquals("value", object.get("key"));
+        assertEquals("value", object.getPath("key"));
     }
 }

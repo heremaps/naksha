@@ -1,12 +1,18 @@
 package naksha.psql
 
+import naksha.base.Action
+import naksha.base.Guid
+import naksha.base.Int64
+import naksha.base.NakshaError
+import naksha.base.TupleNumber
+import naksha.base.Version
 import naksha.model.*
 import naksha.model.objects.NakshaFeature
 import naksha.model.request.*
 import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatFeature
 import kotlin.test.*
 
-class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
+class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
 
     @Test
     fun shouldPerformSimpleUpdateAndUpsert() {
@@ -17,10 +23,17 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
             id = "feature_1"
             featureType = "some_feature_type"
         }
+        //TODO if .copy(recursive = true) is fixed, and can preserve nested objects' classes, then use initialFeature.copy(true)
+        val copy = NakshaFeature().apply {
+            id = "feature_1"
+            featureType = "some_feature_type"
+        }
         val writeFeatureReq = WriteRequest().add(
             Write().createFeature(collection, initialFeature)
         )
         val writeFeatureResp = executeWrite(writeFeatureReq)
+        // Check that request execution does not mutate the input feature
+        assertTrue { initialFeature.contentDeepEquals(copy) }
         assertEquals(1, writeFeatureResp.features.size)
         val feature = assertNotNull(writeFeatureResp.features[0])
         assertEquals(initialFeature.id, feature.id)
@@ -56,7 +69,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
                         retrievedXyz
                             .hasProperty("appId", PgTest.TEST_APP_ID)
                             .hasProperty("author", PgTest.TEST_APP_AUTHOR)
-                            .hasProperty("action", Action.UPDATED.text)
+                            .hasProperty("action", Action.UPDATE.text)
                             .hasProperty("changeCount", 2)
                     }
             }
@@ -92,8 +105,8 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // READ FEATURE HISTORY
         Naksha.cache.clear()
         val readResp = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             featureIds += initialFeature.id
             queryHistory = true
         })
@@ -102,34 +115,29 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         assertNotNull(retrievedTuples)
         assertEquals(2, retrievedTuples.size)
 
-        val createdTuple = retrievedTuples.first { it.meta.action() == Action.CREATED }
-        val updatedTuple = retrievedTuples.first { it.meta.action() == Action.UPDATED }
+        val createdTuple = retrievedTuples.first { Action.fromValue((it.getLong(naksha.model.objects.StandardMembers.FeatureVersion).toInt() and 3) ?: -1) == Action.CREATE }
+        val updatedTuple = retrievedTuples.first { Action.fromValue((it.getLong(naksha.model.objects.StandardMembers.FeatureVersion).toInt() and 3) ?: -1) == Action.UPDATE }
 
         // Then
         assertNotEquals(updatedTuple.tupleNumber.version, createdTuple.tupleNumber.version)
-        assertNull(createdTuple.meta.prevTupleNumber)
-        assertEquals(createdTuple.meta.nextTupleNumber, updatedTuple.tupleNumber)
-        assertEquals(updatedTuple.meta.prevTupleNumber, createdTuple.tupleNumber)
-        assertNull(updatedTuple.meta.nextTupleNumber)
-        assertNotEquals(createdTuple.meta.flags, updatedTuple.meta.flags)
-        assertEquals(1, createdTuple.meta.changeCount)
-        assertEquals(2, updatedTuple.meta.changeCount)
-        assertEquals(createdTuple.geo, updatedTuple.geo)
-        assertEquals(createdTuple.tags, updatedTuple.tags)
-        assertNotEquals(createdTuple.feature, updatedTuple.feature)
-        assertEquals(createdTuple.referencePoint, updatedTuple.referencePoint)
-        assertNull(createdTuple.toNakshaFeature().properties["new_attr"])
-        assertEquals("some_value", updatedTuple.toNakshaFeature().properties["new_attr"])
-        assertEquals(createdTuple.meta.createdAt ?: createdTuple.meta.updatedAt, updatedTuple.meta.createdAt)
-        assertNotEquals(updatedTuple.meta.createdAt, updatedTuple.meta.updatedAt)
-        assertNull(createdTuple.meta.createdAt)
-        assertNotNull(createdTuple.meta.updatedAt)
-        assertEquals(createdTuple.meta.hereTile, updatedTuple.meta.hereTile)
-        assertEquals(1, updatedTuple.meta.uid)
-        assertEquals(0, createdTuple.meta.uid)
-        assertEquals(1, updatedTuple.tupleNumber.uid)
-        assertEquals(0, createdTuple.tupleNumber.uid)
-        assertNotEquals(createdTuple.meta.authorTs, updatedTuple.meta.authorTs)
+        assertEquals(createdTuple.getLong(naksha.model.objects.StandardMembers.NextVersion), updatedTuple.tupleNumber.version)
+        assertNull(updatedTuple.nextTupleNumber)
+        assertEquals(1, createdTuple.getInt(naksha.model.objects.XyzMembers.XyzChangeCount))
+        assertEquals(2, updatedTuple.getInt(naksha.model.objects.XyzMembers.XyzChangeCount))
+        assertEquals(createdTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry), updatedTuple.getByteArray(naksha.model.objects.StandardMembers.Geometry))
+        assertEquals(createdTuple.getString(naksha.model.objects.XyzMembers.XyzTags), updatedTuple.getString(naksha.model.objects.XyzMembers.XyzTags))
+        assertNotEquals(createdTuple.featureBytes, updatedTuple.featureBytes)
+        assertEquals(createdTuple.getByteArray(naksha.model.objects.XyzMembers.XyzReferencePoint), updatedTuple.getByteArray(naksha.model.objects.XyzMembers.XyzReferencePoint))
+        assertNull(createdTuple.decodeFeature(null)?.properties["new_attr"])
+        assertEquals("some_value", updatedTuple.decodeFeature(null)?.properties["new_attr"])
+        assertEquals(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == Int64(0L)) null else it } ?: createdTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == Int64(0L)) null else it })
+        assertNotEquals(updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt))
+        assertNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == Int64(0L)) null else it })
+        assertNotNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt))
+        assertEquals(createdTuple.getInt(naksha.model.objects.XyzMembers.XyzHereTile), updatedTuple.getInt(naksha.model.objects.XyzMembers.XyzHereTile))
+        assertEquals(Action.UPDATE, updatedTuple.tupleNumber.action)
+        assertEquals(Action.CREATE, createdTuple.tupleNumber.action)
+        assertNotEquals(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzAuthorTimestamp), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzAuthorTimestamp))
     }
 
     @Test
@@ -151,9 +159,10 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         testWithCollection("atomicUpdateNotExistingWithFakeUuid")
 
         val featureId = "feature_not_existing"
+        val fakeUUID = TupleNumber(storage.number, catalog.catalogNumber, collection.collectionNumber, Naksha.featureNumber(featureId), Version.now(Int64(1), Action.CREATE).number)
         val feature = NakshaFeature().apply {
             id = featureId
-            properties.xyz.setRaw("uuid", Guid(featureId, TupleNumber.HEAD).toString())
+            properties.xyz.setRaw("uuid", fakeUUID)
         }
         val updateFeatureResponse = executeWriteErrorResponse(
             WriteRequest().add(
@@ -193,7 +202,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(initialFeature.momType,persistedFeature.momType)
-        assertEquals(featureCreationResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(featureCreationResponse.features[0]!!.properties.xyz.guid?.tupleNumber?.featureNumber, persistedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
     }
 
     @Test
@@ -224,7 +233,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(desiredFeature.momType, persistedFeature.momType)
-        assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(updateResponse.features[0]!!.properties.xyz.guid?.tupleNumber?.featureNumber, persistedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
     }
 
     @Test
@@ -256,14 +265,14 @@ class UpdateFeatureTest : PgTestBase(collection = null, mapId = "") {
         // And:
         val persistedFeature = fetchSingleFeature(initialFeature.id)
         assertEquals(desiredFeature.momType, persistedFeature.momType)
-        assertEquals(updateResponse.features[0]!!.featureNumber, persistedFeature.featureNumber)
+        assertEquals(updateResponse.features[0]!!.properties.xyz.guid?.tupleNumber?.featureNumber, persistedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
     }
 
     private fun fetchSingleFeature(id: String): NakshaFeature {
         Naksha.cache.clear()
         val readFeatureResp = executeRead(ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             featureIds += id
         })
         assertEquals(1, readFeatureResp.length)

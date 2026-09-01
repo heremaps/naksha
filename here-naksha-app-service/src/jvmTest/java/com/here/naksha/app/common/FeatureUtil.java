@@ -18,9 +18,56 @@
  */
 package com.here.naksha.app.common;
 
+import naksha.base.Platform;
+import naksha.model.XyzFeatureCollection;
+import naksha.model.objects.NakshaFeature;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static naksha.base.Platform.javaProxy;
+
 public class FeatureUtil {
 
   private FeatureUtil() {}
+
+  public static @Nullable NakshaFeature featureFromFeatureResponse(String featureCollectionResponseJson) {
+    final var raw = Platform.fromJSON(featureCollectionResponseJson);
+    return javaProxy(raw, NakshaFeature.class);
+  }
+
+  public static @Nullable NakshaFeature featureFromCollectionResponse(String featureCollectionResponseJson) {
+    final var raw = Platform.fromJSON(featureCollectionResponseJson);
+    final var featureCollection = javaProxy(raw, XyzFeatureCollection.class);
+    if (featureCollection == null) return null;
+    final var features = featureCollection.getFeatures();
+    if (features.isEmpty()) return null;
+    return features.getFirst();
+  }
+
+  public static @NotNull List<@NotNull NakshaFeature> featuresFromCollectionResponse(String featureCollectionResponseJson) {
+    final var raw = Platform.fromJSON(featureCollectionResponseJson);
+    final var featureCollection = javaProxy(raw, XyzFeatureCollection.class);
+    if (featureCollection == null) return Collections.emptyList();
+    return featureCollection.getFeatures();
+  }
+
+  public static @NotNull Map<@NotNull String, @NotNull NakshaFeature> featuresByIdFromCollectionResponse(String featureCollectionResponseJson) {
+    final var raw = Platform.fromJSON(featureCollectionResponseJson);
+    final var featureCollection = javaProxy(raw, XyzFeatureCollection.class);
+    final var map = new HashMap<String, NakshaFeature>();
+    if (featureCollection == null) return map;
+    for (var feature : featureCollection.getFeatures()) {
+      if (feature == null) continue;
+      final var id = feature.getId();
+      map.put(id, feature);
+    }
+    return map;
+  }
 
 //  public static void generateBigFeature(final @NotNull XyzFeature feature,
 //                                        final long targetBodySize) {

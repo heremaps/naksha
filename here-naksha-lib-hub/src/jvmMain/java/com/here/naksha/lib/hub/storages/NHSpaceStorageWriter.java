@@ -24,11 +24,10 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.hub.EventPipelineFactory;
-import naksha.base.AtomicInt;
 import naksha.model.ILock;
 import naksha.model.IWriteSession;
-import naksha.model.NakshaError;
-import naksha.model.NakshaException;
+import naksha.base.NakshaError;
+import naksha.base.NakshaException;
 import naksha.model.NakshaVersion;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
@@ -277,11 +276,6 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   @Override
   public @Nullable NakshaTx getTransaction() {
-    throw NOT_SUPPORTED_ERROR;
-  }
-
-  @Override
-  public @NotNull AtomicInt getUid() {
     throw NOT_SUPPORTED_ERROR;
   }
 }

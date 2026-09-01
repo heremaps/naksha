@@ -29,9 +29,9 @@ import com.here.naksha.lib.view.missing.ObligatoryLayersResolver;
 import java.util.*;
 
 import naksha.model.*;
+import naksha.model.MemberProcessorMap;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.objects.NakshaMap;
-import naksha.model.objects.NakshaStorage;
+import naksha.model.objects.NakshaCatalog;
 import naksha.model.request.*;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.IPropertyQuery;
@@ -189,7 +189,7 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
       }
       if (propertyQuery instanceof PQuery) {
         final PQuery query = ((PQuery) propertyQuery);
-        return query.getProperty().getPath().contains(Property.ID)
+        return query.getProperty().getPath().contains("id")
                && query.getOp().equals(AnyOp.IS_ANY_OF);
       }
     }
@@ -235,20 +235,23 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
     return execute(request);
   }
 
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples) {
-    loadTuples(featureTuples, 0, featureTuples.size(), FETCH_ALL);
-  }
-
   @Override
-  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to, int mode) {
-    final @NotNull ViewLayerCollection viewCollection = view.getViewCollection();
-    // TODO: We need to group the tuples by layer using:
-    //       viewCollection.getByTupleNumber()
-    //       Then we can query for the tuples.
-    //       The reason for all the effort is that the view allows a postponed commit,
-    //       which means we can't load tuple modified features, because the changes are
-    //       not yet visible outside the session!
-    throw new UnsupportedOperationException("loadTuples");
+  public void loadTuples(@NotNull List<? extends FeatureTuple> featureTuples, int from, int to) {
+    final ViewLayerCollection viewCollection = view.getViewCollection();
+    final Map<ViewLayer, List<FeatureTuple>> byLayer = new LinkedHashMap<>();
+    for (int i = from; i < to; i++) {
+      final FeatureTuple featureTuple = featureTuples.get(i);
+      if (featureTuple == null) {
+        continue;
+      }
+      final ViewLayer layer = viewCollection.getByTupleNumber(featureTuple.tupleNumber);
+      byLayer.computeIfAbsent(layer, k -> new ArrayList<>()).add(featureTuple);
+    }
+    // Sub-sessions read committed data, so features written in this session load only after commit.
+    for (final Map.Entry<ViewLayer, List<FeatureTuple>> entry : byLayer.entrySet()) {
+      final List<FeatureTuple> group = entry.getValue();
+      subSessions.get(entry.getKey()).loadTuples(group, 0, group.size());
+    }
   }
 
   @Override
@@ -257,27 +260,38 @@ public class ViewReadSession implements IReadSession, AutoCloseable {
   }
 
   @Override
-  public @Nullable NakshaMap getMapById(@NotNull String mapId) {
+  public @Nullable NakshaCatalog getCatalogById(@NotNull String catalogId, boolean allowTombstone) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public @Nullable NakshaMap getMapByNumber(int mapNumber) {
+  public @Nullable NakshaCatalog getCatalogByNumber(int catalogNumber, boolean allowTombstone) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionById(@NotNull NakshaMap map, @NotNull String collectionId) {
+  public @Nullable NakshaCollection getCollectionById(
+      @NotNull NakshaCatalog map,
+      @NotNull String collectionId,
+      boolean allowTombstone) {
     throw new UnsupportedOperationException();
   }
 
   @Override
-  public @Nullable NakshaCollection getCollectionByNumber(@NotNull NakshaMap map, int collectionNumber) {
+  public @Nullable NakshaCollection getCollectionByNumber(
+      @NotNull NakshaCatalog catalog,
+      int collectionNumber,
+      boolean allowTombstone) {
     throw new UnsupportedOperationException();
   }
 
   @Override
   public @NotNull SessionOptions getOptions() {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public @NotNull MemberProcessorMap getProcessors() {
     throw new UnsupportedOperationException();
   }
 }

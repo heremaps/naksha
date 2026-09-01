@@ -21,12 +21,12 @@ class ReadFeaturesByGuuidTest :
 
         // And
         val createResp = insertFeatures(listOf(inputFeature1, inputFeature2, inputFeature3))
-        val guuidById = createResp.features.filterNotNull().associate { it.id to it.guid }
+        val guuidById = createResp.features.filterNotNull().associate { it.id to it.properties.xyz.guid }
 
         // When
         val readByGuid = ReadFeatures().apply {
-            mapId = collection.mapId
-            collectionIds += collection.id
+            catalogId = collection.catalogId
+            collectionId = collection.id
             guids = GuidList().apply {
                 add(guuidById[inputFeature1.id])
                 add(guuidById[inputFeature3.id])

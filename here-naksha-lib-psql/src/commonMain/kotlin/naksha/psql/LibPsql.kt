@@ -19,7 +19,7 @@ import naksha.psql.PgType.Companion.STRING
  * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
  * @since 3.0
  */
-val minAdminVersion = NakshaVersion.of("3.0.0-beta.24")
+val minAdminVersion = NakshaVersion.of("3.0.0-beta.44")
 
 /**
  * The `naksha~admin` version.
@@ -27,7 +27,7 @@ val minAdminVersion = NakshaVersion.of("3.0.0-beta.24")
  * This is different from the normal [NakshaVersion.current], because `lib-psql` only increments the admin version, when the SQL functions are modified, and require an upgrade. So, even while client code may be modified, this still may not need an upgrade of the SQL functions.
  * @since 3.0
  */
-val adminVersion = NakshaVersion.of("3.0.0-beta.24")
+val adminVersion = NakshaVersion.of("3.0.0-beta.44")
 
 /**
  * `$`: The separation string used to flag internal tables.
@@ -35,76 +35,66 @@ val adminVersion = NakshaVersion.of("3.0.0-beta.24")
 internal const val PG_S = "\$"
 
 /**
- * ``: The identifier for the HEAD-table, no prefix.
+ * ``: The postfix for the HEAD-table, no prefix.
  */
 internal const val PG_HEAD = ""
 
 /**
- * `$del`: The identifier for the DELETION-table.
- */
-internal const val PG_DEL = "${PG_S}del"
-
-/**
- * `$hst`: The identifier for the HISTORY-table.
+ * `$hst`: The postfix for the HISTORY-table.
  */
 internal const val PG_HST = "${PG_S}hst"
 
 /**
- * `$meta`: The identifier for the META-table.
+ * `$meta`: The postfix for the META-table.
  */
 internal const val PG_META = "${PG_S}meta"
 
 /**
- * `$i_???`: The prefix used for indices, followed by the index identifier, e.g. `$i_id`
+ * `$i`: The prefix used for index-names. The pattern is `{tablename}$i{
  */
-internal const val PG_IDX = "${PG_S}i_"
+internal const val PG_IDX = "${PG_S}i"
 
 /**
- * `$c_??`: The prefix used for constraints, followed by the identifier of the constraint.
+ * `$c`: The prefix used for constraints, followed by the identifier of the constraint.
  */
-internal const val PG_CONSTRAINT = "${PG_S}c_"
+internal const val PG_CONSTRAINT = "${PG_S}c"
 
 /**
- * The name of the constraint above [tn_next][PgColumn.next_tn] (yearly partition).
+ * `$c_nv`: The postfix of the history-constraint above [next_version][PgColumn.NextVersionColumn] _(shifted partition)_.
  */
-internal const val PG_TN_NEXT_CONSTRAINT = "${PG_CONSTRAINT}nt"
+internal const val PG_HISTORY_CONSTRAINT = "${PG_CONSTRAINT}nv"
 
 /**
- * The name of the constraint above [tn][PgColumn.tn] (performance partition).
+ * `$c_fn`: The postfix of the distribution-constraint above [feature-number][PgColumn.FnColumn].
  */
-internal const val PG_PART_CONSTRAINT = "${PG_CONSTRAINT}tn"
+internal const val PG_DIST_CONSTRAINT = "${PG_CONSTRAINT}fn"
 
 /**
- * The name of the partition-constraint above [id][PgColumn.id].
+ * `$h`: The prefix used for history-partitions.
  */
-internal const val PG_ID_CONSTRAINT = "${PG_CONSTRAINT}id"
+internal const val PG_HISTORY_PARTITION = "${PG_S}h"
 
 /**
- * `$p_`: The prefix used for numerated partitions, the final value is `$p???` with `?` being `[0-9]`.
+ * `$p`: The prefix used for distribution-partitions.
  */
-internal const val PG_PART = "${PG_S}p"
-
-/**
- * `$y_`: The prefix used for yearly partitions, the final value is `$y????` with `?` being `[0-9]`.
- */
-internal const val PG_YEAR = "${PG_S}y"
+internal const val PG_DIST_PARTITION = "${PG_S}p"
 
 /**
  * The prefix used for all internal tables.
  */
 internal const val PG_INTERNAL_PREFIX = Naksha.INTERNAL_PREFIX
 
-internal const val NAKSHA_TXN_SEQ = "naksha_txn_seq"
+internal const val NAKSHA_VERSION_SEQ = "naksha_version_seq"
 //internal const val NAKSHA_MAP_SEQ = "naksha_map_seq"
 //internal const val NAKSHA_COL_SEQ = "naksha_col_seq"
 
 internal const val MAX_POSTGRES_TOAST_TUPLE_TARGET = 32736
 internal const val MIN_POSTGRES_TOAST_TUPLE_TARGET = 2048
 
-internal const val TRANSACTIONS_COL = Naksha.TRANSACTIONS_COL
+internal const val TRANSACTIONS_COL = Naksha.TRANSACTIONS_COL_ID
 
-internal const val NKC_TABLE = Naksha.TRANSACTIONS_COL
-internal const val NKC_TABLE_ESC = "\"${Naksha.TRANSACTIONS_COL}\""
+internal const val NKC_TABLE = Naksha.TRANSACTIONS_COL_ID
+internal const val NKC_TABLE_ESC = "\"${Naksha.TRANSACTIONS_COL_ID}\""
 internal const val NKC_PARTITION_COUNT = "partitionCount"
 internal const val NKC_ID = "id"
 internal const val NKC_GEO_INDEX = "geoIndex"
@@ -116,9 +106,7 @@ internal const val NKC_STORAGE_CLASS = "storageClass"
 
 internal const val COL_TXN_NEXT = "txn_next"
 internal const val COL_TXN = "txn"
-internal const val COL_UID = "uid"
 internal const val COL_PTXN = "ptxn"
-internal const val COL_PUID = "puid"
 internal const val COL_FLAGS = "flags"
 internal const val COL_VERSION = "version"
 internal const val COL_CREATED_AT = "created_at"
@@ -138,9 +126,7 @@ internal const val COL_FNVA1 = "fnva1"
 internal val COL_ALL: String = arrayOf(
     COL_TXN_NEXT,
     COL_TXN,
-    COL_UID,
     COL_PTXN,
-    COL_PUID,
     COL_FLAGS,
     COL_VERSION,
     COL_CREATED_AT,
