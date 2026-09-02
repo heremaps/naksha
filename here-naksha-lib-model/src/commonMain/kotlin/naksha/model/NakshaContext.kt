@@ -381,11 +381,11 @@ open class NakshaContext protected constructor(
         val defaultAppName = AtomicRef("NakshaClient/${NakshaVersion.CURRENT}")
 
         /**
-         * The default application identifier to use, defaults to `null`.
+         * The default application identifier to use, defaults to `naksha-init-job`.
          * @since 3.0.0
          */
         @JvmField
-        val defaultAppId = AtomicRef<String>(null)
+        val defaultAppId = AtomicRef("naksha-init-job")
 
         /**
          * The default exclude path to use, when calculating hashes.
