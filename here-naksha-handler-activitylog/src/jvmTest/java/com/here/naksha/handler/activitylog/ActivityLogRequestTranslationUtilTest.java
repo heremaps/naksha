@@ -22,6 +22,7 @@ import naksha.model.request.query.PQuery;
 import naksha.model.request.query.StringOp;
 import org.junit.jupiter.api.Test;
 
+@SuppressWarnings("deprecation")
 class ActivityLogRequestTranslationUtilTest {
 
   private static final String TEST_SPACE_ID = "test_space_id";
@@ -149,6 +150,7 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And:
     assertNull(readFeatures.getQuery().getProperties());
+    assertTrue(readFeatures.getFeatureIds().isEmpty());
   }
 
   @Test
@@ -174,6 +176,7 @@ class ActivityLogRequestTranslationUtilTest {
 
     // And: the pQuery left is effectively dead
     assertNull(readFeatures.getQuery().getProperties());
+    assertTrue(readFeatures.getFeatureIds().isEmpty());
   }
 
   @Test
