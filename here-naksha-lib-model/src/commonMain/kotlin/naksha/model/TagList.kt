@@ -42,7 +42,7 @@ class TagList() : StringList() {
         setCapacity(tags.size)
         for (i in 0 until tags.size) {
             val tag = tags[i]
-            if (tag is String) addTag(tag, skipInvalid)
+            if (tag is String) addTag(tag, !skipNormalize)
             else if (tag is Char || tag is CharSequence) addTag(tag.toString(), !skipNormalize)
             else if (!skipInvalid) throw illegalArg("The tag $i is no string: $tag")
         }
