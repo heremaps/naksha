@@ -139,6 +139,8 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                     if (child == null) continue
                     if (first) first = false else where.append("AND ")
                     applyOp(child)
+                    // If the applyOp does not add anything, so is a no-op, remove the AND.
+                    if (where.endsWith("AND ")) where.setLength(where.length - "AND ".length)
                 }
                 if (children.size > 1) where.append(") ") else where.append(" ")
                 return
@@ -153,6 +155,8 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
                     if (child == null) continue
                     if (first) first = false else where.append("OR ")
                     applyOp(child)
+                    // If the applyOp does not add anything, so is a no-op, remove the OR.
+                    if (where.endsWith("OR ")) where.setLength(where.length - "OR ".length)
                 }
                 if (children.size > 1) where.append(") ") else where.append(" ")
                 return
