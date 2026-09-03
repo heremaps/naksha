@@ -494,8 +494,9 @@ data class Tuple @JvmOverloads constructor(
                 is ByteArray -> fromTWKB(value)
                 else -> value.proxy(SpGeometry::class)
             }
-            return geometry
-                ?: { warnMismatch(featureId, memberName, "SpGeometry", value); null } as SpGeometry?
+            if (geometry != null) return geometry
+            warnMismatch(featureId, memberName, "SpGeometry", value);
+            return null
         }
 
         private fun coerceTagMap(value: Any, featureId: String, memberName: String): TagMap? {
@@ -503,9 +504,6 @@ data class Tuple @JvmOverloads constructor(
             if (tagMap != null) return tagMap
             warnMismatch(featureId, memberName, "TagMap", value)
             return null
-            // TODO: Nice Compiler Bug, this code should replace the above, but compiler complains!
-            //       The exact same code works above in `coerceSpatial` ?
-            // return tagMap ?: { warnMismatch(featureId, memberName, "TagMap", value); null } as TagMap?
         }
 
         private fun coerceTagList(value: Any, featureId: String, memberName: String): TagList? {
