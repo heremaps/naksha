@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.ITagList
 import naksha.base.StringList
 import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.js.JsExport
@@ -13,7 +14,7 @@ import kotlin.jvm.JvmStatic
  * A list of tags.
  */
 @JsExport
-class TagList() : StringList() {
+class TagList() : StringList(), ITagList {
 
     /**
      * Create a tag list from the given arguments; the tags are normalized.

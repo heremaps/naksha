@@ -860,6 +860,7 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
             }
         }
         when (value) {
+            null -> encodeNull()
             is Char -> if (global != null) encodeText(value.toString()) else encodeString(value.toString())
             is String -> if (global != null) encodeText(value) else encodeString(value)
             is Boolean -> encodeBool(value)
@@ -879,10 +880,9 @@ open class JbEncoder2(var global: IBook? = null) : Binary() {
                 value.version
             )
             is ByteArray -> if (value.isNotEmpty()) encodeByteArray(value) else encodeNull()
-            is MapProxy<*, *> -> if (value::class.simpleName == "TagMap") encodeTagMap(value as MapProxy<String, *>) else encodeObject(value as MapProxy<String, *>)
-            is ListProxy<*> -> if (value::class.simpleName == "TagList") encodeTagList(value) else encodeList(value)
+            is MapProxy<*, *> -> if (value is ITagMap) encodeTagMap(value as MapProxy<String, *>) else encodeObject(value as MapProxy<String, *>)
+            is ListProxy<*>   -> if (value is ITagList) encodeTagList(value) else encodeList(value)
             is Array<*> -> encodeArray(value as Array<Any?>)
-            null -> encodeNull()
             else -> throw IllegalArgumentException("Could not encode value for type: ${value::class}")
         }
         return start
