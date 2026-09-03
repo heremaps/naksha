@@ -90,15 +90,17 @@ open class NakshaError() : AnyObject() {
         const val PARTITION_NOT_FOUND = "PartitionNotFound"
 
         /**
-         * An event that was sent to the connector failed, because the connector cannot process it.
+         * An event that was sent through a space and failed, because a handler cannot process it.
          *
-         * This will result in an 501 Not Implemented response.
+         * This will result in an `501 Not Implemented` response.
          * @since 3.0.0
          */
         const val NOT_IMPLEMENTED = "NotImplemented"
 
         /**
-         * An error being thrown when an optional operation is not supported.
+         * An error being thrown when an internal API call is not supported by the implementation.
+         *
+         * This will result in an `500 Internal Server Error` response.
          * @since 3.0.0
          */
         const val UNSUPPORTED_OPERATION = "UnsupportedOperation"
@@ -232,11 +234,18 @@ open class NakshaError() : AnyObject() {
         const val DICT_MANAGER_NOT_FOUND = "DictManagerNotFound"
 
         /**
-         * A [naksha.model.IStorage] does not exist, but is expected to exist.
+         * A storage does not exist, but is expected to exist.
          *
          * @since 3.0.0
          */
         const val STORAGE_NOT_FOUND = "StorageNotFound"
+
+        /**
+         * An error to be reported by the storage, if the `id` is unique, but another feature with the same feature-number exists. This is a hash collision as described in [Id]. The storage will not resolve this, it will only inform the client about this problem, the client has to use a different `id` or relocate the feature into another collection.
+         * @since 3.0
+         * @see Id
+         */
+        const val ID_COLLISION = "IdCollision"
 
         private val CODE_FIELD = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
         private val MSG_FIELD = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
