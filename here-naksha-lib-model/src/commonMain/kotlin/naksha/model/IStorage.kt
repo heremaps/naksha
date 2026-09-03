@@ -120,6 +120,17 @@ interface IStorage : IDictReader {
     fun newReadSession(options: SessionOptions? = null): IReadSession
 
     /**
+     * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
+     *
+     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
+     * @return the read-only session.
+     * @since 2.0.7
+     */
+    // TODO: Modify: fun newReadSession(database: NakshaDatabase, options: SessionOptions? = null): IReadSession
+    fun newStreamSession(options: SessionOptions? = null): IStreamSession
+
+    /**
      * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
      * @param options the session-options.
      * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
