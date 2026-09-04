@@ -249,8 +249,16 @@ actual class Platform {
         @JvmStatic
         actual fun isAssignable(source: KClass<*>, target: KClass<*>): Boolean = source.java.isAssignableFrom(target.java)
 
+        private val isSuperKlassOfCache = AtomicMap<KClass<*>, Boolean>()
+
         @JvmStatic
-        actual fun isProxyKlass(klass: KClass<*>): Boolean = Proxy::class.isSuperclassOf(klass)
+        actual fun isProxyKlass(klass: KClass<*>): Boolean {
+            val cached = isSuperKlassOfCache[klass]
+            if (cached != null) return cached
+            val isProxy = Proxy::class.isSuperclassOf(klass)
+            isSuperKlassOfCache[klass] = isProxy
+            return isProxy
+        }
 
         @JvmStatic
         actual fun <T : Any> klassForName(name: String): KClass<T> {

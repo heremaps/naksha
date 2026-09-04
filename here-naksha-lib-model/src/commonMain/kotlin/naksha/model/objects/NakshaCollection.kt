@@ -285,6 +285,8 @@ open class NakshaCollection() : NakshaFeature() {
      */
     var members: MemberList? by MEMBERS
 
+    private var validatedMembers: MemberList? = null
+
     /**
      * @see [members]
      */
@@ -331,6 +333,7 @@ open class NakshaCollection() : NakshaFeature() {
         if (list.size >= MemberList.MAX_MEMBERS) {
             throw NakshaException(ILLEGAL_ARGUMENT, "Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
         }
+        validatedMembers = null
         list.add(value)
         return this
     }
@@ -378,6 +381,9 @@ open class NakshaCollection() : NakshaFeature() {
      * @throws NakshaException with [ILLEGAL_STATE]
      */
     open fun useMembers(): MemberList {
+        val current = this.members
+        val cached = validatedMembers
+        if (cached != null && cached === current) return cached
         var write = false
         var list = this.members
         if (list == null) {
@@ -399,6 +405,7 @@ open class NakshaCollection() : NakshaFeature() {
             }
         }
         if (write) this.members = list
+        validatedMembers = list
         return list
     }
 

@@ -124,7 +124,8 @@ open class MemberList() : ListProxy<Member>(Member::class) {
      * Test whether this member list is valid, so does not have `null` entries and all members have unique valid names. Throws a [NakshaException], if any error is found.
      */
     fun validate() {
-        for (i in 0 until this.size) {
+        val size = this.size
+        for (i in 0 until size) {
             val member = this[i] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $i is null")
             val memberName = member.name
             if (!INTERNAL_MEMBER.isValidId(memberName)) {
