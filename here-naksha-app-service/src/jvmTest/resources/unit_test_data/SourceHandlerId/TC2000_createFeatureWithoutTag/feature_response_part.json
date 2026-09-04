@@ -15,7 +15,7 @@
       "properties": {
         "@ns:com:here:xyz": {
           "tags": [
-            "xyz_source_id_Task_1"
+            "xyz_source_id_task_1"
           ]
         },
         "speedLimit": "50",

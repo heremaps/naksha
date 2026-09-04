@@ -16,7 +16,7 @@
         "@ns:com:here:xyz": {
           "tags": [
             "existing_normalized_tag",
-            "xyz_source_id_Task_3"
+            "xyz_source_id_task_3"
           ]
         },
         "speedLimit": "50",
