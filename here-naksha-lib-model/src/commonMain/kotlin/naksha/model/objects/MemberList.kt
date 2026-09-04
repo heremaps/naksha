@@ -125,15 +125,17 @@ open class MemberList() : ListProxy<Member>(Member::class) {
      */
     fun validate() {
         val size = this.size
-        val names : HashSet<String> = HashSet(size)
         for (i in 0 until size) {
             val member = this[i] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $i is null")
             val memberName = member.name
             if (!INTERNAL_MEMBER.isValidId(memberName)) {
                 throw NakshaException(ILLEGAL_STATE, "Member at index $i has invalid name: $memberName")
             }
-            if (!names.add(memberName)) {
-                throw NakshaException(ILLEGAL_STATE, "Member at index $i has duplicate name with another member: $memberName")
+            for (j in (i + 1) until this.size) {
+                val later = this[j] ?: throw NakshaException(ILLEGAL_STATE, "Member at index $j is null")
+                if (memberName == later.name) {
+                    throw NakshaException(ILLEGAL_STATE, "Member at index $i has same name as member at $j: $memberName")
+                }
             }
         }
     }
