@@ -14,6 +14,8 @@ import kotlin.jvm.JvmStatic
 
 /**
  * A list of tags.
+ * @see TagNormalizer
+ * @since 3.0
  */
 @JsExport
 class TagList() : StringList(), ITagList {
@@ -22,6 +24,7 @@ class TagList() : StringList(), ITagList {
      * Create a tag list from the given arguments; the tags are normalized.
      * @param tags the tags.
      * @param skipNormalize if normalization should be skipped; expects then that the given values are already normalized.
+     * @since 3.0
      */
     @JvmOverloads
     @JsName("of")
@@ -36,6 +39,7 @@ class TagList() : StringList(), ITagList {
      * @param skipInvalid if invalid values in the given should be skipped; otherwise an exception is raised.
      * @param skipNormalize if normalization should be skipped; expects then that the given values are already normalized.
      * @throws naksha.base.NakshaException with error [ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] if the given list contains `null` or valus not being `String` and [skipInvalid] is _false_.
+     * @since 3.0
      */
     @JvmOverloads
     @JsName("ofList")
@@ -50,11 +54,12 @@ class TagList() : StringList(), ITagList {
     }
 
     /**
-     * Returns 'true' if the tag was removed, 'false' if it was not present.
+     * Returns _true_ if the tag was removed, _false_ if it was not present.
      *
      * @param tag       The normalized tag to remove.
-     * @param normalize `true` if the tag should be normalized before trying to remove; `false` if the tag is normalized.
+     * @param normalize _true_ if the tag should be normalized before trying to remove; _false_ if the tag is normalized.
      * @return true if the tag was removed; false otherwise.
+     * @since 3.0
      */
     fun removeTag(tag: String, normalize: Boolean): Boolean {
         val tagToRemove = if (normalize) normalizeTag(tag) else tag
@@ -65,8 +70,9 @@ class TagList() : StringList(), ITagList {
      * Removes the given tags.
      *
      * @param tags      The tags to remove.
-     * @param normalize `true` if the tags should be normalized before trying to remove; `false` if the tags are normalized.
+     * @param normalize _true_ if the tags should be normalized before trying to remove; _false_ if the tags are normalized.
      * @return this.
+     * @since 3.0
      */
     fun removeTags(tags: List<String>?, normalize: Boolean): TagList {
         if (tags.isNullOrEmpty()) {
@@ -86,8 +92,9 @@ class TagList() : StringList(), ITagList {
     /**
      * Removes tags starting with prefix
      *
-     * @param prefix string prefix.
+     * @param prefix string prefix _(must be normalized)_.
      * @return this.
+     * @since 3.0
      */
     fun removeTagsWithPrefix(prefix: String?): TagList {
         if (isEmpty() || prefix == null) {
@@ -99,10 +106,11 @@ class TagList() : StringList(), ITagList {
     }
 
     /**
-     * Removes tags starting with given list of prefixes
+     * Removes tags starting with given list of prefixes.
      *
-     * @param prefixes list of tag prefixes
+     * @param prefixes list of tag prefixes _(must be normalized)_.
      * @return this.
+     * @since 3.0
      */
     fun removeTagsWithPrefixes(prefixes: List<String?>?): TagList {
         if (prefixes != null) {
@@ -114,11 +122,11 @@ class TagList() : StringList(), ITagList {
     }
 
     /**
-     * Returns 'true' if the tag added, 'false' if it was already present.
+     * Returns _true_ if the tag added, _false_ if it was already present.
      *
      * @param tag the tag to add.
-     * @param normalize `true` if the tag should be normalized; `false` otherwise.
-     * @return true if the tag added; false otherwise.
+     * @param normalize defaults to _true_; set to _false_ only if the tag is already normalized.
+     * @since 3.0
      */
     fun addTag(tag: String, normalize: Boolean = true): Boolean {
         val tagToAdd = if (normalize) normalizeTag(tag) else tag
@@ -134,8 +142,9 @@ class TagList() : StringList(), ITagList {
      * Add the given tags.
      *
      * @param tags the tags to add.
-     * @param normalize `true` if the given tags should be normalized; `false`, if they are already normalized.
+     * @param normalize defaults to _true_; set to _false_ only if the tags are already normalized.
      * @return this.
+     * @since 3.0
      */
     fun addTags(tags: List<String>?, normalize: Boolean = true): TagList {
         if (!tags.isNullOrEmpty()) {
@@ -158,6 +167,7 @@ class TagList() : StringList(), ITagList {
      *
      * @param tags the tags to normalize and add.
      * @return this.
+     * @since 3.0
      */
     fun addAndNormalizeTags(vararg tags: String): TagList {
         if (tags.isNotEmpty()) {
@@ -175,6 +185,7 @@ class TagList() : StringList(), ITagList {
     /**
      * Convert this tag-list into a tag-map.
      * @return this tag-list as tag-map.
+     * @since 3.0
      */
     fun toTagMap(): TagMap = TagMap(this)
 
@@ -206,6 +217,7 @@ class TagList() : StringList(), ITagList {
          *
          * @param tags a list of tags.
          * @return the same list, just that the content is normalized.
+         * @since 3.0
          */
         @JvmStatic
         @JsStatic

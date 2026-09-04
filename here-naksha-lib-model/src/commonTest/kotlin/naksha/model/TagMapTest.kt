@@ -55,5 +55,29 @@ class TagMapTest {
         assertEquals("Tag values can only be String, Boolean or Number", failure.message)
     }
 
+    @Test
+    fun shouldAllowToSplitReferences() {
+        val tagList = TagList("@sourceId=Ref\$1")
+        assertEquals(1, tagList.size)
+        val tagMap = tagList.toTagMap()
+        assertEquals(1, tagMap.size)
+        assertTrue(tagMap.containsKey("@sourceId"))
+        assertEquals("Ref\$1", tagMap["@sourceId"])
+        assertEquals("@sourceId", tagMap.keys.first())
+        assertEquals("Ref\$1", tagMap.values.first())
+    }
+
+    @Test
+    fun shouldSupportSourceID() {
+        val tagList = TagList("sourceID_Ref\$1")
+        assertEquals(1, tagList.size)
+        val tagMap = tagList.toTagMap()
+        assertEquals(1, tagMap.size)
+        assertTrue(tagMap.containsKey("sourceID_Ref\$1"))
+        assertNull(tagMap["sourceID_Ref\$1"])
+        assertEquals("sourceID_Ref\$1", tagMap.keys.first())
+        assertNull(tagMap.values.first())
+    }
+
     object NotSupportedType
 }

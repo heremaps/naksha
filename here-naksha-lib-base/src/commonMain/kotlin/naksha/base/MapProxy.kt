@@ -167,40 +167,62 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
      */
     open fun toValue(key: K, value: Any?, alt: V? = null): V? = box(value, valueKlass, alt)
 
+    override val size: Int
+        get() = map_size(platformObject())
+
     override val entries: MutableSet<MutableEntry<K, V?>>
         get() {
-            val basicEntries: MutableSet<MutableEntry<K, V?>> = rawEntries()
-                .map { platformList ->
-                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
-                    val key = toKey(array_get(platformList, 0))
-                    requireNotNull(key) { "Key can't be null" }
-                    Entry(key, toValue(key, array_get(platformList, 1)), this)
-                }
-                .toMutableSet()
-            return MapProxyEntrySet(basicEntries, this)
+            val platformObject = platformObject()
+            val size = map_size(platformObject)
+            val it = map_iterator(platformObject)
+            var result: PlatformIteratorResult<PlatformList>? = null
+            val entries = Array<MutableEntry<K, V?>>(size) { i ->
+                result = it.next()
+                val entry = result.value
+                require(array_get_length(entry) == 2) { "Key $i can't be null" }
+                val key = toKey(array_get(entry, 0))
+                requireNotNull(key) { "Key $i can't be null" }
+                val value = toValue(key, array_get(entry, 1))
+                Entry(key, value, this)
+            }
+            return MapProxyEntrySet(entries.toMutableSet(), this)
         }
 
     override val keys: MutableSet<K>
         get() {
-            return rawEntries()
-                .mapNotNull { platformList ->
-                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
-                    toKey(array_get(platformList, 0))
-                }
-                .toMutableSet()
+            val platformObject = platformObject()
+            val size = map_size(platformObject)
+            val it = map_iterator(platformObject)
+            var result: PlatformIteratorResult<PlatformList>? = null
+            val keys = Array(size) { i ->
+                result = it.next()
+                val entry = result.value
+                require(array_get_length(entry) == 2) { "Key $i can't be null" }
+                val key = toKey(array_get(entry, 0))
+                requireNotNull(key) { "Key $i can't be null" }
+                key as Any
+            }
+            @Suppress("UNCHECKED_CAST")
+            return keys.toMutableSet() as MutableSet<K>
         }
-
-    override val size: Int
-        get() = map_size(platformObject())
 
     override val values: MutableCollection<V?>
         get() {
-            return rawEntries()
-                .mapNotNull { platformList ->
-                    require(array_get_length(platformList) == 2) { "Expected PlatformList with size of 2 (key and value)" }
-                    box(array_get(platformList, 1), valueKlass)
-                }
-                .toMutableSet()
+            val platformObject = platformObject()
+            val size = map_size(platformObject)
+            val it = map_iterator(platformObject)
+            var result: PlatformIteratorResult<PlatformList>? = null
+            val values = Array(size) { i ->
+                result = it.next()
+                val entry = result.value
+                require(array_get_length(entry) == 2) { "Key $i can't be null" }
+                val key = toKey(array_get(entry, 0))
+                requireNotNull(key) { "Key $i can't be null" }
+                val value = toValue(key, array_get(entry, 1))
+                value as Any?
+            }
+            @Suppress("UNCHECKED_CAST")
+            return values.toMutableList() as MutableCollection<V?>
         }
 
     override fun clear() = map_clear(platformObject())
@@ -308,13 +330,6 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
             owner.removeRaw(
                 currentKey ?: throw IllegalStateException("Iterator is invalid position")
             )
-        }
-    }
-
-    private fun rawEntries(): Sequence<PlatformList> {
-        val platformIterator = map_iterator(platformObject())
-        return generateSequence(platformIterator.next().value) {
-            platformIterator.next().value
         }
     }
 }
