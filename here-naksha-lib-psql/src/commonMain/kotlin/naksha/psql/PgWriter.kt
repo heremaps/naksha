@@ -77,23 +77,28 @@ open class PgWriter internal constructor(
      * @return the response.
      */
     fun execute(writes: WriteList) : Response {
-        val tupleNumberList = executeWrites(writes.mapNotNull { it }.toMutableList())
-        return SuccessResponse().withTupleNumberList(tupleNumberList)
+        val featureTupleList = executeWrites(writes.mapNotNull { it }.toMutableList())
+        return SuccessResponse().withFeatureTupleList(featureTupleList)
     }
 
     /**
      * Performs the given writes.
+     *
+     * The returned [FeatureTupleList] carries the written tuples by hard reference (in input order), so
+     * the response keeps them reachable for as long as it is used, instead of relying on the soft-referenced
+     * cache retaining them.
      * @param writes the writes to perform.
-     * @return the tuple-numbers of the
+     * @return the written feature-tuples, in input order (writes without a tuple-number are skipped).
      */
-    private fun executeWrites(writes: MutableList<Write>) : TupleNumberList {
-        if (writes.isEmpty()) return TupleNumberList()
-        // Add the input-index.
+    private fun executeWrites(writes: MutableList<Write>) : FeatureTupleList {
+        if (writes.isEmpty()) return FeatureTupleList()
+        // Add the input-index as preparation for sorting by db, catalog, collection, partition.
         val pgWrites = ArrayList<PgWrite>(writes.size)
-        for (i in 0 ..< writes.size) pgWrites.add(PgWrite(writes[i], i))
+        for (i in 0 until writes.size) {
+            pgWrites.add(PgWrite(writes[i], i))
+        }
         val savepointId = PlatformUtil.randomString()
         var conn: PgConnection? = null
-        var partitionSnapshot: Map<PgCollection, Set<Int>>? = null
         try {
             // This can be time-consuming, unless the connection is already open, try not to open it before we do this!
             val updateCache = prepareWrite(pgWrites)
@@ -167,31 +172,28 @@ open class PgWriter internal constructor(
         }
 
         // Reorder results to match input.
-        val tupleNumbers = TupleNumberList()
-        tupleNumbers.setCapacity(writes.size)
         val tupleList = ArrayList<Tuple>(writes.size)
         val transaction = tx.nakshaTx
         var featuresModified = 0
-        for (write in pgWrites) {
-            val tupleNumber = write.tupleNumber
-            tupleNumbers[write.i] = tupleNumber
-            val tuple = write.tuple
-            if (write.isFeatureModification) {
-                val map = write.catalog
-                val col = write.collection
+        for (pgWrite in pgWrites) {
+            val tupleNumber = pgWrite.tupleNumber
+            val tuple = pgWrite.tuple
+            if (pgWrite.isFeatureModification) {
+                val map = pgWrite.catalog
+                val col = pgWrite.collection
                 val txCol = transaction.useCatalog(map.id, map.catalogNumber).useCollection(col.id, col.collectionNumber)
                 if (tupleNumber != null) {
                     txCol.add(tupleNumber, col.partitions)
                 }
                 featuresModified += 1
-            } else if (write.isCatalogModification) {
-                val map = write.asPgCatalog
-                if (map != null) transaction.useCatalog(map.id, map.catalogNumber, write.action)
-            } else if (write.isCollectionModification) {
-                val map = write.catalog
-                val col = write.asPgCollection
+            } else if (pgWrite.isCatalogModification) {
+                val map = pgWrite.asPgCatalog
+                if (map != null) transaction.useCatalog(map.id, map.catalogNumber, pgWrite.action)
+            } else if (pgWrite.isCollectionModification) {
+                val map = pgWrite.catalog
+                val col = pgWrite.asPgCollection
                 if (col != null) {
-                    transaction.useCatalog(map.id, map.catalogNumber).useCollection(col.id, col.collectionNumber, write.action)
+                    transaction.useCatalog(map.id, map.catalogNumber).useCollection(col.id, col.collectionNumber, pgWrite.action)
                     map.invalidateCollection(col)
                 }
             }
@@ -201,7 +203,18 @@ open class PgWriter internal constructor(
         // We do not put tuples into cache, before we are sure everything was successful!
         // Adding all together into the cache reduces the effort to iterate above all caches multiple times.
         Naksha.cache.store(tupleList)
-        return tupleNumbers
+
+        val featureTuples = FeatureTupleList()
+        featureTuples.setCapacity(writes.size)
+        for (pgWrite in pgWrites) {
+            val i = pgWrite.i
+            val tupleNumber = pgWrite.tupleNumber
+            val tuple = pgWrite.tuple
+            if (tupleNumber != null) {
+                featureTuples[i] = if (tuple != null) FeatureTuple(tupleNumber, tuple) else FeatureTuple(tupleNumber)
+            }
+        }
+        return featureTuples
     }
 
     // Ensure that the needed physical schema and tables are created.

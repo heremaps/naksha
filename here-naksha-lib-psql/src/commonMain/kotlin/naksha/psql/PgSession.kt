@@ -473,7 +473,7 @@ SELECT * FROM from_hst"""
                 rows.readAll(cursor)
             }
         }
-        // TupleHeapCache holds tuples as WeakRef, so a just-stored tuple can be GC'd before we read it
+        // TupleHeapCache holds tuples as SoftReference, so a just-stored tuple can be GC'd before we read it
         // back via cache[tupleNumber], returning null under memory pressure. The local map keeps a
         // strong reference as a workaround.
         // TODO: Find a better way; the cache should not drop tuples that are currently in use
