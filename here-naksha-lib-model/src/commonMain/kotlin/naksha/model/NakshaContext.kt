@@ -275,7 +275,7 @@ open class NakshaContext protected constructor(
     /**
      * When calculating the hash of a feature, a function to be called for every property to hash.
      *
-     * The function receives the feature that is being hashed, the current path, and the value to be hashed (will be _null_, _String_, _Int_, _Int64_, _Double_ or _Boolean_). It should return _true_, when the value should be part of the hash; _false_ otherwise.
+     * The function receives the feature that is being hashed, the current path, and the value to be hashed (will be _null_, _String_, _Int_, _Long_, _Double_ or _Boolean_). It should return _true_, when the value should be part of the hash; _false_ otherwise.
      */
     open var excludeFn: Fn3<Boolean, NakshaFeature, List<String>, Any?>? = null
         get() = if (field == null) defaultExcludeFn.get() else field
@@ -360,7 +360,7 @@ open class NakshaContext protected constructor(
      * relative timestamps (time since start of a request).
      */
     @JvmField
-    val startMicros: Int64 = Platform.currentMicros()
+    val startMicros: Long = Platform.currentMicros()
 
     /**
      * Attaches this context to the current thread.

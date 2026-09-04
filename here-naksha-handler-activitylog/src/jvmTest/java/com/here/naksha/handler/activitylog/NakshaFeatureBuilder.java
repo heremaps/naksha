@@ -8,7 +8,6 @@ import static com.here.naksha.handler.activitylog.ActivityLogRequestTranslationU
 import static naksha.model.XyzNs.NUUID;
 
 import java.util.Map;
-import naksha.base.JvmInt64;
 import naksha.base.Action;
 import naksha.model.XyzNs;
 import naksha.model.objects.NakshaFeature;
@@ -59,12 +58,12 @@ class NakshaFeatureBuilder {
     return this;
   }
 
-  NakshaFeatureBuilder withCreatedAt(JvmInt64 createdAt) {
+  NakshaFeatureBuilder withCreatedAt(long createdAt) {
     feature.getProperties().getXyz().put(CREATED_AT, createdAt);
     return this;
   }
 
-  NakshaFeatureBuilder withUpdatedAt(JvmInt64 updatedAt) {
+  NakshaFeatureBuilder withUpdatedAt(long updatedAt) {
     feature.getProperties().getXyz().put(UPDATED_AT, updatedAt);
     return this;
   }

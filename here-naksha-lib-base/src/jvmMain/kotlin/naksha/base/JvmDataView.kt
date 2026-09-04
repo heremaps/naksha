@@ -1,6 +1,5 @@
 package naksha.base
 
-import naksha.base.Platform.PlatformCompanion.longToInt64
 import java.nio.ByteOrder
 import kotlin.reflect.KClass
 import kotlin.reflect.full.primaryConstructor
@@ -126,13 +125,12 @@ open class JvmDataView(byteArray: ByteArray, offset: Int = 0, length: Int = byte
         Platform.unsafe.putInt(buffer, offset(pos, 4), ordered(value, littleEndian))
     }
 
-    fun getInt64(pos: Int, littleEndian: Boolean): Int64 {
+    fun getInt64(pos: Int, littleEndian: Boolean): Long {
         val value = Platform.unsafe.getLong(buffer, offset(pos, 8))
-        return longToInt64(ordered(value, littleEndian))
+        return ordered(value, littleEndian)
     }
 
-    fun setInt64(pos: Int, value: Int64, littleEndian: Boolean) {
-        check(value is JvmInt64)
-        Platform.unsafe.putLong(buffer, offset(pos, 8), ordered(value.toLong(), littleEndian))
+    fun setInt64(pos: Int, value: Long, littleEndian: Boolean) {
+        Platform.unsafe.putLong(buffer, offset(pos, 8), ordered(value, littleEndian))
     }
 }

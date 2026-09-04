@@ -6,12 +6,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Tests if the tag with given name exists, ignoring the value.
- *
- * For map-form tags ([naksha.model.objects.MemberType.TAG_MAP] / [naksha.model.objects.MemberType.TAG_MAP_FROM_ARRAY])
- * this tests if the key exists. For tag-list-form tags ([naksha.model.objects.MemberType.TAG_LIST], the default)
- * this tests if the full string element exists, e.g. `TagExists("foo")` matches a feature tagged
- * `["foo", "bar"]`.
+ * Tests if the tag _(key)_ with given name exists in a [TagMap][naksha.model.TagMap] or [TagList][naksha.model.TagList], ignoring the value. For example `TagExists("foo")` matches a feature tagged `["foo", "bar"]` or `{"foo":5, "bar":"demo"}`.
  * @since 3.0.0
  */
 @JsExport

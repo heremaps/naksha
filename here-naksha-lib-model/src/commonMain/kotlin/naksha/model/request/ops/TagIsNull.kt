@@ -8,7 +8,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Tests if the tag [key] on the member at [at] is null.
+ * Tests if the value of the tag [key] on the member [at] is `null`.
  * @since 3.0
  */
 @JsExport

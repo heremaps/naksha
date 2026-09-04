@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.TupleNumber
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
@@ -29,14 +28,14 @@ import naksha.model.request.FeatureTuple
 expect class TupleHeapCache: ITupleCache {
 
     // ITupleCache implementation
-    override val latencyInMicros: Int64
+    override val latencyInMicros: Long
     override operator fun get(tupleNumber: TupleNumber): Tuple?
     override fun load(featureTuples: List<FeatureTuple?>, from:Int, to:Int, acceptFeature: Boolean): Int
     override fun put(tuple: Tuple)
     override fun store(tuples: List<Tuple>)
     override fun onStorageAdd(storage: IStorage)
     override fun onStorageRemove(storage: IStorage)
-    override fun getDictReader(storageNumber: Int64): IDictReader?
+    override fun getDictReader(storageNumber: Long): IDictReader?
     override fun clear()
     override fun clear(storage: IStorage)
     override fun gc()

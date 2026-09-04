@@ -1,6 +1,5 @@
 package naksha.model
 
-import naksha.base.Int64
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -15,7 +14,7 @@ class GuidTest {
 //            featureId = "Feature1",
 //            luid = RowId(
 //                uid = 11,
-//                version = Version.of(2001, 11, 26, Int64(3))
+//                version = Version.of(2001, 11, 26, 3L)
 //            )
 //        )
 //
@@ -26,7 +25,7 @@ class GuidTest {
 //    @Test
 //    fun shouldTransformTxtToGuid() {
 //        // given
-//        val txn = Version.of(2001, 11, 26, Int64(3))
+//        val txn = Version.of(2001, 11, 26, 3L)
 //
 //        // when
 //        val guid = txn.toGuid("naksha", "foo", "foo1")

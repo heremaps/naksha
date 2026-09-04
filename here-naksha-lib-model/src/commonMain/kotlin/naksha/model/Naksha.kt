@@ -5,13 +5,11 @@ package naksha.model
 import naksha.base.*
 import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.md5
-import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
 import naksha.geo.GeoUtil.GeoUtil_C.toTWKB
 import naksha.geo.SpGeometry
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_NOT_FOUND
-import naksha.base.Version.VersionCompanion.virtualVersion
 import naksha.model.NakshaVersion.Companion.CURRENT
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
@@ -179,22 +177,16 @@ class Naksha private constructor() {
         /**
          * A method to calculate a valid database-number from the database-id.
          *
+         * The method simply invokes [featureNumber].
+         *
          * @param id the id, from which to extract the database-number.
          * @return the database-number.
          * @since 3.0
-         * @see [hashId]
+         * @see [featureNumber]
          */
         @JsStatic
         @JvmStatic
-        fun databaseNumber(id: String): Int64 {
-            if (id == "0" || is63BitUnsigned.matches(id)) {
-                try {
-                    return id.toLong(10).toInt64()
-                } catch (_: Exception) {}
-            }
-            val md5 = hashId(id)
-            return md5.getInt64(8) or INT64_SIGN_BIT
-        }
+        fun databaseNumber(id: String): Long = featureNumber(id)
 
        /**
          * A method to calculate a valid catalog-number from the catalog-id.
@@ -242,7 +234,9 @@ class Naksha private constructor() {
         /**
          * A method to calculate the feature-number (`fn`) from the feature-id.
          *
-         * Actually, this method will try to detect if the feature-id is a 63-bit unsigned integer, if that is the case, it will convert this string into the corresponding positive 64-bit integer, and return it.
+         * Actually, this method will try to detect if the feature-id is a 63-bit unsigned integer using [featureNumberAsLong], if that is the case, it will convert this string into the corresponding positive 64-bit integer, and return it. If [featureNumberAsLong] returns `-1`, so the `id` is no valid positive numeric identifier, it will invoke [featureNumberAsHash] to convert the `id` into a 64-bit hash identifier, which is guaranteed to be a negative number.
+         *
+         * Applications may have performance advantages when they process identifiers in a loop to apply this logic themself to avoid unnecessary hashing or duplicate number parsing/detection.
          *
          * Otherwise, it uses the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being cleared, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
          *
@@ -259,19 +253,43 @@ class Naksha private constructor() {
          *
          * @param id the feature-id, from which to extract the feature-number.
          * @return the feature-number.
-         * @see [hashId]
-         * @see [alternativeInt64]
+         * @see [featureNumberAsLong]
+         * @see [featureNumberAsHash]
          */
         @JsStatic
         @JvmStatic
-        fun featureNumber(id: String): Int64 {
+        fun featureNumber(id: String): Long {
+            val numericId = featureNumberAsLong(id)
+            return if (numericId >= 0L) numericId else featureNumberAsHash(id)
+        }
+
+        /**
+         * Converts the given feature `id` into a 64-bit positive feature-number if the given `id` is a valid positive integer in the supported range.
+         *
+         * This method is faster than [featureNumber] if the feature-number is only needed, when it is positive. Internally used when detecting numeric identifies in query building. This method does not apply an [MD5](https://en.wikipedia.org/wiki/MD5) hash.
+         * @param id the feature-id as string.
+         * @return the feature-id as positive number, when being a positive number; `-1` otherwise.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun featureNumberAsLong(id: String): Long {
             val internalNumber = internalIdToNumber[id]
-            if (internalNumber != null) return internalNumber.toInt64()
+            if (internalNumber != null) return internalNumber.toLong()
             if (id == "0" || is63BitUnsigned.matches(id)) {
                 try {
-                    return id.toLong(10).toInt64()
+                    return id.toLong(10)
                 } catch (_: Exception) {}
             }
+            return -1L
+        }
+
+        /**
+         *
+         */
+        @JsStatic
+        @JvmStatic
+        fun featureNumberAsHash(id: String): Long {
             val md5 = hashId(id)
             return md5.getInt64(8) or INT64_SIGN_BIT
         }
@@ -294,49 +312,43 @@ class Naksha private constructor() {
         @JsName("isAutoNumber64")
         @JsStatic
         @JvmStatic
-        fun isAutoNumber(number: Int64): Boolean = (number and INT64_SIGN_BIT) == INT64_SIGN_BIT
+        fun isAutoNumber(number: Long): Boolean = (number and INT64_SIGN_BIT) == INT64_SIGN_BIT
 
         /**
          * `0x8000_0000_0000_0000`, should be `-9223372036854775808`, but this does not work in Kotlin, only `-9223372036854775807 -1`?
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_SIGN_BIT = Int64(Long.MIN_VALUE)
+        internal const val INT64_SIGN_BIT = Long.MIN_VALUE
 
         /**
          * `0x7fff_ffff_ffff_ffff`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_SIGN_BIT = Int64(0x7fff_ffff_ffff_ffff)
+        internal const val INT64_CLEAR_SIGN_BIT = 0x7fff_ffff_ffff_ffffL
 
         /**
          * `0x0000_0000_0000_ffff`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH48 = Int64(0x0000_0000_0000_ffff)
+        internal const val INT64_CLEAR_HIGH48 = 0x0000_0000_0000_ffffL
 
         /**
          * `0x0000_0000_ffff_ffff` aka `4294967295`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH32 = Int64(4294967295)
+        internal const val INT64_CLEAR_HIGH32 = 4294967295L
 
         /**
          * `0xff00_0000_0000_0000` aka `-72057594037927936`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_HIGH8 = Int64(-72057594037927936)
+        internal const val INT64_CLEAR_HIGH8 = -72057594037927936L
 
         /**
          * `0xffff_ffff_ffff_0000` aka `-65536`
          * - See [programmer calculator](https://devtools.calckit.io/programmer-calculator)
          */
-        @JvmStatic
-        internal val INT64_CLEAR_LOW16 = Int64(-65536)
+        internal const val INT64_CLEAR_LOW16 = -65536L
 
         /**
          * Returns the partition-number from the given feature-id.
@@ -361,7 +373,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun partitionNumber(featureNumber: Int64): Int = featureNumber.toInt() and 0xffff
+        fun partitionNumber(featureNumber: Long): Int = featureNumber.toInt() and 0xffff
 
         /**
          * Increment a 64-bit number _(storage- or feature-number)_ programmatically in case of collision, and return the _alternative_ number, derived deterministically from the given number. This method implements the same behavior as the SQL function `naksha_alt64`.
@@ -377,7 +389,7 @@ class Naksha private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun alternativeInt64(number: Int64): Int64
+        fun alternativeInt64(number: Long): Long
             = ((number + 65536) and INT64_CLEAR_LOW16) or (number and INT64_CLEAR_HIGH48) or INT64_SIGN_BIT
 
         /**
@@ -397,54 +409,12 @@ class Naksha private constructor() {
         fun alternativeInt32(number: Int): Int = (number + 1) or -2147483648
 
         /**
-         * Decode Naksha tags from their binary representation.
-         * @param bytes the bytes to decode.
-         * @param dictReader the dictionary manager to use for decoding; if any.
-         * @return the Naksha tags.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun decodeTags(json: String?): TagMap? {
-            if (json.isNullOrBlank()) return null
-            val decoded = fromJSON(json)
-            return if (decoded is PlatformMap) decoded.proxy(TagMap::class) else null
-        }
-
-        /**
-         * Encodes the given tags into their binary representation.
-         * @param tags the tags to encode.
-         * @return the JSON text representation, or _null_ if [tags] is _null_ / empty.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun encodeTags(tags: TagMap?): String? {
-            if (tags.isNullOrEmpty()) return null
-            return toJSON(tags)
-        }
-
-        /**
-         * Encodes the given tag-list into the [tag_list][naksha.model.objects.MemberType.TAG_LIST]
-         * representation: a JSON array, with the element order preserved.
-         * @param tags the tags to encode.
-         * @return the JSON array text representation, or _null_ if [tags] is _null_ / empty.
-         * @since 3.0
-         */
-        @JsStatic
-        @JvmStatic
-        fun encodeTagList(tags: TagList?): String? {
-            if (tags.isNullOrEmpty()) return null
-            return toJSON(tags)
-        }
-
-        /**
          * Decodes Naksha tags from their JSON text representation into a [TagList].
          *
          * Supports both persisted forms:
          * - a JSON array ([tag_list][naksha.model.objects.MemberType.TAG_LIST], the default) is returned
          *   unmodified, preserving the element order;
-         * - a JSON object ([naksha.model.objects.MemberType.TAG_MAP_FROM_ARRAY]) is re-flattened via
+         * - a JSON object ([naksha.model.objects.MemberType.TAG_MAP_FROM_TAG_LIST]) is re-flattened via
          *   [TagMap.toTagList], in which case the original order is not guaranteed.
          * @param json the JSON text to decode (value of the `tags` member).
          * @return the decoded tag-list, or _null_ if [json] is _null_, blank, or neither an array nor an object.
@@ -499,7 +469,7 @@ class Naksha private constructor() {
          * @since 3.0
          */
         @JvmField
-        internal val storagesByNumber = AtomicMap<Int64, AbstractStorage<*>>()
+        internal val storagesByNumber = AtomicMap<Long, AbstractStorage<*>>()
 
         /**
          * All registered storages by [storage-id][IStorage.id].
@@ -545,7 +515,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun getStorageByNumber(storageNumber: Int64): IStorage? = storagesByNumber[storageNumber]
+        fun getStorageByNumber(storageNumber: Long): IStorage? = storagesByNumber[storageNumber]
 
         /**
          * Returns the storage for the given tuple-number.
@@ -652,7 +622,7 @@ class Naksha private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun useStorageByNumber(storageNumber: Int64): IStorage = storagesByNumber[storageNumber]
+        fun useStorageByNumber(storageNumber: Long): IStorage = storagesByNumber[storageNumber]
             ?: throw NakshaException(STORAGE_NOT_FOUND, "No storage found for storage-number: $storageNumber")
 
         /**

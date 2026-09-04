@@ -1,6 +1,5 @@
 package com.here.naksha.cli.copy.service;
 
-import naksha.base.Platform;
 import naksha.model.ISession;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
@@ -44,7 +43,7 @@ public final class CopyServiceTestUtils {
         FeatureTupleList featureTuples = new FeatureTupleList();
         featureTuples.setCapacity(nakshaFeatures.size());
         TupleNumber dummyTupleNumber = new TupleNumber(
-                Platform.intToInt64(0), 0, 0, Platform.intToInt64(0), Version.HEAD.number
+                0L, 0, 0, 0L, Version.HEAD.number
         );
         for (NakshaFeature feature : nakshaFeatures) {
             FeatureTuple featureTuple = new FeatureTuple(dummyTupleNumber, null);

@@ -19,12 +19,12 @@ class Fnv1a64 {
         /**
          * The multiplier used.
          */
-        private val MUL = Platform.toInt64(1099511628211L)
+        private const val MUL = 1099511628211L
 
         /**
          * The initial value.
          */
-        private val INITIAL_VALUE = Platform.toInt64(0xCBF29CE484222325uL.toLong())
+        private const val INITIAL_VALUE = -3750763034362895579L
 
         /**
          * Reset the hash to the default initial value.
@@ -32,7 +32,7 @@ class Fnv1a64 {
          */
         @JvmStatic
         @JsStatic
-        fun start(): Int64 = INITIAL_VALUE
+        fun start(): Long = INITIAL_VALUE
 
         /**
          * Hash the given string. Internally all code-points are hashed by their width, so 8-bit, 16-bit or 24-bit
@@ -43,7 +43,7 @@ class Fnv1a64 {
          */
         @JvmStatic
         @JsStatic
-        fun string(hashCode: Int64, string: String): Int64 {
+        fun string(hashCode: Long, string: String): Long {
             var hash = hashCode
             var i = 0
             while (i < string.length) {
@@ -78,8 +78,8 @@ class Fnv1a64 {
          */
         @JvmStatic
         @JsStatic
-        fun int8(hashCode: Int64, v: Byte): Int64 {
-            var hash = hashCode xor Platform.toInt64(v.toInt() and 0xff)
+        fun int8(hashCode: Long, v: Byte): Long {
+            var hash = hashCode xor (v.toLong() and 0xff)
             hash *= MUL
             return hash
         }
@@ -92,10 +92,10 @@ class Fnv1a64 {
          */
         @JvmStatic
         @JsStatic
-        fun int16BE(hashCode: Int64, v: Short): Int64 {
-            var hash = hashCode xor Int64((v.toInt() and 0xffff) ushr 8)
+        fun int16BE(hashCode: Long, v: Short): Long {
+            var hash = hashCode xor ((v.toInt() and 0xffff) ushr 8).toLong()
             hash *= MUL
-            hash = hash xor Int64(v.toInt() and 0xff)
+            hash = hash xor (v.toLong() and 0xff)
             hash *= MUL
             return hash
         }
@@ -108,10 +108,10 @@ class Fnv1a64 {
          */
         @JvmStatic
         @JsStatic
-        fun int16LE(hashCode: Int64, v: Short): Int64 {
-            var hash = hashCode xor Int64(v.toInt() and 0xff)
+        fun int16LE(hashCode: Long, v: Short): Long {
+            var hash = hashCode xor (v.toLong() and 0xff)
             hash *= MUL
-            hash = hash xor Int64((v.toInt() and 0xffff) ushr 8)
+            hash = hash xor ((v.toInt() and 0xffff) ushr 8).toLong()
             hash *= MUL
             return hash
         }
@@ -124,14 +124,14 @@ class Fnv1a64 {
          */
         @JvmStatic
         @JsStatic
-        fun int32BE(hashCode: Int64, v: Int): Int64 {
-            var hash = hashCode xor Int64(v ushr 24)
+        fun int32BE(hashCode: Long, v: Int): Long {
+            var hash = hashCode xor (v ushr 24).toLong()
             hash *= MUL
-            hash = hash xor Int64((v ushr 16) and 0xff)
+            hash = hash xor ((v ushr 16) and 0xff).toLong()
             hash *= MUL
-            hash = hash xor Int64((v ushr 8) and 0xff)
+            hash = hash xor ((v ushr 8) and 0xff).toLong()
             hash *= MUL
-            hash = hash xor Int64(v and 0xff)
+            hash = hash xor (v and 0xff).toLong()
             hash *= MUL
             return hash
         }
@@ -144,14 +144,14 @@ class Fnv1a64 {
          */
         @JvmStatic
         @JsStatic
-        fun int32LE(hashCode: Int64, v: Int): Int64 {
-            var hash = hashCode xor Int64(v and 0xff)
+        fun int32LE(hashCode: Long, v: Int): Long {
+            var hash = hashCode xor (v and 0xff).toLong()
             hash *= MUL
-            hash = hash xor Int64((v ushr 8) and 0xff)
+            hash = hash xor ((v ushr 8) and 0xff).toLong()
             hash *= MUL
-            hash = hash xor Int64((v ushr 16) and 0xff)
+            hash = hash xor ((v ushr 16) and 0xff).toLong()
             hash *= MUL
-            hash = hash xor Int64(v ushr 24)
+            hash = hash xor (v ushr 24).toLong()
             hash *= MUL
             return hash
         }

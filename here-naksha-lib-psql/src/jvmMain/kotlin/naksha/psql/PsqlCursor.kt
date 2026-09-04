@@ -1,10 +1,7 @@
 package naksha.psql
 
 import naksha.base.AnyObject
-import naksha.base.Int64
 import naksha.base.Platform
-import naksha.base.Platform.PlatformCompanion.longToInt64
-import naksha.base.toInt64
 import java.sql.ResultSet
 import java.sql.Statement
 import kotlin.reflect.KClass
@@ -183,8 +180,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
                 is Byte -> result[i] = raw.toInt()
                 is Short -> result[i] = raw.toInt()
                 is Int -> result[i] = raw
-                is Long -> result[i] = raw.toInt64()
-                is Int64 -> result[i] = raw
+                is Long -> result[i] = raw
                 is Float -> result[i] = raw.toDouble()
                 is Double -> result[i] = raw
                 is String -> result[i] = raw
@@ -210,20 +206,20 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
         }
         return when (type) {
             // TODO: We need to check which values can simply read using getObject, so we can avoid the null-casting.
-            //       However, we want to return Integer for short and Int64 for long, so some hacks are needed, just which?
+            //       However, we want to return Integer for short and Long for long, so some hacks are needed, just which?
             "null" -> null
             "text", "varchar", "character", "char", "json", "uuid", "inet", "cidr", "macaddr", "xml", "internal",
             "point", "line", "lseg", "box", "path", "polygon", "circle", "int4range", "int8range", "numrange",
             "tsrange", "tstzrange", "daterange" -> valueOrNull(rs, rs.getString(index))
             "smallint", "int2" -> valueOrNull(rs, rs.getShort(index).toInt())
             "integer", "int", "int4", "xid4", "oid" -> valueOrNull(rs, rs.getInt(index))
-            "bigint", "int8", "xid8" -> valueOrNull(rs, longToInt64(rs.getLong(index)))
+            "bigint", "int8", "xid8" -> valueOrNull(rs, rs.getLong(index))
             "real" -> valueOrNull(rs, rs.getFloat(index).toDouble())
             "double precision" -> valueOrNull(rs, rs.getDouble(index))
             "numeric" -> valueOrNull(rs, rs.getBigDecimal(index))
             "bool", "boolean" -> valueOrNull(rs, rs.getBoolean(index))
-            "timestamp" -> valueOrNull(rs, longToInt64(rs.getTimestamp(index).toInstant().toEpochMilli()))
-            "date" -> valueOrNull(rs, longToInt64(rs.getDate(index).toInstant().toEpochMilli()))
+            "timestamp" -> valueOrNull(rs, rs.getTimestamp(index).toInstant().toEpochMilli())
+            "date" -> valueOrNull(rs, rs.getDate(index).toInstant().toEpochMilli())
             "bytea" -> valueOrNull(rs, rs.getBytes(index))
             "jsonb" -> rs.getString(index)?.let { Platform.fromJSON(it) }
             else -> rs.getObject(index)

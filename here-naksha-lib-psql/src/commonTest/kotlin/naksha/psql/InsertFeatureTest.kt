@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Int64
 import naksha.base.NakshaError
 import naksha.base.Platform
 import naksha.base.Version
@@ -13,6 +12,11 @@ import naksha.psql.assertions.NakshaFeatureFluidAssertions.Companion.assertThatF
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeature
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.StandardMembers
+import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzId
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
+import naksha.model.request.ops.Equals
 import kotlin.test.*
 
 class InsertFeatureTest : PgTestBase() {
@@ -119,8 +123,8 @@ class InsertFeatureTest : PgTestBase() {
         // And:
         val retrievedFeature = retrievedFeatures.find { it?.id == featureToCreate.id }
         assertNotNull(retrievedFeature, "Missing feature with id: ${featureToCreate.id}")
-        assertEquals(Int64(featureNumber), retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
-        assertEquals(Int64(featureNumber), retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
+        assertEquals(featureNumber, retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
+        assertEquals(featureNumber, retrievedFeature.properties.xyz.guid?.tupleNumber?.featureNumber)
         assertThatFeature(retrievedFeature)
             .isIdenticalTo(
                 other = featureToCreate,
@@ -136,6 +140,18 @@ class InsertFeatureTest : PgTestBase() {
                     }
                     .hasTags(TagList("wicked"))
             }
+
+        executeRead(ReadFeatures().apply {
+            catalogId = collection.catalogId
+            collectionId = collection.id
+            queryMembers = Equals(XyzId, "$featureNumber")
+        }).apply {
+            assertEquals(1, features.size)
+            val f = assertNotNull(features[0])
+            assertEquals("$featureNumber", f.id)
+            val tn = assertNotNull( XyzTn.readTupleNumber(f) )
+            assertEquals(featureNumber, tn.featureNumber.toLong())
+        }
     }
 
     @Test

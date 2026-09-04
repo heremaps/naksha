@@ -76,9 +76,9 @@ internal data class PgWrite(val original: Write, val i: Int) {
      * This is the authoritative routing key for physical partition assignment.
      * @since 3.0
      */
-    val featureNumber: naksha.base.Int64 = when (original.collectionId) {
-        Naksha.COLLECTIONS_COL_ID -> naksha.base.Int64(Naksha.collectionNumber(id))
-        Naksha.CATALOGS_COL_ID -> naksha.base.Int64(Naksha.catalogNumber(id))
+    val featureNumber: Long = when (original.collectionId) {
+        Naksha.COLLECTIONS_COL_ID -> Naksha.collectionNumber(id).toLong()
+        Naksha.CATALOGS_COL_ID -> Naksha.catalogNumber(id).toLong()
         else -> Naksha.featureNumber(id)
     }
 

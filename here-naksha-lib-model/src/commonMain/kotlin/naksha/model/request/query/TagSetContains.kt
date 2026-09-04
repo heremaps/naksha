@@ -19,9 +19,7 @@ import kotlin.js.JsName
  * complete elements can be matched: a feature tagged `["foo=bar"]` is found by
  * `TagSetContains("foo=bar")`, not by `TagSetContains("foo")`.
  *
- * This query does **not** match map-form tags ([naksha.model.objects.MemberType.TAG_MAP] or
- * [naksha.model.objects.MemberType.TAG_MAP_FROM_ARRAY]); use [TagExists] and the `TagValueIs*` queries
- * for those.
+ * This query does **not** match [TagMap][naksha.model.TagMap].
  * @since 3.0
  */
 @JsExport

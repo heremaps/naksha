@@ -80,7 +80,7 @@ abstract class PgTestBase(
     @Suppress("DEPRECATION")
     private fun ensureCatalogId(catalogId: String?): String = NakshaIdType.CATALOG.verify(when (catalogId) {
         null -> TEST_MAP_ID
-        "" -> defaultName
+        "" -> TEST_MAP_ID
         else -> catalogId
     })
 

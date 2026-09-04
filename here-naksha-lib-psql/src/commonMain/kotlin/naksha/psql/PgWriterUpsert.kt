@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformUtil
@@ -29,7 +28,7 @@ internal class PgWriterUpsert(
 
     // All columns that are BYTE_ARRAYs (can be empty)
     private val byteArrayCols = pgCollection.columns.filter { it.memberType == MemberType.BYTE_ARRAY }
-    private val writeByFn = mutableMapOf<Int64, PgWrite>()
+    private val writeByFn = mutableMapOf<Long, PgWrite>()
     init {
         inRows.addColumns(pgCollection.columns)
         loadAllTuple { _, tuple, pgWrite -> writeByFn[tuple.tupleNumber.featureNumber] = pgWrite }
@@ -38,7 +37,7 @@ internal class PgWriterUpsert(
     private fun plan(conn: PgConnection): PgWriterPlan {
         // This is what we should INSERT or UPDATE.
         val new_row = """WITH new_row AS (
-  SELECT ${inRows.newRowProjection()} FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
+  SELECT ${inRows.decodedColumns()} FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
 
         // Select existing.
@@ -193,12 +192,12 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
         cursor.fetch().use {
             outRows.readAll(cursor)
             for (row in 0 until outRows.size) {
-                val updated_fn = outRows.getInt64(row, "_updated_fn")
-                val updated_version = outRows.getInt64(row, "_updated_version")
+                val updated_fn = outRows.getLong(row, "_updated_fn")
+                val updated_version = outRows.getLong(row, "_updated_version")
                 if (updated_fn != null && updated_version != null) {
                     // UPDATE was executed.
                     val pgWrite = writeByFn[updated_fn] ?: throw generalException("Received _updated_fn '$updated_fn', but found no matching PgWrite")
-                    val previousVersion = outRows.getInt64(row, "_head_row_version")
+                    val previousVersion = outRows.getLong(row, "_head_row_version")
                         ?: throw generalException("Missing previous HEAD version for updated feature '${pgWrite.id}'")
                     val updatedTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
                     val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, previousVersion)

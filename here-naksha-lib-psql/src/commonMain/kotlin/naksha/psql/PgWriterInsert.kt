@@ -33,7 +33,7 @@ internal class PgWriterInsert(
 
     private fun plan(conn: PgConnection): PgWriterPlan {
         val new_row = """WITH new_row AS (
-  SELECT ${inRows.newRowProjection()} FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
+  SELECT ${inRows.decodedColumns()} FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()})
 )"""
 
         // Detect any existing tombstone in HEAD for the same id (auto-purge target).

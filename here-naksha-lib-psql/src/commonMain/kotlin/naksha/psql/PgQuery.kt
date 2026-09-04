@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 
 /**
  * An SQL query to be executed against a Naksha table.
@@ -32,7 +31,7 @@ data class PgQuery(
      * The storage-number of the storage from which the results are.
      * @since 3.0
      */
-    val storageNumber: Int64,
+    val storageNumber: Long,
 
     /**
      * The map-number of the map from which the results are.

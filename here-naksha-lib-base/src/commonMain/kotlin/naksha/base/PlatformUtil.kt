@@ -48,56 +48,56 @@ class PlatformUtil {
          */
         @JsStatic
         @JvmField
-        val FLOAT_MAX: Double = Platform.toDoubleRawBits(Int64(0x47efffffe0000000L))
+        val FLOAT_MAX: Double = Double.fromBits(0x47efffffe0000000L)
 
         /**
          * The minimal 32-bit floating point number that can be encoded without losing precision.
          */
         @JsStatic
         @JvmField
-        val FLOAT_MIN: Double = Platform.toDoubleRawBits(Int64(0x36a0000000000000L))
+        val FLOAT_MIN: Double = Double.fromBits(0x36a0000000000000L)
 
         /**
          * A single milliseconds.
          */
         @JsStatic
         @JvmField
-        val MILLISECOND = Int64(1)
+        val MILLISECOND = 1L
 
         /**
          * A second in milliseconds.
          */
         @JsStatic
         @JvmField
-        val SECOND = Int64(1000)
+        val SECOND = 1000L
 
         /**
          * A minute in milliseconds.
          */
         @JsStatic
         @JvmField
-        val MINUTE = Int64(60 * 1000)
+        val MINUTE = 60 * 1000L
 
         /**
          * An hour in milliseconds.
          */
         @JsStatic
         @JvmField
-        val HOUR = Int64(60 * 60 * 1000)
+        val HOUR = 60 * 60 * 1000L
 
         /**
          * A day in milliseconds.
          */
         @JsStatic
         @JvmField
-        val DAY = Int64(24 * 60 * 60 * 1000)
+        val DAY = 24 * 60 * 60 * 1000L
 
         /**
          * A multiplier to convert milliseconds to microseconds or a divider, to turn microseconds into millis.
          */
         @JsStatic
         @JvmField
-        val MILLIS_TO_MICROS = Int64(1000)
+        val MILLIS_TO_MICROS = 1000L
 
         /**
          * The default size of a view. This is used at various placed.

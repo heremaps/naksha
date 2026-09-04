@@ -1,7 +1,6 @@
 package naksha.model
 
 import naksha.base.Action
-import naksha.base.Int64
 import naksha.base.TupleNumber
 import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B64
 import naksha.base.TupleNumberVariant.TupleNumberVariant_C.B128
@@ -13,17 +12,17 @@ import kotlin.test.assertEquals
 
 class TupleNumberTest {
 
-    private val storageNumber = Int64(1L)
+    private val storageNumber = 1L
     private val mapNumber = 2
     private val collectionNumber = 3
-    private val featureNumber = Int64(0x12345678_9ABCDEF0L)
+    private val featureNumber = 0x12345678_9ABCDEF0L
     // txn value with lower 2 bits clear so we can OR in the action bits
-    private val txnBase = Int64(0x0102_0304_0506_0708L and -4L)
+    private val txnBase = 0x0102_0304_0506_0708L and -4L
 
     /** Build a TupleNumber with the given action encoded in the lower 2 bits of txn.
      *  action.intValue is the raw 2-bit value (0=CREATED, 1=UPDATED, 2=DELETED). */
     private fun tn(action: Action): TupleNumber {
-        val txn = txnBase or Int64(action.intValue.toLong())
+        val txn = txnBase or action.longValue
         return TupleNumber(storageNumber, mapNumber, collectionNumber, featureNumber, txn)
     }
 

@@ -1,8 +1,6 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.Platform.PlatformCompanion.longToInt64
 import naksha.base.fn.Fx2
 import naksha.model.SessionOptions
 import org.postgresql.PGProperty.*
@@ -68,7 +66,7 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
 
     internal data class PooledPgConnection(
         val jdbcConn: org.postgresql.jdbc.PgConnection,
-        val id: Int64 = longToInt64(connCounter.getAndIncrement()),
+        val id: Long = connCounter.getAndIncrement(),
         val idle: AtomicInteger = AtomicInteger(0),
         val connection: AtomicReference<WeakReference<PsqlConnection>?> = AtomicReference(),
         var e: Exception? = null
@@ -86,7 +84,7 @@ class PsqlInstance(private val config: PgInstanceConfig) : PgInstance {
     /**
      * All open connections (the connection pool).
      */
-    internal val connectionPool = ConcurrentHashMap<Int64, PooledPgConnection>()
+    internal val connectionPool = ConcurrentHashMap<Long, PooledPgConnection>()
 
     /**
      * The host specification.

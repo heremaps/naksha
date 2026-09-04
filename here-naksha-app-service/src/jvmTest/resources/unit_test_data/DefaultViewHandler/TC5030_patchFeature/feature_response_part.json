@@ -24,7 +24,7 @@
         },
         "@ns:com:here:xyz": {
           "tags": [
-            "xyz_source_id_COM_1000001_20240214"
+            "xyz_source_id_com_1000001_20240214"
           ]
         },
         "speedLimit": "50",

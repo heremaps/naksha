@@ -28,11 +28,11 @@ class PlatformTest {
         assertEquals(14, xyz.getAs("someInt", Int::class))
         assertTrue(xyz["bigInt"] is Number)
         val hexBigInt = xyz["hexBigInt"]
-        assertTrue(hexBigInt is Int64)
-        assertEquals(Int64(9007199254740991L), hexBigInt)
+        assertIs<Long>(hexBigInt)
+        assertEquals(9007199254740991L, hexBigInt)
         val decimalBigInt = xyz["decimalBigInt"]
-        assertTrue(decimalBigInt is Int64)
-        assertEquals(Int64(9007199254740991L), decimalBigInt)
+        assertIs<Long>(decimalBigInt)
+        assertEquals(9007199254740991L, decimalBigInt)
         val tags = xyz.getAs("tags", StringList::class)
         assertNotNull(tags)
         assertEquals(2, tags.size)

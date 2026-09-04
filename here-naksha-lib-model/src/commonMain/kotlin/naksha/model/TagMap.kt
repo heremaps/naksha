@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.MapProxy
 import naksha.base.NakshaError
 import naksha.base.NakshaException
@@ -54,7 +53,7 @@ class TagMap() : MapProxy<String, Any>(String::class, Any::class) {
         when (value) {
             null -> key
             is String -> "$key=$value"
-            is Boolean, is Long, is Int64 -> "$key:=$value"
+            is Boolean, is Long -> "$key:=$value"
             is Number -> "$key:=${value.toDouble()}"
             else -> throw NakshaException(
                 NakshaError.ILLEGAL_ARGUMENT,

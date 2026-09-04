@@ -33,14 +33,14 @@ class Int32Member() : TypedMember<Int32Member>() {
     }
 
     /** Retrieves the int32 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Int? = readInt64(feature)?.toInt()
+    fun get(feature: NakshaFeature): Int? = readLong(feature)?.toInt()
 
     /**
      * Retrieves the int32 value of this member from the given tuple.
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getFromTuple")
-    fun get(tuple: Tuple): Int? = readInt64(tuple)?.toInt()
+    fun get(tuple: Tuple): Int? = readLong(tuple)?.toInt()
 
     /** Sets the int32 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Int): Any? = setPath(feature, path, value)

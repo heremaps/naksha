@@ -33,8 +33,8 @@ open class NakshaTx : NakshaFeature() {
     companion object NakshaTransaction_C {
         private val INT_0 = NotNullProperty<NakshaTx, Int>(Int::class, init = { _, _ -> 0 })
         private val MAPS = NotNullProperty<NakshaTx, NakshaTxMapById>(NakshaTxMapById::class)
-        private val INT64_NULL = NotNullProperty<NakshaTx, Int64>(Int64::class)
-        private val TIME = NotNullProperty<NakshaTx, Int64>(Int64::class) { _, _ -> Platform.currentMillis() }
+        private val INT64_NULL = NotNullProperty<NakshaTx, Long>(Long::class)
+        private val TIME = NotNullProperty<NakshaTx, Long>(Long::class) { _, _ -> Platform.currentMillis() }
     }
 
     /**
@@ -44,7 +44,7 @@ open class NakshaTx : NakshaFeature() {
      * @since 3.0
      */
     @JvmOverloads
-    fun setEpoch(epoch: Timestamp, seq: Int64 = Int64(0)): NakshaTx {
+    fun setEpoch(epoch: Timestamp, seq: Long = 0L): NakshaTx {
         val version = Version.auto(epoch.year, epoch.month, epoch.day, seq, Action.VERSION)
         setRaw("id", version.toString())
         setRaw("time", epoch.ts)
@@ -81,8 +81,8 @@ open class NakshaTx : NakshaFeature() {
      * @since 3.0
      */
     @JvmOverloads
-    fun setNow(seq: Int64? = null): NakshaTx {
-        setEpoch(Timestamp.now(), seq ?: Int64(0))
+    fun setNow(seq: Long? = null): NakshaTx {
+        setEpoch(Timestamp.now(), seq ?: 0L)
         return this
     }
 
@@ -95,7 +95,7 @@ open class NakshaTx : NakshaFeature() {
     override var id: String
         get() = getAs("id", String::class) ?: throw illegalState("The property 'id' must be a valid string")
         set(value) {
-            val txn = Int64(value.toLong(10))
+            val txn = value.toLong(10)
             setVersion(Version(txn))
         }
 
@@ -109,7 +109,7 @@ open class NakshaTx : NakshaFeature() {
     val time by TIME
 
     private var _epoch: Timestamp? = null
-    private var _epochTime: Int64? = null
+    private var _epochTime: Long? = null
 
     /**
      * The [time] as [Timestamp].
@@ -120,7 +120,7 @@ open class NakshaTx : NakshaFeature() {
             val time = this.time
             var _epoch = this._epoch
             val _epochTime = this._epochTime
-            if (_epoch != null && _epochTime === time) return _epoch
+            if (_epoch != null && _epochTime == time) return _epoch
             _epoch = Timestamp.fromMillis(time)
             this._epochTime = time
             this._epoch = _epoch
@@ -153,7 +153,7 @@ open class NakshaTx : NakshaFeature() {
      * The transaction number, basically just `version.txn`.
      * @since 3.0
      */
-    val txn: Int64
+    val txn: Long
         get() = version.number
 
     /**

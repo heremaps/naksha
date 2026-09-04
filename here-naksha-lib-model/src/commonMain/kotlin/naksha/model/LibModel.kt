@@ -5,7 +5,6 @@
 // - jn Java at the class naksha.model.LibModelKt.{name}
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLISECOND
 import naksha.base.PlatformUtil.PlatformUtilCompanion.MILLIS_TO_MICROS
 import kotlin.js.ExperimentalJsStatic
@@ -30,35 +29,35 @@ const val ACTION_DELETE = 2
  * @since 3.0
  */
 @JvmField
-val LATENCY_STORAGE = Int64(200) * MILLISECOND * MILLIS_TO_MICROS
+val LATENCY_STORAGE = 200L * MILLISECOND * MILLIS_TO_MICROS
 
 /**
  * The default latency to use for S3 buckets, being 100,000 microseconds (aka 100 milliseconds).
  * @since 3.0
  */
 @JvmField
-val LATENCY_S3 = Int64(100) * MILLISECOND * MILLIS_TO_MICROS
+val LATENCY_S3 = 100L * MILLISECOND * MILLIS_TO_MICROS
 
 /**
  * The default latency to use for Redis including some network latency, being 10,000 microseconds (aka 10 milliseconds).
  * @since 3.0
  */
 @JvmField
-val LATENCY_REDIS_REMOTE = Int64(10) * MILLISECOND * MILLIS_TO_MICROS
+val LATENCY_REDIS_REMOTE = 10L * MILLISECOND * MILLIS_TO_MICROS
 
 /**
  * The default latency to use for a local Redis or with ultra-fast networking, being 1,000 microseconds (aka 1 millisecond).
  * @since 3.0
  */
 @JvmField
-val LATENCY_REDIS_LOCAL = Int64(1) * MILLISECOND * MILLIS_TO_MICROS
+val LATENCY_REDIS_LOCAL = 1L * MILLISECOND * MILLIS_TO_MICROS
 
 /**
  * The default latency to use for in-memory caching, being 0 microsecond.
  * @since 3.0
  */
 @JvmField
-val LATENCY_MEMORY = Int64(0)
+val LATENCY_MEMORY = 0L
 
 /**
  * The default feature encoding to be used by all storages — see [Naksha.DEFAULT_DATA_ENCODING].
@@ -147,4 +146,3 @@ const val NO_CACHE_CLEAR: FetchMode = NO_CACHE_BIT.inv()
  * @since 3.0.0
  */
 const val FETCH_MASK: FetchMode = 31
-

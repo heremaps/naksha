@@ -9,7 +9,7 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * Tests if the tag [key] on the member at [at] is less than the given [value].
+ * Tests if the value of the tag [key] on the member [at] is less than the given [value].
  * @since 3.0
  */
 @JsExport

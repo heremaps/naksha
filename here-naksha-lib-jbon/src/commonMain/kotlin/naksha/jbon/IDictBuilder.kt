@@ -7,7 +7,7 @@ package naksha.jbon
 interface IDictBuilder : IBook {
     /**
      * Append the given value to the end of the dictionary. If the value is already in the dictionary, return the index.
-     * @param value the value to add, must be any of `null`, `Boolean`, `Int`, `Int64`, `Double`, `String`, `Map<String,Any?>`, or `List<Any?>`.
+     * @param value the value to add, must be any of `null`, `Boolean`, `Int`, `Long`, `Double`, `String`, `Map<String,Any?>`, or `List<Any?>`.
      * @return the index of the value (this can differ from [length], if the value is already in the dictionary).
      * @since 3.0.0
      */
