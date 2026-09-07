@@ -197,7 +197,7 @@ open class PgCollection internal constructor(
         for (requestedIndex in requested) {
             if (!indices.contains(requestedIndex)) indices.add(requestedIndex)
         }
-        return Array(indices.size) { i ->
+        return (0 until indices.size).mapNotNull { i ->
             val index = indices[i] ?: throw NakshaException(ILLEGAL_STATE, "Index #$i must not be null")
             val indexName = index.name
 
@@ -232,14 +232,18 @@ open class PgCollection internal constructor(
             } else {
                 include = null
             }
-            PgIndex(
-                indexName,
-                on.toTypedArray(),
-                include?.toTypedArray() ?: emptyArray(),
-                unique = index.isUnique(),
-                partial = index.isConditional()
-            )
-        }
+            if (onHead && nakshaOn.isNotEmpty() && on.isEmpty()) {
+                null
+            } else {
+                PgIndex(
+                    indexName,
+                    on.toTypedArray(),
+                    include?.toTypedArray() ?: emptyArray(),
+                    unique = index.isUnique(),
+                    partial = index.isConditional()
+                )
+            }
+        }.toTypedArray()
     }
 
     /**
