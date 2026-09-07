@@ -75,13 +75,10 @@ interface IStorage : IDictReader {
 
     /**
      * Open a new write session.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
      * @return the write session.
      * @since 2.0.7
-     */
-    // TODO: Modify: fun newWriteSession(database: NakshaDatabase, options: SessionOptions? = null): IWriteSession
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize; error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if this session type is not supported by the underlying implementation.     */
     fun newWriteSession(options: SessionOptions? = null): IWriteSession
 
     /**
@@ -90,7 +87,6 @@ interface IStorage : IDictReader {
      * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
      * @return the result of the lambda.
      */
-    // TODO: Modify: fun useWriteSession(database: NakshaDatabase, options: SessionOptions? = null, lambda: Fn1<T, IWriteSession>): T
     fun <T> useWriteSession(options: SessionOptions? = null, lambda: Fn1<T, IWriteSession>): T {
         val session = newWriteSession(options)
         return session.use { lambda.call(session) }
@@ -101,8 +97,8 @@ interface IStorage : IDictReader {
      * This is very similar to [useWriteSession] but it's not returning any value.
      * @param options the session-options.
      * @param lambda the void lambda to execute in a try block, ensuring that the session is closed.
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize; error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if this session type is not supported by the underlying implementation.
      */
-    // TODO: Modify: fun runInWriteSession(database: NakshaDatabase, options: SessionOptions? = null, lambda: Fx1<IWriteSession>): T
     fun runInWriteSession(options: SessionOptions? = null, lambda: Fx1<IWriteSession>) {
         val session = newWriteSession(options)
         session.use { lambda.call(session) }
@@ -111,32 +107,20 @@ interface IStorage : IDictReader {
     /**
      * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
      *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
      * @return the read-only session.
      * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize; error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if this session type is not supported by the underlying implementation.
      */
-    // TODO: Modify: fun newReadSession(database: NakshaDatabase, options: SessionOptions? = null): IReadSession
     fun newReadSession(options: SessionOptions? = null): IReadSession
-
-    /**
-     * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
-     * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
-     * @return the read-only session.
-     * @since 2.0.7
-     */
-    // TODO: Modify: fun newReadSession(database: NakshaDatabase, options: SessionOptions? = null): IReadSession
-    fun newStreamSession(options: SessionOptions? = null): IStreamSession
 
     /**
      * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
      * @param options the session-options.
      * @param lambda the lambda to execute in a try block, ensuring that the session is closed.
      * @return the result of the lambda.
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize; error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if this session type is not supported by the underlying implementation.
      */
-    // TODO: Modify: fun useReadSession(database: NakshaDatabase, options: SessionOptions? = null, useReadSession): T
     fun <T> useReadSession(options: SessionOptions? = null, lambda: Fn1<T, IReadSession>): T {
         val session = newReadSession(options)
         return session.use { lambda.call(session) }
@@ -147,10 +131,20 @@ interface IStorage : IDictReader {
      * This is very similar to [useReadSession] but it's not returning any value.
      * @param options the session-options.
      * @param lambda the void lambda to execute in a try block, ensuring that the session is closed.
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize; error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if this session type is not supported by the underlying implementation.
      */
-    // TODO: Modify: fun runInReadSession(database: NakshaDatabase, options: SessionOptions? = null, lambda: Fx1<IReadSession>): T
     fun runInReadSession(options: SessionOptions? = null, lambda: Fx1<IReadSession>) {
         val session = newReadSession(options)
         session.use { lambda.call(session) }
     }
+
+    /**
+     * Open a new streaming session to read or write data in streaming mode.
+     *
+     * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
+     * @return the read-only session.
+     * @since 2.0.7
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize; error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if this session type is not supported by the underlying implementation.
+     */
+    fun newStreamSession(options: SessionOptions? = null): IStreamSession
 }
