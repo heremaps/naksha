@@ -22,10 +22,10 @@ class TupleHeapCacheTest {
     /** A distinct [TupleNumber]; [featureNumber] and [storage] vary between tuples in these tests. */
     private fun tupleNumber(featureNumber: Long, storage: Long = 1): TupleNumber =
         TupleNumber(
-            Int64(storage),         // storage (databaseNumber)
+            storage,         // storage (databaseNumber)
             0,                      // catalogNumber
             0,                      // collectionNumber
-            Int64(featureNumber),
+            featureNumber,
             Version(1).number
         )
 
