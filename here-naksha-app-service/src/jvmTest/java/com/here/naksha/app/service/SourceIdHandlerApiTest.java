@@ -31,7 +31,6 @@ public class SourceIdHandlerApiTest extends ApiTest {
         nakshaClient.post("hub/spaces/" + SPACE_ID + "/features", initialFeaturesJson, UUID.randomUUID().toString());
     }
 
-
     @Test
     void tc2000_testCreateFeaturesWithSourceIdInMeta() throws Exception {
         // Given:
