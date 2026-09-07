@@ -35,7 +35,7 @@ interface PlatformLock : AutoCloseable {
      * locking will fail.
      * @return _true_, if the lock was acquired; _false_ if locking failed due to timeout.
      */
-    fun tryAcquire(waitMillis: Int64? = null): Boolean
+    fun tryAcquire(waitMillis: Long? = null): Boolean
 
     /**
      * Release the lock.

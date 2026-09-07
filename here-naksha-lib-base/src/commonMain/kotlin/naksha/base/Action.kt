@@ -128,7 +128,7 @@ class Action : JsEnum() {
          */
         @JsStatic
         @JvmStatic
-        fun fromVersion(version: Int64): Action = FROM_VALUE[version.toInt() and 3] ?: VERSION
+        fun fromVersion(version: Long): Action = FROM_VALUE[version.toInt() and 3] ?: VERSION
     }
 
     /**
@@ -154,4 +154,3 @@ class Action : JsEnum() {
     var shortId: String = VERSION_SHORT
         private set
 }
-

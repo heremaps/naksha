@@ -3,7 +3,6 @@
 package naksha.psql
 
 import naksha.base.AtomicInt
-import naksha.base.Int64
 import naksha.model.*
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
@@ -46,7 +45,7 @@ internal class PgLock internal constructor(
      * The lock-number generated from the lock-id.
      * @since 3.0.0
      */
-    val lockNumber: Int64 = PgUtil.lockId(lockId)
+    val lockNumber: Long = PgUtil.lockId(lockId)
 
     init {
         if (isSessionLock) {

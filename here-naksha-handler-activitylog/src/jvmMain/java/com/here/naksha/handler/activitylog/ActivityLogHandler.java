@@ -158,7 +158,7 @@ public class ActivityLogHandler extends AbstractEventHandler {
   }
 
   private ReadFeatures missingPredecessorFeatures(List<TupleNumber> tupleNumbers) {
-    // next_version is a plain int8 column, so we pass an Int64[] of the version values.
+    // next_version is a plain int8 column, so we pass Long version values.
     final Or or = new Or();
     final OpList orClauses = or.getChildren();
       for (TupleNumber tupleNumber : tupleNumbers) {

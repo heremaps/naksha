@@ -2,7 +2,6 @@
 
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.jbon.IDictManager
 import naksha.jbon.JbFeatureDecoder
@@ -27,9 +26,9 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
     private var _geoIndex: String? = null
     private var _disableHistory = false
     private var _autoPurge = false
-    private var _maxAge: Int64? = null
-    private var _estimatedFeatureCount: Int64? = null
-    private var _estimatedDeletedCount: Int64? = null
+    private var _maxAge: Long? = null
+    private var _estimatedFeatureCount: Long? = null
+    private var _estimatedDeletedCount: Long? = null
     private var _storageClass: String? = null
 
     override fun clear(): JbNakshaCollectionDecoder {
@@ -67,7 +66,7 @@ class JbNakshaCollectionDecoder(dictManager: IDictManager) : JbFeatureDecoder(di
     fun geoIndex(): String = _geoIndex ?: "gist"
     fun disableHistory(): Boolean = _disableHistory
     fun autoPurge(): Boolean = _autoPurge
-    fun maxAge(): Int64 = _maxAge ?: Platform.INT64_MAX_VALUE
-    fun estimatedFeatureCount(): Int64 = _estimatedFeatureCount ?: NakshaCollection.UNKNOWN
+    fun maxAge(): Long = _maxAge ?: Platform.INT64_MAX_VALUE
+    fun estimatedFeatureCount(): Long = _estimatedFeatureCount ?: NakshaCollection.UNKNOWN
     fun storageClass(): String = _storageClass ?: PgStorageClass.Consistent.toString()
 }

@@ -627,18 +627,18 @@ open class JbDecoder {
      * Read the current unit as integer.
      * @return The value read or _null_, if the current unit is no integer.
      */
-    fun decodeInt64(): Int64? {
+    fun decodeInt64(): Long? {
         val leadIn = leadIn()
         return when (leadIn and ENC_MASK) {
             ENC_TINY -> when (leadIn and ENC_TINY_MASK) {
-                ENC_TINY_INT -> Int64((leadIn shl 27) shr 27)
+                ENC_TINY_INT -> ((leadIn shl 27) shr 27).toLong()
                 else -> null
             }
 
             ENC_MIXED -> when (leadIn) {
-                ENC_MIXED_SCALAR_INT8 -> Int64(binary.getInt8(pos + 1).toInt())
-                ENC_MIXED_SCALAR_INT16 -> Int64(binary.getInt16(pos + 1).toInt())
-                ENC_MIXED_SCALAR_INT32 -> Int64(binary.getInt32(pos + 1))
+                ENC_MIXED_SCALAR_INT8 -> binary.getInt8(pos + 1).toLong()
+                ENC_MIXED_SCALAR_INT16 -> binary.getInt16(pos + 1).toLong()
+                ENC_MIXED_SCALAR_INT32 -> binary.getInt32(pos + 1).toLong()
                 ENC_MIXED_SCALAR_INT64 -> binary.getInt64(pos + 1)
                 else -> null
             }
@@ -653,11 +653,11 @@ open class JbDecoder {
      * Reads the timestamp if the current unit is a timestamp.
      * @throws IllegalStateException If the current unit is no timestamp.
      */
-    fun decodeTimestamp(): Int64 {
+    fun decodeTimestamp(): Long {
         val view = binary
         check(unitType() == TYPE_TIMESTAMP) { "Can't read timestamp, unit is ${unitTypeName(unitType())}" }
         val hi = (view.getInt16(pos + 1).toLong() and 0xffff) shl 32
-        return Int64(hi or (view.getInt32(pos + 3).toLong() and 0xffff_ffff))
+        return hi or (view.getInt32(pos + 3).toLong() and 0xffff_ffffL)
     }
 
     /**
@@ -853,7 +853,7 @@ open class JbDecoder {
 
     /**
      * Read the current unit.
-     * @return _null_, [Boolean], [Int], [Int64], [Double], [String], [AnyObject] or [Array].
+     * @return _null_, [Boolean], [Int], [Long], [Double], [String], [AnyObject] or [Array].
      * @throws IllegalStateException If the reader position or the unit-type is invalid.
      */
     fun decodeValue(): Any? {

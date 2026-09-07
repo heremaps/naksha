@@ -1,14 +1,11 @@
 package com.here.naksha.app.service.util;
 
 import com.here.naksha.app.common.ApiTest;
-import naksha.base.Int64;
 import naksha.base.Action;
 import naksha.model.Naksha;
 import naksha.base.TupleNumber;
 import naksha.base.Version;
 import org.jetbrains.annotations.NotNull;
-
-import static naksha.base.Platform.longToInt64;
 
 public final class TupleInfo {
   /**
@@ -43,7 +40,7 @@ public final class TupleInfo {
   public final @NotNull String databaseId;
   public final @NotNull String catalogId;
   public final @NotNull String collectionId;
-  public final @NotNull Int64 databaseNumber;
+  public final long databaseNumber;
   public final int catalogNumber;
   public final int collectionNumber;
 
@@ -56,8 +53,8 @@ public final class TupleInfo {
    * @return the new unique virtual tuple-number.
    */
   public @NotNull TupleNumber newTupleNumber(@NotNull String featureId, @NotNull Action action) {
-    final Version version = Version.now(longToInt64(seq++), action);
-    final Int64 featureNumber = Naksha.featureNumber(featureId);
+    final Version version = Version.now(seq++, action);
+    final long featureNumber = Naksha.featureNumber(featureId);
     return new TupleNumber(databaseNumber, catalogNumber, collectionNumber, featureNumber, version.number);
   }
 }

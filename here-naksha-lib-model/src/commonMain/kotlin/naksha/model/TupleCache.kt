@@ -5,7 +5,6 @@ package naksha.model
 import naksha.base.AtomicBool
 import naksha.base.AtomicInt64
 import naksha.base.AtomicRef
-import naksha.base.Int64
 import naksha.base.TupleNumber
 import naksha.base.fn.Fn1
 import naksha.jbon.IDictReader
@@ -118,7 +117,7 @@ class TupleCache internal constructor() {
      * @see [load]
      */
     operator fun get(tupleNumber: TupleNumber): Tuple? {
-        val ZERO = Int64(0)
+        val ZERO = 0L
         return forEachCache { if (it.latencyInMicros == ZERO) it[tupleNumber] else null }
     }
 
@@ -140,7 +139,7 @@ class TupleCache internal constructor() {
         tupleNumbers: TupleNumberBinaryArray,
         from:Int = 0,
         to:Int = tupleNumbers.size,
-        maxMicros: Int64? = null,
+        maxMicros: Long? = null,
         loadFromStorage: Boolean? = null
     ): List<Tuple> = load(tupleNumbers.toFeatureTupleList(from, to), maxMicros = maxMicros, loadFromStorage = loadFromStorage).toTupleList()
 
@@ -184,7 +183,7 @@ class TupleCache internal constructor() {
         featureTuples: LIST,
         from:Int = 0,
         to:Int = featureTuples.size,
-        maxMicros: Int64? = null,
+        maxMicros: Long? = null,
         loadFromStorage: Boolean? = null,
         acceptFeature: Boolean = false
     ): LIST {
@@ -219,7 +218,7 @@ class TupleCache internal constructor() {
      * @since 3.0
      */
     fun store(tuple: Tuple) {
-        forEachCache { if (it.latencyInMicros eq 0) it.put(tuple) }
+        forEachCache { if (it.latencyInMicros == 0L) it.put(tuple) }
     }
 
     /**
@@ -231,7 +230,7 @@ class TupleCache internal constructor() {
     @JsName("storeAll")
     fun store(vararg tuples: Tuple) {
         forEachCache {
-            if (it.latencyInMicros eq 0) {
+            if (it.latencyInMicros == 0L) {
                 for (tuple in tuples) {
                     it.put(tuple)
                 }
@@ -251,7 +250,7 @@ class TupleCache internal constructor() {
     @JsName("storeList")
     fun store(tuples: List<Tuple?>) {
         forEachCache {
-            if (it.latencyInMicros eq 0) {
+            if (it.latencyInMicros == 0L) {
                 for (tuple in tuples) {
                     if (tuple != null) {
                         it.put(tuple)
@@ -270,7 +269,7 @@ class TupleCache internal constructor() {
      */
     fun storeFeatureTuples(featureTuples: List<FeatureTuple?>) {
         forEachCache {
-            if (it.latencyInMicros eq 0) {
+            if (it.latencyInMicros == 0L) {
                 for (f in featureTuples) {
                     val tuple = f?.tuple ?: continue
                     it.put(tuple)
@@ -308,7 +307,7 @@ class TupleCache internal constructor() {
      * @return the [dictionary reader][IDictReader], if any is available.
      */
     @JsName("getDictReaderForStorageId")
-    fun getDictReader(storageNumber: Int64): IDictReader?
+    fun getDictReader(storageNumber: Long): IDictReader?
         = forEachCache { it.getDictReader(storageNumber) }
 
     /**

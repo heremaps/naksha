@@ -20,7 +20,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -205,9 +204,6 @@ class NakshaVersion(
      * @param enc the multi-platform 64-bit binary encoding.
      * @since 3.0
      */
-    @JsName("fromBigInt")
-    constructor(enc: Int64) : this(enc.toLong())
-
     private var _long: Long? = null
 
     /**
@@ -234,7 +230,7 @@ class NakshaVersion(
      * @return the 64-bit multi-platform binary encoding of this version.
      * @since 2.0.3
      */
-    fun toInt64(): Int64 = Int64(toLong())
+    fun toInt64(): Long = toLong()
 
     override fun compareTo(other: NakshaVersion): Int {
         val result = toLong() - other.toLong()

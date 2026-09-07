@@ -29,11 +29,9 @@ import naksha.base.StringList;
 import naksha.base.Guid;
 import naksha.base.TupleNumber;
 import naksha.model.objects.StandardMembers;
+import naksha.model.objects.XyzMembers;
 import naksha.model.request.ReadFeatures;
-import naksha.model.request.ops.And;
-import naksha.model.request.ops.Equals;
-import naksha.model.request.ops.OpList;
-import naksha.model.request.ops.Or;
+import naksha.model.request.ops.*;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
 import naksha.model.request.query.StringOp;
@@ -92,18 +90,30 @@ class ActivityLogRequestTranslationUtil {
       }
       readFeatures.setQueryMembers(or);
     }
-    StringList finalFeatureIds = new StringList();
-
     // extractFeatureIds from activityLogId - populate featureIds
     Set<PQuery> disabledActivityLogPOps = disablePQueriesInRequest(
         readFeatures.getQuery(),
         ActivityLogRequestTranslationUtil::isSingleActivityLogIdEqualityQuery
     );
+
+    final StringList featureIds = new StringList();
     if (!disabledActivityLogPOps.isEmpty()) {
-      disabledActivityLogPOps.forEach(activityLogOp -> finalFeatureIds.add(String.valueOf(activityLogOp.getValue())));
+      disabledActivityLogPOps.forEach(activityLogOp -> featureIds.add(String.valueOf(activityLogOp.getValue())));
       readFeatures.refreshPropertyFilter();
     }
-    readFeatures.setFeatureIds(finalFeatureIds);
+    // Translated from old syntax into new members query, because we do not allow to mix old and new syntax!
+    // TODO: Why do we need this?
+    if (!featureIds.isEmpty()) {
+      final IsAnyOf searchFeaturesByIdOp = new IsAnyOf(XyzMembers.XyzId);
+      for (var id : featureIds) searchFeaturesByIdOp.getItems().add(id);
+
+      final Op existing = readFeatures.getQueryMembers();
+      if (existing == null)
+        readFeatures.setQueryMembers(searchFeaturesByIdOp);
+      else
+        readFeatures.setQueryMembers(new And(existing, searchFeaturesByIdOp));
+    }
+    readFeatures.setFeatureIds(new StringList());
   }
 
   private static boolean isSingleActivityLogIdEqualityQuery(PQuery pQuery) {

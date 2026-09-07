@@ -20,7 +20,6 @@ package com.here.naksha.app.common;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import naksha.base.Int64;
 import naksha.model.Naksha;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,7 +53,7 @@ public abstract class ApiTest {
   public static String databaseId;
 
   /** The number of the storage. */
-  public static Int64 databaseNumber;
+  public static long databaseNumber;
 
   /** The identifier of the data catalog. */
   public static String catalogId;

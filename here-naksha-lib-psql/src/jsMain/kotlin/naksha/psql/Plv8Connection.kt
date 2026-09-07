@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.model.SessionOptions
 
 /**
@@ -15,7 +14,7 @@ class Plv8Connection : PgConnection {
         get() = TODO("Not yet implemented")
         set(value) {}
 
-    override val id: Int64
+    override val id: Long
         get() = TODO("Not yet implemented")
 
     override fun toUri(showPassword: Boolean): String {

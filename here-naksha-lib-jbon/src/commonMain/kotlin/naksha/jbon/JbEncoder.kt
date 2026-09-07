@@ -132,7 +132,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
          */
         @JvmStatic
         @JsStatic
-        fun sizeOfInt64Encoding(value: Int64): Int {
+        fun sizeOfInt64Encoding(value: Long): Int {
             if (value >= Int.MAX_VALUE || value <= Int.MIN_VALUE) return 9
             return sizeOfIntEncoding(value.toInt())
         }
@@ -296,7 +296,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
      * @param value The integer to write.
      * @return The offset of the value written.
      */
-    fun encodeInt64(value: Int64): Int {
+    fun encodeInt64(value: Long): Int {
         if (value >= Int.MIN_VALUE && value <= Int.MAX_VALUE) {
             return encodeInt32(value.toInt())
         }
@@ -311,7 +311,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
      * @param value The timestamp to write.
      * @return The offset of the value written.
      */
-    fun encodeTimestamp(value: Int64): Int {
+    fun encodeTimestamp(value: Long): Int {
         val offset = end;
         writeInt8(ENC_MIXED_SCALAR_TIMESTAMP.toByte())
         val hi = (value ushr 32).toShort()
@@ -923,8 +923,7 @@ open class JbEncoder(var global: IBook? = null) : Binary() {
             is Byte -> encodeInt32(value.toInt())
             is Short -> encodeInt32(value.toInt())
             is Int -> encodeInt32(value)
-            is Long -> encodeInt64(value.toInt64())
-            is Int64 -> encodeInt64(value)
+            is Long -> encodeInt64(value)
             is Float -> encodeFloat32(value)
             is Double -> if (Platform.canBeFloat32(value)) encodeFloat32(value.toFloat()) else encodeFloat64(value)
             is MapProxy<*, *> -> encodeMap(value as MapProxy<String, *>)

@@ -26,7 +26,7 @@ import kotlin.time.Instant
  */
 @JsExport
 class Timestamp(
-    val ts: Int64,
+    val ts: Long,
     val year: Int,
     val month: Int,
     val day: Int,
@@ -48,7 +48,7 @@ class Timestamp(
             val instant = Clock.System.now()
             val ldt = instant.toLocalDateTime(TimeZone.UTC)
             return Timestamp(
-                Int64(instant.toEpochMilliseconds()),
+                instant.toEpochMilliseconds(),
                 ldt.year,
                 ldt.month.number,
                 ldt.day,
@@ -68,8 +68,8 @@ class Timestamp(
          */
         @JvmStatic
         @JsStatic
-        fun fromMillis(ts: Int64) : Timestamp {
-            val instant = Instant.fromEpochMilliseconds(ts.toLong())
+        fun fromMillis(ts: Long) : Timestamp {
+            val instant = Instant.fromEpochMilliseconds(ts)
             val ldt = instant.toLocalDateTime(TimeZone.UTC)
             return Timestamp(
                 ts,
@@ -101,7 +101,7 @@ class Timestamp(
             val ldt = LocalDateTime(year, month, day, hour, minute, second, nanos)
             val instant = ldt.toInstant(TimeZone.UTC)
             return Timestamp(
-                Int64(instant.toEpochMilliseconds()),
+                instant.toEpochMilliseconds(),
                 year,
                 month,
                 day,

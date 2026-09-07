@@ -2,7 +2,6 @@
 
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.base.Version
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -17,13 +16,13 @@ data class PgTxn(
      * The transaction-number.
      * @since 3.0.0
      */
-    val number: Int64,
+    val number: Long,
 
     /**
      * The Epoch timestamp _(milliseconds since 1 January 1970)_ when the transaction started.
      * @since 3.0.0
      */
-    val epoch: Int64,
+    val epoch: Long,
 
     /**
      * The version object, created from [number].

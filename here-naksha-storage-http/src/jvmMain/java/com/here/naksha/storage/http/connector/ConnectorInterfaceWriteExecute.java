@@ -6,7 +6,6 @@ import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
 import com.here.naksha.storage.http.PrepareResult;
 import com.here.naksha.storage.http.RequestSender;
-import naksha.base.Int64;
 import naksha.base.Platform;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
@@ -50,11 +49,11 @@ public class ConnectorInterfaceWriteExecute {
         this.endpoint = "/" + singleCollectionIdFrom(request);
     }
 
-    private static void setCreatedAt(NakshaFeature feature, Int64 creationTime) {
+    private static void setCreatedAt(NakshaFeature feature, long creationTime) {
         feature.getProperties().getXyz().setRaw("createdAt", creationTime);
     }
 
-    private static void setUpdatedAt(NakshaFeature feature, Int64 creationTime) {
+    private static void setUpdatedAt(NakshaFeature feature, long creationTime) {
         feature.getProperties().getXyz().setRaw("updatedAt", creationTime);
     }
 
@@ -103,7 +102,7 @@ public class ConnectorInterfaceWriteExecute {
             }
         }
 
-        Int64 currentTime = Platform.currentMillis();
+        long currentTime = Platform.currentMillis();
         featuresToInsert.forEach(feature -> {
             assertNoUuid(feature);
             setRandomUuid(feature);

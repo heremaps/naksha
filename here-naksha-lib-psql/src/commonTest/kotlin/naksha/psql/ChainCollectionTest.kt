@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.model.objects.Index
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
@@ -50,17 +49,15 @@ class ChainCollectionTest : PgTestBase(
 
     private fun makeFeature(fn: Long, leftFn: Long?, rightFn: Long?): NakshaFeature {
         val f = NakshaFeature(fn.toString())
-        if (leftFn  != null) f.properties["left_fn"]  = Int64(leftFn)
-        if (rightFn != null) f.properties["right_fn"] = Int64(rightFn)
+        if (leftFn  != null) f.properties["left_fn"]  = leftFn
+        if (rightFn != null) f.properties["right_fn"] = rightFn
         return f
     }
 
-    /** Coerces any numeric type (Long, Int, Int64) to Int64 for assertion. */
-    private fun toInt64(v: Any?): Int64? = when (v) {
+    /** Coerces any numeric type to Long for assertion. */
+    private fun toLong(v: Any?): Long? = when (v) {
         null -> null
-        is Int64 -> v
-        is Long  -> Int64(v)
-        is Int   -> Int64(v.toLong())
+        is Number -> v.toLong()
         else     -> null
     }
 
@@ -102,37 +99,37 @@ class ChainCollectionTest : PgTestBase(
 
         // Then: verify head
         val headBack = assertNotNull(response.features.find { it?.id == headFn.toString() })
-        assertEquals(Int64(headFn), XyzTn.get(headBack)?.featureNumber)
+        assertEquals(headFn, XyzTn.get(headBack)?.featureNumber)
         assertNull(
             headBack.properties["left_fn"],
             "head.left_fn should be null"
         )
         assertEquals(
-            Int64(midFn),
-            toInt64(headBack.properties["right_fn"]),
+            midFn,
+            toLong(headBack.properties["right_fn"]),
             "head.right_fn should point to mid"
         )
 
         // Then: verify mid
         val midBack = assertNotNull(response.features.find { it?.id == midFn.toString() })
-        assertEquals(Int64(midFn), XyzTn.get(midBack)?.featureNumber)
+        assertEquals(midFn, XyzTn.get(midBack)?.featureNumber)
         assertEquals(
-            Int64(headFn),
-            toInt64(midBack.properties["left_fn"]),
+            headFn,
+            toLong(midBack.properties["left_fn"]),
             "mid.left_fn should point to head"
         )
         assertEquals(
-            Int64(tailFn),
-            toInt64(midBack.properties["right_fn"]),
+            tailFn,
+            toLong(midBack.properties["right_fn"]),
             "mid.right_fn should point to tail"
         )
 
         // Then: verify tail
         val tailBack = assertNotNull(response.features.find { it?.id == tailFn.toString() })
-        assertEquals(Int64(tailFn), XyzTn.get(tailBack)?.featureNumber)
+        assertEquals(tailFn, XyzTn.get(tailBack)?.featureNumber)
         assertEquals(
-            Int64(midFn),
-            toInt64(tailBack.properties["left_fn"]),
+            midFn,
+            toLong(tailBack.properties["left_fn"]),
             "tail.left_fn should point to mid"
         )
         assertNull(
@@ -189,7 +186,7 @@ class ChainCollectionTest : PgTestBase(
 
         // Then: find the feature whose right_fn == tailFn (that must be mid)
         val candidate = all.features.find { f ->
-            f != null && toInt64(f.properties["right_fn"]) == Int64(tailFn)
+            f != null && toLong(f.properties["right_fn"]) == tailFn
         }
         assertNotNull(candidate, "No feature with right_fn == tailFn found")
         assertEquals(midFn.toString(), candidate.id)

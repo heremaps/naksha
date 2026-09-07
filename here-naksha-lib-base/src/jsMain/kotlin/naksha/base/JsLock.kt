@@ -4,7 +4,7 @@ package naksha.base
 class JsLock : PlatformLock {
     override fun acquire(): PlatformLock = this
 
-    override fun tryAcquire(waitMillis: Int64?): Boolean = true
+    override fun tryAcquire(waitMillis: Long?): Boolean = true
 
     override fun close() {}
 }

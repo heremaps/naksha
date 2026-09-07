@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.illegalArg
 import naksha.model.objects.Index
+import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -67,9 +68,9 @@ data class PgIndex(
             MemberType.STRING -> Pair("btree", "${column.ident} COLLATE \"C\" text_pattern_ops")
             // A two-dimensional gist index over the TWKB geometry, via the naksha_2d() helper.
             MemberType.SPATIAL -> Pair("gist", "naksha_2d(${column.ident})")
-            MemberType.TAG_MAP,
-            MemberType.TAG_MAP_FROM_ARRAY -> Pair("gin", "${column.ident} jsonb_ops")
+            MemberType.TAG_MAP -> Pair("gin", "${column.ident} jsonb_ops")
             MemberType.TAG_LIST -> Pair("gin", "${column.ident} array_ops")
+            // tuple-number and boolean so far
             else -> throw illegalArg("The member type ${column.memberType} of column '$column' of index '$indexName' is not a valid index target")
         }
     }

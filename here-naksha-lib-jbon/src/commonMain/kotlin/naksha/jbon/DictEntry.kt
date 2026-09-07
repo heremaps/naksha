@@ -27,7 +27,7 @@ data class DictEntry(
      * - `null`
      * - `Boolean`
      * - `Int`
-     * - `Int64`
+ * - `Long`
      * - `Double`
      * - `String`
      * - `Map<String,Any?>` - with _Any_ again being limited to these types.
