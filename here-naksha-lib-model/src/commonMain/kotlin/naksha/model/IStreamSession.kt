@@ -20,8 +20,12 @@ interface IStreamSession: ISession {
     fun read(request: StreamRequest): Stream
 
     /**
-     * Asks the storage to persist
+     * Asks the storage to synchronously persist the given chunk.
+     *
+     * The method will block until all data is eventually writen into the storage with the consistency guarantees for the underlying implementation.
+     * @param chunk the feature states to persist, either a [StreamTransaction][naksha.model.streaming.StreamTransaction] or a pure [StreamChunk].
      * @since 3.0
+     * @throws naksha.base.NakshaException if any error occurred.
      */
     fun store(chunk: StreamChunk)
 }
