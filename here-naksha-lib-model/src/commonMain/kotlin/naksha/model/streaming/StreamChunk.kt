@@ -12,7 +12,7 @@ import kotlin.jvm.JvmName
  * @since 3.0
  */
 @JsExport
-abstract class StreamChunk(
+open class StreamChunk(
     /**
      * The stream to which this chunk belongs.
      * @since 3.0
