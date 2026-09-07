@@ -231,7 +231,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: passed Write Collection request was about creating collection defined in Handler properties
     assertEquals(WriteOp.CREATE, capturedCollectionWrite.getOp());
     assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getId());
-    assertIndexNames(collectionFrom(capturedCollectionWrite), "tags", "geo");
+    assertIndexNames(collectionFrom(capturedCollectionWrite), "tags", "geo", "nv");
     assertNull(handler.properties.getCollection().getIndices(), "Handler collection config must not be mutated");
   }
 
@@ -542,7 +542,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     NakshaCollection normalized = (NakshaCollection) submittedWrite.getFeature();
     assertEquals("request_collection", normalized.getId());
     assertEquals(mapId, normalized.getCatalogId());
-    assertIndexNames(normalized, "tags", "geo");
+    assertIndexNames(normalized, "tags", "geo", "nv");
     assertEquals("request_catalog", requestCollection.getCatalogId());
     assertNull(requestCollection.getIndices());
   }
