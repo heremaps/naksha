@@ -1,7 +1,6 @@
 ARG DR_NAKSHA_POSTGRES=hcr.data.here.com/naksha/postgres
 ARG VERSION
-FROM ${DR_NAKSHA_POSTGRES}:pljava-${VERSION}
-#FROM ${DR_NAKSHA_POSTGRES}:plrust-${VERSION}
+FROM ${DR_NAKSHA_POSTGRES}:plrust-${VERSION}
 
 ADD files /
 
@@ -10,10 +9,6 @@ RUN chown postgres:postgres /usr/bin/run_postgres.sh \
     && chown -R postgres:postgres /home/postgres \
     && cd /home/postgres \
     && chown -R postgres:postgres *
-
-# Remove any unnecessary packages and cache
-RUN dnf clean all  \
-    && rm -rf /var/cache/dnf
 
 EXPOSE 5432
 
