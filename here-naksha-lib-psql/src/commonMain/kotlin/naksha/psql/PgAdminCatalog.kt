@@ -8,7 +8,6 @@ import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.Action
 import naksha.base.AtomicMap
-import naksha.base.Int64
 import naksha.model.NakshaVersion
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.IDictReader
@@ -261,7 +260,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             for (adminCol in listOf(collections, transactions, books, catalogs)) {
                 val tn = TupleNumber(
                     number, catalogNumber, collectionsColNumber,
-                    Int64(adminCol.collectionNumber.toLong()), Int64(1)
+                    adminCol.collectionNumber.toLong(), 1L
                 )
                 // Set the collection's resolved `_tn` member, where encodeFeature reads it back.
                 val col = adminCol.head
@@ -285,10 +284,10 @@ SELECT basics.*, procs.* FROM basics, procs;
                 }
                 var installed_version: NakshaVersion
                 var installed_storage_id: String
-                var installed_storage_number: Int64
+                var installed_storage_number: Long
                 conn.execute("SELECT \"${ADMIN_CATALOG_ID}\".naksha_version() AS v, \"${ADMIN_CATALOG_ID}\".naksha_storage_id() AS id, \"${ADMIN_CATALOG_ID}\".naksha_storage_number() AS n").fetch().use { cursor ->
                     try {
-                        val v: Int64 = cursor["v"]
+                        val v: Long = cursor["v"]
                         installed_version = NakshaVersion(v)
                         installed_storage_id = cursor["id"]
                         installed_storage_number = cursor["n"]
@@ -366,7 +365,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         conn: PgConnection,
         config: PgConfig,
         storageId: String,
-        storageNumber: Int64,
+        storageNumber: Long,
         psqlVersion: NakshaVersion
     ): Int
 
@@ -387,7 +386,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         conn: PgConnection,
         config: PgConfig,
         storageId: String,
-        storageNumber: Int64,
+        storageNumber: Long,
         psqlVersion: NakshaVersion,
         schemaOid: Int,
         installedVersion: NakshaVersion?
@@ -401,11 +400,11 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the next _(unused)_ transaction-number.
      * @since 3.0.0
      */
-    fun getTxn(conn: PgConnection): Int64 {
+    fun getTxn(conn: PgConnection): Long {
         val QUERY = "SELECT currval($1) as txn"
         val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
         cursor.use {
-            val txn: Int64 = cursor["txn"]
+            val txn: Long = cursor["txn"]
             return txn
         }
     }
@@ -423,14 +422,14 @@ SELECT basics.*, procs.* FROM basics, procs;
             val QUERY = "SELECT nextval($1) as version, (extract(epoch from clock_timestamp())*1000)::int8 as time, (extract(epoch from transaction_timestamp())*1000)::int8 as txn"
             val cursor = conn.execute(QUERY, arrayOf(versionSequenceOid)).fetch()
             cursor.use {
-                var txn: Int64 = cursor["txn"]
-                var postgresClock: Int64 = cursor["time"]
+                var txn: Long = cursor["txn"]
+                var postgresClock: Long = cursor["time"]
                 var postgresInstant = Instant.fromEpochMilliseconds(postgresClock.toLong())
                 var postgresDate = postgresInstant.toLocalDateTime(TimeZone.UTC)
                 var year = postgresDate.year
                 var month = postgresDate.month.number
                 var day = postgresDate.day
-                var versionNumber: Int64 = cursor["version"]
+                var versionNumber: Long = cursor["version"]
                 var version = Version(versionNumber)
                 if (version.isBehind(year, month, day)) {
                     logger.info("Transaction sequence ({}/{}/{}-{}) lags behind real date ({}/{}/{}), acquire advisory lock",
@@ -453,7 +452,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                         if (version.isBehind(year, month, day)) {
                             logger.info("Transaction sequence ({}/{}/{}-{}) still lags behind real date ({}/{}/{}), rollover to next day as we now hold the advisory lock",
                                 version.month, version.day, version.year, version.seq, month, day, year)
-                            version = Version.auto(year, month, day, Int64(0), Action.VERSION)
+                            version = Version.auto(year, month, day, 0L, Action.VERSION)
                             versionNumber = version.number
                             conn.execute("SELECT setval($1, $2)", arrayOf(versionSequenceOid, versionNumber)).close()
                             // SELECT setval($1, $2); — Next nextval will return $2 + Increment, currval will return $2, no need to add 4!
@@ -500,7 +499,7 @@ SELECT basics.*, procs.* FROM basics, procs;
 
             val existing = catalogCache[catalogNumber]
             val existingTn = existing?.head?.tupleNumber
-            val existingVersion: Int64? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
+            val existingVersion: Long? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
             if (existingVersion != null && existingVersion > newVersion) {
                 logger.debug("Do not update catalog '$id', the existing version ($existingVersion) is newer than the new ($newVersion)")
                 break
@@ -559,7 +558,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         conn.use {
             conn.autoCommit = false
             setSearchPath(conn)
-            val versionNumber = Version.now(Int64(1), Action.CREATE).number
+            val versionNumber = Version.now(1L, Action.CREATE).number
             for (adminCol in listOf(collections, transactions, catalogs, books)) {
                 if (!adminCol.storeHistory) continue
                 // TODO This creation of history partitions upfront by 3 years is a temporary hack, to be replaced when pg_partman is used

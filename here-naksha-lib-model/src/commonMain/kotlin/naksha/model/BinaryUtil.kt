@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.PlatformDataView
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int16
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_get_int32
@@ -157,9 +156,9 @@ class BinaryUtil private constructor() {
          */
         @JvmStatic
         @JsStatic
-        fun readTimestamp(view: PlatformDataView, offset: Int): Int64
-            =   (Int64(dataview_get_int16(view, offset).toInt() and 0xffff) shl 16) or
-                (Int64(dataview_get_int32(view, offset + 2)) and Int64(0xffff_ffffL))
+        fun readTimestamp(view: PlatformDataView, offset: Int): Long
+            =   ((dataview_get_int16(view, offset).toLong() and 0xffffL) shl 16) or
+                (dataview_get_int32(view, offset + 2).toLong() and 0xffff_ffffL)
 
         /**
          * Read a binary encoded [naksha.base.TupleNumber]; can be used to fetch four encodings:
@@ -182,13 +181,13 @@ class BinaryUtil private constructor() {
         fun readTupleNumber(
             view: PlatformDataView,
             offset: Int,
-            storageNumber: Int64? = null,
+            storageNumber: Long? = null,
             mapNumber: Int? = null,
             collectionNumber: Int? = null,
-            featureNumber: Int64? = null
+            featureNumber: Long? = null
         ): TupleNumber? {
             var pos = if (offset >= 0) offset else return null
-            val sn: Int64 // storage-number
+            val sn: Long // storage-number
             if (storageNumber == null) {
                 sn = dataview_get_int64(view, pos)
                 pos += 8
@@ -206,7 +205,7 @@ class BinaryUtil private constructor() {
                 pos += 4
             } else cn = collectionNumber
 
-            val fn: Int64 // feature-number
+            val fn: Long // feature-number
             if (featureNumber == null) {
                 fn = dataview_get_int64(view, pos)
                 pos += 8

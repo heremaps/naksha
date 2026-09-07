@@ -2,7 +2,6 @@
 
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.model.Naksha
 import naksha.base.NakshaError.NakshaErrorCompanion.PARTITION_NOT_FOUND
 import naksha.base.NakshaException
@@ -73,7 +72,7 @@ PARTITION BY RANGE ((($FnColumn & 65535)::int4 % ${collection.partitions}))$TABL
      * @since 3.0
      */
     @JsName("partitionNumberForFeatureNumber")
-    fun partitionNumber(featureNumber: Int64): Int = Naksha.partitionNumber(featureNumber) % collection.partitions
+    fun partitionNumber(featureNumber: Long): Int = Naksha.partitionNumber(featureNumber) % collection.partitions
 
     /**
      * Calculates the partition-number from the given [feature-id][Id].
@@ -90,7 +89,7 @@ PARTITION BY RANGE ((($FnColumn & 65535)::int4 % ${collection.partitions}))$TABL
      * @return either the distribution-partition to put the feature into or `null` if the table is not partitioned, features need to be written into the table itself.
      */
     @JsName("getByFeatureNumber")
-    operator fun get(featureNumber: Int64): PgDistributionPartition? {
+    operator fun get(featureNumber: Long): PgDistributionPartition? {
         val partitions = this.partitions
         if (partitions.isEmpty()) return null
         val i = Naksha.partitionNumber(featureNumber) % collection.partitions

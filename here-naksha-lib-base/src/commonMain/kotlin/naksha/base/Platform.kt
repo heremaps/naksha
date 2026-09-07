@@ -30,13 +30,13 @@ expect class Platform {
          * The maximum value of a 64-bit integer.
          * @return The maximum value of a 64-bit integer.
          */
-        val INT64_MAX_VALUE: Int64
+        val INT64_MAX_VALUE: Long
 
         /**
          * The minimum value of a 64-bit integer.
          * @return The minimum value of a 64-bit integer.
          */
-        val INT64_MIN_VALUE: Int64
+        val INT64_MIN_VALUE: Long
 
         /**
          * The minimum integer that can safely stored in a double.
@@ -76,9 +76,9 @@ expect class Platform {
         val intKlass: KClass<Int>
 
         /**
-         * The KClass for [Int64].
+         * The KClass for [Long].
          */
-        val int64Klass: KClass<Int64>
+        val int64Klass: KClass<Long>
 
         /**
          * The KClass for [Double].
@@ -241,7 +241,7 @@ expect class Platform {
          * @param startValue the initial value.
          * @return the atomic integer.
          */
-        fun newAtomicInt64(startValue: Int64): AtomicInt64
+        fun newAtomicInt64(startValue: Long): AtomicInt64
 
         /**
          * Creates a new byte-array of the given size.
@@ -303,7 +303,7 @@ expect class Platform {
 
         /**
          * Create a 32-bit integer from the given value.
-         * @param value A value being either [Number], [Int64] or [String] that contains a decimal number.
+         * @param value A value being either [Number] or [String] that contains a decimal number.
          * @return The value as 32-bit integer.
          * @throws IllegalArgumentException If the given value fails to be converted into a 32-bit integer.
          */
@@ -315,11 +315,11 @@ expect class Platform {
          * @return The value as 64-bit integer.
          * @throws IllegalArgumentException If the given value fails to be converted into a 64-bit integer.
          */
-        fun toInt64(value: Any): Int64
+        fun toInt64(value: Any): Long
 
         /**
          * Create a 64-bit floating point number from the given value.
-         * @param value A value being either [Number], [Int64] or [String].
+         * @param value A value being either [Number] or [String].
          * @return The value as 64-bit floating point number.
          * @throws IllegalArgumentException If the given value fails to be converted into a 64-bit floating point number.
          */
@@ -332,7 +332,7 @@ expect class Platform {
          * @param i The 64-bit integer.
          * @return The integer converted into a double.
          */
-        fun toDoubleRawBits(i: Int64): Double
+        fun toDoubleRawBits(i: Long): Double
 
         /**
          * Cast the given 64-bit floating point number into a 64-bit integer using only raw bits. That means, the 64-bits of the
@@ -340,28 +340,28 @@ expect class Platform {
          * @param d The 64-bit double in [IEEE-754](https://en.wikipedia.org/wiki/IEEE_754) format.
          * @return The integer converted into a double.
          */
-        fun toInt64RawBits(d: Double): Int64
+        fun toInt64RawBits(d: Double): Long
 
         /**
          * Widen a 32-bit integer into a platform specific 64-bit integer.
          * @param value the 32-bit integer.
          * @return the platform specific 64-bit representation.
          */
-        fun intToInt64(value: Int): Int64
+        fun intToInt64(value: Int): Long
 
         /**
          * Converts an internal 64-bit integer into a platform specific.
          * @param value The internal 64-bit.
          * @return The platform specific 64-bit.
          */
-        fun longToInt64(value: Long): Int64
+        fun longToInt64(value: Long): Long
 
         /**
          * Converts a platform specific 64-bit integer into an internal one to be used for example with the [PlatformDataViewApi].
          * @param value The platform specific 64-bit integer.
          * @return The internal 64-bit integer.
          */
-        fun int64ToLong(value: Int64): Long
+        fun int64ToLong(value: Long): Long
 
         /**
          * Tests if the given object is a scalar, so _null_, _undefined_, any [Number], [String] or [Boolean].
@@ -371,16 +371,16 @@ expect class Platform {
         fun isScalar(o: Any?): Boolean
 
         /**
-         * Tests if the given object is a [Number] or [Int64].
+         * Tests if the given object is a [Number].
          * @param o The object to test.
-         * @return _true_ if the object is a [Number] or [Int64]; _false_ otherwise.
+         * @return _true_ if the object is a [Number]; _false_ otherwise.
          */
         fun isNumber(o: Any?): Boolean
 
         /**
-         * Tests if the given object is a [Byte], [Short], [Int] or [Int64].
+         * Tests if the given object is a [Byte], [Short], [Int] or [Long].
          * @param o The object to test.
-         * @return _true_ if the object is a [Byte], [Short], [Int] or [Int64]; _false_ otherwise.
+         * @return _true_ if the object is a [Byte], [Short], [Int] or [Long]; _false_ otherwise.
          */
         fun isInteger(o: Any?): Boolean
 
@@ -440,7 +440,7 @@ expect class Platform {
          * - [Boolean]
          * - [Short]
          * - [Int]
-         * - [Int64]
+         * - [Long]
          * - [Float]
          * - [Double]
          * - [String]
@@ -495,7 +495,7 @@ expect class Platform {
 
         /**
          * Convert the given platform native objects recursively into multi-platform objects. So all maps are corrected to [PlatformMap],
-         * all strings starting with `data:bigint,` or Java `Long`'s are converted into [Int64]'s, lists are corrected to [PlatformList],
+         * all strings starting with `data:bigint,` are converted into [Long]'s, lists are corrected to [PlatformList],
          * and so on. This can be used after a JSON was parsed from an arbitrary platform tool into some platform specific standard
          * objects or when exchanging data with a platform specific library that does not like the multi-platform objects.
          * @param obj The platform native objects to convert recursively.
@@ -518,19 +518,19 @@ expect class Platform {
          * Returns the current epoch milliseconds.
          * @return The current epoch milliseconds.
          */
-        fun currentMillis(): Int64
+        fun currentMillis(): Long
 
         /**
          * Returns the current epoch microseconds.
          * @return current epoch microseconds.
          */
-        fun currentMicros(): Int64
+        fun currentMicros(): Long
 
         /**
          * Returns the current epoch nanoseconds.
          * @return current epoch nanoseconds.
          */
-        fun currentNanos(): Int64
+        fun currentNanos(): Long
 
         /**
          * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).

@@ -22,5 +22,4 @@ open class AnyList : ListProxy<Any>(Any::class) {
         super.add(element)
         return this
     }
-
 }

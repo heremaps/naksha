@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.base.IntMutable
 import naksha.base.fn.Fx3
 import naksha.model.Tuple
@@ -58,7 +57,7 @@ internal abstract class PgWriterBase protected constructor(
     val session: PgSession
         get() = pgWriter.session
 
-    val storageNumber: Int64
+    val storageNumber: Long
         get() = pgCollection.storage.number
 
     val catalogNumber: Int
@@ -160,8 +159,8 @@ internal abstract class PgWriterBase protected constructor(
      * @return the number of rows loaded.
      */
     protected fun loadAllTuple(lambda: Fx3<Int, Tuple, PgWrite>? = null): Int {
-        var row = 0
-        inRows.setMinRows(inRows.size + (end - start))
+        var row = inRows.size
+        inRows.withMinCapacity(inRows.size + (end - start))
         for (i in start ..< end) {
             val pgWrite = pgWrites[i]
             val tuple = pgWrite.tuple ?: throw illegalArg("The write #$i has no tuple, failed to load all tuple")

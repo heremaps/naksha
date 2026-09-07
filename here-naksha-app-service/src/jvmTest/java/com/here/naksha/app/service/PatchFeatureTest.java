@@ -114,7 +114,7 @@ class PatchFeatureTest extends ApiTest {
                         tupleNumber.catalogNumber,
                         tupleNumber.collectionNumber,
                         tupleNumber.featureNumber,
-                        tupleNumber.version.minus(4) //older, invalid version, to simulate wrong uuid
+                        tupleNumber.version - 4L //older, invalid version, to simulate wrong uuid
                 )).toString();
         // NOTE: if the wrong uuid is different in databaseNumber, or catalogNumber, or collectionNumber, the response will be 400 (mapped from NakshaError.ILLEGAL_ARGUMENT, thrown by storage) instead of 409.
         // But this requires manual modification of the uuid in the input JSON, which is not an expected behavior from the client, so we don't handle that currently.

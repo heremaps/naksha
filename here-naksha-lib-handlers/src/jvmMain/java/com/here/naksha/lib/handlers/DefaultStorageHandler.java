@@ -63,7 +63,6 @@ import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttemp
 import static com.here.naksha.lib.handlers.DefaultStorageHandler.OperationAttempt.FIRST_ATTEMPT;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
-import static naksha.base.Platform.longToInt64;
 import static naksha.model.util.RequestHelper.createWriteCollectionsRequest;
 
 public class DefaultStorageHandler extends AbstractEventHandler {
@@ -143,7 +142,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   private void addStorageTimeToStreamInfo(StopWatch storageTimer, NakshaContext ctx) {
     StreamInfo streamInfo = ctx.getStreamInfo();
     if (streamInfo != null) {
-      streamInfo.addTimeInStorage(longToInt64(NANOSECONDS.toMillis(storageTimer.getNanoTime())));
+      streamInfo.addTimeInStorage(NANOSECONDS.toMillis(storageTimer.getNanoTime()));
     }
   }
 

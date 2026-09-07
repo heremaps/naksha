@@ -5,7 +5,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.Action
-import naksha.base.Int64
 import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
@@ -48,8 +47,8 @@ class AbstractStorageTest {
     fun newVirtualVersionDoesNotRollBackSequenceWithNewerDate() {
         val previousDay = LocalDateTime(2026, 8, 24, 23, 59, 59)
         val nextDay = LocalDateTime(2026, 8, 25, 0, 0, 0)
-        val previousDayVersion = Version.auto(2026, 8, 24, Int64(0), Action.VERSION)
-        val nextDayVersion = Version.auto(2026, 8, 25, Int64(0), Action.VERSION)
+        val previousDayVersion = Version.auto(2026, 8, 24, 0L, Action.VERSION)
+        val nextDayVersion = Version.auto(2026, 8, 25, 0L, Action.VERSION)
         val storage = TestStorage()
         var competingVersion: Version? = null
 
@@ -73,7 +72,7 @@ class AbstractStorageTest {
         val collectionId = "test-collection"
         val featureId = "test-feature"
         val storage = TestStorage().apply { initialize(storageId) }
-        val version = Version.auto(2026, 8, 24, Int64(42), Action.VERSION).number
+        val version = Version.auto(2026, 8, 24, 42L, Action.VERSION).number
 
         for (action in listOf(Action.CREATE, Action.UPDATE, Action.DELETE, Action.VERSION)) {
             val tupleNumber = storage.newTupleNumber(catalogId, collectionId, featureId, version, action)
@@ -90,7 +89,7 @@ class AbstractStorageTest {
     @Test
     fun newVirtualTupleNumberRequiresInitializedStorage() {
         val exception = assertFailsWith<NakshaException> {
-            TestStorage().newTupleNumber("catalog", "collection", "feature", Int64(3), Action.VERSION)
+            TestStorage().newTupleNumber("catalog", "collection", "feature", 3L, Action.VERSION)
         }
 
         assertEquals(UNINITIALIZED, exception.error.code)
@@ -133,11 +132,11 @@ class AbstractStorageTest {
             invokeInitStorage(NakshaStorage(storageId, "TestStorage"), create = null, upgrade = null)
         }
 
-        fun resetNextVirtualVersion(version: Int64) {
+        fun resetNextVirtualVersion(version: Long) {
             nextVirtualVersion.set(version)
         }
 
-        fun peekNextVirtualVersion(): Int64 = nextVirtualVersion.get()
+        fun peekNextVirtualVersion(): Long = nextVirtualVersion.get()
 
         fun fakeVirtualVersionTime(times: List<LocalDateTime>, afterFirstAcquire: () -> Unit) {
             fakeTimes = times.toMutableList()
@@ -149,14 +148,14 @@ class AbstractStorageTest {
         override fun newVirtualVersion(): Version {
             val times = fakeTimes ?: return super.newVirtualVersion()
             while (true) {
-                val version = Version(nextVirtualVersion.getAndAdd(Int64(4)))
+                val version = Version(nextVirtualVersion.getAndAdd(4L))
                 afterAcquire?.let { hook ->
                     afterAcquire = null
                     hook()
                 }
                 val now = times.removeAt(0)
                 if (version.isBehind(now.year, now.month.number, now.day)) {
-                    val newVersion = Version.auto(now.year, now.month.number, now.day, Int64(0), Action.VERSION)
+                    val newVersion = Version.auto(now.year, now.month.number, now.day, 0L, Action.VERSION)
                     if (nextVirtualVersion.compareAndSet(version.number + 4, newVersion.number + 4)) {
                         return newVersion
                     }
@@ -170,7 +169,7 @@ class AbstractStorageTest {
             catalogId: String,
             collectionId: String,
             featureId: String,
-            version: Int64,
+            version: Long,
             action: Action,
         ): TupleNumber = newVirtualTupleNumber(catalogId, collectionId, featureId, version, action)
 

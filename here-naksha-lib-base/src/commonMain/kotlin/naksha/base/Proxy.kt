@@ -73,16 +73,12 @@ abstract class Proxy : PlatformObject {
             if (Platform.isAssignable(klass, JsEnum::class)) {
                 return JsEnum.get(raw, klass as KClass<out JsEnum>) as T
             }
-            if (klass == Int64::class) {
-                val value = if (klass == Int64::class) when (raw) {
-                    is Short -> Int64(raw.toInt())
-                    is Int -> Int64(raw)
-                    is Long -> Int64(raw)
-                    is Float -> Int64(raw.toDouble())
-                    is Double -> Int64(raw)
+            if (klass == Long::class) {
+                val value = when (raw) {
+                    is Number -> raw.toLong()
                     else -> raw
-                } else raw
-                if (value is Int64) return value as T
+                }
+                if (value is Long) return value as T
             }
             return if (init != null) init.call() else alternative
         }
@@ -265,7 +261,6 @@ abstract class Proxy : PlatformObject {
         }
         if (current is PlatformMap) return Platform.proxy(current, AnyObject::class)
         if (current is PlatformList) return Platform.proxy(current, AnyList::class)
-        if (current is PlatformDataView) return Platform.proxy(current, DataViewProxy::class)
         return current
     }
 

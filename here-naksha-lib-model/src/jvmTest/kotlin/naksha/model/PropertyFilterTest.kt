@@ -1,6 +1,5 @@
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.Platform
 import naksha.base.Proxy
 import naksha.base.TupleNumber
@@ -469,7 +468,7 @@ class PropertyFilterTest {
             val feature = Proxy.box(Platform.fromJSON(featureJson), NakshaFeature::class)!!
             val encoder = JbEncoder2()
             val featureBytes = encoder.buildTupleFromMap(feature)
-            val storageNumber = Int64(1)
+            val storageNumber = 1L
             val mapNumber = 0
             val collectionNumber = 0
             val version = Version(0)
@@ -482,7 +481,7 @@ class PropertyFilterTest {
             )
             val members = HeapBook(BookType.MEMBER_BOOK)
             members.put(XyzTn.name, tupleNumber)
-            members.put(XyzUpdatedAt.name, Int64(0))
+            members.put(XyzUpdatedAt.name, 0L)
             members.put(XyzId.name, feature.id)
             members.put(XyzAppId.name, "")
             members.put(XyzAuthor.name, null)

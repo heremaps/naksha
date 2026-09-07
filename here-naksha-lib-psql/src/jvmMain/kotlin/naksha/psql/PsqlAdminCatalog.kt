@@ -31,11 +31,11 @@ class PsqlAdminCatalog internal constructor(
         return null
     }
 
-    override fun createAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion): Int {
+    override fun createAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Long, psqlVersion: NakshaVersion): Int {
         return upsertAdminMap(conn, storageId, storageNumber, psqlVersion, null, null)
     }
 
-    override fun upgradeAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Int64, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
+    override fun upgradeAdminCatalog(conn: PgConnection, config: PgConfig, storageId: String, storageNumber: Long, psqlVersion: NakshaVersion, schemaOid: Int, installedVersion: NakshaVersion?) {
         upsertAdminMap(conn, storageId, storageNumber, psqlVersion, schemaOid, installedVersion)
     }
 
@@ -46,7 +46,7 @@ class PsqlAdminCatalog internal constructor(
     private fun upsertAdminMap(
         conn: PgConnection,
         storageId: String,
-        storageNumber: Int64,
+        storageNumber: Long,
         psqlVersion: NakshaVersion,
         schemaOid: Int?,
         installedVersion: NakshaVersion?
@@ -157,7 +157,7 @@ class PsqlAdminCatalog internal constructor(
         )
         logger.info("Create transaction-seq, map-sequence, and collection-sequence ...")
         // For a version number, the lower two bit must be always set.
-        val START_VERSION = Version.now(0.toInt64(), Action.VERSION)
+        val START_VERSION = Version.now(0L, Action.VERSION)
         conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_VERSION_SEQ AS ${PgType.INT64} START ${START_VERSION.number} INCREMENT BY 4 CACHE 1;").close()
 
         logger.info("Create internal collections: transactions, collections, and dictionaries")
