@@ -1,6 +1,7 @@
 package com.here.naksha.lib.core.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -24,13 +25,21 @@ class CollectionIndexPolicyTest {
     final IndexList second = CollectionIndexPolicy.hubSlimIndices();
 
     assertNotSame(first, second);
-    assertEquals(2, first.size());
+    assertEquals(3, first.size());
     assertEquals("tags", first.get(0).getName());
     assertEquals(XyzMembers.XyzTags.getName(), first.get(0).getOn().get(0));
     assertEquals("geo", first.get(1).getName());
     assertEquals(StandardMembers.Geometry.getName(), first.get(1).getOn().get(0));
+    final Index nv = first.get(2);
+    assertEquals("nv", nv.getName());
+    assertEquals(1, nv.getOn().size());
+    assertEquals(StandardMembers.NextVersion.getName(), nv.getOn().get(0));
+    assertNull(nv.getInclude());
+    assertFalse(nv.isUnique());
+    assertFalse(nv.isConditional());
     assertSame(XyzIndices.XyzTags, first.get(0));
     assertSame(StandardIndices.Geometry, first.get(1));
+    assertNotSame(first.get(2), second.get(2));
   }
 
   @Test
@@ -47,7 +56,7 @@ class CollectionIndexPolicyTest {
     assertNull(source.getIndices());
     assertEquals("target_collection", normalized.getId());
     assertEquals("target_catalog", normalized.getCatalogId());
-    assertIndexNames(normalized, "tags", "geo");
+    assertIndexNames(normalized, "tags", "geo", "nv");
   }
 
   @Test
@@ -104,7 +113,7 @@ class CollectionIndexPolicyTest {
 
     assertEquals("target_collection", collection.getId());
     assertEquals("target_catalog", collection.getCatalogId());
-    assertIndexNames(collection, "tags", "geo");
+    assertIndexNames(collection, "tags", "geo", "nv");
   }
 
   private static void assertIndexNames(
