@@ -154,7 +154,7 @@ class XyzProxyTest {
         val xyz = XyzNs()
 
         // when
-        xyz.setTags(TagList("Alicja", "Baba", "Alan", skipNormalize = true), normalize = false)
+        xyz.setTags(TagList("Alicja", "Baba", "Alan"), normalize = false)
 
         // then
         assertEquals(listOf("Alicja", "Baba", "Alan"), xyz.tags.toList())
