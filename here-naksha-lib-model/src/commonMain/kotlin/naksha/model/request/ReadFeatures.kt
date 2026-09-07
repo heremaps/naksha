@@ -201,15 +201,6 @@ open class ReadFeatures : ReadRequest() {
     }
 
     /**
-     * @see minVersion
-     */
-    @JsName("withMinVersionLong")
-    fun withMinVersion(minVersion: Long?): ReadFeatures {
-        this.minVersion = if (minVersion != null) Int64(minVersion) else null
-        return this
-    }
-
-    /**
      * Limit the read to states at or before the given maximum version, `null` if no limit _(read up to [HEAD][Version.VersionCompanion.HEAD] aka up until latest state)_.
      *
      * This effectively requests a specific historical snapshot when no [minVersion] is set and [versions] is `1`, which is the default for both parameters.
