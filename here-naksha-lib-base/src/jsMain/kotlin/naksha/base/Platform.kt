@@ -97,6 +97,16 @@ actual class Platform {
                     override fun deref(): Int = 0
                 }
 
+                // Fix that `if (longValue instanceof Number)` works.
+//                js("""
+//Object.defineProperty(Number, Symbol.hasInstance, {
+//    value(x) {
+//        return typeof x === "number" ||
+//               typeof x === "bigint" ||
+//               x instanceof Number;
+//    }
+//});
+//""")
                 copyPrototypeToPrototype(objectTemplate, js("{}").unsafeCast<Any>())
                 copyPrototypeToPrototype(listTemplate, js("[]").unsafeCast<Any>())
                 copyPrototypeToPrototype(mapTemplate, js("new Map()").unsafeCast<Any>())
@@ -104,26 +114,6 @@ actual class Platform {
 
                 copyPrototypeToPrototype(symbolTemplate, js("Symbol()").unsafeCast<Any>())
                 copyPrototypeToPrototype(weakRefTemplate, js("new WeakRef(Object(0))").unsafeCast<Any>())
-                copyPrototypeToPrototype(JsInt64(), js("BigInt(0)").unsafeCast<Any>())
-                // Patch the Int64::class, so that it works as expected (it should only detect BigInt!)
-                val i64Class = Int64::class
-                js(
-                    """
-                    var pt = Object.getPrototypeOf(i64Class);
-                    var keys = Object.getOwnPropertyNames(pt);
-                    var isInstanceOfName = null;
-                    var i;
-                    for (i in keys) {
-                        var key = keys[i];
-                        if (key.startsWith("isInstance")) isInstanceOfName = key;
-                    };
-                    // Note: Do not override pt[isInstanceOfName]!
-                    //       If we do this, then all isInstanceOf calls are overloaded, 
-                    //       but we only want to overload the one of Int64::class!
-                    i64Class[isInstanceOfName] = function(value) {
-                      return value != null && typeof value.valueOf()==="bigint";
-                    };"""
-                )
                 return true
             }
             return false
@@ -139,10 +129,10 @@ actual class Platform {
         actual val ITERATOR: Symbol = js("Symbol.iterator").unsafeCast<Symbol>()
 
         @JsStatic
-        actual val INT64_MAX_VALUE: Int64 = js("BigInt('9223372036854775807')").unsafeCast<Int64>()
+        actual val INT64_MAX_VALUE: Long = Long.MAX_VALUE
 
         @JsStatic
-        actual val INT64_MIN_VALUE: Int64 = js("BigInt('-9223372036854775808')").unsafeCast<Int64>()
+        actual val INT64_MIN_VALUE: Long = Long.MIN_VALUE
 
         @JsStatic
         actual val MAX_SAFE_INT: Double = 9007199254740991.0
@@ -188,7 +178,7 @@ actual class Platform {
         actual fun newAtomicInt(startValue: Int): AtomicInt = JsAtomicInt(startValue)
 
         @JsStatic
-        actual fun newAtomicInt64(startValue: Int64): AtomicInt64 = JsAtomicInt64(startValue)
+        actual fun newAtomicInt64(startValue: Long): AtomicInt64 = JsAtomicInt64(startValue)
 
         @JsStatic
         actual fun newList(vararg entries: Any?): PlatformList {
@@ -235,46 +225,42 @@ actual class Platform {
         @JsStatic
         actual fun toInt(value: Any): Int = when (value) {
             is Long -> value.toInt()
-            is Int64 -> value.toInt()
             is Number -> value.toInt()
             is String -> value.toInt()
             else -> throw IllegalArgumentException("Failed to convert object to int")
         }
 
         @JsStatic
-        actual fun toInt64(value: Any): Int64 = when (value) {
-            is Long -> longToInt64(value)
-            is Int64 -> value
-            is Byte, Short, Int -> js("BigInt(value)").unsafeCast<Int64>()
-            is Float, Double -> js("BigInt(Math.round(value))").unsafeCast<Int64>()
-            is String -> js("BigInt(value)").unsafeCast<Int64>()
+        actual fun toInt64(value: Any): Long = when (value) {
+            is Number -> value.toLong()
+            is String -> value.toLong()
             else -> throw IllegalArgumentException("Failed to convert object to int64")
         }
 
         @JsStatic
         actual fun toDouble(value: Any): Double = when (value) {
             is Long -> value.toDouble()
-            is Int64 -> value.toDouble()
             is Number -> value.toDouble()
             is String -> value.toDouble()
             else -> throw IllegalArgumentException("Failed to convert object to double")
         }
 
         @JsStatic
-        actual fun intToInt64(value: Int): Int64 = js("BigInt(value)").unsafeCast<Int64>()
+        actual fun intToInt64(value: Int): Long = value.toLong()
 
         @JsStatic
         @Suppress("NON_EXPORTABLE_TYPE")
-        actual fun longToInt64(value: Long): Int64 {
+        actual fun longToInt64(value: Long): Long = value
+
+        internal fun longToLegacyInt64(value: Long): Int64 {
             val view = convertView
             view.setInt32(0, (value ushr 32).toInt())
             view.setInt32(4, value.toInt())
             return view.getBigInt64(0).unsafeCast<Int64>()
         }
 
-        @JsStatic
         @Suppress("NON_EXPORTABLE_TYPE")
-        actual fun int64ToLong(value: Int64): Long {
+        internal fun int64ToLong(value: Int64): Long {
             val view = convertView
             view.setBigInt64(0, value)
             val hi = view.getInt32(0).unsafeCast<Int>()
@@ -285,16 +271,13 @@ actual class Platform {
         private val convertView: dynamic = js("new DataView(new ArrayBuffer(16))")
 
         @JsStatic
-        actual fun toInt64RawBits(d: Double): Int64 {
-            convertView.setFloat64(0, d)
-            return convertView.getBigInt64(0).unsafeCast<Int64>()
-        }
+        actual fun toInt64RawBits(d: Double): Long = d.toRawBits()
 
         @JsStatic
-        actual fun toDoubleRawBits(i: Int64): Double {
-            convertView.setBigInt64(0, i)
-            return convertView.getFloat64(0).unsafeCast<Double>()
-        }
+        actual fun toDoubleRawBits(i: Long): Double = Double.fromBits(i)
+
+        @JsStatic
+        actual fun int64ToLong(value: Long): Long = value
 
         @JsStatic
         actual fun isNumber(o: Any?): Boolean =
@@ -415,11 +398,11 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
         actual val intKlass: KClass<Int> = Int::class
 
         /**
-         * The KClass for [Int64].
+         * The KClass for [Long].
          */
         @Suppress("NON_EXPORTABLE_TYPE")
         @JsStatic
-        actual val int64Klass: KClass<Int64> = Int64::class
+        actual val int64Klass: KClass<Long> = Long::class
 
         /**
          * The KClass for [Double].
@@ -665,21 +648,21 @@ return obj;
          * @return The current epoch milliseconds.
          */
         @JsStatic
-        actual fun currentMillis(): Int64 = js("BigInt(Date.now())").unsafeCast<Int64>()
+        actual fun currentMillis(): Long = js("Date.now()").unsafeCast<Double>().toLong()
 
         /**
          * Returns the current epoch microseconds.
          * @return current epoch microseconds.
          */
         @JsStatic
-        actual fun currentMicros(): Int64 = js("BigInt(Date.now()*1000)").unsafeCast<Int64>()
+        actual fun currentMicros(): Long = js("Date.now()*1000").unsafeCast<Double>().toLong()
 
         /**
          * Returns the current epoch nanoseconds.
          * @return current epoch nanoseconds.
          */
         @JsStatic
-        actual fun currentNanos(): Int64 = js("BigInt(Date.now()*1000*1000)").unsafeCast<Int64>()
+        actual fun currentNanos(): Long = js("Date.now()*1000*1000").unsafeCast<Double>().toLong()
 
         /**
          * Generates a new random number between 0 and 1 (therefore with 53-bit random bits).
@@ -688,8 +671,8 @@ return obj;
         @JsStatic
         actual fun random(): Double = js("Math.random()").unsafeCast<Double>()
 
-        private val MANTISSA_MASK = Int64(0x000f_ffff_ffff_ffffL)
-        private val MANTISSA_LO_MASK = Int64(0x0000_0000_1fff_ffffL)
+        private const val MANTISSA_MASK = 0x000f_ffff_ffff_ffffL
+        private const val MANTISSA_LO_MASK = 0x0000_0000_1fff_ffffL
 
         /**
          * Tests if the given 64-bit floating point number can be converted into a 32-bit floating point number without losing information.
@@ -713,8 +696,8 @@ return obj;
             if (exponent < -126 || exponent > 127) return false
             // We do not want to lose precision in mantissa either.
             // Either the lower 29-bit of mantissa are zero (only 23-bit used) or all bits are set.
-            val mantissa = view.getBigInt64(0).unsafeCast<Int64>() and MANTISSA_MASK
-            return (mantissa and MANTISSA_LO_MASK) == I64_ZERO || mantissa == MANTISSA_MASK
+            val mantissa = value.toRawBits() and MANTISSA_MASK
+            return (mantissa and MANTISSA_LO_MASK) == 0L || mantissa == MANTISSA_MASK
         }
 
         private const val MIN_INT_VALUE_AS_DOUBLE = Int.MIN_VALUE.toDouble()

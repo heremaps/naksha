@@ -1,6 +1,5 @@
 package naksha.psql
 
-import naksha.base.Int64
 import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgColumn.PgColumn_C.NextVersionColumn
@@ -74,7 +73,7 @@ PARTITION BY RANGE ((($FnColumn & 65535)::int4 % ${collection.partitions}))$TABL
         = if (partitions.isEmpty()) null else partitions[partitionNumber(featureId) % partitions.size]
 
     @JsName("getByFeatureNumber")
-    operator fun get(featureNumber: Int64): PgDistributionPartition?
+    operator fun get(featureNumber: Long): PgDistributionPartition?
             = if (partitions.isEmpty()) null else partitions[featureNumber.toInt() % partitions.size]
 
     override fun create(conn: PgConnection) {

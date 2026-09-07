@@ -62,8 +62,8 @@ public class ActivityLogEnhancer {
     Original original = new Original();
     if (xyzNamespace != null) {
 //      original.setPuuid(xyzNamespace.getPuuid()); // TODO: restore this when CASL-1094 is fixed
-      original.setUpdatedAt(xyzNamespace.getUpdatedAt().toLong());
-      original.setCreatedAt(xyzNamespace.getCreatedAt().toLong());
+      original.setUpdatedAt(xyzNamespace.getUpdatedAt());
+      original.setCreatedAt(xyzNamespace.getCreatedAt());
     }
     if (spaceId != null) {
       original.setSpace(spaceId);

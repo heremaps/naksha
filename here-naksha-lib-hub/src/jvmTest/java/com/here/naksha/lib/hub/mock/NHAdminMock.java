@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import kotlin.reflect.KClass;
-import naksha.base.Int64;
 import naksha.base.Platform;
 import naksha.base.PlatformLock;
 import naksha.jbon.JbDictionary;
@@ -166,7 +165,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
   }
 
   @Override
-  public @NotNull Int64 getNumber() {
+  public long getNumber() {
     throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 

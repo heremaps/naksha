@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.hub.storages;
 
-import naksha.base.Int64;
 import naksha.base.PlatformLock;
 import naksha.base.fn.Fn1;
 import naksha.base.fn.Fx1;
@@ -84,7 +83,7 @@ public class NHAdminStorage implements IStorage {
   }
 
   @Override
-  public @NotNull Int64 getNumber() {
+  public long getNumber() {
     return psqlStorage.getNumber();
   }
 

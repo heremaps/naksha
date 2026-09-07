@@ -324,24 +324,24 @@ open class Binary() : BinaryView {
         end += 4
     }
 
-    override fun getInt64(pos: Int, littleEndian: Boolean): Int64 {
+    override fun getInt64(pos: Int, littleEndian: Boolean): Long {
         prepareRead(pos, 8, byteLength)
         return dataview_get_int64(view, pos, littleEndian)
     }
 
-    override fun setInt64(pos: Int, value: Int64, littleEndian: Boolean) {
+    override fun setInt64(pos: Int, value: Long, littleEndian: Boolean) {
         prepareWrite(pos, 8)
         dataview_set_int64(view, pos, value, littleEndian)
     }
 
-    override fun readInt64(littleEndian: Boolean): Int64 {
+    override fun readInt64(littleEndian: Boolean): Long {
         prepareRead(pos, 8, end)
         val v = dataview_get_int64(view, pos, littleEndian)
         pos += 8
         return v
     }
 
-    override fun writeInt64(value: Int64, littleEndian: Boolean) {
+    override fun writeInt64(value: Long, littleEndian: Boolean) {
         prepareWrite(end, 8)
         dataview_set_int64(view, end, value, littleEndian)
         end += 8

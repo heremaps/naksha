@@ -18,7 +18,7 @@ import kotlin.js.JsName
  * collection. The [type] decides the storage method:
  * - [IndexType.BTREE]: ordered index for equality and range queries on scalar and text columns.
  * - [IndexType.SPATIAL]: spatial index covering a 2D-encoded geometry column. [on] must contain exactly one geometry member.
- * - [IndexType.TAG_MAP]: inverted index over a tags member ([MemberType.TAG_MAP] or [MemberType.TAG_MAP_FROM_ARRAY]) supporting key/value containment queries. [on] must contain exactly one member.
+ * - [IndexType.TAG_MAP]: inverted index over a tags member ([MemberType.TAG_MAP] or [MemberType.TAG_MAP_FROM_TAG_LIST]) supporting key/value containment queries. [on] must contain exactly one member.
  * - [IndexType.TAG_LIST]: inverted index over a tag-list member ([MemberType.TAG_LIST]) supporting element containment queries. [on] must contain exactly one member.
  *
  * When [internal] is `true` the index is storage-managed (an index the storage maintains itself to keep

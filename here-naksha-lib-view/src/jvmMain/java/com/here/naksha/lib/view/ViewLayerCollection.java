@@ -58,7 +58,7 @@ public class ViewLayerCollection {
 
   public ViewLayer getByTupleNumber(@NotNull TupleNumber tupleNumber) {
     for (ViewLayer layer : layers) {
-      if (layer.getStorage().getNumber().toLong() != tupleNumber.databaseNumber.toLong()) {
+      if (layer.getStorage().getNumber() != tupleNumber.databaseNumber) {
         continue;
       }
       String mapId = layer.getMapId();

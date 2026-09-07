@@ -33,14 +33,14 @@ class Int16Member() : TypedMember<Int16Member>() {
     }
 
     /** Retrieves the int16 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Short? = readInt64(feature)?.toShort()
+    fun get(feature: NakshaFeature): Short? = readLong(feature)?.toShort()
 
     /**
      * Retrieves the int16 value of this member from the given tuple.
      * TODO: When no such member exists in membersBook, should search along [path] in [tuple.featureBytes], but currently cannot due to JbDecoder2 limits.
      */
     @JsName("getFromTuple")
-    fun get(tuple: Tuple): Short? = readInt64(tuple)?.toShort()
+    fun get(tuple: Tuple): Short? = readLong(tuple)?.toShort()
 
     /** Sets the int16 value of this member on the given feature. */
     fun set(feature: NakshaFeature, value: Short): Any? = setPath(feature, path, value)

@@ -200,6 +200,6 @@ class PgUtil private constructor() {
          */
         @JsStatic
         @JvmStatic
-        fun lockId(name: String): Int64 = Fnv1a64.string(Fnv1a64.start(), name)
+        fun lockId(name: String): Long = Fnv1a64.string(Fnv1a64.start(), name)
     }
 }

@@ -20,7 +20,7 @@ open class NakshaSubscriptionState() : AnyObject() {
     companion object {
         private val ID = NotNullProperty<NakshaSubscriptionState, String>(String::class) { _, _ -> PlatformUtil.randomString() }
         private val INT_0 = NotNullProperty<NakshaSubscriptionState, Int>(Int::class) { _, _ -> 0 }
-        private val INT64_0 = NotNullProperty<NakshaSubscriptionState, Int64>(Int64::class) { _, _ -> Int64(0) }
+        private val INT64_0 = NotNullProperty<NakshaSubscriptionState, Long>(Long::class) { _, _ -> 0L }
         private val ERROR_NULL = NullableProperty<NakshaSubscriptionState, NakshaError>(NakshaError::class)
         private val ANY_OBJECT = NotNullProperty<NakshaSubscriptionState, AnyObject>(AnyObject::class)
     }

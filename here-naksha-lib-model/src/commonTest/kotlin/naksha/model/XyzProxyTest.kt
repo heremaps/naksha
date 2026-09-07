@@ -154,13 +154,13 @@ class XyzProxyTest {
         val xyz = XyzNs()
 
         // when
-        xyz.setTags(TagList("Alicja", "Baba", "Alan"), false)
+        xyz.setTags(TagList("Alicja", "Baba", "Alan"), normalize = false)
 
         // then
-        assertEquals(listOf("Alicja", "Baba", "Alan"), xyz.tags?.toList())
+        assertEquals(listOf("Alicja", "Baba", "Alan"), xyz.tags.toList())
 
         // when
         xyz.setTags(TagList("Cecil"), true)
-        assertEquals(listOf("cecil"), xyz.tags?.toList())
+        assertEquals(listOf("cecil"), xyz.tags.toList())
     }
 }

@@ -69,7 +69,7 @@ data class SessionOptions @JvmOverloads constructor(
     /**
      * When calculating the hash of a feature, a function to be called for every property to hash.
      *
-     * The function receives the feature that is being hashed, the current path, and the value to be hashed (will be _null_, _String_, _Int_, _Int64_, _Double_ or _Boolean_). It should return _true_, when the value should be part of the hash; _false_ otherwise.
+     * The function receives the feature that is being hashed, the current path, and the value to be hashed (will be _null_, _String_, _Int_, _Long_, _Double_ or _Boolean_). It should return _true_, when the value should be part of the hash; _false_ otherwise.
      * @since 3.0
      */
     @JvmField

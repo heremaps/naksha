@@ -2,7 +2,6 @@
 
 package naksha.jbon
 
-import naksha.base.Int64
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.jvm.JvmStatic
@@ -12,7 +11,7 @@ import kotlin.jvm.JvmStatic
  */
 @JsExport
 @Deprecated("Please use new class from lib-model", level = DeprecationLevel.WARNING)
-class NakshaUuid(val storageId: String, val collectionId: String, val year: Int, val month: Int, val day: Int, val seq: Int64, val uid: Int) {
+class NakshaUuid(val storageId: String, val collectionId: String, val year: Int, val month: Int, val day: Int, val seq: Long, val uid: Int) {
     private lateinit var string : String
     companion object NakshaUuidCompanion {
         @JvmStatic
@@ -25,13 +24,13 @@ class NakshaUuid(val storageId: String, val collectionId: String, val year: Int,
                     values[2].toInt(),
                     values[3].toInt(),
                     values[4].toInt(),
-                    Int64( values[5].toLong()),
+                    values[5].toLong(),
                     values[6].toInt(),
             )
         }
 
         @JvmStatic
-        fun from(storageId: String, collectionId: String, txn: Int64, uid: Int): NakshaUuid {
+        fun from(storageId: String, collectionId: String, txn: Long, uid: Int): NakshaUuid {
             val nakshaTxn = NakshaTxn(txn)
             return NakshaUuid(
                     storageId,

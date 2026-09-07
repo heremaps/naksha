@@ -2,7 +2,6 @@ package naksha.jbon
 
 import naksha.base.AnyObject
 import naksha.base.Binary
-import naksha.base.Int64
 import naksha.base.MapProxy
 import naksha.base.Platform
 import naksha.geo.GeoUtil
@@ -32,8 +31,8 @@ class Jbon2MembersTest {
     private class ListDict(private val entries: List<Any?>) : IBook {
         override val id: String? = null
         override val bookType: BookType = BookType.MEMBER_BOOK
-        override val databaseNumber: Int64? = null
-        override val featureNumber: Int64? = null
+        override val databaseNumber: Long? = null
+        override val featureNumber: Long? = null
         override val length: Int get() = entries.size
         override fun get(index: Int): Any? = entries.getOrNull(index)
         override fun indexOfString(string: String): Int = entries.indexOfFirst { it == string }
@@ -50,7 +49,7 @@ class Jbon2MembersTest {
         val bin = Binary()
         bin.view = Platform.newDataView(bytes)
         bin.end = bytes.size
-        val dec = JbDecoder2(membersDict = membersDict)
+        val dec = JbDecoder2(membersBook = membersDict)
         dec.view = bin
         dec.end = bytes.size
         return dec.decodeValueAt(0)
@@ -61,7 +60,7 @@ class Jbon2MembersTest {
         val enc = JbEncoder2()
         @Suppress("UNCHECKED_CAST")
         val tupleBytes = enc.buildTupleFromMap(feature as MapProxy<String, *>)
-        val dec = JbDecoder2(membersDict = membersDict)
+        val dec = JbDecoder2(membersBook = membersDict)
         dec.mapBytes(tupleBytes)
         return dec.toAnyObject()
     }
@@ -92,7 +91,7 @@ class Jbon2MembersTest {
         // Members book: slot 0 → 42
         val membersDict = ListDict(listOf(42))
 
-        val dec = JbDecoder2(membersDict = membersDict)
+        val dec = JbDecoder2(membersBook = membersDict)
         dec.mapBytes(tupleBytes)
         val decoded = dec.toAnyObject()
 
@@ -131,7 +130,7 @@ class Jbon2MembersTest {
         // Members book: slot 0 → raw TWKB ByteArray (simulating PostgreSQL bytea column)
         val membersDict = ListDict(listOf(SpPoint(lon, lat)))
 
-        val dec = JbDecoder2(membersDict = membersDict)
+        val dec = JbDecoder2(membersBook = membersDict)
         dec.mapBytes(tupleBytes)
         val decoded = dec.toAnyObject()
 
@@ -204,7 +203,7 @@ class Jbon2MembersTest {
 
         val membersDict = ListDict(listOf("hello world"))
 
-        val dec = JbDecoder2(membersDict = membersDict)
+        val dec = JbDecoder2(membersBook = membersDict)
         dec.mapBytes(tupleBytes)
         val decoded = dec.toAnyObject()
 
@@ -232,7 +231,7 @@ class Jbon2MembersTest {
 
         val membersDict = ListDict(listOf(null))
 
-        val dec = JbDecoder2(membersDict = membersDict)
+        val dec = JbDecoder2(membersBook = membersDict)
         dec.mapBytes(tupleBytes)
         val decoded = dec.toAnyObject()
 

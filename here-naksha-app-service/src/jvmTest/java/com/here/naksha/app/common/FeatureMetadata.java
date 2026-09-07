@@ -19,8 +19,8 @@ public record FeatureMetadata(String featureId, String uuid, long createdAt, lon
     return new FeatureMetadata(
         feature.getId(),
         xyzNamespace.getUuid(),
-        xyzNamespace.getCreatedAt().toLong(),
-        xyzNamespace.getUpdatedAt().toLong()
+        xyzNamespace.getCreatedAt(),
+        xyzNamespace.getUpdatedAt()
     );
   }
 

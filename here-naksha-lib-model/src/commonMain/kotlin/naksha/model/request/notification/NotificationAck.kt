@@ -1,7 +1,6 @@
 package naksha.model.request.notification
 
 import naksha.model.request.Response
-import naksha.base.Int64
 import naksha.base.MapProxy
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
@@ -14,7 +13,7 @@ import kotlin.js.JsExport
 @OptIn(ExperimentalJsExport::class)
 @JsExport
 class NotificationAck(
-    val seqNumber: Int64,
+    val seqNumber: Long,
     val uid: Int,
     val handlerStates: MapProxy<String, Any>
 ) : Response() {

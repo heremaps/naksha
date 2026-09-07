@@ -3,14 +3,13 @@
 package naksha.model
 
 import naksha.base.AtomicMap
-import naksha.base.Int64
 import naksha.base.TupleNumber
 import naksha.base.WeakRef
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
 
 actual class TupleHeapCache : ITupleCache {
-    actual override val latencyInMicros: Int64
+    actual override val latencyInMicros: Long
         get() = LATENCY_MEMORY
 
     // TODO: Review Caffeine, we should use it!
@@ -22,7 +21,7 @@ actual class TupleHeapCache : ITupleCache {
     //       Eventually we should use all other available additional memory via weak-references for caching.
     //       All heap references should always be weak-referred to be collectable under memory pressure.
     //       The partial tuples should use only weak-references, they are very unhandy anyway and should be avoided.
-    private var tuplesByStorage = AtomicMap<Int64, AtomicMap<TupleNumber, WeakRef<Tuple>>>()
+    private var tuplesByStorage = AtomicMap<Long, AtomicMap<TupleNumber, WeakRef<Tuple>>>()
 
     actual override fun get(tupleNumber: TupleNumber): Tuple?
         = tuplesByStorage[tupleNumber.databaseNumber]?.get(tupleNumber)?.deref()
@@ -68,7 +67,7 @@ actual class TupleHeapCache : ITupleCache {
     actual override fun onStorageRemove(storage: IStorage) {
     }
 
-    actual override fun getDictReader(storageNumber: Int64): IDictReader? {
+    actual override fun getDictReader(storageNumber: Long): IDictReader? {
         // TODO: Implement me!
         return null
     }

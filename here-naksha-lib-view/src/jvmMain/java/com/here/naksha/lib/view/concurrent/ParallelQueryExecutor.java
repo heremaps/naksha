@@ -20,7 +20,6 @@ package com.here.naksha.lib.view.concurrent;
 
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.util.stream.Collectors.groupingBy;
-import static naksha.base.Platform.longToInt64;
 import static naksha.base.NakshaError.EXCEPTION;
 import static naksha.base.NakshaError.INTERNAL_ERROR;
 
@@ -32,7 +31,6 @@ import java.util.*;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
-import naksha.base.Int64;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.model.*;
@@ -107,7 +105,7 @@ public class ParallelQueryExecutor {
 
     final @NotNull Response readResponse = session.execute(readRequest);
     final FeatureTupleList featureTupleList = getFeatureTuples(readResponse);
-    final Int64 maxMicros = longToInt64(TimeUnit.SECONDS.toMicros(10));
+    final long maxMicros = TimeUnit.SECONDS.toMicros(10);
     Naksha.cache.load(featureTupleList, 0, featureTupleList.size(), maxMicros, true, true);
     log.info(
         "[View Request stats => streamId,layerId,method,status,timeTakenMs,fCnt] - ViewReqStats {} {} {} {} {} {}",

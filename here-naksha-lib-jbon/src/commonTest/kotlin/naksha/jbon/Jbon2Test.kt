@@ -241,45 +241,45 @@ class Jbon2Test {
 
     @Test
     fun testInt64FirstAboveInt32Max() {
-        val v = (Int.MAX_VALUE.toLong() + 1L).toInt64()
+        val v = Int.MAX_VALUE.toLong() + 1L
         val enc = singleEncode(v)
         assertEquals(9, enc.end, "Int64 above Int32 max must be 9 bytes")
         assertEquals(JB2_INT64.toByte(), enc.getInt8(0), "lead-in must be INT64")
         val decoded = singleDecode(enc)
-        assertIs<Int64>(decoded, "decoded value must be Int64")
-        assertEquals(Int.MAX_VALUE.toLong() + 1L, decoded.toLong())
+        assertIs<Long>(decoded, "decoded value must be Long")
+        assertEquals(Int.MAX_VALUE.toLong() + 1L, decoded)
     }
 
     @Test
     fun testInt64FirstBelowInt32Min() {
-        val v = (Int.MIN_VALUE.toLong() - 1L).toInt64()
+        val v = Int.MIN_VALUE.toLong() - 1L
         val enc = singleEncode(v)
         assertEquals(9, enc.end)
         val decoded = singleDecode(enc)
-        assertIs<Int64>(decoded)
-        assertEquals(Int.MIN_VALUE.toLong() - 1L, decoded.toLong())
+        assertIs<Long>(decoded)
+        assertEquals(Int.MIN_VALUE.toLong() - 1L, decoded)
     }
 
     @Test
     fun testInt64MaxValue() {
-        val enc = singleEncode(Long.MAX_VALUE.toInt64())
+        val enc = singleEncode(Long.MAX_VALUE)
         assertEquals(9, enc.end)
-        val decoded = singleDecode(enc) as Int64
-        assertEquals(Long.MAX_VALUE, decoded.toLong())
+        val decoded = singleDecode(enc) as Long
+        assertEquals(Long.MAX_VALUE, decoded)
     }
 
     @Test
     fun testInt64MinValue() {
-        val enc = singleEncode(Long.MIN_VALUE.toInt64())
+        val enc = singleEncode(Long.MIN_VALUE)
         assertEquals(9, enc.end)
-        val decoded = singleDecode(enc) as Int64
-        assertEquals(Long.MIN_VALUE, decoded.toLong())
+        val decoded = singleDecode(enc) as Long
+        assertEquals(Long.MIN_VALUE, decoded)
     }
 
     /** Values inside Int32 range must NOT use the 9-byte Int64 encoding. */
     @Test
     fun testInt64FallsBackToInt32ForSmallValues() {
-        val enc = singleEncode(Int.MAX_VALUE.toLong().toInt64())
+        val enc = singleEncode(Int.MAX_VALUE.toLong())
         assertEquals(5, enc.end, "Int.MAX_VALUE as Long should be encoded as Int32 (5 bytes), not Int64")
         assertEquals(Int.MAX_VALUE, singleDecode(enc))
     }
@@ -795,7 +795,7 @@ class Jbon2Test {
 
     @Test
     fun testTupleNumberHead() {
-        val tn = TupleNumber(Int64(0), 0, 0, Int64(0), Version.HEAD.number)
+        val tn = TupleNumber(0L, 0, 0, 0L, Version.HEAD.number)
         val enc = singleEncode(tn)
         assertEquals(33, enc.end, "TupleNumber must be exactly 33 bytes")
         assertEquals(JB2_TUPLE_NUMBER.toByte(), enc.getInt8(0), "lead-in must be TUPLE_NUMBER")
@@ -809,13 +809,13 @@ class Jbon2Test {
 
     @Test
     fun testTupleNumberRealisticValues() {
-        // Simulate realistic values: large Int64 storage number, negative catalog/collection from MD5 hash
+        // Simulate realistic values: large 64-bit storage number, negative catalog/collection from MD5 hash
         val tn = TupleNumber(
-            databaseNumber = Int64(0x8000000012345678UL.toLong()),
+            databaseNumber = 0x8000000012345678UL.toLong(),
             catalogNumber = -1234567890,
             collectionNumber = -987654321,
-            featureNumber = Int64(0x80000000ABCDEF00UL.toLong()),
-            version = Int64(42)
+            featureNumber = 0x80000000ABCDEF00UL.toLong(),
+            version = 42L
         )
         val enc = singleEncode(tn)
         assertEquals(33, enc.end)
@@ -831,11 +831,11 @@ class Jbon2Test {
     @Test
     fun testTupleNumberAllExtremes() {
         val tn = TupleNumber(
-            databaseNumber = Int64(Long.MIN_VALUE),
+            databaseNumber = Long.MIN_VALUE,
             catalogNumber = Int.MIN_VALUE,
             collectionNumber = Int.MAX_VALUE,
-            featureNumber = Int64(Long.MAX_VALUE),
-            version = Int64(Long.MIN_VALUE)
+            featureNumber = Long.MAX_VALUE,
+            version = Long.MIN_VALUE
         )
         val enc = singleEncode(tn)
         assertEquals(33, enc.end)
@@ -850,7 +850,7 @@ class Jbon2Test {
     @Test
     fun testTupleNumberUnitSize() {
         // Verify that JbDecoder2.unitSize() correctly reports 33 bytes for TUPLE_NUMBER
-        val tn = TupleNumber(Int64(1), 2, 3, Int64(4), Int64(5))
+        val tn = TupleNumber(1L, 2, 3, 4L, 5L)
         val enc = singleEncode(tn)
         val dec = JbDecoder2()
         val bin = Binary()
@@ -864,11 +864,11 @@ class Jbon2Test {
     @Test
     fun testTupleNumberExplicitEncodeDecode() {
         // Test the low-level encodeTupleNumber/decode path directly, bypassing encodeValue
-        val db = Int64(100)
+        val db = 100L
         val cat = -200
         val col = 300
-        val feat = Int64(-400)
-        val ver = Int64(500)
+        val feat = -400L
+        val ver = 500L
 
         val enc = JbEncoder2()
         enc.encodeTupleNumber(db, cat, col, feat, ver)
@@ -959,7 +959,7 @@ class Jbon2Test {
 
     @Test
     fun testJsonConversionLargeInt() {
-        // 2147483648 = Int.MAX_VALUE + 1; decoded as Int or Int64; either way must appear as a number.
+        // 2147483648 = Int.MAX_VALUE + 1; decoded as Int or Long; either way must appear as a number.
         val f = roundTrip("""{"id":"x","properties":{"big":2147483648}}""")
         val json = Platform.toJSON(f)
         assertTrue(json.contains("2147483648"), "large integer must appear numerically in JSON, not as a class name")

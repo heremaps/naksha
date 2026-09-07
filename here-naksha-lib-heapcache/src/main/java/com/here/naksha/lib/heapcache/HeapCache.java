@@ -18,7 +18,6 @@
  */
 package com.here.naksha.lib.heapcache;
 
-import naksha.base.Int64;
 import naksha.base.PlatformMap;
 import naksha.jbon.IDictManager;
 import naksha.model.*;
@@ -231,7 +230,7 @@ public class HeapCache implements IStorage {
 
   @NotNull
   @Override
-  public ILock enterLock(@NotNull String id, @NotNull Int64 waitMillis) {
+  public ILock enterLock(@NotNull String id, long waitMillis) {
     return null;
   }
 

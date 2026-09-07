@@ -129,7 +129,7 @@ open class StreamInfo() {
      * @param deltaMillis the amount of milliseconds to add or subtract.
      * @return this.
      */
-    open fun addTimeInStorage(deltaMillis: Int64): StreamInfo {
+    open fun addTimeInStorage(deltaMillis: Long): StreamInfo {
         timeInStorageMs.addAndGet(deltaMillis)
         return this
     }
@@ -138,7 +138,7 @@ open class StreamInfo() {
      * Returns the current timer value.
      * @return the current timer value.
      */
-    open fun getTimeInStorageMs(): Int64 = timeInStorageMs.get()
+    open fun getTimeInStorageMs(): Long = timeInStorageMs.get()
 
     /**
      * Internally used to print a value within [toColonSeparatedString].

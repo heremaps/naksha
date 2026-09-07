@@ -2,7 +2,6 @@
 
 package naksha.model
 
-import naksha.base.Int64
 import naksha.base.TupleNumber
 import naksha.jbon.IDictReader
 import naksha.model.request.FeatureTuple
@@ -14,7 +13,7 @@ import naksha.model.request.FeatureTuple
  * @since 3.0
  */
 actual class TupleHeapCache : ITupleCache {
-    actual override val latencyInMicros: Int64
+    actual override val latencyInMicros: Long
         get() = LATENCY_MEMORY
 
     actual override fun get(tupleNumber: TupleNumber): Tuple? {
@@ -41,7 +40,7 @@ actual class TupleHeapCache : ITupleCache {
         TODO("Not yet implemented")
     }
 
-    actual override fun getDictReader(storageNumber: Int64): IDictReader? {
+    actual override fun getDictReader(storageNumber: Long): IDictReader? {
         TODO("Not yet implemented")
     }
 

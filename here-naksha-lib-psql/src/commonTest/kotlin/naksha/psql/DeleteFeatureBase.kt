@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.Int64
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -91,8 +90,8 @@ abstract class DeleteFeatureBase(
     @Test
     fun tombstoneVersionMustCarryDeleteTransactionAndDeletedActionBits() {
         val featureId = "feature_version_bits_check"
-        val ACTION_MASK = Int64(3L)         // lower 2 bits
-        val ACTION_CLEAR = Int64(-4L)       // clear lower 2 bits
+        val ACTION_MASK = 3L         // lower 2 bits
+        val ACTION_CLEAR = -4L       // clear lower 2 bits
 
         // CREATE — capture the create-transaction's version (txn with lower 2 bits = 0 = CREATED).
         val createdTn = assertNotNull(
@@ -155,9 +154,10 @@ abstract class DeleteFeatureBase(
     @Test
     fun deleteWithoutHistoryButWithShadow() {
         // Create special test collection.
+        val collectionId = "${defaultName}_no_history_shadow"
         val createCollectionReq = WriteRequest().add(
             Write().createCollection(
-                NakshaCollection("delete_no_history_but_shadow", catalog.id)
+                NakshaCollection(collectionId, catalog.id)
                     .withStoreDeleted(StoreMode.ON)
                     .withStoreMeta(StoreMode.OFF)
                     .withStoreHistory(StoreMode.OFF)
@@ -168,7 +168,7 @@ abstract class DeleteFeatureBase(
         assertEquals(1, createCollectionResp.features.size)
         val collection = assertNotNull(createCollectionResp.features[0]).proxy(NakshaCollection::class)
         assertEquals(catalog.id, collection.catalogId)
-        assertEquals("delete_no_history_but_shadow", collection.id)
+        assertEquals(collectionId, collection.id)
 
         // Create feature.
         val featureId = "feature_to_delete_without_history"
@@ -194,7 +194,7 @@ abstract class DeleteFeatureBase(
     @Test
     fun writeRequestWithTwoWritesDifferentCollectionsExecutedCorrectly() {
         //create another collection
-        val otherCollectionId = "delete_two_collections"
+        val otherCollectionId = "${defaultName}_two_collections"
         val createCollectionReq =
             WriteRequest().add(Write().createCollection(NakshaCollection(otherCollectionId, catalog.id)))
         val createCollectionResp =
