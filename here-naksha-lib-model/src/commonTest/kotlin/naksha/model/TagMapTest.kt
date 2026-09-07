@@ -52,7 +52,7 @@ class TagMapTest {
 
         // Then:
         assertIs<NakshaException>(failure)
-        assertEquals("Tag values can only be String, Boolean or Number", failure.message)
+        assertTrue(failure.message?.startsWith("Tag values can only be String, Boolean or Number") ?: false, "Missing message")
     }
 
     @Test

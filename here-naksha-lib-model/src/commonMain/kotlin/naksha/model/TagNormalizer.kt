@@ -164,7 +164,7 @@ class TagNormalizer private constructor() {
                 is String -> "$key=$value"
                 is Boolean, is Long -> "$key:=$value"
                 is Number -> "$key:=${value.toDouble()}"
-                else -> throw illegalArg("Tag values can only be String, Boolean or Number, found: $value")
+                else -> throw illegalArg("Tag values can only be String, Boolean or Number, found: $key = $value")
             }
 
         private fun policyFor(tag: String): TagProcessingPolicy {
