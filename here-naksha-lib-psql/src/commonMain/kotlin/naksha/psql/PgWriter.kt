@@ -207,11 +207,10 @@ open class PgWriter internal constructor(
         val featureTuples = FeatureTupleList()
         featureTuples.setCapacity(writes.size)
         for (pgWrite in pgWrites) {
-            val i = pgWrite.i
             val tupleNumber = pgWrite.tupleNumber
-            val tuple = pgWrite.tuple
             if (tupleNumber != null) {
-                featureTuples[i] = if (tuple != null) FeatureTuple(tupleNumber, tuple) else FeatureTuple(tupleNumber)
+                val tuple = pgWrite.tuple
+                featureTuples[pgWrite.i] = if (tuple != null) FeatureTuple(tupleNumber, tuple) else FeatureTuple(tupleNumber)
             }
         }
         return featureTuples

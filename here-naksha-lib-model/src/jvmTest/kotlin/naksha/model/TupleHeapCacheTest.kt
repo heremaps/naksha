@@ -85,9 +85,11 @@ class TupleHeapCacheTest {
             held.add(putTuple(cache, tn))
             tns.add(tn)
         }
+        forceGc()
+        cache.gc()
 
         for (tn in tns) {
-            assertNotNull(cache.get(tn), "cache must return a stored, strongly-reachable tuple $tn")
+            assertNotNull(cache[tn], "cache must return a stored, strongly-reachable tuple $tn")
         }
         assertEquals(50, held.size)
     }
@@ -107,25 +109,5 @@ class TupleHeapCacheTest {
         assertEquals(1, loaded, "load must report one filled feature-tuple")
         assertNotNull(featureTuple.tuple, "load must fill the tuple from the cache")
         assertSame(cache, featureTuple.source, "load must record the serving cache as the source")
-    }
-
-    @Test
-    fun gcKeepsStronglyReachableTuples() {
-        val cache = TupleHeapCache.getInstance()
-        cache.clear()
-
-        val held = ArrayList<Tuple>()
-        val tns = ArrayList<TupleNumber>()
-        for (i in 0 until 10) {
-            val tn = tupleNumber(featureNumber = 1000 + i.toLong())
-            held.add(putTuple(cache, tn)) // keep a strong reference
-            tns.add(tn)
-        }
-        cache.gc()
-
-        for (tn in tns) {
-            assertNotNull(cache.get(tn), "gc() must not drop a strongly-reachable tuple $tn")
-        }
-        assertEquals(10, held.size)
     }
 }
