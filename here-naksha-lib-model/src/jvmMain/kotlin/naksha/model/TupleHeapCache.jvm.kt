@@ -73,8 +73,11 @@ actual class TupleHeapCache : ITupleCache {
 
     actual override fun gc() {
         for (storageTuples in tuplesByStorage.values) {
-            val dead = storageTuples.entries.filter { it.value.get() == null }
-            for (entry in dead) storageTuples.remove(entry.key, entry.value)
+            for ((tn, tupleSoftRef) in storageTuples) {
+                if (tupleSoftRef.get() == null) {
+                    storageTuples.remove(tn, tupleSoftRef)
+                }
+            }
         }
     }
 
