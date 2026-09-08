@@ -254,7 +254,7 @@ public class NakshaHub implements INaksha {
     });
   }
 
-  static WriteRequest upsertAdminCollectionsRequest(@NotNull String adminMapId) {
+  private static WriteRequest upsertAdminCollectionsRequest(@NotNull String adminMapId) {
     final WriteRequest writeRequest = new WriteRequest();
     for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
       writeRequest.add(new Write().upsertCollection(

@@ -34,11 +34,14 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.EndPipelineHandler;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
@@ -57,6 +60,7 @@ import java.util.Objects;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
+import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
 import naksha.model.objects.IndexList;
 import naksha.model.objects.NakshaCollection;
@@ -64,6 +68,7 @@ import naksha.model.objects.NakshaStorage;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ReadFeatures;
 import naksha.model.request.ReadRequest;
+import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.MethodOrderer;
@@ -72,6 +77,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -112,12 +118,36 @@ class NakshaHubWiringTest extends AbstractTest {
   @Order(0)
   void adminCollectionsUseSlimIndices() {
     final String adminMapId = "admin_map";
-    final WriteRequest request = NakshaHub.upsertAdminCollectionsRequest(adminMapId);
+    final IStorage storage = mock(IStorage.class);
+    final IWriteSession writer = mock(IWriteSession.class);
+    when(storage.newWriteSession(any())).thenReturn(writer);
+    doCallRealMethod().when(storage).runInWriteSession(any(), any());
+    when(writer.execute(any(WriteRequest.class))).thenAnswer(ignored -> new SuccessResponse());
+    final NakshaHubConfig config = mock(NakshaHubConfig.class);
+    when(config.getId()).thenReturn("test-config");
+    when(config.getMaxParallelRequestsPerCPU()).thenReturn(30);
+    when(config.getMaxPctParallelRequestsPerActor()).thenReturn(25);
+
+    final NakshaContext previousContext = NakshaContext.currentContext();
+    try (MockedStatic<Naksha> naksha = mockStatic(Naksha.class);
+         MockedStatic<AbstractTask> tasks = mockStatic(AbstractTask.class)) {
+      naksha.when(() -> Naksha.useStorage(any(NakshaStorage.class))).thenReturn(storage);
+      newTestNakshaContext();
+      new NakshaHub(
+              adminMapId, "admin_storage", "jdbc:postgresql://unused/admin?user=test&password=test", config, config.getId());
+    } finally {
+      previousContext.attachToCurrentThread();
+    }
+
+    // Initialization writes the map, its admin collections, and the supplied Hub config.
+    final ArgumentCaptor<WriteRequest> reqCaptor = ArgumentCaptor.forClass(WriteRequest.class);
+    verify(writer, times(3)).execute(reqCaptor.capture());
+    final WriteRequest request = reqCaptor.getAllValues().get(1);
 
     assertEquals(ALL_HUB_INTERNAL_COLLECTIONS.size(), request.getWrites().size());
     for (int i = 0; i < request.getWrites().size(); i++) {
       final NakshaCollection collection =
-          assertInstanceOf(NakshaCollection.class, request.getWrites().get(i).getFeature());
+              assertInstanceOf(NakshaCollection.class, request.getWrites().get(i).getFeature());
       assertEquals(ALL_HUB_INTERNAL_COLLECTIONS.get(i), collection.getId());
       assertEquals(adminMapId, collection.getCatalogId());
       assertSlimIndices(collection);
