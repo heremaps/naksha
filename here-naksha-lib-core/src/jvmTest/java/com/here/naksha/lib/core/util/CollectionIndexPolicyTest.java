@@ -30,13 +30,14 @@ class CollectionIndexPolicyTest {
     assertEquals(XyzMembers.XyzTags.getName(), first.get(0).getOn().get(0));
     assertEquals("geo", first.get(1).getName());
     assertEquals(StandardMembers.Geometry.getName(), first.get(1).getOn().get(0));
-    final Index nv = first.get(2);
-    assertEquals("nv", nv.getName());
-    assertEquals(1, nv.getOn().size());
-    assertEquals(StandardMembers.NextVersion.getName(), nv.getOn().get(0));
-    assertNull(nv.getInclude());
-    assertFalse(nv.isUnique());
-    assertFalse(nv.isConditional());
+    final Index fnNv = first.get(2);
+    assertEquals("fn_nv", fnNv.getName());
+    assertEquals(2, fnNv.getOn().size());
+    assertEquals(StandardMembers.FeatureNumber.getName(), fnNv.getOn().get(0));
+    assertEquals(StandardMembers.NextVersion.getName(), fnNv.getOn().get(1));
+    assertNull(fnNv.getInclude());
+    assertFalse(fnNv.isUnique());
+    assertFalse(fnNv.isConditional());
     assertSame(XyzIndices.XyzTags, first.get(0));
     assertSame(StandardIndices.Geometry, first.get(1));
     assertNotSame(first.get(2), second.get(2));
@@ -56,7 +57,7 @@ class CollectionIndexPolicyTest {
     assertNull(source.getIndices());
     assertEquals("target_collection", normalized.getId());
     assertEquals("target_catalog", normalized.getCatalogId());
-    assertIndexNames(normalized, "tags", "geo", "nv");
+    assertIndexNames(normalized, "tags", "geo", "fn_nv");
   }
 
   @Test
@@ -113,7 +114,7 @@ class CollectionIndexPolicyTest {
 
     assertEquals("target_collection", collection.getId());
     assertEquals("target_catalog", collection.getCatalogId());
-    assertIndexNames(collection, "tags", "geo", "nv");
+    assertIndexNames(collection, "tags", "geo", "fn_nv");
   }
 
   private static void assertIndexNames(

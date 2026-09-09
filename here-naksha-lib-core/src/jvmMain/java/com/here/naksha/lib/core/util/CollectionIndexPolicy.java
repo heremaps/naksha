@@ -17,7 +17,7 @@ public final class CollectionIndexPolicy {
     return IndexList.of(
         XyzIndices.XyzTags,
         StandardIndices.Geometry,
-        new Index("nv", StandardMembers.NextVersion.getName()));
+        new Index("fn_nv", StandardMembers.FeatureNumber.getName(), StandardMembers.NextVersion.getName()));
   }
 
   public static @NotNull NakshaCollection hubSlimCollection(

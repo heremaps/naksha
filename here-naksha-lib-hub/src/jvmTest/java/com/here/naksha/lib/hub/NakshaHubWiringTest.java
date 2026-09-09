@@ -227,7 +227,7 @@ class NakshaHubWiringTest extends AbstractTest {
     assertEquals(3, indices.size());
     assertEquals("tags", indices.get(0).getName());
     assertEquals("geo", indices.get(1).getName());
-    assertEquals("nv", indices.get(2).getName());
+    assertEquals("fn_nv", indices.get(2).getName());
   }
 
   @Test
