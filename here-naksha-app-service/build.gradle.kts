@@ -72,3 +72,29 @@ tasks {
 }
 setOverallCoverage(0.0) // only increasing allowed!
 
+
+val openApiFile = project.projectDir.resolve("src/jvmMain/resources/swagger/openapi.yaml")
+tasks.register("updateOpenApiYaml") {
+    doLast {
+        if (!openApiFile.exists()) throw GradleException("openapi.yaml not found: ${openApiFile.path}")
+        val content = openApiFile.readText()
+        val currentVersionRegex = Regex("  version: \"([^\"]+)\"")
+        val match = currentVersionRegex.find(content)
+        val existingVersion = match?.groupValues?.get(1)
+        val newVersion = project.version.toString()
+        if (existingVersion == newVersion) {
+            println("✅ 'openapi.yaml' is up to date: $newVersion")
+        } else {
+            val updated = content.replace(
+                Regex("  version: \"[^\"]+\""),
+                "  version: \"${project.version}\""
+            )
+            openApiFile.writeText(updated)
+            println("✅ Updated 'openapi.yaml' to ${project.version} in ${openApiFile.path}")
+        }
+    }
+}
+
+tasks.named("jvmProcessResources") {
+    dependsOn("updateOpenApiYaml")
+}
