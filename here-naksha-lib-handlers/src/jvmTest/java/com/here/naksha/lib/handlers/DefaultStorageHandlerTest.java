@@ -11,8 +11,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -23,6 +25,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import com.here.naksha.lib.core.util.CollectionIndexPolicy;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerTest.CollectionPriorityTestCase.ValidCollectionSource;
 import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import java.util.List;
@@ -65,11 +68,14 @@ import org.junit.jupiter.api.Named;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -235,6 +241,77 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertNull(handler.properties.getCollection().getIndices(), "Handler collection config must not be mutated");
   }
 
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void shouldNotNormalizeCollectionForSuccessfulFeatureRequests(boolean read) {
+    when(storageReadSession.execute(any(ReadFeatures.class))).thenReturn(new SuccessResponse());
+    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteFeaturesRequest)))
+        .thenReturn(new SuccessResponse());
+    DefaultStorageHandler handler = storageHandler();
+    NakshaCollection configuredCollection = handler.properties.getCollection();
+    String originalCatalogId = configuredCollection.getCatalogId();
+    Request request = read ? readRandomFeature() : writeRandomFeature();
+
+    try (MockedStatic<CollectionIndexPolicy> policy =
+        mockStatic(CollectionIndexPolicy.class, CALLS_REAL_METHODS)) {
+      Response response = handler.processEvent(event(request));
+      assertInstanceOf(SuccessResponse.class, response);
+      policy.verifyNoInteractions();
+    }
+
+    assertEquals(originalCatalogId, configuredCollection.getCatalogId());
+    assertNull(configuredCollection.getIndices());
+    verify(storageWriteSession, never()).execute(argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void shouldNormalizeCollectionOnlyWhenAutoCreationIsNeeded(boolean read) {
+    DefaultStorageHandler handler = storageHandler();
+    NakshaCollection configuredCollection = handler.properties.getCollection();
+    String originalCatalogId = configuredCollection.getCatalogId();
+    Request request = read ? readRandomFeature() : writeRandomFeature();
+
+    try (MockedStatic<CollectionIndexPolicy> policy =
+        mockStatic(CollectionIndexPolicy.class, CALLS_REAL_METHODS)) {
+      Answer<Response> missingCollection = invocation -> {
+        policy.verifyNoInteractions();
+        return new ErrorResponse(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
+      };
+      if (read) {
+        when(storageReadSession.execute(any(ReadFeatures.class)))
+            .thenAnswer(missingCollection)
+            .thenReturn(new SuccessResponse());
+      } else {
+        when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteFeaturesRequest)))
+            .thenAnswer(missingCollection)
+            .thenReturn(new SuccessResponse());
+      }
+      when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest)))
+          .thenReturn(new SuccessResponse());
+
+      Response response = handler.processEvent(event(request));
+      assertInstanceOf(SuccessResponse.class, response);
+      policy.verify(() -> CollectionIndexPolicy.normalizeForHubCreation(
+          configuredCollection, configuredCollection.getId(), "test_map_id"), times(1));
+    }
+
+    ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
+    if (read) {
+      verify(storageWriteSession).execute(captor.capture());
+      verify(storageReadSession, times(2)).execute(any(ReadFeatures.class));
+    } else {
+      verify(storageWriteSession, times(3)).execute(captor.capture());
+    }
+    NakshaCollection created = collectionFrom(findSingleCreateCollectionWrite(captor.getAllValues()));
+    assertEquals(configuredCollection.getId(), created.getId());
+    assertEquals("test_map_id", created.getCatalogId());
+    assertIndexNames(created, "tags", "geo", "fn_nv");
+    assertNotSame(configuredCollection, created);
+    assertEquals(originalCatalogId, configuredCollection.getCatalogId());
+    assertNull(configuredCollection.getIndices());
+  }
+
   @Test
   void shouldPreserveExplicitEmptyIndicesWhenCreatingMissingCollection() {
     NakshaError missingCollectionError = new NakshaError(COLLECTION_NOT_FOUND, "Missing collection");
@@ -298,10 +375,13 @@ class DefaultStorageHandlerTest extends AbstractTest {
     handler.properties.setAutoCreateCollection(false);
 
     // When: Processing write features
-    ignoreExceptionsFrom(
-        () -> handler.processEvent(event(writeXyzFeatures)),
-        "The mock for storage writer is already configured to always fail - it's ok to allow this as we only want to check invocations"
-    );
+    try (MockedStatic<CollectionIndexPolicy> policy =
+        mockStatic(CollectionIndexPolicy.class, CALLS_REAL_METHODS)) {
+      Response response = handler.processEvent(event(writeXyzFeatures));
+      assertInstanceOf(ErrorResponse.class, response);
+      assertEquals(NakshaError.NOT_FOUND, ((ErrorResponse) response).getError().getCode());
+      policy.verifyNoInteractions();
+    }
 
     // Then: No Write Collection request was passed to storage writer
     verify(storageWriteSession, never()).execute(argThat(matchesCreateCollectionRequest()));
@@ -534,9 +614,12 @@ class DefaultStorageHandlerTest extends AbstractTest {
     handlerProperties.setCollection(null);
     DefaultStorageHandler handler = storageHandler(handlerProperties, testSpace());
 
-    Response response = handler.processEvent(event(request));
-
-    assertInstanceOf(SuccessResponse.class, response);
+    try (MockedStatic<CollectionIndexPolicy> policy =
+        mockStatic(CollectionIndexPolicy.class, CALLS_REAL_METHODS)) {
+      assertInstanceOf(SuccessResponse.class, handler.processEvent(event(request)));
+      policy.verify(() -> CollectionIndexPolicy.normalizeForHubCreation(
+          requestCollection, "request_collection", mapId), times(1));
+    }
     Write submittedWrite = request.getWrites().get(0);
     assertNotSame(requestCollection, submittedWrite.getFeature());
     NakshaCollection normalized = (NakshaCollection) submittedWrite.getFeature();

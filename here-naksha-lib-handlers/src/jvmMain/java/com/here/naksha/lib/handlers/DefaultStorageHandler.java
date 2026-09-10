@@ -121,10 +121,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       String collectionId = collection.getId();
       String mapId = extractMapIdFromStorageProps(storageImpl);
       normalizeWriteRequest(request, mapId, collectionId);
-      NakshaCollection collectionForCreation =
-          CollectionIndexPolicy.normalizeForHubCreation(collection, collectionId, mapId);
       OperationData operationData = new OperationData(
-          sessionOptions, storageImpl, mapId, collectionId, collectionForCreation, request);
+          sessionOptions, storageImpl, mapId, collectionId, collection, request);
       return forwardRequestToStorage(operationData, FIRST_ATTEMPT, storageTimer);
     } catch (NakshaException ne) {
       return new ErrorResponse(ne.getError());
@@ -468,13 +466,15 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           operationData.getCollectionId());
+      final NakshaCollection collectionForCreation = CollectionIndexPolicy.normalizeForHubCreation(
+          operationData.getCollection(), operationData.getCollectionId(), operationData.getMapId());
       Response createCollectionResp = measuredStorageSupplier(
           () -> createMissingCollection(
               operationData.getSessionOptions(),
               operationData.getStorageImpl(),
               operationData.getMapId(),
               operationData.getCollectionId(),
-              operationData.getCollection()),
+              collectionForCreation),
           storageTimer);
       if (createCollectionResp instanceof SuccessResponse) {
         logger.info("Created collection {}, forwarding the request once again", operationData.getCollectionId());
