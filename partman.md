@@ -122,8 +122,9 @@ mandatory root `UNIQUE (fn, nv) INCLUDE (version)` includes the root `nv` key
 and every child `(fn, nv)` index includes its child `fn` range key; PostgreSQL
 can therefore enforce the requested collection-wide uniqueness normally.
 
-Install a schema-qualified immutable SQL function, for use by direct SQL users
-and internally at every SQL boundary:
+Install schema-qualified immutable SQL functions. `bswap8` is the low-level
+primitive; direct SQL users and Naksha SQL should use `fn_to_int8` and
+`int8_to_fn` so the sign-bit normalization remains an internal detail:
 
 ```sql
 CREATE OR REPLACE FUNCTION "naksha~admin".bswap8(v int8) RETURNS int8
@@ -138,13 +139,25 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
         | get_byte(b,0)::int8 << 56)
   FROM (SELECT int8send(v) AS b) s
 $$;
+
+CREATE OR REPLACE FUNCTION "naksha~admin".fn_to_int8(fn int8) RETURNS int8
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+  SELECT "naksha~admin".bswap8(fn) # (-9223372036854775808::int8)
+$$;
+
+CREATE OR REPLACE FUNCTION "naksha~admin".int8_to_fn(value int8) RETURNS int8
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+  SELECT "naksha~admin".bswap8(value # (-9223372036854775808::int8))
+$$;
 ```
 
-The Kotlin/JVM/JS implementations should use the equivalent byte-swap plus
-sign-bit flip instead of calling this SQL function per row. All query bind
-values that compare `fn`, all `fn` values read from storage, and all direct-SQL
-examples must convert at the boundary. `fn` remains logical everywhere in the
-Naksha API and tuple encoding; only the PostgreSQL column is physical.
+`fn_to_int8` converts the logical Naksha feature number to its stored PostgreSQL
+value; `int8_to_fn` is its inverse. The Kotlin/JVM/JS implementations should
+use the equivalent conversion instead of calling the SQL functions per row. All
+query bind values that compare `fn`, all `fn` values read from storage, and all
+direct-SQL examples must convert at the boundary. `fn` remains logical
+everywhere in the Naksha API and tuple encoding; only the PostgreSQL column is
+physical.
 
 ## Partition-Number Contract Change
 
@@ -328,8 +341,9 @@ Work:
    logical HEAD partition, not a catch-all table.
 10. Store `fn` using the reversible range-sort encoding described in
     [Feature-Number Storage and Range Subpartitioning](#feature-number-storage-and-range-subpartitioning).
-    Install `"naksha~admin".bswap8(int8)` in the initialization SQL and add
-    equivalent Kotlin/JS conversion helpers.
+    Install `"naksha~admin".bswap8(int8)`, `fn_to_int8(int8)`, and
+    `int8_to_fn(int8)` in the initialization SQL and add equivalent Kotlin/JS
+    conversion helpers.
 11. For performance partitioning, create and supply a partman template that
     makes each finite-`nv` child `PARTITION BY RANGE (fn)`, then creates the
     `N` leaf ranges from the encoded low-byte bounds. The physical `fn` column,
