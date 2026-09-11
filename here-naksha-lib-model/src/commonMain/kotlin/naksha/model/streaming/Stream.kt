@@ -90,13 +90,20 @@ abstract class Stream(
 ) : Iterator<StreamChunk>, AutoCloseable {
 
     /**
-     * Returns an array of not yet acknowledged _(outstanding)_ [chunks][StreamChunk].
+     * An array of not yet acknowledged _(outstanding)_ [chunks][StreamChunk].
      *
-     * The method is intended only for logs or CLI tool reporting of the current status.
-     * @return an array of not yet acknowledged stream _(outstanding)_ [chunks][StreamChunk].
+     * This is intended only for logs or CLI tool reporting of the current status.
      * @since 3.0
      */
-    abstract fun unacknowledged(): Array<StreamChunk>
+    abstract val unacknowledgedChunks: Array<StreamChunk>
+
+    /**
+     * An array of [chunks][StreamChunk] that have been acknowledges, but are pending. That means, the current restoration point was not yet forwarded, because some still outstanding [chunk(s)][StreamChunk] prevent this. Ones the outstanding and blocking unacknowledged [chunk(s)][StreamChunk] is/are acknowledged, these chunks will be removed from pending list.
+     *
+     * This is intended only for logs or CLI tool reporting of the current status.
+     * @since 3.0
+     */
+    abstract val acknowledgedChunks: Array<StreamChunk>
 
     /**
      * If the stream is generally recoverable in an error case.
