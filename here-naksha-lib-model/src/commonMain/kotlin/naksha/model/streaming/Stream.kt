@@ -68,6 +68,7 @@ import kotlin.time.Duration
  * #### Note
  * The example code is based upon JVM version 24+, because between 21 _(including)_ and 24 _(excluding)_ the virtual threads have a severe bug with synchronized methods and synchronization blocks, see [JEPS-491](https://openjdk.org/jeps/491) and [JDK-8337395](https://bugs.openjdk.org/browse/JDK-8337395)!
  *
+ * #### More details
  * It is the responsibility of the stream to decide in which order it is safe to consume chunks.
  *
  * For transactions, it is safe to process them in parallel if they do not impact each other. That means, as long as transactions do not contain the same features as any other yet unacknowledged transaction, they can be written in parallel.
