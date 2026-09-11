@@ -57,7 +57,7 @@ import kotlin.time.Duration
  * }
  * ```
  *
- * This allows to read ones and write in parallel into multiple targets _(e.g. into S3 and multiple replication databases)_. For each writer the reader forwards the read [chunk][StreamChunk] to, it should increment [StreamChunk.acknowledgeCount] by one, before handing it over.
+ * This allows to read ones and write in parallel into multiple targets _(e.g. into S3 and multiple replication databases)_. For each writer the reader forwards the read [chunk][StreamChunk] to, it should increment the [acknowledgeCount][StreamChunk.acknowledgeCount] by one before handing it over.
  *
  * #### Warning
  * The example code is based upon JVM version 24+, because between 21 _(including)_ and 24 _(excluding)_ the virtual threads have a severe bug with synchronized methods and synchronization blocks, see [JEPS-491](https://openjdk.org/jeps/491) and [JDK-8337395](https://bugs.openjdk.org/browse/JDK-8337395)!
@@ -98,12 +98,40 @@ abstract class Stream(
     abstract val unacknowledgedChunks: Array<StreamChunk>
 
     /**
-     * An array of [chunks][StreamChunk] that have been acknowledges, but are pending. That means, the current restoration point was not yet forwarded, because some still outstanding [chunk(s)][StreamChunk] prevent this. Ones the outstanding and blocking unacknowledged [chunk(s)][StreamChunk] is/are acknowledged, these chunks will be removed from pending list.
+     * An array of [chunks][StreamChunk] that have been acknowledged, but are pending. That means, the current restoration point was not yet forwarded, because some still outstanding [chunks][StreamChunk] prevent this. Ones the outstanding and blocking [chunks][StreamChunk] are acknowledged, the pending [chunks][StreamChunk] will be removed from this list.
      *
      * This is intended only for logs or CLI tool reporting of the current status.
      * @since 3.0
      */
     abstract val acknowledgedChunks: Array<StreamChunk>
+
+    /**
+     * The estimated total amount of chunks that will be streamed.
+     *
+     * This is only an educated guess by the storage, it can be adjusted while streaming. A storage can return `-1` if it has simply no clue what to expect _(or not yet a clue)_. This is intended only for logs or CLI tool reporting of the current status.
+     * @since 3.0
+     */
+    abstract val estimatedChunks: Long
+
+    /**
+     * The estimated total amount of tuples _(feature states)_ that will be streamed.
+     *
+     * This is only an educated guess by the storage, it can be adjusted while streaming. A storage can return `-1` if it has simply no clue what to expect _(or not yet a clue)_. This is intended only for logs or CLI tool reporting of the current status.
+     * @since 3.0
+     */
+    abstract val estimatedTuples: Long
+
+    /**
+     * The amount of tuple _(feature states)_ that have been successfully read and acknowledged by the processors.
+     * @since 3.0
+     */
+    abstract val acknowledgedTuples: Long
+
+    /**
+     * The amount of tuple _(feature states)_ that have been read, but not yet fully acknowledged by the processors.
+     * @since 3.0
+     */
+    abstract val unacknowledgedTuples: Long
 
     /**
      * If the stream is generally recoverable in an error case.
