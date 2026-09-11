@@ -258,7 +258,7 @@ public class NakshaHub implements INaksha {
     final WriteRequest writeRequest = new WriteRequest();
     for (String adminCollectionId : ALL_HUB_INTERNAL_COLLECTIONS) {
       writeRequest.add(new Write().upsertCollection(
-          CollectionIndexPolicy.hubSlimCollection(adminCollectionId, adminMapId)));
+          CollectionIndexPolicy.normalizeForHubCreation(adminCollectionId, adminMapId)));
     }
     return writeRequest;
   }

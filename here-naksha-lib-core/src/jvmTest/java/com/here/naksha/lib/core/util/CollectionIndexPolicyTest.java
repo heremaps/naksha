@@ -9,6 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import naksha.model.objects.Index;
 import naksha.model.objects.IndexList;
 import naksha.model.objects.Member;
+import naksha.model.objects.MemberList;
 import naksha.model.objects.MemberType;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.StandardIndices;
@@ -16,6 +17,8 @@ import naksha.model.objects.StandardMembers;
 import naksha.model.objects.XyzIndices;
 import naksha.model.objects.XyzMembers;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class CollectionIndexPolicyTest {
 
@@ -44,77 +47,77 @@ class CollectionIndexPolicyTest {
   }
 
   @Test
-  void normalizeForHubCreationDefaultsNullMembersAndIndicesOnADeepCopy() {
+  void normalizeForHubCreationDefaultsNullMembersAndIndicesInPlace() {
     final NakshaCollection source = new NakshaCollection("source_collection", "source_catalog");
 
-    final NakshaCollection normalized =
-        CollectionIndexPolicy.normalizeForHubCreation(source, "target_collection", "target_catalog");
+    final NakshaCollection normalized = CollectionIndexPolicy.normalizeForHubCreation(source);
 
-    assertNotSame(source, normalized);
+    assertSame(source, normalized);
     assertEquals("source_collection", source.getId());
     assertEquals("source_catalog", source.getCatalogId());
+    assertNull(source.getDatabaseId());
     assertNull(source.getMembers());
-    assertNull(source.getIndices());
-    assertEquals("target_collection", normalized.getId());
-    assertEquals("target_catalog", normalized.getCatalogId());
-    assertIndexNames(normalized, "tags", "geo", "fn_nv");
+    assertIndexNames(source, "tags", "geo", "fn_nv");
   }
 
   @Test
-  void normalizeForHubCreationPreservesExplicitEmptyIndicesOnADeepCopy() {
+  void normalizeForHubCreationPreservesExplicitEmptyIndicesInPlace() {
     final NakshaCollection source = new NakshaCollection("source_collection", "source_catalog")
         .withIndices(new IndexList());
+    final IndexList indices = source.getIndices();
 
-    final NakshaCollection normalized =
-        CollectionIndexPolicy.normalizeForHubCreation(source, "target_collection", "target_catalog");
+    final NakshaCollection normalized = CollectionIndexPolicy.normalizeForHubCreation(source);
 
-    assertNotSame(source, normalized);
-    assertNotSame(source.getIndices(), normalized.getIndices());
-    assertEquals(0, source.getIndices().size());
+    assertSame(source, normalized);
+    assertSame(indices, normalized.getIndices());
     assertEquals(0, normalized.getIndices().size());
   }
 
   @Test
-  void normalizeForHubCreationPreservesCustomIndicesOnADeepCopy() {
+  void normalizeForHubCreationPreservesCustomIndicesInPlace() {
     final Index customIndex = new Index("custom", "score");
     final NakshaCollection source = new NakshaCollection("source_collection", "source_catalog")
+        .withMembers(new Member("score", MemberType.INT64, null))
         .withIndices(customIndex);
+    final IndexList indices = source.getIndices();
+    final Index storedCustomIndex = source.getIndices().get(0);
 
-    final NakshaCollection normalized =
-        CollectionIndexPolicy.normalizeForHubCreation(source, "target_collection", "target_catalog");
+    final NakshaCollection normalized = CollectionIndexPolicy.normalizeForHubCreation(source);
 
-    assertNotSame(source, normalized);
-    assertNotSame(source.getIndices(), normalized.getIndices());
-    assertNotSame(source.getIndices().get(0), normalized.getIndices().get(0));
-    assertIndexNames(source, "custom");
+    assertSame(source, normalized);
+    assertSame(indices, normalized.getIndices());
+    assertSame(storedCustomIndex, normalized.getIndices().get(0));
     assertIndexNames(normalized, "custom");
     assertEquals("score", normalized.getIndices().get(0).getOn().get(0));
   }
 
   @Test
-  void normalizeForHubCreationUsesEmptyIndicesForExplicitMembers() {
-    final Member customMember = new Member("score", MemberType.INT64, null);
-    final NakshaCollection source = new NakshaCollection("source_collection", "source_catalog")
-        .withMembers(customMember);
+  void normalizeForHubCreationBuildsNewCollectionFromIds() {
+    final NakshaCollection first = CollectionIndexPolicy.normalizeForHubCreation(
+        "target_collection", "target_catalog");
+    final NakshaCollection second = CollectionIndexPolicy.normalizeForHubCreation(
+        "target_collection", "target_catalog");
 
-    final NakshaCollection normalized =
-        CollectionIndexPolicy.normalizeForHubCreation(source, "target_collection", "target_catalog");
-
-    assertNull(source.getIndices());
-    assertNotSame(source.getMembers(), normalized.getMembers());
-    assertEquals("score", source.getMembers().get(0).getName());
-    assertEquals("score", normalized.getMembers().get(0).getName());
-    assertEquals(0, normalized.getIndices().size());
+    assertEquals("target_collection", first.getId());
+    assertEquals("target_catalog", first.getCatalogId());
+    assertNull(first.getDatabaseId());
+    assertNull(first.getMembers());
+    assertIndexNames(first, "tags", "geo", "fn_nv");
+    assertNotSame(first, second);
+    assertNotSame(first.getIndices(), second.getIndices());
   }
 
   @Test
-  void hubSlimCollectionDelegatesToHubCreationNormalization() {
-    final NakshaCollection collection =
-        CollectionIndexPolicy.hubSlimCollection("target_collection", "target_catalog");
+  void normalizeForHubCreationPreservesDefaultsOnRepeatedCalls() {
+    final NakshaCollection collection = CollectionIndexPolicy.normalizeForHubCreation(
+        "target_collection", "target_catalog");
+    final IndexList indices = collection.getIndices();
 
-    assertEquals("target_collection", collection.getId());
-    assertEquals("target_catalog", collection.getCatalogId());
-    assertIndexNames(collection, "tags", "geo", "fn_nv");
+    final NakshaCollection normalized = CollectionIndexPolicy.normalizeForHubCreation(collection);
+
+    assertSame(collection, normalized);
+    assertSame(indices, normalized.getIndices());
+    assertIndexNames(normalized, "tags", "geo", "fn_nv");
   }
 
   private static void assertIndexNames(

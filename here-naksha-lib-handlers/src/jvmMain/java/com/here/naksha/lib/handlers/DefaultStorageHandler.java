@@ -466,8 +466,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           operationData.getCollectionId());
-      final NakshaCollection collectionForCreation = CollectionIndexPolicy.normalizeForHubCreation(
-          operationData.getCollection(), operationData.getCollectionId(), operationData.getMapId());
+      final NakshaCollection collectionForCreation = operationData.getCollection();
+      collectionForCreation.setId(operationData.getCollectionId());
+      collectionForCreation.setCatalogId(operationData.getMapId());
+      CollectionIndexPolicy.normalizeForHubCreation(collectionForCreation);
       Response createCollectionResp = measuredStorageSupplier(
           () -> createMissingCollection(
               operationData.getSessionOptions(),
@@ -540,8 +542,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         wr.getWrites().forEach(write -> {
           if (write.getFeature() instanceof NakshaCollection) {
             final NakshaCollection collectionFromRequest = (NakshaCollection) write.getFeature();
-            write.setFeature(CollectionIndexPolicy.normalizeForHubCreation(
-                collectionFromRequest, collectionId, mapId));
+            collectionFromRequest.setId(collectionId);
+            collectionFromRequest.setCatalogId(mapId);
+            CollectionIndexPolicy.normalizeForHubCreation(collectionFromRequest);
           }
         });
       }

@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Named.named;
 import static org.mockito.ArgumentMatchers.any;
@@ -237,8 +238,10 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: passed Write Collection request was about creating collection defined in Handler properties
     assertEquals(WriteOp.CREATE, capturedCollectionWrite.getOp());
     assertEquals(handler.properties.getCollection().getId(), capturedCollectionWrite.getId());
-    assertIndexNames(collectionFrom(capturedCollectionWrite), "tags", "geo", "fn_nv");
-    assertNull(handler.properties.getCollection().getIndices(), "Handler collection config must not be mutated");
+    NakshaCollection created = collectionFrom(capturedCollectionWrite);
+    assertSame(handler.properties.getCollection(), created);
+    assertEquals("test_map_id", created.getCatalogId());
+    assertIndexNames(created, "tags", "geo", "fn_nv");
   }
 
   @ParameterizedTest
@@ -276,6 +279,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
         mockStatic(CollectionIndexPolicy.class, CALLS_REAL_METHODS)) {
       Answer<Response> missingCollection = invocation -> {
         policy.verifyNoInteractions();
+        assertEquals(originalCatalogId, configuredCollection.getCatalogId());
+        assertNull(configuredCollection.getIndices());
         return new ErrorResponse(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection"));
       };
       if (read) {
@@ -292,8 +297,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
       Response response = handler.processEvent(event(request));
       assertInstanceOf(SuccessResponse.class, response);
-      policy.verify(() -> CollectionIndexPolicy.normalizeForHubCreation(
-          configuredCollection, configuredCollection.getId(), "test_map_id"), times(1));
+      policy.verify(() -> CollectionIndexPolicy.normalizeForHubCreation(configuredCollection), times(1));
     }
 
     ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
@@ -304,12 +308,12 @@ class DefaultStorageHandlerTest extends AbstractTest {
       verify(storageWriteSession, times(3)).execute(captor.capture());
     }
     NakshaCollection created = collectionFrom(findSingleCreateCollectionWrite(captor.getAllValues()));
+    assertSame(configuredCollection, created);
     assertEquals(configuredCollection.getId(), created.getId());
     assertEquals("test_map_id", created.getCatalogId());
     assertIndexNames(created, "tags", "geo", "fn_nv");
-    assertNotSame(configuredCollection, created);
-    assertEquals(originalCatalogId, configuredCollection.getCatalogId());
-    assertNull(configuredCollection.getIndices());
+    assertEquals("test_map_id", configuredCollection.getCatalogId());
+    assertIndexNames(configuredCollection, "tags", "geo", "fn_nv");
   }
 
   @Test
@@ -321,6 +325,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
         .thenReturn(new SuccessResponse());
     DefaultStorageHandlerProperties handlerProperties = handlerProperties();
     handlerProperties.getCollection().setIndices(new IndexList());
+    IndexList configuredIndices = handlerProperties.getCollection().getIndices();
     DefaultStorageHandler handler = storageHandler(handlerProperties);
 
     ignoreExceptionsFrom(
@@ -330,9 +335,10 @@ class DefaultStorageHandlerTest extends AbstractTest {
     ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
     verify(storageWriteSession, times(3)).execute(captor.capture());
     NakshaCollection created = collectionFrom(findSingleCreateCollectionWrite(captor.getAllValues()));
+    assertSame(handlerProperties.getCollection(), created);
+    assertSame(configuredIndices, created.getIndices());
     assertIndexNames(created);
     assertEquals(0, handlerProperties.getCollection().getIndices().size());
-    assertNotSame(handlerProperties.getCollection(), created);
   }
 
   @Test
@@ -343,7 +349,9 @@ class DefaultStorageHandlerTest extends AbstractTest {
     when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest)))
         .thenReturn(new SuccessResponse());
     DefaultStorageHandlerProperties handlerProperties = handlerProperties();
-    handlerProperties.getCollection().setIndices(IndexList.of(new Index("custom", "id")));
+    Index customIndex = new Index("custom", "id");
+    IndexList configuredIndices = IndexList.of(customIndex);
+    handlerProperties.getCollection().setIndices(configuredIndices);
     DefaultStorageHandler handler = storageHandler(handlerProperties);
 
     ignoreExceptionsFrom(
@@ -353,11 +361,12 @@ class DefaultStorageHandlerTest extends AbstractTest {
     ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
     verify(storageWriteSession, times(3)).execute(captor.capture());
     NakshaCollection created = collectionFrom(findSingleCreateCollectionWrite(captor.getAllValues()));
+    assertSame(handlerProperties.getCollection(), created);
+    assertSame(configuredIndices, created.getIndices());
+    assertSame(customIndex, created.getIndices().get(0));
     assertIndexNames(created, "custom");
     assertEquals("id", created.getIndices().get(0).getOn().get(0));
     assertIndexNames(handlerProperties.getCollection(), "custom");
-    assertNotSame(handlerProperties.getCollection().getIndices(), created.getIndices());
-    assertNotSame(handlerProperties.getCollection().getIndices().get(0), created.getIndices().get(0));
   }
 
   @Test
@@ -373,6 +382,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
     // And: Handler with autoCreateCollection disabled to test
     DefaultStorageHandler handler = storageHandler();
     handler.properties.setAutoCreateCollection(false);
+    NakshaCollection configuredCollection = handler.properties.getCollection();
+    String originalCatalogId = configuredCollection.getCatalogId();
 
     // When: Processing write features
     try (MockedStatic<CollectionIndexPolicy> policy =
@@ -385,6 +396,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     // Then: No Write Collection request was passed to storage writer
     verify(storageWriteSession, never()).execute(argThat(matchesCreateCollectionRequest()));
+    assertEquals(originalCatalogId, configuredCollection.getCatalogId());
+    assertNull(configuredCollection.getIndices());
   }
 
   @Test
@@ -602,63 +615,41 @@ class DefaultStorageHandlerTest extends AbstractTest {
     assertEquals("apply_col", write.getFeature().getId());
   }
 
-  @Test
-  void shouldNormalizeDirectCollectionWriteWithoutMutatingRequestFeature() {
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void shouldNormalizeDirectCollectionWriteInPlace(boolean handlerCollectionConfigured) {
     final String mapId = "direct_collection_map";
     final NakshaCollection requestCollection = new NakshaCollection("request_collection", "request_catalog");
+    requestCollection.setDatabaseId("request_database");
     final WriteRequest request = new WriteRequest().add(new Write().upsertCollection(requestCollection));
     configureStorageConfig(storageConfigWithMapId(mapId));
     when(storageWriteSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResponse());
 
     DefaultStorageHandlerProperties handlerProperties = handlerProperties();
-    handlerProperties.setCollection(null);
+    NakshaCollection handlerCollection = handlerProperties.getCollection();
+    if (!handlerCollectionConfigured) {
+      handlerProperties.setCollection(null);
+    }
     DefaultStorageHandler handler = storageHandler(handlerProperties, testSpace());
 
     try (MockedStatic<CollectionIndexPolicy> policy =
         mockStatic(CollectionIndexPolicy.class, CALLS_REAL_METHODS)) {
       assertInstanceOf(SuccessResponse.class, handler.processEvent(event(request)));
-      policy.verify(() -> CollectionIndexPolicy.normalizeForHubCreation(
-          requestCollection, "request_collection", mapId), times(1));
+      policy.verify(() -> CollectionIndexPolicy.normalizeForHubCreation(requestCollection), times(1));
     }
     Write submittedWrite = request.getWrites().get(0);
-    assertNotSame(requestCollection, submittedWrite.getFeature());
-    NakshaCollection normalized = (NakshaCollection) submittedWrite.getFeature();
-    assertEquals("request_collection", normalized.getId());
+    assertSame(requestCollection, submittedWrite.getFeature());
+    NakshaCollection normalized = requestCollection;
+    assertEquals(handlerCollectionConfigured ? handlerCollection.getId() : "request_collection", normalized.getId());
     assertEquals(mapId, normalized.getCatalogId());
     assertIndexNames(normalized, "tags", "geo", "fn_nv");
-    assertEquals("request_catalog", requestCollection.getCatalogId());
-    assertNull(requestCollection.getIndices());
+    assertEquals("request_database", normalized.getDatabaseId());
+    assertEquals(mapId, submittedWrite.getCatalogId());
+    assertEquals(Naksha.COLLECTIONS_COL_ID, submittedWrite.getCollectionId());
   }
 
   @Test
-  void shouldUseCustomMembersAndEmptyIndicesWhenCreatingMissingCollection() {
-    final String mapId = "custom_members_map";
-    configureStorageConfig(storageConfigWithMapId(mapId));
-    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteFeaturesRequest)))
-        .thenReturn(new ErrorResponse(new NakshaError(COLLECTION_NOT_FOUND, "Missing collection")));
-    when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest)))
-        .thenReturn(new SuccessResponse());
-
-    DefaultStorageHandlerProperties handlerProperties = handlerProperties();
-    handlerProperties.getCollection().withMembers(new Member("score", MemberType.STRING, null));
-    handlerProperties.getCollection().setIndices(null);
-    DefaultStorageHandler handler = storageHandler(handlerProperties);
-
-    ignoreExceptionsFrom(
-        () -> handler.processEvent(event(writeRandomFeature())),
-        "The feature retry is configured to fail after collection creation");
-
-    ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
-    verify(storageWriteSession, times(3)).execute(captor.capture());
-    NakshaCollection created = collectionFrom(findSingleCreateCollectionWrite(captor.getAllValues()));
-    assertEquals(1, created.getMembers().size());
-    assertEquals("score", created.getMembers().get(0).getName());
-    assertIndexNames(created);
-    assertNull(handlerProperties.getCollection().getIndices());
-  }
-
-  @Test
-  void shouldPreserveSpaceCollectionConfigurationWhenCreatingMissingCollection() {
+  void shouldNormalizeSpaceCollectionConfigurationInPlaceWhenCreatingMissingCollection() {
     final String mapId = "space_collection_map";
     configureStorageConfig(storageConfigWithMapId(mapId));
     when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteFeaturesRequest)))
@@ -668,7 +659,8 @@ class DefaultStorageHandlerTest extends AbstractTest {
 
     final NakshaCollection configuredCollection =
         new NakshaCollection("space_collection", "original_catalog")
-            .withMembers(new Member("score", MemberType.STRING, null));
+            .withXyzMembers()
+            .addMember(new Member("score", MemberType.STRING, null));
     final SpaceProperties spaceProperties = new SpaceProperties();
     spaceProperties.setCollection(configuredCollection);
     final Space space = space("space_with_collection", spaceProperties);
@@ -683,15 +675,11 @@ class DefaultStorageHandlerTest extends AbstractTest {
     ArgumentCaptor<WriteRequest> captor = ArgumentCaptor.forClass(WriteRequest.class);
     verify(storageWriteSession, times(3)).execute(captor.capture());
     NakshaCollection created = collectionFrom(findSingleCreateCollectionWrite(captor.getAllValues()));
+    assertSame(configuredCollection, created);
     assertEquals("space_collection", created.getId());
     assertEquals(mapId, created.getCatalogId());
-    assertEquals("score", created.getMembers().get(0).getName());
-    assertIndexNames(created);
-
-    NakshaCollection unchanged =
-        JvmBoxingUtil.box(space.getProperties(), SpaceProperties.class).getCollection();
-    assertEquals("original_catalog", unchanged.getCatalogId());
-    assertNull(unchanged.getIndices());
+    assertEquals("score", created.useMember("score").getName());
+    assertIndexNames(created, "tags", "geo", "fn_nv");
   }
 
   @Test

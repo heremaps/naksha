@@ -7,7 +7,6 @@ import naksha.model.objects.StandardIndices;
 import naksha.model.objects.StandardMembers;
 import naksha.model.objects.XyzIndices;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 public final class CollectionIndexPolicy {
 
@@ -20,23 +19,20 @@ public final class CollectionIndexPolicy {
         new Index("fn_nv", StandardMembers.FeatureNumber.getName(), StandardMembers.NextVersion.getName()));
   }
 
-  public static @NotNull NakshaCollection hubSlimCollection(
+  public static @NotNull NakshaCollection normalizeForHubCreation(
       final @NotNull String collectionId,
       final @NotNull String catalogId) {
-    return normalizeForHubCreation(null, collectionId, catalogId);
+    final NakshaCollection collection = new NakshaCollection();
+    collection.setId(collectionId);
+    collection.setCatalogId(catalogId);
+    return normalizeForHubCreation(collection);
   }
 
   public static @NotNull NakshaCollection normalizeForHubCreation(
-      final @Nullable NakshaCollection collection,
-      final @NotNull String collectionId,
-      final @NotNull String catalogId) {
-    final NakshaCollection normalized =
-        collection == null ? new NakshaCollection() : collection.copy(true);
-    normalized.setId(collectionId);
-    normalized.setCatalogId(catalogId);
-    if (normalized.getIndices() == null) {
-      normalized.setIndices(normalized.getMembers() == null ? hubSlimIndices() : new IndexList());
+      final @NotNull NakshaCollection collection) {
+    if (collection.getIndices() == null) {
+      collection.setIndices(hubSlimIndices());
     }
-    return normalized;
+    return collection;
   }
 }
