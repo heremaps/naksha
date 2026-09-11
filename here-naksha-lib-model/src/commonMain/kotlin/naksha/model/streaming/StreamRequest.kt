@@ -9,6 +9,10 @@ import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmName
 import kotlin.jvm.JvmOverloads
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.DurationUnit
+import kotlin.time.toDuration
 
 /**
  * The parameters that describe the stream to be opened or restored; can be serialized to try to recover an aborted streaming.
@@ -28,6 +32,7 @@ open class StreamRequest(): AnyObject() {
      * @param minVersion the minimal version to read; defaults to `0`.
      * @param ignoreTransactions if transactions can be ignored, even while the storage supports transactions, this allows certain optimizations to be performed, like reordering features and re-grouping to created filled chunks for faster writing and eventually faster copy; defaults to _false_.
      * @param chunkSize the amount of features to pack into each [StreamChunk] chunk; only applies when the storage does not support history and transaction logs **or** _ignoreTransactions_ was explicitly set to _true_; defaults to `1000`.
+     * @param timeout the timeout duration to wait for [acknowledgement][Stream.acknowledge] and for the read storage; defaults to 5 minutes.
      * @since 3.0
      */
     @JvmOverloads
@@ -41,7 +46,8 @@ open class StreamRequest(): AnyObject() {
         queryHistory: Boolean = true,
         minVersion: Long = 0L,
         ignoreTransactions: Boolean = false,
-        chunkSize: Int = 1000
+        chunkSize: Int = 1000,
+        timeout: Duration = 5.minutes
     ): this() {
         set("databaseId", databaseId)
         set("catalogId", catalogId)
@@ -52,6 +58,7 @@ open class StreamRequest(): AnyObject() {
         set("minVersion", minVersion)
         set("ignoreTransactions", ignoreTransactions)
         set("chunkSize", chunkSize)
+        set("timeout", timeout.toLong(DurationUnit.MILLISECONDS))
     }
 
     /**
@@ -120,6 +127,13 @@ open class StreamRequest(): AnyObject() {
     @get:JvmName("chunkSize")
     val chunkSize: Int by INT_1000
 
+    /**
+     * The default timeout, for example to wait for new data while reading or to wait for the [acknowledgement][Stream.acknowledge] of [stream chunks][StreamChunk]. Defaults to 5 minutes.
+     * @since 3.0
+     */
+    @get:JvmName("timeout")
+    val timeout: Duration by DURATION_NOT_NULL
+
     companion object StreamRequestCompanion {
         private val ID_NOT_NULL = NotNullIdProperty<StreamRequest>()
         private val BOOLEAN_FALSE = NotNullProperty<StreamRequest, Boolean>(Boolean::class) { _,_ -> false }
@@ -127,5 +141,9 @@ open class StreamRequest(): AnyObject() {
         private val LONG_HEAD = NotNullProperty<StreamRequest, Long>(Long::class) { _,_ -> HEAD.number }
         private val LONG_0 = NotNullProperty<StreamRequest, Long>(Long::class) { _,_ -> 0L }
         private val INT_1000 = NotNullProperty<StreamRequest, Int>(Int::class) { _,_ -> 1000 }
+        private val DURATION_NOT_NULL = NotNullProperty<StreamRequest, Duration>(Duration::class) { self, name ->
+            val duration = self.getRaw(name)
+            if (duration is Long) duration.toDuration(DurationUnit.MILLISECONDS) else 5.minutes
+        }
     }
 }

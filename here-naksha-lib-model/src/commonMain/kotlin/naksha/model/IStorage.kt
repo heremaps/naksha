@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.Id
 import naksha.base.PlatformLock
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fx1
@@ -46,18 +47,11 @@ interface IStorage : IDictReader {
     val config: NakshaStorage
 
     /**
-     * The storage-id, optionally stored in the storage, must always be the same for the same physical storage.
+     * The storage-id, must always be the same for the same physical storage.
      * @since 2.0.8
      * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    val id: String
-
-    /**
-     * The storage-number, managed by environment, optionally stored in the storage, must always be the same for the same physical storage.
-     * @since 3.0
-     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
-     */
-    val number: Long
+    val id: Id
 
     /**
      * The hard-cap _(max result size)_ of the storage. No result-set every can become bigger than this amount of features.
@@ -142,8 +136,8 @@ interface IStorage : IDictReader {
      * Open a new streaming session to read or write data in streaming mode.
      *
      * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
-     * @return the read-only session.
-     * @since 2.0.7
+     * @return the streaming session.
+     * @since 3.0
      * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize; error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if this session type is not supported by the underlying implementation.
      */
     fun newStreamSession(options: SessionOptions? = null): IStreamSession
