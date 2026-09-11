@@ -32,6 +32,12 @@ open class NakshaError() : AnyObject() {
 
     companion object NakshaErrorCompanion {
         /**
+         * A socket, connection, stream or alike was or is closed. Dependent on context, this can be as well a success error, for example when `close` was called on a stream intentionally.
+         * @since 3.0.0
+         */
+        const val CLOSED = "Closed"
+
+        /**
          * A general error (not further specified) happened while processing the request.
          *
          * This results in a 500 Internal Server Error.

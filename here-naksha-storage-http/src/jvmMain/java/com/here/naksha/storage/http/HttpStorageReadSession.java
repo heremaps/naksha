@@ -23,7 +23,6 @@ import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
 import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
 import naksha.base.*;
 import naksha.model.IReadSession;
-import naksha.model.MemberProcessorMap;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
@@ -41,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 
 import static java.util.Objects.requireNonNull;
-import static naksha.base.Platform.getLogger;
 import static naksha.base.Platform.javaProxy;
 
 public class HttpStorageReadSession implements IReadSession {
@@ -94,7 +92,7 @@ public class HttpStorageReadSession implements IReadSession {
       }
       return attachVirtualTupleNumbers(response, requestWrapper);
     } catch (NakshaException exception) {
-      getLogger().info("Unexpected error while executing read", exception);
+      log.info("Unexpected error while executing read", exception);
       return new ErrorResponse(exception.getError());
     } catch (Exception exception) {
       log.warn("We got exception while executing Read request.", exception);

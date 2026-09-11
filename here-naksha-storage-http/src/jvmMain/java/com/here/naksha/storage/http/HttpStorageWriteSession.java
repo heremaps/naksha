@@ -9,15 +9,12 @@ import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.model.objects.NakshaTx;
 import naksha.model.request.ErrorResponse;
-import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static naksha.base.Platform.getLogger;
 
 public class HttpStorageWriteSession extends HttpStorageReadSession implements IWriteSession {
 
@@ -43,7 +40,7 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
                     throw new IllegalStateException("Unsupported HTTP interface: " + httpInterface);
             }
         } catch (NakshaException e) {
-            getLogger().info("Unexpected error while executing write", e);
+            log.info("Unexpected error while executing write", e);
             return new ErrorResponse(e.getError());
         } catch (UnsupportedOperationException e) {
             return new ErrorResponse(NakshaError.NOT_IMPLEMENTED, e.getMessage(), e);

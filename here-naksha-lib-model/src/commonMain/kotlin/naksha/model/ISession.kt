@@ -27,7 +27,7 @@ interface ISession : AutoCloseable {
     var socketTimeout: Int
 
     /**
-     * The statement timeout in milliseconds.
+     * The statement/request-timeout in milliseconds.
      * @since 3.0
      */
     var stmtTimeout: Int

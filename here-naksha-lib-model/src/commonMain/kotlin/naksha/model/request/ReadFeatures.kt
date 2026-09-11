@@ -238,10 +238,6 @@ open class ReadFeatures : ReadRequest() {
     }
 
     /**
-     * @see version
-     */
-
-    /**
      * Order the result-set like given; this is an expensive operation and should be avoided.
      *
      * If an order is required, but no specific one, then it is strongly recommended to stick with the [deterministic order][OrderBy.deterministic], which is produced by creating a blank empty [OrderBy] object or through the static helper method [OrderBy.deterministic]. Ordering by anything else can have a drastic performance impact.
