@@ -51,14 +51,7 @@ interface IStorage : IDictReader {
      * @since 2.0.8
      * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    val id: String
-
-    /**
-     * The storage-number.
-     * @since 2.0.8
-     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
-     */
-    val number: Long
+    val id: Id
 
     /**
      * The hard-cap _(max result size)_ of the storage. No result-set every can become bigger than this amount of features.
@@ -114,17 +107,6 @@ interface IStorage : IDictReader {
      * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize; error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if this session type is not supported by the underlying implementation.
      */
     fun newReadSession(options: SessionOptions? = null): IReadSession
-
-    /**
-     * Open a new read-only session. The [SessionOptions] can be used to guarantee, that the session relates to the master-node, if replication lags are not acceptable.
-     *
-     * - Throws [naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
-     * @param options additional options, _null_ automatically creates them from the current [NakshaContext].
-     * @return the read-only session.
-     * @since 2.0.7
-     */
-    // TODO: Modify: fun newReadSession(database: NakshaDatabase, options: SessionOptions? = null): IReadSession
-    fun newStreamSession(options: SessionOptions? = null): IStreamSession
 
     /**
      * Open a new read-session and execute the given lambda, ensuring that the session is closed after the lambda returns.
