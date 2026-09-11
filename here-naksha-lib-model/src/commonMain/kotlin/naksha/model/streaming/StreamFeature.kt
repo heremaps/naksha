@@ -44,6 +44,8 @@ open class StreamFeature @JvmOverloads constructor(
 
     /**
      * The [TupleNumber] of the feature, if the source storage does provide this.
+     *
+     * If the target system contains the same database
      * @since 3.0
      */
     @get:JvmName("tupleNumber")
