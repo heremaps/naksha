@@ -24,6 +24,8 @@ import kotlin.time.Duration
  *       if (stream.hasMore()) {
  *         // Read ones, write multiple.
  *         val chunk = stream.next()
+ *         // This is important here!
+ *         chunk.acknowledgeCount.addAndGet(targets.size)
  *         for (target in targets) {
  *           doWrite(chunk, target)
  *         }
@@ -46,7 +48,6 @@ import kotlin.time.Duration
  *   session: IStreamSession
  * ) {
  *   Thread.startVirtualThread {
- *     chunk.acknowledgeCount.getAndAdd(1)
  *     try {
  *       session.write(chunk)
  *     } catch (Exception e) {
@@ -57,9 +58,14 @@ import kotlin.time.Duration
  * }
  * ```
  *
- * This allows to read ones and write in parallel into multiple targets _(e.g. into S3 and multiple replication databases)_. For each writer the reader forwards the read [chunk][StreamChunk] to, it should increment the [acknowledgeCount][StreamChunk.acknowledgeCount] by one before handing it over.
+ * This allows to read ones and write in parallel into multiple targets _(e.g. into S3 and multiple replication databases)_.
  *
  * #### Warning
+ * For each writer the reader forwards the read [chunk][StreamChunk] to, it should increment the [acknowledgeCount][StreamChunk.acknowledgeCount] by one. This **must** be done before handing the chunk over to the first processor/writer! This is important, because otherwise a very fast writer could decrement the [acknowledgedCount][StreamChunk.acknowledgeCount] to `0` before all writers are done!
+ *
+ * This would cause a fatal _(and hard to find)_ error. The moment the [acknowledgedCount][StreamChunk.acknowledgeCount] goes to `0` it will notify the reader that the [chunk][StreamChunk] is finished, this causes the reader to proceed. If not all writers are yet done, this can cause great harm to consistency of the target storages.
+ *
+ * #### Note
  * The example code is based upon JVM version 24+, because between 21 _(including)_ and 24 _(excluding)_ the virtual threads have a severe bug with synchronized methods and synchronization blocks, see [JEPS-491](https://openjdk.org/jeps/491) and [JDK-8337395](https://bugs.openjdk.org/browse/JDK-8337395)!
  *
  * It is the responsibility of the stream to decide in which order it is safe to consume chunks.
