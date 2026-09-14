@@ -152,7 +152,7 @@ class Id private constructor(
      * @see partitionIndex
      */
     @JvmField
-    val partitionNumber: Int = number.toInt() and 0xffff
+    val partitionNumber: Int = partitionNumber(number)
 
     /**
      * Returns the real partition index of this identifier.
@@ -379,7 +379,7 @@ class Id private constructor(
         /**
          * Returns the partition-number from the given feature-id.
          *
-         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
+         * This is basically just an unsigned 8-bit integer, extracted from the lowest 8-bit of the feature-number. When there are less than 256 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
          * @param id the feature-id.
          * @return the partition-number.
          * @since 3.0
@@ -394,7 +394,7 @@ class Id private constructor(
         /**
          * Returns the partition-number from the given feature-number.
          *
-         * This is basically just an unsigned 16-bit integer, extracted from the lowest 16-bit of the feature-number. When there are less than 65536 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
+         * This is basically just an unsigned 8-bit integer, extracted from the lowest 8-bit of the feature-number. When there are less than 256 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
          * @param number the feature-number.
          * @return the partition-number.
          * @since 3.0
@@ -403,6 +403,6 @@ class Id private constructor(
          */
         @JsStatic
         @JvmStatic
-        fun partitionNumber(number: Long): Int = number.toInt() and 0xffff
+        fun partitionNumber(number: Long): Int = number.toInt() and 0xff
     }
 }

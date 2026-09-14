@@ -546,3 +546,35 @@ The existing tests that explicitly expect `<collection>$hst`, calendar-year
 partition names, and writer-created future partitions need replacement rather
 than incremental adjustment. Relevant current locations include
 `CollectionTests.kt` and `PartitioningTest.kt` in `here-naksha-lib-psql`.
+
+## Id Helper Migration
+
+Use `naksha.base.Id` as the sole identifier/feature-number helper inside
+Naksha. Retain `Naksha` constants and unrelated storage-registry APIs. Use a
+static `Id` helper for a one-off conversion: it allocates no `Id` and calculates
+at most the one necessary MD5 hash. Use an `Id` instance where its text and/or
+numeric value is already available, or two or more derived values are needed;
+its lazy `number` calculation is cached and avoids rehashing the same text.
+As part of the low-byte partition contract above, change `Id.partitionNumber`
+from its current low-16-bit behavior to the unsigned low byte before migrating
+partition call sites.
+
+| Current helper | Allocation-free static replacement | Cached `Id` instance replacement | Preferred use and code to update |
+| --- | --- | --- | --- |
+| `Naksha.featureNumber(id)` | `Id.textToNumber(id)` | `Id(id).number` | Static for one-off feature-number construction; instance if the caller also retains/uses the same id text or another derived value. `Tuple.kt`, `NakshaStorage.kt`, `PgWrite.kt`, `PgPlatform.kt`, test fixtures/tests |
+| `Naksha.databaseNumber(id)` | `Id.textToNumber(id)` | `Id(id).number` | Static for a single storage-number comparison; instance only when the same id is used again. `NakshaCatalog.kt`, `NakshaCollection.kt`, storage/app/http tests |
+| `Naksha.catalogNumber(id)` | `Id.featureNumberAsInt(Id.textToNumber(id))` | `Id(id).intValue` | Static when only the catalog number is needed; instance when the id object or its full number is reused. `NakshaCatalog.kt`, `NakshaCollection.kt`, `PgCatalog.kt`, `PgAdminCatalog.kt`, view/app/http tests |
+| `Naksha.collectionNumber(id)` | `Id.featureNumberAsInt(Id.textToNumber(id))` | `Id(id).intValue` | Static when only the collection number is needed; instance when the id object or its full number is reused. `NakshaCollection.kt`, `Tuple.kt`, `PgCollection.kt`, `PgWrite.kt`, `PgCatalog.kt`, view/app/http tests |
+| `Naksha.partitionNumber(fn)` | `Id.partitionNumber(fn)` | `Id(fn).partitionNumber` | Static for an existing numeric `fn`; constructing `Id(fn)` adds no value unless the instance is retained for other operations. `TupleNumberBinaryArray.kt`, `PgWrite.kt`, partition tests |
+| `Naksha.partitionNumber(id)` | `Id.partitionNumber(id)` | `Id(id).partitionNumber` | Static for a one-off routing decision; instance when the id will also be encoded, compared, or used for its number. `PgHistoryPartition.kt`, `PgPlatform.kt`, partition tests |
+| `Naksha.partitionNumber(fn) % partitions` | `Id.partitionNumber(fn) % partitions` | `Id(fn).partitionIndex(partitions)` | Static for one-off legacy routing; instance only if already held. Remove these paths with range partitioning. `PgHistoryPartition.kt` |
+| `Naksha.partitionNumber(id) % partitions` | `Id.partitionNumber(id) % partitions` | `Id(id).partitionIndex(partitions)` | Static for one-off legacy routing; instance only if already held. Remove these paths with range partitioning. `PgHistoryPartition.kt` |
+| `Naksha.featureNumberAsLong(id)` | `Id.textToNumber(id)` | `Id(id).number` | Static if the numeric representation alone is needed; instance if it will be reused. Migrate any remaining callers. |
+| `Naksha.featureNumberAsHash(id)` | None | None | Private implementation detail with no external callers; remove it when `Naksha.featureNumber` is removed/migrated to `Id`. |
+| `Naksha.isAutoNumber(Int/Long)` | None | None | Unused legacy API; remove both overloads and their tests, if any. |
+
+After the mechanical caller migration, remove the obsolete numeric helper
+implementation from `Naksha` (`hashId`, numeric-id regular expressions,
+feature/database/catalog/collection number helpers, partition helpers, hash
+helper, and auto-number helpers) where it has become redundant with `Id`.
+Preserve only `Naksha` constants and non-identifier responsibilities.
