@@ -9,8 +9,6 @@ import naksha.model.Naksha.NakshaCompanion.COLLECTIONS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.BOOKS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.CATALOGS_COL_ID
 import naksha.model.Naksha.NakshaCompanion.TRANSACTIONS_COL_ID
-import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaDictionary
@@ -115,8 +113,8 @@ open class Write : AnyObject() {
             return if (map_diff == 0) {
                 val col_diff = compareCollectionIds(a_colId, b_colId)
                 if (col_diff == 0) {
-                    val a_partition = partitionNumber(a.featureNumber)
-                    val b_partition = partitionNumber(b.featureNumber)
+                    val a_partition = Id.partitionNumber(a.featureNumber)
+                    val b_partition = Id.partitionNumber(b.featureNumber)
                     val part_diff = a_partition.compareTo(b_partition)
                     if (part_diff == 0) {
                         val id_diff = a.id.compareTo(b.id)
@@ -368,7 +366,7 @@ open class Write : AnyObject() {
             val cachedNumber = featureNumberValue
             @Suppress("StringReferentialEquality") // Intentional reference compare !
             if (id === cachedId && cachedNumber != null) return cachedNumber
-            val number = featureNumber(id)
+            val number = Id.textToNumber(id)
             featureNumberId = id
             featureNumberValue = number
             return number

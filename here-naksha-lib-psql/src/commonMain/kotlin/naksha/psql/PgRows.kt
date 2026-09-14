@@ -104,7 +104,7 @@ internal class PgRows {
                 columns.clear()
                 collectionNumber = collection.collectionNumber
                 catalogNumber = collection.catalog.catalogNumber
-                databaseNumber = collection.catalog.storage.number
+                databaseNumber = collection.catalog.storage.id.number
                 for (pgColumn in collection.columns) {
                     columns.add(PgColumnWithValues(this, this.columns.size, pgColumn))
                 }

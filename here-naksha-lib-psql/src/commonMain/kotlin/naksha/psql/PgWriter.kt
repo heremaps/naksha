@@ -250,7 +250,7 @@ open class PgWriter internal constructor(
                 if (op == WriteOp.CREATE || op == WriteOp.UPSERT || op == WriteOp.UPDATE) {
                     val feature = pgWrite.feature ?: throw illegalArg("The write #${pgWrite.i} is $op, but the feature is null")
                     nakshaMap = feature as? NakshaCatalog ?: feature.proxy(NakshaCatalog::class)
-                    nakshaMap.databaseId = storage.id
+                    nakshaMap.databaseId = storage.id.text
                     if (targetCatalog == null) {
                         if (op == WriteOp.UPDATE) {
                             throw mapNotFound("The UPDATE (write #${pgWrite.i}) failed, because the map '$featureId' does not exist")

@@ -1,7 +1,6 @@
 package naksha.psql
 
-import naksha.model.*
-import java.security.MessageDigest
+import naksha.base.Id
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PgPlatform {
@@ -30,9 +29,6 @@ actual class PgPlatform {
         @JvmStatic
         internal actual fun quote_ident(vararg parts: String): String? = null
 
-        @JvmStatic
-        private val md5Digest = ThreadLocal.withInitial { MessageDigest.getInstance("MD5") }
-
         /**
          * Calculates the partition number between 0 and 255. This is the unsigned value of the first byte of the MD5 hash above the
          * given feature-id. When there are less than 256 partitions, the value must be divided by the number of partitions and the rest
@@ -44,11 +40,11 @@ actual class PgPlatform {
          */
         @Deprecated(
             message = "This function will be removed in a future release.",
-            replaceWith = ReplaceWith("Naksha.partitionNumber(Naksha.featureNumber(featureId))"),
+            replaceWith = ReplaceWith("Id.partitionNumber(featureId)"),
             level = DeprecationLevel.WARNING
         )
         @JvmStatic
-        actual fun partitionNumber(featureId: String): Int = Naksha.partitionNumber(Naksha.featureNumber(featureId))
+        actual fun partitionNumber(featureId: String): Int = Id.partitionNumber(featureId)
 
         /**
          * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).

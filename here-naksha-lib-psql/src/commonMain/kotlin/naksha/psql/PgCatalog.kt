@@ -53,7 +53,7 @@ open class PgCatalog internal constructor(
      * The catalog-number of the catalog, actually the same as the feature-number of the [NakshaCatalog] feature.
      * @since 3.0
      */
-    val catalogNumber: Int = Naksha.catalogNumber(id),
+    val catalogNumber: Int = Id(id).intValue,
 ) {
     /**
      * The map-identifier quoted optionally in double quotes.
@@ -96,7 +96,7 @@ open class PgCatalog internal constructor(
                 c = PgNakshaCollections(this)
                 val collectionsColNumber = c.collectionNumber
                 c.head.tupleNumber = TupleNumber(
-                    storage.number, catalogNumber, collectionsColNumber,
+                    storage.id.number, catalogNumber, collectionsColNumber,
                     collectionsColNumber.toLong(), 1L
                 )
                 _collections = c
@@ -258,7 +258,7 @@ open class PgCatalog internal constructor(
             }
         }
         if (id == COLLECTIONS_COL_ID) return collections
-        val collectionNumber = Naksha.collectionNumber(id)
+        val collectionNumber = Id(id).intValue
         val existing = collectionCache[collectionNumber]
         if (existing != null || conn == null) return existing
 
