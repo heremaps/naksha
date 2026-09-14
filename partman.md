@@ -163,34 +163,55 @@ physical.
 
 Files expected to change:
 
-- `here-naksha-lib-model/.../Naksha.kt`
-- feature-id/feature-number partition helper tests
+- `here-naksha-lib-base/.../Id.kt` and `TupleNumber.kt`
+- `here-naksha-lib-model/.../Naksha.kt`, `Tuple.kt`,
+  `TupleNumberBinaryArray.kt`, and `objects/NakshaCollection.kt`
+- `here-naksha-lib-model/.../request/Write.kt` and
+  `objects/NakshaTxCollection.kt`
 - `here-naksha-lib-psql/.../PgPlatform.kt`
-- writer routing, relation tests, and documentation that refer to the former
-  16-bit/modulo calculation
+- psql writer/partition helpers, all feature-number/partition tests, and
+  documentation that refer to the former 16-bit/modulo calculation
 
 Work:
 
-1. Change `Naksha.partitionNumber(featureNumber)` and
-   `Naksha.partitionNumber(featureId)` to return the unsigned low eight bits,
-   in the inclusive range `0..255`.
-2. Update their documentation and all callers to remove the former low-16-bit
-   and `% partitions` behavior. `partitionNumber` represents a stable logical
-   byte bucket, while the collection's encoded `fn` range bounds determine its
-   physical PostgreSQL leaf.
-3. Limit `NakshaCollection.partitions` and the `PgWriter` create-collection
+1. Keep the already-updated `Id.partitionNumber` static overloads and instance
+   property as the authoritative low-byte implementation:
+   `number.toInt() and 0xff`, yielding `0 <= partitionNumber < 256`. Update
+   stale `Id` documentation that still describes a low-16-bit value and the
+   obsolete `partitionIndex` modulo routing behavior.
+2. Change `TupleNumber.partitionNumber` to delegate to
+   `Id.partitionNumber(featureNumber)`. Update `TupleNumber.partitionIndex`,
+   comparisons, and their documentation from 16-bit/modulo behavior to the
+   new byte-range routing contract, or remove `partitionIndex` where range
+   subpartitioning makes it unnecessary.
+3. In the same change, replace all mechanically equivalent production calls to
+   `Naksha.featureNumber`, `databaseNumber`, `catalogNumber`,
+   `collectionNumber`, and `partitionNumber` with the appropriate static or
+   cached-instance `Id` API described in [Id Helper Migration](#id-helper-migration).
+   This includes `Tuple`, `TupleNumberBinaryArray`, `NakshaCatalog`,
+   `NakshaCollection`, `NakshaStorage`, `Write`, `NakshaTxCollection`,
+   `PgWrite`, `PgPlatform`, `PgCollection`, `PgCatalog`, and `PgAdminCatalog`.
+4. Remove the now-redundant identifier numeric helpers from `Naksha`, including
+   `partitionNumber`, its 16-bit constants and documentation, and the obsolete
+   collision increment that preserves 16 low bits. Update collision handling to
+   preserve the low eight partition bits if it remains supported.
+5. Limit `NakshaCollection.partitions` and the `PgWriter` create-collection
    validation to `1..256`. Remove the inconsistent current psql-only `1000`
    cap and update error messages/tests accordingly.
-4. Update `Id`-related partition helpers and tests to use the same low-byte
-   contract for identifier-derived feature numbers. Ensure negative feature
-   numbers are masked, not modulo-divided, so the result remains `0..255`.
-5. Add conversion tests covering every low-byte value, negative and positive
+6. Replace all remaining `% partitions` routing with the encoded-`fn` range
+   lookup. This includes legacy `PgHistoryPartition` helpers and write sorting;
+   delete them where the new root/table descriptors no longer need explicit
+   partition selection.
+7. Update application/view/http test fixtures and assertions to use `Id`,
+   leaving `Naksha` only for its non-identifier constants and responsibilities.
+8. Add conversion tests covering every low-byte value, negative and positive
    feature numbers, the encoded `fn` order, each valid partition count, and
    exact coverage/no-overlap of the generated range bounds.
 
 Acceptance checks:
 
-- `partitionNumber` always returns `0..255`.
+- `Id.partitionNumber` and `TupleNumber.partitionNumber` always return
+  `0..255`; no production code uses `Naksha.partitionNumber`.
 - Collection creation rejects `partitions > 256` before issuing DDL.
 - Every logical feature number maps to exactly one encoded-`fn` leaf for every
   valid `partitions` value.
@@ -550,7 +571,9 @@ than incremental adjustment. Relevant current locations include
 ## Id Helper Migration
 
 Use `naksha.base.Id` as the sole identifier/feature-number helper inside
-Naksha. Retain `Naksha` constants and unrelated storage-registry APIs. Use a
+Naksha. This migration is executed together with the
+[Partition-Number Contract Change](#partition-number-contract-change), not as
+a separate cleanup. Retain `Naksha` constants and unrelated storage-registry APIs. Use a
 static `Id` helper for a one-off conversion: it allocates no `Id` and calculates
 at most the one necessary MD5 hash. Use an `Id` instance where its text and/or
 numeric value is already available, or two or more derived values are needed;
