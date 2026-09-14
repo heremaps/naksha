@@ -135,7 +135,7 @@ class Id private constructor(
      */
     @get:JvmName("intValue")
     val intValue: Int
-        get() = numberAsInt(number)
+        get() = numberToInt(number)
 
     /**
      * Tests if the identifier is a pure numeric identifier, so the [text] is just the stringified number _(only for positive numbers)_.
@@ -302,7 +302,7 @@ class Id private constructor(
          */
         @JvmStatic
         @JsStatic
-        fun numberAsInt(featureNumber: Long): Int {
+        fun numberToInt(featureNumber: Long): Int {
             val sign = ((featureNumber shr 63) shl 31).toInt()
             val low = (featureNumber and 0x7fff_ffffL).toInt()
             return sign or low

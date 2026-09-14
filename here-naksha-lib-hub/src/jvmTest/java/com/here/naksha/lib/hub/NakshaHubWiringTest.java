@@ -51,6 +51,8 @@ import com.here.naksha.lib.hub.storages.NHSpaceStorage;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import naksha.base.Id;
 import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.Naksha;
@@ -75,6 +77,8 @@ class NakshaHubWiringTest extends AbstractTest {
   @Mock
   static NakshaHub hub;
 
+  static final Id adminStorageId = new Id();
+
   @Mock
   static NHAdminStorage adminStorage;
 
@@ -91,16 +95,20 @@ class NakshaHubWiringTest extends AbstractTest {
   @BeforeEach
   void beforeEachTest() {
     MockitoAnnotations.openMocks(this);
+
     spyPipelineFactory = spy(new NakshaEventPipelineFactory(hub));
-    spaceStorage = new NHSpaceStorage(hub, spyPipelineFactory);
-    when(hub.getSpaceStorage()).thenReturn(spaceStorage);
     when(hub.getAdminStorage()).thenReturn(adminStorage);
+    when(adminStorage.getId()).thenReturn(adminStorageId);
     when(adminStorage.newReadSession(any())).thenReturn(adminStorageReader);
     when(adminStorage.newWriteSession(any())).thenReturn(adminStorageWriter);
     when(adminStorage.useReadSession(any(), any())).thenCallRealMethod();
     when(adminStorage.useWriteSession(any(), any())).thenCallRealMethod();
     doCallRealMethod().when(adminStorage).runInReadSession(any(), any());
     doCallRealMethod().when(adminStorage).runInWriteSession(any(), any());
+
+    spaceStorage = new NHSpaceStorage(hub, spyPipelineFactory);
+    when(hub.getSpaceStorage()).thenReturn(spaceStorage);
+
   }
 
   @Test

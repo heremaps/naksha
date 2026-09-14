@@ -32,19 +32,13 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-class IntHandlerForStoragesTest {
-
-  private static final String TEST_MAP_ID = "test_map_id";
-
-  @Mock
-  INaksha naksha;
+class IntHandlerForStoragesTest extends AbstractIntHandlerTest {
 
   IntHandlerForStorageConfigs handler;
 
   @BeforeEach
   void setup() {
-    MockitoAnnotations.openMocks(this);
-    when(naksha.getAdminMapId()).thenReturn(TEST_MAP_ID);
+    super.setup();
     handler = new IntHandlerForStorageConfigs(naksha);
   }
 
@@ -134,7 +128,6 @@ class IntHandlerForStoragesTest {
   private void adminStorageAlwaysSucceeds() {
     IWriteSession writeSession = mock(IWriteSession.class);
     when(writeSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResponse());
-    IStorage adminStorage = mock(IStorage.class);
     when(adminStorage.newWriteSession(any(SessionOptions.class))).thenReturn(writeSession);
     when(naksha.getAdminStorage()).thenReturn(adminStorage);
   }

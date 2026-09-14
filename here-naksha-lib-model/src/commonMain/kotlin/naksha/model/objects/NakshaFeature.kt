@@ -97,6 +97,16 @@ open class NakshaFeature() : AnyObject() {
     }
 
     /**
+     * Helper to get/set the [TupleNumber] of the collection-feature. All collection features follow the old XYZ-Hub style, therefore the location of the [TupleNumber] is clear at `properties->@ns:com:here:xyz->uuid`.
+     * @since 3.0
+     */
+    var tupleNumber: TupleNumber?
+        get() = XyzMembers.XyzTn.readTupleNumber(this)
+        set(value) {
+            XyzMembers.XyzTn.write(this, value)
+        }
+
+    /**
      * The type of the feature, to be [GeoJSON](https://datatracker.ietf.org/doc/html/rfc7946) compatible, one of the following is expected:
      * - `FeatureCollection`
      * - `Feature`

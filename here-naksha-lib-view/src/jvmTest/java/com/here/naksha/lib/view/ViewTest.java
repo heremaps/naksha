@@ -54,6 +54,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
+
+import naksha.base.Id;
 import naksha.base.MapProxy;
 import naksha.base.Action;
 import naksha.model.IReadSession;
@@ -136,7 +138,8 @@ public class ViewTest {
     View view = new View(viewLayerCollection);
     when(storage.newWriteSession(sessionOptions)).thenReturn(session);
 //    when(storage.getMapId(any(Integer.class))).thenReturn(VIEW_COLLECTION);
-    when(storage.getId()).thenReturn("Mock Storage");
+    final var id = new Id("Mock Storage");
+    when(storage.getId()).thenReturn(id);
 //    when(storage.get(any())).thenReturn(map);
 //    when(map.getCollectionId(any())).thenReturn("Mock Collection");
 

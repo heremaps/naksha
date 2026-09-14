@@ -597,7 +597,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @since 3.0.0
      */
     fun getPgCatalogById(conn: PgConnection?, id: String): PgCatalog?
-        = getPgCatalogByNumber(conn, Id.numberAsInt(Id.textToNumber(id)))
+        = getPgCatalogByNumber(conn, Id.numberToInt(Id.textToNumber(id)))
 
     /**
      * Returns the existing map with the given number; if any.

@@ -1,5 +1,7 @@
 package naksha.psql
 
+import naksha.base.Action
+import naksha.base.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -7,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -128,17 +131,27 @@ class AllowTombstoneTest : PgTestBase() {
         val collection = NakshaCollection(collectionId, catalog.id)
 
         // Create the collection.
-        executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        val response = executeWrite(WriteRequest().add(Write().createCollection(collection)))
+        val created = assertNotNull(response.features)
+        assertEquals(1, created.size, "We should get back the collection that we created")
+        val created_tn = created[0]?.tupleNumber
+        assertNotNull(created_tn, "Expected that the returned collection has a tuple-number")
+        storage.newReadSession().use { session ->
+            val found = session.getCollectionById(catalog, collectionId)
+            assertNotNull(found, "Collection should exist after create")
+            assertNotNull( found.tupleNumber, "The collection should have a tuple-number")
+            assertEquals(created_tn, found.tupleNumber)
+        }
+        assertEquals(Action.CREATE, created_tn.action)
 
         // Delete the collection (first deletion).
         executeWrite(WriteRequest().add(Write().deleteCollectionById(catalog.id, collectionId)))
 
         // Fetch the HEAD state including the tombstone and verify it is marked deleted.
         val tombstone = newWriteSession().use { session ->
-            val cat = session.getCatalogById(catalog.id)
-            assertNotNull(cat, "Catalog should still exist after first deletion")
-            val ts = session.getCollectionById(cat, collectionId, allowTombstone = true)
+            val ts = session.getCollectionById(catalog, collectionId, allowTombstone = true)
             assertNotNull(ts, "Tombstone must be retrievable with allowTombstone = true")
+            assertFalse(ts == created_tn, "The tuple-number of the current collection head is the same as the on of the created collection, but expected an update in the cache!")
             assertTrue(
                 ts.tupleNumber?.isDeleted ?: false,
                 "HEAD state must be marked as deleted (tombstone)"

@@ -28,6 +28,8 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import naksha.base.Id;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.StringList;
 import naksha.base.fn.Fn1;
@@ -74,7 +76,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
   }
 
   private static final String HANDLER_ID = "test_handler";
-  private static final String STORAGE_ID = "dsh_test_storage_id";
+  private static final Id STORAGE_ID = new Id("dsh_test_storage_id");
   private static final Logger log = LoggerFactory.getLogger(DefaultStorageHandlerTest.class);
 
   @Mock
@@ -484,7 +486,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     IStorage customStorage = registeredStorageWithConfig(storageConfig);
 
     // And:
-    DefaultStorageHandler handler = storageHandler(handlerProperties(customStorage.getId()));
+    DefaultStorageHandler handler = storageHandler(handlerProperties(customStorage.getId().text()));
 
     // When
     handler.processEvent(event(writeRandomFeature()));
@@ -513,7 +515,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     IStorage customStorage = registeredStorageWithConfig(storageConfig);
 
     // And:
-    DefaultStorageHandler handler = storageHandler(handlerProperties(customStorage.getId()));
+    DefaultStorageHandler handler = storageHandler(handlerProperties(customStorage.getId().text()));
 
     // When
     handler.processEvent(event(readRandomFeature()));
@@ -531,11 +533,11 @@ class DefaultStorageHandlerTest extends AbstractTest {
   }
 
   private IStorage registeredStorageWithConfig(NakshaStorage config) {
-    String customStorageId = "customStorageId_" + RandomUtils.nextInt();
+    Id customStorageId = new Id("customStorageId_" + RandomUtils.nextInt());
     IStorage customStorage = Mockito.mock(IStorage.class);
     when(customStorage.getId()).thenReturn(customStorageId);
     when(customStorage.getConfig()).thenReturn(config);
-    when(naksha.getStorageById(customStorageId)).thenReturn(customStorage);
+    when(naksha.getStorageById(customStorageId.text())).thenReturn(customStorage);
     return customStorage;
   }
 

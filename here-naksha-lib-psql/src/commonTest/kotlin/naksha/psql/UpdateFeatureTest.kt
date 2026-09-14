@@ -158,7 +158,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
         testWithCollection("atomicUpdateNotExistingWithFakeUuid")
 
         val featureId = "feature_not_existing"
-        val fakeUUID = TupleNumber(storage.number, catalog.catalogNumber, collection.collectionNumber, Naksha.featureNumber(featureId), Version.now(1L, Action.CREATE).number)
+        val fakeUUID = TupleNumber(storage.id.number, catalog.catalogNumber, collection.collectionNumber, Naksha.featureNumber(featureId), Version.now(1L, Action.CREATE).number)
         val feature = NakshaFeature().apply {
             id = featureId
             properties.xyz.setRaw("uuid", fakeUUID)
