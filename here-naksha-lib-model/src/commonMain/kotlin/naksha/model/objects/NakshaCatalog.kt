@@ -3,6 +3,7 @@
 package naksha.model.objects
 
 import naksha.base.NullableProperty
+import naksha.base.Id
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
@@ -84,7 +85,7 @@ open class NakshaCatalog() : NakshaFeature() {
     fun withDatabaseId(value: String): NakshaCatalog {
         val tn = tupleNumber
         if (tn != null) {
-            if (Naksha.databaseNumber(value) != tn.databaseNumber) {
+            if (Id.textToNumber(value) != tn.databaseNumber) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "The given database-id does not match the database-number of the collection.")
             }
         }
@@ -97,8 +98,8 @@ open class NakshaCatalog() : NakshaFeature() {
      *
      * It is **NOT** the catalog-number of this catalog-feature, so where the catalog-feature itself is stored, which has always the catalog-number `0`, because all catalog features are always stored in the catalog `naksha~admin`.
      * @since 3.0
-     * @see [Naksha.catalogNumber]
+     * @see [Id.intValue]
      */
     val catalogNumber: Int
-        get() = Naksha.catalogNumber(id)
+        get() = Id(id).intValue
 }

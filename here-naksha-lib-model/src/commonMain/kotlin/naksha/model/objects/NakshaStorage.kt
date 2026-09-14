@@ -171,7 +171,7 @@ open class NakshaStorage() : NakshaFeature() {
         get() {
             // TODO: We need to allow a custom database number, actually we need to decouple the storage from the database.
             //       However, this is a much larger architectural change, so for now, the storage and the database are hard-wired the same!
-            return Naksha.featureNumber(id)
+            return Id.textToNumber(id)
         }
 
     override fun equals(other: Any?): Boolean {

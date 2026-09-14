@@ -1,6 +1,11 @@
 package naksha.psql
 
 import naksha.base.Action
+import naksha.base.CATALOGS_COL_NUMBER
+import naksha.base.CATALOGS_COL_TEXT
+import naksha.base.COLLECTIONS_COL_NUMBER
+import naksha.base.COLLECTIONS_COL_TEXT
+import naksha.base.Id
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.model.*
@@ -77,26 +82,26 @@ internal data class PgWrite(val original: Write, val i: Int) {
      * @since 3.0
      */
     val featureNumber: Long = when (original.collectionId) {
-        Naksha.COLLECTIONS_COL_ID -> Naksha.collectionNumber(id).toLong()
-        Naksha.CATALOGS_COL_ID -> Naksha.catalogNumber(id).toLong()
-        else -> Naksha.featureNumber(id)
+        COLLECTIONS_COL_TEXT -> COLLECTIONS_COL_NUMBER
+        CATALOGS_COL_TEXT -> CATALOGS_COL_NUMBER
+        else -> Id.textToNumber(id)
     }
 
     /**
-     * The partition-number for this feature, derived from the lower 16 bits of [featureNumber].
+     * The partition-number for this feature, derived from the lower 8 bits of [featureNumber].
      *
      * Always computed from [featureNumber] (i.e. from `fn`), never directly from the [id] string.
-     * Value is between `0` and `65535` (inclusive).
+     * Value is between `0` and `255` (inclusive).
      * @since 3.0
      * @see [partition]
      */
-    val partitionNumber: Int = Naksha.partitionNumber(featureNumber)
+    val partitionNumber: Int = Id.partitionNumber(featureNumber)
 
     /**
      * The partition-index, being `-1` if the collection does not have any performance-partitions, otherwise a value between `0` and `collection.partitions` _(exclusive)_. Must not be called unless [collection] has been initialized _(as it is a `lateinit` variable)_.
      *
      * Routing is always by [featureNumber] (`fn`). Both named and numeric features are routed identically
-     * via the lower 16 bits of `fn`.
+     * via the lower 8 bits of `fn`.
      * @since 3.0
      * @see [partitionNumber]
      */

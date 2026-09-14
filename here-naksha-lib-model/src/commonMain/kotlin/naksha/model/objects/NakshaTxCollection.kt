@@ -117,7 +117,7 @@ class NakshaTxCollection() : AnyObject() {
                 featuresByPartition = NakshaTxFeatureByPartition()
                 this.featuresByPartition = featuresByPartition
             }
-            val partition = tupleNumber.partitionNumber % partitions
+            val partition = tupleNumber.partitionIndex(partitions)
             featuresByPartition.add(partition, 1)
         }
         return this

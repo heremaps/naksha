@@ -59,11 +59,11 @@ data class TupleNumber(
     @JvmField val version: Long,
 ) : Comparable<TupleNumber> {
     /**
-     * The partition-number of the [naksha.model.Tuple], a value between `0` and `65536` _(exclusive)_.
+     * The partition-number of the [naksha.model.Tuple], a value between `0` and `256` _(exclusive)_.
      * @since 3.0
      */
     val partitionNumber: Int
-        get() = featureNumber.toInt() and 0xffff
+        get() = Id.partitionNumber(featureNumber)
 
     /**
      * The [Action] applied to generate the [naksha.model.Tuple] referred by this [TupleNumber].
@@ -83,12 +83,12 @@ data class TupleNumber(
     /**
      * Calculates the distribution partition-index where this [naksha.model.Tuple] will be located.
      *
-     * If the given partitions are less than `2`, the method always returns `-1`. If the number is bigger than `65536` the result will be mapped back into the range between `0` and `65536` _(exclusive)_.
+     * If the given partitions are less than `2`, the method always returns `-1`.
      * @param partitions the number of partitions
-     * @return the partition-index, a value between `0` and `partitions - 1` _(maximal 65535)_; or `-1` if there are no distribution partitions.
+     * @return the partition-index, a value between `0` and `partitions - 1` _(maximal 255)_; or `-1` if there are no distribution partitions.
      * @since 3.0
      */
-    fun partitionIndex(partitions: Int): Int = if (partitions < 2) -1 else (partitionNumber % partitions) and 0xffff
+    fun partitionIndex(partitions: Int): Int = if (partitions < 2) -1 else partitionNumber % partitions
 
     override fun hashCode(): Int = version.hashCode()
 

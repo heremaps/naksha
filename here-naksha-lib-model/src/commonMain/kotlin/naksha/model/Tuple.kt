@@ -6,6 +6,7 @@ import naksha.base.Action
 import naksha.base.AnyList
 import naksha.base.AnyObject
 import naksha.base.Guid
+import naksha.base.Id
 import naksha.base.ListProxy
 import naksha.base.MapProxy
 import naksha.base.Platform.PlatformCompanion.fromJSON
@@ -136,9 +137,8 @@ data class Tuple @JvmOverloads constructor(
             // Read members.
             val id = idMember.readString(feature) ?: throw illegalArg("Missing 'id' in NakshaFeature")
             val featureNumber = when (collection.id) {
-                Naksha.COLLECTIONS_COL_ID -> Naksha.collectionNumber(id).toLong()
-                Naksha.CATALOGS_COL_ID -> Naksha.catalogNumber(id).toLong()
-                else -> Naksha.featureNumber(id)
+                Naksha.COLLECTIONS_COL_ID, Naksha.CATALOGS_COL_ID -> Id(id).intValue.toLong()
+                else -> Id.textToNumber(id)
             }
             var prevTn: TupleNumber?
             var origin: String? = originMember?.readString(feature)

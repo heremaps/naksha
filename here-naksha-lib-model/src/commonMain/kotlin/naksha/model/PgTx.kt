@@ -87,7 +87,7 @@ open class PgTx private constructor(
         author: String?,
         dictReader: IDictReader?,
         session: IWriteSession,
-    ): this(storage, storage.number, version, appId, author, dictReader, session)
+    ): this(storage, storage.id.number, version, appId, author, dictReader, session)
 
     /**
      * The statistical transaction information, updated while this class is being used, should eventually be writted into the transaction-log of the storage.

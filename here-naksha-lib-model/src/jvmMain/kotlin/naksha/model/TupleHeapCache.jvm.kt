@@ -68,7 +68,7 @@ actual class TupleHeapCache : ITupleCache {
     }
 
     actual override fun clear(storage: IStorage) {
-        tuplesByStorage.remove(storage.number)
+        tuplesByStorage.remove(storage.id.number)
     }
 
     actual override fun gc() {
