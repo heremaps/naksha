@@ -81,7 +81,7 @@ class Id private constructor(
     constructor() : this(0L, randomAtoZ())
 
     /**
-     * The numeric representation of the `id`, when not given automatically calculated from the [text]; strongly recommended to not set the value manually.
+     * The numeric representation of the `id`, when not given automatically calculated from the [text].
      *
      * ### Catalogs and Collections
      * For catalogs and collections this number will be the full number, so the 64-bit value. However, only the lower 32-bit, as returned by [intValue], are significant. This means, internally the storages will trim the number down to 32-bit and when two catalogs or collections have the same lower 32-bit, they are treated as being the same. This is done, because only the 32-bit value is encoded in [tuple-numbers][TupleNumber]. In other words, the amount of collisions for catalogs and collections is much higher. However, it is not expected to have millions of catalogs in the same database, or millions of collections in the same catalog, therefore this is a fair tradeoff between encoding size of [TupleNumber] and collision resistance.
@@ -135,7 +135,7 @@ class Id private constructor(
      */
     @get:JvmName("intValue")
     val intValue: Int
-        get() = featureNumberAsInt(number)
+        get() = numberAsInt(number)
 
     /**
      * Tests if the identifier is a pure numeric identifier, so the [text] is just the stringified number _(only for positive numbers)_.
@@ -167,7 +167,21 @@ class Id private constructor(
         if (other !is Id) return false
         return number == other.number
     }
+
+    /**
+     * Returns the same as [intValue].
+     * @return the same as [intValue].
+     * @since 3.0
+     * @see intValue
+     */
     override fun hashCode(): Int = intValue
+
+    /**
+     * Returns the same as [text].
+     * @return the same as [text].
+     * @return since 3.0
+     * @see text
+     */
     override fun toString(): String = text
     override fun compareTo(other: Id?): Int {
         // We order `null` at the end of lists/arrays.
@@ -288,7 +302,7 @@ class Id private constructor(
          */
         @JvmStatic
         @JsStatic
-        fun featureNumberAsInt(featureNumber: Long): Int {
+        fun numberAsInt(featureNumber: Long): Int {
             val sign = ((featureNumber shr 63) shl 31).toInt()
             val low = (featureNumber and 0x7fff_ffffL).toInt()
             return sign or low
