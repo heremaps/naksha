@@ -73,7 +73,7 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     final Request request = event.getRequest();
     // process request using Naksha Admin Storage instance
     IStorage adminStorage = nakshaHub().getAdminStorage();
-    addStorageIdToStreamInfo(adminStorage.getId(), ctx);
+    addStorageIdToStreamInfo(adminStorage.getId().text(), ctx);
     if (request instanceof ReadRequest) {
       ReadRequest rr = (ReadRequest) request;
       return adminStorage.useReadSession(SessionOptions.from(ctx), reader -> reader.execute(rr));

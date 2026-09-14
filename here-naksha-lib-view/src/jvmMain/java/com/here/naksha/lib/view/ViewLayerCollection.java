@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.view;
 
+import naksha.base.Id;
 import naksha.model.Naksha;
 import naksha.base.TupleNumber;
 import org.jetbrains.annotations.NotNull;
@@ -27,21 +28,25 @@ import java.util.List;
 
 public class ViewLayerCollection {
 
-  private final String name;
+  private final @NotNull Id id;
   private final List<ViewLayer> layers;
 
   public ViewLayerCollection(String name, List<ViewLayer> layers) {
-    this.name = name;
+    this.id = new Id(name);
     this.layers = Collections.unmodifiableList(layers);
   }
 
   public ViewLayerCollection(String name, ViewLayer... orderedLowerLevelStorages) {
-    this.name = name;
+    this.id = new Id(name);
     this.layers = List.of(orderedLowerLevelStorages);
   }
 
+  public @NotNull Id getId() {
+    return id;
+  }
+
   public String getName() {
-    return name;
+    return id.text();
   }
 
   public List<ViewLayer> getLayers() {
@@ -58,7 +63,7 @@ public class ViewLayerCollection {
 
   public ViewLayer getByTupleNumber(@NotNull TupleNumber tupleNumber) {
     for (ViewLayer layer : layers) {
-      if (layer.getStorage().getNumber() != tupleNumber.databaseNumber) {
+      if (layer.getStorage().getId().number() != tupleNumber.databaseNumber) {
         continue;
       }
       String mapId = layer.getMapId();
