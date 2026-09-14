@@ -30,7 +30,7 @@ final class GeneratingSession implements IReadSession {
     @Override
     public @NotNull Response executeRead(@NotNull ReadRequest request) {
         GeneratingStorageService service = storage.getService();
-        FeatureTupleList featureTuples = service.generateDummyFeatureTuples(storage.getNumber(), storage.getNumOfFeaturesToGenerate());
+        FeatureTupleList featureTuples = service.generateDummyFeatureTuples(storage.getId().number(), storage.getNumOfFeaturesToGenerate());
         return new SuccessResponse(featureTuples);
     }
 

@@ -7,16 +7,13 @@ import kotlinx.datetime.toLocalDateTime
 import naksha.base.Action
 import naksha.base.Action.Action_C.VERSION
 import naksha.base.AtomicRef
+import naksha.base.Id
 import naksha.base.Platform
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
 import naksha.base.Version
-import naksha.model.Naksha.NakshaCompanion.catalogNumber
-import naksha.model.Naksha.NakshaCompanion.collectionNumber
-import naksha.model.Naksha.NakshaCompanion.databaseNumber
-import naksha.model.Naksha.NakshaCompanion.featureNumber
 import naksha.model.objects.NakshaStorage
 import kotlin.reflect.KClass
 import kotlin.time.Clock
@@ -47,17 +44,13 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      * @since 3.0.0
      */
     protected var configRef: AtomicRef<CONFIG> = AtomicRef(null)
-    private var _id: String? = null
-    private var _number: Long? = null
+    private var _id: Id? = null
 
     override val config: CONFIG
         get() = configRef.get() ?: throwUninitialized()
 
-    override val id: String
+    override val id: Id
         get() = _id ?: throwUninitialized()
-
-    override val number: Long
-        get() = _number ?: throwUninitialized()
 
     override var hardCap: Int = 16777216
         set(value) {
@@ -94,8 +87,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
         lock.acquire().use {
             if (configRef.get() == null || create==true || upgrade==true) {
                 val _config = storage.proxy(configKlass)
-                this._id = storage.id
-                this._number = featureNumber(storage.id)
+                this._id = Id(storage.id)
                 this.hardCap = storage.hardCap
                 initStorage(_config, create, upgrade)
                 this.configRef.set(_config)
@@ -119,7 +111,7 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
      */
     protected open fun newVirtualTupleNumber(catalogId: String, collectionId: String, featureId: String, version: Long, action: Action): TupleNumber {
         val v = (version and -4L) or action.longValue
-        return TupleNumber(databaseNumber(id), catalogNumber(catalogId), collectionNumber(collectionId), featureNumber(featureId), v)
+        return TupleNumber(id.number, Id(catalogId).intValue, Id(collectionId).intValue, Id.textToNumber(featureId), v)
     }
 
     /**
