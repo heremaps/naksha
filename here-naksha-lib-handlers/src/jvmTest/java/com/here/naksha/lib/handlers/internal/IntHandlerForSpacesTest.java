@@ -11,6 +11,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.kotlin.OngoingStubbingKt.whenever;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -18,9 +19,9 @@ import com.here.naksha.lib.core.models.naksha.Space;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
 import naksha.base.fn.Fn1;
 import naksha.model.IReadSession;
-import naksha.model.IStorage;
 import naksha.model.IWriteSession;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
@@ -34,25 +35,18 @@ import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.request.WriteRequest;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Named;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentMatcher;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
-class IntHandlerForSpacesTest {
-
-  @Mock
-  INaksha naksha;
+class IntHandlerForSpacesTest extends AbstractIntHandlerTest {
 
   IntHandlerForSpaces handler;
 
   @BeforeEach
   void setup() {
-    MockitoAnnotations.openMocks(this);
+    super.setup();
     handler = new IntHandlerForSpaces(naksha);
     NakshaContext.currentContext().setAppId("testAppId");
   }
@@ -168,17 +162,13 @@ class IntHandlerForSpacesTest {
   }
 
   private void writingToAdminSucceeds() {
-    IStorage admin = mock(IStorage.class);
-    when(naksha.getAdminStorage()).thenReturn(admin);
     IWriteSession writeSession = mock(IWriteSession.class);
     when(writeSession.execute(any(WriteRequest.class))).thenReturn(new SuccessResponse());
-    when(admin.useWriteSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
-    when(admin.newWriteSession(any(SessionOptions.class))).thenReturn(writeSession);
+    when(adminStorage.useWriteSession(any(SessionOptions.class), any(Fn1.class))).thenCallRealMethod();
+    when(adminStorage.newWriteSession(any(SessionOptions.class))).thenReturn(writeSession);
   }
 
   private void handlersExist(List<String> eventHandlerIds) {
-    IStorage spaceStorage = mock(IStorage.class);
-    when(naksha.getSpaceStorage()).thenReturn(spaceStorage);
     IReadSession readSession = mock(IReadSession.class);
     SuccessResponse successResponse = successfulResponseWithIds(eventHandlerIds);
     when(readSession.execute(argThat(anyReadHandlersRequest()))).thenReturn(successResponse);

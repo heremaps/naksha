@@ -226,7 +226,7 @@ class InsertFeatureTest : PgTestBase() {
         // And:
         val firstFeature = retrievedFeatures.find { it?.id == firstFeatureToCreate.id }
         assertNotNull(firstFeature)
-        assertEquals(storage.number, firstFeature.properties.xyz.guid?.tupleNumber?.databaseNumber)
+        assertEquals(storage.id.number, firstFeature.properties.xyz.guid?.tupleNumber?.databaseNumber)
         assertEquals(catalog.catalogNumber, firstFeature.properties.xyz.guid?.tupleNumber?.catalogNumber)
         assertEquals(collection.collectionNumber, firstFeature.properties.xyz.guid?.tupleNumber?.collectionNumber)
         Platform.logger.info("Storage reported guid '${firstFeature.properties.xyz.guid}' for first feature")

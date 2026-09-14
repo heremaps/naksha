@@ -66,16 +66,6 @@ open class NakshaCollection() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaCollection = super.withMomType(value) as NakshaCollection
 
     /**
-     * Helper to get/set the [TupleNumber] of the collection-feature. All collection features follow the old XYZ-Hub style, therefore the location of the [TupleNumber] is clear at `properties->@ns:com:here:xyz->uuid`.
-     * @since 3.0
-     */
-    var tupleNumber: TupleNumber?
-        get() = XyzMembers.XyzTn.readTupleNumber(this)
-        set(value) {
-            XyzMembers.XyzTn.write(this, value)
-        }
-
-    /**
      * The database-number of the collection; the collection-feature itself is stored in the same database as the collection it describes.
      * @since 3.0
      * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].

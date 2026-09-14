@@ -19,7 +19,7 @@ import naksha.base.NakshaException
 import naksha.base.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaCatalog
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
+import naksha.model.objects.StandardMembers
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
@@ -53,7 +53,7 @@ open class PgCatalog internal constructor(
      * The catalog-number of the catalog, actually the same as the feature-number of the [NakshaCatalog] feature.
      * @since 3.0
      */
-    val catalogNumber: Int = Id(id).intValue,
+    val catalogNumber: Int = Id.numberToInt(Id.textToNumber(id)),
 ) {
     /**
      * The map-identifier quoted optionally in double quotes.
@@ -265,7 +265,7 @@ open class PgCatalog internal constructor(
         // Read from database
         setSearchPath(conn)
         val TABLE = collections.headTable.quotedName
-        val ID = collections.column(Id)
+        val ID = collections.column(StandardMembers.Id)
         val SQL = "SELECT * FROM $TABLE WHERE $ID = $1"
         val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
         val rows = PgRows().withCollection(collections)
