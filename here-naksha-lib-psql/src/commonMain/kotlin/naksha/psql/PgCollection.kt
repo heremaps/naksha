@@ -187,16 +187,7 @@ open class PgCollection internal constructor(
     }
 
     private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
-        val indices = IndexList()
-        val declared: IndexList? = nakshaCollection.indices
-        val requested: List<Index> = when {
-            declared != null -> List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
-            defaultXyz -> XyzIndices.ALL
-            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Collection '${nakshaCollection.id}' declares custom members but no indices; declare an index list (an empty list is allowed)")
-        }
-        for (requestedIndex in requested) {
-            if (!indices.contains(requestedIndex)) indices.add(requestedIndex)
-        }
+        val indices = nakshaCollection.indices ?: IndexList()
         return Array(indices.size) { i ->
             val index = indices[i] ?: throw NakshaException(ILLEGAL_STATE, "Index #$i must not be null")
             val indexName = index.name
