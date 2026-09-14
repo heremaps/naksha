@@ -174,7 +174,21 @@ class Id private constructor(
         if (other !is Id) return false
         return number == other.number
     }
+
+    /**
+     * Returns the same as [intValue].
+     * @return the same as [intValue].
+     * @since 3.0
+     * @see intValue
+     */
     override fun hashCode(): Int = intValue
+
+    /**
+     * Returns the same as [text].
+     * @return the same as [text].
+     * @return since 3.0
+     * @see text
+     */
     override fun toString(): String = text
     override fun compareTo(other: Id?): Int {
         // We order `null` at the end of lists/arrays.
