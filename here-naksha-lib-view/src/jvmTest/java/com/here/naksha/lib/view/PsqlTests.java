@@ -73,7 +73,7 @@ abstract class PsqlTests {
     if (response instanceof ErrorResponse) {
       ((ErrorResponse)response).getError().print(Platform.getLogger());
     }
-    return assertInstanceOf(SuccessResponse.class, response);
+    return assertInstanceOf(SuccessResponse.class, response, () -> "Failed with "+response);
   }
 
   protected static @NotNull SuccessResponse executeWrite(@NotNull WriteRequest request) {

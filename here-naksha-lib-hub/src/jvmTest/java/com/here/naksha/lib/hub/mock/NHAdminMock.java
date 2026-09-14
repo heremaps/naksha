@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import kotlin.reflect.KClass;
+import naksha.base.Id;
 import naksha.base.Platform;
 import naksha.base.PlatformLock;
 import naksha.jbon.JbDictionary;
@@ -50,6 +51,7 @@ public class NHAdminMock extends AbstractStorage<Config> {
 
   protected static @NotNull Map<String, TreeMap<String, NakshaFeature>> mockCollection;
   protected static @NotNull NakshaHubConfig nakshaHubConfig;
+  private final @NotNull Id id = new Id();
 
   @Override
   public @NotNull KClass<Config> getConfigKlass() {
@@ -118,8 +120,8 @@ public class NHAdminMock extends AbstractStorage<Config> {
 
   @NotNull
   @Override
-  public String getId() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
+  public Id getId() {
+    return id;
   }
 
   @Override
@@ -164,11 +166,6 @@ public class NHAdminMock extends AbstractStorage<Config> {
   @Override
   public @NotNull PlatformLock getLock() {
     return Platform.newLock();
-  }
-
-  @Override
-  public long getNumber() {
-    throw new UnsupportedOperationException("Not yet supported by NHAdminMock");
   }
 
   @Override

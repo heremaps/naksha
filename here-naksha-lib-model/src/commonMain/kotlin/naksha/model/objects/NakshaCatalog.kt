@@ -56,16 +56,6 @@ open class NakshaCatalog() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaCatalog = super.withMomType(value) as NakshaCatalog
 
     /**
-     * Helper to get/set the [TupleNumber] of the catalog-feature. All catalogs features follow the old XYZ-Hub style, therefore the location of the [TupleNumber] is clear.
-     * @since 3.0
-     */
-    var tupleNumber: TupleNumber?
-        get() = XyzMembers.XyzTn.readTupleNumber(this)
-        set(value) {
-            XyzMembers.XyzTn.write(this, value)
-        }
-
-    /**
      * The database-number of the catalog; the catalog-feature itself is stored in the same database as the catalog it describes.
      * @since 3.0
      * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
