@@ -58,7 +58,7 @@ internal abstract class PgWriterBase protected constructor(
         get() = pgWriter.session
 
     val storageNumber: Long
-        get() = pgCollection.storage.number
+        get() = pgCollection.storage.id.number
 
     val catalogNumber: Int
         get() = pgCollection.catalog.catalogNumber

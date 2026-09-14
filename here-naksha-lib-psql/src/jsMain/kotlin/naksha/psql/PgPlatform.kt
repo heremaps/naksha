@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.model.Naksha
+import naksha.base.Id
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING", "OPT_IN_USAGE")
 @JsExport
@@ -46,11 +46,11 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.
          */
         @Deprecated(
             message = "This function will be removed in a future release.",
-            replaceWith = ReplaceWith("Naksha.partitionNumber(Naksha.featureNumber(featureId))"),
+            replaceWith = ReplaceWith("Id.partitionNumber(featureId)"),
             level = DeprecationLevel.WARNING
         )
         @JsStatic
-        actual fun partitionNumber(featureId: String): Int = Naksha.partitionNumber(Naksha.featureNumber(featureId))
+        actual fun partitionNumber(featureId: String): Int = Id.partitionNumber(featureId)
 
         /**
          * Tests if this code is executed within a PostgresQL database using [PLV8 extension](https://plv8.github.io/).

@@ -148,7 +148,7 @@ SELECT $FN AS fn, $VERSION AS version FROM limited"""
             sql = SQL,
             argValues = whereClause?.argValues?.toTypedArray() ?: emptyArray(),
             argTypes = whereClause?.argTypeNames ?: emptyArray(),
-            pgStorage.number,
+            pgStorage.id.number,
             pgCatalog.catalogNumber,
             pgCollection.collectionNumber
         )

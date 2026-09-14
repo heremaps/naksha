@@ -68,7 +68,7 @@ open class PgCollection internal constructor(
      * @since 3.0
      */
     @JvmField
-    val collectionNumber: Int = Naksha.collectionNumber(id)
+    val collectionNumber: Int = Id(id).intValue
 
     /**
      * The amount of bit the [next-version][PgColumn.NextVersionColumn] should be shifted right to calculate the history-partition.

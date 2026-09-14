@@ -95,7 +95,7 @@ open class NakshaCollection() : NakshaFeature() {
     fun withDatabaseId(value: String): NakshaCollection {
         val tn = tupleNumber
         if (tn != null) {
-            if (Naksha.databaseNumber(value) != tn.databaseNumber) {
+            if (Id.textToNumber(value) != tn.databaseNumber) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "The given database-id does not match the database-number of the collection.")
             }
         }
@@ -124,7 +124,7 @@ open class NakshaCollection() : NakshaFeature() {
         catalogId = value
         val tn = tupleNumber
         if (tn != null) {
-            if (Naksha.catalogNumber(value) != tn.catalogNumber) {
+            if (Id(value).intValue != tn.catalogNumber) {
                 throw NakshaException(ILLEGAL_ARGUMENT, "The given catalog-id does not match the catalog-number of the collection.")
             }
         }
@@ -137,15 +137,15 @@ open class NakshaCollection() : NakshaFeature() {
      *
      * It is **NOT** the collection-number of this collection-feature, so where the collection-feature itself is stored, which has always the collection-number `0`, because all collection features are always stored in the collection `naksha~collections`.
      * @since 3.0
-     * @see [Naksha.collectionNumber]
+     * @see [Id.intValue]
      */
     val collectionNumber: Int
-        get() = Naksha.collectionNumber(id)
+        get() = Id(id).intValue
 
     /**
      * If partitions is given, then the collection is internally partitioned in the storage, optimised for large quantities of features. The default is no partitions; as a rule of thumb, add one more partition for every 10 to 20 million features expected.
      *
-     * Valid values are between `1` and `65536` _(exclusive)_, the values `undefined`, `null` and `0` are interpreted as one partition (`1`), all other values will be rejected.
+     * Valid values are between `1` and `256` _(inclusive)_, the values `undefined`, `null` and `0` are interpreted as one partition (`1`), all other values will be rejected.
      *
      * **{Create-Only}** - after collection creation, modification of this parameter takes no effect.
      * @since 3.0
@@ -156,7 +156,36 @@ open class NakshaCollection() : NakshaFeature() {
      * @see [partitions]
      */
     open fun withPartitions(value: Int): NakshaCollection {
+        require(value in 0..256) { "partitions must be in 0..256, got $value" }
         this.partitions = value
+        return this
+    }
+
+    /** The amount of completed history partition ranges retained by pg_partman. */
+    var retain: Int by RETAIN
+
+    fun withRetain(value: Int): NakshaCollection {
+        require(value > 1) { "retain must be greater than 1, got $value" }
+        require(-value < backward && forward < value) { "retain must exceed backward magnitude and forward" }
+        retain = value
+        return this
+    }
+
+    /** The negative number of history ranges created before the current range. */
+    var backward: Int by BACKWARD
+
+    fun withBackward(value: Int): NakshaCollection {
+        require(value < 0 && -retain < value) { "backward must be in ${-retain + 1}..-1, got $value" }
+        backward = value
+        return this
+    }
+
+    /** The number of future history ranges pg_partman keeps prepared. */
+    var forward: Int by FORWARD
+
+    fun withForward(value: Int): NakshaCollection {
+        require(value >= 0 && value < retain) { "forward must be in 0..${retain - 1}, got $value" }
+        forward = value
         return this
     }
 
@@ -164,9 +193,8 @@ open class NakshaCollection() : NakshaFeature() {
      * The bit-shift applied to a transaction number to derive the history partition key.
      *
      * History is partitioned by range over `(txn >> shift)`. Each partition covers one contiguous
-     * range of the shifted value. With the default `shift = 41` the shifted value equals the
-     * calendar year (e.g. 2026), because the upper bits of a Naksha transaction number encode
-     * the year.
+      * range of the shifted value. With the default `shift = 37`, normal transaction versions
+      * are grouped approximately monthly.
      *
      * Valid values: `1..62` (inclusive). Any other value is rejected.
      *
@@ -692,7 +720,10 @@ open class NakshaCollection() : NakshaFeature() {
         private val DATABASE_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val CATALOG_ID = NullableProperty<NakshaCollection, String>(String::class)
         private val PARTITIONS = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 1 }
-        private val SHIFT = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 41 }
+        private val SHIFT = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 37 }
+        private val RETAIN = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 24 }
+        private val BACKWARD = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> -1 }
+        private val FORWARD = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 3 }
         private val STORAGE_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val MEMBERS = NullableProperty<NakshaCollection, MemberList>(MemberList::class)

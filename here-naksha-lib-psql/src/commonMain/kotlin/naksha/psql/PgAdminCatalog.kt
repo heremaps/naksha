@@ -8,11 +8,11 @@ import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
 import naksha.base.Action
 import naksha.base.AtomicMap
+import naksha.base.Id
 import naksha.model.NakshaVersion
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.jbon.IDictReader
 import naksha.jbon.JbDictionary
-import naksha.model.*
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_ID
 import naksha.model.Naksha.NakshaCompanion.ADMIN_CATALOG_FN
 import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
@@ -23,9 +23,10 @@ import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.forbidden
 import naksha.base.illegalState
+import naksha.model.Naksha
+import naksha.model.NakshaIdType
 import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.StandardMembers
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.time.Instant
@@ -61,7 +62,7 @@ abstract class PgAdminCatalog internal constructor(
      * @since 3.0.0
      */
     upgrade: Boolean?
-) : PgCatalog(storage, NakshaCatalog().withDatabaseId(storage.id).withId(ADMIN_CATALOG_ID)), IDictReader {
+) : PgCatalog(storage, NakshaCatalog().withDatabaseId(storage.id.text).withId(ADMIN_CATALOG_ID)), IDictReader {
     /**
      * The page-size of the database (`current_setting('block_size')`).
      * @since 3.0.0
@@ -595,28 +596,8 @@ SELECT basics.*, procs.* FROM basics, procs;
      * @return the map, if it exists; _null_ otherwise.
      * @since 3.0.0
      */
-    fun getPgCatalogById(conn: PgConnection?, id: String): PgCatalog? {
-        if (ADMIN_CATALOG_ID == id) return this
-        val catalogNumber = Naksha.catalogNumber(id)
-        val existing = catalogCache[catalogNumber]
-        if (existing != null || conn==null) return existing
-
-        val outRows = PgRows().withCollection(catalogs)
-        val SQL = """SELECT ${outRows.aliases()}
-FROM "naksha~admin".${catalogs.headTable.quotedName}
-WHERE $Id = $1"""
-        val plan = conn.prepare(SQL, arrayOf(PgType.STRING.text))
-        plan.execute(arrayOf(id)).fetch().use { cursor ->
-            if (!outRows.read(cursor)) return null
-        }
-        if (outRows.size == 0) return null
-        val tuple: Tuple = outRows[0] ?: return null
-        Naksha.cache.store(tuple)
-        val nakshaCatalog = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
-        val pgCatalog = PgCatalog(storage, nakshaCatalog)
-        cacheCatalog(pgCatalog)
-        return pgCatalog
-    }
+    fun getPgCatalogById(conn: PgConnection?, id: String): PgCatalog?
+        = getPgCatalogByNumber(conn, Id.numberAsInt(Id.textToNumber(id)))
 
     /**
      * Returns the existing map with the given number; if any.
