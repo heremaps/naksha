@@ -340,6 +340,15 @@ actual class Platform {
         @JsStatic
         actual fun isProxyKlass(klass: KClass<*>): Boolean = isAssignable(klass, Proxy::class)
 
+        @Suppress("NON_EXPORTABLE_TYPE")
+        @JsStatic
+        actual fun <T: Any> asInstanceOf(o: Any?, klass: KClass<out T>): T? {
+            if (o == null) return null
+            @Suppress("UNCHECKED_CAST")
+            if (klass.isInstance(o)) return o as T
+            return null
+        }
+
         /**
          * Returns the [KClass] created **by** the given constructor. This is mainly for JavaScript, it will simply query a cached and if not
          * found, it will create an instance, query the [KClass] using [klassOf] and add it into the cache. Therefore, the cost of
