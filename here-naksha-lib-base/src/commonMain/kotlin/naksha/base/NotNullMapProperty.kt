@@ -1,5 +1,6 @@
 package naksha.base
 
+import naksha.base.fn.Fn2
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -32,25 +33,27 @@ import kotlin.reflect.KProperty
  * @property name the name of the property in the map, if different from the property name, if _null_, the property name is used.
  * @property init the initializer to create a new value, when the property does not exist or the value is not of the desired type. If the
  * initializer returns _null_, the value is created by invoking the default constructor of the value type.
+ * @property initFn cached SAM-converted to [Fn2] to avoid creating a new wrapper for every [MapProxy.getOrCreate].
  */
 @Suppress("NON_EXPORTABLE_TYPE", "OPT_IN_USAGE")
 @JsExport
 open class NotNullMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_TYPE : Any, PROPERTY_TYPE : MAP_VALUE_TYPE>(
     val klass: KClass<out PROPERTY_TYPE>,
     val name: String? = null,
-    val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null
+    val init: ((self: MAP, name: String) -> PROPERTY_TYPE?)? = null,
+    private val initFn: Fn2<PROPERTY_TYPE?, MAP, String>? = init?.let { fn -> Fn2 { self, name -> fn(self, name) } }
 ) {
 
     @JvmOverloads
     open fun getValue(self: MAP, propertyName: String? = null): PROPERTY_TYPE = self.getOrCreate(
         this.name ?: propertyName ?: throw IllegalArgumentException("Undefined property name"),
         klass,
-        init
+        initFn
     )
 
     @JsName("getValueByProperty")
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE =
-        getValue(self, property.name)
+        self.getOrCreate(name ?: property.name, klass, initFn)
 
     @JvmOverloads
     open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE) =
