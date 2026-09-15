@@ -53,7 +53,7 @@ open class NotNullMapProperty<MAP : MapProxy<String, MAP_VALUE_TYPE>, MAP_VALUE_
 
     @JsName("getValueByProperty")
     open operator fun getValue(self: MAP, property: KProperty<*>): PROPERTY_TYPE =
-        self.getOrCreate(name ?: property.name, klass, initFn)
+        getValue(self, property.name)
 
     @JvmOverloads
     open fun setValue(self: MAP, propertyName: String? = null, value: PROPERTY_TYPE) =

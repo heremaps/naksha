@@ -29,12 +29,12 @@ abstract class Proxy : PlatformObject {
     companion object ProxyCompanion {
         @Suppress("UNCHECKED_CAST")
         private fun <T : Any> proxyOf(data: PlatformObject, klass: KClass<out T>): T {
-            var asKlass = asInstanceOf(data, klass)
-            if (asKlass != null) return asKlass
+            var asT = asInstanceOf(data, klass)
+            if (asT != null) return asT
             val symbol = Symbols.of(klass)
             val existing = Symbols.get(data, symbol)
-            asKlass = asInstanceOf(existing, klass)
-            if (asKlass != null) return asKlass
+            asT = asInstanceOf(existing, klass)
+            if (asT != null) return asT
             // Create a new instance.
             val instance = Platform.newInstanceOf(klass)
             (instance as Proxy).bind(data, symbol)
