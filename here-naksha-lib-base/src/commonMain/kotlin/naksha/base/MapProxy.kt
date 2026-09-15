@@ -105,12 +105,9 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
         init: Fn2<out T?, in SELF, in KEY>? = null
     ): T {
         val data = platformObject()
-        var raw: Any? = null
-        if (map_contains_key(data, key)) {
-            raw = map_get(data, key)
-            val value = box(raw, klass)
-            if (value != null) return value
-        }
+        val raw = map_get(data, key)
+        val boxed = box(raw, klass)
+        if (boxed != null) return boxed
         if (init != null) {
             @Suppress("UNCHECKED_CAST")
             val value = init.call(this as SELF, key)

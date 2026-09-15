@@ -261,6 +261,14 @@ actual class Platform {
         }
 
         @JvmStatic
+        actual fun <T: Any> asInstanceOf(o: Any?, klass: KClass<out T>): T? {
+            if (o == null) return null
+            @Suppress("UNCHECKED_CAST")
+            if (klass.java.isInstance(o)) return o as T
+            return null
+        }
+
+        @JvmStatic
         actual fun <T : Any> klassForName(name: String): KClass<T> {
             try {
                 @Suppress("UNCHECKED_CAST")

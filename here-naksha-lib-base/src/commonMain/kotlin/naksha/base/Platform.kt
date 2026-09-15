@@ -158,6 +158,14 @@ expect class Platform {
         fun isProxyKlass(klass: KClass<*>): Boolean
 
         /**
+         * Cast the given object into the given type, if possible, otherwise return _null_.
+         * @param o The object to cast.
+         * @param klass The type to cast to.
+         * @return The object casted into the given type or _null_ if not possible.
+         */
+        fun <T: Any> asInstanceOf(o: Any?, klass: KClass<out T>): T?
+
+        /**
          * Returns the [KClass] **of** the given object.
          * @param o The object to query.
          * @return The [KClass] **of** the given object.

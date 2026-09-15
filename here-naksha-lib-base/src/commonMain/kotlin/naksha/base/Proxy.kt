@@ -3,6 +3,7 @@
 package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.UNDEFINED
+import naksha.base.Platform.PlatformCompanion.asInstanceOf
 import naksha.base.Platform.PlatformCompanion.isNil
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_delete
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
@@ -28,10 +29,12 @@ abstract class Proxy : PlatformObject {
     companion object ProxyCompanion {
         @Suppress("UNCHECKED_CAST")
         private fun <T : Any> proxyOf(data: PlatformObject, klass: KClass<out T>): T {
-            if (klass.isInstance(data)) return data as T
+            var asT = asInstanceOf(data, klass)
+            if (asT != null) return asT
             val symbol = Symbols.of(klass)
             val existing = Symbols.get(data, symbol)
-            if (klass.isInstance(existing)) return existing as T
+            asT = asInstanceOf(existing, klass)
+            if (asT != null) return asT
             // Create a new instance.
             val instance = Platform.newInstanceOf(klass)
             (instance as Proxy).bind(data, symbol)
@@ -68,7 +71,8 @@ abstract class Proxy : PlatformObject {
                 // Special handling, when the given klass is an interface.
                 val symbol = Symbols.of(klass)
                 val existing = Symbols.get(data, symbol)
-                if (klass.isInstance(existing)) return existing as T
+                val asKlass = asInstanceOf(existing, klass)
+                if (asKlass != null) return asKlass
             } else if (klass.isInstance(data)) return data as T
             if (Platform.isAssignable(klass, JsEnum::class)) {
                 return JsEnum.get(raw, klass as KClass<out JsEnum>) as T
@@ -113,7 +117,10 @@ abstract class Proxy : PlatformObject {
                     if (data is PlatformList) return data.proxy(AnyList::class) as T
                     if (data is PlatformDataView) return data.proxy(DataViewProxy::class) as T
                 }
-            } else if (klass.isInstance(data)) return data as T
+            } else {
+                val asKlass = asInstanceOf(data, klass)
+                if (asKlass != null) return asKlass
+            }
             return init.call(key)
         }
 
