@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import com.here.naksha.lib.core.util.CollectionIndexPolicy;
 import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.IStorage;
@@ -50,8 +51,6 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -118,10 +117,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
     StopWatch storageTimer = new StopWatch();
     try {
-      String collectionId = retrieveCollectionIdFromRequest(request);
+      NakshaCollection collection = retrieveCollectionFromRequest(request);
+      String collectionId = collection.getId();
       String mapId = extractMapIdFromStorageProps(storageImpl);
       normalizeWriteRequest(request, mapId, collectionId);
-      OperationData operationData = new OperationData(sessionOptions, storageImpl, mapId, collectionId, request);
+      OperationData operationData = new OperationData(
+          sessionOptions, storageImpl, mapId, collectionId, collection, request);
       return forwardRequestToStorage(operationData, FIRST_ATTEMPT, storageTimer);
     } catch (NakshaException ne) {
       return new ErrorResponse(ne.getError());
@@ -465,8 +466,17 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           operationData.getCollectionId());
+      final NakshaCollection collectionForCreation = operationData.getCollection();
+      collectionForCreation.setId(operationData.getCollectionId());
+      collectionForCreation.setCatalogId(operationData.getMapId());
+      CollectionIndexPolicy.normalizeForHubCreation(collectionForCreation);
       Response createCollectionResp = measuredStorageSupplier(
-          () -> createMissingCollection(operationData.getSessionOptions(), operationData.getStorageImpl(), operationData.getMapId(), operationData.getCollectionId()),
+          () -> createMissingCollection(
+              operationData.getSessionOptions(),
+              operationData.getStorageImpl(),
+              operationData.getMapId(),
+              operationData.getCollectionId(),
+              collectionForCreation),
           storageTimer);
       if (createCollectionResp instanceof SuccessResponse) {
         logger.info("Created collection {}, forwarding the request once again", operationData.getCollectionId());
@@ -500,8 +510,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       @NotNull SessionOptions sessionOptions,
       @NotNull IStorage storageImpl,
       @NotNull String mapId,
-      @NotNull String collectionId) {
-    return createXyzCollection(sessionOptions, storageImpl, mapId, collectionId);
+      @NotNull String collectionId,
+      @NotNull NakshaCollection collection) {
+    return createXyzCollection(sessionOptions, storageImpl, mapId, collectionId, collection);
   }
 
   private boolean indicateStorageNotInitialized(@NotNull ErrorResponse errorResponse) {
@@ -528,9 +539,13 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     } else if (request instanceof WriteRequest) {
       WriteRequest wr = (WriteRequest) request;
       if (isOnlyWriteCollections(wr)) {
-        collectionsFrom(wr).forEach(collectionFromRequest -> {
-          collectionFromRequest.setCatalogId(mapId);
-          collectionFromRequest.setId(collectionId);
+        wr.getWrites().forEach(write -> {
+          if (write.getFeature() instanceof NakshaCollection) {
+            final NakshaCollection collectionFromRequest = (NakshaCollection) write.getFeature();
+            collectionFromRequest.setId(collectionId);
+            collectionFromRequest.setCatalogId(mapId);
+            CollectionIndexPolicy.normalizeForHubCreation(collectionFromRequest);
+          }
         });
       }
       String finalCollectionId = isOnlyWriteCollections(wr) ? Naksha.COLLECTIONS_COL_ID : collectionId;
@@ -553,7 +568,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
   }
 
   // TODO: collectionId at handler level can be potentially removed in the future
-  private @NotNull String retrieveCollectionIdFromRequest(final Request request) {
+  private @NotNull NakshaCollection retrieveCollectionFromRequest(final Request request) {
     // TODO: check if mapId is present
     final NakshaCollection collectionDefinedInHandler = properties.getCollection();
     if (collectionDefinedInHandler != null) {
@@ -561,7 +576,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
           "Using collection with id {} that is associated with EventHandler(id={})",
           collectionDefinedInHandler.getId(),
           eventHandlerConfig.getId());
-      return collectionDefinedInHandler.getId();
+      return collectionDefinedInHandler;
     }
     if (eventTarget instanceof Space) {
       Space s = (Space) eventTarget;
@@ -582,33 +597,24 @@ public class DefaultStorageHandler extends AbstractEventHandler {
             "Using collection with id {} that is associated with Space(id={})",
             collectionDefinedInSpace.getId(),
             s.getId());
-        return collectionDefinedInSpace.getId();
+        return collectionDefinedInSpace;
       }
     }
     logger.info(
         "No collection definition found in Handler & Space properties, using default one with event target id: {}",
         eventTarget.getId());
-    return eventTarget.getId();
-  }
-
-  private @NotNull List<@NotNull NakshaCollection> collectionsFrom(@NotNull WriteRequest wr) {
-    final ArrayList<NakshaCollection> collections = new ArrayList<>();
-    for (Write write : wr.getWrites()) {
-      if (write.getFeature() instanceof NakshaCollection) {
-        collections.add((NakshaCollection) write.getFeature());
-      }
-    }
-    return collections;
+    return new NakshaCollection(eventTarget.getId());
   }
 
   private Response createXyzCollection(
       @NotNull SessionOptions sessionOptions,
       @NotNull IStorage storageImpl,
       @NotNull String mapId,
-      @NotNull String collectionId
+      @NotNull String collectionId,
+      @NotNull NakshaCollection collection
   ) {
     return storageImpl.useWriteSession(sessionOptions, writer -> {
-      final Response result = writer.execute(createWriteCollectionsRequest(new NakshaCollection(collectionId, mapId)));
+      final Response result = writer.execute(createWriteCollectionsRequest(collection));
       if (result instanceof SuccessResponse) {
         writer.commit();
         return result;
@@ -644,6 +650,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     private final IStorage storageImpl;
     private final String mapId;
     private final String collectionId;
+    private final NakshaCollection collection;
     private final Request request;
 
     private OperationData(
@@ -651,12 +658,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         IStorage storageImpl,
         String mapId,
         String collectionId,
+        NakshaCollection collection,
         Request request
     ) {
       this.sessionOptions = sessionOptions;
       this.storageImpl = storageImpl;
       this.mapId = mapId;
       this.collectionId = collectionId;
+      this.collection = collection;
       this.request = request;
     }
 
@@ -674,6 +683,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
 
     private String getCollectionId() {
       return collectionId;
+    }
+
+    private NakshaCollection getCollection() {
+      return collection;
     }
 
     private Request getRequest() {
