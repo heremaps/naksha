@@ -3,7 +3,6 @@
 package naksha.model
 
 import naksha.base.fn.Fn3
-import naksha.model.SessionOptions.SessionOptions_C.from
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -131,7 +130,7 @@ data class SessionOptions @JvmOverloads constructor(
      * @since 3.0
      */
     @JvmField
-    val logLevel: String? = null,
+    val logLevel: String? = Naksha.DEFAULT_SESSION_LOG_LEVEL,
 ) {
     /**
      * The stream-identifier for this session.
@@ -189,6 +188,7 @@ data class SessionOptions @JvmOverloads constructor(
                 socketTimeout = c.socketTimeout,
                 stmtTimeout = c.stmtTimeout,
                 lockTimeout = c.lockTimeout,
+                idleTxTimeout = c.idleTxTimeout,
                 useMaster = useMaster,
                 streamInfo = c.streamInfo,
                 authToken = authToken,
