@@ -21,11 +21,13 @@ class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
         val initialFeature = NakshaFeature().apply {
             id = "feature_1"
             featureType = "some_feature_type"
+            properties.xyz["foo"] = "bar"
         }
         //TODO if .copy(recursive = true) is fixed, and can preserve nested objects' classes, then use initialFeature.copy(true)
         val copy = NakshaFeature().apply {
             id = "feature_1"
             featureType = "some_feature_type"
+            properties.xyz["foo"] = "bar"
         }
         val writeFeatureReq = WriteRequest().add(
             Write().createFeature(collection, initialFeature)

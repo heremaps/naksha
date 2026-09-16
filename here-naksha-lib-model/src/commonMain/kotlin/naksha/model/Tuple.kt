@@ -288,7 +288,7 @@ data class Tuple @JvmOverloads constructor(
         fun copyOnWrite(original: NakshaFeature, path: JsonPath): NakshaFeature {
             val root = Platform.copy(original.platformObject(), false) as PlatformMap
             var current: PlatformObject = root
-            for (i in 0 until path.size - 1) {
+            for (i in 0 until path.size) {
                 val key = path[i]
                 val parent = current
                 val child = when (parent) {
