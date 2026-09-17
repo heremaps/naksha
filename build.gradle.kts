@@ -369,6 +369,7 @@ project(":here-naksha-storage-http") {
         implementation(project(":here-naksha-common-http"))
 
         implementation(commons_lang3)
+        implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.0.0")
 
         testImplementation(mockito)
         testImplementation("io.rest-assured:rest-assured:5.5.0")
