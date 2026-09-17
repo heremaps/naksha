@@ -21,6 +21,8 @@ package com.here.naksha.storage.http;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.net.http.HttpRequest.newBuilder;
 
+import com.here.naksha.storage.http.circuitbreaker.CircuitBreakerHandle;
+import com.here.naksha.storage.http.circuitbreaker.CircuitBreakerProps;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -46,13 +48,21 @@ public class RequestSender {
   @NotNull
   private final RequestSender.KeyProperties keyProps;
 
-  public RequestSender(@NotNull RequestSender.KeyProperties keyProps) {
+  @Nullable
+  private final CircuitBreakerHandle circuitBreaker;
+
+  public RequestSender(@NotNull RequestSender.KeyProperties keyProps, @Nullable CircuitBreakerHandle circuitBreaker) {
     this.keyProps = keyProps;
+    this.circuitBreaker = circuitBreaker;
     this.httpClient = createNewClient();
   }
 
   private HttpClient createNewClient() {
     return HttpClientFactory.getHttpClient(Duration.ofSeconds(keyProps.connectionTimeoutSec));
+  }
+
+  public @NotNull KeyProperties getKeyProps() {
+    return keyProps;
   }
 
   /**
@@ -70,6 +80,24 @@ public class RequestSender {
   }
 
   public HttpResponse<byte[]> sendRequest(
+      @NotNull String endpoint,
+      boolean keepDefHeaders,
+      @Nullable Map<String, String> headers,
+      @Nullable String httpMethod,
+      @Nullable String body) {
+    if (circuitBreaker == null) {
+      return sendRequestInternal(endpoint, keepDefHeaders, headers, httpMethod, body);
+    }
+    try {
+      return circuitBreaker.execute(
+          () -> sendRequestInternal(endpoint, keepDefHeaders, headers, httpMethod, body));
+    } catch (Exception e) {
+      log.error("Circuit breaker or request execution failed for storageId: {}", keyProps.name, e);
+      throw unchecked(e);
+    }
+  }
+
+  private HttpResponse<byte[]> sendRequestInternal(
       @NotNull String endpoint,
       boolean keepDefHeaders,
       @Nullable Map<String, String> headers,
@@ -131,10 +159,6 @@ public class RequestSender {
         && ioe.getMessage().contains("GOAWAY"));
   }
 
-  public boolean hasKeyProps(KeyProperties thatKeyProps) {
-    return this.keyProps.equals(thatKeyProps);
-  }
-
   /**
    * Set of properties that are just enough to construct the sender
    * and distinguish unambiguously between objects
@@ -146,5 +170,7 @@ public class RequestSender {
       @NotNull Map<String, String> defaultHeaders,
       long connectionTimeoutSec,
       long socketTimeoutSec,
-      long maxRetries) {}
+      long maxRetries,
+      @Nullable CircuitBreakerProps circuitBreakerConfig,
+      long storageUpdatedAt) {}
 }

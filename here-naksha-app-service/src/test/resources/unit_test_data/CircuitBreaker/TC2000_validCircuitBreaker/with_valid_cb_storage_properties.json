@@ -1,0 +1,17 @@
+{
+  "connectTimeout": 1,
+  "socketTimeout": 2,
+  "url": "http://localhost:9094",
+  "headers": {
+    "Authorization": "Bearer <token>",
+    "Content-Type": "application/json"
+  },
+  "circuitBreaker": {
+    "slidingWindowSize": 10,
+    "minimumNumberOfCalls": 5,
+    "slowCallDurationThresholdMs": 500,
+    "slowCallRateThreshold": 50,
+    "waitDurationInOpenStateMs": 5000,
+    "permittedNumberOfCallsInHalfOpenState": 4
+  }
+}
