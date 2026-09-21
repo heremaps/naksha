@@ -32,7 +32,7 @@ open class StreamTransaction(
      * The identifier of the version, if the source storage has transaction logs.
      * @since 3.0
      */
-    @get:JvmName("version")
+    @get:JvmName("id")
     val id: Id?,
 
     /**
