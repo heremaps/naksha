@@ -93,4 +93,4 @@ RUN dnf install -y libxml2 libxml2-devel cmake \
 
 EXPOSE 5432
 
-CMD /usr/bin/run_postgres.sh
+CMD ["/usr/bin/run_postgres.sh"]
