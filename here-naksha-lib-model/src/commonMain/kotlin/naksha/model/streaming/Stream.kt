@@ -230,13 +230,29 @@ abstract class Stream(
     /**
      * Closes the stream gracefully.
      *
-     * When [hasNext] returns _false_, the reading thread should call this method to wait for all outstanding writes to [acknowledge], before eventually closing the stream. It as well can be used to intentionally close a stream gracefully.
-     *
-     * This method waits for [acknowledge] of all outstanding [chunks][StreamChunk], then closes the stream. If there are more [chunks][StreamChunk] available to read, it throws a [StreamException] with error [CLOSED][naksha.base.NakshaError.CLOSED], providing a recovery request. Should a [next] call be outstanding, it is interrupted by throwing the same exception.
+     * - This method should not be invoked unless [isDone] returns _true_.
+     * - This method waits for [acknowledge] of all outstanding [chunks][StreamChunk], then closes the stream.
+     * - Should a [next] call be outstanding, it is interrupted.
+     * - If there are more [chunks][StreamChunk] available to read, it throws a [StreamException] with error [CLOSED][naksha.base.NakshaError.CLOSED], providing a recovery request.
      *
      * @since 3.0
      * @throws StreamException with a recovery request, if there are still outstanding chunks.
      * @throws NakshaException if recovery is not possible and there are outstanding chunks.
+     * @see isDone
      */
     abstract override fun close()
+
+    /**
+     * Closes the stream gracefully and returns a recovery request.
+     *
+     * - This method can be used for subscriptions, in that case best with a concurrency-level of `1`.
+     * - This method waits for [acknowledge] of all outstanding [chunks][StreamChunk], then closes the stream.
+     * - Should a [next] call be outstanding, it is interrupted.
+     *
+     * @param timeout if not `null`, the maximum duration to wait for a recoverable state.
+     * @return the [StreamRequest] to be used for recovery.
+     * @throws NakshaException if any error prevents the creation of the recovery request.
+     * @since 3.0
+     */
+    abstract fun closeForRecovery(timeout: Duration?): StreamRequest
 }

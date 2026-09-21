@@ -26,6 +26,7 @@ open class StreamRequest(): AnyObject() {
      * @param databaseId the identifier of the database to read from.
      * @param catalogId the identifier of the catalog to read from.
      * @param collectionId the identifier of the collection to read from.
+     * @param concurrencyLevel the amount of concurrent writers that are expected. This hints the stream reader in how much data it should prepare for parallel loading, so that [Stream.next] can keep all writers busy. Specifically, if `1` or less is given, the steam expects sequential processing _(sometimes intentionally)_, so it does not load much ahead.
      * @param version the maximal version to read.
      * @param queryDeleted the deleted features should be part of the stream; defaults to _true_.
      * @param queryHistory If all states _([Tuple][naksha.model.Tuple])_ between _minVersion_ and _version_ should be returned or just the latest state, closest to _version_; defaults to _true_.
@@ -41,6 +42,7 @@ open class StreamRequest(): AnyObject() {
         databaseId: Id,
         catalogId: Id,
         collectionId: Id,
+        concurrencyLevel: Int,
         version: Long = HEAD.number,
         queryDeleted: Boolean = true,
         queryHistory: Boolean = true,
@@ -52,6 +54,7 @@ open class StreamRequest(): AnyObject() {
         set("databaseId", databaseId)
         set("catalogId", catalogId)
         set("collectionId", collectionId)
+        set("concurrencyLevel", concurrencyLevel)
         set("queryDeleted", queryDeleted)
         set("queryHistory", queryHistory)
         set("version", version)
@@ -81,6 +84,15 @@ open class StreamRequest(): AnyObject() {
      */
     @get:JvmName("collectionId")
     val collectionId: Id by ID_NOT_NULL
+
+    /**
+     * The amount of concurrent writers that are expected.
+     *
+     * This hints the stream reader in how much data it should prepare for parallel processing, so that [Stream.next] can keep all writers busy. Specifically, if `1` or less is given, the steam expects sequential processing _(sometimes intentionally)_, so it does not load much ahead.
+     * @since 3.0
+     */
+    @get:JvmName("concurrencyLevel")
+    val concurrencyLevel: Int by INT_1
 
     /**
      * If deleted features should be read.
@@ -140,6 +152,7 @@ open class StreamRequest(): AnyObject() {
         private val BOOLEAN_TRUE = NotNullProperty<StreamRequest, Boolean>(Boolean::class) { _,_ -> true }
         private val LONG_HEAD = NotNullProperty<StreamRequest, Long>(Long::class) { _,_ -> HEAD.number }
         private val LONG_0 = NotNullProperty<StreamRequest, Long>(Long::class) { _,_ -> 0L }
+        private val INT_1 = NotNullProperty<StreamRequest, Int>(Int::class) { _,_ -> 1 }
         private val INT_1000 = NotNullProperty<StreamRequest, Int>(Int::class) { _,_ -> 1000 }
         private val DURATION_NOT_NULL = NotNullProperty<StreamRequest, Duration>(Duration::class) { self, name ->
             val duration = self.getRaw(name)
