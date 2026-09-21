@@ -262,7 +262,7 @@ open class MapProxy<K : Any, V : Any>(val keyKlass: KClass<out K>, val valueKlas
         if (v is Id) return v
         if (v !is String) return null
         val id = Id(v)
-        if (update) map_set(platformObject(), id, v)
+        if (update) map_set(platformObject(), key, id)
         return id
     }
 
