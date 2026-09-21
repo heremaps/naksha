@@ -1,0 +1,19 @@
+{
+  "id": "auth_readonly_storage_denied",
+  "type": "Storage",
+  "title": "Readonly JWT denied storage",
+  "description": "Storage payload for write authorization negative test",
+  "className": "naksha.psql.PsqlStorage",
+  "properties": {
+    "dbConfig": {
+      "host": "${dataDb.host}",
+      "db": "${dataDb.db}",
+      "user": "${dataDb.user}",
+      "password": "${dataDb.password}",
+      "port": ${dataDb.port},
+      "schema": "${dataDb.schema}",
+      "minPoolSize": 5,
+      "maxPoolSize": 50
+    }
+  }
+}

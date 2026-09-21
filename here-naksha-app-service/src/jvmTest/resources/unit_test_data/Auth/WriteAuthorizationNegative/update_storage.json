@@ -1,0 +1,19 @@
+{
+  "id": "auth_test_storage",
+  "type": "Storage",
+  "title": "Test PSQL storage (updated)",
+  "description": "PSQL storage instance for testing purpose - PUT auth denial",
+  "className": "naksha.psql.PsqlStorage",
+  "properties": {
+    "dbConfig": {
+      "host": "${dataDb.host}",
+      "db": "${dataDb.db}",
+      "user": "${dataDb.user}",
+      "password": "${dataDb.password}",
+      "port": ${dataDb.port},
+      "schema": "${dataDb.schema}",
+      "minPoolSize": 5,
+      "maxPoolSize": 50
+    }
+  }
+}
