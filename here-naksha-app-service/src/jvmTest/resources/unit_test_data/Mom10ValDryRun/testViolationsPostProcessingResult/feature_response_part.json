@@ -1,0 +1,45 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "my-custom-id-4000-1",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [8.68872, 50.0561, 292.9437776]
+      },
+      "properties": {
+        "speedLimit": "60"
+      },
+      "momType": "Topology"
+    }
+  ],
+  "violations": [
+    {
+      "type": "Feature",
+      "properties": {
+        "isoCountryCode": "DEU",
+        "ruleDescription": "Speed limit on the road should match the speed limit sign",
+        "errorMessage": "Topology ID urn:here::here:Topology:106003684 has a Speed Limit 50 that does not match the speed sign",
+        "severity": 1,
+        "references": [
+          {
+            "featureType": "Topology",
+            "id": "my-custom-id-4000-1",
+            "spaceId": "local-space-4-mom10-val-dry-run"
+          }
+        ],
+        "longitude": 13.63291,
+        "latitude": 52.2943,
+        "deltaMode": false,
+        "ruleId": "WROAD159"
+      },
+      "violatedObject": {
+        "featureType": "Topology",
+        "id": "my-custom-id-4000-1",
+        "spaceId": "local-space-4-mom10-val-dry-run"
+      },
+      "momType": "supporting.Violation"
+    }
+  ]
+}
