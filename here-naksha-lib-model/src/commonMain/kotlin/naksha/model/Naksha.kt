@@ -3,6 +3,16 @@
 package naksha.model
 
 import naksha.base.*
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_INT
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_TEXT
+import naksha.base.Id.IdCompanion.BOOKS_COL_INT
+import naksha.base.Id.IdCompanion.BOOKS_COL_TEXT
+import naksha.base.Id.IdCompanion.CATALOGS_COL_INT
+import naksha.base.Id.IdCompanion.CATALOGS_COL_TEXT
+import naksha.base.Id.IdCompanion.COLLECTIONS_COL_INT
+import naksha.base.Id.IdCompanion.COLLECTIONS_COL_TEXT
+import naksha.base.Id.IdCompanion.TRANSACTIONS_COL_INT
+import naksha.base.Id.IdCompanion.TRANSACTIONS_COL_TEXT
 import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.md5
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
@@ -32,71 +42,29 @@ class Naksha private constructor() {
          */
         const val INTERNAL_PREFIX = "naksha~"
 
-        /**
-         * The identifier of the administration catalog, fixed to `naksha~admin`. It can be found in any database under Naksha control.
-         *
-         * **Note**: The feature of the administration catalog is an immutable feature needed to bootstrap a Naksha controlled database, therefore it is not peristed anywhere.
-         * @since 3.0
-         */
-        const val ADMIN_CATALOG_ID = "naksha~admin"
-
-        /**
-         * The identifier of the administration catalog, fixed to `0`. It can be found in any database under Naksha control.
-         * @since 3.0
-         */
-        const val ADMIN_CATALOG_FN = 0
-
-        /**
-         * The identifier of the collections-collection, the collection in which the collection-features of each catalog are persisted.
-         *
-         * This collection exists in every catalog under Naksha management. The identifier of the collection itself is fixed to `naksha~collections`. The feature of the collections-collection is an immutable feature. It is needed to bootstrap a new catalog.
-         * @since 3.0
-         */
-        const val COLLECTIONS_COL_ID = "naksha~collections"
-
-        /**
-         * The collection-number of the collections-collection in which the collection-features of each catalog are persisted, it has the fixed feature-number _(`0`)_.
-         * @since 3.0
-         */
-        const val COLLECTIONS_COL_FN = 0
-
-        /**
-         * The identifier of the collection in which transactions are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~transactions`)_.
-         * @since 3.0
-         * @see [naksha.model.objects.NakshaTx]
-         */
-        const val TRANSACTIONS_COL_ID = "naksha~transactions"
-
-        /**
-         * The collection-number of the collection in which transactions are stored, located in the [admin-catalog][ADMIN_CATALOG_ID]. The feature-number of this collection is fixed to `1`.
-         * @since 3.0
-         */
-        const val TRANSACTIONS_COL_FN = 1
-
-        /**
-         * The identifier of the collection in which catalogs (maps) are stored, located only within the [admin-map][ADMIN_CATALOG_ID] _(`naksha~catalogs`)_.
-         * @see [naksha.model.objects.NakshaCatalog]
-         * @since 3.0
-         */
-        const val CATALOGS_COL_ID = "naksha~catalogs"
-
-        /**
-         * The collection-number of the collection in which catalogs (maps) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`2`)_.
-         * @since 3.0
-         */
-        const val CATALOGS_COL_FN = 2
-
-        /**
-         * The identifier of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`naksha~books`)_.
-         * @since 3.0
-         */
-        const val BOOKS_COL_ID = "naksha~books"
-
-        /**
-         * The collection-number of the collection in which books (global JBON2 dictionaries) are stored, located in the [admin-map][ADMIN_CATALOG_ID] _(`3`)_.
-         * @since 3.0
-         */
-        const val BOOKS_COL_FN = 3
+        //
+        // Move constants into `Id` class, mainly because `Id` is in `lib-base` where we need it, and `Naksha` is in `lib-model`.
+        //
+        @Deprecated(message = "Use Id.ADMIN_CATALOG_TEXT", replaceWith = ReplaceWith("Id.ADMIN_CATALOG_TEXT"))
+        const val ADMIN_CATALOG_ID = ADMIN_CATALOG_TEXT
+        @Deprecated(message = "Use Id.ADMIN_CATALOG_INT", replaceWith = ReplaceWith("Id.ADMIN_CATALOG_INT"))
+        const val ADMIN_CATALOG_FN = ADMIN_CATALOG_INT
+        @Deprecated(message = "Use Id.COLLECTIONS_COL_TEXT", replaceWith = ReplaceWith("Id.COLLECTIONS_COL_TEXT"))
+        const val COLLECTIONS_COL_ID = COLLECTIONS_COL_TEXT
+        @Deprecated(message = "Use Id.COLLECTIONS_COL_INT", replaceWith = ReplaceWith("Id.COLLECTIONS_COL_INT"))
+        const val COLLECTIONS_COL_FN = COLLECTIONS_COL_INT
+        @Deprecated(message = "Use Id.TRANSACTIONS_COL_TEXT", replaceWith = ReplaceWith("Id.TRANSACTIONS_COL_TEXT"))
+        const val TRANSACTIONS_COL_ID = TRANSACTIONS_COL_TEXT
+        @Deprecated(message = "Use Id.TRANSACTIONS_COL_INT", replaceWith = ReplaceWith("Id.TRANSACTIONS_COL_INT"))
+        const val TRANSACTIONS_COL_FN = TRANSACTIONS_COL_INT
+        @Deprecated(message = "Use Id.CATALOGS_COL_TEXT", replaceWith = ReplaceWith("Id.CATALOGS_COL_TEXT"))
+        const val CATALOGS_COL_ID = CATALOGS_COL_TEXT
+        @Deprecated(message = "Use Id.CATALOGS_COL_INT", replaceWith = ReplaceWith("Id.CATALOGS_COL_INT"))
+        const val CATALOGS_COL_FN = CATALOGS_COL_INT
+        @Deprecated(message = "Use Id.BOOKS_COL_TEXT", replaceWith = ReplaceWith("Id.BOOKS_COL_TEXT"))
+        const val BOOKS_COL_ID = BOOKS_COL_TEXT
+        @Deprecated(message = "Use Id.BOOKS_COL_INT", replaceWith = ReplaceWith("Id.BOOKS_COL_INT"))
+        const val BOOKS_COL_FN = BOOKS_COL_INT
 
         /**
          * The maximum length of identifiers _(`42`)_.
@@ -151,168 +119,30 @@ class Naksha private constructor() {
         @JvmField
         var DEFAULT_SESSION_LOG_LEVEL: String? = null
 
-        /**
-         * Generates an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given identifier, which is used to extract many values from it.
-         * @param id the identifier to hash.
-         * @return a [Binary] view above the [MD5](https://en.wikipedia.org/wiki/MD5) hash.
-         * @since 3.0
-         */
-        private fun hashId(id: String): Binary {
-            val hash = md5(id)
-            return Binary(Platform.newDataView(hash))
-        }
-
-        /**
-         * A regular expression to test if a string contains potentially a 63-bit unsigned integer (`1 .. 9,223,372,036,854,775,807`).
-         * @since 3.0
-         */
-        private val is63BitUnsigned = Regex("^[1-9][0-9]{0,18}$")
-
-        /**
-         * A regular expression to test if a string contains potentially a 31-bit unsigned integer (`1 .. 2,147,483,647`).
-         * @since 3.0
-         */
-        private val is31BitUnsigned = Regex("^[1-9][0-9]{0,9}\$")
-
-        /**
-         * A method to calculate a valid database-number from the database-id.
-         *
-         * The method simply invokes [featureNumber].
-         *
-         * @param id the id, from which to extract the database-number.
-         * @return the database-number.
-         * @since 3.0
-         * @see [featureNumber]
-         */
+        @Deprecated(message = "Use Id.textToNumber", replaceWith = ReplaceWith("Id.textToNumber"))
         @JsStatic
         @JvmStatic
-        fun databaseNumber(id: String): Long = featureNumber(id)
+        fun databaseNumber(id: String): Long = Id.textToNumber(id)
 
-       /**
-         * A method to calculate a valid catalog-number from the catalog-id.
-         *
-         * @param id the catalog-id, from which to extract the catalog-number.
-         * @return the catalog-number.
-         * @since 3.0
-         * @see [hashId]
-         */
+        @Deprecated(message = "Use Id.textToInt", replaceWith = ReplaceWith("Id.textToInt"))
         @JsStatic
         @JvmStatic
-        fun catalogNumber(id: String): Int {
-           if (id == ADMIN_CATALOG_ID) return ADMIN_CATALOG_FN
-           if (id == "0" || is31BitUnsigned.matches(id)) {
-               try {
-                   return id.toUInt(10).toInt()
-               } catch (_: Exception) {}
-           }
-           val md5 = hashId(id)
-           return md5.getInt32(12) or -2147483648
-       }
+        fun catalogNumber(id: String): Int = Id.textToInt(id)
 
-        /**
-         * A method to calculate a valid collection-number from the collection-id.
-         *
-         * @param id the collection-id, from which to extract the collection-number.
-         * @return the collection-number.
-         * @since 3.0
-         * @see [hashId]
-         */
+        @Deprecated(message = "Use Id.textToInt", replaceWith = ReplaceWith("Id.textToInt"))
         @JsStatic
         @JvmStatic
-        fun collectionNumber(id: String): Int {
-            val internalNumber = internalIdToNumber[id]
-            if (id != ADMIN_CATALOG_ID && internalNumber != null) return internalNumber
-            if (id == "0" || is31BitUnsigned.matches(id)) {
-                try {
-                    return id.toUInt(10).toInt()
-                } catch (_: Exception) {}
-            }
-            val md5 = hashId(id)
-            return md5.getInt32(12) or -2147483648
-        }
+        fun collectionNumber(id: String): Int = Id.textToInt(id)
 
-        /**
-         * A method to calculate the feature-number (`fn`) from the feature-id.
-         *
-         * Actually, this method will try to detect if the feature-id is a 63-bit unsigned integer using [featureNumberAsLong], if that is the case, it will convert this string into the corresponding positive 64-bit integer, and return it. If [featureNumberAsLong] returns `-1`, so the `id` is no valid positive numeric identifier, it will invoke [featureNumberAsHash] to convert the `id` into a 64-bit hash identifier, which is guaranteed to be a negative number.
-         *
-         * Applications may have performance advantages when they process identifiers in a loop to apply this logic themself to avoid unnecessary hashing or duplicate number parsing/detection.
-         *
-         * Otherwise, it uses the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the feature-id and return the lower 64-bit as feature-number, with the highest bit (sign-bit) always being cleared, which reserves all positive numbers for manually managed feature-numbers, which is compatible to what `Map-Hub` originally did. Considering the [birthday paradox](https://betterexplained.com/articles/understanding-the-birthday-paradox/), we can assume that for the maximum of 2^40 features in a collection, there will be around 65,000 collisions, when using 2^32 features _(4 billion)_ we only get 2 collisions, while for less than 1 billion features we will not encounter any collision _(or, it is unlikely)_.
-         *
-         * ### Collision handling
-         * As collisions in feature numbers are not totally avoidable, the strategy in case of a collision should be to increment to the feature-number until an unused number is found, not modifying the lower 16-bit, which we use as [partition-number][partitionNumber]. The general approach is:
-         * ```
-         * new_fn = ((fn + 65536) & 0xffff_ffff_ffff_0000)
-         *        | (fn & 0xffff) | 0x8000_0000_0000_0000
-         * ```
-         * A storage may provide a helper (e.g. `naksha_alt64`) that encapsulates this increment.
-         *
-         * ### Note
-         * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^63)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^64) )`, which results in around 6 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^64) )` to around 63.2 percent, reaching 99.99% for around 147 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
-         *
-         * @param id the feature-id, from which to extract the feature-number.
-         * @return the feature-number.
-         * @see [featureNumberAsLong]
-         * @see [featureNumberAsHash]
-         */
+        @Deprecated(message = "Use Id.textToNumber", replaceWith = ReplaceWith("Id.textToNumber"))
         @JsStatic
         @JvmStatic
-        fun featureNumber(id: String): Long {
-            val numericId = featureNumberAsLong(id)
-            return if (numericId >= 0L) numericId else featureNumberAsHash(id)
-        }
+        fun featureNumber(id: String): Long = Id.textToNumber(id)
 
-        /**
-         * Converts the given feature `id` into a 64-bit positive feature-number if the given `id` is a valid positive integer in the supported range.
-         *
-         * This method is faster than [featureNumber] if the feature-number is only needed, when it is positive. Internally used when detecting numeric identifies in query building. This method does not apply an [MD5](https://en.wikipedia.org/wiki/MD5) hash.
-         * @param id the feature-id as string.
-         * @return the feature-id as positive number, when being a positive number; `-1` otherwise.
-         * @since 3.0
-         */
+        @Deprecated(message = "Use Id.hashText", replaceWith = ReplaceWith("Id.hashText"))
         @JsStatic
         @JvmStatic
-        fun featureNumberAsLong(id: String): Long {
-            val internalNumber = internalIdToNumber[id]
-            if (internalNumber != null) return internalNumber.toLong()
-            if (id == "0" || is63BitUnsigned.matches(id)) {
-                try {
-                    return id.toLong(10)
-                } catch (_: Exception) {}
-            }
-            return -1L
-        }
-
-        /**
-         *
-         */
-        @JsStatic
-        @JvmStatic
-        fun featureNumberAsHash(id: String): Long {
-            val md5 = hashId(id)
-            return md5.getInt64(8) or INT64_SIGN_BIT
-        }
-
-        /**
-         * Test if the given 32-bit represents a number, generated from an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the identifier.
-         * @param number the number to test.
-         * @return `true` if the given map- or collection-number was generated as hash above the identifier; `false` otherwise.
-         */
-        @JsName("isAutoNumber32")
-        @JsStatic
-        @JvmStatic
-        fun isAutoNumber(number: Int): Boolean = (number and -2147483648) == -2147483648
-
-        /**
-         * Test if the given 64-bit represents a number, generated from an [MD5](https://en.wikipedia.org/wiki/MD5) hash above the identifier.
-         * @param number the number to test.
-         * @return `true` if the given storage- or feature-number was generated as hash above the identifier; `false` otherwise.
-         */
-        @JsName("isAutoNumber64")
-        @JsStatic
-        @JvmStatic
-        fun isAutoNumber(number: Long): Boolean = (number and INT64_SIGN_BIT) == INT64_SIGN_BIT
+        fun featureNumberAsHash(id: String): Long = Id.hashText(id)
 
         /**
          * `0x8000_0000_0000_0000`, should be `-9223372036854775808`, but this does not work in Kotlin, only `-9223372036854775807 -1`?
@@ -374,39 +204,6 @@ class Naksha private constructor() {
         @JsStatic
         @JvmStatic
         fun partitionNumber(featureNumber: Long): Int = featureNumber.toInt() and 0xffff
-
-        /**
-         * Increment a 64-bit number _(storage- or feature-number)_ programmatically in case of collision, and return the _alternative_ number, derived deterministically from the given number. This method implements the same behavior as the SQL function `naksha_alt64`.
-         *
-         * ### Note
-         * This method can be applied recursively until a new valid number has been found.
-         *
-         * @param number the number to calculate an alternative from.
-         * @return the alternative number.
-         * @since 3.0
-         * @see [number]
-         * @see [hashId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun alternativeInt64(number: Long): Long
-            = ((number + 65536) and INT64_CLEAR_LOW16) or (number and INT64_CLEAR_HIGH48) or INT64_SIGN_BIT
-
-        /**
-         * Increment a 32-bit number _(map- or collection-number)_ programmatically in case of collision, and return the _alternative_ number, derived deterministically from the given number. This method implements the same behavior as the SQL function `naksha_alt32`.
-         *
-         * ### Note
-         * This method can be applied recursively until a new valid number has been found.
-         *
-         * @param number the number to calculate an alternative from.
-         * @return the alternative number.
-         * @since 3.0
-         * @see [number]
-         * @see [hashId]
-         */
-        @JsStatic
-        @JvmStatic
-        fun alternativeInt32(number: Int): Int = (number + 1) or -2147483648
 
         /**
          * Decodes Naksha tags from their JSON text representation into a [TagList].
@@ -664,7 +461,7 @@ class Naksha private constructor() {
          * ```
          * ```java
          * // rs = ResultTupleList
-         * final ResultTupleList result = Naksha.cache.load(rs, 0, rs.size())
+         * final ResultTupleList result = Naksha.cache.load(rs, 0, rs.size());
          * ```
          * @since 3.0
          */

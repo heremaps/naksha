@@ -117,61 +117,6 @@ const val MEMBER_TYPE = "naksha.Member"
 @JsExport
 const val INDEX_TYPE = "naksha.Index"
 
-// ── Well-known internal identifiers ──────────────────────────────────
-
-/** Text of the administration catalog identifier (`naksha~admin`). */
-@JsExport
-const val ADMIN_CATALOG_TEXT = "${INTERNAL_PREFIX}admin"
-/** Quoted text of the administration catalog identifier (`"naksha~admin"`). */
-@JsExport
-const val ADMIN_CATALOG_QUOTED = "\"${INTERNAL_PREFIX}admin\""
-/** Number of the administration catalog (fixed to `0`). */
-@JsExport
-const val ADMIN_CATALOG_NUMBER = 0L
-
-/** Text of the collections-collection identifier (`naksha~collections`). */
-@JsExport
-const val COLLECTIONS_COL_TEXT = "${INTERNAL_PREFIX}collections"
-/** Quoted text of the collections-collection identifier (`"naksha~collections"`). */
-@JsExport
-const val COLLECTIONS_COL_QUOTED = "\"${INTERNAL_PREFIX}collections\""
-/** Number of the collections-collection (fixed to `0`). */
-@JsExport
-const val COLLECTIONS_COL_NUMBER = 0L
-
-/** Text of the transactions-collection identifier (`naksha~transactions"`). */
-@JsExport
-const val TRANSACTIONS_COL_TEXT = "${INTERNAL_PREFIX}transactions"
-/** Quoted text of the transactions-collection identifier (`"naksha~transactions"`). */
-@JsExport
-const val TRANSACTIONS_COL_QUOTED = "\"${INTERNAL_PREFIX}transactions\""
-/** Number of the transactions-collection (fixed to `1`). */
-@JsExport
-const val TRANSACTIONS_COL_NUMBER = 1L
-
-/** Text of the catalogs-collection identifier (`naksha~catalogs`). */
-@JsExport
-const val CATALOGS_COL_TEXT = "${INTERNAL_PREFIX}catalogs"
-/** Quoted text of the catalogs-collection identifier (`"naksha~catalogs"`). */
-@JsExport
-const val CATALOGS_COL_QUOTED = "\"${INTERNAL_PREFIX}catalogs\""
-/** Number of the catalogs-collection (fixed to `2`). */
-@JsExport
-const val CATALOGS_COL_NUMBER = 2L
-
-/** Text of the books-collection identifier (`naksha~books`). */
-@JsExport
-const val BOOKS_COL_TEXT = "${INTERNAL_PREFIX}books"
-/** Quoted text of the books-collection identifier (`"naksha~books"`). */
-@JsExport
-const val BOOKS_COL_QUOTED = "\'${INTERNAL_PREFIX}books\'"
-/** Number of the books-collection (fixed to `3`). */
-@JsExport
-const val BOOKS_COL_NUMBER = 3L
-
-
-
-
 // -------------------------------------------------------------------------------------------------
 // ByteArray typed accessors — thin inline wrappers around ByteArrays
 // -------------------------------------------------------------------------------------------------

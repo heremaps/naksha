@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.AnyList
+import naksha.base.Id.IdCompanion.textToPositiveNumber
 import naksha.base.StringList
 import naksha.model.Naksha
 import naksha.base.NakshaError
@@ -8,9 +9,7 @@ import naksha.base.NakshaException
 import naksha.base.illegalArg
 import naksha.base.unsupportedOp
 import naksha.geo.SpGeometry
-import naksha.model.Naksha.NakshaCompanion.featureNumberAsLong
 import naksha.model.objects.MemberType
-import naksha.model.objects.StandardMembers
 import naksha.model.objects.StandardMembers.StandardMembers_C.Action
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureVersion
@@ -115,7 +114,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             throw illegalArg("The value for '$memberName' ${op.op} '$value' is not the correct type, excepted: $memberType")
         }
         return if (memberName == Id.name) {
-            val numeric = featureNumberAsLong(value as String)
+            val numeric = textToPositiveNumber(value as String)
             // If `id` is a string, but a positive integer, the `id` column will be NULL.
             // Therefore, in that case we need to search for the intger in the feature-number (fn) column!
             if (numeric >= 0) Pair(FeatureNumber.name, numeric) else Pair(Id.name, value)
@@ -301,7 +300,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         for (item in items) {
             // We simply ignore invalid types.
             if (item !is String) continue
-            val numeric = featureNumberAsLong(item)
+            val numeric = textToPositiveNumber(item)
             if (numeric >= 0L) {
                 fn_array[fn_end++] = numeric
             } else {

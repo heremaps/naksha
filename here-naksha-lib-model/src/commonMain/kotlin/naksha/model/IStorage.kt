@@ -51,7 +51,14 @@ interface IStorage : IDictReader {
      * @since 2.0.8
      * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
      */
-    val id: Id
+    val id: String
+
+    /**
+     * The storage-number.
+     * @since 2.0.8
+     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+     */
+    val number: Long
 
     /**
      * The hard-cap _(max result size)_ of the storage. No result-set every can become bigger than this amount of features.

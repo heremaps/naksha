@@ -121,7 +121,7 @@ class Id private constructor(
         get() {
             var text = this._text
             if (text == null) {
-                text = _numberToText(_number)
+                text = numberToText(_number)
                 this._text = text
             }
             return text
@@ -132,10 +132,12 @@ class Id private constructor(
      *
      * The method will keep the lower 31-bit of the [number] intact and copy the sign-bit to them, so that the resulting 32-bit value will match the lower 31-bit plus the sign of [number]. This guarantees that negative numbers stay negative, and positive numbers stay positive. In case of a negative number, it effectively returns the 32-bit at offset `12` of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the `id` string, with a set sign-bit.
      * @since 3.0
+     * @see Id.numberToInt
+     * @see Id.textToInt
      */
     @get:JvmName("intValue")
     val intValue: Int
-        get() = featureNumberAsInt(number)
+        get() = numberToInt(number)
 
     /**
      * Tests if the identifier is a pure numeric identifier, so the [text] is just the stringified number _(only for positive numbers)_.
@@ -184,6 +186,66 @@ class Id private constructor(
     // -------------------------------------------------------------------------------------------------------------------
 
     companion object IdCompanion {
+        /** Text of the administration catalog identifier (`naksha~admin`). */
+        const val ADMIN_CATALOG_TEXT = "${INTERNAL_PREFIX}admin"
+
+        /** Quoted text of the administration catalog identifier (`"naksha~admin"`). */
+        const val ADMIN_CATALOG_QUOTED = "\"${INTERNAL_PREFIX}admin\""
+
+        /** Number of the administration catalog (fixed to `-5047830975677239995`). */
+        const val ADMIN_CATALOG_NUMBER: Long = -5047830975677239995L
+
+        /** Int-Number of the administration catalog (fixed to `-527733435`). */
+        const val ADMIN_CATALOG_INT: Int = -527733435
+
+        /** Text of the collections-collection identifier (`naksha~collections`). */
+        const val COLLECTIONS_COL_TEXT = "${INTERNAL_PREFIX}collections"
+
+        /** Quoted text of the collections-collection identifier (`"naksha~collections"`). */
+        const val COLLECTIONS_COL_QUOTED = "\"${INTERNAL_PREFIX}collections\""
+
+        /** Number of the collections-collection (fixed to `-784851911399779908`). */
+        const val COLLECTIONS_COL_NUMBER: Long = -784851911399779908L
+
+        /** Int-Number of the collections-collection (fixed to `-876949060`). */
+        const val COLLECTIONS_COL_INT: Int = -876949060
+
+        /** Text of the transactions-collection identifier (`naksha~transactions"`). */
+        const val TRANSACTIONS_COL_TEXT = "${INTERNAL_PREFIX}transactions"
+
+        /** Quoted text of the transactions-collection identifier (`"naksha~transactions"`). */
+        const val TRANSACTIONS_COL_QUOTED = "\"${INTERNAL_PREFIX}transactions\""
+
+        /** Number of the transactions-collection (fixed to `-4460574983858345304`). */
+        const val TRANSACTIONS_COL_NUMBER: Long = -4460574983858345304L
+
+        /** Int-Number of the transactions-collection (fixed to `-249484632`). */
+        const val TRANSACTIONS_COL_INT: Int = -249484632
+
+        /** Text of the catalogs-collection identifier (`naksha~catalogs`). */
+        const val CATALOGS_COL_TEXT = "${INTERNAL_PREFIX}catalogs"
+
+        /** Quoted text of the catalogs-collection identifier (`"naksha~catalogs"`). */
+        const val CATALOGS_COL_QUOTED = "\"${INTERNAL_PREFIX}catalogs\""
+
+        /** Number of the catalogs-collection (fixed to `-8430948877866261206`). */
+        const val CATALOGS_COL_NUMBER = -8430948877866261206L
+
+        /** Int-Number of the catalogs-collection (fixed to `-1488083670`). */
+        const val CATALOGS_COL_INT: Int = -1488083670
+
+        /** Text of the books-collection identifier (`naksha~books`). */
+        const val BOOKS_COL_TEXT = "${INTERNAL_PREFIX}books"
+
+        /** Quoted text of the books-collection identifier (`"naksha~books"`). */
+        const val BOOKS_COL_QUOTED = "\'${INTERNAL_PREFIX}books\'"
+
+        /** Number of the books-collection (fixed to `-9124739062881139952`). */
+        const val BOOKS_COL_NUMBER: Long = -9124739062881139952L
+
+        /** Int-Number of the books-collection (fixed to `-791231728`). */
+        const val BOOKS_COL_INT: Int = -791231728
+
         /**
          * Private marker string object.
          */
@@ -232,20 +294,25 @@ class Id private constructor(
          * @param number the number for which to return the string version.
          * @return the number as string.
          * @since 3.0
-         * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the given `number` is not positive.
+         * @throws NakshaException with [NakshaError.ILLEGAL_ARGUMENT] if the given `number` can't be converted into a string.
          */
         @JvmStatic
         @JsStatic
-        fun numberToText(number: Long): String = _numberToText(number)
+        fun numberToText(number: Long): String {
+            if (number >= 0L) number.toString()
+            return numberToTextMap[number] ?: throw illegalArg("The text value of the given number is unknown: $number")
+        }
 
         /**
-         * This method only exists so that we always add the correct file and linenumber into the exception, the one of the consumer!
-         * @see numberToText
+         * Calculate the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the given text and returns the 64-bit Big-Endian value at offset 8 of the generated hash, setting the sign-bit, so that the returned value is always negative.
+         * @param text the text.
+         * @return the negative 64-bit hash above the given identifier.
+         * @since 3.0
+         * @see textToNumber
          */
-        private fun _numberToText(number: Long): String {
-            if (number >= 0L) return numberToTextMap[number] ?: number.toString()
-            throw illegalArg("Invalid number, expected a positive number, but got: $number")
-        }
+        @JvmStatic
+        @JsStatic
+        fun hashText(text: String): Long = md5(text).getInt64Be(8) or INT64_SIGN_BIT
 
         /**
          * Calculate the number from a textual identifier. Results in a positive number, if the `id` is a 63-bit unsigned integer literal, otherwise a negative number is returned as [MD5](https://en.wikipedia.org/wiki/MD5) hash above the `id`.
@@ -259,7 +326,41 @@ class Id private constructor(
             if (id == "0" || IS_63BIT_UNSIGNED.matches(id)) {
                 try { return id.toLong(10) } catch (_: Exception) {}
             }
-            return textToNumberMap[id] ?: (md5(id).getInt64Be(8) or INT64_SIGN_BIT)
+            return textToNumberMap[id] ?: hashText(id)
+        }
+
+        /**
+         * Calculate the 32-bit number from a textual identifier.
+         *
+         * This call can be replaced with:
+         * ```kotlin
+         * numberToInt(textToNumber(id))
+         * ```
+         * @param id the textual identifier.
+         * @return the numeric identifier calculated from the textual one.
+         * @since 3.0
+         * @see textToNumber
+         * @see numberToInt
+         */
+        @JvmStatic
+        @JsStatic
+        fun textToInt(id: String): Int = numberToInt(textToNumber(id))
+
+        /**
+         * Converts the given identifier into a 64-bit positive feature-number, if the given `id` is a valid positive integer in the supported range.
+         *
+         * This method is faster than [textToNumber] if the feature-number is only needed, when it is positive. Internally used when detecting numeric identifies in query building. This method does not apply an [MD5](https://en.wikipedia.org/wiki/MD5) hash.
+         * @param id the feature-id as string.
+         * @return the feature-id as positive number, when being a positive number; `-1` otherwise.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun textToPositiveNumber(id: String): Long {
+            if (id == "0" || IS_63BIT_UNSIGNED.matches(id)) {
+                try { return id.toLong(10) } catch (_: Exception) {}
+            }
+            return -1L
         }
 
         /**
@@ -288,7 +389,7 @@ class Id private constructor(
          */
         @JvmStatic
         @JsStatic
-        fun featureNumberAsInt(featureNumber: Long): Int {
+        fun numberToInt(featureNumber: Long): Int {
             val sign = ((featureNumber shr 63) shl 31).toInt()
             val low = (featureNumber and 0x7fff_ffffL).toInt()
             return sign or low
