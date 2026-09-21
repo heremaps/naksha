@@ -62,8 +62,11 @@ open class StreamChunk(
         while (true) {
             val count = acknowledgeCount.get()
             if (count <= 0) return
-            if (!acknowledgeCount.compareAndSet(count, count - 1)) continue
-            if (count == 1) stream._acknowledge(this)
+            if (acknowledgeCount.compareAndSet(count, count - 1)) {
+                if (count == 1) stream._acknowledge(this)
+                return
+            }
+            // Failed to update acknowledge count due to concurrent modifications, retry.
         }
     }
 
