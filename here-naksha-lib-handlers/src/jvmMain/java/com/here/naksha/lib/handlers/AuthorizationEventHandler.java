@@ -18,6 +18,7 @@
  */
 package com.here.naksha.lib.handlers;
 
+import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.SEND_UPSTREAM_WITHOUT_PROCESSING;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
 
@@ -65,7 +66,7 @@ public class AuthorizationEventHandler extends AbstractEventHandler {
   protected EventProcessingStrategy processingStrategyFor(IEvent event) {
     final Request request = event.getRequest();
     if (isOnlyWriteFeatures(request)) {
-      return EventProcessingStrategy.PROCESS;
+      return PROCESS;
     }
     return SEND_UPSTREAM_WITHOUT_PROCESSING;
   }
