@@ -169,12 +169,12 @@ mkdir -p ~/pg_temp
 To create the container do the following:
 
 ```bash
-docker pull ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+docker pull ghcr.io/naksha-oss/naksha-postgres:v18.6
 docker run --name naksha_pg \
        -v ~/pg_data:/usr/local/pgsql/data \
        -v ~/pg_temp:/usr/local/pgsql/temp \
        -p 0.0.0.0:5432:5432 \
-       -d ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+       -d ghcr.io/naksha-oss/naksha-postgres:v18.6
 ```
 
 When the docker container is started for the first time, it will generate a random password for the `postgres` user and store it inside the docker container in `/home/postgres/postgres.pwd`. You should remember this, because the password is stored in the database. It as well prints it, you can review like:

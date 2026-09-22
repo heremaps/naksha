@@ -40,7 +40,7 @@ EOF
 ###############
 # FINAL STAGE #
 ###############
-FROM ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+FROM ghcr.io/naksha-oss/naksha-postgres:v18.6
 
 ARG JAVA_HOME NAKSHA_CLI_DIR CLI_FILES_PATH="/tmp/naksha-cli-files"
 ARG srcStorageConfig="${CLI_FILES_PATH}/srcStorageConfig.json" srcMapId="" srcCollectionId=""
