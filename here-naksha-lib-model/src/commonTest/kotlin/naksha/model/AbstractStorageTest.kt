@@ -27,7 +27,7 @@ class AbstractStorageTest {
         while (true) {
             val before = Clock.System.now().toLocalDateTime(TimeZone.UTC).date
 
-            storage.resetNextVirtualVersion(Version.MIN_AUTO.number)
+            storage.resetNextVirtualVersion(Version.MIN_DATED.number)
             val first = storage.newVersion()
             val second = storage.newVersion()
 

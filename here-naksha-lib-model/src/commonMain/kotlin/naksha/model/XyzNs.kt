@@ -528,7 +528,7 @@ class XyzNs : AnyObject() {
         get() {
             // Downward compatibility hack.
             val raw = getRaw("version")
-            if (raw is Long && raw >= Version.MIN_AUTO.number) return Version(raw)
+            if (raw is Long && raw >= Version.MIN_DATED.number) return Version(raw)
             val version = guid?.tupleNumber?.version
             return if (version != null) Version(version) else null
         }
