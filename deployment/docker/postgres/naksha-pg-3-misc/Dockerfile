@@ -6,8 +6,8 @@ FROM ${DR_NAKSHA_POSTGRES}:plv8-${VERSION}
 RUN cd /tmp/ \
     && git clone https://github.com/pramsey/pgsql-gzip.git \
     && cd pgsql-gzip \
-    && git checkout v1.0.0 \
-    && make \
+    && git checkout v1.1.1 \
+    && make -j$(nproc) \
     && make install \
 # SELECT * FROM pg_available_extensions WHERE name = 'gzip';
 #
@@ -15,8 +15,8 @@ RUN cd /tmp/ \
     && cd /tmp/ \
     && git clone https://github.com/ossc-db/pg_hint_plan.git \
     && cd pg_hint_plan \
-    && git checkout REL16_1_6_0 \
-    && make \
+    && git checkout REL18_1_8_0 \
+    && make -j$(nproc) \
     && make install \
 # SELECT * FROM pg_available_extensions WHERE name = 'pg_hint_plan';
 #
@@ -24,8 +24,8 @@ RUN cd /tmp/ \
     && cd /tmp/ \
     && git clone https://github.com/citusdata/pg_cron.git \
     && cd pg_cron \
-    && git checkout v1.6.2 \
-    && make \
+    && git checkout v1.6.8 \
+    && make -j$(nproc) \
     && make install \
 # SELECT * FROM pg_available_extensions WHERE name = 'pg_cron';
 #
@@ -33,8 +33,8 @@ RUN cd /tmp/ \
     && cd /tmp/ \
     && git clone https://github.com/pgpartman/pg_partman.git \
     && cd pg_partman \
-    && git checkout v5.0.1 \
-    && make \
+    && git checkout v5.5.0 \
+    && make -j$(nproc) \
     && make install \
 # SELECT * FROM pg_available_extensions WHERE name = 'pg_partman';
 #
