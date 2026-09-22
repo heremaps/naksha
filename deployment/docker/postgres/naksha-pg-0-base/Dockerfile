@@ -13,7 +13,7 @@ RUN cd /tmp/ \
     && tar xzf postgresql-18.6.tar.gz \
     && cd postgresql-18.6 \
     && ./configure --prefix=/usr/local --with-blocksize=32 --with-wal-blocksize=32 --with-lz4 --with-zstd --with-openssl --with-uuid=ossp \
-    && make world WITH_PGBLOCKSIZE=32K \
+    && make -j$(nproc) world WITH_PGBLOCKSIZE=32K \
     && groupadd postgres -g 5430 \
     && useradd postgres -u 5432 -g 5430 \
     && make install-world \
