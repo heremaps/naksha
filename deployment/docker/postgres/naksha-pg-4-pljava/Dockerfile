@@ -8,13 +8,14 @@ FROM ${DR_NAKSHA_POSTGRES}:misc-${VERSION}
 # https://tada.github.io/pljava/use/policy.html
 # https://www.percona.com/blog/postgresql-pl-java-how-to-part-1/
 # https://www.slideshare.net/petereisentraut/postgresql-and-pljava
-RUN dnf install -y java-21-amazon-corretto maven \
+# NOTE: cannot maven install with parallel threads '-T 1C'
+RUN dnf install -y java-25-amazon-corretto maven \
     && cd /tmp/ \
     && git clone https://github.com/tada/pljava.git \
     && cd pljava \
-    && git checkout V1_6_6 \
+    && git checkout V1_6_10 \
     && mvn clean install \
-    && java -jar pljava-packaging/target/pljava-pg16.jar \
+    && java -jar pljava-packaging/target/pljava-pg18.jar \
 # SELECT * FROM pg_available_extensions WHERE name = 'pljava';
 #
 # Cleanup
@@ -22,4 +23,4 @@ RUN dnf install -y java-21-amazon-corretto maven \
 
 EXPOSE 5432
 
-CMD /usr/bin/run_postgres.sh
+CMD ["/usr/bin/run_postgres.sh"]

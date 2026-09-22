@@ -62,11 +62,11 @@ You can use standalone instance installed directly on your host machine but ther
 To use the containerized Postgres with your locally runnning Naksha:
 1) Pull docker image:
     ```bash
-    docker pull ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+    docker pull ghcr.io/naksha-oss/naksha-postgres:v18.6
     ```
 2) Run docker image with password set to default:
     ```bash
-    docker run -p 5432:5432 -e PGPASSWORD=password ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+    docker run -p 5432:5432 -e PGPASSWORD=password ghcr.io/naksha-oss/naksha-postgres:v18.6
     ```
 
 3) When the docker container is started for the first time, it will generate a random password so to simplify local development we can change it to default.

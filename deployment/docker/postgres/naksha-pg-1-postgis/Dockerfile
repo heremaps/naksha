@@ -5,14 +5,15 @@ FROM ${DR_NAKSHA_POSTGRES}:base-${VERSION}
 #
 # Install Geos (https://libgeos.org/usage/download/)
 RUN dnf install -y libxml2 libxml2-devel cmake \
+    && export CMAKE_BUILD_PARALLEL_LEVEL=$(nproc) \
     && cd /tmp/ \
-    && wget https://download.osgeo.org/geos/geos-3.12.1.tar.bz2 \
-    && tar xjf geos-3.12.1.tar.bz2 \
-    && cd geos-3.12.1 \
+    && wget https://download.osgeo.org/geos/geos-3.15.0.tar.bz2 \
+    && tar xjf geos-3.15.0.tar.bz2 \
+    && cd geos-3.15.0 \
     && mkdir _build \
     && cd _build \
     && cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local .. \
-    && make \
+    && make -j$(nproc) \
     && make install \
     && echo "/usr/local/lib64" > /etc/ld.so.conf.d/usr_local_lib64.conf \
     && rm /etc/ld.so.cache && ldconfig \
@@ -24,7 +25,7 @@ RUN dnf install -y libxml2 libxml2-devel cmake \
     && cd /tmp/ \
     && git clone https://github.com/OSGeo/PROJ.git \
     && cd PROJ \
-    && git checkout 9.4 \
+    && git checkout 9.9 \
     && mkdir build \
     && cd build \
     && cmake .. \
@@ -38,13 +39,14 @@ RUN dnf install -y libxml2 libxml2-devel cmake \
     && cd /tmp/ \
     && git clone https://github.com/OSGeo/gdal.git \
     && cd gdal \
-    && git checkout v3.8.4 \
+    && git checkout v3.13.3 \
     && mkdir build \
     && cd build \
+    && export GDAL_PYTHON_BINDINGS_WITHOUT_NUMPY=1 \
     && cmake -DCMAKE_BUILD_TYPE=Release .. \
     && cmake --build . \
     && cmake --build . --target install \
-# Test if library is available: ldconfig -v -N | grep jdal
+# Test if library is available: ldconfig -v -N | grep gdal
 # JSON-C
 # This library is needed for some POSTGIS functions
 # See: https://postgis.net/docs/postgis_installation.html#installation_configuration
@@ -52,11 +54,11 @@ RUN dnf install -y libxml2 libxml2-devel cmake \
     && cd /tmp/ \
     && git clone https://github.com/json-c/json-c.git \
     && cd json-c \
-    && git checkout json-c-0.17 \
+    && git checkout json-c-0.19 \
     && mkdir json-c-build \
     && cd json-c-build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release \
-    && make \
+    && make -j$(nproc) \
     && make install \
     && rm /etc/ld.so.cache && ldconfig \
 # Test if library is available: ldconfig -v -N | grep json-c
@@ -66,11 +68,11 @@ RUN dnf install -y libxml2 libxml2-devel cmake \
     && cd /tmp/ \
     && git clone https://github.com/PCRE2Project/pcre2.git \
     && cd pcre2 \
-    && git checkout pcre2-10.43 \
+    && git checkout pcre2-10.48 \
     && mkdir pcre2-build \
     && cd pcre2-build \
     && cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=OFF \
-    && make \
+    && make -j$(nproc) \
     && make install \
     && rm /etc/ld.so.cache && ldconfig \
 # Test if library is available: ldconfig -v -N | grep pcre2
@@ -81,10 +83,10 @@ RUN dnf install -y libxml2 libxml2-devel cmake \
     && cd /tmp/ \
     && git clone https://git.osgeo.org/gitea/postgis/postgis.git \
     && cd postgis \
-    && git checkout 3.4.2 \
+    && git checkout 3.6.4 \
     && ./autogen.sh \
     && ./configure \
-    && make \
+    && make -j$(nproc) \
     && export PGUSER=postgres \
     && make install \
 # SELECT * FROM pg_available_extensions WHERE name = 'postgis';
@@ -93,4 +95,4 @@ RUN dnf install -y libxml2 libxml2-devel cmake \
 
 EXPOSE 5432
 
-CMD /usr/bin/run_postgres.sh
+CMD ["/usr/bin/run_postgres.sh"]

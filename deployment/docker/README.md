@@ -9,14 +9,13 @@ Before you can start building the image, install docker, for example [Docker Des
 1. The first step is to export environment variables, and then login to your docker registry (**DR**), example of HERE registry:
 
 ```bash
-export DR_USER='<here-user>'
-export DR_PWD='<encrypted-password>'
-export DR_HOST="hcr.data.here.com" #Do not set if publishing to Docker Hub
-export DR_NAKSHA_POSTGRES="$DR_HOST/naksha/postgres" #For Docker Hub use "heremaps/naksha-postgres"
-docker login -u="$DR_USER" -p="$DR_PWD" $DR_HOST
+#Do not set DR_HOST if publishing to Docker Hub
+#For Docker Hub use export DR_NAKSHA_POSTGRES="heremaps/naksha-postgres"
+export DR_USER='naksha-oss'
+export DR_HOST="ghcr.io" 
+export DR_NAKSHA_POSTGRES="$DR_HOST/naksha-oss/naksha-postgres"
+docker login -u="$DR_USER" $DR_HOST
 ```
-
-**Note**: If you feel saver, enter the password on CLI. The rest of the instructions are no longer environment dependent.
 
 2. To build images supporting multi-platforms (ARM, AMD,...), enable containerd image store, or use a custom docker builder https://docs.docker.com/build/building/multi-platform/
 
@@ -35,12 +34,13 @@ The Naksha PostgresQL image is build in steps, follow these instructions:
 ```bash
 # Define postgres version, and revision to be build
 # v{pg-major}.{pg-minor}[.{pg-revision}]-r{revision}
-export BASE_VER="v16.2-r4"
-export POSTGIS_VER="v16.2-r4"
-export PLV8_VER="v16.2-r4"
-export MISC_VER="v16.2-r4"
-export PLJAVA_VER="v16.2-r4"
-export RELEASE_VER="v16.2-r4"
+# for later revisions, you can use v18.6-r1, v18.6-r2, ...
+export BASE_VER="v18.6" 
+export POSTGIS_VER="v18.6"
+export PLV8_VER="v18.6"
+export MISC_VER="v18.6"
+export PLJAVA_VER="v18.6"
+export RELEASE_VER="v18.6"
 ```
 
 Ones done, start compiling
@@ -169,12 +169,12 @@ mkdir -p ~/pg_temp
 To create the container do the following:
 
 ```bash
-docker pull ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+docker pull ghcr.io/naksha-oss/naksha-postgres:v18.6
 docker run --name naksha_pg \
        -v ~/pg_data:/usr/local/pgsql/data \
        -v ~/pg_temp:/usr/local/pgsql/temp \
        -p 0.0.0.0:5432:5432 \
-       -d ghcr.io/naksha-oss/naksha-postgres:v16.2-r5
+       -d ghcr.io/naksha-oss/naksha-postgres:v18.6
 ```
 
 When the docker container is started for the first time, it will generate a random password for the `postgres` user and store it inside the docker container in `/home/postgres/postgres.pwd`. You should remember this, because the password is stored in the database. It as well prints it, you can review like:

@@ -141,8 +141,8 @@ sudo systemctl start docker
 sudo systemctl enable docker
 
 # Start the PostgresQL docker
-sudo docker pull hcr.data.here.com/naksha-devops/naksha-postgres:amd64-v16.2-r0
-sudo docker run --name naksha_pg --privileged -v /mnt/pg_data:/usr/local/pgsql/data -v /mnt/pg_temp:/usr/local/pgsql/temp --network host -d hcr.data.here.com/naksha-devops/naksha-postgres:amd64-v16.2-r0
+sudo docker pull ghcr.io/naksha-oss/naksha-postgres:v18.6
+sudo docker run --name naksha_pg --privileged -v /mnt/pg_data:/usr/local/pgsql/data -v /mnt/pg_temp:/usr/local/pgsql/temp --network host -d ghcr.io/naksha-oss/naksha-postgres:v18.6
 sudo docker logs naksha_pg
 # Find the generated postgres root password, looks like:
 # Initialized database with password: zFKRsAEWoJteGUCobBxgJmNrDLeJARNP
