@@ -17,12 +17,12 @@ class StreamRequestBuilderTest {
         val catalogId = Id("catalog")
         val collectionId = Id("collection")
 
-        val request = StreamRequestBuilder(databaseId, catalogId, collectionId, 3).build()
+        val request = StreamRequestBuilder(databaseId, catalogId, collectionId).build()
 
         assertEquals(databaseId, request.databaseId)
         assertEquals(catalogId, request.catalogId)
         assertEquals(collectionId, request.collectionId)
-        assertEquals(3, request.concurrencyLevel)
+        assertEquals(false, request.sequential)
         assertEquals(HEAD.number, request.version)
         assertTrue(request.queryDeleted)
         assertTrue(request.queryHistory)
@@ -34,17 +34,16 @@ class StreamRequestBuilderTest {
 
     @Test
     fun stringConstructorConvertsIdentifiers() {
-        val request = StreamRequestBuilder("database", "catalog", "collection", 3).build()
+        val request = StreamRequestBuilder("database", "catalog", "collection").build()
 
         assertEquals(Id("database"), request.databaseId)
         assertEquals(Id("catalog"), request.catalogId)
         assertEquals(Id("collection"), request.collectionId)
-        assertEquals(3, request.concurrencyLevel)
     }
 
     @Test
     fun propertiesAndFluentSettersConfigureBuiltRequest() {
-        val builder = StreamRequestBuilder(Id("database"), Id("catalog"), Id("collection"), 2)
+        val builder = StreamRequestBuilder(Id("database"), Id("catalog"), Id("collection"))
         assertSame(builder, builder.withVersion(42))
         assertSame(builder, builder.withQueryDeleted(false))
         assertSame(builder, builder.withMinVersion(7))

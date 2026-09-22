@@ -26,13 +26,13 @@ open class StreamRequest(): AnyObject() {
      * @param databaseId the identifier of the database to read from.
      * @param catalogId the identifier of the catalog to read from.
      * @param collectionId the identifier of the collection to read from.
-     * @param concurrencyLevel the amount of concurrent writers that are expected. This hints the stream reader in how much data it should prepare for parallel loading, so that [Stream.next] can keep all writers busy. Specifically, if `1` or less is given, the steam expects sequential processing _(sometimes intentionally)_, so it does not load much ahead.
      * @param version the maximal version to read.
      * @param queryDeleted the deleted features should be part of the stream; defaults to _true_.
      * @param queryHistory If all states _([Tuple][naksha.model.Tuple])_ between _minVersion_ and _version_ should be returned or just the latest state, closest to _version_; defaults to _true_.
+     * @param sequential if the stream should be forced into sequential reading _(defaults to false)_.
      * @param minVersion the minimal version to read; defaults to `0`.
      * @param ignoreTransactions if transactions can be ignored, even while the storage supports transactions, this allows certain optimizations to be performed, like reordering features and re-grouping to created filled chunks for faster writing and eventually faster copy; defaults to _false_.
-     * @param chunkSize the amount of features to pack into each [StreamChunk] chunk; only applies when the storage does not support history and transaction logs **or** _ignoreTransactions_ was explicitly set to _true_; defaults to `1000`.
+     * @param chunkSize the amount of features to pack into each [StreamChunk] chunk; only applies when the storage does not support history and transaction logs **or** `ignoreTransactions` was explicitly set to _true_; defaults to `1000`.
      * @param timeout the timeout duration to wait for [acknowledgement][Stream.acknowledge] and for the read storage; defaults to 5 minutes.
      * @since 3.0
      */
@@ -42,10 +42,10 @@ open class StreamRequest(): AnyObject() {
         databaseId: Id,
         catalogId: Id,
         collectionId: Id,
-        concurrencyLevel: Int,
         version: Long = HEAD.number,
         queryDeleted: Boolean = true,
         queryHistory: Boolean = true,
+        sequential: Boolean = false,
         minVersion: Long = 0L,
         ignoreTransactions: Boolean = false,
         chunkSize: Int = 1000,
@@ -54,7 +54,7 @@ open class StreamRequest(): AnyObject() {
         set("databaseId", databaseId)
         set("catalogId", catalogId)
         set("collectionId", collectionId)
-        set("concurrencyLevel", concurrencyLevel)
+        set("sequential", sequential)
         set("queryDeleted", queryDeleted)
         set("queryHistory", queryHistory)
         set("version", version)
@@ -86,13 +86,13 @@ open class StreamRequest(): AnyObject() {
     val collectionId: Id by ID_NOT_NULL
 
     /**
-     * The amount of concurrent writers that are expected.
+     * If the stream is forced into sequential read mode.
      *
-     * This hints the stream reader in how much data it should prepare for parallel processing, so that [Stream.next] can keep all writers busy. Specifically, if `1` or less is given, the steam expects sequential processing _(sometimes intentionally)_, so it does not load much ahead.
+     * This forces the stream reader into sequential mode, it does not load [chunks][StreamChunk] in parallel and does not return more than one [chunk][StreamChunk] at a time. It as well guarantees the order. This is only necessary for certain special targets _(that can't support parallel writing)_, e.g. useful for subscription.
      * @since 3.0
      */
-    @get:JvmName("concurrencyLevel")
-    val concurrencyLevel: Int by INT_1
+    @get:JvmName("sequential")
+    val sequential: Boolean by BOOLEAN_FALSE
 
     /**
      * If deleted features should be read.
@@ -152,7 +152,6 @@ open class StreamRequest(): AnyObject() {
         private val BOOLEAN_TRUE = NotNullProperty<StreamRequest, Boolean>(Boolean::class) { _,_ -> true }
         private val LONG_HEAD = NotNullProperty<StreamRequest, Long>(Long::class) { _,_ -> HEAD.number }
         private val LONG_0 = NotNullProperty<StreamRequest, Long>(Long::class) { _,_ -> 0L }
-        private val INT_1 = NotNullProperty<StreamRequest, Int>(Int::class) { _,_ -> 1 }
         private val INT_1000 = NotNullProperty<StreamRequest, Int>(Int::class) { _,_ -> 1000 }
         private val DURATION_NOT_NULL = NotNullProperty<StreamRequest, Duration>(Duration::class) { self, name ->
             val duration = self.getRaw(name)

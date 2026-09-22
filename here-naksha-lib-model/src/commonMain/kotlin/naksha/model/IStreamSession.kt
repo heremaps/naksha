@@ -16,13 +16,16 @@ interface IStreamSession: ISession {
      * @param request the request for the stream.
      * @return the stream.
      * @since 3.0
+     * @throws naksha.base.NakshaException with error [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] if the request is not supported. For example, if a sequential read is requested and not supported, or vice versa.
      */
     fun read(request: StreamRequest): Stream
 
     /**
-     * Asks the storage to atomically create the features of the given chunk.
+     * Asks the storage to atomically store the features of the given chunk.
      *
-     * The method will block the calling thread until all data is eventually writen into the storage with the consistency guarantees for the underlying implementation or the writing failed. The storage should consider that the provided features do exist already. It should not fail in such a case, except the existing features are in a modified state.
+     * The method will block the calling thread until all data is eventually writen into the storage with the consistency guarantees for the underlying implementation.
+     *
+     * **The implementation must expect to handle the situation that the provided features do exist already**. It should not fail in such a case, except the existing features are in a modified state.
      *
      * The implementation can use a single connection for all writes or write each chunk using a dedicated own connection. However, the storage need to consider that it may get plenty of concurrent calls _(potentially thousands or millions when the reader uses virtual threads and enough memory is available)_. Therefore, the storage **must** prepare measurements to limit the amount of parallel writes, when necessary.
      *

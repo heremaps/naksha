@@ -15,33 +15,31 @@ import kotlin.time.Duration.Companion.minutes
  * @param databaseId the identifier of the database to read from.
  * @param catalogId the identifier of the catalog to read from.
  * @param collectionId the identifier of the collection to read from.
- * @param concurrencyLevel the number of concurrent writers expected to consume the stream.
  * @since 3.0
  */
 @JsExport
 class StreamRequestBuilder(
     val databaseId: Id,
     val catalogId: Id,
-    val collectionId: Id,
-    val concurrencyLevel: Int,
+    val collectionId: Id
 ) {
-
     /**
      * Builds a stream request using textual identifiers.
      *
      * @param databaseId the textual identifier of the database to read from.
      * @param catalogId the textual identifier of the catalog to read from.
      * @param collectionId the textual identifier of the collection to read from.
-     * @param concurrencyLevel the number of concurrent writers expected to consume the stream.
      * @since 3.0
      */
     @JsName("newStreamRequestBuilder")
     constructor(
         databaseId: String,
         catalogId: String,
-        collectionId: String,
-        concurrencyLevel: Int,
-    ) : this(Id(databaseId), Id(catalogId), Id(collectionId), concurrencyLevel)
+        collectionId: String
+    ) : this(Id(databaseId), Id(catalogId), Id(collectionId))
+
+    /** If the stream should be read sequentially. */
+    var sequential: Boolean = false
 
     /** The maximal version to read; defaults to [HEAD]. */
     var version: Long = HEAD.number
@@ -63,6 +61,13 @@ class StreamRequestBuilder(
 
     /** The timeout for stream reads and acknowledgements; defaults to five minutes. */
     var timeout: Duration = 5.minutes
+
+    /**
+     * Sets [sequential].
+     * @param value _true_ to force sequential read; _false_ otherwise _(default)_.
+     * @return this builder.
+     */
+    fun withSequential(value: Boolean): StreamRequestBuilder = apply { sequential = value }
 
     /**
      * Sets [version].
@@ -122,10 +127,10 @@ class StreamRequestBuilder(
         databaseId = databaseId,
         catalogId = catalogId,
         collectionId = collectionId,
-        concurrencyLevel = concurrencyLevel,
         version = version,
         queryDeleted = queryDeleted,
         queryHistory = queryHistory,
+        sequential = sequential,
         minVersion = minVersion,
         ignoreTransactions = ignoreTransactions,
         chunkSize = chunkSize,
