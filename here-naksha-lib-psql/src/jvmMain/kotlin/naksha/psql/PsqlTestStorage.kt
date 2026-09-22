@@ -44,7 +44,7 @@ class PsqlTestStorage : PsqlStorage() {
             }
         }
 
-        internal const val POSTGRES_IMAGE_URI = "ghcr.io/naksha-oss/naksha-postgres:v16.2-r5"
+        internal const val POSTGRES_IMAGE_URI = "ghcr.io/naksha-oss/naksha-postgres:v18.6"
         internal val dockerContainerInfo = AtomicReference<PsqlTestDockerContainerInfo?>()
 
         /**
