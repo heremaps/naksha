@@ -16,15 +16,16 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.storage.http.circuitbreaker;
+package com.here.naksha.lib.circuitbreaker;
 
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import java.util.concurrent.Callable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Abstraction for circuit breaker provider. Implementations manage per-resourceId circuit
- * breaker instances.
+ * Abstraction for circuit breaker provider. Implementations manage per-resourceId circuit breaker
+ * instances.
  */
 public interface CircuitBreakerProvider {
 

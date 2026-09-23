@@ -21,8 +21,8 @@ package com.here.naksha.storage.http;
 import static com.here.naksha.lib.core.exceptions.UncheckedException.unchecked;
 import static java.net.http.HttpRequest.newBuilder;
 
-import com.here.naksha.storage.http.circuitbreaker.CircuitBreakerHandle;
-import com.here.naksha.storage.http.circuitbreaker.CircuitBreakerProps;
+import com.here.naksha.lib.circuitbreaker.CircuitBreakerHandle;
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;

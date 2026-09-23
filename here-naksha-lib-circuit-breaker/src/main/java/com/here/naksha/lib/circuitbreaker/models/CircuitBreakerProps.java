@@ -16,15 +16,14 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.storage.http.circuitbreaker;
+package com.here.naksha.lib.circuitbreaker.models;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.here.naksha.storage.http.HttpStorage;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * A Circuit breaker configuration as used by the {@link HttpStorage}.
+ * A circuit breaker configuration used by Naksha components.
  */
 public class CircuitBreakerProps {
 

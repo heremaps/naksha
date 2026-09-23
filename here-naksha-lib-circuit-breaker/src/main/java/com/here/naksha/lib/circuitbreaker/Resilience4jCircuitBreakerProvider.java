@@ -16,8 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.storage.http.circuitbreaker;
+package com.here.naksha.lib.circuitbreaker;
 
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType;

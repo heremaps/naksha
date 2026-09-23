@@ -2,8 +2,8 @@ package com.here.naksha.storage.http.cache;
 
 import com.here.naksha.storage.http.RequestSender;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
-import com.here.naksha.storage.http.circuitbreaker.CircuitBreakerProps;
-import com.here.naksha.storage.http.circuitbreaker.Resilience4jCircuitBreakerProvider;
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
+import com.here.naksha.lib.circuitbreaker.Resilience4jCircuitBreakerProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;

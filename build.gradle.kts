@@ -116,6 +116,8 @@ val otel = "io.opentelemetry:opentelemetry-api:1.40.0"
 
 val cytodynamics = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
 
+val resilience4j = "io.github.resilience4j:resilience4j-circuitbreaker:2.0.0"
+
 val projectRepoURI = getRequiredPropertyFromRootProject("projectRepoURI")
 val mavenUrl = getRequiredPropertyFromRootProject("mavenUrl")
 val mavenUser = getRequiredPropertyFromRootProject("mavenUser")
@@ -367,9 +369,9 @@ project(":here-naksha-storage-http") {
     dependencies {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-common-http"))
+        implementation(project(":here-naksha-lib-circuit-breaker"))
 
         implementation(commons_lang3)
-        implementation("io.github.resilience4j:resilience4j-circuitbreaker:2.0.0")
 
         testImplementation(mockito)
         testImplementation("io.rest-assured:rest-assured:5.5.0")
@@ -379,6 +381,20 @@ project(":here-naksha-storage-http") {
         if (System.getenv("runConnectorIntegrationTests")?.toBoolean() != true) {
             exclude("**/integration/**")
         }
+    }
+    setOverallCoverage(0.0) // only increasing allowed!
+}
+
+project(":here-naksha-lib-circuit-breaker") {
+    description = "Naksha Circuit Breaker Library"
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        withJavadocJar()
+        withSourcesJar()
+    }
+    dependencies {
+        api(resilience4j)
     }
     setOverallCoverage(0.0) // only increasing allowed!
 }
@@ -462,6 +478,7 @@ project(":here-naksha-lib-handlers") {
         implementation(project(":here-naksha-lib-core"))
         implementation(project(":here-naksha-lib-psql"))
         implementation(project(":here-naksha-lib-view"))
+        implementation(project(":here-naksha-lib-circuit-breaker"))
         implementation(project(":here-naksha-storage-http"))
         implementation(project(":here-naksha-lib-mm-util"))
 

@@ -22,6 +22,7 @@ import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
 
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
@@ -43,7 +44,6 @@ import com.here.naksha.lib.core.util.storage.RequestHelper;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.storage.http.HttpStorage;
 import com.here.naksha.storage.http.HttpStorageProperties;
-import com.here.naksha.storage.http.circuitbreaker.CircuitBreakerProps;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;

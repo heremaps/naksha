@@ -16,7 +16,7 @@
  * SPDX-License-Identifier: Apache-2.0
  * License-Filename: LICENSE
  */
-package com.here.naksha.storage.http.circuitbreaker;
+package com.here.naksha.lib.circuitbreaker;
 
 import java.util.concurrent.Callable;
 
@@ -24,7 +24,7 @@ import java.util.concurrent.Callable;
  * Minimal execution wrapper for a circuit breaker implementation.
  *
  * <p>This keeps request execution code independent of the concrete breaker library while still
- * allowing the cache to execute HTTP requests through a breaker when configured.
+ * allowing callers to execute operations through a breaker when configured.
  */
 public interface CircuitBreakerHandle {
 

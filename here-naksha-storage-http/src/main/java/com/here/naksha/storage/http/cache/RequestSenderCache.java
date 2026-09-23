@@ -18,12 +18,11 @@
  */
 package com.here.naksha.storage.http.cache;
 
-import static com.here.naksha.storage.http.RequestSender.KeyProperties;
-
+import com.here.naksha.lib.circuitbreaker.CircuitBreakerHandle;
+import com.here.naksha.lib.circuitbreaker.CircuitBreakerProvider;
+import com.here.naksha.lib.circuitbreaker.Resilience4jCircuitBreakerProvider;
 import com.here.naksha.storage.http.RequestSender;
-import com.here.naksha.storage.http.circuitbreaker.CircuitBreakerHandle;
-import com.here.naksha.storage.http.circuitbreaker.CircuitBreakerProvider;
-import com.here.naksha.storage.http.circuitbreaker.Resilience4jCircuitBreakerProvider;
+import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import java.util.concurrent.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
