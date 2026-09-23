@@ -15,7 +15,9 @@ import kotlin.time.DurationUnit
 import kotlin.time.toDuration
 
 /**
- * The parameters that describe the stream to be opened or restored; can be serialized to try to recover an aborted streaming.
+ * The parameters that describe the stream to be opened.
+ *
+ * Implementors of [IStreamSession][naksha.model.IStreamSession] are free to
  * @since 3.0
  */
 @JsExport
@@ -27,14 +29,16 @@ open class StreamRequest(): AnyObject() {
      * @param catalogId the identifier of the catalog to read from.
      * @param collectionId the identifier of the collection to read from.
      * @param version the maximal version to read.
-     * @param queryDeleted the deleted features should be part of the stream; defaults to _true_.
-     * @param queryHistory If all states _([Tuple][naksha.model.Tuple])_ between _minVersion_ and _version_ should be returned or just the latest state, closest to _version_; defaults to _true_.
-     * @param sequential if the stream should be forced into sequential reading _(defaults to false)_.
-     * @param minVersion the minimal version to read; defaults to `0`.
-     * @param ignoreTransactions if transactions can be ignored, even while the storage supports transactions, this allows certain optimizations to be performed, like reordering features and re-grouping to created filled chunks for faster writing and eventually faster copy; defaults to _false_.
-     * @param chunkSize the amount of features to pack into each [StreamChunk] chunk; only applies when the storage does not support history and transaction logs **or** `ignoreTransactions` was explicitly set to _true_; defaults to `1000`.
-     * @param timeout the timeout duration to wait for [acknowledgement][Stream.acknowledge] and for the read storage; defaults to 5 minutes.
+     * @param queryDeleted whether deleted features should be part of the stream; defaults to _true_.
+     * @param queryHistory whether all states _([Tuple][naksha.model.Tuple])_ between `minVersion` _(inclusive)_ and `version` _(inclusive)_ should be returned _(true)_ or just the latest state, closest to `version` _(false)_; defaults to _true_.
+     * @param sequential whether the stream should be forced into sequential reading _(defaults to false)_.
+     * @param minVersion the minimal version to read; defaults to `0`. The only purpose of this parameter is to read change-sets.
+     * @param ignoreTransactions whether transactions should be ignored, even while the storage supports transactions. This allows certain optimizations to be performed, like reordering features and re-grouping to created filled chunks for faster writing and eventually faster copy; defaults to _false_.
+     * @param chunkSize the amount of features to pack into each [StreamChunk] chunk; only applies when the storage does not support transactions **or** `ignoreTransactions` was explicitly set to _true_; defaults to `1000`.
+     * @param timeout the timeout duration to wait for [acknowledgement][Stream.acknowledge] and for the read storage; defaults to 15 minutes.
      * @since 3.0
+     * @see StreamRequestBuilder
+     * @see StreamRequest
      */
     @JvmOverloads
     @JsName("newStreamRequest")
@@ -49,7 +53,7 @@ open class StreamRequest(): AnyObject() {
         minVersion: Long = 0L,
         ignoreTransactions: Boolean = false,
         chunkSize: Int = 1000,
-        timeout: Duration = 5.minutes
+        timeout: Duration = 15.minutes
     ): this() {
         set("databaseId", databaseId)
         set("catalogId", catalogId)

@@ -47,7 +47,7 @@ class StreamRequestBuilder(
     /** Whether deleted features are included; defaults to `true`. */
     var queryDeleted: Boolean = true
 
-    /** Whether all states in the requested version range are included; defaults to `true`. */
+    /** Whether all states _([Tuple][naksha.model.Tuple])_ between `minVersion` _(inclusive)_ and `version` _(inclusive)_ should be returned _(true)_ or just the latest state, closest to [version] _(false)_; defaults to _true_. */
     var queryHistory: Boolean = true
 
     /** The minimal version to read; defaults to `0`. */
