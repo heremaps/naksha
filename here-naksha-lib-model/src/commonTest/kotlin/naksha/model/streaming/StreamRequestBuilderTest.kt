@@ -29,7 +29,6 @@ class StreamRequestBuilderTest {
         assertEquals(0L, request.minVersion)
         assertFalse(request.ignoreTransactions)
         assertEquals(1000, request.chunkSize)
-        assertEquals(5.minutes, request.timeout)
     }
 
     @Test
@@ -48,7 +47,6 @@ class StreamRequestBuilderTest {
         assertSame(builder, builder.withQueryDeleted(false))
         assertSame(builder, builder.withMinVersion(7))
         assertSame(builder, builder.withIgnoreTransactions(true))
-        assertSame(builder, builder.withTimeout(2.minutes))
         builder.queryHistory = false
         builder.chunkSize = 50
 
@@ -60,6 +58,5 @@ class StreamRequestBuilderTest {
         assertEquals(7L, request.minVersion)
         assertTrue(request.ignoreTransactions)
         assertEquals(50, request.chunkSize)
-        assertEquals(2.minutes, request.timeout)
     }
 }

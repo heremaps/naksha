@@ -59,9 +59,6 @@ class StreamRequestBuilder(
     /** The preferred number of features per stream chunk; defaults to `1000`. */
     var chunkSize: Int = 1000
 
-    /** The timeout for stream reads and acknowledgements; defaults to five minutes. */
-    var timeout: Duration = 5.minutes
-
     /**
      * Sets [sequential].
      * @param value _true_ to force sequential read; _false_ otherwise _(default)_.
@@ -112,13 +109,6 @@ class StreamRequestBuilder(
     fun withChunkSize(value: Int): StreamRequestBuilder = apply { chunkSize = value }
 
     /**
-     * Sets [timeout].
-     * @param value the timeout for stream reads and acknowledgements.
-     * @return this builder.
-     */
-    fun withTimeout(value: Duration): StreamRequestBuilder = apply { timeout = value }
-
-    /**
      * Creates a stream request from the required constructor values and the current settings.
      *
      * @return the configured stream request.
@@ -133,7 +123,6 @@ class StreamRequestBuilder(
         sequential = sequential,
         minVersion = minVersion,
         ignoreTransactions = ignoreTransactions,
-        chunkSize = chunkSize,
-        timeout = timeout,
+        chunkSize = chunkSize
     )
 }
