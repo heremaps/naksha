@@ -251,14 +251,15 @@ abstract class Stream(
     abstract override fun close()
 
     /**
-     * Return the recovery request of the stream gracefully.
+     * Return a recovery request of the stream.
      *
-     * - This method can be used for subscriptions, in that case best with a concurrency-level of `1`.
-     * - This method waits for [acknowledge] of all outstanding [chunks][StreamChunk], then generates the recovery request.
-     * - Should a [next] call be outstanding, it is postponed.
+     * Actually, this method serializes the current stream position into a [StreamRequest], which can be used later to open a new [Stream] via [IStreamSession.read], continuing reading from the current stream position. The current position is serialized gracefully, this means:
+     * - This method waits for [acknowledge] of all outstanding [chunks][StreamChunk] before generates the recovery request.
+     * - Should a [next] call be outstanding, it is blocked until the recovery request is generated.
+     * - This method can be used for subscriptions to remember the last successful event read; in that case the stream should use [StreamRequest.sequential] mode.
      *
      * @param timeout if not `null`, the maximum duration to wait for a recoverable state.
-     * @return the [StreamRequest] to be used for recovery.
+     * @return the [StreamRequest] to be used for recovery with [IStreamSession.read], can be serialized and stored long term.
      * @throws NakshaException if any error prevents the creation of the recovery request in the given time, or [isRecoverable] is _false_.
      * @since 3.0
      */
