@@ -20,6 +20,7 @@ package com.here.naksha.storage.http;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import com.here.naksha.lib.core.NakshaVersion;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzProperties;
 import java.util.Map;
@@ -47,6 +48,7 @@ public class HttpStorageProperties extends XyzProperties {
   private static final String HEADERS = "headers";
 
   private static final String HTTP_INTERFACE = "httpInterface";
+  private static final String CIRCUIT_BREAKER = "circuitBreaker";
   private static final HttpInterface DEFAULT_XYZ_PROTOCOL = HttpInterface.ffwAdapter;
 
   @JsonProperty(URL)
@@ -67,6 +69,9 @@ public class HttpStorageProperties extends XyzProperties {
   @JsonProperty(HTTP_INTERFACE)
   private @NotNull HttpInterface httpInterface;
 
+  @JsonProperty(CIRCUIT_BREAKER)
+  private @Nullable CircuitBreakerProps circuitBreakerConfig;
+
   @JsonCreator
   public HttpStorageProperties(
       @JsonProperty(value = URL, required = true) @NotNull String url,
@@ -74,13 +79,15 @@ public class HttpStorageProperties extends XyzProperties {
       @JsonProperty(SOCKET_TIMEOUT) @Nullable Long socketTimeout,
       @JsonProperty(MAX_RETRIES) @Nullable Long maxRetries,
       @JsonProperty(HEADERS) @Nullable Map<String, String> headers,
-      @JsonProperty(HTTP_INTERFACE) @Nullable HttpInterface httpInterface) {
+      @JsonProperty(HTTP_INTERFACE) @Nullable HttpInterface httpInterface,
+      @JsonProperty(CIRCUIT_BREAKER) @Nullable CircuitBreakerProps circuitBreakerConfig) {
     this.url = url;
     this.connectTimeout = connectTimeout == null ? DEF_CONNECTION_TIMEOUT_SEC : connectTimeout;
     this.socketTimeout = socketTimeout == null ? DEF_SOCKET_TIMEOUT_SEC : socketTimeout;
     this.maxRetries = maxRetries == null ? DEF_MAX_RETRIES : maxRetries;
     this.headers = headers == null ? DEFAULT_HEADERS : headers;
     this.httpInterface = httpInterface == null ? DEFAULT_XYZ_PROTOCOL : httpInterface;
+    this.circuitBreakerConfig = circuitBreakerConfig;
   }
 
   public HttpStorageProperties(
@@ -89,7 +96,7 @@ public class HttpStorageProperties extends XyzProperties {
       @JsonProperty(SOCKET_TIMEOUT) @Nullable Long socketTimeout,
       @JsonProperty(MAX_RETRIES) @Nullable Long maxRetries,
       @JsonProperty(HEADERS) @Nullable Map<String, String> headers) {
-    this(url, connectTimeout, socketTimeout, maxRetries, headers, DEFAULT_XYZ_PROTOCOL);
+    this(url, connectTimeout, socketTimeout, maxRetries, headers, DEFAULT_XYZ_PROTOCOL, null);
   }
 
   /**
@@ -117,5 +124,9 @@ public class HttpStorageProperties extends XyzProperties {
 
   public @NotNull HttpInterface getProtocol() {
     return httpInterface;
+  }
+
+  public @Nullable CircuitBreakerProps getCircuitBreakerConfig() {
+    return circuitBreakerConfig;
   }
 }

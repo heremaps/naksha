@@ -1,0 +1,12 @@
+{
+  "id": "{{handlerId}}",
+  "type": "EventHandler",
+  "title": "Circuit breaker test handler",
+  "description": "Storage handler for circuit breaker API tests",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "active": true,
+  "extensionId": null,
+  "properties": {
+    "storageId": "{{storageId}}"
+  }
+}
