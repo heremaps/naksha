@@ -175,7 +175,7 @@ abstract class Stream(
      * If [hasNext] returns _false_, this method can be used to wait for all outstanding [chunks][StreamChunk] before calling [close] or [getRecoveryRequest]. Calling [close] directly is generally safe, but does not allow to get a final recovery request.
      *
      * @param timeout the timeout after which to return with _false_. If `null`, zero, or negative, the method must not block, but return instantly.
-     * @return _true_ if there are still outstanding [chunks][StreamChunk]; _false_ otherwise.
+     * @return _false_ if there are still outstanding [chunks][StreamChunk]; _true_ otherwise.
      */
     abstract fun isDone(timeout: Duration?): Boolean
 
