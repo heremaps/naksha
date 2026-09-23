@@ -90,8 +90,7 @@ public class Resilience4jCircuitBreakerProvider implements CircuitBreakerProvide
 
   private @NotNull CircuitBreakerConfig buildCircuitBreakerConfig(
       @NotNull String resourceId, @NotNull CircuitBreakerProps config) {
-    log.info(
-        "Creating CircuitBreaker for resourceId: {} with config: slidingWindowSize={}, minimumNumberOfCalls={}, slowCallDurationThresholdMs={}, slowCallRateThreshold={}%, waitDurationInOpenStateMs={}, permittedNumberOfCallsInHalfOpenState={}",
+    log.info("Creating CircuitBreaker for resourceId: {} with config: slidingWindowSize={}, minimumNumberOfCalls={}, slowCallDurationThresholdMs={}, slowCallRateThreshold={}%, waitDurationInOpenStateMs={}, permittedNumberOfCallsInHalfOpenState={}",
         resourceId,
         config.getSlidingWindowSize(),
         config.getMinimumNumberOfCalls(),
