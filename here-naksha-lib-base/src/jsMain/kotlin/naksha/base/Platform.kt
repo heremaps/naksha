@@ -831,35 +831,55 @@ return obj;
 
         @JsStatic
         actual fun getTestStorageId(): String = "local_psql_test_storage"
+
+        /**
+         * Returns an object with stack frame information like: `{file:?, line:?, column:?}`. Returns `null` if not detectable.
+         * @param n the depth with `1` representing the caller of the caller of this method
+         * @return either the frame information or `null`.
+         * @since 3.0
+         */
+        @JsStatic
+        fun callerLocation(n: Int): dynamic = js("""
+const stack = new Error().stack;
+if (!stack) return null;
+
+const lines = stack.split("\n");
+
+// 0 = "Error"
+// 1 = callerLocation()
+// 2 = our caller — which is what n=1 represents
+const frame = lines[n + 1];
+if (!frame) return null;
+
+// V8:
+//   at foo (file.js:12:34)
+//   at file.js:12:34
+//
+// Firefox:
+//   foo@file.js:12:34
+const match = frame.match(/(?:\(|@|\s)([^()@\s]+):(\d+):(\d+)\)?$/);
+if (!match) return null;
+
+return {
+  file: match[1],
+  line: Number(match[2]),
+  column: Number(match[3])
+};
+"""
+        )
+
+        @JsStatic
         actual val FAL: String
             get() {
-                if (!isPlv8()) return ""
-                return js("""
-(function() {
-    var orig = Error.prepareStackTrace;
-    Error.prepareStackTrace = function(_, stack) { return stack; };
-    var err = new Error();
-    Error.captureStackTrace(err, callerInfo);
-    var frame = err.stack[0];
-    Error.prepareStackTrace = orig;
-    return "[" + frame.getFileName() + ":" + frame.getLineNumber() + "] ";
-})()
-""").unsafeCast<String>()
+                val location = callerLocation(1) ?: return ""
+                return "[" + location.file + ":" + location.line + "] "
             }
 
+        @JsStatic
         actual fun fal(n: Int): String {
-            if (!isPlv8()) return ""
-            return js("""
-(function() {
-    var orig = Error.prepareStackTrace;
-    Error.prepareStackTrace = function(_, stack) { return stack; };
-    var err = new Error();
-    Error.captureStackTrace(err, callerInfo);
-    var frame = err.stack[Math.max(0, (n||1)-1) || 0];
-    Error.prepareStackTrace = orig;
-    return "[" + frame.getFileName() + ":" + frame.getLineNumber() + "] ";
-})()
-""").unsafeCast<String>()
+            if (n < 1) return ""
+            val location = callerLocation(n) ?: return ""
+            return "[" + location.file + ":" + location.line + "] "
         }
     }
 }
