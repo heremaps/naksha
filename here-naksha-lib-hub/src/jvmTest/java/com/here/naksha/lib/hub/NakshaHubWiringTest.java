@@ -123,6 +123,7 @@ class NakshaHubWiringTest extends AbstractTest {
     when(storage.newWriteSession(any())).thenReturn(writer);
     doCallRealMethod().when(storage).runInWriteSession(any(), any());
     when(writer.execute(any(WriteRequest.class))).thenAnswer(ignored -> new SuccessResponse());
+    when(writer.executeWrite(any(WriteRequest.class))).thenAnswer(ignored -> new SuccessResponse());
     final NakshaHubConfig config = mock(NakshaHubConfig.class);
     when(config.getId()).thenReturn("test-config");
     when(config.getMaxParallelRequestsPerCPU()).thenReturn(30);
@@ -141,8 +142,8 @@ class NakshaHubWiringTest extends AbstractTest {
 
     // Initialization writes the map, its admin collections, and the supplied Hub config.
     final ArgumentCaptor<WriteRequest> reqCaptor = ArgumentCaptor.forClass(WriteRequest.class);
-    verify(writer, times(3)).execute(reqCaptor.capture());
-    final WriteRequest request = reqCaptor.getAllValues().get(1);
+    verify(writer, times(2)).executeWrite(reqCaptor.capture());
+    final WriteRequest request = reqCaptor.getAllValues().get(0);
 
     assertEquals(ALL_HUB_INTERNAL_COLLECTIONS.size(), request.getWrites().size());
     for (int i = 0; i < request.getWrites().size(); i++) {

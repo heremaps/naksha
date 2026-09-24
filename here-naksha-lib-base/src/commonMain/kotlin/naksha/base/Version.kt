@@ -12,40 +12,41 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmStatic
 
-// TODO: @AI: Fix the documentation, it does not match the actual one.
 /**
- * Wrapper for a version (transaction number), encoded as an unsigned 56-bit integer (the upper 8 bits are always zero).
+ * Wrapper for a version encoded as an unsigned 53-bit integer (the upper 11 bits are always zero). The reason to only use 53-bit is that the version should be convertable into a 64-bit floating point number without losing precision.
  *
  * There are two kinds of versions:
  *
- * ### Dated version (`isDated() == true`, year ≥ 16)
+ * ### Dated version
+ * Bits are laid out as follows:
+ * - `0 .. 1` _(2 bit)_: [action]
+ *     - `CREATED` _(0)_, `UPDATED` _(1)_, `DELETED` _(2), `VERSION` _(3)_
+ * - `2 .. 31` _(30 bit)_: [seq]
+ *     - The 30-bit sequence number within the day, `0 .. 1,073,741,823`
+ * - `32 .. 36` _(5 bit)_: [day]
+ *     - The day of the month, `1 .. 31`
+ * - `37 .. 40` _(4 bit)_: [month]
+ *     - The month of the year, `1 .. 12`
+ * - `41 .. 52` _(12 bit): [year]
+ *     - The year of the version `16 .. 4047` _(must not be less than 16)_
+ * - `53 .. 63` _(11 bit)_: Reserved, always zero.
  *
- * Bits are laid out as follows (MSB → LSB):
- * ```
- * | 63–56        | 55–41       | 40–37       | 36–32     | 31–2          | 1–0          |
- * | 8-bit (zero) | 15-bit year | 4-bit month | 5-bit day | 30-bit seq    | 2-bit action |
- * ```
- * - **year** (`txn ushr 41`): calendar year, must be ≥ 16 and ≤ 32767. JavaScript-safe up to year 4095
- *   (53-bit precision limit: `(4095 shl 41) + ...` still fits in a JS double).
- * - **month** (`(txn ushr 37) and 0xF`): 1–12.
- * - **day** (`(txn ushr 32) and 0x1F`): 1–31.
- * - **seq** (`(txn ushr 2) and 0x3FFF_FFFF`): 30-bit sequence number within the day, 0–1073741823.
- * - **action** (`txn and 3`): lower 2 bits, see [Action].
+ * Use [auto] or [now] to construct a dated version.
  *
- * Use [auto] to construct a dated version.
+ * ### Manual version
+ * Bits are laid out as follows:
+ * - `0 .. 1` _(2 bit)_: [action]
+ *     - `CREATED` _(0)_, `UPDATED` _(1)_, `DELETED` _(2), `VERSION` _(3)_
+ * - `2 .. 43` _(42 bits)_: [seq]
+ *     - The 42-bit sequence of the version, `0 .. 4,398,046,511,103`
+ * - `44 .. 63` _(20 bits)_: Reserved, always zero.
  *
- * ### Manual version (`isManualVersion() == true`, year < 16)
- *
- * The upper 21 bits (63–43) are always zero. The lower 43 bits hold an arbitrary value, with bits 1–0
- * still encoding the [Action]. Manual versions are hand-assigned and not timestamp-derived.
+ * The upper 20 bits (`44 .. 63`) are always zero. The lower 2 bits store the [action], the rest _(42-bit)_ hold an arbitrary value. Manual versions are hand-assigned and not timestamp-derived.
  *
  * Use [manual] to construct a manual version.
  *
  * ### String representation
- *
- * [toString] returns the raw [number] value as a plain decimal number, regardless of whether the
- * version is dated or manual. [fromString] accepts both the decimal form and the legacy
- * `{year}:{month}:{day}:{seqWithAction}` form for backward-compatibility.
+ * [toString] returns the raw [number] value as a plain decimal number, regardless of whether the version is dated or manual. [fromString] accepts the decimal form, and the legacy `{year}:{month}:{day}:{seqWithAction}` form for backward-compatibility.
  *
  * @property number the raw 53-bit version number (upper 11 bits are always zero).
  * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the given version number is invalid.
@@ -71,21 +72,26 @@ open class Version(@JvmField val number: Long) : Comparable<Version> {
     companion object VersionCompanion {
 
         /**
-         * `2^53 - 1` — the maximum safe integer in an IEEE-754 double (`Number.MAX_SAFE_INTEGER`),
+         * `2^53 - 1` — the maximum safe integer in an IEEE-754 double (`Number.MAX_SAFE_INTEGER`, `9007199254740991`),
          * and therefore the largest valid version number.
          */
         const val MAX_SAFE_INTEGER: Long = 9_007_199_254_740_991L
 
-        /** Maximum year value (15-bit, JS-safe upper bound). */
-        private const val YEAR_MAX = 32767
+        /** Maximum year value _(JavaScript safe upper bound)_. */
+        private const val YEAR_MAX = 4095
+
         /** Minimum year for a dated version. */
         private const val YEAR_MIN = 16
 
         /** Mask for the 30-bit sequence field. */
         private const val SEQ_30_MASK = 0x3FFF_FFFFL
 
-        /** Mask for the 41-bit manual-version seq field (upper 21 bits of the 64-bit value must be 0). */
-        private const val MANUAL_SEQ_MASK = 0x1FF_FFFF_FFFFL // 41 bits; 2,199,023,255,551
+        /**
+         * Mask and maximum value for the manual-version [seq] field (upper 20 bits of the 64-bit value must be 0, lower 2 are action): `8796093022207`.
+         * @since 3.0
+         */
+        private const val MANUAL_SEQ_MASK = 0x7FF_FFFF_FFFFL // 42 bits; 8796093022207
+        //
 
         /**
          * Create a version from a double (JavaScript number).
@@ -137,12 +143,12 @@ open class Version(@JvmField val number: Long) : Comparable<Version> {
             if (seq !in 0..SEQ_30_MASK) {
                 throw illegalArg("seq must be in 0..$SEQ_30_MASK (30-bit), got $seq")
             }
-            val txn = (year.toLong() shl 41) or
-                      (month.toLong() shl 37) or
-                      (day.toLong() shl 32) or
-                      (seq shl 2) or
-                      action.intValue.toLong()
-            return Version(txn)
+            val number = (year.toLong() shl 41) or
+                         (month.toLong() shl 37) or
+                         (day.toLong() shl 32) or
+                         (seq shl 2) or
+                         action.longValue
+            return Version(number)
         }
 
         /**
@@ -159,9 +165,9 @@ open class Version(@JvmField val number: Long) : Comparable<Version> {
         @JsStatic
         fun manual(seq: Long, action: Action): Version {
             if (seq !in 0..MANUAL_SEQ_MASK) {
-                throw illegalArg("seq for a manual version must be in 0..$MANUAL_SEQ_MASK (41-bit), got $seq")
+                throw illegalArg("seq for a manual version must be in 0..$MANUAL_SEQ_MASK, got $seq")
             }
-            return Version((seq shl 2) or action.intValue.toLong())
+            return Version((seq shl 2) or action.longValue)
         }
 
         /**
@@ -210,7 +216,7 @@ open class Version(@JvmField val number: Long) : Comparable<Version> {
         }
 
         /**
-         * The _HEAD_ sentinel version _(`9_007_199_254_740_991` aka `2^53-1`)_. Can be used as well to mask version to ensure valid version number, like `version & Version.HEAD`.
+         * The _HEAD_ sentinel version _(`9007199254740991` aka `2^53-1`)_. Can be used as well to mask version to ensure valid version number, like `version and Version.HEAD`.
          *
          * When a `Tuple` is the _HEAD_ state its next-version is synthesized as this value or as `null`, which has by definition the same meaning.
          * @since 3.0
@@ -222,40 +228,54 @@ open class Version(@JvmField val number: Long) : Comparable<Version> {
         // bitwise: 0x001f_ffff_ffff_ffff
 
         /**
-         * The minimum valid dated version (year=16, month=1, day=1, seq=0, action=CREATED).
+         * The minimum valid dated version (year=16, month=1, day=1, seq=0, action=CREATED): `35326106009600`.
          * @since 3.0
+         * @see MAX_DATED
+         * @see MIN_MANUAL
+         * @see MAX_MANUAL
          */
         @JvmField
         @JsStatic
-        val MIN_AUTO = auto(16, 1, 1, 0, CREATE)
+        val MIN_DATED = auto(16, 1, 1, 0, CREATE)
         // 0n + (0n << 2n) + (1n << 32n) + (1n << (32n+5n)) + (16n << (32n+5n+4n)) = 35326106009600n
         // bitwise: 0x0000_2021_0000_0000
 
         /**
-         * The maximum valid dated version (year=4095, month=12, day=31, seq=1,073,741,823, action=VERSION).
+         * The maximum valid dated version (year=4095, month=12, day=31, seq=1,073,741,823, action=VERSION): `9006786937880575`.
          * @since 3.0
+         * @see MIN_DATED
+         * @see MIN_MANUAL
+         * @see MAX_MANUAL
          */
         @JvmField
         @JsStatic
-        val MAX_AUTO = auto(4095, 12, 31, 1_073_741_823, VERSION)
+        val MAX_DATED = auto(4095, 12, 31, 1_073_741_823, VERSION)
         // 3n + (1073741823n << 2n) + (31n << 32n) + (12n << (32n+5n)) + (4095n << (32n+5n+4n)) = 9006786937880575n
         // bitwise: 0x001f_ff9f_ffff_ffff
 
         /**
-         * The minimum manual version (year=0, month=0, day=0, seq=1, action=CREATED).
+         * The minimum manual version (year=0, month=0, day=0, seq=1, action=CREATED): `4`.
          * @since 3.0
+         * @see MAX_MANUAL
+         * @see MIN_DATED
+         * @see MAX_DATED
          */
         @JvmField
         @JsStatic
         val MIN_MANUAL = manual(1, CREATE)
 
         /**
-         * The maximum valid manual version (seq=2,199,023,255,551, action=VERSION).
+         * The maximum valid manual version (seq=2,199,023,255,551, action=VERSION): `35184372088831`.
+         *
+         * **Note**: There is a gap between maximum valid manual version and minimum valid dated version, because a date is invalid with month or day being 0`!
          * @since 3.0
+         * @see MIN_MANUAL
+         * @see MIN_DATED
+         * @see MAX_DATED
          */
         @JvmField
         @JsStatic
-        val MAX_MANUAL = manual(MANUAL_SEQ_MASK, CREATE)
+        val MAX_MANUAL = manual(MANUAL_SEQ_MASK, VERSION)
 
         /**
          * The absolute minimum version number _(3)_.
@@ -401,17 +421,20 @@ open class Version(@JvmField val number: Long) : Comparable<Version> {
         }
 
     /**
-     * Returns `true` if this is a **dated** version, i.e. the year field (`txn ushr 41`) is ≥ 16.
+     * Returns _true_ if this is a **dated** version.
+     *
+     * Checks lower bounds that the [year] is at least `16`, and the [month] and [day] are at least `1`, and the upper bounds with maximum [year] being `4047`, maximum [month] being `12`, and day `31`.
      * @since 3.0
      */
-    fun isDated(): Boolean = (number ushr 41).toInt() >= 16
+    fun isDated(): Boolean = number in MIN_DATED.number.. MAX_DATED.number
 
     /**
-     * Returns `true` if this is a **manual** version, i.e. the year field is < 16 and the upper 21 bits are zero.
-     * This is the logical inverse of [isDated].
+     * Returns _true_ if this is a **manual** version.
+     *
+     * Ensures that the [year] is less than `16`.
      * @since 3.0
      */
-    fun isManualVersion(): Boolean = !isDated()
+    fun isManual(): Boolean = number in MIN_MANUAL.number .. MAX_MANUAL.number
 
     /**
      * Returns the [Action] encoded in the lower 2 bits of [number].
@@ -451,15 +474,17 @@ open class Version(@JvmField val number: Long) : Comparable<Version> {
     }
 
     /**
-     * Tests if this version lags behind the given `year`, `month`, and `day`. If this is the case and the version was acquired from a dated sequence, the sequence needs a rollover to the given `year`, `month`, and `day`.
+     * Tests if this version lags behind the given `year`, `month`, and `day`.
+     *
+     * If this is the case and the version was acquired from a dated sequence, the sequence needs a rollover to the given `year`, `month`, and `day`.
      * @param year the year to test against.
      * @param month the month to test against.
      * @param day the day to test against.
-     * @return _true_ if this is a dated version, and it lags behind the given date; _false_ otherwise _(as well when this is a manual version)_.
+     * @return _true_ if this is a dated version and it lags behind the given date; _false_ otherwise _(as well if this is a manual version)_.
      * @since 3.0
      */
     fun isBehind(year: Int, month: Int, day: Int): Boolean {
-        if (isManualVersion()) return false
+        if (isManual()) return false
 
         if (this.year > year) return false
         if (this.year < year) return true
