@@ -1,7 +1,6 @@
 package naksha.model.streaming
 
 import naksha.base.Id
-import naksha.base.PlatformObject
 import naksha.model.objects.NakshaTx
 import kotlin.js.JsExport
 import kotlin.jvm.JvmName
@@ -30,7 +29,7 @@ open class StreamTransaction(
     /**
      * The [Naksha compatible version][naksha.base.Version] that this transaction is linked to.
      *
-     * A new version is always generated as result of committing a transaction, therefore, every transaction relates exactly to one version. Beware that all features in the transaction must have the same [version][StreamFeature.version], but not necessarily the same [nextVersion][StreamFeature.nextVersion].
+     * A new version is always generated as result of committing a transaction, therefore, every transaction relates exactly to one version. Beware that all features in the transaction must have the same [version][StreamTuple.version], but not necessarily the same [nextVersion][StreamTuple.nextVersion].
      * @since 3.0
      */
     @get:JvmName("version")
@@ -54,5 +53,5 @@ open class StreamTransaction(
      * The features being part of this transaction.
      * @since 3.0
      */
-    features: Array<StreamFeature>,
+    features: Array<StreamTuple>,
 ): StreamChunk(stream, features)

@@ -8,11 +8,11 @@ import kotlin.js.JsExport
 import kotlin.jvm.JvmName
 
 /**
- * A chunk of features with the guarantee that it does not contain multiple states of same feature _(so with the same [identifier][naksha.base.Id])_. Therefore, the chunk does not contain the same feature multiple times.
+ * A chunk of [Tuple][naksha.model.Tuple] with the guarantee that it does not contain multiple [Tuple][naksha.model.Tuple] of same feature _(so with the same [identifier][naksha.base.Id])_. Therefore, the chunk does not contain the same feature in multiple states.
  *
- * The order of the provided features is not significant. They should be consumed and stored together in an atomic way. When features have been processed the steam must be notified by closing the chunk.
+ * The order of the provided [Tuple][naksha.model.Tuple] is not significant. They should be consumed and stored together in an atomic way. When the [Tuple][naksha.model.Tuple] have been processed, the steam must be notified by calling [StreamChunk.acknowledge].
  *
- * After being returned by a [Stream], this chunk requires initialization by setting the targets via [setTargets].
+ * After being returned by a [Stream], this chunk requires initialization by the reader, it must set the number targets via [setTargets], so that the amount of [acknowledge] calls match and the [Stream] is not notified before all targets are processed the chunk.
  * @since 3.0
  * @see setTargets
  * @see Stream
@@ -27,12 +27,12 @@ open class StreamChunk(
     val stream: Stream,
 
     /**
-     * The features being part of this chunk.
+     * The tuples being part of this chunk.
      * @since 3.0
-     * @see StreamFeature
+     * @see StreamTuple
      */
     @get:JvmName("features")
-    val features: Array<StreamFeature>
+    val features: Array<StreamTuple>
 ) {
     companion object StreamChunkCompanion {
         /**

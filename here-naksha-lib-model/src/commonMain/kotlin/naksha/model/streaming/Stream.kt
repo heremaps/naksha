@@ -89,7 +89,7 @@ import kotlin.js.JsName
  *
  * For transactions, it is always safe to process them in parallel, if they do not impact each other. That means, as long as transactions do not contain the same features as any other not yet acknowledged transaction, they can always be read _(and written)_ in parallel.
  *
- * If the source storage does provide a [version][StreamFeature.version] and [next-version][StreamFeature.nextVersion] for each [StreamFeature], it is safe to read and write all data in parallel. This is because the features can directly be written to the correct target without generating a _HISTORY_. Therefore, if stream is not sequential, and the source can provide [version][StreamFeature.version] and [nextVersion][StreamFeature.nextVersion] for each [StreamFeature], the stream can return all data as fast as it can read it. **Beware**: The recovery request might lag behind in this case, due to acknowledgements. So, for technical reasons, it may not be possible for the stream to move a recovery point forward until certain acknowledgements have been done. This means for the targets, in the case of a recovery, they may get a bunch of chunks again!
+ * If the source storage does provide a [version][StreamTuple.version] and [next-version][StreamTuple.nextVersion] for each [StreamTuple], it is safe to read and write all data in parallel. This is because the features can directly be written to the correct target without generating a _HISTORY_. Therefore, if stream is not sequential, and the source can provide [version][StreamTuple.version] and [nextVersion][StreamTuple.nextVersion] for each [StreamTuple], the stream can return all data as fast as it can read it. **Beware**: The recovery request might lag behind in this case, due to acknowledgements. So, for technical reasons, it may not be possible for the stream to move a recovery point forward until certain acknowledgements have been done. This means for the targets, in the case of a recovery, they may get a bunch of chunks again!
  *
  * A Naksha storage will read the transaction log, then use multiple connections in parallel to read the features of the transactions in parallel. It will hand them out as being read, except sequential mode was explicitly requested. So, native Naksha storages can read and write in parallel with maximum performance.
  *
@@ -212,10 +212,10 @@ abstract class Stream(
     abstract fun isAcknowledged(timeoutMillis: Long): Boolean
 
     /**
-     * Returns the next [StreamFeature] or [StreamTransaction].
+     * Returns the next [StreamTuple] or [StreamTransaction].
      *
      * This method will throw an exception when there are no more chunks, the stream is closed, or in a broken state. Additionally, it will use [stmtTimeout][naksha.model.SessionOptions.stmtTimeout] of the [SessionOptions][naksha.model.SessionOptions], provided while opening the stream, as timeout.
-     * @return the next [StreamFeature] or [StreamTransaction].
+     * @return the next [StreamTuple] or [StreamTransaction].
      * @since 3.0
      * @throws NoSuchElementException if there are no more elements. The reader should invoke [close] to wait for outstanding [acknowledgements][acknowledge].
      * @throws NakshaException with error [ILLEGAL_STATE][naksha.base.NakshaError.ILLEGAL_STATE] if the stream is closed without any recovery possibility. Expect as well [CLOSE][naksha.base.NakshaError.CLOSED] _(stream closed)_ or [TIMEOUT][naksha.base.NakshaError.TIMEOUT] _(chunks are not acknowledged in time)_.
@@ -224,11 +224,11 @@ abstract class Stream(
     abstract override operator fun next(): StreamChunk
 
     /**
-     * Returns the next [StreamFeature] or [StreamTransaction].
+     * Returns the next [StreamTuple] or [StreamTransaction].
      *
      * The given timeout is no exact measurement, especially when given less than a second.
      * @param timeoutMillis if greater than zero, the maximum amount of milliseconds to wait; if zero or less, the method returns instantly.
-     * @return the next [StreamFeature] or [StreamTransaction] or `null`, if the timeout was reached.
+     * @return the next [StreamTuple] or [StreamTransaction] or `null`, if the timeout was reached.
      * @since 3.0
      * @throws NoSuchElementException if there are no more elements. The reader should invoke [close] to wait for outstanding [acknowledgements][acknowledge].
      * @throws NakshaException with error [ILLEGAL_STATE][naksha.base.NakshaError.ILLEGAL_STATE] if the stream is closed without any recovery possibility.

@@ -3,18 +3,17 @@ package naksha.model.streaming
 import naksha.base.Id
 import naksha.base.PlatformMap
 import naksha.base.TupleNumber
-import naksha.base.Version
 import kotlin.js.JsExport
 import kotlin.jvm.JvmName
 import kotlin.jvm.JvmOverloads
 
 /**
- * A feature of a [StreamChunk] or [StreamTransaction].
+ * A [Tuple][naksha.model.Tuple] of a feature being part of a [StreamChunk] or [StreamTransaction].
  * @since 3.0
  * @see Stream
  */
 @JsExport
-open class StreamFeature @JvmOverloads constructor(
+open class StreamTuple @JvmOverloads constructor(
     /**
      * The identifier of the feature.
      * @since 3.0
@@ -23,7 +22,7 @@ open class StreamFeature @JvmOverloads constructor(
     val id: Id,
 
     /**
-     * The feature itself.
+     * The `JSON` representation of the [Tuple][naksha.model.Tuple].
      * @since 3.0
      */
     @get:JvmName("feature")
