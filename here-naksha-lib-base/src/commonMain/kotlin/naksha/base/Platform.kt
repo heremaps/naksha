@@ -28,26 +28,26 @@ expect class Platform {
         val ITERATOR: Symbol
 
         /**
-         * The maximum value of a 64-bit integer.
+         * The maximum value of a 64-bit integer (`9223372036854775807`).
          * @return The maximum value of a 64-bit integer.
          */
         val INT64_MAX_VALUE: Long
 
         /**
-         * The minimum value of a 64-bit integer.
+         * The minimum value of a 64-bit integer (`-9223372036854775808`).
          * @return The minimum value of a 64-bit integer.
          */
         val INT64_MIN_VALUE: Long
 
         /**
-         * The minimum integer that can safely stored in a double.
-         * @return The minimum integer that can safely stored in a double.
+         * The maximum integer that can safely stored in a double (`9007199254740991.0`).
+         * @return The maximum integer that can safely stored in a double.
          */
         val MAX_SAFE_INT: Double
 
         /**
-         * The maximum integer that can safely stored in a double.
-         * @return The maximum integer that can safely stored in a double.
+         * The minimum integer that can safely stored in a double (`-9007199254740991.0`).
+         * @return The minimum integer that can safely stored in a double.
          */
         val MIN_SAFE_INT: Double
 
