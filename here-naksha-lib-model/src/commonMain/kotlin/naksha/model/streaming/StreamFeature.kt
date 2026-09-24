@@ -16,13 +16,6 @@ import kotlin.jvm.JvmOverloads
 @JsExport
 open class StreamFeature @JvmOverloads constructor(
     /**
-     * The [StreamChunk] to which this feature belongs.
-     * @since 3.0
-     */
-    @get:JvmName("chunk")
-    val chunk: StreamChunk,
-
-    /**
      * The identifier of the feature.
      * @since 3.0
      */
