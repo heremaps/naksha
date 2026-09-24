@@ -4,6 +4,7 @@ package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.md5
 import naksha.base.PlatformUtil.PlatformUtilCompanion.randomAtoZ
+import naksha.base.PlatformUtil.PlatformUtilCompanion.randomString
 import kotlin.js.ExperimentalJsExport
 import kotlin.js.ExperimentalJsStatic
 import kotlin.js.JsExport
@@ -18,7 +19,11 @@ import kotlin.jvm.JvmStatic
  *
  * Invoking the constructor without arguments will create a new random identifier.
  *
- * All identifiers in Naksha have a text and a numeric representation. If the text is a positive 64-bit integer in decimal notation, like `"1234"`, then the numeric representation is the same parsed into a positive 64-bit integer. Otherwise, an [MD5](https://en.wikipedia.org/wiki/MD5) hash is calculated above the text resulting in a 16-byte hash. The lower 64-bit _(at offset 8 in the returned byte-array)_ are read in [Big-Endian Byte-Order](https://en.wikipedia.org/wiki/Endianness), the sign bit is set _(bit #63)_, so that a negative 64-bit integer is made and used as feature-number.
+ * All identifiers in Naksha have a text and a numeric representation. The textual representation is used for serialization and can be used to synchronize external storages, as long as this does not cause collisions.
+ *
+ * **The numeric representation of an identifier is the primary key in Naksha.**
+ *
+ * If the text is a positive 64-bit integer in decimal notation, like `"1234"`, then the numeric representation is the same parsed into a positive 64-bit integer. Otherwise, an [MD5](https://en.wikipedia.org/wiki/MD5) hash is calculated above the text resulting in a 16-byte hash. The lower 64-bit _(at offset 8 in the returned byte-array)_ are read in [Big-Endian Byte-Order](https://en.wikipedia.org/wiki/Endianness), the sign bit is set _(bit #63)_, so that a negative 64-bit integer is made and used as feature-number.
  *
  * It is expensive when an application has to perform these calculations multiple times per object. To avoid this the [Id] class has been created. It can be used to carry around the texual and the numeric representation together, avoiding multi-hashing.
  *
@@ -36,10 +41,12 @@ import kotlin.jvm.JvmStatic
  * ### Catalogs and Collections
  * Due to the way how the state identifiers of objects are addressed, the numeric representation of catalogs and collections is truncated to 32-bit. This is done by clearing the top 33-bit, then copy back the sign bit, so that negative integers stay negative.
  *
- * This means that hash collisions in catalogs and collections are much more likely. However, the expected number of catalogs per database is around a maximum of 100,000; and the expected maximum of collections per catalog is as well 100,000. For these numbers there should not be any collision; at least it is highly unlikely. Beware that using this maximum means to handle 10 billion containers in a single storage; it is questionable if any single storage is able to handle that amount, so collisions will probably be the least problem.
+ * This means that hash collisions in catalogs and collections are much more likely. However, the expected number of catalogs per database is around 1000; and the expected maximum of collections per catalog is as well around 1000. For these numbers there should not be any collision; at least it is unlikely _(around 0.0233%)_. Beware that using this maximum means to handle 1 million containers in a single database; that should leave enough room.
  *
  * ### Note
- * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^63)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^64) )`, which results in around 6 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^64) )` to around 63.2 percent, reaching 99.99% for around 147 billion features _(there is expected to be at least one collision)_. Beware, just because a collision is unlikely, does not mean there will be none!
+ * Generally, the estimated number of collisions is calculated as `n^2 / 2N` with `n` being the number of features and `N` being the entropy, so the maximum amount of numbers available _(so here 2^63)_. The collision possibility can be estimated via `1 - e^( -(n^2 / 2N) )`, for example, for 1 billion features it will be `1 - e^( -(2^60 / 2^64) )`, which results in around 6 percent, for 4 billion features it grows to `1 - e^( -(2^64 / 2^64) )` to around 63.2 percent, reaching 99.99% for around 147 billion features _(there is expected to be at least one collision)_.
+ *
+ * **Beware, just because a collision is unlikely, does not mean there will be none!**
  * @see text
  * @see number
  * @see intValue
@@ -53,20 +60,18 @@ class Id private constructor(
 ) : Comparable<Id?>, CharSequence {
 
     /**
-     * The numeric representation of the `id`, when not given automatically calculated from the [text]; strongly recommended to not set the value manually.
-     *
-     * ### Catalogs and Collections
-     * For catalogs and collections this number will be the full number, so the 64-bit value. However, only the lower 32-bit, as returned by [intValue], are significant. This means, internally the storages will trim the number down to 32-bit and when two catalogs or collections have the same lower 32-bit, they are treated as being the same. This is done, because only the 32-bit value is encoded in [tuple-numbers][TupleNumber]. In other words, the amount of collisions for catalogs and collections is much higher. However, it is not expected to have millions of catalogs in the same database, or millions of collections in the same catalog, therefore this is a fair tradeoff between encoding size of [TupleNumber] and collision resistance.
+     * Creates a numeric identifier, requires the given `number` to be a positive integer.
+     * @param number the positive numeric identifier.
      * @since 3.0
      * @see intValue
      * @see text
      * @see fromValue
      */
     @JsName("newNumericId")
-    constructor(number: Long) : this(number, if (number == 0L) ZERO else null)
+    constructor(number: Long) : this(requirePositiveNumber(number), if (number == 0L) ZERO else null)
 
     /**
-     * Create a new identifier.
+     * Create an identifier based upon the given textual representation.
      * @param text the textual identifier.
      * @since 3.0
      */
@@ -78,10 +83,10 @@ class Id private constructor(
      * @since 3.0
      */
     @JsName("newRandomId")
-    constructor() : this(0L, randomAtoZ())
+    constructor() : this(0L, randomString())
 
     /**
-     * The numeric representation of the `id`, when not given automatically calculated from the [text]; strongly recommended to not set the value manually.
+     * The numeric representation of the `id`, when not given, automatically calculated from the [text].
      *
      * ### Catalogs and Collections
      * For catalogs and collections this number will be the full number, so the 64-bit value. However, only the lower 32-bit, as returned by [intValue], are significant. This means, internally the storages will trim the number down to 32-bit and when two catalogs or collections have the same lower 32-bit, they are treated as being the same. This is done, because only the 32-bit value is encoded in [tuple-numbers][TupleNumber]. In other words, the amount of collisions for catalogs and collections is much higher. However, it is not expected to have millions of catalogs in the same database, or millions of collections in the same catalog, therefore this is a fair tradeoff between encoding size of [TupleNumber] and collision resistance.
@@ -396,6 +401,17 @@ class Id private constructor(
         }
 
         /**
+         * Ensures that the given number is positive.
+         * @param number the number to verify.
+         * @return the given number if being positive.
+         * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the given number is not positive.
+         */
+        private fun requirePositiveNumber(number: Long): Long {
+            if (number >= 0L) return number
+            throw illegalArg("The number is negative, this requires a text: $number")
+        }
+
+        /**
          * Tries to return the [Id] from the given value.
          *
          * @param value the value to convert into an [Id].
@@ -416,6 +432,11 @@ class Id private constructor(
                     is Float, is Double -> {
                         // The floating point number as double.
                         val d = value.toDouble()
+                        // This fixes range issues, e.g. if the value is 9223372036854775808.0
+                        // it would be converted to Long.MAX_VALUE and the next long to double
+                        // would convert it again to 9223372036854775808.0, but still it is an
+                        // invalid value. Directly prevent these errors here.
+                        if (d < Platform.MIN_SAFE_INT || d > Platform.MAX_SAFE_INT) return null
                         // The floating point number as long.
                         val v = d.toLong()
                         // The long converted back into a floating point number and therefore,
