@@ -125,31 +125,32 @@ class PlatformUtil {
                 else -> throw IllegalStateException()
             }
         }
+        private const val THE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstvwxyz"
+        private val ALPHABET = CharArray(THE_ALPHABET.length) { THE_ALPHABET[it] }
 
         /**
-         * Generates a random string that Web-URL safe and matches those of the Web-Safe Base64 encoding, so persists
-         * only out of `a` to `z`, `A` to `Z`, `0` to `9`.
-         * @param length The amount of characters to return, if less than or equal zero, 12 characters are used.
+         * Generates a random string that Web-URL safe and human-readable, persisting out of the alphabet `23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstvwxyz`.
+         *
+         * The collision possibility when generating 10 billion random strings, using the default length of 16, is around ~4.03×10⁻⁷% (about 1 in 248 million).
+         * @param length The amount of characters to return, if less than or equal zero, 16 characters are used.
          * @return The random string.
          * @see randomBase64String
          * @see randomAtoZ
          */
         @JvmStatic
         @JsStatic
-        @Deprecated("This is not a balanced randomness", replaceWith = ReplaceWith("randomAtoZ()"))
-        fun randomString(length: Int = 12): String {
+        @JvmOverloads
+        fun randomString(length: Int = 16): String {
             // This way, in JavaScript, we catch undefined.
-            val end = if (length >= 1) length else 12
-            val chars = randomCharacters
+            val end = if (length >= 1) length else 16
+            val chars = ALPHABET
             val sb = StringBuilder()
-            var pos = 0
-            var i = (random() * 64.0).toInt()
-            // The first character should not be 0 to 9!
-            if (i < 10) i += 10
-            sb.append(chars[i and 63])
-            while (++pos < end) {
-                i = (random() * 64.0).toInt()
-                sb.append(chars[i and 63])
+            while (sb.length < end) {
+                // toInt always floors.
+                val i = (random() * chars.size.toDouble()).toInt()
+                // The first character should not be 2..9
+                if (sb.isEmpty() && i < 8) continue
+                sb.append(chars[i])
             }
             return sb.toString()
         }
