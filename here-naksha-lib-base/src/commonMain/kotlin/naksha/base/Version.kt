@@ -434,7 +434,7 @@ open class Version(@JvmField val number: Long) : Comparable<Version> {
      * Ensures that the [year] is less than `16`.
      * @since 3.0
      */
-    fun isManual(): Boolean = number in MIN_MANUAL.number until MAX_MANUAL.number
+    fun isManual(): Boolean = number in MIN_MANUAL.number .. MAX_MANUAL.number
 
     /**
      * Returns the [Action] encoded in the lower 2 bits of [number].
