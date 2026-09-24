@@ -59,7 +59,7 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * A tuple represents a specific immutable state of a feature in binary encoding.
+ * A tuple represents a specific immutable state of a feature.
  * @since 3.0
  */
 @JsExport
