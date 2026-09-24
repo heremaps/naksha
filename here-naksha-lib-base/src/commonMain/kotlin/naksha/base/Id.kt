@@ -299,7 +299,7 @@ class Id private constructor(
         @JvmStatic
         @JsStatic
         fun numberToText(number: Long): String {
-            if (number >= 0L) number.toString()
+            if (number >= 0L) return number.toString()
             return numberToTextMap[number] ?: throw illegalArg("The text value of the given number is unknown: $number")
         }
 
