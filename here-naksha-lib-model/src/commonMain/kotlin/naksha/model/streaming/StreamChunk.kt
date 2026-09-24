@@ -31,8 +31,8 @@ open class StreamChunk(
      * @since 3.0
      * @see StreamTuple
      */
-    @get:JvmName("features")
-    val features: Array<StreamTuple>
+    @get:JvmName("tuples")
+    val tuples: Array<StreamTuple>
 ) {
     companion object StreamChunkCompanion {
         /**
