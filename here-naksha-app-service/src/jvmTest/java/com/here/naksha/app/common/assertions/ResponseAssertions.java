@@ -33,6 +33,7 @@ import java.util.Optional;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.mom.MomReference;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -213,6 +214,25 @@ public class ResponseAssertions {
       assertNotNull(
           feature.getProperties().getXyz().getUuid(),
           "UUID found missing in response for feature id " + feature.getId());
+    }
+    return this;
+  }
+
+  /**
+   * Asserts that none of the violations in the response still carry the pre-MOM10 namespaces
+   * ({@code @ns:com:here:mom:meta} / {@code @ns:com:here:mom:delta}), i.e. that violations went through the same
+   * MOM10 post-processing as regular features.
+   */
+  public ResponseAssertions hasViolationsWithoutPreMom10Namespaces() {
+    if (collectionResponse == null) {
+      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    }
+    final List<NakshaFeature> violations = collectionResponse.getViolations();
+    assertNotNull(violations, "No violations found in response");
+    for (final NakshaFeature violation : violations) {
+      final NakshaProperties properties = violation.getProperties();
+      assertNull(properties.getMeta(), "Expected pre-MOM10 '" + NakshaProperties.META_KEY + "' namespace to be stripped from violation " + violation.getId());
+      assertNull(properties.getDelta(), "Expected pre-MOM10 '" + NakshaProperties.DELTA_KEY + "' namespace to be stripped from violation " + violation.getId());
     }
     return this;
   }

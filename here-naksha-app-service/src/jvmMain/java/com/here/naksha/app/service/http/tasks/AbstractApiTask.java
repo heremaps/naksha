@@ -214,11 +214,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final List<NakshaFeature> insertedFeatures = featureMap.get(Action.CREATE);
       final List<NakshaFeature> updatedFeatures = featureMap.get(Action.UPDATE);
       final List<NakshaFeature> deletedFeatures = featureMap.get(Action.DELETE);
-      // extract violations if available
-      List<NakshaFeature> violations = null;
-      if (successResponse instanceof ContextXyzFeatureResponse cr) {
-        violations = cr.getViolations();
-      }
+      // extract violations if available, and post-process them the same way as features
+      final List<NakshaFeature> violations = postProcessedViolations(successResponse, postProcessor);
       if (featureMap.isEmpty() && (violations == null || violations.isEmpty())) {
         if (isDeleteOperation) {
           logger.info("No data found, returning empty collection");
@@ -287,6 +284,26 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   protected <P extends AnyObject> @NotNull P parseRequestBodyAs(final Class<P> type) {
     final String bodyJson = routingContext.body().asString();
     return requireNonNull(box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), type));
+  }
+
+  /**
+   * Extracts violations from a {@link ContextXyzFeatureResponse} and applies the given post-processor to each one.
+   * Returns {@code null} if the response carries no violations.
+   */
+  private static @Nullable List<NakshaFeature> postProcessedViolations(
+      SuccessResponse response,
+      FeaturePostProcessor<NakshaFeature> postProcessor) {
+    if (!(response instanceof ContextXyzFeatureResponse cr)) {
+      return null;
+    }
+    final List<NakshaFeature> violations = cr.getViolations();
+    if (violations == null) {
+      return null;
+    }
+    for (NakshaFeature violation : violations) {
+      postProcessor.postProcess(violation);
+    }
+    return violations;
   }
 
   /**
