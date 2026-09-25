@@ -120,6 +120,9 @@ public class EventHandlerConfig extends NakshaFeature {
             getEventHandlerConstructor(getClassName(), EventHandlerConfig.class, eventTargetClass);
       } else {
         ClassLoader extClassLoader = naksha.getClassLoader(extensionId);
+        if (extClassLoader == null) {
+          throw new Exception("Extension " + extensionId + " is not loaded yet for event handler " + getId());
+        }
         //noinspection unchecked
         constructor = (Fe3<IEventHandler, INaksha, EventHandlerConfig, EventTarget<?>>) getEventHandlerConstructor(
             getClassName(), EventHandlerConfig.class, eventTargetClass, extensionId, extClassLoader);
