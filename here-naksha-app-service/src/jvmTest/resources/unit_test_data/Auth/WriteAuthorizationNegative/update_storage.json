@@ -1,0 +1,17 @@
+{
+  "id": "auth_test_storage",
+  "type": "Storage",
+  "title": "Test PSQL storage (updated)",
+  "description": "PSQL storage instance for testing purpose - PUT auth denial",
+  "className": "naksha.psql.PsqlStorage",
+  "master": {
+    "host": "${dataDb.host}",
+    "db": "${dataDb.db}",
+    "user": "${dataDb.user}",
+    "password": "${dataDb.password}",
+    "port": ${dataDb.port}
+  },
+  "properties": {
+    "schema": "${dataDb.schema}"
+  }
+}
