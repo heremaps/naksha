@@ -5,11 +5,10 @@
         "momType": "supporting.Violation",
         "properties": {
             "meta": {
+                "createdTS": "2014-04-08T02:44:49.789Z",
+                "lastUpdatedTS": "2018-02-08T01:15:17.372Z",
                 "modelVersion": "10.0.0",
-                "sourceId": "TMOB",
-                "operation": "CREATED",
-                "lastUpdatedBy": "topology_adapter_service",
-                "updatedByUser": "topology_adapter_service"
+                "updatedByUser": "account_identifier"
             },
             "@ns:com:here:mom:meta": {
                 "sourceId": "TMOB",
@@ -44,11 +43,10 @@
         "momType": "supporting.Violation",
         "properties": {
             "meta": {
+                "createdTS": "2014-04-08T02:44:49.789Z",
+                "lastUpdatedTS": "2018-02-08T01:15:17.372Z",
                 "modelVersion": "10.0.0",
-                "sourceId": "TMOB",
-                "operation": "CREATED",
-                "lastUpdatedBy": "topology_adapter_service",
-                "updatedByUser": "topology_adapter_service"
+                "updatedByUser": "account_identifier"
             },
             "@ns:com:here:mom:meta": {
                 "sourceId": "TMOB",

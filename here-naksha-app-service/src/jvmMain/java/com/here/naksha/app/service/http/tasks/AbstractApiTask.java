@@ -292,16 +292,17 @@ public abstract class AbstractApiTask<T extends XyzResponse>
    */
   private static @Nullable List<NakshaFeature> postProcessedViolations(
       SuccessResponse response,
-      FeaturePostProcessor<NakshaFeature> postProcessor) {
+      @Nullable FeaturePostProcessor<NakshaFeature> postProcessor) {
     if (!(response instanceof ContextXyzFeatureResponse cr)) {
       return null;
     }
-    final List<NakshaFeature> violations = cr.getViolations();
-    if (violations == null) {
-      return null;
+    final List<NakshaFeature> rawViolations = cr.getViolations();
+    if (rawViolations == null || postProcessor == null) {
+      return rawViolations;
     }
-    for (NakshaFeature violation : violations) {
-      postProcessor.postProcess(violation);
+    final List<NakshaFeature> violations = new ArrayList<>();
+    for (NakshaFeature violation : rawViolations) {
+      violations.add(postProcessor.postProcess(violation));
     }
     return violations;
   }
