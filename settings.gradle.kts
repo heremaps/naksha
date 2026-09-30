@@ -1,8 +1,23 @@
 pluginManagement {
+    val internalMavenRepoUrl = providers.gradleProperty("internalMavenRepoUrl")
+        .orNull
+        ?.takeIf { it.isNotBlank() }
+    val internalPluginRepoUrl = providers.gradleProperty("internalPluginRepoUrl")
+        .orNull
+        ?.takeIf { it.isNotBlank() }
+
     repositories {
-        //mavenLocal()
-        gradlePluginPortal()
-        mavenCentral()
+        if (internalPluginRepoUrl != null) {
+            maven(internalPluginRepoUrl)
+        } else {
+            gradlePluginPortal()
+        }
+
+        if (internalMavenRepoUrl != null) {
+            maven(internalMavenRepoUrl)
+        } else {
+            mavenCentral()
+        }
     }
 }
 
