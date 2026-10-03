@@ -3,6 +3,8 @@ package com.here.naksha.cli;
 import com.here.naksha.cli.copy.CopyCommand;
 import com.here.naksha.cli.copy.service.StorageProvider;
 import com.here.naksha.cli.copy.service.factory.CopyServiceFactory;
+import com.here.naksha.cli.stream.StreamCopyCommand;
+import com.here.naksha.cli.stream.StreamProviders;
 import picocli.CommandLine;
 
 final class CommandFactory implements CommandLine.IFactory {
@@ -15,6 +17,9 @@ final class CommandFactory implements CommandLine.IFactory {
                     new CopyServiceFactory(),
                     new StorageProvider()
             ));
+        }
+        if (cls == StreamCopyCommand.class) {
+            return cls.cast(new StreamCopyCommand(StreamProviders.load()));
         }
         return fallback.create(cls);
     }
