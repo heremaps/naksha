@@ -86,3 +86,23 @@
       --targetMapId "targetmapid" \
       --targetCollectionId "targetcolid"
     ```
+## Stream copy command (POC)
+
+The `stream-copy` command copies a collection from a source into one or more targets using the streaming API. Sources and targets are providers, discovered using the Java SPI _(`META-INF/services/com.here.naksha.cli.stream.StreamProvider`)_ and selected by name. Additional providers can be added by putting their jars into `here-naksha-cli/plugins/`.
+
+List the available providers:
+```bash
+./naksha-cli stream-copy --list
+```
+
+The POC contains only the two built-in providers:
+
+- `random`: a source that generates random features, every feature in multiple states. It accepts the configuration of the Generating Storage _(`count`, `idsPrefix`, `featureTemplateFile`, `tileIds` or `tileIdsCsvFile`)_, plus `statesPerFeature` _(default `3`)_. Without a configuration it generates 1000 features.
+- `null`: a target that acknowledges every chunk and throws the data away. It needs no configuration.
+
+Copy random features into the `null` target:
+```bash
+./naksha-cli stream-copy --source random --sourceConfig gen.json --target null
+```
+
+When a copy aborts, a recovery request is written into `stream-recovery.json` _(see `--recoveryFile`)_, continue with `--resume stream-recovery.json`. See `stream-copy --help` for all options.

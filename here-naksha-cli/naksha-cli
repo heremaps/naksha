@@ -37,7 +37,8 @@ fi
 cd "$CURRENT_DIR"
 
 if [[ -f "$JAR" ]]; then
-  java -jar "$JAR" "${java_args[@]}"
+  # A class path instead of -jar, so that jars in plugins/ can add stream providers via META-INF/services.
+  java -cp "$JAR:$MODULE_DIR/plugins/*" com.here.naksha.cli.Main "${java_args[@]}"
   exit $?
 else
   echo "Error: JAR file not found!" >&2
