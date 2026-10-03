@@ -7,9 +7,6 @@ import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.TreeMap;
 
-/**
- * All stream providers found on the class path, by name.
- */
 public final class StreamProviders {
     private final Map<String, StreamProvider> byName = new TreeMap<>();
 
@@ -23,7 +20,6 @@ public final class StreamProviders {
         }
     }
 
-    /** Loads all providers registered in {@code META-INF/services}. */
     public static @NotNull StreamProviders load() {
         return new StreamProviders(ServiceLoader.load(StreamProvider.class));
     }
@@ -32,9 +28,6 @@ public final class StreamProviders {
         return byName.values();
     }
 
-    /**
-     * @throws IllegalArgumentException if there is no provider with the given name; the message lists the available names.
-     */
     public @NotNull StreamProvider get(@NotNull String name) {
         StreamProvider p = byName.get(name);
         if (p == null) {

@@ -27,14 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
-/**
- * A source that generates random features, like {@code /dev/random}.
- *
- * <p>Accepts the configuration of the {@code GeneratingStorage} ({@code count}, {@code idsPrefix}, {@code featureTemplateFile},
- * {@code tileIds} or {@code tileIdsCsvFile}), plus {@code statesPerFeature}. Every feature is delivered in {@code statesPerFeature}
- * states, oldest first, with the property {@code state} set to the state index, so that targets can verify the order per feature.
- * Identifiers are {@code {idsPrefix}{index}}, so a resumed stream continues with the same features.
- */
+/** Ids are {@code {idsPrefix}{index}}, so a resumed stream continues with the same features. */
 public final class RandomStreamProvider implements StreamProvider {
     static final String CURSOR = "randomCursor";
     static final int DEFAULT_COUNT = 1000;
@@ -115,7 +108,6 @@ public final class RandomStreamProvider implements StreamProvider {
         RandomStream(RandomStreamSession session, StreamRequest request, Config config) {
             super(session, request, session.getOptions(), request.sequential() ? 1 : 16);
             this.config = config;
-            // Only the latest state was requested, so every feature has exactly one state.
             this.states = request.queryHistory() ? config.statesPerFeature() : 1;
             this.start = request.getRaw(CURSOR) instanceof Number n ? n.longValue() : 0L;
             start();
