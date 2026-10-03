@@ -61,6 +61,10 @@ public final class StreamCopyService {
                 }
             }
             // All writers finished; close verifies acknowledgements and that nothing is left to read.
+            // Closed from outside, for example by the Ctrl-C hook, so not everything was copied.
+            if (stream.isClosed()) {
+                return new Aborted(new NakshaError(NakshaError.CLOSED, "Stream was closed before all chunks were copied", null), null);
+            }
             long tuples = stream.getAcknowledgedTuples();
             stream.close();
             return new Done(tuples);
