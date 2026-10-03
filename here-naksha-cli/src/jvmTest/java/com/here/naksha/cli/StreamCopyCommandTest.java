@@ -63,6 +63,14 @@ class StreamCopyCommandTest {
     }
 
     @Test
+    void missingRecoveryFileIsAUsageError() {
+        Run r = run("stream-copy", "--source", "random", "--target", "null", "--resume", dir.resolve("nope.json").toString());
+
+        assertEquals(CommandLine.ExitCode.USAGE, r.exitCode());
+        assertTrue(r.err().contains("Recovery file not found"), r.err());
+    }
+
+    @Test
     void targetConfigsMustMatchTargets() {
         Run r = run("stream-copy", "--source", "random", "--target", "null", "--target", "null", "--targetConfig", "a.json");
 

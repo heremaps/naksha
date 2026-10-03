@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @CommandLine.Command(
         name = "stream-copy",
@@ -32,6 +33,7 @@ import java.util.concurrent.Callable;
 )
 public final class StreamCopyCommand implements Callable<Integer> {
     static final String DEFAULT_ID = "default";
+    static final int EXIT_INTERRUPTED = 130;
 
     @CommandLine.Spec
     private CommandLine.Model.CommandSpec spec;
@@ -126,15 +128,23 @@ public final class StreamCopyCommand implements Callable<Integer> {
                 if (!session.getMayWrite()) throw param("Provider '" + targets.get(i) + "' can't be used as target");
             }
 
-            StreamRequest request = resume != null ? StreamRequestJson.fromJson(Files.readString(resume)) : buildRequest();
+            StreamRequest request = resume != null ? loadRecovery(resume) : buildRequest();
             Stream stream = sourceSession.read(request);
             StreamCopyService service = new StreamCopyService(maxInFlight, s -> out.printf(
                     "\racknowledged %d, in flight %d, estimated %d", s.getAcknowledgedTuples(), s.getUnacknowledgedTuples(), s.getEstimatedTuples()));
 
-            Thread hook = new Thread(() -> saveRecoveryOnShutdown(stream, out));
+            AtomicBoolean interrupted = new AtomicBoolean();
+            Thread hook = new Thread(() -> {
+                interrupted.set(true);
+                saveRecoveryOnShutdown(stream, out);
+                // The JVM exits without running the finally block of the main thread.
+                closeQuietly(targetSessions, sourceSession, out);
+            });
             Runtime.getRuntime().addShutdownHook(hook);
             try {
                 StreamCopyService.Result result = service.copy(stream, targetSessions);
+                // The hook already reported the interruption and saved the recovery request.
+                if (interrupted.get()) return EXIT_INTERRUPTED;
                 out.println();
                 if (result instanceof StreamCopyService.Done done) {
                     out.printf("Success! Copied %d tuples.%n", done.tuples());
@@ -165,11 +175,21 @@ public final class StreamCopyCommand implements Callable<Integer> {
         }
         if (maxInFlight <= 0) throw param("--maxInFlight must be > 0");
         if (chunkSize <= 0) throw param("--chunkSize must be > 0");
+        if (resume != null) loadRecovery(resume);
         try {
             providers.get(source);
             for (String t : targets) providers.get(t);
         } catch (IllegalArgumentException e) {
             throw param(e.getMessage());
+        }
+    }
+
+    private StreamRequest loadRecovery(Path file) {
+        if (!Files.isRegularFile(file)) throw param("Recovery file not found: " + file);
+        try {
+            return StreamRequestJson.fromJson(Files.readString(file));
+        } catch (Exception e) {
+            throw param("Invalid recovery file " + file + ": " + e.getMessage());
         }
     }
 
@@ -213,6 +233,20 @@ public final class StreamCopyCommand implements Callable<Integer> {
         } catch (Exception e) {
             out.printf("Could not create a recovery request: %s%n", e.getMessage());
             out.flush();
+        }
+    }
+
+    private static void closeQuietly(List<IStreamSession> targets, IStreamSession source, PrintWriter out) {
+        for (IStreamSession s : targets) closeQuietly(s, out);
+        closeQuietly(source, out);
+        out.flush();
+    }
+
+    private static void closeQuietly(IStreamSession session, PrintWriter out) {
+        try {
+            session.close();
+        } catch (Exception e) {
+            out.printf("Could not close a session: %s%n", e.getMessage());
         }
     }
 
