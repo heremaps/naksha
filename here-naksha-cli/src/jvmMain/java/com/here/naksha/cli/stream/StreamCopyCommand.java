@@ -22,10 +22,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 
-/**
- * Copies one collection from a source into one or more targets, using the streaming API.
- * Sources and targets are {@link StreamProvider}s, selected by name.
- */
 @CommandLine.Command(
         name = "stream-copy",
         mixinStandardHelpOptions = true,
