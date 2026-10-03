@@ -75,7 +75,7 @@ public final class RandomStreamProvider implements StreamProvider {
                 }
                 return new Config(count, states, prefix, tiles, template);
             } catch (JsonParserException | IOException e) {
-                throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid random source configuration " + path + ": " + e.getMessage(), e);
+                throw new NakshaException(NakshaError.ILLEGAL_ARGUMENT, "Invalid random source configuration: " + e.getMessage());
             }
         }
     }

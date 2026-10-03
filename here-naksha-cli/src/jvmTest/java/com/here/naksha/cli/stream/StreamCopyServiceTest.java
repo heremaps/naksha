@@ -72,6 +72,22 @@ class StreamCopyServiceTest {
     }
 
     @Test
+    void streamClosedFromOutsideIsReportedAsAborted() {
+        List<StreamTuple> tuples = history();
+        var source = new ListStreamSession(storage, options, tuples);
+        var target = new RecordingTargetSession(storage, options);
+        AtomicBoolean closed = new AtomicBoolean();
+
+        // Like the Ctrl-C hook: close the stream for recovery while the copy is running.
+        var result = new StreamCopyService(4, s -> {
+            if (closed.compareAndSet(false, true)) s.closeForRecovery();
+        }).copy(source.read(request(5)), List.<IStreamSession>of(target));
+
+        assertInstanceOf(StreamCopyService.Aborted.class, result);
+        assertTrue(target.written.size() < tuples.size());
+    }
+
+    @Test
     void failureReturnsRecoveryRequestAndResumeCompletesTheCopy() {
         List<StreamTuple> tuples = history();
         var source = new ListStreamSession(storage, options, tuples);
