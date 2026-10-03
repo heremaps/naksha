@@ -10,9 +10,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.nio.file.Path;
 
-/**
- * A target that acknowledges every chunk and throws the data away, like {@code /dev/null}. Needs no configuration.
- */
 public final class NullStreamProvider implements StreamProvider {
     @Override
     public @NotNull String name() {

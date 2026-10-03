@@ -5,11 +5,7 @@ import naksha.model.IStorage
 import naksha.model.IStreamSession
 import naksha.model.SessionOptions
 
-/**
- * Session boilerplate for stream sessions; subclasses override [read] and/or [write].
- *
- * Providers that are not backed by a storage, like the CLI test providers, pass `null` as storage.
- */
+/** Providers that are not backed by a storage, like the CLI test providers, pass `null` as storage. */
 abstract class AbstractStreamSession(
     private val backingStorage: IStorage?,
     override val options: SessionOptions,
