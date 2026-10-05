@@ -38,7 +38,6 @@ public final class NullStreamProvider implements StreamProvider {
 
         @Override
         public boolean write(@NotNull StreamChunk chunk) {
-            chunk.acknowledge();
             return true;
         }
     }

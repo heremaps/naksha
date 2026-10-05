@@ -212,6 +212,9 @@ abstract class QueueStream(
         recovery
     }
 
+    /** The recovery request for the current position, without waiting for outstanding acknowledgements; used for periodic checkpoints. */
+    fun currentRecoveryRequest(): StreamRequest = lock.withLock { recoveryRequestLocked() }
+
     override fun getRecoveryRequest(timeoutMillis: Long): StreamRequest = lock.withLock {
         if (!awaitAcknowledgedLocked(timeoutMillis)) throw NakshaException(TIMEOUT, "Timeout waiting for acknowledgements")
         recoveryRequestLocked()

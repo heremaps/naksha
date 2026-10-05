@@ -76,4 +76,25 @@ class StreamCopyCommandTest {
 
         assertEquals(CommandLine.ExitCode.USAGE, r.exitCode());
     }
+
+    @Test
+    void checkpointFileIsRemovedAfterSuccess() throws Exception {
+        Path cfg = dir.resolve("gen.json");
+        Files.writeString(cfg, "{\"count\":20000,\"statesPerFeature\":3,\"tileIds\":[\"120210233222\"]}");
+        Path recovery = dir.resolve("recovery.json");
+
+        Run r = run("stream-copy", "--source", "random", "--sourceConfig", cfg.toString(), "--target", "null",
+                "--chunkSize", "10", "--maxInFlight", "1", "--sequential", "--checkpointInterval", "1", "--recoveryFile", recovery.toString());
+
+        assertEquals(0, r.exitCode(), r.out() + r.err());
+        assertTrue(r.out().contains("Success! Copied 60000 tuples."), r.out());
+        assertFalse(Files.exists(recovery));
+    }
+
+    @Test
+    void negativeCheckpointIntervalIsAUsageError() {
+        Run r = run("stream-copy", "--source", "random", "--target", "null", "--checkpointInterval", "-1");
+
+        assertEquals(CommandLine.ExitCode.USAGE, r.exitCode());
+    }
 }
