@@ -37,7 +37,7 @@ class RandomAndNullProvidersTest {
 
     private static StreamRequest request(int chunkSize, boolean headOnly) {
         return new StreamRequestBuilder("random", "default", "default")
-                .withChunkSize(chunkSize).withQueryHistory(!headOnly).withIgnoreTransactions(headOnly).build();
+                .withChunkSize(chunkSize).withQueryHistory(!headOnly).build();
     }
 
     private static int state(StreamTuple t) {

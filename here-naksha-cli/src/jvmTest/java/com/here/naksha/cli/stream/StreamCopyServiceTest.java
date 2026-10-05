@@ -111,4 +111,37 @@ class StreamCopyServiceTest {
         for (StreamTuple t : target.written) versions.add(t.version());
         assertEquals(tuples.size(), versions.size(), "at-least-once: every state must be written after resume");
     }
+
+    @Test
+    void throwingWriterIsReportedAsAborted() {
+        var source = new ListStreamSession(storage, options, history());
+        var target = new RecordingTargetSession(storage, options) {
+            @Override
+            public boolean write(@org.jetbrains.annotations.NotNull naksha.model.streaming.StreamChunk chunk) {
+                throw new IllegalStateException("boom");
+            }
+        };
+
+        var result = new StreamCopyService(4, s -> {}).copy(source.read(request(5)), List.<IStreamSession>of(target));
+
+        var aborted = assertInstanceOf(StreamCopyService.Aborted.class, result);
+        assertEquals("boom", aborted.error().getMsg());
+        assertNotNull(aborted.recoveryRequest());
+    }
+
+    @Test
+    void checkpointerWritesTheCurrentRecoveryRequest(@org.junit.jupiter.api.io.TempDir java.nio.file.Path dir) throws Exception {
+        var stream = new ListStreamSession(storage, options, history()).read(request(5));
+        var file = dir.resolve("checkpoint.json");
+
+        try (var checkpointer = Checkpointer.start(stream, file, 10)) {
+            assertNotNull(checkpointer);
+            for (int i = 0; i < 200 && !checkpointer.written(); i++) Thread.sleep(10);
+            assertTrue(checkpointer.written());
+        } finally {
+            stream.closeForRecovery();
+        }
+        StreamRequest checkpoint = StreamRequestJson.fromJson(java.nio.file.Files.readString(file));
+        assertEquals(new Id("collection"), checkpoint.collectionId());
+    }
 }

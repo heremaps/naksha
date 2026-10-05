@@ -68,7 +68,7 @@ public final class StreamCopyCommand implements Callable<Integer> {
     @CommandLine.Option(names = "--maxVersion", description = "The highest version to read (inclusive); defaults to HEAD.")
     private @Nullable Long maxVersion;
 
-    @CommandLine.Option(names = "--headOnly", description = "Only read the latest state of every feature, implies --ignoreTransactions.")
+    @CommandLine.Option(names = "--headOnly", description = "Only read the latest state of every feature.")
     private boolean headOnly;
 
     @CommandLine.Option(names = "--excludeDeleted", description = "Do not read deleted features.")
@@ -86,8 +86,11 @@ public final class StreamCopyCommand implements Callable<Integer> {
     @CommandLine.Option(names = "--maxInFlight", description = "The maximal amount of concurrent writes.")
     private int maxInFlight = 64;
 
-    @CommandLine.Option(names = "--recoveryFile", description = "Where to write the recovery request, when the copy aborts.")
+    @CommandLine.Option(names = "--recoveryFile", description = "Where to write the recovery request, when the copy aborts, and the checkpoints.")
     private Path recoveryFile = Path.of("stream-recovery.json");
+
+    @CommandLine.Option(names = "--checkpointInterval", description = "Seconds between checkpoints written to --recoveryFile, 0 to disable.")
+    private long checkpointInterval = 30;
 
     @CommandLine.Option(names = "--resume", description = "Resume from the given recovery file.")
     private @Nullable Path resume;
@@ -133,9 +136,11 @@ public final class StreamCopyCommand implements Callable<Integer> {
             StreamCopyService service = new StreamCopyService(maxInFlight, s -> out.printf(
                     "\racknowledged %d, in flight %d, estimated %d", s.getAcknowledgedTuples(), s.getUnacknowledgedTuples(), s.getEstimatedTuples()));
 
+            Checkpointer checkpointer = Checkpointer.start(stream, recoveryFile, checkpointInterval * 1000);
             AtomicBoolean interrupted = new AtomicBoolean();
             Thread hook = new Thread(() -> {
                 interrupted.set(true);
+                if (checkpointer != null) checkpointer.close();
                 saveRecoveryOnShutdown(stream, out);
                 // The JVM exits without running the finally block of the main thread.
                 closeQuietly(targetSessions, sourceSession, out);
@@ -143,11 +148,13 @@ public final class StreamCopyCommand implements Callable<Integer> {
             Runtime.getRuntime().addShutdownHook(hook);
             try {
                 StreamCopyService.Result result = service.copy(stream, targetSessions);
+                if (checkpointer != null) checkpointer.close();
                 // The hook already reported the interruption and saved the recovery request.
                 if (interrupted.get()) return EXIT_INTERRUPTED;
                 out.println();
                 if (result instanceof StreamCopyService.Done done) {
                     out.printf("Success! Copied %d tuples.%n", done.tuples());
+                    if (checkpointer != null && checkpointer.written()) Files.deleteIfExists(recoveryFile);
                     return CommandLine.ExitCode.OK;
                 }
                 StreamCopyService.Aborted aborted = (StreamCopyService.Aborted) result;
@@ -159,6 +166,7 @@ public final class StreamCopyCommand implements Callable<Integer> {
                 }
                 return CommandLine.ExitCode.SOFTWARE;
             } finally {
+                if (checkpointer != null) checkpointer.close();
                 removeHook(hook);
             }
         } finally {
@@ -175,6 +183,7 @@ public final class StreamCopyCommand implements Callable<Integer> {
         }
         if (maxInFlight <= 0) throw param("--maxInFlight must be > 0");
         if (chunkSize <= 0) throw param("--chunkSize must be > 0");
+        if (checkpointInterval < 0) throw param("--checkpointInterval must be >= 0");
         if (resume != null) loadRecovery(resume);
         try {
             providers.get(source);
@@ -200,8 +209,7 @@ public final class StreamCopyCommand implements Callable<Integer> {
                 .withVersion(maxVersion != null ? maxVersion : Version.HEAD.number)
                 .withQueryHistory(!headOnly)
                 .withQueryDeleted(!excludeDeleted)
-                // A source with transactions must deliver them even for HEAD only, so HEAD only implies ignoring them.
-                .withIgnoreTransactions(ignoreTransactions || headOnly)
+                .withIgnoreTransactions(ignoreTransactions)
                 .withSequential(sequential)
                 .withChunkSize(chunkSize)
                 .build();
@@ -216,7 +224,7 @@ public final class StreamCopyCommand implements Callable<Integer> {
         out.println("Recovery request:");
         out.println(json);
         try {
-            Files.writeString(recoveryFile, json);
+            Checkpointer.writeAtomically(recoveryFile, json);
             out.printf("Saved to %s, resume with --resume %s%n", recoveryFile, recoveryFile);
         } catch (IOException e) {
             out.printf("Could not write %s: %s%n", recoveryFile, e.getMessage());

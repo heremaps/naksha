@@ -18,9 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.function.Consumer;
 
-/**
- * DRAFT: reads one stream and writes every chunk into all targets, following the read loop documented in {@link Stream}.
- */
+/** Writers only write; this service acknowledges or fails the chunk based on the result of {@link IStreamSession#write}. */
 public final class StreamCopyService {
     private static final Logger log = LoggerFactory.getLogger(StreamCopyService.class);
 
@@ -80,7 +78,11 @@ public final class StreamCopyService {
 
     private static void write(IStreamSession target, StreamChunk chunk, Semaphore permits) {
         try {
-            target.write(chunk);
+            if (target.write(chunk)) {
+                chunk.acknowledge();
+            } else {
+                chunk.fail(new NakshaError(NakshaError.EXCEPTION, "Write was not successful", null));
+            }
         } catch (NakshaException e) {
             log.error("Write failed", e);
             chunk.fail(e.getError());
