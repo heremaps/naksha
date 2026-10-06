@@ -24,12 +24,12 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import com.here.naksha.lib.core.util.CollectionIndexPolicy;
 import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
+import com.here.naksha.lib.handlers.internal.IntHandlerForSpaces;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import naksha.base.JvmBoxingUtil;
-import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.model.util.ResultHelper;
 import naksha.model.*;
 import naksha.base.NakshaError;
@@ -120,8 +120,9 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       return executeUpdateSpace(writeRequest);
     } else if (isCreateSpaceRequest(writeRequest, spaceId)) {
       return executeCreateSpace(writeRequest);
-    } else if (isSaveEventHandlerRequest(writeRequest, spaceId)) {
-      return executeSaveEventHandler(writeRequest);
+    } else if (isMappedSpaceBatchRequest(writeRequest, spaceId)) {
+      return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+          "Spaces with custom index mappings must be created or updated one at a time");
     } else if (virtualSpaces.containsKey(spaceId)) {
       // Request is to write to Naksha Admin space
       return executeWriteToAdminSpaces(writeRequest, spaceId);
@@ -185,8 +186,13 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeUpdateSpace(@NotNull WriteRequest updateSpaceEntryReq) {
     final Space space = ((Space) updateSpaceEntryReq.getWrites().get(0).getFeature());
     final SpaceProperties spaceProperties = space.getProperties();
+    final List<EventHandlerConfig> handlers = readEventHandlers(space);
+    final ErrorResponse hiddenMapping = IntHandlerForSpaces.hiddenMappingError(space, handlers);
+    if (hiddenMapping != null) {
+      return hiddenMapping;
+    }
     NakshaCollection collection = spaceProperties.getCollection();
-    if (collection == null && hasCustomIndexMappings(space)) {
+    if (collection == null && hasMappedCollection(handlers)) {
       // The Handler defines a mapped collection, which is created or verified before the Space is saved.
       collection = new NakshaCollection(space.getId());
     }
@@ -220,7 +226,12 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
    */
   private @NotNull Response executeCreateSpace(@NotNull WriteRequest createSpaceEntryReq) {
     final Space space = ((Space) createSpaceEntryReq.getWrites().get(0).getFeature());
-    if (hasCustomIndexMappings(space)) {
+    final List<EventHandlerConfig> handlers = readEventHandlers(space);
+    final ErrorResponse hiddenMapping = IntHandlerForSpaces.hiddenMappingError(space, handlers);
+    if (hiddenMapping != null) {
+      return hiddenMapping;
+    }
+    if (CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection()) || hasMappedCollection(handlers)) {
       final NakshaCollection collection = space.getProperties().getCollection();
       final WriteRequest upsertCollectionReq = new WriteRequest()
           .add(new Write().upsertCollection(collection != null ? collection : new NakshaCollection(space.getId())));
@@ -237,76 +248,47 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   /**
-   * Tests if the Space, or one of its Handlers, defines a collection with custom index mappings.
+   * Tests if one of the storage Handlers defines a collection with custom index mappings.
    */
-  private boolean hasCustomIndexMappings(@NotNull Space space) {
-    if (CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection())) {
-      return true;
-    }
-    final List<String> handlerIds = space.getEventHandlerIds();
-    if (handlerIds == null || handlerIds.isEmpty()) {
-      return false;
-    }
-    final Response response = nakshaHub.getAdminStorage().useReadSession(sessionOptions,
-        reader -> reader.execute(readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerIds)));
-    if (!(response instanceof SuccessResponse successResponse)) {
-      return false;
-    }
-    for (EventHandlerConfig handler : ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class)) {
-      final DefaultStorageHandlerProperties properties =
-          JvmBoxingUtil.box(handler.getProperties(), DefaultStorageHandlerProperties.class);
-      if (CustomIndexMappingCompiler.hasMappings(properties.getCollection())) {
+  private static boolean hasMappedCollection(@NotNull List<EventHandlerConfig> handlers) {
+    for (EventHandlerConfig handler : handlers) {
+      if (DefaultStorageHandler.class.getName().equals(handler.getClassName())
+          && CustomIndexMappingCompiler.hasMappings(
+              JvmBoxingUtil.box(handler.getProperties(), DefaultStorageHandlerProperties.class).getCollection())) {
         return true;
       }
     }
     return false;
   }
 
-  private boolean isSaveEventHandlerRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
-    List<Write> writes = writeRequest.getWrites();
-    return EVENT_HANDLERS.equals(spaceId)
-           && writes.size() == 1
-           && (WriteOp.CREATE.equals(writes.get(0).getOp()) || WriteOp.UPDATE.equals(writes.get(0).getOp()));
+  private @NotNull List<EventHandlerConfig> readEventHandlers(@NotNull Space space) {
+    final List<String> handlerIds = space.getEventHandlerIds();
+    if (handlerIds == null || handlerIds.isEmpty()) {
+      return List.of();
+    }
+    final Response response = nakshaHub.getAdminStorage().useReadSession(sessionOptions,
+        reader -> reader.execute(readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerIds)));
+    if (!(response instanceof SuccessResponse successResponse)) {
+      return List.of();
+    }
+    return ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class);
   }
 
   /**
-   * A collection with custom index mappings, defined by the Handler, is created or verified before the Handler is saved.
-   * If the map does not exist yet, the collection is created lazily, like any other collection.
+   * Mapped collections are only created or verified for single Space create and update requests.
    */
-  private @NotNull Response executeSaveEventHandler(@NotNull WriteRequest saveHandlerReq) {
-    final EventHandlerConfig handler =
-        JvmBoxingUtil.box(saveHandlerReq.getWrites().get(0).getFeature(), EventHandlerConfig.class);
-    final DefaultStorageHandlerProperties properties =
-        JvmBoxingUtil.box(handler.getProperties(), DefaultStorageHandlerProperties.class);
-    final NakshaCollection collection = properties.getCollection();
-    if (CustomIndexMappingCompiler.hasMappings(collection)
-        && properties.getStorageId() != null
-        && Boolean.TRUE.equals(properties.getAutoCreateCollection())) {
-      final IStorage storage;
-      try {
-        storage = nakshaHub.getStorageById(properties.getStorageId());
-      } catch (RuntimeException unknownStorage) {
-        // The Handler validation reports the missing storage.
-        return executeWriteToAdminSpaces(saveHandlerReq, EVENT_HANDLERS);
-      }
-      final String catalogId = CustomStoragePropertiesUtil.getSchema(Objects.requireNonNull(storage.getConfig()));
-      final WriteRequest upsertCollectionReq = new WriteRequest().add(new Write().upsertCollection(
-          CollectionIndexPolicy.toNativeCollection(collection, collection.getId(), catalogId)));
-      final Response response = storage.useWriteSession(sessionOptions, writer -> {
-        final Response result = writer.execute(upsertCollectionReq);
-        if (result instanceof SuccessResponse) {
-          writer.commit();
-        } else {
-          writer.rollback();
-        }
-        return result;
-      });
-      if (response instanceof ErrorResponse errorResponse
-          && !NakshaError.MAP_NOT_FOUND.equals(errorResponse.getError().getCode())) {
-        return errorResponse;
+  private boolean isMappedSpaceBatchRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
+    if (!SPACES.equals(spaceId)) {
+      return false;
+    }
+    for (Write write : writeRequest.getWrites()) {
+      if (!WriteOp.DELETE.equals(write.getOp())
+          && CustomIndexMappingCompiler.hasMappings(
+              JvmBoxingUtil.box(write.getFeature(), Space.class).getProperties().getCollection())) {
+        return true;
       }
     }
-    return executeWriteToAdminSpaces(saveHandlerReq, EVENT_HANDLERS);
+    return false;
   }
 
   private String singleCollectionIdFrom(WriteRequest writeRequest) {

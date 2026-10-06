@@ -69,6 +69,9 @@ class CustomIndexMappingTest {
             definition(mapping("a"), mapping("a")),
             definition(mapping("address", MemberType.TAG_MAP), CustomIndexMapping(JsonPath("properties", "address", "city"), MemberType.STRING)),
             definition(CustomIndexMapping(JsonPath("geometry"), MemberType.SPATIAL)),
+            definition(CustomIndexMapping(JsonPath("properties", "address", "rating"), MemberType.INT32)).apply {
+                members = MemberList(Member("address", MemberType.TAG_MAP, JsonPath("properties", "address")))
+            },
         )
         for (definition in invalid) {
             val error = assertFailsWith<NakshaException> { native(definition) }

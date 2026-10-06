@@ -314,7 +314,10 @@ class CustomIndexMappingStorageTest : CustomIndexNativeFixture() {
                 CustomIndexMapping(JsonPath("properties", "score"), MemberType.INT32),
                 CustomIndexMapping(JsonPath("properties", "label"), MemberType.STRING))
         }
-        for (changed in listOf(changedType, added, NakshaCollection(config.id, catalog.id))) {
+        val movedPath = NakshaCollection(config.id, catalog.id).apply {
+            customIndexMapping = CustomIndexMappingList(CustomIndexMapping(JsonPath("properties", "different"), MemberType.INT32))
+        }
+        for (changed in listOf(changedType, added, movedPath, NakshaCollection(config.id, catalog.id))) {
             val response = assertIs<ErrorResponse>(upsert(changed))
             assertEquals(naksha.base.NakshaError.CONFLICT, response.error.code)
         }

@@ -385,10 +385,16 @@ open class PgCollection internal constructor(
         immutable(candidate.shift == shift, "shift")
         immutable(candidate.partitions == partitions, "partitions")
         immutable(candidate.storageClass == storageClass, "storageClass")
-        immutable(candidate.columns.contentEquals(columns), "members")
+        immutable(candidate.columns.contentEquals(columns) && memberKeys(newHead) == memberKeys(head), "members")
         immutable(indexKeys(candidate.headIndices) == indexKeys(headIndices)
             && indexKeys(candidate.historyIndices) == indexKeys(historyIndices), "indices")
     }
+
+    // Columns do not know the JSON path from which a member is materialized.
+    private fun memberKeys(collection: NakshaCollection): Set<String> =
+        collection.useMembers().filterNotNull().map { member ->
+            "${member.name}:${member.dataType}:${member.path.toList()}"
+        }.toSet()
 
     private fun indexKeys(indices: Array<PgIndex>): Set<String> = indices.map { index ->
         "${index.name}(${index.on.joinToString { it.name }})${index.includes.joinToString { it.name }}:${index.unique}:${index.partial}"

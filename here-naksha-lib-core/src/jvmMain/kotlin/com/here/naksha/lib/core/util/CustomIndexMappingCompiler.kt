@@ -45,8 +45,8 @@ class CustomIndexMappingCompiler private constructor() {
                 val suffix = (i + 1).toString().padStart(2, '0')
                 val member = Member("cm$suffix", mapping.dataType!!, mapping.jsonPath!!)
                 for (other in members) {
-                    if (other != null && !other.isVirtual() && samePath(other.path, member.path)) {
-                        throw invalid("customIndexMapping", "path ${member.path} duplicates member '${other.name}'")
+                    if (other != null && !other.isVirtual() && (isPrefix(other.path, member.path) || isPrefix(member.path, other.path))) {
+                        throw invalid("customIndexMapping", "path ${member.path} overlaps member '${other.name}'")
                     }
                 }
                 definition.addMember(member)

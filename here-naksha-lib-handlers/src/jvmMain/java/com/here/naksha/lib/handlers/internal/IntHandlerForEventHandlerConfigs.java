@@ -21,6 +21,7 @@ package com.here.naksha.lib.handlers.internal;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.lib.core.util.CollectionIndexPolicy;
 import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
@@ -31,6 +32,7 @@ import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
+import naksha.model.IStorage;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
@@ -40,9 +42,12 @@ import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
+import naksha.model.request.WriteOp;
+import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
+import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.model.util.RequestHelper;
 import naksha.model.util.ResultHelper;
 import org.apache.commons.lang3.StringUtils;
@@ -51,9 +56,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
@@ -63,6 +70,7 @@ import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_P
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
 import static naksha.base.Platform.javaProxy;
+import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
 public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<EventHandlerConfig> {
@@ -156,6 +164,78 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
           "The event handler defines a collection, but these spaces define custom index mappings: " + mappedSpaceIds);
     }
     return SUCCESSFUL_VALIDATION;
+  }
+
+  /**
+   * A Handler collection with custom index mappings is created when the Handler is saved. If the collection exists, the
+   * storage verifies that its schema is unchanged; this is done as well when the mapping is removed or creation disabled.
+   */
+  @Override
+  protected @NotNull Response beforePersist(final @NotNull WriteRequest wr) {
+    for (final Write write : wr.getWrites()) {
+      if (WriteOp.DELETE.equals(write.getOp())) {
+        continue;
+      }
+      final EventHandlerConfig eventHandler = JvmBoxingUtil.box(write.getFeature(), EventHandlerConfig.class);
+      if (!DefaultStorageHandler.class.getName().equals(eventHandler.getClassName())) {
+        continue;
+      }
+      final Response response = provisionCollection(eventHandler);
+      if (response instanceof ErrorResponse) {
+        return response;
+      }
+    }
+    return SUCCESSFUL_VALIDATION;
+  }
+
+  private @NotNull Response provisionCollection(EventHandlerConfig eventHandler) {
+    final DefaultStorageHandlerProperties properties =
+        JvmBoxingUtil.box(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
+    final NakshaCollection collection = properties.getCollection();
+    if (collection == null) {
+      return SUCCESSFUL_VALIDATION;
+    }
+    final boolean mapped = CustomIndexMappingCompiler.hasMappings(collection);
+    if (!mapped && !CustomIndexMappingCompiler.hasMappings(savedCollection(eventHandler.getId()))) {
+      return SUCCESSFUL_VALIDATION;
+    }
+    final IStorage storage = nakshaHub().getStorageById(properties.getStorageId());
+    final String catalogId = CustomStoragePropertiesUtil.getSchema(Objects.requireNonNull(storage.getConfig()));
+    final NakshaCollection nativeCollection = CollectionIndexPolicy.toNativeCollection(
+        collection.copy(true), collection.getId(), catalogId);
+    final Write write = mapped && properties.getAutoCreateCollection()
+        ? new Write().upsertCollection(nativeCollection)
+        : new Write().updateCollection(nativeCollection, false);
+    final Response response = storage.useWriteSession(SessionOptions.from(currentContext()), writer -> {
+      final Response result = writer.execute(new WriteRequest().add(write));
+      if (result instanceof SuccessResponse) {
+        writer.commit();
+      } else {
+        writer.rollback();
+      }
+      return result;
+    });
+    if (response instanceof ErrorResponse) {
+      final String code = ((ErrorResponse) response).getError().getCode();
+      // Nothing to verify, the collection is created lazily on the first write.
+      if (NakshaError.COLLECTION_NOT_FOUND.equals(code) || NakshaError.MAP_NOT_FOUND.equals(code)) {
+        return SUCCESSFUL_VALIDATION;
+      }
+    }
+    return response;
+  }
+
+  private @Nullable NakshaCollection savedCollection(String handlerId) {
+    final ReadFeatures readHandler = readFeaturesByIdRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerId);
+    final Response response = nakshaHub().getAdminStorage()
+        .useReadSession(SessionOptions.from(currentContext()), readSession -> readSession.execute(readHandler));
+    if (!(response instanceof SuccessResponse)) {
+      return null;
+    }
+    final EventHandlerConfig saved = ResultHelper.readFeatureFromResponse((SuccessResponse) response, EventHandlerConfig.class);
+    return saved == null
+        ? null
+        : JvmBoxingUtil.box(saved.getProperties(), DefaultStorageHandlerProperties.class).getCollection();
   }
 
   private @NotNull Response viewHandlerPropertiesValidation(EventHandlerConfig eventHandler) {

@@ -27,6 +27,7 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,6 +43,7 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
 
@@ -89,16 +91,31 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     if (!(result instanceof SuccessResponse)) {
       return result;
     }
-    for (EventHandlerConfig handler :
-        ResultHelper.extractResponseItems((SuccessResponse) result, EventHandlerConfig.class)) {
-      if (JvmBoxingUtil.box(handler.getProperties(), DefaultStorageHandlerProperties.class).getCollection() != null) {
+    final ErrorResponse hiddenMapping = hiddenMappingError(
+        space, ResultHelper.extractResponseItems((SuccessResponse) result, EventHandlerConfig.class));
+    if (hiddenMapping != null) {
+      return hiddenMapping;
+    }
+    return SUCCESSFUL_VALIDATION;
+  }
+
+  /**
+   * Returns an error, if the Space defines custom index mappings, but one of its storage Handlers defines the collection.
+   */
+  public static @Nullable ErrorResponse hiddenMappingError(@NotNull Space space, @NotNull List<EventHandlerConfig> handlers) {
+    if (!CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection())) {
+      return null;
+    }
+    for (EventHandlerConfig handler : handlers) {
+      if (DefaultStorageHandler.class.getName().equals(handler.getClassName())
+          && JvmBoxingUtil.box(handler.getProperties(), DefaultStorageHandlerProperties.class).getCollection() != null) {
         return new ErrorResponse(
             NakshaError.CONFLICT,
             String.format("Space %s defines custom index mappings, but its handler %s defines the collection",
                 space.getId(), handler.getId()));
       }
     }
-    return SUCCESSFUL_VALIDATION;
+    return null;
   }
 
   private @NotNull Response handlerExistenceValidation(Space space) {
