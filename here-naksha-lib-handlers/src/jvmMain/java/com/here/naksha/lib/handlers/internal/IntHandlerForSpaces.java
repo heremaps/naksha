@@ -64,28 +64,39 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
       return basicValidation;
     }
     Space space = (Space) write.getFeature();
-    List<EventHandlerConfig> handlers = getHandlersFor(space);
-    Response handlerExistence = handlerExistenceValidation(space, handlers);
+    Response handlerExistence = handlerExistenceValidation(space);
     if (handlerExistence instanceof ErrorResponse) {
       return handlerExistence;
     }
-    return collectionValidation(space, handlers);
+    return collectionValidation(space);
   }
 
   /**
    * A Handler collection replaces the Space collection, so custom index mappings of the Space would be ignored.
    */
-  private @NotNull Response collectionValidation(Space space, List<EventHandlerConfig> handlers) {
+  private @NotNull Response collectionValidation(Space space) {
     NakshaCollection collection = space.getProperties().getCollection();
     try {
-      if (collection != null) {
-        CustomIndexMappingCompiler.validate(collection);
+      if (!CustomIndexMappingCompiler.hasMappings(collection)) {
+        return SUCCESSFUL_VALIDATION;
       }
+      CustomIndexMappingCompiler.validate(collection);
     } catch (NakshaException e) {
       return new ErrorResponse(e.getError());
     }
-    ErrorResponse hiddenMapping = hiddenMappingError(space, handlers);
-    return hiddenMapping != null ? hiddenMapping : SUCCESSFUL_VALIDATION;
+    ReadFeatures getEventHandlersRequest =
+        readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, space.getEventHandlerIds());
+    Response result = nakshaHub().getSpaceStorage().useReadSession(SessionOptions.from(currentContext()),
+        readSession -> readSession.execute(getEventHandlersRequest));
+    if (!(result instanceof SuccessResponse)) {
+      return result;
+    }
+    final ErrorResponse hiddenMapping = hiddenMappingError(
+        space, ResultHelper.extractResponseItems((SuccessResponse) result, EventHandlerConfig.class));
+    if (hiddenMapping != null) {
+      return hiddenMapping;
+    }
+    return SUCCESSFUL_VALIDATION;
   }
 
   /**
@@ -107,11 +118,8 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     return null;
   }
 
-  private @NotNull Response handlerExistenceValidation(Space space, List<EventHandlerConfig> handlers) {
-    List<String> availableHandlerIds = handlers.stream().map(EventHandlerConfig::getId).collect(Collectors.toList());
-    List<String> missingHandlerIds = space.getEventHandlerIds().stream()
-        .filter(expectedId -> !availableHandlerIds.contains(expectedId))
-        .collect(Collectors.toList());
+  private @NotNull Response handlerExistenceValidation(Space space) {
+    List<String> missingHandlerIds = getMissingHandlersFor(space);
     if (missingHandlerIds.isEmpty()) {
       return SUCCESSFUL_VALIDATION;
     } else {
@@ -122,14 +130,19 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     }
   }
 
-  private List<EventHandlerConfig> getHandlersFor(Space space) {
-    ReadFeatures getEventHandlersRequest =
-        readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, space.getEventHandlerIds());
+  private List<String> getMissingHandlersFor(Space space) {
+    List<String> expectedHandlerIds = space.getEventHandlerIds();
+    ReadFeatures getEventHandlersRequest = readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, expectedHandlerIds);
     return nakshaHub().getSpaceStorage().useReadSession(SessionOptions.from(currentContext()), readSession -> {
       Response result = readSession.execute(getEventHandlersRequest);
-      return result instanceof SuccessResponse
-          ? ResultHelper.extractResponseItems((SuccessResponse) result, EventHandlerConfig.class)
-          : List.of();
+      return missingHandlersIds(result, expectedHandlerIds);
     });
+  }
+
+  private List<String> missingHandlersIds(Response fetchedHandlers, List<String> expectedHandlersIds) {
+    List<String> availableHandlerIds = ResultHelper.readIdsFromResult(fetchedHandlers);
+    return expectedHandlersIds.stream()
+        .filter(expectedId -> !availableHandlerIds.contains(expectedId))
+        .collect(Collectors.toList());
   }
 }
