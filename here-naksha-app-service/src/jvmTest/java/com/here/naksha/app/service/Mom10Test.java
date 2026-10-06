@@ -10,7 +10,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
-import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -18,10 +17,6 @@ class Mom10Test extends ApiTest {
 
   private static final NakshaTestWebClient nakshaClient = new NakshaTestWebClient();
   private static final String SPACE_ID = "mom_10_test_space";
-  private static final String[] DELTA_NS_PATH =
-      new String[] {"properties", NakshaProperties.DELTA_KEY};
-  private static final String[] META_NS_PATH =
-      new String[] {"properties", NakshaProperties.META_KEY};
 
   @BeforeAll
   static void setup() {
@@ -42,7 +37,7 @@ class Mom10Test extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasJsonBody(featuresJson)
-        .hasFeaturesWithout(DELTA_NS_PATH, META_NS_PATH)
+        .hasFeaturesWithoutPreMom10Namespaces()
         .hasStreamIdHeader(streamId);
   }
 
@@ -64,7 +59,7 @@ class Mom10Test extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasJsonBody(createFeatureJson)
-        .hasFeaturesWithout(DELTA_NS_PATH, META_NS_PATH)
+        .hasFeaturesWithoutPreMom10Namespaces()
         .hasStreamIdHeader(streamId);
   }
 

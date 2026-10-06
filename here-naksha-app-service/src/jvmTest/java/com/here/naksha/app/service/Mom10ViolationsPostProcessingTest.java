@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.http.HttpResponse;
 import java.util.UUID;
-import naksha.model.objects.NakshaProperties;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -71,11 +70,7 @@ public class Mom10ViolationsPostProcessingTest extends ApiTest {
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBody(expectedBodyPart, "Validation dry-run response body doesn't match")
-        .hasFeaturesWithout(
-            new String[] {"properties", NakshaProperties.META_KEY},
-            new String[] {"properties", NakshaProperties.DELTA_KEY})
-        .hasViolationsWithout(
-            new String[] {"properties", NakshaProperties.META_KEY},
-            new String[] {"properties", NakshaProperties.DELTA_KEY});
+        .hasFeaturesWithoutPreMom10Namespaces()
+        .hasViolationsWithoutPreMom10Namespaces();
   }
 }

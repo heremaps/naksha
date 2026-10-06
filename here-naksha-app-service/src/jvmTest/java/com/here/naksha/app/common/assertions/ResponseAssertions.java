@@ -24,20 +24,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.app.common.TestUtil;
 import com.here.naksha.app.service.models.FeatureCollectionRequest;
 import java.net.http.HttpResponse;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.mom.MomReference;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -222,40 +218,32 @@ public class ResponseAssertions {
     return this;
   }
 
-  public ResponseAssertions hasFeaturesWithout(String[]... paths) {
-    return hasBodyWithout("features", paths);
-  }
-
-  public ResponseAssertions hasViolationsWithout(String[]... paths) {
-    return hasBodyWithout("violations", paths);
-  }
-
-  public ResponseAssertions hasBodyWithout(@NotNull String arrayName, String[]... paths) {
-    final Map<String, Object> jsonBody;
-    try {
-      jsonBody = new ObjectMapper().readValue(subject.body(), Map.class);
-    } catch (JsonProcessingException e) {
-      fail("Unable to parse response body as JSON", e);
-      return this;
+  public ResponseAssertions hasFeaturesWithoutPreMom10Namespaces() {
+    if (collectionResponse == null) {
+      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
     }
-    if (jsonBody.containsKey(arrayName)) {
-      final List<Map<String, Object>> items = (List<Map<String, Object>>) jsonBody.get(arrayName);
-      for (Map<String, Object> item : items) {
-        failIfFeatureJsonContainsEntry(item, paths);
-      }
-    }
+    assertWithoutPreMom10Namespaces(collectionResponse.getFeatures(), "feature");
     return this;
   }
 
-  private void failIfFeatureJsonContainsEntry(Map<String, Object> rawFeature, String[]... paths) {
-    for (String[] path : paths) {
-      Map<String, Object> current = rawFeature;
-      for (int i = 0; current != null && i < path.length - 1; i++) {
-        current = (Map<String, Object>) current.get(path[i]);
-      }
-      if (current != null && current.containsKey(path[path.length - 1])) {
-        fail("Body should not contain entry for path: " + Arrays.toString(path));
-      }
+  public ResponseAssertions hasViolationsWithoutPreMom10Namespaces() {
+    if (collectionResponse == null) {
+      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    }
+    final List<NakshaFeature> violations = collectionResponse.getViolations();
+    assertNotNull(violations, "No violations found in response");
+    assertWithoutPreMom10Namespaces(violations, "violation");
+    return this;
+  }
+
+  private void assertWithoutPreMom10Namespaces(List<NakshaFeature> features, String itemType) {
+    for (final NakshaFeature feature : features) {
+      assertNull(
+          feature.getProperties().getMeta(),
+          "Expected pre-MOM10 '" + NakshaProperties.META_KEY + "' namespace to be stripped from " + itemType + " " + feature.getId());
+      assertNull(
+          feature.getProperties().getDelta(),
+          "Expected pre-MOM10 '" + NakshaProperties.DELTA_KEY + "' namespace to be stripped from " + itemType + " " + feature.getId());
     }
   }
 
