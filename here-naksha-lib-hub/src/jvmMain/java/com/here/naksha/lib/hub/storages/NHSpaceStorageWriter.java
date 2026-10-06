@@ -25,6 +25,7 @@ import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import com.here.naksha.lib.handlers.AuthorizationEventHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.lib.handlers.internal.IntHandlerForSpaces;
@@ -186,6 +187,11 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeUpdateSpace(@NotNull WriteRequest updateSpaceEntryReq) {
     final Space space = ((Space) updateSpaceEntryReq.getWrites().get(0).getFeature());
     final SpaceProperties spaceProperties = space.getProperties();
+    // The collection is written before the Space, so the Space write must be authorized first.
+    final ErrorResponse forbidden = new AuthorizationEventHandler(nakshaHub).checkWriteAccess();
+    if (forbidden != null) {
+      return forbidden;
+    }
     final List<EventHandlerConfig> handlers = readEventHandlers(space);
     final ErrorResponse hiddenMapping = IntHandlerForSpaces.hiddenMappingError(space, handlers);
     if (hiddenMapping != null) {
@@ -226,6 +232,11 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
    */
   private @NotNull Response executeCreateSpace(@NotNull WriteRequest createSpaceEntryReq) {
     final Space space = ((Space) createSpaceEntryReq.getWrites().get(0).getFeature());
+    // The collection is written before the Space, so the Space write must be authorized first.
+    final ErrorResponse forbidden = new AuthorizationEventHandler(nakshaHub).checkWriteAccess();
+    if (forbidden != null) {
+      return forbidden;
+    }
     final List<EventHandlerConfig> handlers = readEventHandlers(space);
     final ErrorResponse hiddenMapping = IntHandlerForSpaces.hiddenMappingError(space, handlers);
     if (hiddenMapping != null) {

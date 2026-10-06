@@ -131,4 +131,19 @@ class CustomIndexMappingSaveApiTest : ApiTest() {
         val result = app.hub.spaceStorage.useWriteSession(SessionOptions()) { it.execute(request) }
         assertEquals(NakshaError.ILLEGAL_ARGUMENT, (result as ErrorResponse).error.code)
     }
+
+    @Test fun rejectedReadOnlySpaceSaveMustNotCreateCollection(@NakshaAppInjection app: NakshaApp) {
+        val id = "mapping_save_forbidden_space_handler"
+        val h = handler(id, "unused", false)
+        h.getJSONObject("properties").remove("collection")
+        val storageId = h.getJSONObject("properties").getString("storageId")
+        status(nakshaClient.post("hub/handlers", h.toString(), stream))
+        val collection = "mapping_save_forbidden_space_table"
+        val s = JSONObject(TestUtil.loadFileOrFail("CustomIndexMapping/TC01_spaceMappingLifecycle/create_space.json"))
+            .put("id", "mapping_save_forbidden_space")
+            .put("eventHandlerIds", JSONArray().put(id))
+        s.getJSONObject("properties").getJSONObject("collection").put("id", collection)
+        status(nakshaClient.post("hub/spaces", s.toString(), stream, "Bearer " + TestUtil.readOnlyJwt()), 403)
+        assertTrue(storedCollection(app, storageId, collection).isEmpty(), "403 must not create a physical collection")
+    }
 }

@@ -10,6 +10,7 @@ import naksha.model.objects.Index
 import naksha.model.objects.IndexList
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
+import naksha.model.objects.MemberType
 import naksha.model.objects.MemberType.MemberType_C.BYTE_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.INT64
 import naksha.model.objects.MemberType.MemberType_C.SPATIAL
@@ -391,10 +392,8 @@ open class PgCollection internal constructor(
     }
 
     // Columns do not know the JSON path from which a member is materialized.
-    private fun memberKeys(collection: NakshaCollection): Set<String> =
-        collection.useMembers().filterNotNull().map { member ->
-            "${member.name}:${member.dataType}:${member.path.toList()}"
-        }.toSet()
+    private fun memberKeys(collection: NakshaCollection): Set<Triple<String, MemberType, List<Any?>>> =
+        collection.useMembers().filterNotNull().map { member -> Triple(member.name, member.dataType, member.path.toList()) }.toSet()
 
     private fun indexKeys(indices: Array<PgIndex>): Set<String> = indices.map { index ->
         "${index.name}(${index.on.joinToString { it.name }})${index.includes.joinToString { it.name }}:${index.unique}:${index.partial}"

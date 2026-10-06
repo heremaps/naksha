@@ -323,4 +323,22 @@ class CustomIndexMappingStorageTest : CustomIndexNativeFixture() {
         }
         assertEquals(XyzMembers.ALL.size + 1, stored(config.id).members!!.size)
     }
+
+    @Test fun pathChangesAreComparedByTypedSegments() {
+        val changes = listOf(
+            JsonPath("properties", "items", 0) to JsonPath("properties", "items", "0"),
+            JsonPath("properties", "a, b") to JsonPath("properties", "a", "b"))
+        changes.forEachIndexed { i, (oldPath, newPath) ->
+            fun native(path: JsonPath) = CollectionIndexPolicy.toNativeCollection(NakshaCollection("custom_typed_path_$i", catalog.id).apply {
+                customIndexMapping = CustomIndexMappingList(CustomIndexMapping(path, MemberType.STRING))
+            }, "custom_typed_path_$i", catalog.id)
+            executeWrite(WriteRequest().add(Write().createCollection(native(oldPath))))
+            val response = storage.newWriteSession().use { writer ->
+                val result = writer.execute(WriteRequest().add(Write().upsertCollection(native(newPath))))
+                if (result is SuccessResponse) writer.commit() else writer.rollback()
+                result
+            }
+            assertEquals(naksha.base.NakshaError.CONFLICT, assertIs<ErrorResponse>(response).error.code, "$oldPath -> $newPath")
+        }
+    }
 }

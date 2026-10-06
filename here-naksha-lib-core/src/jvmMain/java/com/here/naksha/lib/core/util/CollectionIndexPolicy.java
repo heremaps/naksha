@@ -12,6 +12,10 @@ public final class CollectionIndexPolicy {
 
   private CollectionIndexPolicy() {}
 
+  /**
+   * The indices of collections created by the Hub without explicit indices. Existing collections are verified against
+   * this set when a Space or Handler is saved, so changing it requires a migration of existing collections.
+   */
   public static @NotNull IndexList hubSlimIndices() {
     return IndexList.of(
         XyzIndices.XyzTags,
