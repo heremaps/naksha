@@ -148,14 +148,14 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       return new ErrorResponse(e.getError());
     }
     final ReadFeatures readSpacesRequest = new ReadFeatures().withCollectionId(SPACES)
-        .withCatalogId(nakshaHub.getAdminMapId())
-        .withPropertyQuery(new PQuery(new Property(EVENT_HANDLER_IDS), AnyOp.CONTAINS, eventHandler.getId()));
+        .withCatalogId(nakshaHub.getAdminMapId());
     final Response response = nakshaHub().getAdminStorage()
-        .useReadSession(new SessionOptions(), readSession -> readSession.execute(readSpacesRequest));
+        .useReadSession(new SessionOptions(), readSession -> readSession.executeRead(readSpacesRequest));
     if (!(response instanceof SuccessResponse)) {
       return response;
     }
     final List<String> mappedSpaceIds = ResultHelper.extractResponseItems((SuccessResponse) response, Space.class).stream()
+        .filter(space -> space.getEventHandlerIds().contains(eventHandler.getId()))
         .filter(space -> CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection()))
         .map(NakshaFeature::getId)
         .collect(Collectors.toList());
@@ -207,7 +207,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
         ? new Write().upsertCollection(nativeCollection)
         : new Write().updateCollection(nativeCollection, false);
     final Response response = storage.useWriteSession(SessionOptions.from(currentContext()), writer -> {
-      final Response result = writer.execute(new WriteRequest().add(write));
+      final Response result = writer.executeWrite(new WriteRequest().add(write));
       if (result instanceof SuccessResponse) {
         writer.commit();
       } else {
@@ -228,7 +228,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
   private @Nullable NakshaCollection savedCollection(String handlerId) {
     final ReadFeatures readHandler = readFeaturesByIdRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerId);
     final Response response = nakshaHub().getAdminStorage()
-        .useReadSession(SessionOptions.from(currentContext()), readSession -> readSession.execute(readHandler));
+        .useReadSession(SessionOptions.from(currentContext()), readSession -> readSession.executeRead(readHandler));
     if (!(response instanceof SuccessResponse)) {
       return null;
     }

@@ -261,7 +261,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       return List.of();
     }
     final Response response = nakshaHub.getAdminStorage().useReadSession(sessionOptions,
-        reader -> reader.execute(readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerIds)));
+        reader -> reader.executeRead(readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerIds)));
     if (!(response instanceof SuccessResponse successResponse)) {
       return List.of();
     }
