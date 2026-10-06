@@ -6,8 +6,6 @@ import naksha.base.NakshaError
 import naksha.base.JvmBoxingUtil
 import naksha.base.Platform
 import com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS
-import com.here.naksha.lib.core.HubInternalIdentifiers.SPACES
-import com.here.naksha.lib.core.models.naksha.Space
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig
 import naksha.model.NakshaContext
 import naksha.model.SessionOptions
@@ -120,16 +118,6 @@ class CustomIndexMappingSaveApiTest : ApiTest() {
         saveDirect(app, false, h1, h2)
         val after = storedCollection(app, h1.getJSONObject("properties").getString("storageId"), "mapping_save_batch_collection_one")
         assertFalse(after.isEmpty(), "A mapped Handler saved in a batch must provision its collection")
-    }
-
-    @Test fun mappedSpaceUpsertIsRejected(@NakshaAppInjection app: NakshaApp) {
-        NakshaContext.newInstance("custom-index-direct-save", "test", null, true).attachToCurrentThread()
-        val json = JSONObject(TestUtil.loadFileOrFail("CustomIndexMapping/TC01_spaceMappingLifecycle/create_space.json"))
-            .put("id", "mapping_save_upsert_space")
-        val space = requireNotNull(JvmBoxingUtil.box(Platform.fromJSON(json.toString()), Space::class.java))
-        val request = WriteRequest().add(Write().upsertFeature(app.hub.adminMapId, SPACES, space))
-        val result = app.hub.spaceStorage.useWriteSession(SessionOptions()) { it.execute(request) }
-        assertEquals(NakshaError.ILLEGAL_ARGUMENT, (result as ErrorResponse).error.code)
     }
 
     @Test fun rejectedReadOnlySpaceSaveMustNotCreateCollection(@NakshaAppInjection app: NakshaApp) {

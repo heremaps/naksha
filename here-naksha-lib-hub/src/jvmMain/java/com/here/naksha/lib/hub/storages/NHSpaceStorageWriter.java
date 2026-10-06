@@ -121,9 +121,6 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       return executeUpdateSpace(writeRequest);
     } else if (isCreateSpaceRequest(writeRequest, spaceId)) {
       return executeCreateSpace(writeRequest);
-    } else if (isMappedSpaceBatchRequest(writeRequest, spaceId)) {
-      return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
-          "Spaces with custom index mappings must be created or updated one at a time");
     } else if (virtualSpaces.containsKey(spaceId)) {
       // Request is to write to Naksha Admin space
       return executeWriteToAdminSpaces(writeRequest, spaceId);
@@ -283,23 +280,6 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       return List.of();
     }
     return ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class);
-  }
-
-  /**
-   * Mapped collections are only created or verified for single Space create and update requests.
-   */
-  private boolean isMappedSpaceBatchRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
-    if (!SPACES.equals(spaceId)) {
-      return false;
-    }
-    for (Write write : writeRequest.getWrites()) {
-      if (!WriteOp.DELETE.equals(write.getOp())
-          && CustomIndexMappingCompiler.hasMappings(
-              JvmBoxingUtil.box(write.getFeature(), Space.class).getProperties().getCollection())) {
-        return true;
-      }
-    }
-    return false;
   }
 
   private String singleCollectionIdFrom(WriteRequest writeRequest) {
