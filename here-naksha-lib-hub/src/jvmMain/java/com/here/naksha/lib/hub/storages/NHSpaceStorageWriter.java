@@ -35,7 +35,6 @@ import naksha.base.NakshaException;
 import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaTx;
 import naksha.model.request.ErrorResponse;
-import naksha.model.request.Request;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
