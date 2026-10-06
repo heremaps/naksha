@@ -138,7 +138,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
    */
   private @NotNull Response collectionValidation(EventHandlerConfig eventHandler) {
     final NakshaCollection collection =
-        JvmBoxingUtil.box(eventHandler.getProperties(), DefaultStorageHandlerProperties.class).getCollection();
+        javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class).getCollection();
     if (collection == null) {
       return SUCCESSFUL_VALIDATION;
     }
@@ -176,7 +176,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       if (WriteOp.DELETE.equals(write.getOp())) {
         continue;
       }
-      final EventHandlerConfig eventHandler = JvmBoxingUtil.box(write.getFeature(), EventHandlerConfig.class);
+      final EventHandlerConfig eventHandler = javaProxy(write.getFeature(), EventHandlerConfig.class);
       if (!DefaultStorageHandler.class.getName().equals(eventHandler.getClassName())) {
         continue;
       }
@@ -190,7 +190,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
 
   private @NotNull Response provisionCollection(EventHandlerConfig eventHandler) {
     final DefaultStorageHandlerProperties properties =
-        JvmBoxingUtil.box(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
+        javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
     final NakshaCollection collection = properties.getCollection();
     if (collection == null) {
       return SUCCESSFUL_VALIDATION;
@@ -235,7 +235,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     final EventHandlerConfig saved = ResultHelper.readFeatureFromResponse((SuccessResponse) response, EventHandlerConfig.class);
     return saved == null
         ? null
-        : JvmBoxingUtil.box(saved.getProperties(), DefaultStorageHandlerProperties.class).getCollection();
+        : javaProxy(saved.getProperties(), DefaultStorageHandlerProperties.class).getCollection();
   }
 
   private @NotNull Response viewHandlerPropertiesValidation(EventHandlerConfig eventHandler) {

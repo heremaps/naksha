@@ -31,7 +31,7 @@ import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import java.util.List;
 import java.util.stream.Collectors;
-import naksha.base.JvmBoxingUtil;
+import naksha.base.Platform;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
@@ -108,7 +108,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     }
     for (EventHandlerConfig handler : handlers) {
       if (DefaultStorageHandler.class.getName().equals(handler.getClassName())
-          && JvmBoxingUtil.box(handler.getProperties(), DefaultStorageHandlerProperties.class).getCollection() != null) {
+          && Platform.javaProxy(handler.getProperties(), DefaultStorageHandlerProperties.class).getCollection() != null) {
         return new ErrorResponse(
             NakshaError.CONFLICT,
             String.format("Space %s defines custom index mappings, but its handler %s defines the collection",
