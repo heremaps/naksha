@@ -134,4 +134,31 @@ class CustomIndexMappingSaveApiTest : ApiTest() {
         status(nakshaClient.post("hub/spaces", s.toString(), stream, "Bearer " + TestUtil.readOnlyJwt()), 403)
         assertTrue(storedCollection(app, storageId, collection).isEmpty(), "403 must not create a physical collection")
     }
+
+    private fun multiCollectionHandler(id: String, vararg collections: Pair<String, String>): JSONObject {
+        val h = handler(id, "unused")
+        val properties = h.getJSONObject("properties")
+        properties.remove("collection")
+        properties.put("collections", JSONArray().apply {
+            for ((collection, type) in collections) put(JSONObject().put("id", collection).put("customIndexMapping",
+                JSONArray().put(JSONObject().put("jsonPath", JSONArray().put("properties").put("score")).put("dataType", type))))
+        })
+        return h.put("className", MultiCollectionStorageHandler::class.java.name)
+    }
+
+    @Test fun subclassCollectionsAreCreatedOnHandlerSave(@NakshaAppInjection app: NakshaApp) {
+        val h = multiCollectionHandler("mapping_save_multi_handler",
+            "mapping_save_multi_one" to "int32", "mapping_save_multi_two" to "string")
+        val storageId = h.getJSONObject("properties").getString("storageId")
+        status(nakshaClient.post("hub/handlers", h.toString(), stream))
+        assertFalse(storedCollection(app, storageId, "mapping_save_multi_one").isEmpty())
+        assertFalse(storedCollection(app, storageId, "mapping_save_multi_two").isEmpty())
+    }
+
+    @Test fun subclassWithConflictingCollectionDefinitionsIsRejected() {
+        val h = multiCollectionHandler("mapping_save_multi_conflict_handler",
+            "mapping_save_multi_conflict" to "int32", "mapping_save_multi_conflict" to "string")
+        status(nakshaClient.post("hub/handlers", h.toString(), stream), 409)
+        status(nakshaClient.get("hub/handlers/mapping_save_multi_conflict_handler", stream), 404)
+    }
 }

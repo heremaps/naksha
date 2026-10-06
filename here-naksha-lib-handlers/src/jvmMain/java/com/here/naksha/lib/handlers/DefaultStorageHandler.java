@@ -53,6 +53,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -83,6 +84,18 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     this.eventTarget = eventTarget;
     this.properties = Objects.requireNonNull(
         JvmBoxingUtil.box(eventHandlerConfig.getProperties(), DefaultStorageHandlerProperties.class));
+  }
+
+  /**
+   * Returns the collections this Handler defines by its own configuration. They are created, or verified if they exist,
+   * when the Handler is saved. Subclasses with other collection properties override this method.
+   *
+   * <p>The method must only use the Handler configuration: when called for a Handler save, the event target is a
+   * placeholder Space.
+   */
+  public @NotNull List<NakshaCollection> configuredCollections() {
+    final NakshaCollection collection = properties.getCollection();
+    return collection == null ? List.of() : List.of(collection);
   }
 
   @Override

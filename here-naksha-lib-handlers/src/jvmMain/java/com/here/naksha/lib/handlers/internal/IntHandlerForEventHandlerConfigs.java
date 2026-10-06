@@ -167,8 +167,9 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
   }
 
   /**
-   * A Handler collection with custom index mappings is created when the Handler is saved. If the collection exists, the
-   * storage verifies that its schema is unchanged; this is done as well when the mapping is removed or creation disabled.
+   * The collections a {@link DefaultStorageHandler}, or a subclass, defines by its configuration are created when the
+   * Handler is saved, if they have custom index mappings. If a collection exists, the storage verifies that its schema is
+   * unchanged; this is done as well when the mapping is removed or creation disabled.
    */
   @Override
   protected @NotNull Response beforePersist(final @NotNull WriteRequest wr) {
@@ -177,28 +178,38 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
         continue;
       }
       final EventHandlerConfig eventHandler = javaProxy(write.getFeature(), EventHandlerConfig.class);
-      if (!DefaultStorageHandler.class.getName().equals(eventHandler.getClassName())) {
-        continue;
+      final List<NakshaCollection> collections;
+      final List<NakshaCollection> savedCollections;
+      try {
+        collections = configuredCollections(eventHandler);
+        if (collections.isEmpty()) {
+          continue;
+        }
+        savedCollections = configuredCollections(savedHandler(eventHandler.getId()));
+      } catch (RuntimeException e) {
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+            "Cannot create handler " + eventHandler.getId() + " to verify its collections: " + e.getMessage());
       }
-      final Response response = provisionCollection(eventHandler);
-      if (response instanceof ErrorResponse) {
-        return response;
+      for (final NakshaCollection collection : collections) {
+        final Response response = provisionCollection(eventHandler, collection, savedCollections);
+        if (response instanceof ErrorResponse) {
+          return response;
+        }
       }
     }
     return SUCCESSFUL_VALIDATION;
   }
 
-  private @NotNull Response provisionCollection(EventHandlerConfig eventHandler) {
+  private @NotNull Response provisionCollection(
+      EventHandlerConfig eventHandler, NakshaCollection collection, List<NakshaCollection> savedCollections) {
+    final boolean mapped = CustomIndexMappingCompiler.hasMappings(collection);
+    final boolean savedMapped = savedCollections.stream().anyMatch(saved -> collection.getId().equals(saved.getId())
+        && CustomIndexMappingCompiler.hasMappings(saved));
+    if (!mapped && !savedMapped) {
+      return SUCCESSFUL_VALIDATION;
+    }
     final DefaultStorageHandlerProperties properties =
         javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
-    final NakshaCollection collection = properties.getCollection();
-    if (collection == null) {
-      return SUCCESSFUL_VALIDATION;
-    }
-    final boolean mapped = CustomIndexMappingCompiler.hasMappings(collection);
-    if (!mapped && !CustomIndexMappingCompiler.hasMappings(savedCollection(eventHandler.getId()))) {
-      return SUCCESSFUL_VALIDATION;
-    }
     final IStorage storage = nakshaHub().getStorageById(properties.getStorageId());
     final String catalogId = CustomStoragePropertiesUtil.getSchema(Objects.requireNonNull(storage.getConfig()));
     final NakshaCollection nativeCollection = CollectionIndexPolicy.toNativeCollection(
@@ -225,17 +236,40 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     return response;
   }
 
-  private @Nullable NakshaCollection savedCollection(String handlerId) {
+  /**
+   * Returns the collections the given Handler defines by its configuration, if it is a {@link DefaultStorageHandler} or a
+   * subclass of it. A Handler save has no Space, so the Handler is created with a placeholder Space.
+   */
+  private @NotNull List<NakshaCollection> configuredCollections(@Nullable EventHandlerConfig eventHandler) {
+    if (eventHandler == null) {
+      return List.of();
+    }
+    final String extensionId = eventHandler.getExtensionId();
+    final ClassLoader classLoader = extensionId == null || extensionId.isEmpty() || "null".equalsIgnoreCase(extensionId)
+        ? DefaultStorageHandler.class.getClassLoader()
+        : nakshaHub().getClassLoader(extensionId);
+    try {
+      if (classLoader == null
+          || !DefaultStorageHandler.class.isAssignableFrom(classLoader.loadClass(eventHandler.getClassName()))) {
+        return List.of();
+      }
+    } catch (ClassNotFoundException e) {
+      return List.of();
+    }
+    final Space placeholder = new Space();
+    placeholder.setId(eventHandler.getId());
+    placeholder.getEventHandlerIds().add(eventHandler.getId());
+    return ((DefaultStorageHandler) eventHandler.newInstance(nakshaHub(), placeholder)).configuredCollections();
+  }
+
+  private @Nullable EventHandlerConfig savedHandler(String handlerId) {
     final ReadFeatures readHandler = readFeaturesByIdRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerId);
     final Response response = nakshaHub().getAdminStorage()
         .useReadSession(SessionOptions.from(currentContext()), readSession -> readSession.executeRead(readHandler));
     if (!(response instanceof SuccessResponse)) {
       return null;
     }
-    final EventHandlerConfig saved = ResultHelper.readFeatureFromResponse((SuccessResponse) response, EventHandlerConfig.class);
-    return saved == null
-        ? null
-        : javaProxy(saved.getProperties(), DefaultStorageHandlerProperties.class).getCollection();
+    return ResultHelper.readFeatureFromResponse((SuccessResponse) response, EventHandlerConfig.class);
   }
 
   private @NotNull Response viewHandlerPropertiesValidation(EventHandlerConfig eventHandler) {
