@@ -1,0 +1,18 @@
+{
+  "id": "hidden_mapping_space",
+  "type": "Space",
+  "title": "Space with a mapping its Handler overrides",
+  "description": "Hidden mapping test",
+  "eventHandlerIds": ["hidden_mapping_handler"],
+  "properties": {
+    "collection": {
+      "id": "hidden_mapping_space_target",
+      "customIndexMapping": [
+        {
+          "jsonPath": ["properties", "score"],
+          "dataType": "int32"
+        }
+      ]
+    }
+  }
+}

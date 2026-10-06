@@ -1,0 +1,22 @@
+{
+  "id": "mapped_handler_lifecycle",
+  "type": "EventHandler",
+  "title": "Mapped Handler",
+  "description": "Lifecycle test",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "properties": {
+    "storageId": "${dataDb.storageId}",
+    "collection": {
+      "id": "mapped_handler_target",
+      "customIndexMapping": [
+        {
+          "jsonPath": [
+            "properties",
+            "score"
+          ],
+          "dataType": "int32"
+        }
+      ]
+    }
+  }
+}

@@ -374,9 +374,23 @@ open class PgCollection internal constructor(
      *
      * Actually all other values can be changes, with only some having an impact to this object.
      * @param newHead the new _HEAD_ state to be verified.
-     * @throws NakshaException with error [ILLEGAL_STATE] if the columns or indices in the given `newHead` have been changed.
+     * @throws NakshaException with error [CONFLICT][NakshaError.CONFLICT] if any of these values in the given `newHead` have been changed.
      */
     fun verifyNewHeadState(newHead: NakshaCollection) {
-        // TODO: Implement me!
+        val candidate = PgCollection(catalog, newHead)
+        fun immutable(unchanged: Boolean, field: String) {
+            if (!unchanged) throw NakshaException(NakshaError.CONFLICT, "The '$field' of the existing collection '$id' must not be changed")
+        }
+        immutable(candidate.id == id, "id")
+        immutable(candidate.shift == shift, "shift")
+        immutable(candidate.partitions == partitions, "partitions")
+        immutable(candidate.storageClass == storageClass, "storageClass")
+        immutable(candidate.columns.contentEquals(columns), "members")
+        immutable(indexKeys(candidate.headIndices) == indexKeys(headIndices)
+            && indexKeys(candidate.historyIndices) == indexKeys(historyIndices), "indices")
     }
+
+    private fun indexKeys(indices: Array<PgIndex>): Set<String> = indices.map { index ->
+        "${index.name}(${index.on.joinToString { it.name }})${index.includes.joinToString { it.name }}:${index.unique}:${index.partial}"
+    }.toSet()
 }

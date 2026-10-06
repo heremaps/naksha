@@ -1,0 +1,33 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "active",
+      "properties": {
+        "active": true,
+        "score": 10
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "inactive",
+      "properties": {
+        "active": false,
+        "score": 20
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "null",
+      "properties": {
+        "active": null
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "missing",
+      "properties": {}
+    }
+  ]
+}

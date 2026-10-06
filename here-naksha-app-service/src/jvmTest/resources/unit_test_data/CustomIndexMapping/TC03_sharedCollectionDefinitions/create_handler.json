@@ -1,0 +1,10 @@
+{
+  "id": "shared_mapping_handler",
+  "type": "EventHandler",
+  "title": "Shared mapping Handler",
+  "description": "Shared collection configuration test",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "properties": {
+    "storageId": "${dataDb.storageId}"
+  }
+}

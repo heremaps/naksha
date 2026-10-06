@@ -21,9 +21,16 @@ package com.here.naksha.lib.hub.storages;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import com.here.naksha.lib.core.util.CollectionIndexPolicy;
+import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.lib.hub.EventPipelineFactory;
+import naksha.base.JvmBoxingUtil;
+import naksha.model.util.CustomStoragePropertiesUtil;
+import naksha.model.util.ResultHelper;
 import naksha.model.*;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
@@ -46,7 +53,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
 import static naksha.base.NakshaError.UNSUPPORTED_OPERATION;
@@ -109,6 +118,10 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       return executeDeleteSpace(writeRequest);
     } else if (isUpdateSpaceRequest(writeRequest, spaceId)) {
       return executeUpdateSpace(writeRequest);
+    } else if (isCreateSpaceRequest(writeRequest, spaceId)) {
+      return executeCreateSpace(writeRequest);
+    } else if (isSaveEventHandlerRequest(writeRequest, spaceId)) {
+      return executeSaveEventHandler(writeRequest);
     } else if (virtualSpaces.containsKey(spaceId)) {
       // Request is to write to Naksha Admin space
       return executeWriteToAdminSpaces(writeRequest, spaceId);
@@ -172,7 +185,11 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeUpdateSpace(@NotNull WriteRequest updateSpaceEntryReq) {
     final Space space = ((Space) updateSpaceEntryReq.getWrites().get(0).getFeature());
     final SpaceProperties spaceProperties = space.getProperties();
-    final NakshaCollection collection = spaceProperties.getCollection();
+    NakshaCollection collection = spaceProperties.getCollection();
+    if (collection == null && hasCustomIndexMappings(space)) {
+      // The Handler defines a mapped collection, which is created or verified before the Space is saved.
+      collection = new NakshaCollection(space.getId());
+    }
     Response upsertSpaceRes = null;
     if (collection != null) {
       // submit Update Collection request to Custom Space based pipeline
@@ -188,6 +205,108 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       // no collection in Space, we only update the space
       return executeWriteToAdminSpaces(updateSpaceEntryReq, SPACES);
     }
+  }
+
+  private boolean isCreateSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
+    List<Write> writes = writeRequest.getWrites();
+    return SPACES.equals(spaceId)
+           && writes.size() == 1
+           && WriteOp.CREATE.equals(writes.get(0).getOp());
+  }
+
+  /**
+   * Collections with custom index mappings are created when the Space is created, all other collections are created
+   * lazily, on the first write. If the collection exists already, the storage verifies that its schema is unchanged.
+   */
+  private @NotNull Response executeCreateSpace(@NotNull WriteRequest createSpaceEntryReq) {
+    final Space space = ((Space) createSpaceEntryReq.getWrites().get(0).getFeature());
+    if (hasCustomIndexMappings(space)) {
+      final NakshaCollection collection = space.getProperties().getCollection();
+      final WriteRequest upsertCollectionReq = new WriteRequest()
+          .add(new Write().upsertCollection(collection != null ? collection : new NakshaCollection(space.getId())));
+      final EventPipeline pipeline = pipelineFactory.eventPipeline();
+      Response response = setupEventPipelineForSpace(space, pipeline);
+      if (response instanceof SuccessResponse) {
+        response = pipeline.sendEvent(upsertCollectionReq);
+      }
+      if (!(response instanceof SuccessResponse)) {
+        return response;
+      }
+    }
+    return executeWriteToAdminSpaces(createSpaceEntryReq, SPACES);
+  }
+
+  /**
+   * Tests if the Space, or one of its Handlers, defines a collection with custom index mappings.
+   */
+  private boolean hasCustomIndexMappings(@NotNull Space space) {
+    if (CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection())) {
+      return true;
+    }
+    final List<String> handlerIds = space.getEventHandlerIds();
+    if (handlerIds == null || handlerIds.isEmpty()) {
+      return false;
+    }
+    final Response response = nakshaHub.getAdminStorage().useReadSession(sessionOptions,
+        reader -> reader.execute(readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerIds)));
+    if (!(response instanceof SuccessResponse successResponse)) {
+      return false;
+    }
+    for (EventHandlerConfig handler : ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class)) {
+      final DefaultStorageHandlerProperties properties =
+          JvmBoxingUtil.box(handler.getProperties(), DefaultStorageHandlerProperties.class);
+      if (CustomIndexMappingCompiler.hasMappings(properties.getCollection())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean isSaveEventHandlerRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
+    List<Write> writes = writeRequest.getWrites();
+    return EVENT_HANDLERS.equals(spaceId)
+           && writes.size() == 1
+           && (WriteOp.CREATE.equals(writes.get(0).getOp()) || WriteOp.UPDATE.equals(writes.get(0).getOp()));
+  }
+
+  /**
+   * A collection with custom index mappings, defined by the Handler, is created or verified before the Handler is saved.
+   * If the map does not exist yet, the collection is created lazily, like any other collection.
+   */
+  private @NotNull Response executeSaveEventHandler(@NotNull WriteRequest saveHandlerReq) {
+    final EventHandlerConfig handler =
+        JvmBoxingUtil.box(saveHandlerReq.getWrites().get(0).getFeature(), EventHandlerConfig.class);
+    final DefaultStorageHandlerProperties properties =
+        JvmBoxingUtil.box(handler.getProperties(), DefaultStorageHandlerProperties.class);
+    final NakshaCollection collection = properties.getCollection();
+    if (CustomIndexMappingCompiler.hasMappings(collection)
+        && properties.getStorageId() != null
+        && Boolean.TRUE.equals(properties.getAutoCreateCollection())) {
+      final IStorage storage;
+      try {
+        storage = nakshaHub.getStorageById(properties.getStorageId());
+      } catch (RuntimeException unknownStorage) {
+        // The Handler validation reports the missing storage.
+        return executeWriteToAdminSpaces(saveHandlerReq, EVENT_HANDLERS);
+      }
+      final String catalogId = CustomStoragePropertiesUtil.getSchema(Objects.requireNonNull(storage.getConfig()));
+      final WriteRequest upsertCollectionReq = new WriteRequest().add(new Write().upsertCollection(
+          CollectionIndexPolicy.toNativeCollection(collection, collection.getId(), catalogId)));
+      final Response response = storage.useWriteSession(sessionOptions, writer -> {
+        final Response result = writer.execute(upsertCollectionReq);
+        if (result instanceof SuccessResponse) {
+          writer.commit();
+        } else {
+          writer.rollback();
+        }
+        return result;
+      });
+      if (response instanceof ErrorResponse errorResponse
+          && !NakshaError.MAP_NOT_FOUND.equals(errorResponse.getError().getCode())) {
+        return errorResponse;
+      }
+    }
+    return executeWriteToAdminSpaces(saveHandlerReq, EVENT_HANDLERS);
   }
 
   private String singleCollectionIdFrom(WriteRequest writeRequest) {

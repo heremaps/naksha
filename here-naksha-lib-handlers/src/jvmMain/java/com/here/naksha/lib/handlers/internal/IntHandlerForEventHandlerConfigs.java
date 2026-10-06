@@ -21,6 +21,7 @@ package com.here.naksha.lib.handlers.internal;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.lib.handlers.DefaultViewHandler;
@@ -31,6 +32,7 @@ import naksha.base.JvmBoxingUtil;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
 import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
@@ -109,7 +111,11 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
   private Response specificHandlerValidation(EventHandlerConfig eventHandler) {
     final String className = eventHandler.getClassName();
     if (DefaultStorageHandler.class.getName().equals(className)) {
-      return storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      final Response storageValidation = storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      if (!(storageValidation instanceof SuccessResponse)) {
+        return storageValidation;
+      }
+      return collectionValidation(eventHandler);
     } else if (DefaultViewHandler.class.getName().equals(className)) {
       return viewHandlerPropertiesValidation(eventHandler);
     } else if (TagFilterHandler.class.getName().equals(className)) {
@@ -117,6 +123,39 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     } else {
       return SUCCESSFUL_VALIDATION;
     }
+  }
+
+  /**
+   * A Handler collection replaces the collection of its Spaces, so custom index mappings of these Spaces would be ignored.
+   */
+  private @NotNull Response collectionValidation(EventHandlerConfig eventHandler) {
+    final NakshaCollection collection =
+        JvmBoxingUtil.box(eventHandler.getProperties(), DefaultStorageHandlerProperties.class).getCollection();
+    if (collection == null) {
+      return SUCCESSFUL_VALIDATION;
+    }
+    try {
+      CustomIndexMappingCompiler.validate(collection);
+    } catch (NakshaException e) {
+      return new ErrorResponse(e.getError());
+    }
+    final ReadFeatures readSpacesRequest = new ReadFeatures().withCollectionId(SPACES)
+        .withCatalogId(nakshaHub.getAdminMapId())
+        .withPropertyQuery(new PQuery(new Property(EVENT_HANDLER_IDS), AnyOp.CONTAINS, eventHandler.getId()));
+    final Response response = nakshaHub().getAdminStorage()
+        .useReadSession(new SessionOptions(), readSession -> readSession.execute(readSpacesRequest));
+    if (!(response instanceof SuccessResponse)) {
+      return response;
+    }
+    final List<String> mappedSpaceIds = ResultHelper.extractResponseItems((SuccessResponse) response, Space.class).stream()
+        .filter(space -> CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection()))
+        .map(NakshaFeature::getId)
+        .collect(Collectors.toList());
+    if (!mappedSpaceIds.isEmpty()) {
+      return new ErrorResponse(NakshaError.CONFLICT,
+          "The event handler defines a collection, but these spaces define custom index mappings: " + mappedSpaceIds);
+    }
+    return SUCCESSFUL_VALIDATION;
   }
 
   private @NotNull Response viewHandlerPropertiesValidation(EventHandlerConfig eventHandler) {

@@ -182,6 +182,14 @@ public class NHSpaceStorageReader implements IReadSession {
     if (space == null) {
       return new ErrorResponse(NakshaError.NOT_FOUND, "Space not found: " + spaceId);
     }
+    return setupEventPipelineForSpace(space, pipeline);
+  }
+
+  /**
+   * Adds the handlers of the given Space to the pipeline. The Space does not need to be stored yet.
+   */
+  protected @NotNull Response setupEventPipelineForSpace(final @NotNull Space space, final @NotNull EventPipeline pipeline) {
+    final String spaceId = space.getId();
     List<String> eventHandlerIds = space.getEventHandlerIds();
     if (eventHandlerIds == null || eventHandlerIds.isEmpty()) {
       return new ErrorResponse(NakshaError.NOT_FOUND, "No associated handler");
