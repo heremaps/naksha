@@ -1,3 +1,6 @@
+## Naksha_2.2.25
+- Added HTTP storage circuit-breaker support to isolate slow or failing requests by `storageId`.
+
 ## Naksha_2.2.24
 - Apply configured request limits before extension loading to avoid startup `TooManyTasks` errors.
 

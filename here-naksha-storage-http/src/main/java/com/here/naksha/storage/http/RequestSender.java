@@ -131,10 +131,6 @@ public class RequestSender {
         && ioe.getMessage().contains("GOAWAY"));
   }
 
-  public boolean hasKeyProps(KeyProperties thatKeyProps) {
-    return this.keyProps.equals(thatKeyProps);
-  }
-
   /**
    * Set of properties that are just enough to construct the sender
    * and distinguish unambiguously between objects
@@ -146,5 +142,6 @@ public class RequestSender {
       @NotNull Map<String, String> defaultHeaders,
       long connectionTimeoutSec,
       long socketTimeoutSec,
-      long maxRetries) {}
+      long maxRetries,
+      long storageUpdatedAt) {}
 }

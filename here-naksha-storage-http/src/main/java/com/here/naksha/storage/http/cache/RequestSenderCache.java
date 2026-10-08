@@ -18,9 +18,8 @@
  */
 package com.here.naksha.storage.http.cache;
 
-import static com.here.naksha.storage.http.RequestSender.KeyProperties;
-
 import com.here.naksha.storage.http.RequestSender;
+import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import java.util.concurrent.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,13 +27,21 @@ import org.jetbrains.annotations.Nullable;
 public class RequestSenderCache {
 
   public static final int CLEANER_PERIOD_HOURS = 8;
-  private final ConcurrentMap<String, RequestSender> requestSenders;
+  private final ConcurrentMap<String, RequestSenderWithLastUpdatedAt> requestSenders;
+
+  /**
+   * Represents a request sender instance with its configuration version timestamp.
+   */
+  record RequestSenderWithLastUpdatedAt(RequestSender instance, long storageUpdatedAt) {}
 
   private RequestSenderCache() {
     this(new ConcurrentHashMap<>(), CLEANER_PERIOD_HOURS, TimeUnit.HOURS);
   }
 
-  RequestSenderCache(ConcurrentMap<String, RequestSender> requestSenders, int cleanPeriod, TimeUnit cleanPeriodUnit) {
+  RequestSenderCache(
+      ConcurrentMap<String, RequestSenderWithLastUpdatedAt> requestSenders,
+      int cleanPeriod,
+      TimeUnit cleanPeriodUnit) {
     this.requestSenders = requestSenders;
     Executors.newSingleThreadScheduledExecutor()
         .scheduleAtFixedRate(requestSenders::clear, cleanPeriod, cleanPeriod, cleanPeriodUnit);
@@ -47,14 +54,18 @@ public class RequestSenderCache {
 
   @NotNull
   public RequestSender getSenderWith(KeyProperties keyProperties) {
-    return requestSenders.compute(
-        keyProperties.name(), (__, cachedSender) -> getUpdated(cachedSender, keyProperties));
+    return requestSenders
+        .compute(keyProperties.name(), (__, cached) -> getUpdated(cached, keyProperties))
+        .instance();
   }
 
-  private @NotNull RequestSender getUpdated(
-      @Nullable RequestSender cachedSender, @NotNull KeyProperties keyProperties) {
-    if (cachedSender != null && cachedSender.hasKeyProps(keyProperties)) return cachedSender;
-    else return new RequestSender(keyProperties);
+  private @NotNull RequestSenderWithLastUpdatedAt getUpdated(
+      @Nullable RequestSenderWithLastUpdatedAt cached, @NotNull KeyProperties keyProperties) {
+    if (cached != null && cached.storageUpdatedAt() >= keyProperties.storageUpdatedAt()) {
+      return cached;
+    }
+    RequestSender newInstance = new RequestSender(keyProperties);
+    return new RequestSenderWithLastUpdatedAt(newInstance, keyProperties.storageUpdatedAt());
   }
 
   private static final class InstanceHolder {

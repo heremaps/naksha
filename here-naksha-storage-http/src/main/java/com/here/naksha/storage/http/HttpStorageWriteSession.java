@@ -18,6 +18,9 @@
  */
 package com.here.naksha.storage.http;
 
+import com.here.naksha.lib.circuitbreaker.CircuitBreakerOpenException;
+import com.here.naksha.lib.circuitbreaker.ICircuitBreaker;
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.StorageLockException;
 import com.here.naksha.lib.core.models.XyzError;
@@ -27,6 +30,7 @@ import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.storage.http.connector.ConnectorInterfaceWriteExecute;
 import java.util.concurrent.TimeUnit;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,21 +38,24 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
   private static final Logger log = LoggerFactory.getLogger(HttpStorageWriteSession.class);
   private final HttpInterface httpInterface;
 
-  public HttpStorageWriteSession(NakshaContext context, RequestSender requestSender, HttpInterface httpInterface) {
-    super(context, true, requestSender, httpInterface);
+  public HttpStorageWriteSession(
+      @Nullable NakshaContext context,
+      @NotNull RequestSender requestSender,
+      @NotNull HttpInterface httpInterface,
+      @Nullable ICircuitBreaker circuitBreaker,
+      @NotNull String storageId,
+      @Nullable CircuitBreakerProps circuitBreakerConfig) {
+    super(context, true, requestSender, httpInterface, circuitBreaker, storageId, circuitBreakerConfig);
     this.httpInterface = httpInterface;
   }
 
   @Override
   public @NotNull Result execute(@NotNull WriteRequest<?, ?, ?> writeRequest) {
     try {
-      return switch (httpInterface) {
-        case ffwAdapter -> new ErrorResult(
-            XyzError.NOT_IMPLEMENTED, "Writing not supported by underlying storage");
-        case dataHubConnector -> new ConnectorInterfaceWriteExecute(
-                getNakshaContext(), (WriteXyzFeatures) writeRequest, getRequestSender())
-            .execute();
-      };
+      return executeWithOptionalCircuitBreaker(() -> executeWriteRequest((WriteXyzFeatures) writeRequest));
+    } catch (CircuitBreakerOpenException e) {
+      log.warn("Circuit breaker is OPEN or HALF_OPEN (no permits) for storageId: {}. Request rejected.", storageId, e);
+      return new ErrorResult(XyzError.EXCEPTION, "Circuit breaker is open - service temporarily unavailable", e);
     } catch (ConnectorInterfaceWriteExecute.ConflictException e) {
       return new ErrorResult(XyzError.CONFLICT, e.getMessage(), e);
     } catch (UnsupportedOperationException e) {
@@ -57,6 +64,15 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
       log.warn("We got exception while executing Write request.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
     }
+  }
+
+  private @NotNull Result executeWriteRequest(@NotNull WriteXyzFeatures writeRequest) {
+    return switch (httpInterface) {
+      case ffwAdapter -> new ErrorResult(XyzError.NOT_IMPLEMENTED, "Writing not supported by underlying storage");
+      case dataHubConnector -> new ConnectorInterfaceWriteExecute(
+              getNakshaContext(), (WriteXyzFeatures) writeRequest, getRequestSender())
+          .execute();
+    };
   }
 
   @Override
