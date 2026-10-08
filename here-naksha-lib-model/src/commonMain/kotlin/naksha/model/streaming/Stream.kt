@@ -23,59 +23,48 @@ import kotlin.js.JsName
  *
  * The method [next] will block until a new chunk, that need to be processed, becomes available. Beware that even while [hasNext] may return _true_, this does not mean that the next chunk is instantly ready to be processed. The reader must in some cases guarantee the transaction order and avoid that the same feature is processed concurrently. Therefore, the reader may block [next] until it receives a specific acknowledgment of some outstanding chunk, before returning the next chunk, even while it may have it already. This mechanism allow the storage to return chunks for parallel processing, until a potential conflict arises. Still this allows to stream the whole source in parallel with maximum throughput and zero waiting in some cases _(for example all native Naksha storages will do)_. This is only true until the sequential mode was requested. It will force the stream to not hand out another chunk until the previous one was acknowledged.
  *
- * The recommended way to process a stream is that one thread performs the reading of chunks and then delegates the actual processing asynchronously to dedicated threads, which should invoke [StreamChunk.acknowledge] when they are done with the chunk.
+ * The recommended way to process a stream is that one thread performs the reading of chunks and hands them over to all targets using [IStreamSession.write]. The targets write asynchronously and invoke [StreamChunk.acknowledge] when they are done with the chunk.
  *
  * The following is the recommended read loop:
  * ```kotlin
  * // Pseudo read method of e.g. a CLI tool.
+ * // targets are N `IStreamSession`'s
+ * // into which to write the chunks.
  * fun readAll(stream: Stream) {
- *   try { stream.use {
+ *   try {
+ *     var recovery = stream.getRecoveryRequest()
  *     while (stream.hasNext()) {
  *       // Read ones, multiple targets.
- *       // targets are N `IStreamSession`'s
- *       // into which to write the chunks
  *       val chunk = stream.next()
  *       chunk.setTargets(targets.size)
  *       for (target in this.targets) {
- *         doWrite(chunk, target)
+ *         try {
+ *           // Blocks while the target is busy.
+ *           target.write(chunk)
+ *         } catch (e: NakshaException) {
+ *           chunk.fail(e.error)
+ *         }
  *       }
- *       // Potentially wait for targets!
- *       // For virtual threads normally
- *       // not necessary. Can as well be
- *       // use to consolidate writes.
+ *       val latest = stream.getRecoveryRequest()
+ *       if (latest !== recovery) {
+ *         recovery = latest
+ *         save(recovery)
+ *       }
  *     }
- *   }}} catch (StreamException e) {
+ *     // Waits for all targets.
+ *     stream.close()
+ *   } catch (e: StreamException) {
  *     // Failure with e.recoveryRequest!
  *     // Stream is closed!
  *     // Recover via IStreamSession.read!
- *   } catch (NakshaException e) {
+ *   } catch (e: NakshaException) {
  *     // Failure without recovery!
  *     // Stream is closed!
- *   }
- * }
- *
- * // Could as well write into queues or alike.
- * fun doWrite(
- *   chunck: StreamChunck,
- *   session: IStreamSession
- * ) {
- *   Thread.startVirtualThread {
- *     try {
- *       // Writer must handle
- *       // duplicate chunks!
- *       session.write(chunk)
- *     } catch (Exception e) {
- *       log.error("Write error", e)
- *       chunk.failed(retry=false)
- *     }
  *   }
  * }
  * ```
  *
  * This allows to read ones and write in parallel into multiple targets _(e.g. into S3 and multiple replication databases)_.
- *
- * #### Note
- * The example code is based upon JVM version 24+, because between 21 _(including)_ and 24 _(excluding)_ the virtual threads have a severe bug with synchronized methods and synchronization blocks, see [JEPS-491](https://openjdk.org/jeps/491) and [JDK-8337395](https://bugs.openjdk.org/browse/JDK-8337395)!
  *
  * ### Timeout handling
  * Theoretically it could happen that a target does not acknowledge or fails a [StreamChunk]. This would leave the stream stuck in [next] or [closeForRecovery] forever. To prevent this the [stmtTimeout][naksha.model.SessionOptions.stmtTimeout] of the [SessionOptions][naksha.model.SessionOptions] used to open the [Stream] should be used as timeout. This will cause [NakshaException] or [StreamException] to be raised by the waiting methods, with the error being [TIMEOUT][NakshaError.TIMEOUT]. This should as well internally flag the stream as being broken due to timeout, to avoid waiting again. So any call to [next], [close] or [closeForRecovery] immediately fails and behaves according to the documentation in failure case.
@@ -303,19 +292,14 @@ abstract class Stream(
     abstract fun closeForRecovery(): StreamRequest
 
     /**
-     * Return a recovery request of the stream.
+     * Return the latest recovery request of the stream, without blocking.
      *
-     * Actually, this method serializes the current stream position into a [StreamRequest], which can be used later to open a new [Stream] via [IStreamSession.read], continuing reading from the current stream position.
+     * Actually, this method serializes the current stream position into a [StreamRequest], which can be used later to open a new [Stream] via [IStreamSession.read], continuing reading from the current stream position. When the position did not move since the last call, the very same instance is returned, so the caller can compare instances to detect progress.
      *
-     * The current position is serialized gracefully, this means:
-     * - This method waits for [acknowledge] of all outstanding [chunks][StreamChunk] before generates the recovery request.
-     * - Should a [next] call be pending, it is blocked until the recovery request was generated.
-     * - This method can be used for subscriptions to remember the last successful event read; in that case the stream should use [StreamRequest.sequential] mode.
-     *
-     * @param timeoutMillis if greater than zero, the maximum amount of milliseconds to wait; if zero or less, the method returns instantly or fails.
+     * This method can be used for subscriptions to remember the last successful event read; in that case the stream should use [StreamRequest.sequential] mode.
      * @return the [StreamRequest] to be used for recovery with [IStreamSession.read], can be serialized and stored long term.
-     * @throws NakshaException if any error prevents the creation of the recovery request in the given time, or [isRecoverable] is _false_.
+     * @throws NakshaException if [isRecoverable] is _false_.
      * @since 3.0
      */
-    abstract fun getRecoveryRequest(timeoutMillis: Long): StreamRequest
+    abstract fun getRecoveryRequest(): StreamRequest
 }
