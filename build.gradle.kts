@@ -110,13 +110,12 @@ val wiremock =  "org.wiremock:wiremock:3.3.1"
 
 val flipkart_zjsonpatch = "com.flipkart.zjsonpatch:zjsonpatch:0.4.16"
 val json_assert = "org.skyscreamer:jsonassert:1.5.1"
-val resillience4j_retry = "io.github.resilience4j:resilience4j-retry:2.4.0"
 
 val otel = "io.opentelemetry:opentelemetry-api:1.40.0"
 
 val cytodynamics = "com.linkedin.cytodynamics:cytodynamics-nucleus:0.2.0"
 
-val resilience4j = "io.github.resilience4j:resilience4j-circuitbreaker:2.0.0"
+val resilience4j = "io.github.resilience4j:resilience4j-circuitbreaker:2.4.0"
 
 val projectRepoURI = getRequiredPropertyFromRootProject("projectRepoURI")
 val mavenUrl = getRequiredPropertyFromRootProject("mavenUrl")
@@ -556,7 +555,7 @@ project(":here-naksha-app-service") {
         implementation(project(":here-naksha-handler-activitylog"))
 
         testImplementation(json_assert)
-        testImplementation(resillience4j_retry)
+        testImplementation(resilience4j)
         testImplementation(test_containers)
         testImplementation(testFixtures(project(":here-naksha-lib-core")))
         testImplementation(wiremock)
