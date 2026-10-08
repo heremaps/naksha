@@ -187,9 +187,9 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       return forbidden;
     }
     final NakshaCollection collection = spaceProperties.getCollection();
-    final ErrorResponse hiddenMapping = hiddenMappingError(space);
-    if (hiddenMapping != null) {
-      return hiddenMapping;
+    final ErrorResponse handlerMapping = handlerMappingError(space);
+    if (handlerMapping != null) {
+      return handlerMapping;
     }
     Response upsertSpaceRes = null;
     if (collection != null) {
@@ -230,9 +230,9 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     if (forbidden != null) {
       return forbidden;
     }
-    final ErrorResponse hiddenMapping = hiddenMappingError(space);
-    if (hiddenMapping != null) {
-      return hiddenMapping;
+    final ErrorResponse handlerMapping = handlerMappingError(space);
+    if (handlerMapping != null) {
+      return handlerMapping;
     }
     final EventPipeline pipeline = pipelineFactory.eventPipeline();
     Response response = setupEventPipelineForSpace(space, pipeline);
@@ -246,13 +246,14 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   /**
-   * A Space with custom index mappings is rejected before its collection is written, if a Handler defines the collection.
+   * A Space with custom index mappings is rejected before its collection is written, if a Handler defines the collection
+   * or does not create collections.
    */
-  private @Nullable ErrorResponse hiddenMappingError(@NotNull Space space) {
+  private @Nullable ErrorResponse handlerMappingError(@NotNull Space space) {
     if (!CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection())) {
       return null;
     }
-    return IntHandlerForSpaces.hiddenMappingError(space, readEventHandlers(space));
+    return IntHandlerForSpaces.handlerMappingError(nakshaHub, space, readEventHandlers(space));
   }
 
   private @NotNull List<EventHandlerConfig> readEventHandlers(@NotNull Space space) {

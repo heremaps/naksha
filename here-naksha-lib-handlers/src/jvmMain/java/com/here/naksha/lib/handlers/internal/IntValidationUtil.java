@@ -18,6 +18,9 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
+import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
+import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import naksha.base.NakshaError;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
@@ -32,6 +35,27 @@ class IntValidationUtil {
   static final SuccessResponse SUCCESSFUL_VALIDATION = new SuccessResponse();
 
   private IntValidationUtil() {
+  }
+
+  /**
+   * Tests if the Handler is a {@link DefaultStorageHandler} or a subclass of it, so it uses the standard collection
+   * properties and behavior. A class that can't be loaded, for example because its extension is not loaded, is not.
+   */
+  static boolean isStorageHandler(@NotNull INaksha hub, @NotNull EventHandlerConfig eventHandler) {
+    final String className = eventHandler.getClassName();
+    if (DefaultStorageHandler.class.getName().equals(className)) {
+      return true;
+    }
+    final String extensionId = eventHandler.getExtensionId();
+    final ClassLoader classLoader = extensionId == null || extensionId.isEmpty() || "null".equalsIgnoreCase(extensionId)
+        ? DefaultStorageHandler.class.getClassLoader()
+        : hub.getClassLoader(extensionId);
+    try {
+      return classLoader != null && className != null
+          && DefaultStorageHandler.class.isAssignableFrom(classLoader.loadClass(className));
+    } catch (ClassNotFoundException e) {
+      return false;
+    }
   }
 
   static Response basicValidationFor(Write write) {

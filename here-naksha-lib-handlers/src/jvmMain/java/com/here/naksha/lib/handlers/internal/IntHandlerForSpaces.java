@@ -91,28 +91,41 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     if (!(result instanceof SuccessResponse)) {
       return result;
     }
-    final ErrorResponse hiddenMapping = hiddenMappingError(
-        space, ResultHelper.extractResponseItems((SuccessResponse) result, EventHandlerConfig.class));
-    if (hiddenMapping != null) {
-      return hiddenMapping;
+    final ErrorResponse handlerMapping = handlerMappingError(
+        nakshaHub(), space, ResultHelper.extractResponseItems((SuccessResponse) result, EventHandlerConfig.class));
+    if (handlerMapping != null) {
+      return handlerMapping;
     }
     return SUCCESSFUL_VALIDATION;
   }
 
   /**
-   * Returns an error, if the Space defines custom index mappings, but one of its storage Handlers defines the collection.
+   * Returns an error, if the Space defines custom index mappings, but one of its storage Handlers, a
+   * {@link DefaultStorageHandler} or a subclass, defines the collection (the mappings would be ignored) or does not
+   * create collections (the Hub can't create the mapped collection).
    */
-  public static @Nullable ErrorResponse hiddenMappingError(@NotNull Space space, @NotNull List<EventHandlerConfig> handlers) {
+  public static @Nullable ErrorResponse handlerMappingError(
+      @NotNull INaksha hub, @NotNull Space space, @NotNull List<EventHandlerConfig> handlers) {
     if (!CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection())) {
       return null;
     }
     for (EventHandlerConfig handler : handlers) {
-      if (DefaultStorageHandler.class.getName().equals(handler.getClassName())
-          && Platform.javaProxy(handler.getProperties(), DefaultStorageHandlerProperties.class).getCollection() != null) {
+      if (!IntValidationUtil.isStorageHandler(hub, handler)) {
+        continue;
+      }
+      final DefaultStorageHandlerProperties properties =
+          Platform.javaProxy(handler.getProperties(), DefaultStorageHandlerProperties.class);
+      if (properties.getCollection() != null) {
         return new ErrorResponse(
             NakshaError.CONFLICT,
             String.format("Space %s defines custom index mappings, but its handler %s defines the collection",
                 space.getId(), handler.getId()));
+      }
+      if (!properties.getAutoCreateCollection()) {
+        return new ErrorResponse(
+            NakshaError.ILLEGAL_ARGUMENT,
+            String.format("Space %s defines custom index mappings, which require autoCreateCollection, "
+                + "but it is disabled for its handler %s", space.getId(), handler.getId()));
       }
     }
     return null;

@@ -69,6 +69,7 @@ import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_V
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.isStorageHandler;
 import static naksha.base.Platform.javaProxy;
 import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
@@ -128,24 +129,35 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       return viewHandlerPropertiesValidation(eventHandler);
     } else if (TagFilterHandler.class.getName().equals(className)) {
       return tagFilterHandlerPropertiesValidation(eventHandler);
+    } else if (isStorageHandler(nakshaHub(), eventHandler)) {
+      // Subclasses inherit the collection behavior of the DefaultStorageHandler.
+      return collectionValidation(eventHandler);
     } else {
       return SUCCESSFUL_VALIDATION;
     }
   }
 
   /**
-   * A Handler collection replaces the collection of its Spaces, so custom index mappings of these Spaces would be ignored.
+   * Custom index mappings require auto-creation, because the Hub creates the mapped collection. A Handler collection
+   * replaces the collection of its Spaces, so custom index mappings of these Spaces would be ignored.
    */
   private @NotNull Response collectionValidation(EventHandlerConfig eventHandler) {
-    final NakshaCollection collection =
-        javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class).getCollection();
-    if (collection == null) {
+    final DefaultStorageHandlerProperties properties =
+        javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
+    final NakshaCollection collection = properties.getCollection();
+    final boolean autoCreate = properties.getAutoCreateCollection();
+    if (collection != null) {
+      try {
+        CustomIndexMappingCompiler.validate(collection);
+      } catch (NakshaException e) {
+        return new ErrorResponse(e.getError());
+      }
+      if (!autoCreate && CustomIndexMappingCompiler.hasMappings(collection)) {
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+            "Custom index mappings require autoCreateCollection, but it is disabled for handler " + eventHandler.getId());
+      }
+    } else if (autoCreate) {
       return SUCCESSFUL_VALIDATION;
-    }
-    try {
-      CustomIndexMappingCompiler.validate(collection);
-    } catch (NakshaException e) {
-      return new ErrorResponse(e.getError());
     }
     final ReadFeatures readSpacesRequest = new ReadFeatures().withCollectionId(SPACES)
         .withCatalogId(nakshaHub.getAdminMapId());
@@ -159,17 +171,21 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
         .filter(space -> CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection()))
         .map(NakshaFeature::getId)
         .collect(Collectors.toList());
-    if (!mappedSpaceIds.isEmpty()) {
+    if (mappedSpaceIds.isEmpty()) {
+      return SUCCESSFUL_VALIDATION;
+    }
+    if (collection != null) {
       return new ErrorResponse(NakshaError.CONFLICT,
           "The event handler defines a collection, but these spaces define custom index mappings: " + mappedSpaceIds);
     }
-    return SUCCESSFUL_VALIDATION;
+    return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+        "Custom index mappings require autoCreateCollection, but these spaces of the handler define them: " + mappedSpaceIds);
   }
 
   /**
    * The collections a {@link DefaultStorageHandler}, or a subclass, defines by its configuration are created when the
    * Handler is saved, if they have custom index mappings. If a collection exists, the storage verifies that its schema is
-   * unchanged; this is done as well when the mapping is removed or creation disabled.
+   * unchanged; this is done as well when the mapping is removed.
    */
   @Override
   protected @NotNull Response beforePersist(final @NotNull WriteRequest wr) {
@@ -189,6 +205,11 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       } catch (RuntimeException e) {
         return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
             "Cannot create handler " + eventHandler.getId() + " to verify its collections: " + e.getMessage());
+      }
+      if (!javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class).getAutoCreateCollection()
+          && collections.stream().anyMatch(CustomIndexMappingCompiler::hasMappings)) {
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+            "Custom index mappings require autoCreateCollection, but it is disabled for handler " + eventHandler.getId());
       }
       for (final NakshaCollection collection : collections) {
         final Response response = provisionCollection(eventHandler, collection, savedCollections);
@@ -214,7 +235,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     final String catalogId = CustomStoragePropertiesUtil.getSchema(Objects.requireNonNull(storage.getConfig()));
     final NakshaCollection nativeCollection = CollectionIndexPolicy.toNativeCollection(
         collection.copy(true), collection.getId(), catalogId);
-    final Write write = mapped && properties.getAutoCreateCollection()
+    final Write write = mapped
         ? new Write().upsertCollection(nativeCollection)
         : new Write().updateCollection(nativeCollection, false);
     final Response response = storage.useWriteSession(SessionOptions.from(currentContext()), writer -> {
@@ -244,16 +265,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     if (eventHandler == null) {
       return List.of();
     }
-    final String extensionId = eventHandler.getExtensionId();
-    final ClassLoader classLoader = extensionId == null || extensionId.isEmpty() || "null".equalsIgnoreCase(extensionId)
-        ? DefaultStorageHandler.class.getClassLoader()
-        : nakshaHub().getClassLoader(extensionId);
-    try {
-      if (classLoader == null
-          || !DefaultStorageHandler.class.isAssignableFrom(classLoader.loadClass(eventHandler.getClassName()))) {
-        return List.of();
-      }
-    } catch (ClassNotFoundException e) {
+    if (!isStorageHandler(nakshaHub(), eventHandler)) {
       return List.of();
     }
     final Space placeholder = new Space();

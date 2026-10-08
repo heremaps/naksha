@@ -72,7 +72,7 @@ class CustomIndexMappingSaveApiTest : ApiTest() {
         val after = storedCollection(app, storageId, "mapping_save_custom_collection")
         assertTrue(after.isEmpty(), "Unknown handler properties are not a storage contract")
     }
-    @Test fun disablingAutoCreateMustNotAllowTypeChange() {
+    @Test fun disablingAutoCreateForMappedHandlerIsRejected() {
         val id = "mapping_save_autocreate_handler"
         val h = handler(id, "mapping_save_autocreate_collection")
         status(nakshaClient.post("hub/handlers", h.toString(), stream))
@@ -83,7 +83,7 @@ class CustomIndexMappingSaveApiTest : ApiTest() {
         val mapping = p.getJSONObject("collection").getJSONArray("customIndexMapping")
         for (i in 0 until mapping.length()) mapping.getJSONObject(i).put("dataType", "string")
         val r = nakshaClient.put("hub/handlers/$id", saved.toString(), stream)
-        status(r, 409)
+        status(r, 400)
     }
     @Test fun removingAllMappingsMustNotBypassHandlerVerification() {
         val id = "mapping_save_removed_mapping_handler"
@@ -160,5 +160,81 @@ class CustomIndexMappingSaveApiTest : ApiTest() {
             "mapping_save_multi_conflict" to "int32", "mapping_save_multi_conflict" to "string")
         status(nakshaClient.post("hub/handlers", h.toString(), stream), 409)
         status(nakshaClient.get("hub/handlers/mapping_save_multi_conflict_handler", stream), 404)
+    }
+
+    @Test fun mappedHandlerWithoutAutoCreateIsRejected() {
+        val h = handler("mapping_save_no_autocreate_handler", "mapping_save_no_autocreate_collection")
+        h.getJSONObject("properties").put("autoCreateCollection", false)
+        status(nakshaClient.post("hub/handlers", h.toString(), stream), 400)
+        status(nakshaClient.get("hub/handlers/mapping_save_no_autocreate_handler", stream), 404)
+    }
+
+    @Test fun mappedSpaceOnHandlerWithoutAutoCreateIsRejected(@NakshaAppInjection app: NakshaApp) {
+        val handlerId = "mapping_save_space_no_autocreate_handler"
+        val h = handler(handlerId, "unused")
+        h.getJSONObject("properties").remove("collection")
+        h.getJSONObject("properties").put("autoCreateCollection", false)
+        status(nakshaClient.post("hub/handlers", h.toString(), stream))
+        val collection = "mapping_save_space_no_autocreate_table"
+        val s = JSONObject(TestUtil.loadFileOrFail("CustomIndexMapping/TC01_spaceMappingLifecycle/create_space.json"))
+            .put("id", "mapping_save_space_no_autocreate")
+            .put("eventHandlerIds", JSONArray().put(handlerId))
+        s.getJSONObject("properties").getJSONObject("collection").put("id", collection)
+        status(nakshaClient.post("hub/spaces", s.toString(), stream), 400)
+        status(nakshaClient.get("hub/spaces/mapping_save_space_no_autocreate", stream), 404)
+        assertTrue(storedCollection(app, h.getJSONObject("properties").getString("storageId"), collection).isEmpty())
+    }
+
+    @Test fun disablingAutoCreateUnderMappedSpacesIsRejected() {
+        val handlerId = "mapping_save_mapped_spaces_handler"
+        val h = handler(handlerId, "unused")
+        h.getJSONObject("properties").remove("collection")
+        status(nakshaClient.post("hub/handlers", h.toString(), stream))
+        val s = JSONObject(TestUtil.loadFileOrFail("CustomIndexMapping/TC01_spaceMappingLifecycle/create_space.json"))
+            .put("id", "mapping_save_mapped_spaces_space")
+            .put("eventHandlerIds", JSONArray().put(handlerId))
+        s.getJSONObject("properties").getJSONObject("collection").put("id", "mapping_save_mapped_spaces_table")
+        status(nakshaClient.post("hub/spaces", s.toString(), stream))
+        val saved = JSONObject(nakshaClient.get("hub/handlers/$handlerId", stream).body())
+        saved.getJSONObject("properties").put("autoCreateCollection", false)
+        status(nakshaClient.put("hub/handlers/$handlerId", saved.toString(), stream), 400)
+    }
+
+    private fun mappedSpace(id: String, handlerId: String, collection: String): JSONObject {
+        val s = JSONObject(TestUtil.loadFileOrFail("CustomIndexMapping/TC01_spaceMappingLifecycle/create_space.json"))
+            .put("id", id)
+            .put("eventHandlerIds", JSONArray().put(handlerId))
+        s.getJSONObject("properties").getJSONObject("collection").put("id", collection)
+        return s
+    }
+
+    @Test fun mappedSpaceOnSubclassWithoutAutoCreateIsRejected(@NakshaAppInjection app: NakshaApp) {
+        val h = multiCollectionHandler("mapping_save_subclass_no_autocreate_handler")
+        h.getJSONObject("properties").put("autoCreateCollection", false)
+        status(nakshaClient.post("hub/handlers", h.toString(), stream))
+        val collection = "mapping_save_subclass_no_autocreate_table"
+        val s = mappedSpace("mapping_save_subclass_no_autocreate_space", h.getString("id"), collection)
+        status(nakshaClient.post("hub/spaces", s.toString(), stream), 400)
+        status(nakshaClient.get("hub/spaces/mapping_save_subclass_no_autocreate_space", stream), 404)
+        assertTrue(storedCollection(app, h.getJSONObject("properties").getString("storageId"), collection).isEmpty())
+    }
+
+    @Test fun disablingAutoCreateOnSubclassUnderMappedSpacesIsRejected() {
+        val h = multiCollectionHandler("mapping_save_subclass_mapped_spaces_handler")
+        status(nakshaClient.post("hub/handlers", h.toString(), stream))
+        val s = mappedSpace("mapping_save_subclass_mapped_spaces_space", h.getString("id"), "mapping_save_subclass_mapped_spaces_table")
+        status(nakshaClient.post("hub/spaces", s.toString(), stream))
+        val saved = JSONObject(nakshaClient.get("hub/handlers/${h.getString("id")}", stream).body())
+        saved.getJSONObject("properties").put("autoCreateCollection", false)
+        status(nakshaClient.put("hub/handlers/${h.getString("id")}", saved.toString(), stream), 400)
+    }
+
+    @Test fun mappedSpaceOnSubclassWithHandlerCollectionIsRejected() {
+        val h = multiCollectionHandler("mapping_save_subclass_fixed_handler")
+        h.getJSONObject("properties").put("collection", JSONObject().put("id", "mapping_save_subclass_fixed_table"))
+        status(nakshaClient.post("hub/handlers", h.toString(), stream))
+        val s = mappedSpace("mapping_save_subclass_fixed_space", h.getString("id"), "mapping_save_subclass_fixed_space_table")
+        status(nakshaClient.post("hub/spaces", s.toString(), stream), 409)
+        status(nakshaClient.get("hub/spaces/mapping_save_subclass_fixed_space", stream), 404)
     }
 }
