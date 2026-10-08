@@ -44,7 +44,7 @@ import kotlin.js.JsName
  *       // not necessary. Can as well be
  *       // use to consolidate writes.
  *     }
- *   }}} catch (StreamException e) {
+ *   }} catch (StreamException e) {
  *     // Failure with e.recoveryRequest!
  *     // Stream is closed!
  *     // Recover via IStreamSession.read!
@@ -56,7 +56,7 @@ import kotlin.js.JsName
  *
  * // Could as well write into queues or alike.
  * fun doWrite(
- *   chunck: StreamChunck,
+ *   chunk: StreamChunk,
  *   session: IStreamSession
  * ) {
  *   Thread.startVirtualThread {

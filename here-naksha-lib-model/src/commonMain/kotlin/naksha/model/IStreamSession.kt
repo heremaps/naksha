@@ -44,7 +44,7 @@ interface IStreamSession: ISession {
      *
      * The method must call either [StreamChunk.acknowledge] or [StreamChunk.failed].
      * @param chunk the chunk to persist, either a [StreamTransaction][naksha.model.streaming.StreamTransaction] or [StreamChunk].
-     * @return _true_ if the chuck is stored and [acknowledged][StreamChunk.acknowledge]; _false_ if it [failed][StreamChunk.failed] writing.
+     * @return _true_ if the chunk is stored and [acknowledged][StreamChunk.acknowledge]; _false_ if it [failed][StreamChunk.failed] writing.
      * @since 3.0
      * @see StreamChunk.acknowledge
      * @see StreamChunk.failed
