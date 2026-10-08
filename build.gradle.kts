@@ -110,7 +110,7 @@ val wiremock =  "org.wiremock:wiremock:3.3.1"
 
 val flipkart_zjsonpatch = "com.flipkart.zjsonpatch:zjsonpatch:0.4.16"
 val json_assert = "org.skyscreamer:jsonassert:1.5.1"
-val resillience4j_retry = "io.github.resilience4j:resilience4j-retry:2.0.0"
+val resillience4j_retry = "io.github.resilience4j:resilience4j-retry:2.4.0"
 
 val otel = "io.opentelemetry:opentelemetry-api:1.40.0"
 

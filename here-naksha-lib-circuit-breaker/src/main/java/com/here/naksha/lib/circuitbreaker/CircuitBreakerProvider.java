@@ -18,44 +18,50 @@
  */
 package com.here.naksha.lib.circuitbreaker;
 
-import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
-import java.util.concurrent.Callable;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 /**
- * Abstraction for circuit breaker provider. Implementations manage per-resourceId circuit breaker
- * instances.
+ * Factory for obtaining circuit breaker implementations. Provides singleton instances based on
+ * selected implementation type.
  */
-public interface CircuitBreakerProvider {
+public class CircuitBreakerProvider {
+
+  private static volatile ICircuitBreaker r4jInstance;
+
+  private CircuitBreakerProvider() {
+    // Prevent instantiation
+  }
 
   /**
-   * Execute a callable operation with circuit breaker protection scoped to resourceId.
+   * Get the default circuit breaker instance (Resilience4j).
    *
-   * @param resourceId Unique identifier for circuit breaker instance (e.g., storageId)
-   * @param operation The callable operation to execute
-   * @param config Circuit breaker configuration for this resourceId
-   * @param <T> Return type of the operation
-   * @return Result of the operation
-   * @throws Exception If operation fails or circuit breaker is open
+   * @return singleton instance of ICircuitBreaker
    */
-  <T> T executeWithCircuitBreaker(
-      @NotNull String resourceId, @NotNull Callable<T> operation, @NotNull CircuitBreakerProps config)
-      throws Exception;
+  @NotNull
+  public static ICircuitBreaker getInstance() {
+    return getInstance(ECircuitBreakerImpl.RESILIENCE4J);
+  }
 
   /**
-   * Get or create the circuit breaker for the given resourceId.
+   * Get a circuit breaker instance for the specified implementation.
+   *
+   * @param cbImpl the desired implementation
+   * @return singleton instance of ICircuitBreaker
    */
-  @Nullable
-  CircuitBreakerHandle getCircuitBreaker(@NotNull String resourceId, @NotNull CircuitBreakerProps config);
-
-  /**
-   * Remove circuit breaker for the given resourceId.
-   */
-  void remove(@NotNull String resourceId);
-
-  /**
-   * Clear all circuit breakers.
-   */
-  void clear();
+  @NotNull
+  public static ICircuitBreaker getInstance(@NotNull ECircuitBreakerImpl cbImpl) {
+    switch (cbImpl) {
+      case RESILIENCE4J:
+        if (r4jInstance == null) {
+          synchronized (CircuitBreakerProvider.class) {
+            if (r4jInstance == null) {
+              r4jInstance = new Resilience4jCircuitBreaker();
+            }
+          }
+        }
+        return r4jInstance;
+      default:
+        throw new IllegalArgumentException("Unknown circuit breaker implementation: " + cbImpl);
+    }
+  }
 }

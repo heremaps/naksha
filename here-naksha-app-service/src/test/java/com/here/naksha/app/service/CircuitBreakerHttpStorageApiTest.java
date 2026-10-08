@@ -136,7 +136,9 @@ class CircuitBreakerHttpStorageApiTest extends ApiTest {
 
     // Given: OPEN wait duration elapsed and probes are now fast.
     Thread.sleep(5100);
-    stubFor(get(endpointPath).willReturn(okJson(loadFileOrFail(FEATURE_RESPONSE_FIXTURE))));
+    // Add 250ms response delay to ensure all concurrent requests arrive in parallel
+    // This is high enough for synchronization but lower than slowCallDurationThresholdMs (500ms)
+    stubFor(get(endpointPath).willReturn(okJson(loadFileOrFail(FEATURE_RESPONSE_FIXTURE)).withFixedDelay(250)));
 
     // When: 6 concurrent probes are sent in HALF_OPEN, only 4 are permitted.
     List<HttpResponse<String>> halfOpenResponses = callFeatureConcurrently(ids.spaceId, 6);
@@ -273,7 +275,7 @@ class CircuitBreakerHttpStorageApiTest extends ApiTest {
       return false;
     }
     final String body = response.body();
-    return body.contains("CircuitBreaker") && body.contains("does not permit further calls");
+    return body.contains("Circuit breaker") && body.contains("temporarily unavailable");
   }
 
   private SetupIds createStorageHandlerSpace(String prefix, String storagePropertiesJson) throws Exception {

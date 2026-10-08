@@ -19,6 +19,7 @@
 package com.here.naksha.lib.circuitbreaker;
 
 import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowType;
@@ -30,34 +31,43 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Resilience4j-based implementation of {@link CircuitBreakerProvider}. Manages per-resourceId
- * circuit breaker instances with slow-call-based state transitions.
+ * Resilience4j-based implementation of {@link ICircuitBreaker}. Manages per-resourceId circuit
+ * breaker instances with slow-call-based state transitions.
+ *
+ * <p>Package-private: This class should only be instantiated through {@link CircuitBreakerProvider}
+ * factory methods. Consumers must use the factory to obtain circuit breaker instances.
  */
-public class Resilience4jCircuitBreakerProvider implements CircuitBreakerProvider {
+class Resilience4jCircuitBreaker implements ICircuitBreaker {
 
-  private static final Logger log = LoggerFactory.getLogger(Resilience4jCircuitBreakerProvider.class);
+  private static final Logger log = LoggerFactory.getLogger(Resilience4jCircuitBreaker.class);
 
   private final CircuitBreakerRegistry registry;
 
-  public Resilience4jCircuitBreakerProvider() {
+  public Resilience4jCircuitBreaker() {
     this.registry = CircuitBreakerRegistry.ofDefaults();
   }
 
   @Override
-  public <T> T executeWithCircuitBreaker(
-      @NotNull String resourceId, @NotNull Callable<T> operation, @NotNull CircuitBreakerProps config)
-      throws Exception {
-    return getCircuitBreaker(resourceId, config).execute(operation);
+  public <T> T execute(@NotNull String resourceId, @NotNull Callable<T> operation) throws Exception {
+    CircuitBreaker cb = registry.find(resourceId).orElse(null);
+    if (cb == null) {
+      return operation.call();
+    }
+    try {
+      return cb.executeCallable(operation);
+    } catch (CallNotPermittedException e) {
+      // Wrap Resilience4j exception with abstraction
+      throw new CircuitBreakerOpenException(
+          "Circuit breaker '" + resourceId + "' is " + cb.getState() + " and does not permit further calls",
+          e);
+    }
   }
 
   @Override
-  public @Nullable CircuitBreakerHandle getCircuitBreaker(
+  public @NotNull ICircuitBreaker getOrCreateCircuitBreaker(
       @NotNull String resourceId, @NotNull CircuitBreakerProps config) {
-    return new Resilience4jCircuitBreakerHandle(getOrCreateCircuitBreaker(resourceId, config));
-  }
-
-  public @Nullable CircuitBreaker findCircuitBreaker(@NotNull String resourceId) {
-    return registry.find(resourceId).orElse(null);
+    registry.circuitBreaker(resourceId, buildCircuitBreakerConfig(resourceId, config));
+    return this;
   }
 
   @Override
@@ -67,30 +77,29 @@ public class Resilience4jCircuitBreakerProvider implements CircuitBreakerProvide
 
   @Override
   public void clear() {
-    registry.getAllCircuitBreakers().forEach(circuitBreaker -> registry.remove(circuitBreaker.getName()));
+    registry.getAllCircuitBreakers().forEach(cb -> registry.remove(cb.getName()));
   }
 
-  private @NotNull CircuitBreaker getOrCreateCircuitBreaker(
-      @NotNull String resourceId, @NotNull CircuitBreakerProps config) {
-    return registry.circuitBreaker(resourceId, buildCircuitBreakerConfig(resourceId, config));
+  @Override
+  public boolean isClosed(@NotNull String resourceId) {
+    return registry.find(resourceId)
+        .map(cb -> cb.getState() == CircuitBreaker.State.CLOSED)
+        .orElse(false);
   }
 
-  private static final class Resilience4jCircuitBreakerHandle implements CircuitBreakerHandle {
-    private final CircuitBreaker circuitBreaker;
+  @Override
+  public boolean exists(@NotNull String resourceId) {
+    return registry.find(resourceId).isPresent();
+  }
 
-    private Resilience4jCircuitBreakerHandle(@NotNull CircuitBreaker circuitBreaker) {
-      this.circuitBreaker = circuitBreaker;
-    }
-
-    @Override
-    public <T> T execute(Callable<T> operation) throws Exception {
-      return circuitBreaker.executeCallable(operation);
-    }
+  public @Nullable CircuitBreaker findCircuitBreaker(@NotNull String resourceId) {
+    return registry.find(resourceId).orElse(null);
   }
 
   private @NotNull CircuitBreakerConfig buildCircuitBreakerConfig(
       @NotNull String resourceId, @NotNull CircuitBreakerProps config) {
-    log.info("Creating CircuitBreaker for resourceId: {} with config: slidingWindowSize={}, minimumNumberOfCalls={}, slowCallDurationThresholdMs={}, slowCallRateThreshold={}%, waitDurationInOpenStateMs={}, permittedNumberOfCallsInHalfOpenState={}",
+    log.info(
+        "Creating CircuitBreaker for resourceId: {} with config: slidingWindowSize={}, minimumNumberOfCalls={}, slowCallDurationThresholdMs={}, slowCallRateThreshold={}%, waitDurationInOpenStateMs={}, permittedNumberOfCallsInHalfOpenState={}",
         resourceId,
         config.getSlidingWindowSize(),
         config.getMinimumNumberOfCalls(),

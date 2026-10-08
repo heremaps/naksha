@@ -18,15 +18,9 @@
  */
 package com.here.naksha.lib.circuitbreaker;
 
-import java.util.concurrent.Callable;
-
 /**
- * Minimal execution wrapper for a circuit breaker implementation.
- *
- * <p>This keeps request execution code independent of the concrete breaker library while still
- * allowing callers to execute operations through a breaker when configured.
+ * Enumeration of available circuit breaker implementations.
  */
-public interface CircuitBreakerHandle {
-
-  <T> T execute(Callable<T> operation) throws Exception;
+public enum ECircuitBreakerImpl {
+  RESILIENCE4J;
 }

@@ -18,9 +18,6 @@
  */
 package com.here.naksha.storage.http.cache;
 
-import com.here.naksha.lib.circuitbreaker.CircuitBreakerHandle;
-import com.here.naksha.lib.circuitbreaker.CircuitBreakerProvider;
-import com.here.naksha.lib.circuitbreaker.Resilience4jCircuitBreakerProvider;
 import com.here.naksha.storage.http.RequestSender;
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
 import java.util.concurrent.*;
@@ -30,23 +27,24 @@ import org.jetbrains.annotations.Nullable;
 public class RequestSenderCache {
 
   public static final int CLEANER_PERIOD_HOURS = 8;
-  private final ConcurrentMap<String, RequestSender> requestSenders;
-  private final CircuitBreakerProvider circuitBreakerProvider;
+  private final ConcurrentMap<String, RequestSenderWithLastUpdatedAt> requestSenders;
+
+  /**
+   * Represents a request sender instance with its configuration version timestamp.
+   */
+  record RequestSenderWithLastUpdatedAt(RequestSender instance, long storageUpdatedAt) {}
 
   private RequestSenderCache() {
-    this(new ConcurrentHashMap<>(), new Resilience4jCircuitBreakerProvider(), CLEANER_PERIOD_HOURS, TimeUnit.HOURS);
+    this(new ConcurrentHashMap<>(), CLEANER_PERIOD_HOURS, TimeUnit.HOURS);
   }
 
   RequestSenderCache(
-      ConcurrentMap<String, RequestSender> requestSenders,
-      CircuitBreakerProvider circuitBreakerProvider,
+      ConcurrentMap<String, RequestSenderWithLastUpdatedAt> requestSenders,
       int cleanPeriod,
       TimeUnit cleanPeriodUnit) {
     this.requestSenders = requestSenders;
-    this.circuitBreakerProvider = circuitBreakerProvider;
     Executors.newSingleThreadScheduledExecutor()
-        .scheduleAtFixedRate(
-            this::clearCachedSendersAndCircuitBreakers, cleanPeriod, cleanPeriod, cleanPeriodUnit);
+        .scheduleAtFixedRate(requestSenders::clear, cleanPeriod, cleanPeriod, cleanPeriodUnit);
   }
 
   @NotNull
@@ -56,27 +54,18 @@ public class RequestSenderCache {
 
   @NotNull
   public RequestSender getSenderWith(KeyProperties keyProperties) {
-    return requestSenders.compute(
-        keyProperties.name(), (__, cachedSender) -> getUpdated(cachedSender, keyProperties));
+    return requestSenders
+        .compute(keyProperties.name(), (__, cached) -> getUpdated(cached, keyProperties))
+        .instance();
   }
 
-  private @NotNull RequestSender getUpdated(
-      @Nullable RequestSender cachedSender, @NotNull KeyProperties keyProperties) {
-    if (cachedSender != null && cachedSender.getKeyProps().storageUpdatedAt() >= keyProperties.storageUpdatedAt()) {
-      return cachedSender;
+  private @NotNull RequestSenderWithLastUpdatedAt getUpdated(
+      @Nullable RequestSenderWithLastUpdatedAt cached, @NotNull KeyProperties keyProperties) {
+    if (cached != null && cached.storageUpdatedAt() >= keyProperties.storageUpdatedAt()) {
+      return cached;
     }
-    if (cachedSender != null) {
-      circuitBreakerProvider.remove(keyProperties.name());
-    }
-    CircuitBreakerHandle circuitBreaker = keyProperties.circuitBreakerConfig() == null
-        ? null
-        : circuitBreakerProvider.getCircuitBreaker(keyProperties.name(), keyProperties.circuitBreakerConfig());
-    return new RequestSender(keyProperties, circuitBreaker);
-  }
-
-  private void clearCachedSendersAndCircuitBreakers() {
-    requestSenders.clear();
-    circuitBreakerProvider.clear();
+    RequestSender newInstance = new RequestSender(keyProperties);
+    return new RequestSenderWithLastUpdatedAt(newInstance, keyProperties.storageUpdatedAt());
   }
 
   private static final class InstanceHolder {

@@ -20,6 +20,8 @@ package com.here.naksha.storage.http;
 
 import static com.here.naksha.storage.http.RequestSender.KeyProperties;
 
+import com.here.naksha.lib.circuitbreaker.CircuitBreakerProvider;
+import com.here.naksha.lib.circuitbreaker.ICircuitBreaker;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.lambdas.Fe1;
 import com.here.naksha.lib.core.models.naksha.Storage;
@@ -27,6 +29,7 @@ import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.lib.core.storage.IStorage;
 import com.here.naksha.lib.core.storage.IWriteSession;
 import com.here.naksha.lib.core.util.json.JsonSerializable;
+import com.here.naksha.storage.http.cache.CircuitBreakerCache;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
@@ -39,31 +42,53 @@ public class HttpStorage implements IStorage {
 
   private static final Logger log = LoggerFactory.getLogger(HttpStorage.class);
 
+  private final String storageId;
   private final RequestSender requestSender;
   private final HttpStorageProperties properties;
+  private final @Nullable ICircuitBreaker circuitBreaker;
 
   public HttpStorage(@NotNull Storage storage) {
+    storageId = storage.getId();
     properties = HttpStorage.getProperties(storage);
+    long updatedAt = properties.getXyzNamespace().getUpdatedAt();
     requestSender = RequestSenderCache.getInstance()
         .getSenderWith(new KeyProperties(
-            storage.getId(),
+            storageId,
             properties.getUrl(),
             properties.getHeaders(),
             properties.getConnectTimeout(),
             properties.getSocketTimeout(),
             properties.getMaxRetries(),
-            properties.getCircuitBreakerConfig(),
-            properties.getXyzNamespace().getUpdatedAt()));
+            updatedAt));
+    if (properties.getCircuitBreakerConfig() != null) {
+      circuitBreaker = CircuitBreakerProvider.getInstance();
+      CircuitBreakerCache.registerCircuitBreakerEntry(circuitBreaker, storageId, updatedAt, properties.getCircuitBreakerConfig());
+    } else {
+      circuitBreaker = null;
+    }
   }
 
   @Override
   public @NotNull IReadSession newReadSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageReadSession(context, useMaster, requestSender, properties.getProtocol());
+    return new HttpStorageReadSession(
+        context,
+        useMaster,
+        requestSender,
+        properties.getProtocol(),
+        circuitBreaker,
+        storageId,
+        properties.getCircuitBreakerConfig());
   }
 
   @Override
   public @NotNull IWriteSession newWriteSession(@Nullable NakshaContext context, boolean useMaster) {
-    return new HttpStorageWriteSession(context, requestSender, properties.getProtocol());
+    return new HttpStorageWriteSession(
+        context,
+        requestSender,
+        properties.getProtocol(),
+        circuitBreaker,
+        storageId,
+        properties.getCircuitBreakerConfig());
   }
 
   @Override

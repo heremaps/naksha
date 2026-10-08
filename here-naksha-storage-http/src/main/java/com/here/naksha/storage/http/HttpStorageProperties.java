@@ -29,7 +29,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * A Http storage configuration as used by the {@link HttpStorage}.
+ * Configuration properties for HTTP storage backends.
  */
 @AvailableSince(NakshaVersion.v2_0_12)
 public class HttpStorageProperties extends XyzProperties {
@@ -51,24 +51,77 @@ public class HttpStorageProperties extends XyzProperties {
   private static final String CIRCUIT_BREAKER = "circuitBreaker";
   private static final HttpInterface DEFAULT_XYZ_PROTOCOL = HttpInterface.ffwAdapter;
 
+  /**
+   * The base URL of the remote HTTP storage backend.
+   *
+   * <p>Required: Yes
+   */
   @JsonProperty(URL)
   private @NotNull String url;
 
+  /**
+   * Timeout for establishing an HTTP connection to the remote storage, in seconds.
+   *
+   * <p>Required: Yes
+   * <p>Unit: Seconds
+   */
   @JsonProperty(CONNECTION_TIMEOUT)
   private @NotNull Long connectTimeout;
 
+  /**
+   * Timeout for waiting on a response from the remote storage, in seconds.
+   *
+   * <p>Required: Yes
+   * <p>Unit: Seconds
+   */
   @JsonProperty(SOCKET_TIMEOUT)
   private @NotNull Long socketTimeout;
 
+  /**
+   * Number of retry attempts for retryable transport failures.
+   *
+   * <p>When a request fails due to a retryable error (e.g., connection reset, timeout), Naksha
+   * will automatically retry up to this many times before giving up. Non-retryable errors are
+   * not retried.
+   *
+   */
   @JsonProperty(MAX_RETRIES)
   private @NotNull Long maxRetries;
 
+  /**
+   * Default HTTP headers added to every request sent to this storage.
+   *
+   * <p>These headers are merged with request-specific headers. Common use cases include
+   * Authorization tokens, API keys, or custom identifiers.
+   *
+   */
   @JsonProperty(HEADERS)
   private @NotNull Map<String, String> headers;
 
+  /**
+   * HTTP protocol interface mode for communication with the remote storage.
+   *
+   * <p>Determines how Naksha formats requests and parses responses from the storage backend.
+   *
+   * <p>See: HttpInterface enum for available modes
+   */
   @JsonProperty(HTTP_INTERFACE)
   private @NotNull HttpInterface httpInterface;
 
+  /**
+   * Optional circuit breaker configuration for this storage.
+   *
+   * <p>If configured, the circuit breaker monitors request this storage.
+   * When the slow request rate exceeds the configured threshold, the circuit breaker
+   * opens to throttle traffic.
+   *
+   * <p>This enables per-storage isolation: if one storage times out, only its traffic is
+   * throttled. Requests to other storages continue unaffected.
+   *
+   * <p>Default: null (no circuit breaking)
+   *
+   * <p>See: CircuitBreakerProps for configuration options
+   */
   @JsonProperty(CIRCUIT_BREAKER)
   private @Nullable CircuitBreakerProps circuitBreakerConfig;
 

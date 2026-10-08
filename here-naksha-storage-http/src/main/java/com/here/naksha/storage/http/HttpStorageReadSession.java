@@ -18,12 +18,16 @@
  */
 package com.here.naksha.storage.http;
 
+import com.here.naksha.lib.circuitbreaker.CircuitBreakerOpenException;
+import com.here.naksha.lib.circuitbreaker.ICircuitBreaker;
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.storage.*;
 import com.here.naksha.lib.core.storage.IReadSession;
 import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
 import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
@@ -46,15 +50,30 @@ public class HttpStorageReadSession implements IReadSession {
   @NotNull
   private final HttpInterface httpInterface;
 
+  @Nullable
+  private final ICircuitBreaker circuitBreaker;
+
+  @NotNull
+  protected final String storageId;
+
+  @Nullable
+  private final CircuitBreakerProps circuitBreakerConfig;
+
   HttpStorageReadSession(
       @Nullable NakshaContext context,
       boolean useMaster,
       @NotNull RequestSender requestSender,
-      @NotNull HttpInterface httpInterface) {
+      @NotNull HttpInterface httpInterface,
+      @Nullable ICircuitBreaker circuitBreaker,
+      @NotNull String storageId,
+      @Nullable CircuitBreakerProps circuitBreakerConfig) {
     this.context = context == null ? NakshaContext.currentContext() : context;
     this.useMaster = useMaster;
     this.requestSender = requestSender;
     this.httpInterface = httpInterface;
+    this.circuitBreaker = circuitBreaker;
+    this.circuitBreakerConfig = circuitBreakerConfig;
+    this.storageId = storageId;
   }
 
   @Override
@@ -100,16 +119,28 @@ public class HttpStorageReadSession implements IReadSession {
   @Override
   public @NotNull Result execute(@NotNull ReadRequest<?> readRequest) {
     try {
-      return switch (httpInterface) {
-        case ffwAdapter -> FfwInterfaceReadExecute.execute(
-            context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
-        case dataHubConnector -> ConnectorInterfaceReadExecute.execute(
-            context, (ReadFeaturesProxyWrapper) readRequest, requestSender);
-      };
+      return executeWithOptionalCircuitBreaker(() -> executeReadRequest((ReadFeaturesProxyWrapper) readRequest));
+    } catch (CircuitBreakerOpenException e) {
+      log.warn("Circuit breaker is OPEN or HALF_OPEN (no permits) for storageId: {}. Request rejected.", storageId, e);
+      return new ErrorResult(XyzError.EXCEPTION, "Circuit breaker is open - service temporarily unavailable", e);
     } catch (Exception e) {
       log.warn("We got exception while executing Read request.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
     }
+  }
+
+  protected @NotNull Result executeWithOptionalCircuitBreaker(@NotNull Callable<Result> operation) throws Exception {
+    if (circuitBreaker != null && circuitBreakerConfig != null) {
+      return circuitBreaker.getOrCreateCircuitBreaker(storageId, circuitBreakerConfig).execute(storageId, operation);
+    }
+    return operation.call();
+  }
+
+  private @NotNull Result executeReadRequest(@NotNull ReadFeaturesProxyWrapper readRequest) {
+    return switch (httpInterface) {
+      case ffwAdapter -> FfwInterfaceReadExecute.execute(context, readRequest, requestSender);
+      case dataHubConnector -> ConnectorInterfaceReadExecute.execute(context, readRequest, requestSender);
+    };
   }
 
   @Override
