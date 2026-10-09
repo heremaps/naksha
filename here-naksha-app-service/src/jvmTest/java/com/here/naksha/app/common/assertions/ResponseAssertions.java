@@ -33,6 +33,7 @@ import java.util.Optional;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.mom.MomReference;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.objects.NakshaProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.json.JSONException;
@@ -215,6 +216,35 @@ public class ResponseAssertions {
           "UUID found missing in response for feature id " + feature.getId());
     }
     return this;
+  }
+
+  public ResponseAssertions hasFeaturesWithoutPreMom10Namespaces() {
+    if (collectionResponse == null) {
+      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    }
+    assertWithoutPreMom10Namespaces(collectionResponse.getFeatures(), "feature");
+    return this;
+  }
+
+  public ResponseAssertions hasViolationsWithoutPreMom10Namespaces() {
+    if (collectionResponse == null) {
+      collectionResponse = parseJson(subject.body(), XyzFeatureCollection.class);
+    }
+    final List<NakshaFeature> violations = collectionResponse.getViolations();
+    assertNotNull(violations, "No violations found in response");
+    assertWithoutPreMom10Namespaces(violations, "violation");
+    return this;
+  }
+
+  private void assertWithoutPreMom10Namespaces(List<NakshaFeature> features, String itemType) {
+    for (final NakshaFeature feature : features) {
+      assertNull(
+          feature.getProperties().getMeta(),
+          "Expected pre-MOM10 '" + NakshaProperties.META_KEY + "' namespace to be stripped from " + itemType + " " + feature.getId());
+      assertNull(
+          feature.getProperties().getDelta(),
+          "Expected pre-MOM10 '" + NakshaProperties.DELTA_KEY + "' namespace to be stripped from " + itemType + " " + feature.getId());
+    }
   }
 
   public ResponseAssertions hasNoViolations() {

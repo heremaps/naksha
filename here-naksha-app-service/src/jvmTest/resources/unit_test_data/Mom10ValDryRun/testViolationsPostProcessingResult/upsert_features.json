@@ -1,0 +1,33 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "id": "my-custom-id-3000-1",
+      "type": "Feature",
+      "momType": "Topology",
+      "properties": {
+        "meta": {
+          "createdTS": "2014-04-08T02:44:49.789Z",
+          "lastUpdatedTS": "2018-02-08T01:15:17.372Z",
+          "modelVersion": "10.0.0",
+          "updatedByUser": "account_identifier"
+        },
+        "@ns:com:here:mom:meta": {
+          "operation": "CREATED",
+          "modelVersion": "10.0.0",
+          "lastUpdatedBy": "t_service",
+          "updatedByUser": "t_service"
+        },
+        "@ns:com:here:mom:delta": {
+          "changeState": "UPDATED",
+          "reviewState": "AUTO_ENDORSED"
+        },
+        "speedLimit": "60"
+      },
+      "geometry": {
+        "type":"Point",
+        "coordinates":[ 8.68872, 50.0561, 292.94377758]
+      }
+    }
+  ]
+}
