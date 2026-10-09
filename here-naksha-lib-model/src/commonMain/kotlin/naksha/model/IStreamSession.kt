@@ -36,18 +36,16 @@ interface IStreamSession: ISession {
     /**
      * Asks the storage to atomically store the features of the given chunk.
      *
-     * The method will block the calling thread until all data is eventually writen into the storage with the consistency guarantees for the underlying implementation.
+     * The method only blocks until the storage accepted the chunk, normally by adding it to a queue. When the queue is full, it blocks until there is room again. The storage decides how to write the accepted chunks, for example with a thread pool, virtual threads, asynchronous IO or a single writer.
      *
      * **The implementation must expect to handle the situation that the provided features do exist already**. It should not fail in such a case, except the existing features are in a modified state.
      *
-     * The implementation can use a single connection for all writes or write each chunk using a dedicated own connection. However, the storage need to consider that it may get plenty of concurrent calls _(potentially thousands or millions when the reader uses virtual threads and enough memory is available)_. Therefore, the storage **must** prepare measurements to limit the amount of parallel writes, when necessary.
-     *
-     * The method must call either [StreamChunk.acknowledge] or [StreamChunk.failed].
+     * The storage must call either [StreamChunk.acknowledge] or [StreamChunk.fail], normally asynchronously after this method returned.
      * @param chunk the chunk to persist, either a [StreamTransaction][naksha.model.streaming.StreamTransaction] or [StreamChunk].
-     * @return _true_ if the chuck is stored and [acknowledged][StreamChunk.acknowledge]; _false_ if it [failed][StreamChunk.failed] writing.
      * @since 3.0
+     * @throws naksha.base.NakshaException if the chunk was not accepted, then the caller must [fail][StreamChunk.fail] it.
      * @see StreamChunk.acknowledge
      * @see StreamChunk.failed
      */
-    fun write(chunk: StreamChunk): Boolean
+    fun write(chunk: StreamChunk)
 }
