@@ -1,0 +1,24 @@
+{
+  "id": "boolean_mapping_space",
+  "type": "Space",
+  "title": "Boolean mapping Space",
+  "description": "Boolean member mapping test",
+  "eventHandlerIds": [
+    "boolean_mapping_handler"
+  ],
+  "properties": {
+    "collection": {
+      "id": "boolean_mapping_target",
+      "customIndexMapping": [
+        {
+          "jsonPath": ["properties", "active"],
+          "dataType": "boolean"
+        },
+        {
+          "jsonPath": ["properties", "score"],
+          "dataType": "int32"
+        }
+      ]
+    }
+  }
+}

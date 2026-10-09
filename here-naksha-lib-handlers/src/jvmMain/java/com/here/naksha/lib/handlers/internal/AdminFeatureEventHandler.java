@@ -84,6 +84,10 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
       if (valResult instanceof ErrorResponse) {
         return (ErrorResponse) valResult;
       }
+      Response beforePersistResult = beforePersist(wr);
+      if (beforePersistResult instanceof ErrorResponse) {
+        return beforePersistResult;
+      }
       // persist in storage
       return nakshaHub().getAdminStorage().useWriteSession(SessionOptions.from(ctx, true), writer -> {
         final Response result = writer.execute(wr);
@@ -98,6 +102,13 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     } else {
       return notImplemented(request);
     }
+  }
+
+  /**
+   * Called after the whole request was validated, before it is persisted.
+   */
+  protected @NotNull Response beforePersist(final @NotNull WriteRequest wr) {
+    return SUCCESSFUL_VALIDATION;
   }
 
   private @NotNull Response validateWriteRequest(final @NotNull WriteRequest wr) {

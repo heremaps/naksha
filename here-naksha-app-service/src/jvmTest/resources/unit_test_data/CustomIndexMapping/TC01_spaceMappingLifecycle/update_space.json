@@ -1,0 +1,33 @@
+{
+  "id": "custom_mapping_api_space",
+  "type": "Space",
+  "title": "Renamed API Space",
+  "description": "Custom mapping test",
+  "eventHandlerIds": [
+    "custom_mapping_api_handler"
+  ],
+  "properties": {
+    "collection": {
+      "id": "custom_mapping_api_target",
+      "customIndexMapping": [
+        {
+          "jsonPath": [
+            "properties",
+            "score"
+          ],
+          "dataType": "int32"
+        },
+        {
+          "jsonPath": [
+            "properties",
+            "labels"
+          ],
+          "dataType": "tag_list"
+        }
+      ]
+    },
+    "@ns:com:here:xyz": {
+      "uuid": "${uuid}"
+    }
+  }
+}

@@ -21,9 +21,14 @@ package com.here.naksha.lib.hub.storages;
 import com.here.naksha.lib.core.EventPipeline;
 import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
+import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
+import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import com.here.naksha.lib.handlers.AuthorizationEventHandler;
+import com.here.naksha.lib.handlers.internal.IntHandlerForSpaces;
 import com.here.naksha.lib.hub.EventPipelineFactory;
+import naksha.model.util.ResultHelper;
 import naksha.model.*;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
@@ -46,7 +51,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
+import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteCollections;
 import static com.here.naksha.lib.handlers.util.RequestTypesUtil.isOnlyWriteFeatures;
 import static naksha.base.NakshaError.UNSUPPORTED_OPERATION;
@@ -109,6 +116,8 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       return executeDeleteSpace(writeRequest);
     } else if (isUpdateSpaceRequest(writeRequest, spaceId)) {
       return executeUpdateSpace(writeRequest);
+    } else if (isCreateSpaceRequest(writeRequest, spaceId)) {
+      return executeCreateSpace(writeRequest);
     } else if (virtualSpaces.containsKey(spaceId)) {
       // Request is to write to Naksha Admin space
       return executeWriteToAdminSpaces(writeRequest, spaceId);
@@ -172,7 +181,16 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   private @NotNull Response executeUpdateSpace(@NotNull WriteRequest updateSpaceEntryReq) {
     final Space space = ((Space) updateSpaceEntryReq.getWrites().get(0).getFeature());
     final SpaceProperties spaceProperties = space.getProperties();
+    // The collection is written before the Space, so the Space write must be authorized first.
+    final ErrorResponse forbidden = new AuthorizationEventHandler(nakshaHub).checkWriteAccess();
+    if (forbidden != null) {
+      return forbidden;
+    }
     final NakshaCollection collection = spaceProperties.getCollection();
+    final ErrorResponse handlerMapping = handlerMappingError(space);
+    if (handlerMapping != null) {
+      return handlerMapping;
+    }
     Response upsertSpaceRes = null;
     if (collection != null) {
       // submit Update Collection request to Custom Space based pipeline
@@ -188,6 +206,67 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       // no collection in Space, we only update the space
       return executeWriteToAdminSpaces(updateSpaceEntryReq, SPACES);
     }
+  }
+
+  private boolean isCreateSpaceRequest(@NotNull WriteRequest writeRequest, @NotNull String spaceId) {
+    List<Write> writes = writeRequest.getWrites();
+    return SPACES.equals(spaceId)
+           && writes.size() == 1
+           && WriteOp.CREATE.equals(writes.get(0).getOp());
+  }
+
+  /**
+   * Collections with custom index mappings are created when the Space is created, all other collections are created
+   * lazily, on the first write. If the collection exists already, the storage verifies that its schema is unchanged.
+   */
+  private @NotNull Response executeCreateSpace(@NotNull WriteRequest createSpaceEntryReq) {
+    final Space space = ((Space) createSpaceEntryReq.getWrites().get(0).getFeature());
+    final NakshaCollection collection = space.getProperties().getCollection();
+    if (!CustomIndexMappingCompiler.hasMappings(collection)) {
+      return executeWriteToAdminSpaces(createSpaceEntryReq, SPACES);
+    }
+    // The collection is written before the Space, so the Space write must be authorized first.
+    final ErrorResponse forbidden = new AuthorizationEventHandler(nakshaHub).checkWriteAccess();
+    if (forbidden != null) {
+      return forbidden;
+    }
+    final ErrorResponse handlerMapping = handlerMappingError(space);
+    if (handlerMapping != null) {
+      return handlerMapping;
+    }
+    final EventPipeline pipeline = pipelineFactory.eventPipeline();
+    Response response = setupEventPipelineForSpace(space, pipeline);
+    if (response instanceof SuccessResponse) {
+      response = pipeline.sendEvent(new WriteRequest().add(new Write().upsertCollection(collection)));
+    }
+    if (!(response instanceof SuccessResponse)) {
+      return response;
+    }
+    return executeWriteToAdminSpaces(createSpaceEntryReq, SPACES);
+  }
+
+  /**
+   * A Space with custom index mappings is rejected before its collection is written, if a Handler defines the collection
+   * or does not create collections.
+   */
+  private @Nullable ErrorResponse handlerMappingError(@NotNull Space space) {
+    if (!CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection())) {
+      return null;
+    }
+    return IntHandlerForSpaces.handlerMappingError(nakshaHub, space, readEventHandlers(space));
+  }
+
+  private @NotNull List<EventHandlerConfig> readEventHandlers(@NotNull Space space) {
+    final List<String> handlerIds = space.getEventHandlerIds();
+    if (handlerIds == null || handlerIds.isEmpty()) {
+      return List.of();
+    }
+    final Response response = nakshaHub.getAdminStorage().useReadSession(sessionOptions,
+        reader -> reader.executeRead(readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerIds)));
+    if (!(response instanceof SuccessResponse successResponse)) {
+      return List.of();
+    }
+    return ResultHelper.extractResponseItems(successResponse, EventHandlerConfig.class);
   }
 
   private String singleCollectionIdFrom(WriteRequest writeRequest) {

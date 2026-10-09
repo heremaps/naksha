@@ -1,0 +1,13 @@
+{
+  "id": "hidden_mapping_handler",
+  "type": "EventHandler",
+  "title": "Handler with a fixed collection",
+  "description": "Hidden mapping test",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "properties": {
+    "storageId": "${dataDb.storageId}",
+    "collection": {
+      "id": "hidden_mapping_target"
+    }
+  }
+}

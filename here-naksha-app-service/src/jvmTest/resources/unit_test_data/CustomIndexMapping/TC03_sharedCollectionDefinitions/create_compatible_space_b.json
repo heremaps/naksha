@@ -1,0 +1,18 @@
+{
+  "id": "shared_mapping_space_b",
+  "type": "Space",
+  "title": "Second shared mapping Space",
+  "description": "Shared collection configuration test",
+  "eventHandlerIds": ["shared_mapping_handler"],
+  "properties": {
+    "collection": {
+      "id": "shared_mapping_target",
+      "customIndexMapping": [
+        {
+          "jsonPath": ["properties", "score"],
+          "dataType": "int32"
+        }
+      ]
+    }
+  }
+}

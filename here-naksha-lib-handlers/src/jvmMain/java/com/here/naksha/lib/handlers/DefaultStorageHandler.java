@@ -26,6 +26,8 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.util.CollectionIndexPolicy;
+import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import com.here.naksha.lib.core.util.PropertyMemberQueryTranslator;
 import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.IStorage;
@@ -51,6 +53,7 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -81,6 +84,18 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     this.eventTarget = eventTarget;
     this.properties = Objects.requireNonNull(
         JvmBoxingUtil.box(eventHandlerConfig.getProperties(), DefaultStorageHandlerProperties.class));
+  }
+
+  /**
+   * Returns the collections this Handler defines by its own configuration. They are created, or verified if they exist,
+   * when the Handler is saved. Subclasses with other collection properties override this method.
+   *
+   * <p>The method must only use the Handler configuration: when called for a Handler save, the event target is a
+   * placeholder Space.
+   */
+  public @NotNull List<NakshaCollection> configuredCollections() {
+    final NakshaCollection collection = properties.getCollection();
+    return collection == null ? List.of() : List.of(collection);
   }
 
   @Override
@@ -129,6 +144,22 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     } finally {
       addStorageTimeToStreamInfo(storageTimer, ctx);
     }
+  }
+
+  /**
+   * Translates a property search on custom index mappings into member queries, so that the storage can use the
+   * generated indices. Returns the original request, when the collection has no mappings or the query can't be translated.
+   */
+  private @NotNull ReadFeatures translatePropertyQuery(final @NotNull OperationData operationData) {
+    final ReadFeatures readFeatures = (ReadFeatures) operationData.getRequest();
+    final NakshaCollection configured = operationData.getCollection();
+    if (!CustomIndexMappingCompiler.hasMappings(configured)) {
+      return readFeatures;
+    }
+    final NakshaCollection schema = CollectionIndexPolicy.toNativeCollection(
+        configured, operationData.getCollectionId(), operationData.getMapId());
+    final ReadFeatures translated = PropertyMemberQueryTranslator.adapt(readFeatures, schema, configured);
+    return translated != null ? translated : readFeatures;
   }
 
   private String extractMapIdFromStorageProps(@NotNull IStorage storage) {
@@ -196,8 +227,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationAttempt currentAttempt,
       final @NotNull StopWatch storageTimer) {
     logger.info("Processing ReadFeatures against {}", operationData.getCollectionId());
+    final ReadFeatures readFeatures = translatePropertyQuery(operationData);
     Response response = measuredStorageSupplier(
-        () -> singleRead(operationData.getSessionOptions(), operationData.getStorageImpl(), (ReadFeatures) operationData.getRequest()), storageTimer);
+        () -> singleRead(operationData.getSessionOptions(), operationData.getStorageImpl(), readFeatures), storageTimer);
     if (response instanceof ErrorResponse) {
       ErrorResponse errorResponse = (ErrorResponse) response;
       return reattemptFeatureRequest(operationData, currentAttempt, errorResponse, storageTimer);
@@ -466,10 +498,8 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           operationData.getCollectionId());
-      final NakshaCollection collectionForCreation = operationData.getCollection();
-      collectionForCreation.setId(operationData.getCollectionId());
-      collectionForCreation.setCatalogId(operationData.getMapId());
-      CollectionIndexPolicy.normalizeForHubCreation(collectionForCreation);
+      final NakshaCollection collectionForCreation = CollectionIndexPolicy.toNativeCollection(
+          operationData.getCollection(), operationData.getCollectionId(), operationData.getMapId());
       Response createCollectionResp = measuredStorageSupplier(
           () -> createMissingCollection(
               operationData.getSessionOptions(),
@@ -542,9 +572,14 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         wr.getWrites().forEach(write -> {
           if (write.getFeature() instanceof NakshaCollection) {
             final NakshaCollection collectionFromRequest = (NakshaCollection) write.getFeature();
-            collectionFromRequest.setId(collectionId);
-            collectionFromRequest.setCatalogId(mapId);
-            CollectionIndexPolicy.normalizeForHubCreation(collectionFromRequest);
+            // With custom index mappings, the complete Handler collection definition wins, not just its id.
+            final NakshaCollection handlerCollection = properties.getCollection();
+            final boolean useHandlerCollection = handlerCollection != null
+                && write.getOp() != WriteOp.DELETE
+                && (CustomIndexMappingCompiler.hasMappings(handlerCollection)
+                    || CustomIndexMappingCompiler.hasMappings(collectionFromRequest));
+            write.setFeature(CollectionIndexPolicy.toNativeCollection(
+                useHandlerCollection ? handlerCollection : collectionFromRequest, collectionId, mapId));
           }
         });
       }

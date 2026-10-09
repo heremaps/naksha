@@ -21,6 +21,8 @@ package com.here.naksha.lib.handlers.internal;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
+import com.here.naksha.lib.core.util.CollectionIndexPolicy;
+import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import com.here.naksha.lib.handlers.DefaultViewHandler;
@@ -30,7 +32,9 @@ import com.here.naksha.lib.handlers.TagFilterHandlerProperties;
 import naksha.base.JvmBoxingUtil;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
+import naksha.model.IStorage;
 import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
 import naksha.model.request.ErrorResponse;
@@ -38,9 +42,12 @@ import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
+import naksha.model.request.WriteOp;
+import naksha.model.request.WriteRequest;
 import naksha.model.request.query.AnyOp;
 import naksha.model.request.query.PQuery;
 import naksha.model.request.query.Property;
+import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.model.util.RequestHelper;
 import naksha.model.util.ResultHelper;
 import org.apache.commons.lang3.StringUtils;
@@ -49,9 +56,11 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static com.here.naksha.lib.core.HubInternalIdentifiers.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.SPACES;
 import static com.here.naksha.lib.core.HubInternalIdentifiers.STORAGES;
 import static com.here.naksha.lib.core.models.naksha.EventTarget.EVENT_HANDLER_IDS;
@@ -60,7 +69,10 @@ import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_V
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.configuredCollections;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.isStorageHandler;
 import static naksha.base.Platform.javaProxy;
+import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
 
 public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<EventHandlerConfig> {
@@ -109,14 +121,159 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
   private Response specificHandlerValidation(EventHandlerConfig eventHandler) {
     final String className = eventHandler.getClassName();
     if (DefaultStorageHandler.class.getName().equals(className)) {
-      return storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      final Response storageValidation = storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      if (!(storageValidation instanceof SuccessResponse)) {
+        return storageValidation;
+      }
+      return collectionValidation(eventHandler);
     } else if (DefaultViewHandler.class.getName().equals(className)) {
       return viewHandlerPropertiesValidation(eventHandler);
     } else if (TagFilterHandler.class.getName().equals(className)) {
       return tagFilterHandlerPropertiesValidation(eventHandler);
+    } else if (isStorageHandler(nakshaHub(), eventHandler)) {
+      // Subclasses inherit the collection behavior of the DefaultStorageHandler.
+      return collectionValidation(eventHandler);
     } else {
       return SUCCESSFUL_VALIDATION;
     }
+  }
+
+  /**
+   * Custom index mappings require auto-creation, because the Hub creates the mapped collection. Spaces with custom
+   * mappings must own their collection definitions, so their Handler must not declare collections, including nested ones.
+   */
+  private @NotNull Response collectionValidation(EventHandlerConfig eventHandler) {
+    final DefaultStorageHandlerProperties properties =
+        javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
+    final NakshaCollection collection = properties.getCollection();
+    final boolean autoCreate = properties.getAutoCreateCollection();
+    if (collection != null) {
+      try {
+        CustomIndexMappingCompiler.validate(collection);
+      } catch (NakshaException e) {
+        return new ErrorResponse(e.getError());
+      }
+      if (!autoCreate && CustomIndexMappingCompiler.hasMappings(collection)) {
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+            "Custom index mappings require autoCreateCollection, but it is disabled for handler " + eventHandler.getId());
+      }
+    }
+    final boolean definesCollections;
+    try {
+      definesCollections = collection != null || !configuredCollections(nakshaHub(), eventHandler).isEmpty();
+    } catch (RuntimeException e) {
+      return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+          "Cannot inspect collections of handler " + eventHandler.getId() + ": " + e.getMessage());
+    }
+    if (!definesCollections && autoCreate) {
+      return SUCCESSFUL_VALIDATION;
+    }
+    final ReadFeatures readSpacesRequest = new ReadFeatures().withCollectionId(SPACES)
+        .withCatalogId(nakshaHub.getAdminMapId());
+    final Response response = nakshaHub().getAdminStorage()
+        .useReadSession(new SessionOptions(), readSession -> readSession.executeRead(readSpacesRequest));
+    if (!(response instanceof SuccessResponse)) {
+      return response;
+    }
+    final List<String> mappedSpaceIds = ResultHelper.extractResponseItems((SuccessResponse) response, Space.class).stream()
+        .filter(space -> space.getEventHandlerIds().contains(eventHandler.getId()))
+        .filter(space -> CustomIndexMappingCompiler.hasMappings(space.getProperties().getCollection()))
+        .map(NakshaFeature::getId)
+        .collect(Collectors.toList());
+    if (mappedSpaceIds.isEmpty()) {
+      return SUCCESSFUL_VALIDATION;
+    }
+    if (definesCollections) {
+      return new ErrorResponse(NakshaError.CONFLICT,
+          "The event handler defines a collection, but these spaces define custom index mappings: " + mappedSpaceIds);
+    }
+    return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+        "Custom index mappings require autoCreateCollection, but these spaces of the handler define them: " + mappedSpaceIds);
+  }
+
+  /**
+   * The collections a {@link DefaultStorageHandler}, or a subclass, defines by its configuration are created when the
+   * Handler is saved, if they have custom index mappings. If a collection exists, the storage verifies that its schema is
+   * unchanged; this is done as well when the mapping is removed.
+   */
+  @Override
+  protected @NotNull Response beforePersist(final @NotNull WriteRequest wr) {
+    for (final Write write : wr.getWrites()) {
+      if (WriteOp.DELETE.equals(write.getOp())) {
+        continue;
+      }
+      final EventHandlerConfig eventHandler = javaProxy(write.getFeature(), EventHandlerConfig.class);
+      final List<NakshaCollection> collections;
+      final List<NakshaCollection> savedCollections;
+      try {
+        collections = configuredCollections(nakshaHub(), eventHandler);
+        if (collections.isEmpty()) {
+          continue;
+        }
+        savedCollections = configuredCollections(nakshaHub(), savedHandler(eventHandler.getId()));
+      } catch (RuntimeException e) {
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+            "Cannot create handler " + eventHandler.getId() + " to verify its collections: " + e.getMessage());
+      }
+      if (!javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class).getAutoCreateCollection()
+          && collections.stream().anyMatch(CustomIndexMappingCompiler::hasMappings)) {
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+            "Custom index mappings require autoCreateCollection, but it is disabled for handler " + eventHandler.getId());
+      }
+      for (final NakshaCollection collection : collections) {
+        final Response response = provisionCollection(eventHandler, collection, savedCollections);
+        if (response instanceof ErrorResponse) {
+          return response;
+        }
+      }
+    }
+    return SUCCESSFUL_VALIDATION;
+  }
+
+  private @NotNull Response provisionCollection(
+      EventHandlerConfig eventHandler, NakshaCollection collection, List<NakshaCollection> savedCollections) {
+    final boolean mapped = CustomIndexMappingCompiler.hasMappings(collection);
+    final boolean savedMapped = savedCollections.stream().anyMatch(saved -> collection.getId().equals(saved.getId())
+        && CustomIndexMappingCompiler.hasMappings(saved));
+    if (!mapped && !savedMapped) {
+      return SUCCESSFUL_VALIDATION;
+    }
+    final DefaultStorageHandlerProperties properties =
+        javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
+    final IStorage storage = nakshaHub().getStorageById(properties.getStorageId());
+    final String catalogId = CustomStoragePropertiesUtil.getSchema(Objects.requireNonNull(storage.getConfig()));
+    final NakshaCollection nativeCollection = CollectionIndexPolicy.toNativeCollection(
+        collection.copy(true), collection.getId(), catalogId);
+    final Write write = mapped
+        ? new Write().upsertCollection(nativeCollection)
+        : new Write().updateCollection(nativeCollection, false);
+    final Response response = storage.useWriteSession(SessionOptions.from(currentContext()), writer -> {
+      final Response result = writer.executeWrite(new WriteRequest().add(write));
+      if (result instanceof SuccessResponse) {
+        writer.commit();
+      } else {
+        writer.rollback();
+      }
+      return result;
+    });
+    if (response instanceof ErrorResponse) {
+      final String code = ((ErrorResponse) response).getError().getCode();
+      // Nothing to verify, the collection is created lazily on the first write.
+      if (NakshaError.COLLECTION_NOT_FOUND.equals(code) || NakshaError.MAP_NOT_FOUND.equals(code)) {
+        return SUCCESSFUL_VALIDATION;
+      }
+    }
+    return response;
+  }
+
+  private @Nullable EventHandlerConfig savedHandler(String handlerId) {
+    final ReadFeatures readHandler = readFeaturesByIdRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, handlerId);
+    final Response response = nakshaHub().getAdminStorage()
+        .useReadSession(SessionOptions.from(currentContext()), readSession -> readSession.executeRead(readHandler));
+    if (!(response instanceof SuccessResponse)) {
+      return null;
+    }
+    return ResultHelper.readFeatureFromResponse((SuccessResponse) response, EventHandlerConfig.class);
   }
 
   private @NotNull Response viewHandlerPropertiesValidation(EventHandlerConfig eventHandler) {

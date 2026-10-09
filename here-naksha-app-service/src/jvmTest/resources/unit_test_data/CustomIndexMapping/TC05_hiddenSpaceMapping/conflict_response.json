@@ -1,0 +1,5 @@
+{
+  "type": "ErrorResponse",
+  "error": "Conflict",
+  "errorMessage": "Space hidden_mapping_space defines custom index mappings, but its handler hidden_mapping_handler defines the collection"
+}
