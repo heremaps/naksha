@@ -1,8 +1,6 @@
 package com.here.naksha.cli.streaming
 
-import naksha.base.AnyObject
 import naksha.base.Platform
-import naksha.base.proxy
 import naksha.model.IStorage
 import naksha.model.IStreamSession
 import naksha.model.SessionOptions
@@ -10,7 +8,7 @@ import naksha.model.streaming.Stream
 import naksha.model.streaming.StreamChunk
 import naksha.model.streaming.StreamRequest
 import naksha.psql.PgConfig
-import naksha.psql.PgInstanceConfig
+import naksha.psql.PsqlInstance
 
 class StreamReadSessionV2(
     override val storage: IStorage,
@@ -24,12 +22,16 @@ class StreamReadSessionV2(
 
     override fun read(request: StreamRequest): Stream {
         val config = storage.config
-        val master = Platform.proxy(config.properties, PgConfig::class).master
-        val db = master.db
-        val password = master.password
-
-        val stream = Stream(this, request)
-        TODO("Not yet implemented")
+        val master = PsqlInstance(Platform.proxy(config.properties, PgConfig::class).master)
+        val connection = master.openConnection(
+            options = SessionOptions(),
+            readOnly = true,
+            init = null
+        )
+        val sql = "SELECT jsondata, geo FROM ${request.catalogId}.${request.collectionId} WHERE id = ${request.id}"
+        val cursor = connection.execute(sql)
+        val stream = StreamV2(this, request)
+        return stream
     }
 
     override val mayWrite: Boolean
