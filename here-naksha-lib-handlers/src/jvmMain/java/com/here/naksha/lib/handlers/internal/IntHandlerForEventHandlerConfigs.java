@@ -69,6 +69,7 @@ import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.CONTAINS_V
 import static com.here.naksha.lib.handlers.TagFilterHandlerProperties.REMOVE_W_PREFIXES;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.basicValidationFor;
+import static com.here.naksha.lib.handlers.internal.IntValidationUtil.configuredCollections;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.isStorageHandler;
 import static naksha.base.Platform.javaProxy;
 import static naksha.model.NakshaContext.currentContext;
@@ -138,8 +139,8 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
   }
 
   /**
-   * Custom index mappings require auto-creation, because the Hub creates the mapped collection. A Handler collection
-   * replaces the collection of its Spaces, so custom index mappings of these Spaces would be ignored.
+   * Custom index mappings require auto-creation, because the Hub creates the mapped collection. Spaces with custom
+   * mappings must own their collection definitions, so their Handler must not declare collections, including nested ones.
    */
   private @NotNull Response collectionValidation(EventHandlerConfig eventHandler) {
     final DefaultStorageHandlerProperties properties =
@@ -156,7 +157,15 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
         return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
             "Custom index mappings require autoCreateCollection, but it is disabled for handler " + eventHandler.getId());
       }
-    } else if (autoCreate) {
+    }
+    final boolean definesCollections;
+    try {
+      definesCollections = collection != null || !configuredCollections(nakshaHub(), eventHandler).isEmpty();
+    } catch (RuntimeException e) {
+      return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+          "Cannot inspect collections of handler " + eventHandler.getId() + ": " + e.getMessage());
+    }
+    if (!definesCollections && autoCreate) {
       return SUCCESSFUL_VALIDATION;
     }
     final ReadFeatures readSpacesRequest = new ReadFeatures().withCollectionId(SPACES)
@@ -174,7 +183,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     if (mappedSpaceIds.isEmpty()) {
       return SUCCESSFUL_VALIDATION;
     }
-    if (collection != null) {
+    if (definesCollections) {
       return new ErrorResponse(NakshaError.CONFLICT,
           "The event handler defines a collection, but these spaces define custom index mappings: " + mappedSpaceIds);
     }
@@ -197,11 +206,11 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       final List<NakshaCollection> collections;
       final List<NakshaCollection> savedCollections;
       try {
-        collections = configuredCollections(eventHandler);
+        collections = configuredCollections(nakshaHub(), eventHandler);
         if (collections.isEmpty()) {
           continue;
         }
-        savedCollections = configuredCollections(savedHandler(eventHandler.getId()));
+        savedCollections = configuredCollections(nakshaHub(), savedHandler(eventHandler.getId()));
       } catch (RuntimeException e) {
         return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
             "Cannot create handler " + eventHandler.getId() + " to verify its collections: " + e.getMessage());
@@ -255,23 +264,6 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
       }
     }
     return response;
-  }
-
-  /**
-   * Returns the collections the given Handler defines by its configuration, if it is a {@link DefaultStorageHandler} or a
-   * subclass of it. A Handler save has no Space, so the Handler is created with a placeholder Space.
-   */
-  private @NotNull List<NakshaCollection> configuredCollections(@Nullable EventHandlerConfig eventHandler) {
-    if (eventHandler == null) {
-      return List.of();
-    }
-    if (!isStorageHandler(nakshaHub(), eventHandler)) {
-      return List.of();
-    }
-    final Space placeholder = new Space();
-    placeholder.setId(eventHandler.getId());
-    placeholder.getEventHandlerIds().add(eventHandler.getId());
-    return ((DefaultStorageHandler) eventHandler.newInstance(nakshaHub(), placeholder)).configuredCollections();
   }
 
   private @Nullable EventHandlerConfig savedHandler(String handlerId) {

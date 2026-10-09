@@ -27,7 +27,6 @@ import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
-import com.here.naksha.lib.handlers.DefaultStorageHandler;
 import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -100,9 +99,8 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
   }
 
   /**
-   * Returns an error, if the Space defines custom index mappings, but one of its storage Handlers, a
-   * {@link DefaultStorageHandler} or a subclass, defines the collection (the mappings would be ignored) or does not
-   * create collections (the Hub can't create the mapped collection).
+   * A Space with custom index mappings must own its collection definition. Reject it if a storage Handler defines any
+   * collections, including subclass-specific ones, or disables collection creation.
    */
   public static @Nullable ErrorResponse handlerMappingError(
       @NotNull INaksha hub, @NotNull Space space, @NotNull List<EventHandlerConfig> handlers) {
@@ -115,7 +113,15 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
       }
       final DefaultStorageHandlerProperties properties =
           Platform.javaProxy(handler.getProperties(), DefaultStorageHandlerProperties.class);
-      if (properties.getCollection() != null) {
+      final boolean definesCollections;
+      try {
+        definesCollections = properties.getCollection() != null
+            || !IntValidationUtil.configuredCollections(hub, handler).isEmpty();
+      } catch (RuntimeException e) {
+        return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT,
+            "Cannot inspect collections of handler " + handler.getId() + ": " + e.getMessage());
+      }
+      if (definesCollections) {
         return new ErrorResponse(
             NakshaError.CONFLICT,
             String.format("Space %s defines custom index mappings, but its handler %s defines the collection",

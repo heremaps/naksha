@@ -20,8 +20,11 @@ package com.here.naksha.lib.handlers.internal;
 
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
+import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.handlers.DefaultStorageHandler;
+import java.util.List;
 import naksha.base.NakshaError;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
@@ -29,6 +32,7 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 class IntValidationUtil {
 
@@ -38,8 +42,8 @@ class IntValidationUtil {
   }
 
   /**
-   * Tests if the Handler is a {@link DefaultStorageHandler} or a subclass of it, so it uses the standard collection
-   * properties and behavior. A class that can't be loaded, for example because its extension is not loaded, is not.
+   * Tests if the Handler is a {@link DefaultStorageHandler} or a subclass of it, so its configured collections can be
+   * inspected. A class that can't be loaded, for example because its extension is not loaded, is not.
    */
   static boolean isStorageHandler(@NotNull INaksha hub, @NotNull EventHandlerConfig eventHandler) {
     final String className = eventHandler.getClassName();
@@ -56,6 +60,21 @@ class IntValidationUtil {
     } catch (ClassNotFoundException e) {
       return false;
     }
+  }
+
+  /**
+   * Returns collections declared by a storage Handler, including subclass-specific definitions. Discovery uses only the
+   * Handler configuration, so a placeholder Space is sufficient for both validation and provisioning.
+   */
+  static @NotNull List<NakshaCollection> configuredCollections(
+      @NotNull INaksha hub, @Nullable EventHandlerConfig eventHandler) {
+    if (eventHandler == null || !isStorageHandler(hub, eventHandler)) {
+      return List.of();
+    }
+    final Space placeholder = new Space();
+    placeholder.setId(eventHandler.getId());
+    placeholder.getEventHandlerIds().add(eventHandler.getId());
+    return ((DefaultStorageHandler) eventHandler.newInstance(hub, placeholder)).configuredCollections();
   }
 
   static Response basicValidationFor(Write write) {

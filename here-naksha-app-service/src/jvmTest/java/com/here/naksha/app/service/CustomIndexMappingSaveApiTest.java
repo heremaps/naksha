@@ -28,6 +28,8 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /** Save-time creation and verification of mapped Handler collections. */
 class CustomIndexMappingSaveApiTest extends ApiTest {
@@ -261,5 +263,69 @@ class CustomIndexMappingSaveApiTest extends ApiTest {
     JSONObject s = mappedSpace("mapping_save_subclass_fixed_space", h.getString("id"), "mapping_save_subclass_fixed_space_table");
     status(getNakshaClient().post("hub/spaces", s.toString(), stream), 409);
     status(getNakshaClient().get("hub/spaces/mapping_save_subclass_fixed_space", stream), 404);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void mappedSpaceOnSubclassWithNestedCollectionsIsRejected(
+      boolean mapped, @NakshaAppInjection NakshaApp app) throws Exception {
+    String id = "mapping_save_nested_create_" + mapped;
+    JSONObject h = multiCollectionHandler(id, Map.entry(id + "_nested", "int32"));
+    if (!mapped) h.getJSONObject("properties").getJSONArray("collections").getJSONObject(0).remove("customIndexMapping");
+    status(getNakshaClient().post("hub/handlers", h.toString(), stream));
+    String collection = id + "_space_table";
+    JSONObject s = mappedSpace(id + "_space", id, collection);
+
+    status(getNakshaClient().post("hub/spaces", s.toString(), stream), 409);
+
+    status(getNakshaClient().get("hub/spaces/" + s.getString("id"), stream), 404);
+    assertTrue(storedCollection(app, h.getJSONObject("properties").getString("storageId"), collection).isEmpty());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void addingSpaceMappingOnSubclassWithNestedCollectionsIsRejected(
+      boolean mapped, @NakshaAppInjection NakshaApp app) throws Exception {
+    String id = "mapping_save_nested_update_" + mapped;
+    JSONObject h = multiCollectionHandler(id, Map.entry(id + "_nested", "int32"));
+    if (!mapped) h.getJSONObject("properties").getJSONArray("collections").getJSONObject(0).remove("customIndexMapping");
+    status(getNakshaClient().post("hub/handlers", h.toString(), stream));
+    JSONObject s = space(id + "_space", id);
+    status(getNakshaClient().post("hub/spaces", s.toString(), stream));
+    String spaceUrl = "hub/spaces/" + s.getString("id");
+    JSONObject saved = new JSONObject(getNakshaClient().get(spaceUrl, stream).body());
+    String collection = id + "_space_table";
+    saved.getJSONObject("properties").put("collection",
+        mappedSpace(s.getString("id"), id, collection).getJSONObject("properties").getJSONObject("collection"));
+
+    status(getNakshaClient().put(spaceUrl, saved.toString(), stream), 409);
+
+    JSONObject unchanged = new JSONObject(getNakshaClient().get(spaceUrl, stream).body());
+    assertFalse(unchanged.getJSONObject("properties").has("collection"));
+    assertTrue(storedCollection(app, h.getJSONObject("properties").getString("storageId"), collection).isEmpty());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void addingNestedCollectionsUnderMappedSpacesIsRejected(
+      boolean mapped, @NakshaAppInjection NakshaApp app) throws Exception {
+    String id = "mapping_save_nested_handler_" + mapped;
+    JSONObject h = multiCollectionHandler(id);
+    status(getNakshaClient().post("hub/handlers", h.toString(), stream));
+    JSONObject s = mappedSpace(id + "_space", id, id + "_space_table");
+    status(getNakshaClient().post("hub/spaces", s.toString(), stream));
+    String handlerUrl = "hub/handlers/" + id;
+    JSONObject saved = new JSONObject(getNakshaClient().get(handlerUrl, stream).body());
+    String collection = id + "_nested";
+    JSONArray definitions = multiCollectionHandler(id, Map.entry(collection, "int32"))
+        .getJSONObject("properties").getJSONArray("collections");
+    if (!mapped) definitions.getJSONObject(0).remove("customIndexMapping");
+    saved.getJSONObject("properties").put("collections", definitions);
+
+    status(getNakshaClient().put(handlerUrl, saved.toString(), stream), 409);
+
+    JSONObject unchanged = new JSONObject(getNakshaClient().get(handlerUrl, stream).body());
+    assertEquals(0, unchanged.getJSONObject("properties").getJSONArray("collections").length());
+    assertTrue(storedCollection(app, h.getJSONObject("properties").getString("storageId"), collection).isEmpty());
   }
 }
