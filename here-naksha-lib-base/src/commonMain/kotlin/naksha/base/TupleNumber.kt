@@ -2,26 +2,28 @@
 
 package naksha.base
 
+import naksha.base.Action.Action_C.DELETE
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int32
 import naksha.base.PlatformDataViewApi.PlatformDataViewApiCompanion.dataview_set_int64
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmName
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * The in-memory representation of the unique address of a [naksha.model.Tuple].
+ * The in-memory representation of the unique state address of a `Tuple`.
  *
- * The full qualified [naksha.model.Tuple] address is a 256-bit value _(32 byte)_, persisting out of the database-number, catalog-number, collection-number, feature-number, and version. Note that the lower two bits of version encode the [action][Action].
+ * The full qualified `Tuple` address is a 256-bit value _(32 byte)_, persisting out of the [database-number][databaseNumber], [catalog-number][catalogNumber], [collection-number][collectionNumber], [feature-number][featureNumber], and [version][version]. Note that the lower two bits of version encode the [action][Action].
  *
  * The tuple-number is stringified either into URN:
  * ```
  * urn:naksha:tn:{database-number}:{catalog-number}:{collection-number}:{feature-number}:{version}
  * ```
  *
- * There are no two [tuple][naksha.model.Tuple] with the same [tuple-number][TupleNumber]; world-wide.
+ * There are no two tuple with the same [TupleNumber]; world-wide, unless they are really the same feature state.
  * @since 3.0
  */
 @JsExport
@@ -51,22 +53,35 @@ data class TupleNumber(
     @JvmField val featureNumber: Long,
 
     /**
-     * The version _(transaction)_ of which the [naksha.model.Tuple] is part of.
-     * The lower 2 bits of [Version.number] encode the [Action].
+     * The version _(transaction)_ of which the `Tuple` is part of. The lower 2 bits of [Version.number] encode the [Action].
      * @since 3.0
      * @see [Version.HEAD]
      */
     @JvmField val version: Long,
 ) : Comparable<TupleNumber> {
+
     /**
-     * The partition-number of the [naksha.model.Tuple], a value between `0` and `256` _(exclusive)_.
+     * Create a new [TupleNumber] using [Id]'s.
+     * @param databaseId the database [Id].
+     * @param catalogId the catalog [Id].
+     * @param collectionId the collection [Id].
+     * @param featureId the feature [Id].
+     * @param version the version.
+     * @since 3.0
+     */
+    @JsName("NewTupleNumber")
+    constructor(databaseId: Id, catalogId: Id, collectionId: Id, featureId: Id, version:Long)
+        : this(databaseId.number, catalogId.intValue, collectionId.intValue, featureId.number, version)
+
+    /**
+     * The partition-number of the `Tuple`, a value between `0` and `256` _(exclusive)_.
      * @since 3.0
      */
     val partitionNumber: Int
         get() = Id.partitionNumber(featureNumber)
 
     /**
-     * The [Action] applied to generate the [naksha.model.Tuple] referred by this [TupleNumber].
+     * The [Action] applied to generate the `Tuple` referred by this [TupleNumber].
      * Decoded from the lower 2 bits of [version].
      * @since 3.0
      */
@@ -77,11 +92,12 @@ data class TupleNumber(
      * Tests if the `Tuple` is a tombstone, so a deleted state.
      * @since 3.0
      */
-    val isDeleted: Boolean
-        get() = action == Action.DELETE
+    @get:JvmName("isTombstone")
+    val isTombstone: Boolean
+        get() = action == DELETE
 
     /**
-     * Calculates the distribution partition-index where this [naksha.model.Tuple] will be located.
+     * Calculates the distribution partition-index where this `Tuple` will be located.
      *
      * If the given partitions are less than `2`, the method always returns `-1`.
      * @param partitions the number of partitions
@@ -92,25 +108,67 @@ data class TupleNumber(
 
     override fun hashCode(): Int = version.hashCode()
 
+    /**
+     * Compares this [TupleNumber] with the specified `other` [TupleNumber].
+     *
+     * Returns zero if this [TupleNumber] is equal to the specified `other` [TupleNumber], a negative number if it's less than `other`, or a positive number if it's greater than `other`.
+     *
+     * _This is not a simple numeric compare, it considers certain special cases and does a bunch of bit mangling to ensure that special catalogs and collections are sorted first, and that features are ordered by partitions. This method works for all object types with the same reliability!_
+     *
+     * ## Details
+     * This compares first [databases-number][TupleNumber.databaseNumber], then [catalog-number][TupleNumber.catalogNumber], then [collection-number][TupleNumber.collectionNumber], then [partition-number][TupleNumber.partitionNumber], then [action][TupleNumber.action], then [feature-number][TupleNumber.featureNumber], and finally [version][TupleNumber.version]. Beware, this method compares the raw partition-number being a value between 0 and 255, it does not care if partitions exist or not. It ensures that all operations are executed in partition order.
+     *
+     * When comparing the [feature-number][TupleNumber.featureNumber] the compare is done in a special way as described by [Id.compareFeatureNumber].
+     *
+     * ## Important
+     * This compare is important to order operations. All operations must be ordered consistent cross-platform to avoid deadlocks.
+     *
+     * **Only when all clients modify data in the same deterministic order it will work!**
+     *
+     * If the clients use different ordering, they will run in deadlocks. For example, assume two client want to modify the same objects _A_, _B_, and _C_. Say client `X` tries to execute this in order _A_, _B_, _C_ and client `Y` tries in order _C_, _B_, _A_. Now assume the clients run in parallel, and are executed in the following order _(they run at same speed, really parallel)_:
+     * - Client `X` acquires lock on _A_.
+     * - Client `Y` acquires lock on _C_.
+     * - Client `X` acquires lock on _B_.
+     * - Client `Y` tries lock on _B_.
+     * - Client `Y` will be parked, because _B_ is locked by `X`, it will wait for the lock.
+     * - Client `X` tries lock on _C_.
+     * - Client `X` will be parked, because _C_ is locked by `Y`, it will wait for the lock.
+     *
+     * At this point both clients are waiting for each other to finish, this is called a deadlock. This can't happen when both clients use the same order. So, if both clients use the order _A_, _B_, _C_ the one that holds the lock on _A_ will be able to finish execution before all other clients that need _A_ as well. Beware, the above was a very simple example, it gets much more complicated with three or more parallel clients. However, all these issues are solved by using a deterministic order.
+     *
+     * @param other the other [TupleNumber] to compare this against.
+     * @return zero if this [TupleNumber] is equal to the specified `other`, a negative number if this is less than `other`, or a positive number if this is greater than `other`.
+     * @see Id.compareFeatureNumber
+     */
     override fun compareTo(other: TupleNumber): Int {
-        var i64_diff = databaseNumber - other.databaseNumber
-        if (i64_diff < 0) return -1
-        if (i64_diff > 0) return 1
-        var i32_diff = catalogNumber - other.catalogNumber
-        if (i32_diff < 0) return -1
-        if (i32_diff > 0) return 1
-        i32_diff = collectionNumber - other.collectionNumber
-        if (i32_diff < 0) return -1
-        if (i32_diff > 0) return 1
-        i32_diff = partitionNumber - other.partitionNumber
-        if (i32_diff < 0) return -1
-        if (i32_diff > 0) return 1
-        i64_diff = featureNumber - other.featureNumber
-        if (i64_diff < 0) return -1
-        if (i64_diff > 0) return 1
-        i32_diff = version.compareTo(other.version)
-        if (i32_diff < 0) return -1
-        if (i32_diff > 0) return 1
+        val diff64 = databaseNumber - other.databaseNumber
+        if (diff64 < 0) return -1
+        if (diff64 > 0) return 1
+        var diff = catalogNumber - other.catalogNumber
+        if (diff < 0) return -1
+        if (diff > 0) return 1
+        diff = collectionNumber - other.collectionNumber
+        if (diff < 0) return -1
+        if (diff > 0) return 1
+        diff = partitionNumber - other.partitionNumber
+        if (diff < 0) return -1
+        if (diff > 0) return 1
+        val this_action = this.action.intValue
+        val other_action = other.action.intValue
+        if (this_action != other_action) {
+            // We order DELETE (2) first (note: we know actions are not equal!).
+            if (this_action == DELETE.intValue) return -1
+            if (other_action == DELETE.intValue) return 1
+            // Then CREATE (0), then UPDATE (1), then VERSION (3)
+            diff = this_action - other_action
+            return if (diff < 0) -1 else 1
+        }
+        diff = Id.compareFeatureNumber(featureNumber, other.featureNumber)
+        if (diff < 0) return -1
+        if (diff > 0) return 1
+        diff = version.compareTo(other.version)
+        if (diff < 0) return -1
+        if (diff > 0) return 1
         return 0
     }
 
@@ -302,7 +360,7 @@ data class TupleNumber(
         /**
          * The _HEAD_ [TupleNumber], to be used when a [tuple-number][TupleNumber] is not yet available.
          *
-         * This happens for various reasons, for example when a [naksha.model.Tuple] is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a valid tuple-number.
+         * This happens for various reasons, for example when a `Tuple` is created in the client at runtime, and not yet persisted in any storage, therefore does not yet have a valid tuple-number.
          * @since 3.0
          */
         val HEAD = TupleNumber(0, 0, 0, 0, Version.HEAD.number)
