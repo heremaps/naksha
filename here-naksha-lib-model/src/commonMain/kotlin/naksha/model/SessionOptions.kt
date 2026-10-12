@@ -3,7 +3,6 @@
 package naksha.model
 
 import naksha.base.fn.Fn3
-import naksha.model.SessionOptions.SessionOptions_C.from
 import naksha.model.objects.NakshaFeature
 import kotlin.js.JsExport
 import kotlin.js.JsName
@@ -15,7 +14,7 @@ import kotlin.jvm.JvmStatic
 /**
  * Options when acquiring a new session.
  *
- * @constructor Creates a new session, if a default should be created, simply use [from], example `SessionOptions.from(null)`, which will create session options using the defaults setup in the current [NakshaContext] (this is the right thing to do, in most of the cases, and matches the default values in the Kotlin constructor).
+ * @constructor Creates a new session.
  * @since 3.0
  */
 @JsExport
@@ -28,7 +27,7 @@ data class SessionOptions @JvmOverloads constructor(
     val appName: String = NakshaContext.appName(),
 
     /**
-     * The application that acts.
+     * The unique identifier of the application that acts _(written for example into transaction logs)_.
      * @since 3.0
      */
     @JvmField
@@ -63,6 +62,7 @@ data class SessionOptions @JvmOverloads constructor(
      * When calculating the hash of a feature, the paths that should be excluded from hash calculation.
      * @since 3.0
      */
+    @Deprecated("To be removed in release 3.0, this is replaced with member processors")
     @JvmField
     val excludePaths: List<Array<String>>? = NakshaContext.currentContext().excludePaths,
 
@@ -72,6 +72,7 @@ data class SessionOptions @JvmOverloads constructor(
      * The function receives the feature that is being hashed, the current path, and the value to be hashed (will be _null_, _String_, _Int_, _Long_, _Double_ or _Boolean_). It should return _true_, when the value should be part of the hash; _false_ otherwise.
      * @since 3.0
      */
+    @Deprecated("To be removed in release 3.0, this is replaced with member processors")
     @JvmField
     val excludeFn: Fn3<Boolean, NakshaFeature, List<String>, Any?>? = NakshaContext.currentContext().excludeFn,
 

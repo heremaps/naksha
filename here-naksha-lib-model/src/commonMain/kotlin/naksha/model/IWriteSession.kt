@@ -11,7 +11,8 @@ import naksha.model.request.WriteRequest
 import kotlin.js.JsExport
 
 /**
- * A write-request.
+ * A write session.
+ * @since 3.0
  */
 @JsExport
 interface IWriteSession: IReadSession {
