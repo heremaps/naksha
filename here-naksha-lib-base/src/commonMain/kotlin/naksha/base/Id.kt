@@ -12,10 +12,11 @@ import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmName
+import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * A wrapper for Naksha identifiers.
+ * An immutable wrapper for Naksha identifiers.
  *
  * Invoking the constructor without arguments will create a new random identifier.
  *
@@ -86,7 +87,20 @@ class Id private constructor(
     constructor() : this(0L, randomString())
 
     /**
-     * The numeric representation of the `id`, when not given, automatically calculated from the [text].
+     * Creates a new identifier by specifying textual and numeric representation.
+     * @param text the textual representation; must not be `null`.
+     * @param number the numeric representation.
+     * @param skipVerification if the verification of the numeric representation should be skipped _(risky)_, only do it when reading from verified sources.
+     * @throws NakshaException if `skipVerification` is _true_ and the given number is not valid for the given text.
+     * @since 3.0
+     */
+    @JsName("newId")
+    @JvmOverloads
+    constructor(text: String, number: Long, skipVerification: Boolean = false)
+        : this(if (skipVerification) number else verifyNumber(text, number), text)
+
+    /**
+     * The 64-bit numeric representation of the identifier, when not given, automatically calculated from the [text].
      *
      * ### Catalogs and Collections
      * For catalogs and collections this number will be the full number, so the 64-bit value. However, only the lower 32-bit, as returned by [intValue], are significant. This means, internally the storages will trim the number down to 32-bit and when two catalogs or collections have the same lower 32-bit, they are treated as being the same. This is done, because only the 32-bit value is encoded in [tuple-numbers][TupleNumber]. In other words, the amount of collisions for catalogs and collections is much higher. However, it is not expected to have millions of catalogs in the same database, or millions of collections in the same catalog, therefore this is a fair tradeoff between encoding size of [TupleNumber] and collision resistance.
@@ -133,12 +147,15 @@ class Id private constructor(
         }
 
     /**
-     * Returns the [number] as 32-bit integer, needed for catalogs and collections.
+     * Returns the [number] as 32-bit integer, used for catalogs and collections.
      *
-     * The method will keep the lower 31-bit of the [number] intact and copy the sign-bit to them, so that the resulting 32-bit value will match the lower 31-bit plus the sign of [number]. This guarantees that negative numbers stay negative, and positive numbers stay positive. In case of a negative number, it effectively returns the 32-bit at offset `12` of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the `id` string, with a set sign-bit.
+     * The method will keep the lower 31-bit of the [number] intact and copy the sign-bit to them, so that the resulting 32-bit value will match the lower 31-bit of the [number], plus the sign of the [number]. This guarantees that negative numbers stay negative, and positive numbers stay positive.
+     *
+     * In case of a negative number, it effectively returns the 32-bit _(big-endian)_ at offset `12` of the [MD5](https://en.wikipedia.org/wiki/MD5) hash above the `id` string, with a set sign-bit _(therefore, only 31-bit of the hash are significant)_.
      * @since 3.0
      * @see Id.numberToInt
      * @see Id.textToInt
+     * @see number
      */
     @get:JvmName("intValue")
     val intValue: Int
@@ -151,6 +168,14 @@ class Id private constructor(
     @get:JvmName("isNumeric")
     val isNumeric: Boolean
         get() = number >= 0
+
+    /**
+     * Tests if the identifier belongs to an internal identifier with a special meaning.
+     * @since 3.0
+     */
+    @get:JvmName("isInternal")
+    val isInternal: Boolean
+        get() = textToNumberMap[text] == number
 
     /**
      * The number of the partition in which this identifier will be located.
@@ -190,12 +215,18 @@ class Id private constructor(
      * @see text
      */
     override fun toString(): String = text
-    override fun compareTo(other: Id?): Int {
-        // We order `null` at the end of lists/arrays.
-        if (other == null) return -1
-        if (this === other) return 0
-        return number.compareTo(other.number)
-    }
+
+    /**
+     * Compares this identifier with the specified identifier **for order**.
+     *
+     * Returns zero if this `id` is equal to the specified `other`, a negative number if it's less than `other`, or a positive number if it's greater than `other`.
+     *
+     * @param other the other identifier to compare this against.
+     * @return zero if this `id` is equal to the specified `other`, a negative number if this is less than `other`, or a positive number if this is greater than `other`.
+     * @since 3.0
+     * @see compareFeatureNumber
+     */
+    override fun compareTo(other: Id?): Int = compareFeatureNumber(this.number, other?.number)
 
     // ---------------------------------------------< CharSequence >------------------------------------------------------
     override val length: Int
@@ -414,6 +445,14 @@ class Id private constructor(
             return sign or low
         }
 
+        private fun verifyNumber(text: String, number: Long): Long {
+            val realNumber = textToNumber(text)
+            if (number != realNumber) {
+                throw illegalArg("The calculated number $realNumber is not equal to $number for identifier $text")
+            }
+            return number
+        }
+
         /**
          * Ensures that the given number is positive.
          * @param number the number to verify.
@@ -540,5 +579,77 @@ class Id private constructor(
         @JsStatic
         @JvmStatic
         fun partitionNumber(number: Long): Int = number.toInt() and 0xff
+
+        /**
+         * Compares two given feature-numbers against each other.
+         *
+         * This will order `null` last. It pre-sorts [`naksha~admin`][Id.ADMIN_CATALOG_ID], then [`naksha~catalogs`][Id.CATALOGS_COL_ID], and finally [`naksha~collections`][Id.COLLECTIONS_COL_ID]. The rest is ordered by the lower `31`-bit first _([numberToInt])_, then by the bits `31` to `63` _(inclusive)_. The reason for doing this is that we want to ensure that conflicting collections are sorted behind each other.
+         *
+         * @param self this feature-number to compare against `other`.
+         * @param other the other feature-number to compare `self` against.
+         * @return zero if `self` is equal to `other`, a negative number if `self` is less than `other`, or a positive number if `self` is greater than `other`.
+         */
+        fun compareFeatureNumber(self: Long?, other: Long?): Int {
+            // We order `null` at the end, because it is and invalid value.
+            // This allows users to optionally simply truncate entities with no id.
+            if (self == other) return 0
+            if (other == null) return -1
+            if (self == null) return 1
+
+            // Note that for catalogs and collections only the sign-bit and the lower 31-bit are significant.
+            val this_int = numberToInt(self)
+            val other_int = numberToInt(other)
+
+            //
+            // We order first: `naksha~admin`, `naksha~catalogs`, then `naksha~collections`.
+            //
+
+            // We order all modifications done in `naksha~admin` first.
+            if (this_int == ADMIN_CATALOG_ID.intValue) {
+                if (this_int != other_int) return -1
+                return self.compareTo(other)
+            }
+            if (other_int == ADMIN_CATALOG_ID.intValue) {
+                if (other_int != this_int) return 1
+                return self.compareTo(other)
+            }
+
+            // We order all modifications done in `naksha~catalogs` second.
+            if (this_int == CATALOGS_COL_ID.intValue) {
+                if (this_int != other_int) return -1
+                return self.compareTo(other)
+            }
+            if (other_int == CATALOGS_COL_ID.intValue) {
+                if (other_int != this_int) return 1
+                return self.compareTo(other)
+            }
+
+            // We order all modifications done in `naksha~collections` third.
+            if (this_int == COLLECTIONS_COL_ID.intValue) {
+                if (this_int != other_int) return -1
+                return self.compareTo(other)
+            }
+            if (other_int == COLLECTIONS_COL_ID.intValue) {
+                if (other_int != this_int) return 1
+                return self.compareTo(other)
+            }
+
+            //
+            // Now, order normal catalogs, collections, books, features, ...
+            //
+
+            // If the lower 31-bit and the sign-bit are the same, compare by bit 31..63.
+            if (this_int == other_int) return self.compareTo(other)
+
+            // Otherwise, compare by partition first, so lowest 8-bit
+            val this_partition = partitionNumber(self)
+            val other_partition = partitionNumber(other)
+            if (this_partition < other_partition) return -1
+            if (this_partition > other_partition) return 1
+
+            // If both are in the same partition, compare the rest (bit 8..15).
+            // Note: They can't be equal, we checked that before.
+            return if (this_int < other_int) -1 else 1
+        }
     }
 }
