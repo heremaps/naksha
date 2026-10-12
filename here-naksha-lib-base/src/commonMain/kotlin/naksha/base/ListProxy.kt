@@ -258,6 +258,29 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
     fun asList(): List<E?> = this
 
     /**
+     * Returns a read-only copy of the content.
+     * @return a read-only copy of the content.
+     * @since 3.0
+     */
+    fun toList(): List<E?> = List(this.size) { this[it] }
+
+    /**
+     * Returns a read-only copy of the content, removing all `null` values.
+     * @return a read-only copy of the content without `null` entries.
+     * @since 3.0
+     */
+    fun toListNotNull(): List<E> {
+        var size = 0
+        for (e in this) if (e != null) size++
+        var i = 0
+        return List(size) {
+            var e = this[i++]
+            while (e == null) e = this[i++]
+            e
+        }
+    }
+
+    /**
      * Turn this list into an array and return it _(for Java, this is an `Object[]`)_.
      * @return this list as array.
      * @see [toArrayNotNull]
