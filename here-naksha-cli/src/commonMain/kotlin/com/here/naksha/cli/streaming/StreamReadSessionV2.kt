@@ -1,6 +1,7 @@
 package com.here.naksha.cli.streaming
 
 import naksha.base.Platform
+import naksha.base.Version
 import naksha.model.IStorage
 import naksha.model.IStreamSession
 import naksha.model.SessionOptions
@@ -20,15 +21,40 @@ class StreamReadSessionV2(
     override val mayRead: Boolean
         get() = true
 
+    /**
+     * The master instance of the storage.
+     * @since 3.0.0
+     */
+    private val master : PsqlInstance = PsqlInstance(Platform.proxy(storage.config.properties, PgConfig::class).master)
+
+    companion object {
+        const val VERSION_COLUMN_SQL = "i"
+    }
+
     override fun read(request: StreamRequest): Stream {
-        val config = storage.config
-        val master = PsqlInstance(Platform.proxy(config.properties, PgConfig::class).master)
         val connection = master.openConnection(
             options = SessionOptions(),
             readOnly = true,
             init = null
         )
-        val sql = "SELECT jsondata, geo FROM ${request.catalogId}.${request.collectionId} WHERE id = ${request.id}"
+        val whereClause = StringBuilder()
+        if (request.minVersion > 0) {
+            if (whereClause.isEmpty()) {
+                whereClause.append(" WHERE $VERSION_COLUMN_SQL >= ${request.minVersion}")
+            }
+            else {
+                whereClause.append(" AND $VERSION_COLUMN_SQL >= ${request.minVersion}")
+            }
+        }
+        if (request.version < Version.HEAD.number) {
+            if (whereClause.isEmpty()) {
+                whereClause.append(" WHERE $VERSION_COLUMN_SQL <= ${request.version}")
+            }
+            else {
+                whereClause.append(" AND $VERSION_COLUMN_SQL <= ${request.version}")
+            }
+        }
+        val sql = "SELECT jsondata, geo FROM ${request.catalogId}.${request.collectionId}$whereClause;"
         val cursor = connection.execute(sql)
         val stream = StreamV2(this, request)
         return stream
