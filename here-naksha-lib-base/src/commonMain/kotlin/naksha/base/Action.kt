@@ -16,7 +16,7 @@ import kotlin.reflect.KClass
  * - `3` ([VERSION]) — both action bits are set; used as a sentinel to indicate that the [Version.number] value itself
  *   is being used as a version reference rather than encoding a state-change action.
  *
- * @since 1.0.0
+ * @since 1.0
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
@@ -46,7 +46,7 @@ class Action : JsEnum() {
 
         /**
          * The feature was created.
-         * @since 1.0.0
+         * @since 1.0
          */
         @JsStatic
         @JvmField
@@ -58,7 +58,7 @@ class Action : JsEnum() {
 
         /**
          * The feature was updated.
-         * @since 1.0.0
+         * @since 1.0
          */
         @JsStatic
         @JvmField
@@ -70,7 +70,7 @@ class Action : JsEnum() {
 
         /**
          * The feature was deleted.
-         * @since 1.0.0
+         * @since 1.0
          */
         @JsStatic
         @JvmField
@@ -84,7 +84,7 @@ class Action : JsEnum() {
          * Both action bits are set (`3`). Used as a sentinel to signal that the [Version.number] value
          * is a version reference rather than a state-change action. Also returned by [fromValue] for
          * any unrecognised integer value.
-         * @since 1.0.0
+         * @since 1.0
          */
         @JsStatic
         @JvmField
@@ -102,38 +102,36 @@ class Action : JsEnum() {
             Pair(VERSION_STRING, VERSION), Pair(VERSION_SHORT, VERSION),
         )
 
-        private val FROM_VALUE = mapOf(
-            Pair(CREATE_VALUE, CREATE),
-            Pair(UPDATE_VALUE, UPDATE),
-            Pair(DELETE_VALUE, DELETE),
-            Pair(VERSION_VALUE, VERSION),
-        )
+        private val FROM_VALUE = arrayOf(CREATE, UPDATE, DELETE, VERSION)
 
         /**
-         * Helper to parse a string into an [Action]. Returns [VERSION] for unrecognised strings.
+         * Helper to parse a string into an [Action]. Returns [VERSION] for unrecognized strings.
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
         fun fromString(s: String): Action = FROM_STRING[s] ?: VERSION
 
         /**
-         * Helper to obtain an [Action] from its integer value. Returns [VERSION] for unrecognised values.
+         * Helper to obtain an [Action] from its integer value. Returns [VERSION] for unrecognized values.
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun fromValue(value: Int): Action = FROM_VALUE[value] ?: VERSION
+        fun fromValue(value: Int): Action = if (value and 3 == value) FROM_VALUE[value] else VERSION
 
         /**
-         * Helper to obtain an [Action] from its 64-bit version value. Returns [VERSION] for unrecognised values.
+         * Helper to obtain an [Action] from its 64-bit version value.
+         * @since 3.0
          */
         @JsStatic
         @JvmStatic
-        fun fromVersion(version: Long): Action = FROM_VALUE[version.toInt() and 3] ?: VERSION
+        fun fromVersion(version: Long): Action = FROM_VALUE[version.toInt() and 3]
     }
 
     /**
      * The action value.
-     * @since 1.0.0
+     * @since 1.0
      * @see [fromValue]
      */
     var intValue: Int = VERSION_VALUE
@@ -141,7 +139,7 @@ class Action : JsEnum() {
 
     /**
      * The action value.
-     * @since 1.0.0
+     * @since 1.0
      * @see [fromValue]
      */
     var longValue: Long = VERSION_VALUE.toLong()
@@ -149,7 +147,7 @@ class Action : JsEnum() {
 
     /**
      * The short identifier.
-     * @since 1.0.0
+     * @since 1.0
      */
     var shortId: String = VERSION_SHORT
         private set
