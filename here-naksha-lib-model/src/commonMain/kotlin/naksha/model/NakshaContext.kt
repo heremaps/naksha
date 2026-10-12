@@ -91,7 +91,7 @@ open class NakshaContext protected constructor(
      * @since 2.0.7
      */
     open var appId: String
-        get() = _appId ?: defaultAppId.get() ?: throw NakshaException(ILLEGAL_STATE, "Missing appId")
+        get() = _appId ?: defaultAppId.get()
         set(value) {
             _appId = value
         }
@@ -371,21 +371,20 @@ open class NakshaContext protected constructor(
         return this
     }
 
-    @Suppress("OPT_IN_USAGE")
     companion object NakshaContextCompanion {
         /**
-         * The default application name to use, defaults to `NakshaClient/{version}`.
+         * The default application identifier to use, defaults to the primary local IPv4 address _(see [Platform.primaryLocalIp])_.
          * @since 3.0.0
          */
         @JvmField
-        val defaultAppName = AtomicRef("NakshaClient/${NakshaVersion.CURRENT}")
+        val defaultAppId: AtomicNonNullRef<String> = AtomicNonNullRef(Platform.primaryLocalIp())
 
         /**
-         * The default application identifier to use, defaults to `null`.
+         * The default application name to use, defaults to `NakshaClient/${Platform.primaryLocalIp()}`.
          * @since 3.0.0
          */
         @JvmField
-        val defaultAppId = AtomicRef<String>(null)
+        val defaultAppName: AtomicNonNullRef<String> = AtomicNonNullRef("NakshaClient/${Platform.primaryLocalIp()}")
 
         /**
          * The default exclude path to use, when calculating hashes.
@@ -393,6 +392,7 @@ open class NakshaContext protected constructor(
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude path, to use this one!
          * @since 3.0.0
          */
+        @Deprecated("To be removed in release 3.0, this is replaced with member processors")
         @JvmField
         val defaultExcludePaths = AtomicRef<List<Array<String>>>(null)
 
@@ -402,6 +402,7 @@ open class NakshaContext protected constructor(
          * This is an application wide setting, that when not being _null_, will cause all contexts that have no exclude function, to use this one!
          * @since 3.0.0
          */
+        @Deprecated("To be removed in release 3.0, this is replaced with member processors")
         @JvmField
         val defaultExcludeFn = AtomicRef<Fn3<Boolean, NakshaFeature, List<String>, Any?>>(null)
 
