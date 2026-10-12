@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +34,7 @@ class Float64Member() : TypedMember<Float64Member>() {
     }
 
     /** Retrieves the float64 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Double? = readDouble(feature)
+    fun get(feature: AnyObject): Double? = readDouble(feature)
 
     /**
      * Retrieves the float64 value of this member from the given tuple.
@@ -43,5 +44,5 @@ class Float64Member() : TypedMember<Float64Member>() {
     fun get(tuple: Tuple): Double? = readDouble(tuple)
 
     /** Sets the float64 value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Double): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: Double): Any? = setPath(feature, path, value)
 }
