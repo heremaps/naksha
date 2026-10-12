@@ -16,6 +16,7 @@ import naksha.base.NakshaError.NakshaErrorCompanion.CATALOG_EXISTS
 import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.base.NakshaError.NakshaErrorCompanion.MAP_NOT_FOUND
 import naksha.base.NakshaError.NakshaErrorCompanion.NOT_IMPLEMENTED
+import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.base.NakshaError.NakshaErrorCompanion.UNSUPPORTED_OPERATION
 
 /**
@@ -118,7 +119,7 @@ fun generalException(msg: String, cause: Throwable? = null): NakshaException = N
  * @return the [NakshaException].
  * @since 3.0
  */
-fun mapNotFound(msg: String): NakshaException = NakshaException(MAP_NOT_FOUND, msg)
+fun catalogNotFound(msg: String): NakshaException = NakshaException(MAP_NOT_FOUND, msg)
 
 /**
  * Create [CATALOG_EXISTS] exception.
@@ -126,7 +127,7 @@ fun mapNotFound(msg: String): NakshaException = NakshaException(MAP_NOT_FOUND, m
  * @return the [NakshaException].
  * @since 3.0
  */
-fun mapExists(msg: String): NakshaException = NakshaException(CATALOG_EXISTS, msg)
+fun catalogExists(msg: String): NakshaException = NakshaException(CATALOG_EXISTS, msg)
 
 /**
  * Create [COLLECTION_NOT_FOUND] exception.
@@ -185,3 +186,13 @@ fun unsupportedOp(msg: String): NakshaException = NakshaException(UNSUPPORTED_OP
  * @see unsupportedOp
  */
 fun notImplemented(msg: String): NakshaException = NakshaException(NOT_IMPLEMENTED, msg)
+
+/**
+ * Create [UNINITIALIZED] exception
+ * @param msg the message.
+ * @return the [NakshaException].
+ * @since 3.0
+ * @see unsupportedOp
+ */
+fun notInitialized(msg: String): NakshaException = NakshaException(UNINITIALIZED, msg)
+
