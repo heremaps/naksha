@@ -2,6 +2,7 @@
 
 package naksha.base
 
+import naksha.base.fn.Fn1
 import kotlin.math.round
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
@@ -880,6 +881,30 @@ return {
             if (n < 1) return ""
             val location = callerLocation(n) ?: return ""
             return "[" + location.file + ":" + location.line + "] "
+        }
+
+        @JsStatic
+        actual fun primaryLocalIp(): String {
+            val rs = js("plv8").execute("SELECT inet_server_addr() AS ip")
+            if (rs is Array<dynamic> && rs.length == 1) return rs[0].ip
+            return "plv8"
+        }
+
+        @JsStatic
+        actual fun yield() {
+        }
+
+        actual fun <A, Z> runParallel(a: Array<A>, o: Array<Z?>, process: Fn1<Z?, A>): Array<Z?> {
+            val COUNT = a.size
+            val result = if (o.size < COUNT) o.copyOf(COUNT) else {
+                o.fill(null)
+                o
+            }
+
+            for (i in 0 until COUNT) {
+                result[i] = process.call(a[i])
+            }
+            return result
         }
     }
 }

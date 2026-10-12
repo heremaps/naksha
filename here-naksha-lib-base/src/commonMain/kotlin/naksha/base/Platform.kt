@@ -2,9 +2,10 @@
 
 package naksha.base
 
-import kotlin.jvm.JvmName
+import naksha.base.fn.Fn1
+import naksha.base.fn.Fn2
+import naksha.base.fn.Fn3
 import kotlin.reflect.KClass
-import kotlin.reflect.KFunction
 
 /**
  * The platform abstraction, implemented for each platform to support the multi-platform code. All methods in this singleton are
@@ -178,7 +179,7 @@ expect class Platform {
          * A reflective method to turn a full qualified classname into a klass instance.
          *
          * - In the JVM this method will use `Class.forName` to find the class, initialize it, and then return the Kotlin class of it.
-         * - In JavaScript this method will use `globalThis` to find the constructor, so `com.here.example.Foo` will resolve into `globalThis.com.here.example.Foo`, this is expected to be a constructor function, then using [klassFor] to resolve it into the Kotlin class.
+         * - In JavaScript this method will use `globalThis` to find the constructor, so `com.here.example.Foo` will resolve into `globalThis.com.here.example.Foo`, this is expected to be a constructor function, which actually is the `JsClass`.
          * @param name the full qualified name of the Klass.
          * @return the Klass.
          * @since 3.0.0
@@ -692,5 +693,32 @@ expect class Platform {
          * @since 3.0
          */
         fun fal(n: Int): String
+
+        /**
+         * Returns the primary local network address, preferable something like `10.0.0.0`. Can be some alternative value, when the IP address fails detection, e.g. PLv8 engine will just return `"plv8"`, if detection fails, while the JVM will return `"127.0.0.1"`.
+         * @return the primary local network address, preferable `10.x.x.x`.
+         * @since 3.0
+         */
+        fun primaryLocalIp(): String
+
+        /**
+         * Yields the current thread to allow context switch.
+         *
+         * This can be a no-op on some platforms _(like browser or plv8)_. However, when on JVM and running a loop that reads a volatile variable, it is important to invoke this to avoid too many loops in virtual threads.
+         * @since 3.0
+         */
+        fun yield()
+
+        /**
+         * Executes the given `process` function in parallel for the given input data.
+         *
+         * On older JVMs this will use a thread pool, on newer JMVs virtual threads, while in JavaScript the processing is simply sequential. Note that the order in which the input is processed is random, while the output array is ordered the same way as the input.
+         * @param a the input array, must not contain `null` entries.
+         * @param o the output array to fill, if smaller than `a` a copy will be made, if too large, the end will be filled with `null`.
+         * @param process the method to process the given data and to produce the output, invoked in parallel if possible.
+         * @return an output with the results in the same order as the input array; may contain `null`. if the given `o` is big enough, it will be used and returned; otherwise a new array is allocated and the results are filled.
+         * @since 3.0
+         */
+        fun <A, Z> runParallel(a: Array<A>, o: Array<Z?>, process: Fn1<Z?, A>): Array<Z?>
     }
 }
