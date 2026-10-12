@@ -6,12 +6,13 @@ import naksha.base.fn.Fx2
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
+import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
  * An error class.
- * @since 3.0.0
+ * @since 3.0
  */
 @JsExport
 open class NakshaError() : AnyObject() {
@@ -20,11 +21,30 @@ open class NakshaError() : AnyObject() {
      * Create a new error from the given arguments.
      * @param code the error code.
      * @param msg a human-readable message.
+     * @param catalog the _optional_ identifier of the catalog to which the error belongs, see [CATALOG_NOT_FOUND].
+     * @param collection the _optional_ identifier of the collection to which the error belongs, see [COLLECTION_NOT_FOUND].
+     * @param feature the _optional_ identifier of the feature to which the error belongs, see [FEATURE_NOT_FOUND].
+     * @since 3.0
+     */
+    @JsName("newNakshaError")
+    @JvmOverloads
+    constructor(code: String, msg: String, catalog: String? = null, collection: String? = null, feature: String? = null) : this() {
+        this.code = code
+        this.msg = msg
+        this.catalog = catalog
+        this.collection = collection
+    }
+
+    /**
+     * Create a new error from the given arguments.
+     * @param code the error code.
+     * @param msg a human-readable message.
      * @param cause the origin exception that caused this error; if any.
+     * @since 3.0
      */
     @JsName("of")
-    @JvmOverloads
-    constructor(code: String, msg: String, cause: Throwable? = null) : this() {
+    @Deprecated(message = "The cause is being removed from the error, it should be added to the carrier exception, being NakshaException!")
+    constructor(code: String, msg: String, cause: Throwable?) : this() {
         this.code = code
         this.msg = msg
         this.cause = cause
@@ -230,7 +250,15 @@ open class NakshaError() : AnyObject() {
          *
          * @since 3.0.0
          */
+        @Deprecated(message = "Replaced with CATALOG_NOT_FOUND", replaceWith = ReplaceWith("CATALOG_NOT_FOUND"))
         const val MAP_NOT_FOUND = "MapNotFound"
+
+        /**
+         * A catalog does not exist, but is expected to exist.
+         *
+         * @since 3.0.0
+         */
+        const val CATALOG_NOT_FOUND = "MapNotFound"
 
         /**
          * A [dictionary-manager][naksha.jbon.IDictManager] does not exist, but is expected to exist.
@@ -255,6 +283,8 @@ open class NakshaError() : AnyObject() {
 
         private val CODE_FIELD = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
         private val MSG_FIELD = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
+        private val STRING_FIELD = NullableProperty<NakshaError, String>(String::class)
+        @Deprecated(message = "To be removed")
         private val THROWABLE_FIELD = NullableProperty<NakshaError, Throwable>(Throwable::class)
 
         /**
@@ -276,17 +306,38 @@ open class NakshaError() : AnyObject() {
 
     /**
      * The error code.
+     * @since 3.0
      */
-    var code by CODE_FIELD
+    var code: String by CODE_FIELD
 
     /**
      * A human-readable message.
+     * @since 3.0
      */
-    var msg by MSG_FIELD
+    var msg: String by MSG_FIELD
+
+    /**
+     * The _optional_ identifier of the catalog to which the error belongs.
+     * @since 3.0
+     */
+    var catalog: String? by STRING_FIELD
+
+    /**
+     * The _optional_ identifier of the collection to which the error belongs.
+     * @since 3.0
+     */
+    var collection: String? by STRING_FIELD
+
+    /**
+     * The _optional_ identifier of the feature to which the error belongs.
+     * @since 3.0
+     */
+    var feature: String? by STRING_FIELD
 
     /**
      * The origin exception that caused this error; if any.
      */
+    @Deprecated(message = "The cause is being removed from the error, it should be added to the carrier exception, being NakshaException!")
     var cause by THROWABLE_FIELD
 
     /**
@@ -313,7 +364,20 @@ open class NakshaError() : AnyObject() {
                 && cause == other.cause
     }
 
-    override fun toString(): String = "NakshaError(code=$code, msg=$msg)"
+    override fun toString(): String {
+        val catalog = this.catalog
+        val collection = this.collection
+        val feature = this.feature
+        return """
+{
+  \"@type\": \"naksha.base.NakshaError\",
+  \"code\":${code.toJson()},
+  \"msg\":${msg.toJson()},
+  \"catalog\":${catalog.toJson()},
+  \"collection\":${collection.toJson()},
+  \"feature\":${feature.toJson()}
+}"""
+    }
 
     /**
      * Send this error to the logger.
