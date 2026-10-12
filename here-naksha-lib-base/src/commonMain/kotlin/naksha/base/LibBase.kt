@@ -20,6 +20,12 @@ inline fun Long.toInt64(): Long = this
 inline fun Int.toInt64(): Long = toLong()
 
 /**
+ * Turn this string into a `JSON` escaped string, if the variable is `null`, this returns the string `null`.
+ * @since 3.0
+ */
+inline fun String?.toJson(): String = PlatformUtil.jsonString(this)
+
+/**
  * Convert the integer into an unsigned 64-bit integer, so `-1` becomes `4294967295` _(aka `0xffffffff`)_.
  */
 inline fun Int.toUnsignedInt64(): Long = toLong() and INT_TO_UNSIGNED_INT64_MASK
