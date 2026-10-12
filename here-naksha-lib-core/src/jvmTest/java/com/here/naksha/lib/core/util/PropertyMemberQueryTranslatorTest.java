@@ -5,12 +5,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import naksha.model.objects.CustomIndexMapping;
 import naksha.model.objects.CustomIndexMappingList;
 import java.util.ArrayList;
-import naksha.base.Guid;
 import naksha.base.TupleNumber;
 import naksha.model.objects.*;
 import naksha.model.request.*;
 import naksha.model.request.ops.*;
 import naksha.model.request.query.*;
+import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
 import org.junit.jupiter.api.Test;
 
 class PropertyMemberQueryTranslatorTest {
@@ -109,17 +109,14 @@ class PropertyMemberQueryTranslatorTest {
     return tuple;
   }
 
-  @Test void keepsHistoryGuidsAndUnsupportedPrecisionOnLegacyPath() {
+  @Test void keepsHistoryAndUnsupportedPrecisionOnLegacyPath() {
     ReadFeatures request = new ReadFeatures().withPropertyQuery(query(DoubleOp.EQ, 50));
     request.setQueryHistory(true);
     assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
     request.setQueryHistory(false);
-    Guid guid = new Guid("one", TupleNumber.TupleNumber_C.getHEAD());
-    request.getGuids().add(guid);
+    request.setVersions(2);
     assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
-    assertEquals(1, request.getGuids().size());
-    assertEquals(guid, request.getGuids().get(0));
-    request.getGuids().clear();
+    request.setVersions(1);
     Equals nativeQuery = new Equals(StandardMembers.Id, "one");
     request.setQueryMembers(nativeQuery);
     assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
@@ -138,12 +135,12 @@ class PropertyMemberQueryTranslatorTest {
     assertNull(PropertyMemberQueryTranslator.translate(query(AnyOp.CONTAINS, "{\"a\":1}"), schema(MemberType.TAG_MAP)));
   }
 
-  @Test void unknownCallbacksAndUnattachedPropertyFiltersKeepLegacyBehavior() {
-    ReadFeatures request = new ReadFeatures().withPropertyQuery(query(DoubleOp.EQ, 50));
-    request.getResultFilters().add(featureTuple -> featureTuple);
-    assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
-    request.getResultFilters().clear();
-    assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
+  @Test void translatesBboxAndTileRequests() {
+    ReadFeatures request = new ReadFeaturesProxyWrapper().withPropertyQuery(query(DoubleOp.EQ, 50));
+    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(request, schema());
+    assertInstanceOf(ReadFeaturesProxyWrapper.class, adapted);
+    assertNotNull(adapted.getQueryMembers());
     assertNotNull(request.getQuery().getProperties());
   }
+
 }

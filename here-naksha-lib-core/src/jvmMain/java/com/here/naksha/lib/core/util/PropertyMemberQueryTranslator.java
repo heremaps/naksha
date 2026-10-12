@@ -14,7 +14,6 @@ import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.StandardMembers;
 import naksha.model.request.PropertyFilter;
 import naksha.model.request.ReadFeatures;
-import naksha.model.request.ResultFilter;
 import naksha.model.request.ResultFilterList;
 import naksha.model.request.ops.*;
 import naksha.model.request.query.*;
@@ -30,23 +29,17 @@ public final class PropertyMemberQueryTranslator {
 
   public static @Nullable ReadFeatures adapt(
       ReadFeatures original, NakshaCollection schema, NakshaCollection configured) {
-    if (original.getClass() != ReadFeatures.class) return null;
-    // Even lazy getter defaults belong to the owned request, never the fallback input.
-    ReadFeatures request = original.copy(true);
-    if (request.getQueryMembers() != null || !request.getGuids().isEmpty() || request.getQueryHistory()
-        || request.getVersions() != 1 || request.getVersion() != null || request.getMinVersion() != null) return null;
-    // Capture and clone the supported typed tree explicitly before removing legacy query data.
-    if (!original.hasRaw("query")) return null;
-    // Unknown callbacks can transform properties before filtering. Do not move a predicate ahead of them.
-    ResultFilterList filters = original.getResultFilters();
-    if (filters.size() != 1 || !(filters.get(0) instanceof PropertyFilter)) return null;
-    if (((PropertyFilter) filters.get(0)).getReq() != original) return null;
-    IPropertyQuery expression = original.getQuery().getProperties();
+    // Member queries describe single HEAD states; history reads (e.g. the activity log) stay on the legacy path.
+    if (original.getQueryMembers() != null || original.getQueryHistory() || original.getVersions() != 1) return null;
+    // Reading "query" would create it, so check first to never modify the original request.
+    IPropertyQuery expression = original.hasRaw("query") ? original.getQuery().getProperties() : null;
     if (expression == null) return null;
     Op propertyOp = translate(expression, schema, configured);
     if (propertyOp == null) return null;
+    ReadFeatures request = original.copy(true);
     Op other;
     try {
+      // A raw copy can't restore the typed tag and spatial queries, take them from the original.
       request.getQuery().setTags(original.getQuery().getTags());
       request.getQuery().setSpatial(original.getQuery().getSpatial());
       other = QueryConverter.PgQueryConverter_C.convert(request.getQuery());
@@ -58,20 +51,15 @@ public final class PropertyMemberQueryTranslator {
     predicates.add(propertyOp);
     if (other != null) predicates.add(other);
     if (!request.getFeatureIds().isEmpty()) {
-      for (String id : request.getFeatureIds()) {
-        if (id == null) return null;
-      }
-      predicates.add(new IsAnyOf(StandardMembers.Id, request.getFeatureIds().toArray()));
+      predicates.add(new IsAnyOf(StandardMembers.Id, request.getFeatureIds().toArray(new String[0])));
     }
+    // The legacy filter stays as exact check of the results, on a typed copy of the property query.
     ReadFeatures captured = new ReadFeatures().withPropertyQuery(copyExpression(expression));
-    // Filters may be arbitrary caller objects. Preserve their identity and order explicitly.
-    request.setResultFilters(new ResultFilterList());
-    for (ResultFilter filter : filters) {
-      request.getResultFilters().add(filter instanceof PropertyFilter ? new PropertyFilter(captured) : filter);
-    }
+    ResultFilterList filters = new ResultFilterList();
+    filters.add(new PropertyFilter(captured));
+    request.setResultFilters(filters);
     request.removeRaw("query");
     request.getFeatureIds().clear();
-    request.getGuids().clear();
     request.setQueryMembers(predicates.size() == 1 ? predicates.get(0) : new And(predicates.toArray(new Op[0])));
     return request;
   }
