@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +34,7 @@ class Int16Member() : TypedMember<Int16Member>() {
     }
 
     /** Retrieves the int16 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Short? = readLong(feature)?.toShort()
+    fun get(feature: AnyObject): Short? = readLong(feature)?.toShort()
 
     /**
      * Retrieves the int16 value of this member from the given tuple.
@@ -43,5 +44,5 @@ class Int16Member() : TypedMember<Int16Member>() {
     fun get(tuple: Tuple): Short? = readLong(tuple)?.toShort()
 
     /** Sets the int16 value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Short): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: Short): Any? = setPath(feature, path, value)
 }

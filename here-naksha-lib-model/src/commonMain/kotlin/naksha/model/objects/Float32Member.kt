@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +34,7 @@ class Float32Member() : TypedMember<Float32Member>() {
     }
 
     /** Retrieves the float32 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Float? = readDouble(feature)?.toFloat()
+    fun get(feature: AnyObject): Float? = readDouble(feature)?.toFloat()
 
     /**
      * Retrieves the float32 value of this member from the given tuple.
@@ -43,5 +44,5 @@ class Float32Member() : TypedMember<Float32Member>() {
     fun get(tuple: Tuple): Float? = readDouble(tuple)?.toFloat()
 
     /** Sets the float32 value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Float): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: Float): Any? = setPath(feature, path, value)
 }

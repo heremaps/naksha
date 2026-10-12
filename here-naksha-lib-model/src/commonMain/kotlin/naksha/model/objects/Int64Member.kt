@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +34,7 @@ class Int64Member() : TypedMember<Int64Member>() {
     }
 
     /** Retrieves the int64 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Long? = readLong(feature)
+    fun get(feature: AnyObject): Long? = readLong(feature)
 
     /**
      * Retrieves the int64 value of this member from the given tuple.
@@ -43,5 +44,5 @@ class Int64Member() : TypedMember<Int64Member>() {
     fun get(tuple: Tuple): Long? = readLong(tuple)
 
     /** Sets the int64 value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Long): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: Long): Any? = setPath(feature, path, value)
 }

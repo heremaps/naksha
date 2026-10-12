@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +34,7 @@ class BoolMember() : TypedMember<BoolMember>() {
     }
 
     /** Retrieves the boolean value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Boolean? = readBoolean(feature)
+    fun get(feature: AnyObject): Boolean? = readBoolean(feature)
 
     /**
      * Retrieves the boolean value of this member from the given tuple.
@@ -43,5 +44,5 @@ class BoolMember() : TypedMember<BoolMember>() {
     fun get(tuple: Tuple): Boolean? = readBoolean(tuple)
 
     /** Sets the boolean value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Boolean): Boolean? = setPath(feature, path, value) as Boolean?
+    fun set(feature: AnyObject, value: Boolean): Boolean? = setPath(feature, path, value) as Boolean?
 }

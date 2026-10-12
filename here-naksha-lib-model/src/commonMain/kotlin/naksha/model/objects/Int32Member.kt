@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +34,7 @@ class Int32Member() : TypedMember<Int32Member>() {
     }
 
     /** Retrieves the int32 value of this member from the given feature. */
-    fun get(feature: NakshaFeature): Int? = readLong(feature)?.toInt()
+    fun get(feature: AnyObject): Int? = readLong(feature)?.toInt()
 
     /**
      * Retrieves the int32 value of this member from the given tuple.
@@ -43,5 +44,5 @@ class Int32Member() : TypedMember<Int32Member>() {
     fun get(tuple: Tuple): Int? = readLong(tuple)?.toInt()
 
     /** Sets the int32 value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: Int): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: Int): Any? = setPath(feature, path, value)
 }

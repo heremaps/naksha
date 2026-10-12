@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +34,7 @@ class ByteArrayMember() : TypedMember<ByteArrayMember>() {
     }
 
     /** Retrieves the byte array value of this member from the given feature. */
-    fun get(feature: NakshaFeature): ByteArray? = readByteArray(feature)
+    fun get(feature: AnyObject): ByteArray? = readByteArray(feature)
 
     /**
      * Retrieves the byte array value of this member from the given tuple.
@@ -43,5 +44,5 @@ class ByteArrayMember() : TypedMember<ByteArrayMember>() {
     fun get(tuple: Tuple): ByteArray? = readByteArray(tuple)
 
     /** Sets the byte array value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: ByteArray): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: ByteArray): Any? = setPath(feature, path, value)
 }
