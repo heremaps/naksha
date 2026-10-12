@@ -6,7 +6,6 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
-import kotlin.text.toInt
 
 /**
  * All utility functions that work cross-platform.
@@ -269,5 +268,40 @@ class PlatformUtil {
                 else -> obj1 == obj2  // Primitive types, or any other objects
             }
         }
+
+        /**
+         * Escapes the given string into a `JSON` compatible format.
+         * @param string the string to `JSON` escape.
+         * @param quotes if explicitly _false_, the first and last quote characters (`"`) are omitted _(useful when concat strings)_.
+         * @return the `JSON` escaped string, if the given string is `null`, then `null` _(always without quotes)_ is returned.
+         * @since 3.0
+         */
+        @JvmOverloads
+        @JvmStatic
+        @JsStatic
+        fun jsonString(string: String?, quotes: Boolean = true): String = if (string == null) "null"
+            else buildString(string.length + (string.length shr 2)) {
+                if (quotes) append('"')
+                for (c in string) {
+                    when (c) {
+                        '"' -> append("\\\"")
+                        '\\' -> append("\\\\")
+                        '\b' -> append("\\b")
+                        '\u000C' -> append("\\f")
+                        '\n' -> append("\\n")
+                        '\r' -> append("\\r")
+                        '\t' -> append("\\t")
+                        in '\u0000'..'\u001F' -> {
+                            append("\\u")
+                            append("0123456789abcdef"[(c.code shr 12) and 0xF])
+                            append("0123456789abcdef"[(c.code shr 8) and 0xF])
+                            append("0123456789abcdef"[(c.code shr 4) and 0xF])
+                            append("0123456789abcdef"[c.code and 0xF])
+                        }
+                        else -> append(c)
+                    }
+                }
+                if (quotes) append('"')
+            }
     }
 }
