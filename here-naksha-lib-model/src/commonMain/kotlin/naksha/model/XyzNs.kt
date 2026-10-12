@@ -194,7 +194,6 @@ class XyzNs : AnyObject() {
         const val CS3 = "cs3"
 
         private val _ACTION = NotNullEnum<XyzNs, Action>(Action::class) { _, _ -> Action.CREATE }
-        private val _DATA_ENCODING_NULL = NullableEnum<XyzNs, DataEncoding>(DataEncoding::class)
         private val _APP_ID = NotNullProperty<XyzNs, String>(String::class) { _, _ -> NakshaContext.appId() }
         private val _STRING_NULL = NullableProperty<XyzNs, String>(String::class, autoRemove = true)
         private val _INT_0 = NotNullProperty<XyzNs, Int>(Int::class) { _, _ -> 0 }
@@ -214,7 +213,7 @@ class XyzNs : AnyObject() {
          */
         @JsStatic
         @JvmStatic
-        fun guidFromTuple(tuple: Tuple): Guid = Guid(tuple.id, tuple.tupleNumber)
+        fun guidFromTuple(tuple: Tuple): Guid = Guid(tuple.id.text, tuple.tupleNumber)
 
         /**
          * Create the XYZ-namespace from the given [Tuple].
@@ -233,7 +232,7 @@ class XyzNs : AnyObject() {
             val nextTn = tuple.nextTupleNumber
             return AnyObject().apply {
                 setRaw(UUID, guid.toString())
-                if (nextTn != null) setRaw(NUUID, Guid(id, nextTn).toString())
+                if (nextTn != null) setRaw(NUUID, Guid(id.text, nextTn).toString())
                 else if (tn.action == Action.DELETE) setRaw(NUUID, guid.toString())
                 setRaw(UPDATED_AT, updatedAt)
                 if (createdAt != updatedAt) setRaw(CREATED_AT, createdAt)
@@ -571,7 +570,7 @@ class XyzNs : AnyObject() {
      *
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      */
-    val appId by _APP_ID
+    val appId: String by _APP_ID
 
     /**
      * The author of the feature. Not every change of feature is done by intention, the author is only set, when the change of the
@@ -581,7 +580,7 @@ class XyzNs : AnyObject() {
      * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
      * @since 3.0
      */
-    val author by _STRING_NULL
+    val author: String? by _STRING_NULL
 
     /**
      * The time when this author of the feature was modified.
@@ -597,14 +596,6 @@ class XyzNs : AnyObject() {
             if (raw is Long) return raw
             return updatedAt
         }
-
-    /**
-     * The serialization format of the feature payload, calculated server-side from the collection's [naksha.model.objects.NakshaCollection.dataEncoding].
-     *
-     * This field is populated only by **Naksha**. Any values provided by the user will be overwritten.
-     * @since 3.0
-     */
-    val dataEncoding by _DATA_ENCODING_NULL
 
     /**
      * The hash above the feature, calculated server side.
