@@ -1,9 +1,8 @@
 package com.here.naksha.lib.core.util;
 
-import static com.here.naksha.lib.core.models.naksha.CustomIndexMappings.getCustomIndexMapping;
 
-import com.here.naksha.lib.core.models.naksha.CustomIndexMapping;
-import com.here.naksha.lib.core.models.naksha.CustomIndexMappingList;
+import naksha.model.objects.CustomIndexMapping;
+import naksha.model.objects.CustomIndexMappingList;
 import java.util.ArrayList;
 import java.util.List;
 import naksha.base.NakshaError;
@@ -126,7 +125,7 @@ public final class PropertyMemberQueryTranslator {
   }
 
   private static @Nullable Op translateLeaf(PQuery query, NakshaCollection schema, NakshaCollection configured) {
-    CustomIndexMappingList mappings = getCustomIndexMapping(configured);
+    CustomIndexMappingList mappings = configured.getCustomIndexMapping();
     CustomIndexMapping mapping = null;
     if (mappings != null) {
       for (CustomIndexMapping candidate : mappings) {

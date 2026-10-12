@@ -1,10 +1,9 @@
 package com.here.naksha.lib.core.util;
 
-import static com.here.naksha.lib.core.models.naksha.CustomIndexMappings.setCustomIndexMapping;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.here.naksha.lib.core.models.naksha.CustomIndexMapping;
-import com.here.naksha.lib.core.models.naksha.CustomIndexMappingList;
+import naksha.model.objects.CustomIndexMapping;
+import naksha.model.objects.CustomIndexMappingList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,7 +24,7 @@ class CustomIndexMappingTest {
 
   private NakshaCollection definition(CustomIndexMapping... mappings) {
     NakshaCollection definition = new NakshaCollection("mapped", "catalog");
-    setCustomIndexMapping(definition, new CustomIndexMappingList(mappings));
+    definition.setCustomIndexMapping(new CustomIndexMappingList(mappings));
     return definition;
   }
 

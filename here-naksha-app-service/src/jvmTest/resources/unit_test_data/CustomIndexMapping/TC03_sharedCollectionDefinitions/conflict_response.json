@@ -1,5 +1,5 @@
 {
   "type": "ErrorResponse",
   "error": "Conflict",
-  "errorMessage": "The 'members' of the existing collection 'shared_mapping_target' must not be changed"
+  "errorMessage": "Collection 'shared_mapping_target' does not match customIndexMapping: missing member cm01 (string at [properties, score]) or its index"
 }

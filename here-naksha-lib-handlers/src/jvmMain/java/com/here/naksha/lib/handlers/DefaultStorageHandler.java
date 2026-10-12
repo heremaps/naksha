@@ -53,7 +53,6 @@ import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
 import java.util.Objects;
 import java.util.function.Supplier;
 
@@ -84,18 +83,6 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     this.eventTarget = eventTarget;
     this.properties = Objects.requireNonNull(
         JvmBoxingUtil.box(eventHandlerConfig.getProperties(), DefaultStorageHandlerProperties.class));
-  }
-
-  /**
-   * Returns the collections this Handler defines by its own configuration. They are created, or verified if they exist,
-   * when the Handler is saved. Subclasses with other collection properties override this method.
-   *
-   * <p>The method must only use the Handler configuration: when called for a Handler save, the event target is a
-   * placeholder Space.
-   */
-  public @NotNull List<NakshaCollection> configuredCollections() {
-    final NakshaCollection collection = properties.getCollection();
-    return collection == null ? List.of() : List.of(collection);
   }
 
   @Override
@@ -572,14 +559,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         wr.getWrites().forEach(write -> {
           if (write.getFeature() instanceof NakshaCollection) {
             final NakshaCollection collectionFromRequest = (NakshaCollection) write.getFeature();
-            // With custom index mappings, the complete Handler collection definition wins, not just its id.
-            final NakshaCollection handlerCollection = properties.getCollection();
-            final boolean useHandlerCollection = handlerCollection != null
-                && write.getOp() != WriteOp.DELETE
-                && (CustomIndexMappingCompiler.hasMappings(handlerCollection)
-                    || CustomIndexMappingCompiler.hasMappings(collectionFromRequest));
-            write.setFeature(CollectionIndexPolicy.toNativeCollection(
-                useHandlerCollection ? handlerCollection : collectionFromRequest, collectionId, mapId));
+            write.setFeature(CollectionIndexPolicy.toNativeCollection(collectionFromRequest, collectionId, mapId));
           }
         });
       }

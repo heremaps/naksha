@@ -74,20 +74,12 @@ public class AuthorizationEventHandler extends AbstractEventHandler {
   @Override
   protected @NotNull Response process(@NotNull IEvent event) {
     final Request request = event.getRequest();
+    final NakshaContext ctx = NakshaContext.currentContext();
+
     logger.info("Handler received request {}", request.getClass().getSimpleName());
 
-    final ErrorResponse forbidden = checkWriteAccess();
-    return forbidden != null ? forbidden : event.sendUpstream();
-  }
-
-  /**
-   * Checks if the user of the current context may modify features.
-   * @return the error, if access is denied; {@code null} if access is granted.
-   */
-  public @Nullable ErrorResponse checkWriteAccess() {
-    final NakshaContext ctx = NakshaContext.currentContext();
     if (ctx.getSu()) {
-      return null;
+      return event.sendUpstream();
     }
 
     final UserRightsMatrix userRightsMatrix = ctx.getUrm();
@@ -102,7 +94,7 @@ public class AuthorizationEventHandler extends AbstractEventHandler {
     }
 
     if (hasNonReadFeatureAction(serviceRights)) {
-      return null;
+      return event.sendUpstream();
     }
 
     return new ErrorResponse(

@@ -1,14 +1,12 @@
 package com.here.naksha.app.storage;
 
-import static com.here.naksha.lib.core.models.naksha.CustomIndexMappings.getCustomIndexMapping;
-import static com.here.naksha.lib.core.models.naksha.CustomIndexMappings.setCustomIndexMapping;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaAppInjection;
 import com.here.naksha.app.service.NakshaApp;
-import com.here.naksha.lib.core.models.naksha.CustomIndexMapping;
-import com.here.naksha.lib.core.models.naksha.CustomIndexMappingList;
+import naksha.model.objects.CustomIndexMapping;
+import naksha.model.objects.CustomIndexMappingList;
 import com.here.naksha.lib.core.util.CollectionIndexPolicy;
 import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
 import com.here.naksha.lib.core.util.PropertyMemberQueryTranslator;
@@ -67,7 +65,7 @@ class CustomIndexMappingStorageTest extends ApiTest {
 
   private NakshaCollection mapped(String id, CustomIndexMapping... mappings) {
     NakshaCollection definition = new NakshaCollection(id, catalog.getId());
-    setCustomIndexMapping(definition, new CustomIndexMappingList(mappings));
+    definition.setCustomIndexMapping(new CustomIndexMappingList(mappings));
     return definition;
   }
 
@@ -187,7 +185,7 @@ class CustomIndexMappingStorageTest extends ApiTest {
     assertEquals(types.size(), schema.getIndices().size());
     assertFalse(schema.hasRaw("customIndexMapping"));
     assertNull(source.getMembers());
-    assertEquals(types.size(), getCustomIndexMapping(source).size());
+    assertEquals(types.size(), source.getCustomIndexMapping().size());
     SpPoint point = new SpPoint(new PointCoord(13.0, 52.0));
     List<Object> values = List.of("a_%literal", (byte) 12, (short) 32000, 2000000000, 9007199254740991L, 0.5f, 1.25,
         new byte[]{0, 1, -1}, point, new TagList("red", "blue"), tags("color", "red"));

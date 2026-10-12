@@ -1,10 +1,9 @@
 package com.here.naksha.lib.core.util;
 
-import static com.here.naksha.lib.core.models.naksha.CustomIndexMappings.setCustomIndexMapping;
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.here.naksha.lib.core.models.naksha.CustomIndexMapping;
-import com.here.naksha.lib.core.models.naksha.CustomIndexMappingList;
+import naksha.model.objects.CustomIndexMapping;
+import naksha.model.objects.CustomIndexMappingList;
 import java.util.ArrayList;
 import naksha.base.Guid;
 import naksha.base.TupleNumber;
@@ -21,7 +20,7 @@ class PropertyMemberQueryTranslatorTest {
 
   private NakshaCollection schema(MemberType type) {
     NakshaCollection schema = new NakshaCollection("mapped", "catalog");
-    setCustomIndexMapping(schema, new CustomIndexMappingList(new CustomIndexMapping(new JsonPath("properties", "value"), type)));
+    schema.setCustomIndexMapping(new CustomIndexMappingList(new CustomIndexMapping(new JsonPath("properties", "value"), type)));
     return CustomIndexMappingCompiler.expand(schema);
   }
 

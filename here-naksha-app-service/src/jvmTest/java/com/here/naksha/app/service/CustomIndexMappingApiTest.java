@@ -18,7 +18,6 @@ class CustomIndexMappingApiTest extends ApiTest {
   private static final String HANDLER_CASE = "CustomIndexMapping/TC02_handlerMappingLifecycle/";
   private static final String SHARED_CASE = "CustomIndexMapping/TC03_sharedCollectionDefinitions/";
   private static final String BOOLEAN_CASE = "CustomIndexMapping/TC04_booleanMapping/";
-  private static final String HIDDEN_CASE = "CustomIndexMapping/TC05_hiddenSpaceMapping/";
   private static final String FEATURES = "CustomIndexMapping/setup/create_features.json";
   private static final String SEARCH_RESPONSE = "CustomIndexMapping/search_response.json";
 
@@ -38,7 +37,7 @@ class CustomIndexMappingApiTest extends ApiTest {
         .hasStatus(200)
         .hasStreamIdHeader(streamId);
 
-    // 2. The collection and its custom indices were created with the Space, features can be written.
+    // 2. The first feature write creates the collection with its custom indices.
     final String featuresJson = loadFileOrFail(FEATURES);
     assertThat(getNakshaClient().post(spaceUrl + "/features", featuresJson, streamId))
         .hasStatus(200)
@@ -107,7 +106,7 @@ class CustomIndexMappingApiTest extends ApiTest {
         .hasStatus(200)
         .hasStreamIdHeader(streamId);
 
-    // 2. The Handler's collection was created with the Handler, features can be written.
+    // 2. The first feature write creates the collection defined by the Handler.
     final String featuresJson = loadFileOrFail(FEATURES);
     assertThat(getNakshaClient().post(spaceUrl + "/features", featuresJson, streamId))
         .hasStatus(200)
@@ -142,8 +141,8 @@ class CustomIndexMappingApiTest extends ApiTest {
   }
 
   @Test
-  @DisplayName("Shared collection: reject a conflicting Space before ingestion, accept a matching one and search")
-  void sharedCollectionRejectsConflictingSpaceBeforeFirstFeatureWrite() throws Exception {
+  @DisplayName("Shared collection: reject a Space conflicting with the existing collection, accept a matching one and search")
+  void sharedCollectionRejectsConflictingSpaceAfterFirstFeatureWrite() throws Exception {
     final String streamId = UUID.randomUUID().toString();
     final String firstSpace = "hub/spaces/shared_mapping_space_a";
     final String secondSpace = "hub/spaces/shared_mapping_space_b";
@@ -152,7 +151,13 @@ class CustomIndexMappingApiTest extends ApiTest {
     assertThat(getNakshaClient().post("hub/spaces", loadFileOrFail(SHARED_CASE + "create_space_a.json"), streamId))
         .hasStatus(200);
 
-    // No features have been written, but the first Space created the collection, so the second one is verified against it.
+    // The first feature write creates the collection from the first Space's mapping.
+    final String features = loadFileOrFail(FEATURES);
+    assertThat(getNakshaClient().post(firstSpace + "/features", features, streamId))
+        .hasStatus(200)
+        .hasInsertedCountMatchingWithFeaturesInRequest(features);
+
+    // A second Space with a different mapping for the existing collection is rejected.
     assertThat(getNakshaClient().post("hub/spaces", loadFileOrFail(SHARED_CASE + "create_conflicting_space_b.json"), streamId))
         .hasStatus(409)
         .hasStreamIdHeader(streamId)
@@ -163,10 +168,6 @@ class CustomIndexMappingApiTest extends ApiTest {
         .hasStatus(200);
     assertNoGeneratedSchemaInConfiguration(getNakshaClient().get(firstSpace, streamId));
     assertNoGeneratedSchemaInConfiguration(getNakshaClient().get(secondSpace, streamId));
-    final String features = loadFileOrFail(FEATURES);
-    assertThat(getNakshaClient().post(firstSpace + "/features", features, streamId))
-        .hasStatus(200)
-        .hasInsertedCountMatchingWithFeaturesInRequest(features);
     assertThat(getNakshaClient().get(secondSpace + "/search?p.score=51&limit=1", streamId))
         .hasStatus(200)
         .hasJsonBodyFromFile(SEARCH_RESPONSE);
@@ -201,19 +202,6 @@ class CustomIndexMappingApiTest extends ApiTest {
     final HttpResponse<String> saved = getNakshaClient().get(spaceUrl, streamId);
     assertThat(saved).hasStatus(200);
     assertNoGeneratedSchemaInConfiguration(saved);
-  }
-
-  @Test
-  @DisplayName("Hidden mapping: reject a Space mapping that its Handler collection would override")
-  void spaceMappingIsRejectedWhenHandlerDefinesTheCollection() throws Exception {
-    final String streamId = UUID.randomUUID().toString();
-    assertThat(getNakshaClient().post("hub/handlers", loadFileOrFail(HIDDEN_CASE + "create_handler.json"), streamId))
-        .hasStatus(200);
-    assertThat(getNakshaClient().post("hub/spaces", loadFileOrFail(HIDDEN_CASE + "create_space.json"), streamId))
-        .hasStatus(409)
-        .hasStreamIdHeader(streamId)
-        .hasJsonBodyFromFile(HIDDEN_CASE + "conflict_response.json");
-    assertThat(getNakshaClient().get("hub/spaces/hidden_mapping_space", streamId)).hasStatus(404);
   }
 
   private static String loadUpdateWithCurrentVersion(String fixture, HttpResponse<String> current) {
