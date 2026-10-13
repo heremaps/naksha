@@ -43,7 +43,6 @@ interface IStreamSession: ISession {
      * The storage must call either [StreamChunk.acknowledge] or [StreamChunk.fail], normally asynchronously after this method returned.
      * @param chunk the chunk to persist, either a [StreamTransaction][naksha.model.streaming.StreamTransaction] or [StreamChunk].
      * @since 3.0
-     * @throws naksha.base.NakshaException if the chunk was not accepted, then the caller must [fail][StreamChunk.fail] it.
      * @see StreamChunk.acknowledge
      * @see StreamChunk.failed
      */

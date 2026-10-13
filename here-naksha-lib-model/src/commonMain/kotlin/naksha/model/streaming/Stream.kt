@@ -31,19 +31,15 @@ import kotlin.js.JsName
  * // targets are N `IStreamSession`'s
  * // into which to write the chunks.
  * fun readAll(stream: Stream) {
- *   try {
+ *   try { stream.use {
  *     var recovery = stream.getRecoveryRequest()
  *     while (stream.hasNext()) {
  *       // Read ones, multiple targets.
  *       val chunk = stream.next()
  *       chunk.setTargets(targets.size)
  *       for (target in this.targets) {
- *         try {
- *           // Blocks while the target is busy.
- *           target.write(chunk)
- *         } catch (e: NakshaException) {
- *           chunk.fail(e.error)
- *         }
+ *         // Blocks while the target is busy.
+ *         target.write(chunk)
  *       }
  *       val latest = stream.getRecoveryRequest()
  *       if (latest !== recovery) {
@@ -51,15 +47,12 @@ import kotlin.js.JsName
  *         save(recovery)
  *       }
  *     }
- *     // Waits for all targets.
- *     stream.close()
- *   } catch (e: StreamException) {
- *     // Failure with e.recoveryRequest!
+ *   }} catch (e: Exception) {
  *     // Stream is closed!
+ *     val se = e as? StreamException
+ *       ?: e.suppressedExceptions.filterIsInstance<StreamException>().firstOrNull()
  *     // Recover via IStreamSession.read!
- *   } catch (e: NakshaException) {
- *     // Failure without recovery!
- *     // Stream is closed!
+ *     if (se != null) save(se.recoveryRequest)
  *   }
  * }
  * ```

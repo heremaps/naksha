@@ -3,6 +3,7 @@
 package naksha.model
 
 import kotlin.js.JsExport
+import kotlin.jvm.JvmName
 
 /**
  * Creates the configuration of a storage by asking one question after another, until it is [done][isDone].
@@ -15,6 +16,8 @@ interface IStorageConfigBuilder {
      * If all questions are answered, so that [build] can be called.
      * @since 3.0
      */
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @get:JvmName("isDone")
     val isDone: Boolean
 
     /**
@@ -45,6 +48,8 @@ interface IStorageConfigBuilder {
      * If the answer should not be shown while being entered, for example a password.
      * @since 3.0
      */
+    @Suppress("INAPPLICABLE_JVM_NAME")
+    @get:JvmName("isSecret")
     val isSecret: Boolean
 
     /**
