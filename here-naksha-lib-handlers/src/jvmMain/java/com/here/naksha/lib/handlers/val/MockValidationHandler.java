@@ -52,9 +52,11 @@ public class MockValidationHandler extends AbstractEventHandler {
   protected @NotNull EventTarget<?> eventTarget;
   protected @NotNull NakshaProperties properties;
 
-  private static final String MOCK_VIOLATIONS_FILE = "mock_data/dry_run_violations.json";
-  private static final List<NakshaFeature> mockViolations = parseFeatures(MOCK_VIOLATIONS_FILE);
-  private static final int totalViolations = mockViolations.size();
+  private static final String DEFAULT_VIOLATIONS_FILE_PATH = "mock_data/dry_run_violations.json";
+  private static final String VIOLATIONS_FILE_PATH_PROPERTY = "violationsFilePath";
+
+  private final List<NakshaFeature> mockViolations;
+  private final int totalViolations;
 
   public MockValidationHandler(
       final @NotNull EventHandlerConfig eventHandler,
@@ -64,6 +66,12 @@ public class MockValidationHandler extends AbstractEventHandler {
     this.eventHandler = eventHandler;
     this.eventTarget = eventTarget;
     this.properties = JvmBoxingUtil.box(eventHandler.getProperties(), NakshaProperties.class);
+
+    final Object configuredFilePath = this.properties.get(VIOLATIONS_FILE_PATH_PROPERTY);
+    final String violationsFilePath =
+        configuredFilePath instanceof String ? (String) configuredFilePath : DEFAULT_VIOLATIONS_FILE_PATH;
+    this.mockViolations = parseFeatures(violationsFilePath);
+    this.totalViolations = this.mockViolations.size();
   }
 
   @Override

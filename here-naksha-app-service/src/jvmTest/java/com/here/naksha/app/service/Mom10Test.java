@@ -37,6 +37,7 @@ class Mom10Test extends ApiTest {
     assertThat(response)
         .hasStatus(200)
         .hasJsonBody(featuresJson)
+        .hasFeaturesWithoutPreMom10Namespaces()
         .hasStreamIdHeader(streamId);
   }
 
@@ -58,6 +59,7 @@ class Mom10Test extends ApiTest {
     assertThat(getResp)
         .hasStatus(200)
         .hasJsonBody(createFeatureJson)
+        .hasFeaturesWithoutPreMom10Namespaces()
         .hasStreamIdHeader(streamId);
   }
 
