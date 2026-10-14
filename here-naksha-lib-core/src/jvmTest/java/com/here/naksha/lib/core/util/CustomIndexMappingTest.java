@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import naksha.model.objects.CustomIndexMapping;
 import naksha.model.objects.CustomIndexMappingList;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import naksha.base.NakshaError;
@@ -77,31 +78,44 @@ class CustomIndexMappingTest {
   @Test void rejectsInvalidMappings() {
     CustomIndexMapping named = mapping("a");
     named.put("memberName", "user_name");
-    NakshaCollection overlap = definition(new CustomIndexMapping(new JsonPath("properties", "address", "rating"), MemberType.INT32));
-    overlap.setMembers(new MemberList(new Member("address", MemberType.TAG_MAP, new JsonPath("properties", "address"))));
     List<NakshaCollection> invalid = List.of(
         definition(named), definition(mapping("a", MemberType.TUPLE_NUMBER)), definition(mapping("a", MemberType.INT8)),
         definition(mapping("a"), mapping("a")),
-        definition(mapping("address", MemberType.TAG_MAP), new CustomIndexMapping(new JsonPath("properties", "address", "city"), MemberType.STRING)),
-        definition(new CustomIndexMapping(new JsonPath("geometry"), MemberType.SPATIAL)), overlap);
+        definition(new CustomIndexMapping(new JsonPath("geometry"), MemberType.SPATIAL)));
     for (NakshaCollection definition : invalid) {
       NakshaException error = assertThrows(NakshaException.class, () -> nativeCollection(definition));
       assertEquals(NakshaError.ILLEGAL_ARGUMENT, error.getError().getCode());
     }
   }
 
+  private NakshaCollection fromJson(String raw) {
+    String json = raw == null ? "{\"id\":\"mapped\"}" : "{\"id\":\"mapped\",\"customIndexMapping\":" + raw + "}";
+    return Platform.javaProxy(Platform.fromJSON(json), NakshaCollection.class);
+  }
+
   @Test void rejectsMalformedJson() {
-    for (String raw : List.of("{}", "42", "[null]", "[42]", "[{}]",
+    for (String raw : List.of("[null]", "[42]", "[{}]",
         "[{\"jsonPath\":\"properties.a\",\"dataType\":\"string\"}]",
         "[{\"jsonPath\":[\"properties\",\"a\"]}]", "[{\"jsonPath\":[],\"dataType\":\"string\"}]",
         "[{\"jsonPath\":[\"properties\",-1],\"dataType\":\"string\"}]",
         "[{\"jsonPath\":[\"properties\",true],\"dataType\":\"string\"}]",
         "[{\"jsonPath\":[\"properties\",\"a\"],\"dataType\":\"unknown\"}]")) {
-      assertThrows(NakshaException.class, () -> {
-        NakshaCollection definition = Platform.javaProxy(
-            Platform.fromJSON("{\"id\":\"mapped\",\"customIndexMapping\":" + raw + "}"), NakshaCollection.class);
-        nativeCollection(definition);
-      }, raw);
+      assertThrows(NakshaException.class, () -> nativeCollection(fromJson(raw)), raw);
+    }
+  }
+
+  @Test void missingNullOrScalarMappingsAreAbsent() {
+    for (String raw : Arrays.asList(null, "null", "42", "\"properties.a\"")) {
+      NakshaCollection definition = fromJson(raw);
+      assertFalse(CustomIndexMappingCompiler.hasMappings(definition), raw);
+      assertSame(definition, nativeCollection(definition), raw);
+      assertNull(definition.getMembers(), raw);
+    }
+  }
+
+  @Test void wrongMappingContainersFailProxyBinding() {
+    for (String raw : List.of("{}", "[[]]")) {
+      assertThrows(IllegalArgumentException.class, () -> nativeCollection(fromJson(raw)), raw);
     }
   }
 

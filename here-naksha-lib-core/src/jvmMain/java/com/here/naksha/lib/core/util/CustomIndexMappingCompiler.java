@@ -8,9 +8,6 @@ import java.util.List;
 import java.util.Objects;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
-import naksha.base.PlatformList;
-import naksha.base.PlatformListApi;
-import naksha.base.PlatformMap;
 import naksha.model.objects.Index;
 import naksha.model.objects.JsonPath;
 import naksha.model.objects.Member;
@@ -30,7 +27,7 @@ public final class CustomIndexMappingCompiler {
 
   public static boolean hasMappings(@Nullable NakshaCollection definition) {
     if (definition == null) return false;
-    CustomIndexMappingList mappings = mappingList(definition);
+    CustomIndexMappingList mappings = definition.getCustomIndexMapping();
     return mappings != null && !mappings.isEmpty();
   }
 
@@ -50,9 +47,8 @@ public final class CustomIndexMappingCompiler {
       String suffix = (i + 1 < 10 ? "0" : "") + (i + 1);
       Member member = new Member("cm" + suffix, mapping.getDataType(), mapping.getJsonPath());
       for (Member other : members) {
-        if (other != null && !other.isVirtual()
-            && (isPrefix(other.getPath(), member.getPath()) || isPrefix(member.getPath(), other.getPath()))) {
-          throw invalid("customIndexMapping", "path " + member.getPath() + " overlaps member '" + other.getName() + "'");
+        if (other != null && !other.isVirtual() && samePath(other.getPath(), member.getPath())) {
+          throw invalid("customIndexMapping", "path " + member.getPath() + " is already used by member '" + other.getName() + "'");
         }
       }
       definition.addMember(member);
@@ -103,23 +99,9 @@ public final class CustomIndexMappingCompiler {
     return null;
   }
 
-  private static @Nullable CustomIndexMappingList mappingList(NakshaCollection definition) {
-    Object raw = definition.getRaw("customIndexMapping");
-    if (raw != null && !(raw instanceof PlatformList)) throw invalid("customIndexMapping", "must be an array");
-    if (raw instanceof PlatformList) {
-      PlatformList list = (PlatformList) raw;
-      for (int i = 0; i < PlatformListApi.array_get_length(list); i++) {
-        if (!(PlatformListApi.array_get(list, i) instanceof PlatformMap)) {
-          throw invalid("customIndexMapping[" + i + "]", "must be an object");
-        }
-      }
-    }
-    return definition.getCustomIndexMapping();
-  }
-
   private static List<CustomIndexMapping> validatedMappings(NakshaCollection definition) {
     List<CustomIndexMapping> result = new ArrayList<>();
-    CustomIndexMappingList mappings = mappingList(definition);
+    CustomIndexMappingList mappings = definition.getCustomIndexMapping();
     if (mappings == null) return result;
     for (int i = 0; i < mappings.size(); i++) {
       String field = "customIndexMapping[" + i + "]";
@@ -147,14 +129,6 @@ public final class CustomIndexMappingCompiler {
         }
       }
       result.add(mapping);
-    }
-    for (int i = 0; i < result.size(); i++) {
-      for (int j = 0; j < i; j++) {
-        JsonPath a = result.get(j).getJsonPath();
-        JsonPath b = result.get(i).getJsonPath();
-        // A value below another mapped value is materialized inconsistently, see the overlap test.
-        if (isPrefix(a, b) || isPrefix(b, a)) throw invalid("customIndexMapping", "paths " + a + " and " + b + " overlap");
-      }
     }
     return result;
   }

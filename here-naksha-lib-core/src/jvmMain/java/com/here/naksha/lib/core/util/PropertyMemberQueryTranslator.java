@@ -1,17 +1,15 @@
 package com.here.naksha.lib.core.util;
 
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.here.naksha.lib.core.util.json.Json;
 import naksha.model.objects.CustomIndexMapping;
 import naksha.model.objects.CustomIndexMappingList;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
+import naksha.base.Platform;
 import naksha.model.objects.JsonPath;
 import naksha.model.objects.Member;
 import naksha.model.objects.MemberType;
@@ -176,7 +174,6 @@ public final class PropertyMemberQueryTranslator {
       return null;
     }
     if (!NUMERIC_TYPES.contains(type) || !(value instanceof Number)) return null;
-    // The operand is passed unchanged, the storage decides if it fits the member type.
     if (DoubleOp.EQ.equals(op) || AnyOp.CONTAINS.equals(op)) return new Equals(member, value);
     if (DoubleOp.GT.equals(op)) return new Gt(member, value);
     if (DoubleOp.GTE.equals(op)) return new Gte(member, value);
@@ -237,11 +234,11 @@ public final class PropertyMemberQueryTranslator {
     return equals.size() == 1 ? equals.get(0) : new And(equals.toArray(new Op[0]));
   }
 
-  /** Returns the parsed JSON or null, if the text is no complete JSON value. */
+  /** Returns the parsed JSON or null if parsing fails. */
   private static @Nullable Object parseJson(String text) {
-    try (Json json = Json.get()) {
-      return json.reader().forType(Object.class).with(DeserializationFeature.FAIL_ON_TRAILING_TOKENS).readValue(text);
-    } catch (IOException e) {
+    try {
+      return Platform.fromJSON(text);
+    } catch (Exception e) {
       return null;
     }
   }

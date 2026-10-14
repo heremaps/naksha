@@ -74,7 +74,7 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
    */
   private @NotNull Response collectionMappingValidation(Space space) {
     NakshaCollection collection = space.getProperties().getCollection();
-    if (collection == null || !collection.hasRaw("customIndexMapping")) {
+    if (collection == null || collection.getCustomIndexMapping() == null) {
       return SUCCESSFUL_VALIDATION;
     }
     ReadFeatures getEventHandlersRequest =

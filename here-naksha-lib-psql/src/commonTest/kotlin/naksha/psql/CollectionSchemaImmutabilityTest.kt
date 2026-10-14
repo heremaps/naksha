@@ -19,32 +19,33 @@ class CollectionSchemaImmutabilityTest : PgTestBase(collection = null, catalogId
 
     private val collectionId = "schema_immutability_test"
 
-    private fun definition(
+    private fun collectionDefinition(
+        memberName: String = "score",
         type: MemberType = MemberType.INT32,
         path: JsonPath = JsonPath("properties", "score"),
         indexName: String = "score_idx"
     ) = NakshaCollection(collectionId, catalog.id).apply {
-        members = MemberList(Member("score", type, path))
-        indices = IndexList(Index(indexName, "score"))
+        members = MemberList(Member(memberName, type, path))
+        indices = IndexList(Index(indexName, memberName))
     }
 
     private fun upsert(collection: NakshaCollection) = WriteRequest().add(Write().upsertCollection(collection))
 
     @Test
     fun shouldAllowUnchangedSchemaAndRejectSchemaChanges() {
-        executeWrite(WriteRequest().add(Write().createCollection(definition())))
+        executeWrite(WriteRequest().add(Write().createCollection(collectionDefinition())))
 
         // The same schema, also with changed metadata, is accepted.
-        executeWrite(upsert(definition()))
-        executeWrite(upsert(definition().apply { this["description"] = "updated" }))
+        executeWrite(upsert(collectionDefinition()))
+        executeWrite(upsert(collectionDefinition().apply { this["description"] = "updated" }))
 
         val changes = listOf(
-            "shift" to definition().apply { shift = shift + 1 },
-            "partitions" to definition().apply { partitions = 2 },
-            "storageClass" to definition().apply { storageClass = "brittle" },
-            "members" to definition(type = MemberType.STRING),
-            "members" to definition(path = JsonPath("properties", "other")),
-            "indices" to definition(indexName = "other_idx"),
+            "shift" to collectionDefinition().apply { shift = shift + 1 },
+            "partitions" to collectionDefinition().apply { partitions = 2 },
+            "storageClass" to collectionDefinition().apply { storageClass = "brittle" },
+            "members" to collectionDefinition(type = MemberType.STRING),
+            "members" to collectionDefinition(path = JsonPath("properties", "other")),
+            "indices" to collectionDefinition(indexName = "other_idx"),
         )
         for ((field, changed) in changes) {
             val error = executeWriteErrorResponse(upsert(changed)).error
