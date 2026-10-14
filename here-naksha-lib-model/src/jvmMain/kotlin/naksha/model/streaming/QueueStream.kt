@@ -165,7 +165,19 @@ abstract class QueueStream(
     private fun oldestPositionLocked(): Long =
         outstanding.firstOrNull { !it.acknowledged }?.position ?: ready.firstOrNull()?.position ?: producerPosition
 
-    private fun recoveryRequestLocked(): StreamRequest = recoveryRequestAt(oldestPositionLocked())
+    private var lastRecoveryPosition = Long.MIN_VALUE
+    private var lastRecovery: StreamRequest? = null
+
+    // Same instance as long as the position did not move.
+    private fun recoveryRequestLocked(): StreamRequest {
+        val position = oldestPositionLocked()
+        val last = lastRecovery
+        if (last != null && position == lastRecoveryPosition) return last
+        return recoveryRequestAt(position).also {
+            lastRecoveryPosition = position
+            lastRecovery = it
+        }
+    }
 
     private fun awaitAcknowledgedLocked(timeoutMillis: Long): Boolean {
         var nanos = TimeUnit.MILLISECONDS.toNanos(maxOf(0L, timeoutMillis))
@@ -212,11 +224,5 @@ abstract class QueueStream(
         recovery
     }
 
-    /** The recovery request for the current position, without waiting for outstanding acknowledgements; used for periodic checkpoints. */
-    fun currentRecoveryRequest(): StreamRequest = lock.withLock { recoveryRequestLocked() }
-
-    override fun getRecoveryRequest(timeoutMillis: Long): StreamRequest = lock.withLock {
-        if (!awaitAcknowledgedLocked(timeoutMillis)) throw NakshaException(TIMEOUT, "Timeout waiting for acknowledgements")
-        recoveryRequestLocked()
-    }
+    override fun getRecoveryRequest(): StreamRequest = lock.withLock { recoveryRequestLocked() }
 }

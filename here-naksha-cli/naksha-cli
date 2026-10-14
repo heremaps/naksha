@@ -37,7 +37,7 @@ fi
 cd "$CURRENT_DIR"
 
 if [[ -f "$JAR" ]]; then
-  # A class path instead of -jar, so that jars in plugins/ can add stream providers via META-INF/services.
+  # A class path instead of -jar, so that jars in plugins/ can add storage providers via META-INF/services.
   java -cp "$JAR:$MODULE_DIR/plugins/*" com.here.naksha.cli.Main "${java_args[@]}"
   exit $?
 else
