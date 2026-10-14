@@ -109,7 +109,14 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
   private Response specificHandlerValidation(EventHandlerConfig eventHandler) {
     final String className = eventHandler.getClassName();
     if (DefaultStorageHandler.class.getName().equals(className)) {
-      return storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      final Response storageValidation = storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      if (!(storageValidation instanceof SuccessResponse)) {
+        return storageValidation;
+      }
+      final DefaultStorageHandlerProperties properties =
+          javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
+      return IntValidationUtil.collectionMappingValidation(
+          nakshaHub(), properties.getStorageId(), properties.getCollection());
     } else if (DefaultViewHandler.class.getName().equals(className)) {
       return viewHandlerPropertiesValidation(eventHandler);
     } else if (TagFilterHandler.class.getName().equals(className)) {

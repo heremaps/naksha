@@ -49,6 +49,18 @@ public class QueryParameterListTest {
   }
 
   @Test
+  void testBooleanValuesAndQuotedStrings() {
+    for (String literal : List.of("false", "FALSE", "FaLsE")) {
+      final QueryParameterList params = new QueryParameterList("p.active=" + literal);
+      assertEquals(Boolean.FALSE, params.get(0).values().get(0));
+    }
+    final QueryParameterList params = new QueryParameterList("p.active=true,false,'false'");
+    assertEquals(Boolean.TRUE, params.get(0).values().get(0));
+    assertEquals(Boolean.FALSE, params.get(0).values().get(1));
+    assertEquals("false", params.get(0).values().get(2));
+  }
+
+  @Test
   void testPropertySearchParamsExtraction() {
     final QueryParameterList params = new QueryParameterList(
             urlEncoded("p.@ns:com:here:mom:meta.prop_1")+"="+urlEncoded("@value:1")+",'12345'"

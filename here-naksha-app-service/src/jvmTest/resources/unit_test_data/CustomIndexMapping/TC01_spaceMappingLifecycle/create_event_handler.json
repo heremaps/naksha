@@ -1,0 +1,10 @@
+{
+  "id": "custom_mapping_api_handler",
+  "type": "EventHandler",
+  "title": "Mapped API Handler",
+  "description": "Custom mapping test",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "properties": {
+    "storageId": "${dataDb.storageId}"
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "type": "ErrorResponse",
+  "error": "Conflict",
+  "errorMessage": "The 'members' of the existing collection 'custom_mapping_api_target' must not be changed"
+}

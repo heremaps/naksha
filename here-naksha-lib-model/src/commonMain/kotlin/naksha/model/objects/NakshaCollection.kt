@@ -452,6 +452,15 @@ open class NakshaCollection() : NakshaFeature() {
     var indices: IndexList? by INDICES
 
     /**
+     * JSON properties of features that should be materialized as custom members and indexed.
+     *
+     * This is a configuration of Spaces and Handlers: the Hub generates the corresponding [members] and [indices] from it
+     * before the collection is sent to the storage, the storage itself does not use it.
+     * @since 3.0
+     */
+    var customIndexMapping: CustomIndexMappingList? by CUSTOM_INDEX_MAPPING
+
+    /**
      * Initializes the [indices] to the bare minimum.
      *
      * The method should be called, if next to the minimal indices additional proprietary indices should be added.
@@ -697,6 +706,7 @@ open class NakshaCollection() : NakshaFeature() {
         private val PROTECTION_CLASS = NullableProperty<NakshaCollection, String>(String::class)
         private val MEMBERS = NullableProperty<NakshaCollection, MemberList>(MemberList::class)
         private val INDICES = NullableProperty<NakshaCollection, IndexList>(IndexList::class)
+        private val CUSTOM_INDEX_MAPPING = NullableProperty<NakshaCollection, CustomIndexMappingList>(CustomIndexMappingList::class)
         private val MAX_AGE = NotNullProperty<NakshaCollection, Long>(Long::class) { _, _ -> -1L }
         private val QUAD_PARTITION_SIZE = NotNullProperty<NakshaCollection, Int>(Int::class) { _, _ -> 10_485_760 }
         private val _ESTIMATED_FEATURE_COUNT = NotNullProperty<NakshaCollection, Long>(Long::class) { _, _ -> UNKNOWN }
