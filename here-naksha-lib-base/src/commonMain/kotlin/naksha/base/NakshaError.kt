@@ -21,18 +21,21 @@ open class NakshaError() : AnyObject() {
      * Create a new error from the given arguments.
      * @param code the error code.
      * @param msg a human-readable message.
-     * @param catalog the _optional_ identifier of the catalog to which the error belongs, see [CATALOG_NOT_FOUND].
-     * @param collection the _optional_ identifier of the collection to which the error belongs, see [COLLECTION_NOT_FOUND].
-     * @param feature the _optional_ identifier of the feature to which the error belongs, see [FEATURE_NOT_FOUND].
+     * @param id the _optional_ identifier of the entity that caused the error, i.e. [FEATURE_NOT_FOUND], [COLLECTION_NOT_FOUND], [CATALOG_NOT_FOUND], ...
+     * @param collection the _optional_ identifier of the collection in which the entity is located.
+     * @param catalog the _optional_ identifier of the catalog in which the entity is located.
+     * @param database the _optional_ identifier of the database in which the entity is located.
      * @since 3.0
      */
     @JsName("newNakshaError")
     @JvmOverloads
-    constructor(code: String, msg: String, catalog: String? = null, collection: String? = null, feature: String? = null) : this() {
+    constructor(code: String, msg: String, id: String? = null, collection: String? = null, catalog: String? = null, database: String? = null) : this() {
         this.code = code
         this.msg = msg
-        this.catalog = catalog
+        this.id = id
         this.collection = collection
+        this.catalog = catalog
+        this.database = database
     }
 
     /**
@@ -317,22 +320,28 @@ open class NakshaError() : AnyObject() {
     var msg: String by MSG_FIELD
 
     /**
-     * The _optional_ identifier of the catalog to which the error belongs.
+     * The _optional_ identifier of the entity that causes the error.
      * @since 3.0
      */
-    var catalog: String? by STRING_FIELD
+    var id: String? by STRING_FIELD
 
     /**
-     * The _optional_ identifier of the collection to which the error belongs.
+     * The _optional_ identifier of the collection to which the entity with the given [id] belongs.
      * @since 3.0
      */
     var collection: String? by STRING_FIELD
 
     /**
-     * The _optional_ identifier of the feature to which the error belongs.
+     * The _optional_ identifier of the catalog to which the entity with the given [id] belongs.
      * @since 3.0
      */
-    var feature: String? by STRING_FIELD
+    var catalog: String? by STRING_FIELD
+
+    /**
+     * The _optional_ identifier of the database to which the entity with the given [id] belongs.
+     * @since 3.0
+     */
+    var database: String? by STRING_FIELD
 
     /**
      * The origin exception that caused this error; if any.
@@ -365,17 +374,19 @@ open class NakshaError() : AnyObject() {
     }
 
     override fun toString(): String {
+        val database = this.database
         val catalog = this.catalog
         val collection = this.collection
-        val feature = this.feature
-        return """
-{
+        val id = this.id
+        // Serialize into JSON.
+        return """{
   \"@type\": \"naksha.base.NakshaError\",
   \"code\":${code.toJson()},
   \"msg\":${msg.toJson()},
+  \"database\":${database.toJson()},
   \"catalog\":${catalog.toJson()},
   \"collection\":${collection.toJson()},
-  \"feature\":${feature.toJson()}
+  \"id\":${id.toJson()}
 }"""
     }
 
