@@ -22,31 +22,36 @@ import naksha.model.request.ResultFilterList;
 import naksha.model.request.ops.*;
 import naksha.model.request.query.*;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/** Complete-expression translation only. A null result means keep the original request unchanged. */
+/** Complete-expression translation only. The request is rewritten in place, a null result means it is unchanged. */
 public final class PropertyMemberQueryTranslator {
   // TODO: INT8 equality and comparisons fail in lib-psql's PgQueryWhereBuilder: an INT8 member only accepts Byte
   //       operands, but placeholderForArg rejects Byte; null checks bind no operand and work. The mapping validation
   //       rejects INT8 for now.
   private static final List<MemberType> NUMERIC_TYPES = List.of(
       MemberType.INT8, MemberType.INT16, MemberType.INT32, MemberType.INT64, MemberType.FLOAT32, MemberType.FLOAT64);
+  /** Member types whose null checks and value queries are translated. */
+  private static final List<MemberType> TRANSLATED_TYPES = List.of(
+      MemberType.BOOLEAN, MemberType.STRING, MemberType.INT8, MemberType.INT16, MemberType.INT32, MemberType.INT64,
+      MemberType.FLOAT32, MemberType.FLOAT64, MemberType.TAG_LIST, MemberType.TAG_MAP);
+  /** Member types without a matching legacy value operation, only their null checks are translated. */
+  private static final List<MemberType> LEGACY_ONLY_TYPES = List.of(MemberType.BYTE_ARRAY, MemberType.SPATIAL);
+  private static final Logger logger = LoggerFactory.getLogger(PropertyMemberQueryTranslator.class);
 
   private PropertyMemberQueryTranslator() {}
 
   public static @Nullable ReadFeatures adapt(
-      ReadFeatures original, NakshaCollection schema, NakshaCollection configured) {
+      ReadFeatures request, NakshaCollection schema, NakshaCollection configured) {
     // Member queries describe single HEAD states; history reads (e.g. the activity log) stay on the legacy path.
-    if (original.getQueryMembers() != null || original.getQueryHistory() || original.getVersions() != 1) return null;
-    IPropertyQuery expression = original.getQuery().getProperties();
+    if (request.getQueryMembers() != null || request.getQueryHistory() || request.getVersions() != 1) return null;
+    IPropertyQuery expression = request.getQuery().getProperties();
     if (expression == null) return null;
     Op propertyOp = translate(expression, schema, configured);
     if (propertyOp == null) return null;
-    ReadFeatures request = original.copy(true);
     Op other;
     try {
-      // A raw copy can't restore the typed tag and spatial queries, take them from the original.
-      request.getQuery().setTags(original.getQuery().getTags());
-      request.getQuery().setSpatial(original.getQuery().getSpatial());
       other = QueryConverter.PgQueryConverter_C.convert(request.getQuery());
     } catch (NakshaException error) {
       if (NakshaError.UNSUPPORTED_OPERATION.equals(error.getError().getCode())) return null;
@@ -55,15 +60,19 @@ public final class PropertyMemberQueryTranslator {
     List<Op> predicates = new ArrayList<>();
     predicates.add(propertyOp);
     if (other != null) predicates.add(other);
+    // The storage rejects legacy 'query', 'featureIds' or 'guids' next to 'queryMembers', so the feature ids become a
+    // member predicate here, as the storage does itself for legacy requests (see PgQueryWhereBuilder.build).
     if (!request.getFeatureIds().isEmpty()) {
       predicates.add(new IsAnyOf(StandardMembers.Id, request.getFeatureIds().toArray(new String[0])));
     }
-    // The member query replaces the legacy check of the property query, other result filters are kept.
+    // The member query replaces the in-memory check of the property query, other result filters are kept. This runs
+    // before 'query' is removed, because a proxy wrapper (bbox, tile) matches the filter of its wrapped request by value.
     ResultFilterList filters = new ResultFilterList();
     for (ResultFilter filter : request.getResultFilters()) {
-      if (!(filter instanceof PropertyFilter && original.equals(((PropertyFilter) filter).getReq()))) filters.add(filter);
+      if (!(filter instanceof PropertyFilter && request.equals(((PropertyFilter) filter).getReq()))) filters.add(filter);
     }
     request.setResultFilters(filters);
+    // Remove the legacy syntax, it is now part of the member query (properties, tags, spatial and feature ids).
     request.removeRaw("query");
     request.getFeatureIds().clear();
     request.setQueryMembers(predicates.size() == 1 ? predicates.get(0) : new And(predicates.toArray(new Op[0])));
@@ -148,6 +157,10 @@ public final class PropertyMemberQueryTranslator {
     Member member = CustomIndexMappingCompiler.memberForPath(schema, mapping.getJsonPath());
     if (member == null) return null;
     MemberType type = member.getDataType();
+    if (!TRANSLATED_TYPES.contains(type) && !LEGACY_ONLY_TYPES.contains(type)) {
+      logger.warn("Member type {} of {} is not supported by PropertyMemberQueryTranslator, using the legacy path", type, member.getName());
+      return null;
+    }
     AnyOp op = query.getOp();
     Object value = query.getValue();
     if (path.size() > mapping.getJsonPath().size()) {
@@ -155,6 +168,7 @@ public final class PropertyMemberQueryTranslator {
     }
     if (AnyOp.IS_NULL.equals(op)) return new IsNull(member);
     if (AnyOp.EXISTS.equals(op) || AnyOp.IS_NOT_NULL.equals(op)) return new Not(new IsNull(member));
+    if (LEGACY_ONLY_TYPES.contains(type)) return null;
     if (MemberType.BOOLEAN.equals(type)) {
       // REST encodes boolean equality in the operation, only CONTAINS carries the boolean as value.
       if (AnyOp.IS_TRUE.equals(op) || (AnyOp.CONTAINS.equals(op) && Boolean.TRUE.equals(value))) return new IsTrue(member);

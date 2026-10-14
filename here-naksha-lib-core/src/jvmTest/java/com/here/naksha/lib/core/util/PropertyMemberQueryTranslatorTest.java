@@ -6,7 +6,13 @@ import naksha.model.objects.CustomIndexMapping;
 import naksha.model.objects.CustomIndexMappingList;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import kotlin.jvm.JvmClassMappingKt;
+import naksha.base.JsEnum;
+import naksha.base.NakshaException;
 import naksha.model.objects.*;
 import naksha.model.request.*;
 import naksha.model.request.ops.*;
@@ -58,6 +64,44 @@ class PropertyMemberQueryTranslatorTest {
     assertInstanceOf(IsFalse.class, translated(query(AnyOp.CONTAINS, false), schema));
     assertNull(translated(query(StringOp.CONTAINS, "true"), schema));
     assertNull(translated(new PAnd(query(AnyOp.IS_TRUE), query(StringOp.EQUALS, "true")), schema));
+  }
+
+  /**
+   * Fails when a mapping type is added to {@link CustomIndexMappingCompiler} or {@link MemberType} without deciding how
+   * {@link PropertyMemberQueryTranslator} handles it: translate it in translateLeaf and add a sample query here, or keep
+   * it on the legacy path and list it in legacyOnly.
+   */
+  @Test void decidesTheTranslationOfEveryMappingType() {
+    Map<MemberType, PQuery> translatedSamples = new HashMap<>();
+    translatedSamples.put(MemberType.BOOLEAN, query(AnyOp.IS_TRUE));
+    translatedSamples.put(MemberType.STRING, query(StringOp.EQUALS, "abc"));
+    for (MemberType numeric : List.of(MemberType.INT16, MemberType.INT32, MemberType.INT64, MemberType.FLOAT32, MemberType.FLOAT64)) {
+      translatedSamples.put(numeric, query(DoubleOp.EQ, 1L));
+    }
+    translatedSamples.put(MemberType.TAG_LIST, query(StringOp.CONTAINS, "red"));
+    translatedSamples.put(MemberType.TAG_MAP, key(StringOp.EQUALS, "Berlin"));
+    List<MemberType> legacyOnly = List.of(MemberType.BYTE_ARRAY, MemberType.SPATIAL);
+
+    Iterator<MemberType> types = JsEnum.iterate(JvmClassMappingKt.getKotlinClass(MemberType.class));
+    int mappingTypes = 0;
+    while (types.hasNext()) {
+      MemberType type = types.next();
+      NakshaCollection definition = new NakshaCollection("mapped", "catalog");
+      definition.setCustomIndexMapping(new CustomIndexMappingList(new CustomIndexMapping(new JsonPath("properties", "value"), type)));
+      try {
+        CustomIndexMappingCompiler.validate(definition);
+      } catch (NakshaException e) {
+        continue;
+      }
+      mappingTypes++;
+      if (translatedSamples.containsKey(type)) {
+        assertNotNull(translated(translatedSamples.get(type), schema(type)), "no translation for " + type);
+      } else {
+        assertTrue(legacyOnly.contains(type), "Mapping type '" + type + "' is not covered by PropertyMemberQueryTranslator");
+        assertNull(translated(query(StringOp.EQUALS, "abc"), schema(type)), "legacy-only " + type + " was translated");
+      }
+    }
+    assertEquals(translatedSamples.size() + legacyOnly.size(), mappingTypes);
   }
 
   @Test void passesNumericOperandsUnchanged() {
@@ -267,19 +311,17 @@ class PropertyMemberQueryTranslatorTest {
         schema(MemberType.TAG_LIST)));
   }
 
-  @Test void leavesTheOriginalExpressionUnchanged() {
+  @Test void rewritesTheRequestInPlaceButLeavesTheExpressionUnchanged() {
     NakshaCollection schema = schema(MemberType.TAG_MAP);
     String object = "{\"city\":\"Berlin\",\"zip\":10115}";
     POr pair = new POr(query(StringOp.CONTAINS, object), query(StringOp.CONTAINS, "[" + object + "]"));
     PAnd expression = new PAnd(pair, key(DoubleOp.GT, 20L));
     ReadFeatures original = new ReadFeatures().withPropertyQuery(expression);
     ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(original, schema, schema);
-    assertNotNull(adapted);
-    assertInstanceOf(And.class, adapted.getQueryMembers());
-    assertNull(adapted.getQuery().getProperties());
-    assertSame(expression, original.getQuery().getProperties());
-    assertNull(original.getQueryMembers());
-    assertEquals(1, original.getResultFilters().size());
+    assertSame(original, adapted);
+    assertInstanceOf(And.class, original.getQueryMembers());
+    assertNull(original.getQuery().getProperties());
+    assertTrue(original.getResultFilters().isEmpty());
     assertEquals(2, expression.size());
     assertEquals(2, pair.size());
     assertEquals(object, ((PQuery) pair.get(0)).getValue());
@@ -345,7 +387,7 @@ class PropertyMemberQueryTranslatorTest {
     assertInstanceOf(IsNull.class, isNull.getChild());
   }
 
-  @Test void replacesOnlyTheLegacyPropertyFilterOfACopy() {
+  @Test void replacesOnlyTheLegacyPropertyFilter() {
     ResultFilter unrelated = tuple -> tuple;
     PropertyFilter foreign = new PropertyFilter(new ReadFeatures().withPropertyQuery(query(DoubleOp.EQ, 99)));
     PQuery expression = query(DoubleOp.EQ, 50);
@@ -354,16 +396,10 @@ class PropertyMemberQueryTranslatorTest {
     original.getResultFilters().add(foreign);
     original.setLimit(1);
     original.getFeatureIds().add("one");
-    List<ResultFilter> filters = new ArrayList<>(original.getResultFilters());
-    assertEquals(3, filters.size());
+    assertEquals(3, original.getResultFilters().size());
 
     ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(original, schema(), schema());
-    assertNotNull(adapted);
-    assertNull(original.getQueryMembers());
-    assertSame(expression, original.getQuery().getProperties());
-    assertEquals(List.of("one"), new ArrayList<>(original.getFeatureIds()));
-    assertEquals(filters, new ArrayList<>(original.getResultFilters()));
-
+    assertSame(original, adapted);
     assertEquals(List.of(unrelated, foreign), new ArrayList<>(adapted.getResultFilters()));
     assertEquals(1, adapted.getLimit());
     assertTrue(adapted.getFeatureIds().isEmpty());
@@ -388,11 +424,9 @@ class PropertyMemberQueryTranslatorTest {
   @Test void translatesBboxAndTileRequests() {
     ReadFeatures request = new ReadFeaturesProxyWrapper().withPropertyQuery(query(DoubleOp.EQ, 50));
     ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(request, schema(), schema());
-    assertInstanceOf(ReadFeaturesProxyWrapper.class, adapted);
+    assertSame(request, adapted);
     assertNotNull(adapted.getQueryMembers());
     assertTrue(adapted.getResultFilters().isEmpty());
-    assertNotNull(request.getQuery().getProperties());
-    assertEquals(1, request.getResultFilters().size());
 
     // A wrapper around a request recognizes the property filter of the wrapped request.
     ReadFeatures wrapped = ReadFeaturesProxyWrapper.proxyWrapperOf(new ReadFeatures().withPropertyQuery(query(DoubleOp.EQ, 50)));
