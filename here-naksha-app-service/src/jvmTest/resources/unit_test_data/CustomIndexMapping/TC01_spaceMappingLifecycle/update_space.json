@@ -15,7 +15,7 @@
             "properties",
             "score"
           ],
-          "dataType": "int32"
+          "dataType": "int64"
         },
         {
           "jsonPath": [

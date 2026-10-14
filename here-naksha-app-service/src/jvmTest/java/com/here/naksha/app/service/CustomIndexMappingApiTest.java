@@ -2,6 +2,7 @@ package com.here.naksha.app.service;
 
 import static com.here.naksha.app.common.FeatureMetadata.ExtractionUtil.featureMetadataFromFeatureResp;
 import static com.here.naksha.app.common.TestUtil.loadFileOrFail;
+import static com.here.naksha.app.common.TestUtil.urlEncoded;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -50,11 +51,36 @@ class CustomIndexMappingApiTest extends ApiTest {
         .hasStreamIdHeader(streamId)
         .hasJsonBodyFromFile(SEARCH_RESPONSE);
 
-    // 4. An unsupported predicate keeps the existing property-filtering behavior.
+    // 4. A mapped inequality is translated as a negated equality.
     assertThat(getNakshaClient().get(spaceUrl + "/search?p.score=ne=10", streamId))
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBodyFromFile(SEARCH_RESPONSE);
+
+    // 4b. Comma separated values combined with a tag-list containment are translated as a whole.
+    assertThat(getNakshaClient().get(spaceUrl + "/search?p.score=10,51&p.labels=cs=red", streamId))
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId)
+        .hasJsonBodyFromFile(SEARCH_RESPONSE);
+
+    // 4c. URL encoded JSON arrays require all of their tags, comma separated arrays are OR, repeated parameters AND.
+    for (String predicate : new String[] {
+        "p.labels=cs=" + urlEncoded("[\"red\"]"),
+        // The REST decoder does not decode '+' into a space.
+        "p.labels=cs=" + urlEncoded(" [\"red\"] ").replace("+", "%20"),
+        "p.labels=cs=" + urlEncoded("[\"red\",\"blue\"]") + "," + urlEncoded("[\"red\"]"),
+        "p.labels=cs=" + urlEncoded("[\"red\"]") + "&p.labels=cs=" + urlEncoded("[]"),
+        "p.score=51&p.labels=cs=" + urlEncoded("[]")}) {
+      assertThat(getNakshaClient().get(spaceUrl + "/search?" + predicate, streamId))
+          .hasStatus(200)
+          .hasStreamIdHeader(streamId)
+          .hasJsonBodyFromFile(SEARCH_RESPONSE);
+    }
+
+    // 4d. Numeric operands reach the storage unchanged, it rejects the decimal operand for the INT64 member.
+    assertThat(getNakshaClient().get(spaceUrl + "/search?p.score=gt=50.5", streamId))
+        .hasStatus(400)
+        .hasStreamIdHeader(streamId);
 
     // 5. Rename the Space using its current version; the unchanged collection is verified before the Space is saved.
     final HttpResponse<String> current = getNakshaClient().get(spaceUrl, streamId);
@@ -83,7 +109,7 @@ class CustomIndexMappingApiTest extends ApiTest {
     assertNoGeneratedSchemaInConfiguration(afterRejectedUpdate);
 
     // 7. A subsequent request reloads the mapping and can still search the indexed property.
-    assertThat(getNakshaClient().get(spaceUrl + "/search?p.score=gt=50.5&limit=1", streamId))
+    assertThat(getNakshaClient().get(spaceUrl + "/search?p.score=gt=50&limit=1", streamId))
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBodyFromFile(SEARCH_RESPONSE);
@@ -134,7 +160,7 @@ class CustomIndexMappingApiTest extends ApiTest {
     assertNoGeneratedSchemaInConfiguration(saved);
 
     // 5. A later search still uses the Handler mapping after the metadata update.
-    assertThat(getNakshaClient().get(spaceUrl + "/search?p.score=gt=50.5&limit=1", streamId))
+    assertThat(getNakshaClient().get(spaceUrl + "/search?p.score=gt=50&limit=1", streamId))
         .hasStatus(200)
         .hasStreamIdHeader(streamId)
         .hasJsonBodyFromFile(SEARCH_RESPONSE);
