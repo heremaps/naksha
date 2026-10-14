@@ -14,6 +14,8 @@ import naksha.base.NakshaError.NakshaErrorCompanion.UNINITIALIZED
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
 import naksha.base.Version
+import naksha.base.illegalArg
+import naksha.base.illegalId
 import naksha.model.objects.NakshaStorage
 import kotlin.reflect.KClass
 import kotlin.time.Clock
@@ -52,13 +54,9 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
     override val id: Id
         get() = _id ?: throwUninitialized()
 
-    override var hardCap: Int = 16777216
+    override var hardCap: Int = Int.MAX_VALUE
         set(value) {
-            if (value > 16777216) throw NakshaException(
-                ILLEGAL_ARGUMENT,
-                "The maximum hard-cap supported is 16777216, but $value was requested"
-            )
-            field = if (value <= 0) 16777216 else value
+            field = if (value <= 0) Int.MAX_VALUE else value
         }
 
     /**
