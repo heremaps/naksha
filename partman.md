@@ -17,17 +17,16 @@ For a collection `roads` with no performance partitioning:
 
 ```sql
 CREATE TABLE roads (
-  fn bigint NOT NULL,
-  version bigint NOT NULL,
-  nv bigint NOT NULL,
+  fn bigint NOT NULL, -- feature-number
+  v bigint NOT NULL, -- version
+  nv bigint NOT NULL, -- next-version
   ...,
-  CHECK (nv <= <Version.HEAD>),
-  UNIQUE (fn, nv) INCLUDE (version)
+  CONSTRAINT roads_nvc CHECK (nv >= 0 AND nv <= <Version.HEAD>),
+  CONSTRAINT roads_pkey PRIMARY KEY (nv, fn, v)
 ) PARTITION BY RANGE (nv);
 
 -- Created by pg_partman as its default partition, then restricted by Naksha.
-ALTER TABLE roads_default
-  ADD CONSTRAINT roads_default_head CHECK (nv = <Version.HEAD>);
+ALTER TABLE roads_default ADD CONSTRAINT roads_default_head CHECK (nv = <Version.HEAD>);
 ```
 
 The root `CHECK` rejects values above `Version.HEAD`. pg_partman creates the
@@ -601,3 +600,146 @@ implementation from `Naksha` (`hashId`, numeric-id regular expressions,
 feature/database/catalog/collection number helpers, partition helpers, hash
 helper, and auto-number helpers) where it has become redundant with `Id`.
 Preserve only `Naksha` constants and non-identifier responsibilities.
+
+## Links
+- https://plv8.github.io/
+- https://deepwiki.com/plv8/plv8/3-user-guide
+- https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/rawJSON
+- https://github.com/citusdata/pg_cron#setting-up-pg_cron
+
+## Off-Topic Discussion
+@ai: Please ignore this section, it is for humans only!
+
+
+@phuc:
+- root-table
+  - partition by `nv` where `nv` is between `a` and `b`
+    - partition by `fn` _(optionally, performance partition)_; where `fn` is between `a` and `b`
+    - partman only allows range partitioning and postgresql as well
+    - `fn` is using bswap, and xor
+    - the bad: whenever we write or read a feature, we need to bswap the `fn` value, so the storage value matches the programatic value
+  - default partition for all others
+    - add a `CHECK nv=9007199254740991` to ensure only HEAD entries go into default partition
+    - so default partition becomes our head table
+- unique index (primary key)
+  - **unique primary index: (`nv`, `fn`, `version`)**
+  - reason: postgres requires for a unique index, that all partition keys are in the key
+  - what we know: we always need to provide `nv`
+    - to search in head means `where nv=9007199254740991`
+  - then we often have `nv` and `fn`, especially for reading tuples
+  - adding version as well, allows us to do index-only scans form primary-key !!!
+    - this is important for UPSERT fix, because the primary key is always up-to-date and reading it is basically free
+
+
+
+Client Logic
+- check if the collection exists
+  - no - create collection
+  - yes - great
+- do the insert feature
+- Ups, collection not found
+- retry
+
+
+
+PgDatabase
+  —> Put all queries we need into this one
+
+immutable PgCollection <-> NakshaCollection
+-> val nakshaCollection
+-> wrapper
+-> does some work to extract information, like members, indices, and bunch of others
+
+
+immutable PgCatalog <-> NakshaCatalog
+-> thin wrapper
+-> val headTuple: Tuple
+-> collectionCache: AtomicMap<Id, PgCollection>
+   -> i only need my own NakshaCollection instance
+   -> update the session local NakshaCollection instance
+   -> commit, clear the collection form the catalog cache
+
+
+SESSION
+getCatalog(id) —> NakshaCatalog
+  adminCatalog.getPgCatalog(id) —> PgCatalog
+  —> Copy the catalog into session
+  —> Copy of NakshaCatalog (decode from Tuple)
+
+
+session.createCheckPoint()
+-> create a new transaction object
+
+
+partman
+—> PostgreSQL now will move the HEAD row into HISTORY
+—> INSERT new-state
+    —> set the low two bit of the version number to CREATE, when the returned version is DELETE or NULL
+    —> set the low two bit of the version number to UPDATE, when the returned version is anything else
+—> head fn, version, nv
+If we want atomic UPSERT, we can ensure that we either has no HEAD entry or the existing matches the requires, 
+if not, rollback and error conflict
+
+PRE-QUERY:
+- LE: 1, 0, 0, 0 (32-bit) [0..127, 128..255] —> 255 = `1111_1111` —> -1; 128 —> -128 `0000_0000`, 129 —> `0000_0001`, 0 — `1000_0000`
+- BE: 0, 0, 0, 1 (32-bit) bit #7 becomes the sign bit
+- we store fn in big-endian, with sign bit flipped, aka: _(bswap8(fn) xor Long.MIN_VALUE `10000000....`, -1 = `11111....`)_
+- `foo` — primary-key = (`nv`, `fn`, `version`) PARTITION BY RANGE ON `nv`
+  - `fee_123124124` — This is one history table for a certain month, using range upon `nv`
+  - `fee_223124124` — This is one history table for a certain month, using range upon `nv`
+  - `fee_323124124` — This is one history table for a certain month, using range upon `nv`
+  - `foo_default` — **HEAD** — One small path to this table, we add a `CHECK nv = $HEAD`
+    - `foo_default_?` — PARTITION BY RANGE `fn` 
+- **HEAD**: `SELECT fn, version FROM foo WHERE fn = ANY($1) AND nv = $HEAD AND (version & 3) < 2`
+- **HISTORY**: `SELECT fn, version FROM foo WHERE fn = ANY($1) AND version <= $version AND nv > $version $HEAD AND (version & 3) < 2`
+```sql
+WITH new_row AS (SELECT ${inRows.decodedColumns()} FROM UNNEST(${inRows.placeholders()}) AS t(${inRows.aliases()}))
+     ,purge AS ( -- Should move HEAD into HISTORY WHEN action = DELETED
+  UPDATE $headIdent head
+  SET head.nv = $version
+  FROM new_row
+  WHERE head.nv = 9007199254740991 AND head.fn = new_row.fn AND ("version" & 3) = 2
+  RETURNING nv, fn, version
+),
+, do_insert AS (do the insert form new_row)
+, do_upsert AS (do the insert form new_row, but, apply a minor fix to action being in version)
+, do_update AS (do the insert form new_row)
+, do_delete_with_new_state AS (do the insert from new_row)
+, do_delete_with_old_state AS (do the insert from purge or some preselect)
+, do_delete_without_state AS (do the insert from purge, but without any values except for primary key)
+UPDATE table SET next_version = version WHERE nv = HEAD AND (fn, id) in RETURNING fn, version, nv
+```
+
+lib-moderation hacky-branch:
+  - one way: do UPSERT
+  - alternative: do DELETE, commit, INSERT — is 50% faster
+
+
+CREATE -> new query, plus `AND (version & 3) = 2` — If the HEAD is DELETE, we move, otherwise we fail due to existing HEAD
+UPSERT -> Covert by the new query, only remove the `AND (version & 3) = 2` in the pre-update
+UPDATE -> Covert by the new query, only remove the `AND (version & 3) < 2` in the pre-update
+DELETE -> Covert by the new query, add `AND (version & 3) < 2` in the pre-update
+PURGE -> Covert by the new query, add `AND (version & 3) = 2` in the pre-update
+
+
+Caching
+  PgCatalog
+  PgCollection
+
+PgSession
+  - copy of PgCatalog, PgCollection being used by the session
+
+Queries
+- ReadFeatures query
+- Tuple Loading
+- Writes
+
+
+
+
+
+
+
+
+
+
