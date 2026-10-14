@@ -9,9 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
-/**
- * DRAFT: JSON round-trip for recovery requests; {@link Id} values are written as their text.
- */
+/** JSON round-trip for recovery requests, {@link Id} values are written as text. */
 public final class StreamRequestJson {
     private StreamRequestJson() {}
 

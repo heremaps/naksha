@@ -1,0 +1,2 @@
+com.here.naksha.cli.stream.providers.NullStorageProvider
+com.here.naksha.cli.stream.providers.RandomStorageProvider
