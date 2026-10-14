@@ -13,17 +13,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
-/**
- * DRAFT: shared JVM base for stream readers.
- *
- * A producer thread calls [produce], which pushes chunks via [Sink.emit]. The base class takes care of:
- * - bounded prefetch (`1` in sequential mode),
- * - never handing out a chunk while another unacknowledged chunk contains the same feature,
- * - tracking the recovery position (oldest unacknowledged chunk),
- * - failure and timeout handling as documented in [Stream].
- *
- * Positions are opaque, storage-specific, monotonically increasing longs (e.g. a version, a table sequence, a feature-number). The position of a chunk must be a restart point: reading again from it must re-deliver the chunk (at-least-once).
- */
+/** Shared JVM base for stream readers; the position of a chunk must be a restart point, so reading again from it delivers the chunk again. */
 abstract class QueueStream(
     session: IStreamSession,
     request: StreamRequest,
@@ -165,7 +155,19 @@ abstract class QueueStream(
     private fun oldestPositionLocked(): Long =
         outstanding.firstOrNull { !it.acknowledged }?.position ?: ready.firstOrNull()?.position ?: producerPosition
 
-    private fun recoveryRequestLocked(): StreamRequest = recoveryRequestAt(oldestPositionLocked())
+    private var lastRecoveryPosition = Long.MIN_VALUE
+    private var lastRecovery: StreamRequest? = null
+
+    // Same instance as long as the position did not move.
+    private fun recoveryRequestLocked(): StreamRequest {
+        val position = oldestPositionLocked()
+        val last = lastRecovery
+        if (last != null && position == lastRecoveryPosition) return last
+        return recoveryRequestAt(position).also {
+            lastRecoveryPosition = position
+            lastRecovery = it
+        }
+    }
 
     private fun awaitAcknowledgedLocked(timeoutMillis: Long): Boolean {
         var nanos = TimeUnit.MILLISECONDS.toNanos(maxOf(0L, timeoutMillis))
@@ -212,11 +214,5 @@ abstract class QueueStream(
         recovery
     }
 
-    /** The recovery request for the current position, without waiting for outstanding acknowledgements; used for periodic checkpoints. */
-    fun currentRecoveryRequest(): StreamRequest = lock.withLock { recoveryRequestLocked() }
-
-    override fun getRecoveryRequest(timeoutMillis: Long): StreamRequest = lock.withLock {
-        if (!awaitAcknowledgedLocked(timeoutMillis)) throw NakshaException(TIMEOUT, "Timeout waiting for acknowledgements")
-        recoveryRequestLocked()
-    }
+    override fun getRecoveryRequest(): StreamRequest = lock.withLock { recoveryRequestLocked() }
 }
