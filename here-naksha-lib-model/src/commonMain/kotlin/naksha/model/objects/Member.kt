@@ -3,6 +3,8 @@
 package naksha.model.objects
 
 import naksha.base.AnyObject
+import naksha.base.Id
+import naksha.base.JsEnum
 import naksha.base.ListProxy
 import naksha.base.MapProxy
 import naksha.base.NotNullEnum
@@ -23,6 +25,7 @@ import naksha.model.Tuple
 import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
+import kotlin.jvm.JvmOverloads
 
 // TODO: We need an immutable version of this, because this actually allows mutation.
 
@@ -31,11 +34,13 @@ import kotlin.js.JsName
  *
  * At write time, the storage walks the feature using [path], extracts the value, coerces it to the [dataType], and stores it in a storage-specific location derived from the [name]. The value is removed from the feature, and instead of the actual value a reference into the dedicated storage place is added, so that when decoding the feature, it can be copied back.
  *
- * The [name] must be a valid Naksha identifier (see [naksha.model.Naksha.verifyId]). Mandatory members are injected by the storage and **must not** be redeclared by the client with a different type. Mandatory members are:
+ * The [name] must be a valid Naksha identifier. Mandatory members are injected by the storage and **must not** be redeclared by the client with a different type, but they can be relocated to a different [JsonPath]. Mandatory members are:
  * - [Tuple-Number][naksha.model.objects.StandardMembers.StandardMembers_C.Tn]
+ * - [Id][naksha.model.objects.StandardMembers.StandardMembers_C.Id]
+ * - [Feature-Number][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureNumber]
+ * - [Feature-Version][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureVersion]
  * - [NextVersion][naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion]
  * - [GlobalBookFeatureNumber][naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber]
- * - [Id][naksha.model.objects.StandardMembers.StandardMembers_C.Id]
  * - [Feature][naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes]
  *
  * If [path] is not explicitly set, the implicit path defaults to `["properties", <name>]`.
@@ -51,7 +56,8 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @param path the JSON path to read the value from; defaults to `["properties", name]` when null.
      * @since 3.0
      */
-    @JsName("of")
+    @JvmOverloads
+    @JsName("MemberNew")
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
         this.name = INTERNAL_MEMBER.verify(name)
         this.dataType = dataType
@@ -60,14 +66,14 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
-     * Construct a member copy with a different path, used to relocate standard members to different places.
+     * Construct a member copy with a different path, used to relocate the member to a different place.
      *
      * Specifically, this is used to relocate the Tuple-Number and other mandatory members into the deprecated XYZ namespace.
      * @param origin The member to create a copy of.
      * @param path The new path to relocate the member to.
      * @since 3.0
      */
-    @JsName("relocate")
+    @JsName("MemberRelocateTo")
     constructor(origin: Member, path: JsonPath) : this() {
         if (origin.isVirtual()) throw NakshaException(ILLEGAL_ARGUMENT, "Virtual members can't be copied")
         this.name = origin.name
@@ -142,6 +148,40 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
+     * The retain option of the member, defaulting to [ON][MemberRetain.ON].
+     *
+     * Defines what happens to member values, when extracting the values. Possible options are:
+     * - [ON][MemberRetain.ON] — Keep the value in the object when extraction fails or would lose information _(default)_
+     * - [OFF][MemberRetain.OFF] — Do not keep the value in the object, no matter if the extraction succeeded or failed _(potential data loss)_.
+     * - [ALWAYS][MemberRetain.ALWAYS] — Always keep the value in the object, no matter if the extraction succeeded or failed _(data duplication)_.
+     * @since 3.0
+     * @see MemberRetain
+     */
+    var retain: MemberRetain by RETAIN
+
+    /** Fluent setter for [retain]; returns this for chaining. */
+    fun withRetain(value: MemberRetain?): Member {
+        retain = value ?: MemberRetain.ON
+        return this
+    }
+
+    /**
+     * If the index should be build conditional, so, if the value is `null` excludes the member from indexing _(defaults to **true**)_.
+     *
+     * An index being conditional makes the index actually free of cost as long as the member value is no valid value. However, it means that the index can only be utilized if searching for a value that is not `null`, that means for example a member query like [is null][naksha.model.request.ops.IsNull] will not use the index. When your application does not care for `null` values, you should leave the setting to the default to avoid storage and indexing cost for `null` values.
+     *
+     * You can explicitly turn this feature _off_, if you need to query for `null` values.
+     * @since 3.0
+     */
+    var conditional: Boolean by BOOLEAN_TRUE
+
+    /** Fluent setter for [conditional]; returns this for chaining. */
+    fun withConditional(value: Boolean): Member {
+        conditional = value
+        return this
+    }
+
+    /**
      * Read this member from the given proxy using the [path] of this member.
      * @param proxy The proxy to read.
      * @return the value of member in that proxy.
@@ -152,12 +192,20 @@ open class Member() : AnyObject(), Comparator<Member> {
      * Whether this member is a storage-managed mandatory member. When `true`, the storage controls the DDL for this member. Defaults to `false`.
      * @since 3.0
      */
-    private var mandatory: Boolean by MANDATORY
+    private var mandatory: Boolean by BOOLEAN_FALSE
+
+    /** Fluent setter for [mandatory]; returns this for chaining. */
+    internal fun withMandatory(value: Boolean = true): Member {
+        mandatory = value
+        return this
+    }
 
     /** True if this member is mandatory. */
     fun isMandatory(): Boolean = mandatory
 
-    private var virtual: Boolean by VIRTUAL
+    private var virtual: Boolean by BOOLEAN_FALSE
+
+    /** Fluent setter for [virtual]; returns this for chaining. */
     internal fun withVirtual(): Member {
         this.virtual = true
         return this
@@ -167,18 +215,6 @@ open class Member() : AnyObject(), Comparator<Member> {
      * True if this member is a virtual member.
      */
     fun isVirtual(): Boolean = virtual
-
-    /** Remove [mandatory] from the underlying map; returns this for chaining. */
-    internal fun removeMandatory(): Member {
-        removeRaw("mandatory")
-        return this
-    }
-
-    /** Fluent setter for [mandatory]; returns this for chaining. */
-    internal fun withMandatory(value: Boolean = true): Member {
-        mandatory = value
-        return this
-    }
 
     /**
      * Check if this member is the same as the given one, so [name] and [dataType] match.
@@ -265,6 +301,20 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun readString(feature: MapProxy<*,*>): String? {
         val raw = feature.getPath(path)
         if (raw is String) return raw
+        return null
+    }
+
+    /**
+     * Reads the [id][StandardMembers.Id] from the [path] of the given feature.
+     * @param feature The feature to read from.
+     * @return the read [Id] or `null`, if the feature does not store a valid value at the [path].
+     * @since 3.0
+     */
+    fun readId(feature: MapProxy<*,*>): Id? {
+        val raw = feature.getPath(path)
+        if (raw is Id) return raw
+        if (raw is String) return Id(raw)
+        if (raw is Long) return Id(raw)
         return null
     }
 
@@ -382,6 +432,22 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
+     * Reads the current member as [Id] from the given [Tuple].
+     * @param tuple The tuple to read from.
+     * @return the read [Id] or `null`, if the member does not store an identifier.
+     * @since 3.0
+     */
+    @JsName("getIdFromTuple")
+    fun readId(tuple: Tuple): Id? {
+        if (this.name == StandardMembers.Id.name) return tuple.id
+        val raw = tuple.membersBook[this.name]
+        if (raw is Id) return raw
+        if (raw is String) return Id(raw)
+        if (raw is Long) return Id(raw)
+        return null
+    }
+
+    /**
      * Helper to read a 64-bit integer from the given tuple.
      * @param tuple The tuple to read from.
      * @return the read value or `null`, if the tuple does not store a valid value for this member.
@@ -488,8 +554,16 @@ open class Member() : AnyObject(), Comparator<Member> {
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
         private val INDEX = NullableProperty<Member, Int>(Int::class)
         private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath("properties", self.name) }
-        private val MANDATORY = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
-        private val VIRTUAL = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
+        private val RETAIN = NotNullProperty<Member, MemberRetain>(MemberRetain::class) { self, name ->
+            val raw = self.getRaw(name)
+            if (raw != null) {
+                val value = JsEnum.getDefined(raw, MemberRetain::class)
+                if (value != null) return@NotNullProperty value
+            }
+            MemberRetain.ON
+        }
+        private val BOOLEAN_FALSE = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> false }
+        private val BOOLEAN_TRUE = NotNullProperty<Member, Boolean>(Boolean::class) { _, _ -> true }
     }
 
     /**
