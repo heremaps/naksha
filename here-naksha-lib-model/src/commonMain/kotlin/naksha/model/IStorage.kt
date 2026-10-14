@@ -7,17 +7,18 @@ import naksha.base.PlatformLock
 import naksha.base.fn.Fn1
 import naksha.base.fn.Fx1
 import naksha.jbon.IDictReader
+import naksha.model.objects.NakshaDatabase
 import naksha.model.objects.NakshaStorage
 import kotlin.js.JsExport
 
 /**
- * Any entity implementing the [IStorage] interface represents some data-sink, and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
+ * Any entity implementing the [IStorage] interface represents some data-sink and comes with an implementation that grants access to the data. The storage normally is a singleton that opens many sessions in parallel.
  *
- * Storages operate on maps. All storages do have an [administrative map][Naksha.ADMIN_CATALOG_ID], which can be virtual or real, implementation dependent. In this admin-map the storage exposes and manages the custom maps it stores, the transaction-logs of the storage, and the global dictionaries needed for the [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md), plus optional implementation specific information.
+ * Storages operate on [catalogs][naksha.model.objects.NakshaCatalog]. All storages do have an [administrative catalog][naksha.model.objects.NakshaAdmin] which can be virtual or real, implementation dependent. In this [admin-catalog][naksha.model.objects.NakshaAdmin] the storage exposes and manages the custom catalogs it stores, the transaction-logs of the storage, and the global books needed for the [JBON](https://github.com/heremaps/naksha/blob/v3/docs/JBON.md), plus optional implementation specific information.
  *
- * All other maps are custom maps, which are isolated data sinks within the same storage (like an own database schema, an own S3 bucket, an own SQLite database, an own directory or file, aso.). Each custom map is a fully separated storage entity. Within each custom map one [virtual admin collection][Naksha.COLLECTIONS_COL_ID] is exposed, which can be used to manage the collections in the map. Some storages allow to access multiple maps from one session, others may limit a session to a single map, and will reject cross map operations with [naksha.base.NakshaError.UNSUPPORTED_OPERATION].
+ * All [catalogs][naksha.model.objects.NakshaCatalog], except for the [admin-catalog][naksha.model.objects.NakshaAdmin], are [custom catalogs][naksha.model.objects.NakshaCatalog], which are isolated data sinks within the same storage (like a schema, an S3 bucket, an SQLite database file, a directory, aso.). Each [custom catalog][naksha.model.objects.NakshaCatalog] is a fully separated storage entity. Within each [custom catalog][naksha.model.objects.NakshaCatalog] one [admin collection][naksha.model.objects.NakshaAdminCollections] is exposed that can be used to manage the collections in the catalog. Some storages allow to access multiple catalogs from one session, others may limit a session to a single catalog, and will reject cross catalog operations with [UNSUPPORTED_OPERATION][naksha.base.NakshaError.UNSUPPORTED_OPERATION] errors.
  *
- * The storage will cache the dictionaries to avoid that just for [Tuple] decoding a new session need to be opened, which would require object creation for every single feature being decoded, therefore every storage implements the [IDictReader] interface, which internally should be attached to a storage local cache, that is automatically kept up-to-date. The same cache can be accessed from every [session][ISession], because every [session][ISession] implements as well the [dictionary-reader interface][IDictReader].
+ * The storage will cache books, [catalogs][naksha.model.objects.NakshaCatalog], and [collections][naksha.model.objects.NakshaCollection]. The cache can be accessed from every [session][ISession].
  *
  * @since 2.0.7
  */
@@ -54,18 +55,18 @@ interface IStorage : IDictReader {
     val id: Id
 
     /**
+     * The database to which this storage is linked.
+     * @since 3.0
+     */
+    val database: NakshaDatabase
+
+    /**
      * The hard-cap _(max result size)_ of the storage. No result-set every can become bigger than this amount of features.
      *
-     * Setting the value is optionally support, storages may throw an [naksha.base.NakshaError.UNSUPPORTED_OPERATION] exception, when trying to modify the hard-cap, or they may only allow certain values and throw an [naksha.base.NakshaError.ILLEGAL_ARGUMENT] exception, if the value too big. Zero and negative values are changed into the maximum of whatever the storage supports, [Int.MAX_VALUE] means no hard-cap (if supported by the storage).
-     *
-     * Note that technically, due to binary encoding, there is normally a hard-cap at `16777216`.
+     * Setting a value less than or equal to `0` means that there is no hard-cap _(unlimited)_, it will raise the cap to [Int.MAX_VALUE]. Storages can adjust this maximum value to their needs. The default is no limit _(so actually [Int.MAX_VALUE])_. Applications can modify this value to ensure that queries to not extend some hard limits, even when the storage would support this. Therefore, applications can lower the value, but not raise it beyond what the storage is capable of doing, the storage will not allow values below `1` or beyond what it supports as maximum.
      * @since 3.0
      */
     val hardCap: Int
-
-    // TODO: fun createDatabase(databaseId: String): NakshaDatabase
-    //       fun upgradeDatabase(database: NakshaDatabase)
-    //       fun deleteDatabase(database: NakshaDatabase)
 
     /**
      * Open a new write session.
