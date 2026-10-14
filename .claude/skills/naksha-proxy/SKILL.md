@@ -15,7 +15,7 @@ This skill encodes the conventions for writing typed wrappers over `PlatformObje
 - Proxies are **not thread-safe**; only one thread accesses a given instance at a time.
 - An **enumeration** extends `naksha.base.JsEnum`. Values are registered statically through `def(...)` or `defIgnoreCase(...)`. They serialize as plain strings/ints in JSON.
 - Both flavors are `@JsExport`-ed because the same code runs on JVM and JS.
-- For every property, the canonical surface a caller can rely on is four methods: `has<Name>()`, `get<Name>()`, `set<Name>(value)`, `remove<Name>()`. Kotlin's `var name by DELEGATE` compiles to `getName`/`setName` automatically; `hasName`/`removeName` must be written explicitly. Generate all four for every property unless the user explicitly asks for a slimmer surface.
+- For every property, the canonical surface a caller can rely on is four methods: `has<Name>()`, `get<Name>()`, `set<Name>(value)`, `remove<Name>()`. Kotlin's `var name by DELEGATE` compiles to `getName`/`setName` automatically; `hasName`/`withoutName` must be written explicitly. Generate all four for every property unless the user explicitly asks for a slimmer surface.
 
 ## When NOT to use
 
