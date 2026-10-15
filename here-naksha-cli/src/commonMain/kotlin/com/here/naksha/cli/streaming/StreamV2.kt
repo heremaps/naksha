@@ -8,18 +8,23 @@ import naksha.model.streaming.StreamChunk
 import naksha.model.streaming.StreamRequest
 
 class StreamV2(session: IStreamSession, request: StreamRequest) : Stream(session, request) {
-    override val minVersion: Version = Version.fromDouble(request.minVersion.toDouble())
-    override val unacknowledgedChunks: Array<StreamChunk>,
-    override val acknowledgedChunks: Array<StreamChunk>,
+    override val minVersion: Version
+        get() = Version.fromDouble(request.minVersion.toDouble())
+    override val unacknowledgedChunks: Array<StreamChunk>
+        get() = _chunks.subtract(_acknowledgedChunksList.toSet()).toTypedArray()
+    override val acknowledgedChunks: Array<StreamChunk>
+        get() = _acknowledgedChunksList.toTypedArray()
     override val estimatedChunks: Long = -1
     override val estimatedTuples: Long = -1
     override val acknowledgedTuples: Long = 0
     override val unacknowledgedTuples: Long = 0
     override val isRecoverable: Boolean = false
-    private val chunks = ArrayList<StreamChunk>()
 
-    fun addChunk(chunk: StreamChunk) {
-        chunks.add(chunk)
+    private val _chunks = ArrayList<StreamChunk>()
+    private val _acknowledgedChunksList = ArrayList<StreamChunk>()
+
+    internal fun addChunk(chunk: StreamChunk) {
+        _chunks.add(chunk)
     }
 
     override fun hasNext(): Boolean {
@@ -27,7 +32,7 @@ class StreamV2(session: IStreamSession, request: StreamRequest) : Stream(session
     }
 
     override fun isAcknowledged(timeoutMillis: Long): Boolean {
-        TODO("Not yet implemented")
+        return _chunks == _acknowledgedChunksList
     }
 
     override fun next(): StreamChunk {
@@ -39,7 +44,7 @@ class StreamV2(session: IStreamSession, request: StreamRequest) : Stream(session
     }
 
     override fun acknowledge(chunk: StreamChunk) {
-        TODO("Not yet implemented")
+        _acknowledgedChunksList.add(chunk)
     }
 
     override fun fail(chunk: StreamChunk, reason: NakshaError) {
