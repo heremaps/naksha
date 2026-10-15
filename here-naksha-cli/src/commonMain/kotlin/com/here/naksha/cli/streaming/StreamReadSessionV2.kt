@@ -14,6 +14,7 @@ import naksha.model.streaming.StreamChunk
 import naksha.model.streaming.StreamRequest
 import naksha.model.streaming.StreamTuple
 import naksha.psql.PgConfig
+import naksha.psql.PsqlConnection
 import naksha.psql.PsqlInstance
 
 class StreamReadSessionV2(
@@ -27,21 +28,26 @@ class StreamReadSessionV2(
         get() = true
 
     /**
-     * The master instance of the storage.
+     * The connection to the database, opened in read-only mode.
      * @since 3.0.0
      */
-    private val master : PsqlInstance = PsqlInstance(Platform.proxy(storage.config.properties, PgConfig::class).master)
+    val connection: PsqlConnection
+
+    init {
+        val master = PsqlInstance(Platform.proxy(storage.config.properties, PgConfig::class).master)
+
+        connection = master.openConnection(
+            options = SessionOptions(),
+            readOnly = true,
+            init = null
+        )
+    }
 
     companion object {
         const val VERSION_COLUMN_SQL = "i"
     }
 
     override fun read(request: StreamRequest): Stream {
-        val connection = master.openConnection(
-            options = SessionOptions(),
-            readOnly = true,
-            init = null
-        )
         val stream = StreamV2(this, request)
         val whereClause = StringBuilder()
         if (request.minVersion > 0) {
@@ -86,10 +92,10 @@ class StreamReadSessionV2(
     }
 
     override fun isClosed(): Boolean {
-        TODO("Not yet implemented")
+        return connection.isClosed()
     }
 
     override fun close() {
-        TODO("Not yet implemented")
+        connection.close()
     }
 }

@@ -8,7 +8,7 @@ import naksha.model.streaming.StreamChunk
 import naksha.model.streaming.StreamRequest
 
 class StreamV2(session: IStreamSession, request: StreamRequest) : Stream(session, request) {
-    override val minVersion: Version,
+    override val minVersion: Version = Version.fromDouble(request.minVersion.toDouble())
     override val unacknowledgedChunks: Array<StreamChunk>,
     override val acknowledgedChunks: Array<StreamChunk>,
     override val estimatedChunks: Long = -1
@@ -16,6 +16,12 @@ class StreamV2(session: IStreamSession, request: StreamRequest) : Stream(session
     override val acknowledgedTuples: Long = 0
     override val unacknowledgedTuples: Long = 0
     override val isRecoverable: Boolean = false
+    private val chunks = ArrayList<StreamChunk>()
+
+    fun addChunk(chunk: StreamChunk) {
+        chunks.add(chunk)
+    }
+
     override fun hasNext(): Boolean {
         TODO("Not yet implemented")
     }
