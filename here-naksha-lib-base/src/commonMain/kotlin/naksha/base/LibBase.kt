@@ -30,6 +30,126 @@ inline fun String?.toJson(): String = PlatformUtil.jsonString(this)
  */
 inline fun Int.toUnsignedInt64(): Long = toLong() and INT_TO_UNSIGNED_INT64_MASK
 
+/**
+ * Cast this value to the given type.
+ *
+ * If the given `type` is a [Proxy] and this is a [PlatformObject], tries to gather a proxy. For numbers only safe casts are done, so a `double` can be cast to an `int`, when this does not lose precision _(and vice versa)_.
+ * @param type the type to cast this value to.
+ * @return the cast value _(potentially a new instance for primitives and strings)_, `null` if casting failed.
+ * @since 3.0
+ */
+infix fun <T : Any> Any?.As(type: KClass<out T>): T? {
+    @Suppress("UNCHECKED_CAST")
+    if (type.isInstance(this)) return this as T
+
+    // If a proxy is requested.
+    if (Platform.isAssignable(Proxy::class, type)) {
+        if (this !is PlatformList && this !is PlatformMap && this !is PlatformDataView) return null
+        val symbol = Symbols.of(type)
+        val existing = Symbols.get(this, symbol)
+        if (type.isInstance(existing)) {
+            @Suppress("UNCHECKED_CAST")
+            return existing as T
+        }
+        val proxy = Platform.newInstanceOf(type)
+        (proxy as Proxy).bind(this, symbol)
+        return proxy
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    return when (type) {
+        Boolean::class -> if (this is Boolean) this else null
+        Byte::class -> when (this) {
+            is Byte -> this
+            is Short -> if (this >= Byte.MIN_VALUE && this <= Byte.MAX_VALUE) this.toByte() else null
+            is Int -> if (this >= Byte.MIN_VALUE && this <= Byte.MAX_VALUE) this.toByte() else null
+            is Long -> if (this >= Byte.MIN_VALUE && this <= Byte.MAX_VALUE) this.toByte() else null
+            is Float -> {
+                val v: Byte = this.toInt().toByte()
+                if ((this - v) == 0.0f) v else null
+            }
+            is Double -> {
+                val v: Byte = this.toInt().toByte()
+                if ((this - v) == 0.0) v else null
+            }
+            else -> null
+        }
+        Short::class -> when (this) {
+            is Byte -> this.toShort()
+            is Short -> this
+            is Int -> if (this >= Short.MIN_VALUE && this <= Short.MAX_VALUE) this.toShort() else null
+            is Long -> if (this >= Short.MIN_VALUE && this <= Short.MAX_VALUE) this.toShort() else null
+            is Float -> {
+                val v = this.toInt().toShort()
+                if ((this - v) == 0.0f) v else null
+            }
+            is Double -> {
+                val v = this.toInt().toShort()
+                if ((this - v) == 0.0) v else null
+            }
+            else -> null
+        }
+        Int::class -> when (this) {
+            is Byte -> this.toInt()
+            is Short -> this.toInt()
+            is Int -> this
+            is Long -> if (this >= Int.MIN_VALUE && this <= Int.MAX_VALUE) this.toInt() else null
+            is Float -> {
+                val v = this.toInt()
+                if ((this - v) == 0.0f) v else null
+            }
+            is Double -> {
+                val v = this.toInt()
+                if ((this - v) == 0.0) v else null
+            }
+            else -> null
+        }
+        Long::class -> when (this) {
+            is Byte -> this.toLong()
+            is Short -> this.toLong()
+            is Int -> this.toLong()
+            is Long -> this
+            is Float -> {
+                val v = this.toLong()
+                if ((this - v) == 0.0f) v else null
+            }
+            is Double -> {
+                val v = this.toLong()
+                if ((this - v) == 0.0) v else null
+            }
+            else -> null
+        }
+        Float::class -> when (this) {
+            is Byte -> this.toFloat()
+            is Short -> this.toFloat()
+            is Int -> if (this >= -16_777_216 && this <= 16_777_216) this.toFloat() else null
+            is Long -> if (this >= -16_777_216 && this <= 16_777_216) this.toFloat() else null
+            is Float -> this
+            is Double -> {
+                val v = this.toFloat()
+                if ((this - v) == 0.0) v else null
+            }
+            else -> null
+        }
+        Double::class -> when (this) {
+            is Byte -> this.toDouble()
+            is Short -> this.toDouble()
+            is Int -> this.toDouble()
+            is Long -> if (this >= -9_007_199_254_740_992 && this <= 9_007_199_254_740_992) this.toDouble() else null
+            is Float -> this.toDouble()
+            is Double -> this
+            else -> null
+        }
+        String::class -> when (this) {
+            is String -> this
+            is Char -> this.toString()
+            is CharSequence -> this.toString()
+            else -> null
+        }
+        else -> null
+    } as T?
+}
+
 inline fun <K : Any, V : Any> AtomicMap(): AtomicMap<K, V> = Platform.newAtomicMap()
 inline fun AtomicBool(initialValue: Boolean = false): AtomicBool = Platform.newAtomicBool(initialValue)
 inline fun AtomicInt(initialValue: Int = 0): AtomicInt = Platform.newAtomicInt(initialValue)
