@@ -1,3 +1,6 @@
+## Naksha_2.2.25
+- Fixed mixed-case tag searches by removing query normalization.
+
 ## Naksha_2.2.24
 - Apply configured request limits before extension loading to avoid startup `TooManyTasks` errors.
 

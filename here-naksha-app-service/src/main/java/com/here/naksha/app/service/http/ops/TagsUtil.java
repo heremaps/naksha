@@ -23,7 +23,6 @@ import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.*;
 
 import com.here.naksha.lib.core.exceptions.XyzErrorException;
 import com.here.naksha.lib.core.models.XyzError;
-import com.here.naksha.lib.core.models.geojson.implementation.namespaces.XyzNamespace;
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
@@ -196,13 +195,13 @@ public class TagsUtil {
     if (crtOp != OR && crtOp != AND) return;
     // Do we have only one tag? then use EXISTS operation
     if (tags.length == 1) {
-      gList.add(POp.exists(PRef.tag(XyzNamespace.normalizeTag(tags[0]))));
+      gList.add(POp.exists(PRef.tag(tags[0])));
       return;
     }
     // We have multiple tags, so use OR / AND operation
     final POp[] tagOpArr = new POp[tags.length];
     for (int i = 0; i < tags.length; i++) {
-      tagOpArr[i] = POp.exists(PRef.tag(XyzNamespace.normalizeTag(tags[i])));
+      tagOpArr[i] = POp.exists(PRef.tag(tags[i]));
     }
     if (crtOp == OR) {
       gList.add(POp.or(tagOpArr));

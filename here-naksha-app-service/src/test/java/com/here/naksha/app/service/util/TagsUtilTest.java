@@ -123,6 +123,24 @@ class TagsUtilTest {
     return Stream.of(
         tagQuerySpec("tags=x", op -> op.existsWithTagName("x"), "only 'x'"),
         tagQuerySpec(
+            "tags=One",
+            op -> op.existsWithTagName("One"),
+            "preserve capitalized tag"),
+        tagQuerySpec(
+            "tags=One+Two",
+            op -> op.hasType(OpType.AND)
+                .hasChildrenThat(
+                    child -> child.existsWithTagName("One"),
+                    child -> child.existsWithTagName("Two")),
+            "preserve capitalized tags in AND search"),
+        tagQuerySpec(
+            "tags=One,Two",
+            op -> op.hasType(OpType.OR)
+                .hasChildrenThat(
+                    child -> child.existsWithTagName("One"),
+                    child -> child.existsWithTagName("Two")),
+            "preserve capitalized tags in OR search"),
+        tagQuerySpec(
             "tags=this,that",
             op -> op.hasType(OpType.OR)
                 .hasChildrenThat(
