@@ -309,7 +309,7 @@ actual class Platform {
          * @throws NakshaException with error [NakshaError.ILLEGAL_ARGUMENT] if the given object does not implement [PlatformObject].
          */
         @JvmStatic
-        fun <T : Proxy> javaProxy(any: Any?, javaClass: Class<T>): T? {
+        fun <T : Proxy> javaProxy(any: Any?, javaClass: Class<out T>): T? {
             if (any == null) return null
             if (javaClass.isInstance(any)) return javaClass.cast(any)
             if (any is PlatformObject) return proxy(any, javaClass.kotlin)
@@ -634,7 +634,7 @@ actual class Platform {
          */
         @Suppress("UNCHECKED_CAST")
         @JvmStatic
-        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
+        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<out T>, doNotOverride: Boolean): T {
             val obj = unbox(pobject)
             require(obj is JvmObject)
             val symbol = Symbols.of(klass)

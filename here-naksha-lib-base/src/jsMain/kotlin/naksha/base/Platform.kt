@@ -625,7 +625,7 @@ return obj;
          */
         @Suppress("NON_EXPORTABLE_TYPE")
         @JsStatic
-        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean): T {
+        actual fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<out T>, doNotOverride: Boolean): T {
             val o = pobject.asDynamic()
             val sym = Symbols.of(klass)
             val p = o[sym]

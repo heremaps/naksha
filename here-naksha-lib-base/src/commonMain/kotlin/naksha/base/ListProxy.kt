@@ -48,7 +48,7 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
      * Returns the current capacity of the underlying platform object.
      * @return the current capacity of the platform list.
      */
-    fun getCapacity() : Int = array_get_capacity(platformObject())
+    open fun getCapacity() : Int = array_get_capacity(platformObject())
 
     /**
      * Sets the capacity to the given value, if possible, there is no guarantee that this method has any real effect.
@@ -56,11 +56,12 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
      * Note, the capacity can never be changed below the current size, any call like this will be ignored.
      * @param capacity the wished minimum capacity.
      */
-    fun setCapacity(capacity:Int) = array_set_capacity(platformObject(), capacity)
+    open fun setCapacity(capacity:Int) = array_set_capacity(platformObject(), capacity)
 
     /**
-     * Returns the element at the given index. If no such index exists or the element is not of the specified type,
-     * returns the given alternative.
+     * Returns the element at the given index.
+     *
+     * If no such index exists or the element is not of the specified type, returns the given alternative.
      * @param index The index to query.
      * @param alternative The alternative to return, when the element is not of the specified type.
      * @return The element.
@@ -68,14 +69,13 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
     protected open fun getOr(index: Int, alternative: E): E? = box(array_get(platformObject(), index), _elementKlass, alternative)
 
     /**
-     * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored
-     * with the key and returned.
+     * Helper to return the value of the key, if the key does not exist or is not of the expected type, a new value is created, stored with the key and returned.
      * @param index the key to query.
      * @param klass the [KClass] of the expected value type.
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return the value.
      */
-    fun <T : Any, SELF: ListProxy<E>> getOrInit(index: Int, klass: KClass<out T>, init: Fn2<out T, in SELF, in Int>): T {
+    open fun <T : Any, SELF: ListProxy<E>> __getOrInit(index: Int, klass: KClass<out T>, init: Fn2<out T, in SELF, in Int>): T {
         val data = platformObject()
         val i = if (index < 0) max(0, array_get_length(data) + index) else index
         var value: T? = null
@@ -99,7 +99,7 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
      * @param init the initialize method to invoke, when the value is not of the expected type.
      * @return The value.
      */
-    fun <T : Any, SELF: ListProxy<E>> getOrCreate(index: Int, klass: KClass<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
+    open fun <T : Any, SELF: ListProxy<E>> __getOrCreate(index: Int, klass: KClass<out T>, init: Fn2<out T?, in SELF, in Int>? = null): T {
         val data = platformObject()
         val i = if (index < 0) max(0, array_get_length(data) + index) else index
         var value: T? = null
@@ -176,6 +176,7 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
     }
 
     override fun removeAll(elements: Collection<E?>): Boolean {
+        if (isEmpty()) return false
         var dataModified = false
         for (element in elements) {
             dataModified = remove(element) || dataModified

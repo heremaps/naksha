@@ -14,6 +14,13 @@ expect class PlatformListApi {
         fun array_set(array: PlatformList?, i: Int, value: Any?): Any?
         fun array_delete(array: PlatformList?, i: Int): Any?
         fun array_splice(array: PlatformList?, start: Int, deleteCount: Int = 0, vararg add: Any?): PlatformList
+
+        /**
+         * Retains only the given elements.
+         * @param array the array to modify.
+         * @param keep the elements to retain.
+         * @return _true_ if the given array was modified; _false_ otherwise.
+         */
         fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean
 
         /**
