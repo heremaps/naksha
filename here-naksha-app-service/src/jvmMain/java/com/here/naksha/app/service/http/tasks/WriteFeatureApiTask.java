@@ -363,9 +363,9 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
           }
           return patchAndPreProcess(spaceId, featuresFromRequest, responseType, preProcessor, retry + 1);
         } else {
-          String msg = "Error encountered while writing the patched features to storage. Feature ids: "
-              + requestFeaturesIds + ", error: " + error;
+          String msg = "Error encountered while writing the patched features to storage, error: " + error;
           logger.error(msg, error.getCause());
+          // TODO CASL-1198 Should we get failed features IDs in naskha errors.
           return verticle.sendErrorResponse(routingContext, new NakshaError(error.getCode(), msg, error.getCause()));
         }
       } else {
