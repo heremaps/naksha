@@ -61,6 +61,15 @@ data class TupleNumber(
 ) : Comparable<TupleNumber> {
 
     /**
+     * The [feature-number][featureNumber] as integer.
+     *
+     * If this identifier is for a catalog or collection, it is necessary to compare the lower 31-bit and sign-bit, that is for what this value exists.
+     * @since 3.0
+     */
+    val intValue: Int
+        get() = Id.numberToInt(featureNumber)
+
+    /**
      * Create a new [TupleNumber] using [Id]'s.
      * @param databaseId the database [Id].
      * @param catalogId the catalog [Id].
