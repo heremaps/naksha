@@ -316,8 +316,8 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
     if (existingFeaturesById.isEmpty()) {
       if (responseType == HttpResponseType.FEATURE) {
         logger.error(
-            "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature ({}) does not exist.",
-            requestFeaturesIds);
+                "Unexpected null result while reading current versions in storage of targeted features for PATCH. The feature ({}) does not exist.",
+                requestFeaturesIds);
         return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.NOT_FOUND, "Feature does not exist."));
       } else if (!responseType.equals(HttpResponseType.FEATURE_COLLECTION)) {
         logger.error("Unsupported HttpResponseType was called: {}", responseType);
@@ -353,20 +353,20 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
       } else if (wrResponse instanceof ErrorResponse er) {
         writer.rollback();
         writer.close();
+        final NakshaError error = er.getError();
         // If the error was due to CONFLICT we assume concurrent modification and retry
-        if (NakshaError.CONFLICT.equals(er.getError())) {
+        if (NakshaError.CONFLICT.equals(error.getCode())) {
           if (retry >= MAX_RETRY_ATTEMPT) {
-            NakshaError error = er.getError();
             String msg = "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: " + error;
-            logger.error(msg, er.getError().getCause());
-            return verticle.sendErrorResponse(routingContext, new NakshaError(NakshaError.EXCEPTION, msg));
+            logger.error(msg, error.getCause());
+            return verticle.sendErrorResponse(routingContext, new NakshaError(error.getCode(), msg, error.getCause()));
           }
           return patchAndPreProcess(spaceId, featuresFromRequest, responseType, preProcessor, retry + 1);
         } else {
-          logger.error("Received error result {}", er);
+          String msg = "Error encountered while writing the patched features to storage, error: " + error;
+          logger.error(msg, error.getCause());
           // TODO CASL-1198 Should we get failed features IDs in naskha errors.
-          return verticle.sendErrorResponse(routingContext, new NakshaError(er.getError().getCode(),
-              "Error encountered while writing the patched features to storage"));
+          return verticle.sendErrorResponse(routingContext, new NakshaError(error.getCode(), msg, error.getCause()));
         }
       } else {
         if (responseType.equals(HttpResponseType.FEATURE)) {
