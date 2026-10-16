@@ -301,7 +301,7 @@ expect class Platform {
          * @throws IllegalArgumentException if the given `object` is not [PlatformMap], [PlatformList] or [PlatformDataView].
          * @throws IllegalStateException if [doNotOverride] is _true_ and the symbol is already bound to an incompatible type.
          */
-        fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<T>, doNotOverride: Boolean = false): T
+        fun <T : Proxy> proxy(pobject: PlatformObject, klass: KClass<out T>, doNotOverride: Boolean = false): T
 
         /**
          * Return the native platform object for the given proxy. If the given object is no proxy, the object is returned
