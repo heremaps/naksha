@@ -2,6 +2,7 @@
 
 package naksha.model
 
+import naksha.base.Version
 import naksha.base.unsupportedOp
 import naksha.model.objects.NakshaTx
 import naksha.model.request.ReadRequest
@@ -56,7 +57,7 @@ interface IWriteSession: IReadSession {
     fun rollback()
 
     /**
-     * Returns the current transaction, if none is yet started, start a new one. Starting a transaction, requires to allocate a sticky connection, and therefore disables parallel reading.
+     * Returns the current transaction, if none is yet started, start a new one.
      * @return the transaction.
      * @since 3.0.0
      */
@@ -70,19 +71,24 @@ interface IWriteSession: IReadSession {
     fun getTransaction(): NakshaTx?
 
     /**
+     * The version extracted from [useTransaction].
+     *
+     * Reading the member causes the transaction to be started; this requires a request to the physical storage. Ones the transaction has started, the same version is returned for every invocation.
+     * @since 3.0
+     */
+    val version: Version
+        get() = useTransaction().version
+
+    /**
      * Execute the given [WriteRequest].
+     *
+     * After the first write request has been executed, the underlying storage connection is fixed and all reads have to use the same connection to stick to the isolated visibility until [commit] or [rollback] is invoked. This potentially reduces read speed, therefore all reads should have been finished before calling this method.
      * @param request the request to execute.
      * @return the response.
      * @since 2.0.7
      */
     fun executeWrite(request: WriteRequest): Response
 
-    /**
-     * Execute the given [Request].
-     * @param request the request to execute.
-     * @return the response.
-     * @since 3.0
-     */
     @Deprecated("Please use executeRead or executeWrite", level = DeprecationLevel.WARNING)
     override fun execute(request: Request): Response {
         if (request is ReadRequest) return this.executeRead(request)
