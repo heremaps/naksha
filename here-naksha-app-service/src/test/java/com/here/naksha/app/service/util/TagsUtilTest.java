@@ -125,7 +125,7 @@ class TagsUtilTest {
         tagQuerySpec(
             "tags=One",
             op -> op.existsWithTagName("One"),
-            "preserve capitalized tag in single tag search"),
+            "preserve capitalized tag"),
         tagQuerySpec(
             "tags=One+Two",
             op -> op.hasType(OpType.AND)
