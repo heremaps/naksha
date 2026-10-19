@@ -114,18 +114,21 @@ open class PgSession(
         get() = options.socketTimeout
         set(value) {
             optionsValue = options.copy(socketTimeout = value)
+            pgConnection?.options = optionsValue
         }
 
     override var stmtTimeout: Int
         get() = options.stmtTimeout
         set(value) {
             optionsValue = options.copy(stmtTimeout = value)
+            pgConnection?.options = optionsValue
         }
 
     override var lockTimeout: Int
         get() = options.lockTimeout
         set(value) {
             optionsValue = options.copy(lockTimeout = value)
+            pgConnection?.options = optionsValue
         }
 
     /**
