@@ -4,7 +4,6 @@ import naksha.base.Id
 import naksha.base.JvmMap
 import naksha.base.Platform
 import naksha.base.Version
-import naksha.base.proxy
 import naksha.geo.GeoUtil
 import naksha.model.IStorage
 import naksha.model.IStreamSession
@@ -45,29 +44,23 @@ class StreamReadSessionV2(
     }
 
     companion object {
+        /**
+         * An ever-increasing sequence number <collection>i_seq that is used as the last component of feature UUIDs, also available in a dedicated postgres column and indexed.
+         */
         const val VERSION_COLUMN_SQL = "i"
+    }
+
+    private fun queryHead(request: StreamRequest, startingVersion: Long = request.minVersion): String {
+        val whereClause = StringBuilder(" WHERE $VERSION_COLUMN_SQL >= $startingVersion")
+        if (request.version < Version.HEAD.number) {
+            whereClause.append(" AND $VERSION_COLUMN_SQL <= ${request.version}")
+        }
+        return "SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${request.catalogId}.${request.collectionId}$whereClause ORDER BY $VERSION_COLUMN_SQL ASC LIMIT ${request.chunkSize};"
     }
 
     override fun read(request: StreamRequest): Stream {
         val stream = StreamV2(this, request)
-        val whereClause = StringBuilder()
-        if (request.minVersion > 0) {
-            if (whereClause.isEmpty()) {
-                whereClause.append(" WHERE $VERSION_COLUMN_SQL >= ${request.minVersion}")
-            }
-            else {
-                whereClause.append(" AND $VERSION_COLUMN_SQL >= ${request.minVersion}")
-            }
-        }
-        if (request.version < Version.HEAD.number) {
-            if (whereClause.isEmpty()) {
-                whereClause.append(" WHERE $VERSION_COLUMN_SQL <= ${request.version}")
-            }
-            else {
-                whereClause.append(" AND $VERSION_COLUMN_SQL <= ${request.version}")
-            }
-        }
-        val sql = "SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${request.catalogId}.${request.collectionId}$whereClause;"
+        val sql = queryHead(request)
         val cursor = connection.execute(sql)
         val tuples = ArrayList<StreamTuple>()
         while (cursor.next()) {
