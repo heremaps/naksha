@@ -1,6 +1,7 @@
 package com.here.naksha.cli.streaming
 
 import naksha.base.Id
+import naksha.base.JvmMap
 import naksha.base.Platform
 import naksha.base.Version
 import naksha.base.proxy
@@ -66,13 +67,13 @@ class StreamReadSessionV2(
                 whereClause.append(" AND $VERSION_COLUMN_SQL <= ${request.version}")
             }
         }
-        val sql = "SELECT jsondata, geo FROM ${request.catalogId}.${request.collectionId}$whereClause;"
+        val sql = "SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${request.catalogId}.${request.collectionId}$whereClause;"
         val cursor = connection.execute(sql)
         val tuples = ArrayList<StreamTuple>()
         while (cursor.next()) {
-            val jsonData : String = cursor["jsondata"]
+            val jsonData : JvmMap = cursor["jsondata"]
             val geoData : ByteArray = cursor["geo"]
-            val feature = checkNotNull(Platform.fromJSON(jsonData).proxy(NakshaFeature::class)) //TODO might fail here due to different version layout
+            val feature = jsonData.proxy(NakshaFeature::class) //TODO might fail here due to different version layout
             feature.geometry = GeoUtil.fromEWKB(geoData)
             val id = Id(feature.id)
             val streamTuple = StreamTuple(
