@@ -73,7 +73,7 @@ class StreamReadSessionV2(
         while (cursor.next()) {
             val jsonData : JvmMap = cursor["jsondata"]
             val geoData : ByteArray = cursor["geo"]
-            val feature = jsonData.proxy(NakshaFeature::class) //TODO might fail here due to different version layout
+            val feature = jsonData.proxy(NakshaFeature::class)
             feature.geometry = GeoUtil.fromEWKB(geoData)
             val id = Id(feature.id)
             val streamTuple = StreamTuple(

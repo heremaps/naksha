@@ -5,7 +5,7 @@ import naksha.model.NakshaContext
 import naksha.model.objects.NakshaStorage
 import naksha.model.streaming.StreamRequest
 
-class MainStreaming {
+class MainStreamingV2 {
     companion object {
         @JvmStatic
         fun main(args: Array<String>) {
@@ -41,8 +41,8 @@ class MainStreaming {
                 databaseId = Id(db),
                 catalogId = Id(catalog),
                 collectionId = Id(collection),
-                minVersion = 133039218,
-                version = 133040256
+                minVersion = 133039218,  // TODO: make this configurable
+                version = 133040256      // TODO: make this configurable
             )
             val stream = streamSession.read(streamRequest)
             println(stream.unacknowledgedChunks.size)
