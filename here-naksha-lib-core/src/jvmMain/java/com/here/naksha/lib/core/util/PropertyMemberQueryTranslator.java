@@ -48,6 +48,7 @@ public final class PropertyMemberQueryTranslator {
   public static @Nullable ReadFeatures adapt(ReadFeatures request, NakshaCollection configured) {
     // Member queries describe single HEAD states; history reads (e.g. the activity log) stay on the legacy path.
     if (request.getQueryMembers() != null || request.getQueryHistory() || request.getVersions() != 1) return null;
+    // Nothing to translate: other criteria (tags, spatial, feature ids) are converted by the storage on the legacy path.
     IPropertyQuery expression = request.getQuery().getProperties();
     if (expression == null) return null;
     Op propertyOp = translate(expression, CustomIndexMappingCompiler.generatedMembers(configured));
