@@ -357,13 +357,13 @@ public class WriteFeatureApiTask extends AbstractApiTask<XyzResponse> {
         // If the error was due to CONFLICT we assume concurrent modification and retry
         if (NakshaError.CONFLICT.equals(error.getCode())) {
           if (retry >= MAX_RETRY_ATTEMPT) {
-            String msg = "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: " + error;
+            String msg = "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: " + error.getMsg();
             logger.error(msg, error.getCause());
             return verticle.sendErrorResponse(routingContext, new NakshaError(error.getCode(), msg, error.getCause()));
           }
           return patchAndPreProcess(spaceId, featuresFromRequest, responseType, preProcessor, retry + 1);
         } else {
-          String msg = "Error encountered while writing the patched features to storage, error: " + error;
+          String msg = "Error encountered while writing the patched features to storage, error: " + error.getMsg();
           logger.error(msg, error.getCause());
           // TODO CASL-1198 Should we get failed features IDs in naskha errors.
           return verticle.sendErrorResponse(routingContext, new NakshaError(error.getCode(), msg, error.getCause()));
