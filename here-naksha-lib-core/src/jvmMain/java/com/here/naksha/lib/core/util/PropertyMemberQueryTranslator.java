@@ -41,18 +41,30 @@ public final class PropertyMemberQueryTranslator {
   private PropertyMemberQueryTranslator() {}
 
   /**
-   * Translates the property query of the request into member queries on the members generated for the custom index
-   * mappings of the given collection definition.
-   * @return the rewritten request; null, if the request is left unchanged on the legacy path.
+   * Moves the legacy property query of the request onto the members generated for the custom index mappings of the given
+   * collection definition, so the storage can filter in SQL and use the ciNN indices.
+   * @return the rewritten request; null, if the request stays unchanged on the legacy path.
    */
   public static @Nullable ReadFeatures adapt(ReadFeatures request, NakshaCollection configured) {
-    // Member queries describe single HEAD states; history reads (e.g. the activity log) stay on the legacy path.
-    if (request.getQueryMembers() != null || request.getQueryHistory() || request.getVersions() != 1) return null;
+    if (request.getQueryMembers() != null) return null;
+    // History windows (versions > 1) are applied after WHERE, translating would select different versions.
+    if (request.getQueryHistory() || request.getVersions() != 1) return null;
     // Nothing to translate: other criteria (tags, spatial, feature ids) are converted by the storage on the legacy path.
     IPropertyQuery expression = request.getQuery().getProperties();
     if (expression == null) return null;
+    // All or nothing: one untranslatable predicate keeps the whole request on the legacy path.
     Op propertyOp = translate(expression, CustomIndexMappingCompiler.generatedMembers(configured));
     if (propertyOp == null) return null;
+    return replaceLegacyCriteria(request, propertyOp);
+  }
+
+  /**
+   * Replaces the legacy criteria of the request (property query, tags, spatial, feature ids) and its in-memory property
+   * filter with a single member query, because the storage doesn't accept legacy criteria next to member queries.
+   * @return the rewritten request; null, if a legacy criterion can't be converted, the request is then unchanged.
+   */
+  private static @Nullable ReadFeatures replaceLegacyCriteria(ReadFeatures request, Op propertyOp) {
+    // Convert before changing anything, so that a failed conversion leaves the request unchanged.
     Op other;
     try {
       other = QueryConverter.PgQueryConverter_C.convert(request.getQuery());
@@ -63,8 +75,7 @@ public final class PropertyMemberQueryTranslator {
     List<Op> predicates = new ArrayList<>();
     predicates.add(propertyOp);
     if (other != null) predicates.add(other);
-    // The storage rejects legacy 'query', 'featureIds' or 'guids' next to 'queryMembers', so the feature ids become a
-    // member predicate here, as the storage does itself for legacy requests (see PgQueryWhereBuilder.build).
+    // The storage converts feature ids itself only for legacy requests (see PgQueryWhereBuilder.build).
     if (!request.getFeatureIds().isEmpty()) {
       predicates.add(new IsAnyOf(StandardMembers.Id, request.getFeatureIds().toArray(new String[0])));
     }
