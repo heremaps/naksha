@@ -248,15 +248,29 @@ Naksha tests can currently run in two modes:
 1. Against a Postgres database that you start yourself (for example the containerized Postgres described above).
 2. Against a Postgres container started automatically by the build via [Testcontainers](https://github.com/testcontainers).
 
-Before running Gradle, set the environment variables for the mode you want.
+For a standalone Postgres instance, set `NAKSHA_TEST_DB_URL` to its JDBC URL. This shared URL is used by
+`here-naksha-lib-psql` tests and by both admin and data storage tests in `here-naksha-app-service`.
+The app-service test context defaults to standalone Postgres when `NAKSHA_APP_SERVICE_TEST_CONTEXT` is
+unset.
 
 ### Option 1: Run tests against a local standalone Postgres
 
 ```bash
-export NAKSHA_APP_SERVICE_TEST_CONTEXT=LOCAL_STANDALONE
-export NAKSHA_TEST_STORAGE_ID=local_psql_test_storage
-export HUB_ADMIN_STORAGE_ID=local_psql_test_storage
+export NAKSHA_TEST_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password&ssl=false"
+./gradlew cleanAndTest
+```
 
+`NAKSHA_APP_SERVICE_TEST_CONTEXT=LOCAL_STANDALONE` is optional because standalone is the default.
+
+All test suites sharing one database must agree on the storage ID stored in the admin catalog. The test
+storage ID (`NAKSHA_TEST_STORAGE_ID`) defaults to `local_psql_test_storage`, and the Gradle test tasks set
+`HUB_ADMIN_STORAGE_ID` to the same value unless it is set explicitly, so neither needs to be exported.
+
+Use a dedicated test database: test setup may drop Naksha schemas. If tests need different databases,
+override the shared URL with one or more specific URLs. A specific URL takes precedence over
+`NAKSHA_TEST_DB_URL` for its test storage:
+
+```bash
 # For `here-naksha-lib-psql` tests.
 export NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
 
@@ -264,20 +278,20 @@ export NAKSHA_TEST_PSQL_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=p
 export NAKSHA_TEST_ADMIN_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
 
 # For `here-naksha-app-service` data storage tests.
-# Kept separate from the admin DB URL to allow deployment-like test setups, 
-# where administrative entities are stored in a different database/storage than data entities.
-export NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password"
-
-./gradlew cleanAndTest
+export NAKSHA_TEST_DATA_DB_URL="jdbc:postgresql://localhost:5432/other_db?user=postgres&password=password"
 ```
+
+For app-service tests, a URL in `~/.config/naksha/test_admin_db.url` or
+`~/.config/naksha/test_data_db.url` takes precedence over the corresponding environment variables.
 
 ### Option 2: Run tests with Testcontainers-managed Postgres
 
+The `here-naksha-lib-psql` tests start their own Postgres container when neither
+`NAKSHA_TEST_PSQL_DB_URL` nor `NAKSHA_TEST_DB_URL` is set. The app-service tests also need their
+context set to `TEST_CONTAINERS` to start their managed container.
+
 ```bash
 export NAKSHA_APP_SERVICE_TEST_CONTEXT=TEST_CONTAINERS
-export HUB_ADMIN_STORAGE_ID=local_psql_test_storage
-export NAKSHA_TEST_STORAGE_ID=local_psql_test_storage
-
 ./gradlew cleanAndTest
 ```
 

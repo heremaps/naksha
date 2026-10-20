@@ -262,6 +262,17 @@ allprojects {
             from(rootProject.file("LICENSE"))
             into("")
         }
+        tasks.withType<Test>().configureEach {
+            val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
+            if (dbUrl != null) environment("NAKSHA_TEST_PSQL_DB_URL", dbUrl)
+            val sharedDbUrl = System.getenv("NAKSHA_TEST_DB_URL")
+            if (sharedDbUrl != null) environment("NAKSHA_TEST_DB_URL", sharedDbUrl)
+            // Align the hub admin storage ID with the default test storage ID, so that all test suites
+            // sharing one database agree on the admin catalog ID (otherwise: STORAGE_ID_MISMATCH).
+            if (System.getenv("HUB_ADMIN_STORAGE_ID") == null) {
+                environment("HUB_ADMIN_STORAGE_ID", System.getenv("NAKSHA_TEST_STORAGE_ID") ?: "local_psql_test_storage")
+            }
+        }
         val jsNoduleConfig = jsModules[_name]
         pluginManager.withPlugin("org.jetbrains.kotlin.multiplatform") {
             extensions.configure<KotlinMultiplatformExtension> {
@@ -311,8 +322,6 @@ allprojects {
                     getByName<Test>("jvmTest") {
                         useJUnitPlatform()
                         maxHeapSize = "8g"
-                        val dbUrl = System.getenv("NAKSHA_TEST_PSQL_DB_URL")
-                        if (dbUrl != null) environment("NAKSHA_TEST_PSQL_DB_URL", dbUrl)
                     }
                 }
 
