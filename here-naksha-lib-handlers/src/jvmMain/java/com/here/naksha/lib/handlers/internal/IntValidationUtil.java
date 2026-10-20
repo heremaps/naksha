@@ -18,18 +18,14 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import static naksha.model.NakshaContext.currentContext;
-
-import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import java.util.Objects;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
-import naksha.model.IStorage;
-import naksha.model.SessionOptions;
+import naksha.base.PlatformUtil;
+import naksha.model.objects.CustomIndexMapping;
+import naksha.model.objects.CustomIndexMappingList;
 import naksha.model.objects.NakshaCollection;
-import naksha.model.request.ReadCollections;
-import naksha.model.util.CustomStoragePropertiesUtil;
-import naksha.model.util.ResultHelper;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
@@ -67,38 +63,41 @@ class IntValidationUtil {
     return SUCCESSFUL_VALIDATION;
   }
 
-  /**
-   * Validates the custom index mappings of a Space or Handler collection definition. If the collection exists already in
-   * the given storage, it must match the mappings. A missing collection is accepted, it is created on the first write.
-   */
-  static @NotNull Response collectionMappingValidation(
-      @NotNull INaksha hub, @Nullable String storageId, @Nullable NakshaCollection collection) {
+  static @NotNull Response collectionMappingValidation(@Nullable NakshaCollection collection) {
     try {
-      if (storageId == null || !CustomIndexMappingCompiler.hasMappings(collection)) {
-        return SUCCESSFUL_VALIDATION;
-      }
-      CustomIndexMappingCompiler.validate(collection);
-      final IStorage storage = hub.getStorageById(storageId);
-      final ReadCollections readCollection = new ReadCollections()
-          .withMapId(CustomStoragePropertiesUtil.getSchema(storage.getConfig()))
-          .addCollectionId(collection.getId());
-      final Response response = storage.useReadSession(
-          SessionOptions.from(currentContext()), readSession -> readSession.executeRead(readCollection));
-      if (response instanceof ErrorResponse) {
-        final String code = ((ErrorResponse) response).getError().getCode();
-        return NakshaError.COLLECTION_NOT_FOUND.equals(code) || NakshaError.MAP_NOT_FOUND.equals(code)
-            ? SUCCESSFUL_VALIDATION
-            : response;
-      }
-      final NakshaCollection stored =
-          ResultHelper.readFeatureFromResponse((SuccessResponse) response, NakshaCollection.class);
-      if (stored != null) {
-        CustomIndexMappingCompiler.requireMatching(stored, collection);
+      if (collection != null) {
+        CustomIndexMappingCompiler.validate(collection);
       }
       return SUCCESSFUL_VALIDATION;
     } catch (NakshaException e) {
       return new ErrorResponse(e.getError());
     }
+  }
+
+  /** Updates must preserve the mappings saved in the Space or Handler configuration. */
+  static @NotNull Response collectionMappingUpdateValidation(
+      @Nullable NakshaCollection previous, @Nullable NakshaCollection current) {
+    CustomIndexMappingList previousMappings = previous == null ? null : previous.getCustomIndexMapping();
+    CustomIndexMappingList currentMappings = current == null ? null : current.getCustomIndexMapping();
+    if (!sameMappings(previousMappings, currentMappings)) {
+      return new ErrorResponse(NakshaError.CONFLICT, "customIndexMapping cannot be changed");
+    }
+    return SUCCESSFUL_VALIDATION;
+  }
+
+  private static boolean sameMappings(
+      @Nullable CustomIndexMappingList previous, @Nullable CustomIndexMappingList current) {
+    if (previous == null || current == null) return previous == current;
+    if (previous.size() != current.size()) return false;
+    for (int i = 0; i < previous.size(); i++) {
+      CustomIndexMapping before = previous.get(i);
+      CustomIndexMapping after = current.get(i);
+      if (!Objects.equals(before.getDataType(), after.getDataType())
+          || !PlatformUtil.deepEquals(before.getJsonPath(), after.getJsonPath())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static @NotNull Response requiredPropertyValidationError(String value, String propertyName) {

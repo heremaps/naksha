@@ -60,34 +60,6 @@ public final class CustomIndexMappingCompiler {
     return definition;
   }
 
-  /**
-   * Verifies that an existing collection materializes, and indexes, the members generated for the mappings of the given
-   * definition.
-   * @param stored the existing collection, as read from the storage.
-   * @param definition the Space or Handler collection definition with custom index mappings.
-   * @throws NakshaException with {@link NakshaError#CONFLICT}, if the existing collection does not match.
-   */
-  public static void requireMatching(NakshaCollection stored, NakshaCollection definition) {
-    final NakshaCollection expected = expand(definition.copy(true));
-    for (CustomIndexMapping mapping : validatedMappings(definition)) {
-      final Member member = memberForPath(expected, mapping.getJsonPath());
-      final boolean indexed = MemberType.BOOLEAN.equals(member.getDataType()) || isIndexed(stored, member.getName());
-      if (stored.findMember(member, true) == null || !indexed) {
-        throw new NakshaException(NakshaError.CONFLICT, "Collection '" + stored.getId()
-            + "' does not match customIndexMapping: missing member " + member.getName() + " (" + member.getDataType()
-            + " at " + new ArrayList<>(member.getPath()) + ") or its index");
-      }
-    }
-  }
-
-  private static boolean isIndexed(NakshaCollection collection, String memberName) {
-    if (collection.getIndices() == null) return false;
-    for (Index index : collection.getIndices()) {
-      if (index != null && index.getOn().size() == 1 && memberName.equals(index.getOn().get(0))) return true;
-    }
-    return false;
-  }
-
   /** Returns the non-virtual member materializing exactly the given path. */
   public static @Nullable Member memberForPath(NakshaCollection definition, JsonPath path) {
     MemberList members = definition.getMembers();

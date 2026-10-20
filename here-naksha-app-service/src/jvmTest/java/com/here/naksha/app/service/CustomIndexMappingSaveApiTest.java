@@ -24,7 +24,6 @@ import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** Space and Handler saves are verified against an existing collection; a missing collection is created later. */
 class CustomIndexMappingSaveApiTest extends ApiTest {
   private final String stream = UUID.randomUUID().toString();
 
@@ -92,7 +91,7 @@ class CustomIndexMappingSaveApiTest extends ApiTest {
     return handler;
   }
 
-  @Test void handlerConflictingWithExistingCollectionIsRejected(@NakshaAppInjection NakshaApp app) throws Exception {
+  @Test void handlerCreationDoesNotCompareWithExistingCollection(@NakshaAppInjection NakshaApp app) throws Exception {
     JSONObject first = handler("mapping_save_first_handler", "mapping_save_shared");
     status(getNakshaClient().post("hub/handlers", first.toString(), stream));
     status(getNakshaClient().post("hub/spaces", space("mapping_save_first_space", "mapping_save_first_handler").toString(), stream));
@@ -101,11 +100,72 @@ class CustomIndexMappingSaveApiTest extends ApiTest {
     assertFalse(storedCollection(app, storageId, "mapping_save_shared").isEmpty());
 
     JSONObject conflicting = withType(handler("mapping_save_conflicting_handler", "mapping_save_shared"), "string");
-    status(getNakshaClient().post("hub/handlers", conflicting.toString(), stream), 409);
-    status(getNakshaClient().get("hub/handlers/mapping_save_conflicting_handler", stream), 404);
+    status(getNakshaClient().post("hub/handlers", conflicting.toString(), stream));
+    status(getNakshaClient().get("hub/handlers/mapping_save_conflicting_handler", stream));
 
     JSONObject matching = handler("mapping_save_matching_handler", "mapping_save_shared");
     status(getNakshaClient().post("hub/handlers", matching.toString(), stream));
+  }
+
+  @Test void handlerUpdatePreservesMappingsBeforeCollectionCreation(@NakshaAppInjection NakshaApp app) throws Exception {
+    JSONObject handler = handler("mapping_update_handler", "mapping_update_absent");
+    String path = "hub/handlers/mapping_update_handler";
+    status(getNakshaClient().post("hub/handlers", handler.toString(), stream));
+    handler.put("title", "Updated title");
+    status(getNakshaClient().put(path, handler.toString(), stream));
+
+    withType(handler, "string");
+    status(getNakshaClient().put(path, handler.toString(), stream), 409);
+    HttpResponse<String> saved = getNakshaClient().get(path, stream);
+    status(saved);
+    assertEquals("int64", new JSONObject(saved.body()).getJSONObject("properties")
+        .getJSONObject("collection").getJSONArray("customIndexMapping").getJSONObject(0).getString("dataType"));
+    assertTrue(storedCollection(app, handler.getJSONObject("properties").getString("storageId"), "mapping_update_absent").isEmpty());
+  }
+
+  @Test void spaceUpdatePreservesMappingsWithAutoCreationDisabled(@NakshaAppInjection NakshaApp app) throws Exception {
+    JSONObject handler = handler("mapping_update_space_handler", "mapping_update_space_absent");
+    JSONObject properties = handler.getJSONObject("properties");
+    JSONObject collection = properties.getJSONObject("collection");
+    properties.remove("collection");
+    properties.put("autoCreateCollection", false);
+    status(getNakshaClient().post("hub/handlers", handler.toString(), stream));
+
+    JSONObject space = space("mapping_update_space", "mapping_update_space_handler");
+    space.getJSONObject("properties").put("collection", collection);
+    String path = "hub/spaces/mapping_update_space";
+    status(getNakshaClient().post("hub/spaces", space.toString(), stream));
+    space.put("title", "Updated title");
+    status(getNakshaClient().put(path, space.toString(), stream));
+
+    collection.getJSONArray("customIndexMapping").getJSONObject(0).put("dataType", "string");
+    status(getNakshaClient().put(path, space.toString(), stream), 409);
+    space.getJSONObject("properties").remove("collection");
+    status(getNakshaClient().put(path, space.toString(), stream), 409);
+    HttpResponse<String> saved = getNakshaClient().get(path, stream);
+    status(saved);
+    assertEquals("int64", new JSONObject(saved.body()).getJSONObject("properties")
+        .getJSONObject("collection").getJSONArray("customIndexMapping").getJSONObject(0).getString("dataType"));
+    assertTrue(storedCollection(app, properties.getString("storageId"), "mapping_update_space_absent").isEmpty());
+  }
+
+  @Test void rejectedSpaceUpdateDoesNotCreateTheCollection(@NakshaAppInjection NakshaApp app) throws Exception {
+    JSONObject handler = handler("mapping_update_autocreate_handler", "mapping_update_autocreate_absent");
+    JSONObject properties = handler.getJSONObject("properties");
+    JSONObject collection = properties.getJSONObject("collection");
+    properties.remove("collection");
+    status(getNakshaClient().post("hub/handlers", handler.toString(), stream));
+
+    JSONObject space = space("mapping_update_autocreate_space", "mapping_update_autocreate_handler");
+    space.getJSONObject("properties").put("collection", collection);
+    String path = "hub/spaces/mapping_update_autocreate_space";
+    status(getNakshaClient().post("hub/spaces", space.toString(), stream));
+    space.put("title", "Updated title");
+    status(getNakshaClient().put(path, space.toString(), stream));
+
+    collection.getJSONArray("customIndexMapping").getJSONObject(0).put("dataType", "string");
+    status(getNakshaClient().put(path, space.toString(), stream), 409);
+    assertTrue(storedCollection(app, properties.getString("storageId"), "mapping_update_autocreate_absent").isEmpty());
   }
 
   @Test void mappingsAreSavedWhileTheCollectionDoesNotExist(@NakshaAppInjection NakshaApp app) throws Exception {

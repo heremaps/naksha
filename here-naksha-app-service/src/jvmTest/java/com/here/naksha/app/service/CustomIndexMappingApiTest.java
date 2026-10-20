@@ -82,7 +82,7 @@ class CustomIndexMappingApiTest extends ApiTest {
         .hasStatus(400)
         .hasStreamIdHeader(streamId);
 
-    // 5. Rename the Space using its current version; the unchanged collection is verified before the Space is saved.
+    // 5. Rename the Space using its current version; the mappings are unchanged, so the update is accepted.
     final HttpResponse<String> current = getNakshaClient().get(spaceUrl, streamId);
     assertThat(current).hasStatus(200).hasStreamIdHeader(streamId);
     final String updateJson = loadUpdateWithCurrentVersion(SPACE_CASE + "update_space.json", current);
@@ -96,7 +96,7 @@ class CustomIndexMappingApiTest extends ApiTest {
         .hasJsonBodyFromFile(SPACE_CASE + "updated_space_response.json");
     assertNoGeneratedSchemaInConfiguration(saved);
 
-    // 6. Reject a changed mapping, because the schema of an existing collection must not change.
+    // 6. Reject a changed mapping, because a Space update must keep the saved mappings.
     final String changedMapping = loadUpdateWithCurrentVersion(SPACE_CASE + "change_mapping.json", saved);
     assertThat(getNakshaClient().put(spaceUrl, changedMapping, streamId))
         .hasStatus(409)
@@ -167,8 +167,8 @@ class CustomIndexMappingApiTest extends ApiTest {
   }
 
   @Test
-  @DisplayName("Shared collection: reject a Space conflicting with the existing collection, accept a matching one and search")
-  void sharedCollectionRejectsConflictingSpaceAfterFirstFeatureWrite() throws Exception {
+  @DisplayName("Shared collection: Space creation does not compare the existing physical schema")
+  void sharedCollectionAllowsConflictingSpaceConfiguration() throws Exception {
     final String streamId = UUID.randomUUID().toString();
     final String firstSpace = "hub/spaces/shared_mapping_space_a";
     final String secondSpace = "hub/spaces/shared_mapping_space_b";
@@ -183,18 +183,19 @@ class CustomIndexMappingApiTest extends ApiTest {
         .hasStatus(200)
         .hasInsertedCountMatchingWithFeaturesInRequest(features);
 
-    // A second Space with a different mapping for the existing collection is rejected.
+    // Creating a configuration does not check the existing physical collection.
     assertThat(getNakshaClient().post("hub/spaces", loadFileOrFail(SHARED_CASE + "create_conflicting_space_b.json"), streamId))
-        .hasStatus(409)
-        .hasStreamIdHeader(streamId)
-        .hasJsonBodyFromFile(SHARED_CASE + "conflict_response.json");
-    assertThat(getNakshaClient().get(secondSpace, streamId)).hasStatus(404);
+        .hasStatus(200)
+        .hasStreamIdHeader(streamId);
+    assertThat(getNakshaClient().get(secondSpace, streamId)).hasStatus(200);
 
-    assertThat(getNakshaClient().post("hub/spaces", loadFileOrFail(SHARED_CASE + "create_compatible_space_b.json"), streamId))
+    final String compatibleSpace = loadFileOrFail(SHARED_CASE + "create_compatible_space_b.json")
+        .replace("shared_mapping_space_b", "shared_mapping_space_c");
+    assertThat(getNakshaClient().post("hub/spaces", compatibleSpace, streamId))
         .hasStatus(200);
     assertNoGeneratedSchemaInConfiguration(getNakshaClient().get(firstSpace, streamId));
     assertNoGeneratedSchemaInConfiguration(getNakshaClient().get(secondSpace, streamId));
-    assertThat(getNakshaClient().get(secondSpace + "/search?p.score=51&limit=1", streamId))
+    assertThat(getNakshaClient().get("hub/spaces/shared_mapping_space_c/search?p.score=51&limit=1", streamId))
         .hasStatus(200)
         .hasJsonBodyFromFile(SEARCH_RESPONSE);
   }

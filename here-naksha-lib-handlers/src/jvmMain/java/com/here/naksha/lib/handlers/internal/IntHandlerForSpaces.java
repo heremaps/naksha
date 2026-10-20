@@ -24,20 +24,14 @@ import static naksha.model.NakshaContext.currentContext;
 import static naksha.model.util.RequestHelper.readFeaturesByIdsRequest;
 
 import com.here.naksha.lib.core.INaksha;
-import com.here.naksha.lib.core.models.naksha.EventHandlerConfig;
 import com.here.naksha.lib.core.models.naksha.Space;
-import com.here.naksha.lib.handlers.DefaultStorageHandler;
-import com.here.naksha.lib.handlers.DefaultStorageHandlerProperties;
 import java.util.List;
 import java.util.stream.Collectors;
 import naksha.base.NakshaError;
-import naksha.base.Platform;
 import naksha.model.SessionOptions;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadFeatures;
-import naksha.model.objects.NakshaCollection;
 import naksha.model.request.Response;
-import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import naksha.model.util.ResultHelper;
 import org.jetbrains.annotations.NotNull;
@@ -65,37 +59,8 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
     if (handlerExistence instanceof ErrorResponse) {
       return handlerExistence;
     }
-    return collectionMappingValidation(space);
-  }
-
-  /**
-   * Custom index mappings of the Space collection must match the collection, if it exists in the storage of a
-   * {@link DefaultStorageHandler} of the Space.
-   */
-  private @NotNull Response collectionMappingValidation(Space space) {
-    NakshaCollection collection = space.getProperties().getCollection();
-    if (collection == null || collection.getCustomIndexMapping() == null) {
-      return SUCCESSFUL_VALIDATION;
-    }
-    ReadFeatures getEventHandlersRequest =
-        readFeaturesByIdsRequest(nakshaHub.getAdminMapId(), EVENT_HANDLERS, space.getEventHandlerIds());
-    Response result = nakshaHub().getSpaceStorage().useReadSession(SessionOptions.from(currentContext()),
-        readSession -> readSession.executeRead(getEventHandlersRequest));
-    if (!(result instanceof SuccessResponse)) {
-      return result;
-    }
-    for (EventHandlerConfig handler :
-        ResultHelper.extractResponseItems((SuccessResponse) result, EventHandlerConfig.class)) {
-      if (!DefaultStorageHandler.class.getName().equals(handler.getClassName())) {
-        continue;
-      }
-      String storageId = Platform.javaProxy(handler.getProperties(), DefaultStorageHandlerProperties.class).getStorageId();
-      Response validation = IntValidationUtil.collectionMappingValidation(nakshaHub(), storageId, collection);
-      if (validation instanceof ErrorResponse) {
-        return validation;
-      }
-    }
-    return SUCCESSFUL_VALIDATION;
+    return collectionMappingValidation(
+        write, space.getProperties().getCollection(), saved -> saved.getProperties().getCollection());
   }
 
   private @NotNull Response handlerExistenceValidation(Space space) {
