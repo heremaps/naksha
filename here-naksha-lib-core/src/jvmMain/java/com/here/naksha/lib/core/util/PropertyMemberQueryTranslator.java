@@ -1,8 +1,6 @@
 package com.here.naksha.lib.core.util;
 
 
-import naksha.model.objects.CustomIndexMapping;
-import naksha.model.objects.CustomIndexMappingList;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -42,13 +40,17 @@ public final class PropertyMemberQueryTranslator {
 
   private PropertyMemberQueryTranslator() {}
 
-  public static @Nullable ReadFeatures adapt(
-      ReadFeatures request, NakshaCollection schema, NakshaCollection configured) {
+  /**
+   * Translates the property query of the request into member queries on the members generated for the custom index
+   * mappings of the given collection definition.
+   * @return the rewritten request; null, if the request is left unchanged on the legacy path.
+   */
+  public static @Nullable ReadFeatures adapt(ReadFeatures request, NakshaCollection configured) {
     // Member queries describe single HEAD states; history reads (e.g. the activity log) stay on the legacy path.
     if (request.getQueryMembers() != null || request.getQueryHistory() || request.getVersions() != 1) return null;
     IPropertyQuery expression = request.getQuery().getProperties();
     if (expression == null) return null;
-    Op propertyOp = translate(expression, schema, configured);
+    Op propertyOp = translate(expression, CustomIndexMappingCompiler.generatedMembers(configured));
     if (propertyOp == null) return null;
     Op other;
     try {
@@ -79,22 +81,22 @@ public final class PropertyMemberQueryTranslator {
     return request;
   }
 
-  private static @Nullable Op translate(IPropertyQuery query, NakshaCollection schema, NakshaCollection configured) {
+  private static @Nullable Op translate(IPropertyQuery query, List<Member> members) {
     if (query instanceof PNot) {
-      Op child = translate(((PNot) query).getQuery(), schema, configured);
+      Op child = translate(((PNot) query).getQuery(), members);
       return child == null ? null : new Not(child);
     }
-    if (query instanceof PAnd) return translateChildren((PAnd) query, schema, configured, true);
+    if (query instanceof PAnd) return translateChildren((PAnd) query, members, true);
     if (query instanceof POr) {
       // REST sends "cs={...}" as the object OR the object wrapped into an array, for a tag-map only the object fits.
       PQuery object = objectContainment((POr) query);
       if (object != null) {
-        Member member = exactTagMap(object.getProperty().getPath(), schema, configured);
+        Member member = exactTagMap(object.getProperty().getPath(), members);
         if (member != null) return tagMapContains(member, (String) object.getValue());
       }
-      return translateChildren((POr) query, schema, configured, false);
+      return translateChildren((POr) query, members, false);
     }
-    if (query instanceof PQuery) return translateLeaf((PQuery) query, schema, configured);
+    if (query instanceof PQuery) return translateLeaf((PQuery) query, members);
     return null;
   }
 
@@ -110,12 +112,12 @@ public final class PropertyMemberQueryTranslator {
   }
 
   private static @Nullable Op translateChildren(
-      List<IPropertyQuery> children, NakshaCollection schema, NakshaCollection configured, boolean and) {
+      List<IPropertyQuery> children, List<Member> members, boolean and) {
     if (children.isEmpty()) return null;
     List<Op> translated = new ArrayList<>();
     for (IPropertyQuery child : children) {
       if (child == null) return null;
-      Op op = translate(child, schema, configured);
+      Op op = translate(child, members);
       if (op == null) return null;
       translated.add(op);
     }
@@ -123,14 +125,11 @@ public final class PropertyMemberQueryTranslator {
     return and ? new And(array) : new Or(array);
   }
 
-  /** Returns the mapping of exactly the given path or, for a tag-map, of the parent of a direct key. */
-  private static @Nullable CustomIndexMapping mappingFor(JsonPath path, NakshaCollection configured) {
-    CustomIndexMappingList mappings = configured.getCustomIndexMapping();
-    if (mappings == null) return null;
-    for (CustomIndexMapping candidate : mappings) {
-      if (candidate == null || candidate.getJsonPath() == null) continue;
-      if (CustomIndexMappingCompiler.samePath(candidate.getJsonPath(), path)) return candidate;
-      if (MemberType.TAG_MAP.equals(candidate.getDataType()) && isDirectKey(candidate.getJsonPath(), path)) return candidate;
+  /** Returns the member of exactly the given path or, for a tag-map, of the parent of a direct key. */
+  private static @Nullable Member memberFor(JsonPath path, List<Member> members) {
+    for (Member member : members) {
+      if (CustomIndexMappingCompiler.samePath(member.getPath(), path)) return member;
+      if (MemberType.TAG_MAP.equals(member.getDataType()) && isDirectKey(member.getPath(), path)) return member;
     }
     return null;
   }
@@ -143,18 +142,15 @@ public final class PropertyMemberQueryTranslator {
     return true;
   }
 
-  private static @Nullable Member exactTagMap(JsonPath path, NakshaCollection schema, NakshaCollection configured) {
-    CustomIndexMapping mapping = mappingFor(path, configured);
-    if (mapping == null || !CustomIndexMappingCompiler.samePath(mapping.getJsonPath(), path)) return null;
-    Member member = CustomIndexMappingCompiler.memberForPath(schema, mapping.getJsonPath());
-    return member != null && MemberType.TAG_MAP.equals(member.getDataType()) ? member : null;
+  private static @Nullable Member exactTagMap(JsonPath path, List<Member> members) {
+    Member member = memberFor(path, members);
+    return member != null && MemberType.TAG_MAP.equals(member.getDataType())
+        && CustomIndexMappingCompiler.samePath(member.getPath(), path) ? member : null;
   }
 
-  private static @Nullable Op translateLeaf(PQuery query, NakshaCollection schema, NakshaCollection configured) {
+  private static @Nullable Op translateLeaf(PQuery query, List<Member> members) {
     JsonPath path = query.getProperty().getPath();
-    CustomIndexMapping mapping = mappingFor(path, configured);
-    if (mapping == null) return null;
-    Member member = CustomIndexMappingCompiler.memberForPath(schema, mapping.getJsonPath());
+    Member member = memberFor(path, members);
     if (member == null) return null;
     MemberType type = member.getDataType();
     if (!TRANSLATED_TYPES.contains(type) && !LEGACY_ONLY_TYPES.contains(type)) {
@@ -163,7 +159,7 @@ public final class PropertyMemberQueryTranslator {
     }
     AnyOp op = query.getOp();
     Object value = query.getValue();
-    if (path.size() > mapping.getJsonPath().size()) {
+    if (path.size() > member.getPath().size()) {
       return MemberType.TAG_MAP.equals(type) ? translateTagKey(member, (String) path.get(path.size() - 1), op, value) : null;
     }
     if (AnyOp.IS_NULL.equals(op)) return new IsNull(member);

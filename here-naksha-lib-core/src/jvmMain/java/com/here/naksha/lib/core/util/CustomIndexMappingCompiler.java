@@ -36,16 +36,28 @@ public final class CustomIndexMappingCompiler {
     validatedMappings(definition);
   }
 
-  /** Adds the generated members and indices to the given, caller-owned definition. */
-  public static NakshaCollection expand(NakshaCollection definition) {
+  /**
+   * Returns the members generated for the mappings of the given definition, named cmNN in the order of their sorted
+   * paths. Other members of the definition are not included.
+   */
+  public static List<Member> generatedMembers(NakshaCollection definition) {
     List<CustomIndexMapping> mappings = validatedMappings(definition);
     mappings.sort((a, b) -> comparePaths(a.getJsonPath(), b.getJsonPath()));
-    if (mappings.isEmpty()) return definition;
-    MemberList members = definition.useMembers();
+    List<Member> members = new ArrayList<>(mappings.size());
     for (int i = 0; i < mappings.size(); i++) {
       CustomIndexMapping mapping = mappings.get(i);
       String suffix = (i + 1 < 10 ? "0" : "") + (i + 1);
-      Member member = new Member("cm" + suffix, mapping.getDataType(), mapping.getJsonPath());
+      members.add(new Member("cm" + suffix, mapping.getDataType(), mapping.getJsonPath()));
+    }
+    return members;
+  }
+
+  /** Adds the generated members and indices to the given, caller-owned definition. */
+  public static NakshaCollection expand(NakshaCollection definition) {
+    List<Member> generated = generatedMembers(definition);
+    if (generated.isEmpty()) return definition;
+    MemberList members = definition.useMembers();
+    for (Member member : generated) {
       for (Member other : members) {
         if (other != null && !other.isVirtual() && samePath(other.getPath(), member.getPath())) {
           throw invalid("customIndexMapping", "path " + member.getPath() + " is already used by member '" + other.getName() + "'");
@@ -54,21 +66,10 @@ public final class CustomIndexMappingCompiler {
       definition.addMember(member);
       // Native storage supports boolean members, but no indices on them.
       if (!MemberType.BOOLEAN.equals(member.getDataType())) {
-        definition.addIndex(new Index("ci" + suffix, member.getName()));
+        definition.addIndex(new Index("ci" + member.getName().substring(2), member.getName()));
       }
     }
     return definition;
-  }
-
-  /** Returns the non-virtual member materializing exactly the given path. */
-  public static @Nullable Member memberForPath(NakshaCollection definition, JsonPath path) {
-    MemberList members = definition.getMembers();
-    if (members != null) {
-      for (Member member : members) {
-        if (member != null && !member.isVirtual() && samePath(member.getPath(), path)) return member;
-      }
-    }
-    return null;
   }
 
   private static List<CustomIndexMapping> validatedMappings(NakshaCollection definition) {

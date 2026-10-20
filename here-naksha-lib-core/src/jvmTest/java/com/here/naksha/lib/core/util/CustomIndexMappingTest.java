@@ -33,16 +33,22 @@ class CustomIndexMappingTest {
     return CollectionIndexPolicy.toNativeCollection(definition, "physical", "target");
   }
 
+  private Member memberForPath(NakshaCollection compiled, JsonPath path) {
+    return compiled.getMembers().stream()
+        .filter(member -> member != null && CustomIndexMappingCompiler.samePath(member.getPath(), path))
+        .findFirst().orElse(null);
+  }
+
   private List<String> indexNames(NakshaCollection definition) {
     return definition.getIndices().stream().map(Index::getName).collect(Collectors.toList());
   }
 
   @Test void namesFollowSortedPaths() {
     NakshaCollection compiled = nativeCollection(definition(mapping("status"), mapping("rating", MemberType.INT32)));
-    assertEquals("cm01", CustomIndexMappingCompiler.memberForPath(compiled, new JsonPath("properties", "rating")).getName());
-    assertEquals("cm02", CustomIndexMappingCompiler.memberForPath(compiled, new JsonPath("properties", "status")).getName());
+    assertEquals("cm01", memberForPath(compiled, new JsonPath("properties", "rating")).getName());
+    assertEquals("cm02", memberForPath(compiled, new JsonPath("properties", "status")).getName());
     NakshaCollection reordered = nativeCollection(definition(mapping("rating", MemberType.INT32), mapping("status")));
-    assertEquals("cm01", CustomIndexMappingCompiler.memberForPath(reordered, new JsonPath("properties", "rating")).getName());
+    assertEquals("cm01", memberForPath(reordered, new JsonPath("properties", "rating")).getName());
     assertEquals(indexNames(compiled), indexNames(reordered));
   }
 
@@ -133,6 +139,6 @@ class CustomIndexMappingTest {
         new JsonPath("properties", "items", 0), new JsonPath("properties", "items", "0"));
     CustomIndexMapping[] mappings = paths.stream().map(path -> new CustomIndexMapping(path, MemberType.STRING)).toArray(CustomIndexMapping[]::new);
     NakshaCollection compiled = nativeCollection(definition(mappings));
-    for (JsonPath path : paths) assertNotNull(CustomIndexMappingCompiler.memberForPath(compiled, path));
+    for (JsonPath path : paths) assertNotNull(memberForPath(compiled, path));
   }
 }

@@ -28,12 +28,12 @@ class PropertyMemberQueryTranslatorTest {
   private NakshaCollection schema(MemberType type) {
     NakshaCollection schema = new NakshaCollection("mapped", "catalog");
     schema.setCustomIndexMapping(new CustomIndexMappingList(new CustomIndexMapping(new JsonPath("properties", "value"), type)));
-    return CustomIndexMappingCompiler.expand(schema);
+    return schema;
   }
 
   /** Translates the expression through the public API, returns the member query or null for the legacy path. */
   private Op translated(IPropertyQuery expression, NakshaCollection schema) {
-    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(new ReadFeatures().withPropertyQuery(expression), schema, schema);
+    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(new ReadFeatures().withPropertyQuery(expression), schema);
     return adapted == null ? null : adapted.getQueryMembers();
   }
 
@@ -119,18 +119,6 @@ class PropertyMemberQueryTranslatorTest {
     assertOperand(0.1, assertInstanceOf(Equals.class, translated(query(DoubleOp.EQ, 0.1), schema(MemberType.FLOAT32))).getValue());
     assertOperand(0.5f, assertInstanceOf(Lte.class, translated(query(DoubleOp.LTE, 0.5f), schema(MemberType.FLOAT64))).getValue());
     assertOperand(0L, assertInstanceOf(Equals.class, translated(query(DoubleOp.EQ, 0L), schema(MemberType.FLOAT64))).getValue());
-  }
-
-  @Test void passesInt8OperandsUnchanged() {
-    // The mapping validation rejects INT8, therefore the member is declared directly.
-    JsonPath path = new JsonPath("properties", "value");
-    NakshaCollection schema = new NakshaCollection("mapped", "catalog");
-    schema.setCustomIndexMapping(new CustomIndexMappingList(new CustomIndexMapping(path, MemberType.INT8)));
-    schema.addMember(new Member("cm01", MemberType.INT8, path));
-    Equals equals = assertInstanceOf(Equals.class, translated(query(DoubleOp.EQ, 7L), schema));
-    assertEquals("cm01", equals.getAt());
-    assertOperand(7L, equals.getValue());
-    assertOperand(50.5, assertInstanceOf(Gt.class, translated(query(DoubleOp.GT, 50.5), schema)).getValue());
   }
 
   @Test void translatesStringsAndLiteralTagListContainment() {
@@ -317,7 +305,7 @@ class PropertyMemberQueryTranslatorTest {
     POr pair = new POr(query(StringOp.CONTAINS, object), query(StringOp.CONTAINS, "[" + object + "]"));
     PAnd expression = new PAnd(pair, key(DoubleOp.GT, 20L));
     ReadFeatures original = new ReadFeatures().withPropertyQuery(expression);
-    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(original, schema, schema);
+    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(original, schema);
     assertSame(original, adapted);
     assertInstanceOf(And.class, original.getQueryMembers());
     assertNull(original.getQuery().getProperties());
@@ -398,7 +386,7 @@ class PropertyMemberQueryTranslatorTest {
     original.getFeatureIds().add("one");
     assertEquals(3, original.getResultFilters().size());
 
-    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(original, schema(), schema());
+    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(original, schema());
     assertSame(original, adapted);
     assertEquals(List.of(unrelated, foreign), new ArrayList<>(adapted.getResultFilters()));
     assertEquals(1, adapted.getLimit());
@@ -410,27 +398,27 @@ class PropertyMemberQueryTranslatorTest {
   @Test void keepsHistoryAndMemberQueriesOnLegacyPath() {
     ReadFeatures request = new ReadFeatures().withPropertyQuery(query(DoubleOp.EQ, 50));
     request.setQueryHistory(true);
-    assertNull(PropertyMemberQueryTranslator.adapt(request, schema(), schema()));
+    assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
     request.setQueryHistory(false);
     request.setVersions(2);
-    assertNull(PropertyMemberQueryTranslator.adapt(request, schema(), schema()));
+    assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
     request.setVersions(1);
     Equals nativeQuery = new Equals(StandardMembers.Id, "one");
     request.setQueryMembers(nativeQuery);
-    assertNull(PropertyMemberQueryTranslator.adapt(request, schema(), schema()));
+    assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
     assertSame(nativeQuery, request.getQueryMembers());
   }
 
   @Test void translatesBboxAndTileRequests() {
     ReadFeatures request = new ReadFeaturesProxyWrapper().withPropertyQuery(query(DoubleOp.EQ, 50));
-    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(request, schema(), schema());
+    ReadFeatures adapted = PropertyMemberQueryTranslator.adapt(request, schema());
     assertSame(request, adapted);
     assertNotNull(adapted.getQueryMembers());
     assertTrue(adapted.getResultFilters().isEmpty());
 
     // A wrapper around a request recognizes the property filter of the wrapped request.
     ReadFeatures wrapped = ReadFeaturesProxyWrapper.proxyWrapperOf(new ReadFeatures().withPropertyQuery(query(DoubleOp.EQ, 50)));
-    ReadFeatures adaptedWrapper = PropertyMemberQueryTranslator.adapt(wrapped, schema(), schema());
+    ReadFeatures adaptedWrapper = PropertyMemberQueryTranslator.adapt(wrapped, schema());
     assertNotNull(adaptedWrapper);
     assertTrue(adaptedWrapper.getResultFilters().isEmpty());
   }

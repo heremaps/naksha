@@ -143,9 +143,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     if (!CustomIndexMappingCompiler.hasMappings(configured)) {
       return readFeatures;
     }
-    final NakshaCollection schema = CollectionIndexPolicy.toNativeCollection(
-        configured, operationData.getCollectionId(), operationData.getMapId());
-    final ReadFeatures translated = PropertyMemberQueryTranslator.adapt(readFeatures, schema, configured);
+    final ReadFeatures translated = PropertyMemberQueryTranslator.adapt(readFeatures, configured);
     return translated != null ? translated : readFeatures;
   }
 
