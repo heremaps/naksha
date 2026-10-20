@@ -165,6 +165,9 @@ public final class PropertyMemberQueryTranslator {
     Member member = memberFor(path, members);
     if (member == null) return null;
     MemberType type = member.getDataType();
+    // An unhandled type keeps the whole property expression on PropertyFilter.
+    // Property filtering then runs after the storage read, which may increase
+    // feature loading and retains legacy comparison and limit behavior.
     if (!TRANSLATED_TYPES.contains(type) && !LEGACY_ONLY_TYPES.contains(type)) {
       logger.warn("Member type {} of {} is not supported by PropertyMemberQueryTranslator, using the legacy path", type, member.getName());
       return null;
