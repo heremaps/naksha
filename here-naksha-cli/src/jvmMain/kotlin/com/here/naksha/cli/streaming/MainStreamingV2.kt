@@ -42,7 +42,8 @@ class MainStreamingV2 {
                 catalogId = Id(catalog),
                 collectionId = Id(collection),
                 minVersion = 133039218,  // TODO: make this configurable
-                version = 133040256      // TODO: make this configurable
+                //version = 133040256      // TODO: make this configurable
+                chunkSize = 2
             )
             val stream = streamSession.read(streamRequest)
             println(stream.unacknowledgedChunks.size)
