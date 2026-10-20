@@ -7,7 +7,6 @@ import naksha.base.NakshaError
 import naksha.base.Version
 import naksha.geo.GeoUtil
 import naksha.model.objects.NakshaFeature
-import naksha.model.objects.XyzMembers
 import naksha.model.streaming.Stream
 import naksha.model.streaming.StreamChunk
 import naksha.model.streaming.StreamRequest
@@ -15,7 +14,7 @@ import naksha.model.streaming.StreamTuple
 
 class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamRequest) : Stream(v2Session, request) {
     override val minVersion: Version
-        get() = _minVersion
+        get() = Version(_minVersion)
     override val unacknowledgedChunks: Array<StreamChunk>
         get() = _chunks.subList(minAckChunkIndex + 1, _chunks.size)
                 .filterNot { it in _acknowledgedChunksList }.toTypedArray()
@@ -28,7 +27,7 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
     override val unacknowledgedTuples: Long = 0
     override val isRecoverable: Boolean = false
 
-    private var _minVersion = Version.fromDouble(request.minVersion.toDouble())
+    private var _minVersion = request.minVersion
     private val _chunks = ArrayList<StreamChunk>()
     private val _acknowledgedChunksList = ArrayList<StreamChunk>()
     private var minAckChunkIndex = -1
@@ -47,7 +46,7 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         if (request.version < Version.HEAD.number) {
             whereClause.append(" AND $VERSION_COLUMN_SQL <= ${request.version}")
         }
-        return "SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${request.catalogId}.${request.collectionId}$whereClause ORDER BY $VERSION_COLUMN_SQL ASC LIMIT ${request.chunkSize};"
+        return "SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId}$whereClause ORDER BY $VERSION_COLUMN_SQL ASC LIMIT ${request.chunkSize};"
     }
 
     override fun next(): StreamChunk {
@@ -60,13 +59,14 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         while (cursor.next()) {
             val jsonData : JvmMap = cursor["jsondata"]
             val geoData : ByteArray = cursor["geo"]
+            val version : Long = cursor["i"]
             val feature = jsonData.proxy(NakshaFeature::class)
             feature.geometry = GeoUtil.fromEWKB(geoData)
             val id = Id(feature.id)
             val streamTuple = StreamTuple(
                 id = id,
                 feature = feature.platformObject(),
-                tupleNumber = XyzMembers.XyzTn.readTupleNumber(feature)
+                version = version,
             )
             tuples.add(streamTuple)
         }
@@ -93,7 +93,7 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
             if (!_acknowledgedChunksList.remove(head)) break
             minAckChunkIndex++
             val maxVersion = head.tuples.maxOfOrNull { it.version } ?: continue
-            if (maxVersion >= 0) _minVersion = Version(maxVersion + 1) //This works only for V2 and compatible storages, not V3, because V3 versions contain Action bits
+            if (maxVersion >= 0) _minVersion = maxVersion + 1 //This works only for V2 and compatible storages, not V3, because V3 versions contain Action bits
         }
     }
 
