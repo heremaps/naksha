@@ -9,6 +9,7 @@ import naksha.model.objects.NakshaFeature
 import naksha.model.streaming.Stream
 import naksha.model.streaming.StreamChunk
 import naksha.model.streaming.StreamRequest
+import naksha.model.streaming.StreamTransaction
 import naksha.model.streaming.StreamTuple
 
 class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamRequest) : Stream(v2Session, request) {
@@ -93,7 +94,7 @@ SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.co
             throw NoSuchElementException("No more chunks available")
         }
         val sql =
-//            if (request.queryHistory && request.queryDeleted) queryByTransactionSql(request, minVersionToRead) else
+            if (request.ignoreTransactions) queryByTransactionSql(request, minVersionToRead) else
                 queryHeadSql(request, minVersionToRead)
         val cursor = v2Session.connection.execute(sql)
         val tuples = ArrayList<StreamTuple>()
@@ -111,7 +112,10 @@ SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.co
             )
             tuples.add(streamTuple)
         }
-        val chunk = StreamChunk(this, tuples.toTypedArray())
+        val chunk =
+//            if (request.ignoreTransactions)
+            StreamChunk(this, tuples.toTypedArray())
+//        else StreamTransaction(this, version = tuples[0].version, features = tuples.toTypedArray())
         _chunks.add(chunk)
         minVersionToRead = chunk.tuples.maxOfOrNull { it.version }?.plus(1) ?: minVersionToRead
         return chunk
