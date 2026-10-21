@@ -1,5 +1,8 @@
-## Naksha_2.2.25
+## Naksha_2.2.26
 - Added HTTP storage circuit-breaker support to isolate slow or failing requests by `storageId`.
+
+## Naksha_2.2.25
+- Fixed mixed-case tag searches by removing query normalization.
 
 ## Naksha_2.2.24
 - Apply configured request limits before extension loading to avoid startup `TooManyTasks` errors.
