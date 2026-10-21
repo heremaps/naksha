@@ -1,6 +1,5 @@
 package com.here.naksha.cli.streaming
 
-import com.here.naksha.cli.streaming.StreamReadSessionV2.Companion.VERSION_COLUMN_SQL
 import naksha.base.Id
 import naksha.base.JvmMap
 import naksha.base.NakshaError
@@ -13,6 +12,19 @@ import naksha.model.streaming.StreamRequest
 import naksha.model.streaming.StreamTuple
 
 class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamRequest) : Stream(v2Session, request) {
+
+    companion object {
+        /**
+         * An ever-increasing sequence number <collection>i_seq that is used as the last component of feature UUIDs, also available in a dedicated postgres column and indexed.
+         */
+        const val VERSION_COLUMN_SQL = "i"
+        private const val TXN_INDEX_SQL = "(jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint"
+    }
+
+    private fun txnIndexSqlWithTableAlias(alias: String): String {
+        return "($alias.jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint"
+    }
+
     override val minVersion: Version
         get() = Version(_minVersion)
     override val unacknowledgedChunks: Array<StreamChunk>
@@ -41,7 +53,7 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         TODO("Not yet implemented")
     }
 
-    private fun queryHead(request: StreamRequest, startingVersion: Long): String {
+    private fun queryHeadSql(request: StreamRequest, startingVersion: Long): String {
         val whereClause = StringBuilder(" WHERE $VERSION_COLUMN_SQL >= $startingVersion")
         if (request.version < Version.HEAD.number) {
             whereClause.append(" AND $VERSION_COLUMN_SQL <= ${request.version}")
@@ -49,11 +61,40 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         return "SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId}$whereClause ORDER BY $VERSION_COLUMN_SQL ASC LIMIT ${request.chunkSize};"
     }
 
+    private fun queryByTransactionSql(request: StreamRequest, previousTxn: Long): String {
+        return """
+WITH next_txn AS (
+ (SELECT $TXN_INDEX_SQL AS t FROM ${request.catalogId}.${request.collectionId} WHERE $TXN_INDEX_SQL>$previousTxn
+ ORDER BY t ASC LIMIT 1)
+UNION ALL
+ (SELECT $TXN_INDEX_SQL AS t FROM ${request.catalogId}.${request.collectionId}_del WHERE $TXN_INDEX_SQL>$previousTxn
+ ORDER BY t ASC LIMIT 1)
+UNION ALL
+ (SELECT $TXN_INDEX_SQL AS t FROM ${request.catalogId}.${request.collectionId}_hst WHERE $TXN_INDEX_SQL>$previousTxn
+ ORDER BY t ASC LIMIT 1)
+),
+min_txn AS (
+ SELECT MIN(t) AS txn
+ FROM next_txn
+)
+SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId} head, min_txn n
+ WHERE ${txnIndexSqlWithTableAlias("head")}=n.txn
+UNION ALL
+SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId}_del del, min_txn n
+ WHERE ${txnIndexSqlWithTableAlias("del")}=n.txn
+UNION ALL
+SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId}_hst hst, min_txn n
+ WHERE ${txnIndexSqlWithTableAlias("hst")}=n.txn;
+"""
+    }
+
     override fun next(): StreamChunk {
         if (!hasNext()) {
             throw NoSuchElementException("No more chunks available")
         }
-        val sql = queryHead(request, minVersionToRead)
+        val sql =
+//            if (request.queryHistory && request.queryDeleted) queryByTransactionSql(request, minVersionToRead) else
+                queryHeadSql(request, minVersionToRead)
         val cursor = v2Session.connection.execute(sql)
         val tuples = ArrayList<StreamTuple>()
         while (cursor.next()) {

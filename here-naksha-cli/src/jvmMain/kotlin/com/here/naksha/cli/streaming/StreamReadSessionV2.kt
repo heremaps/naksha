@@ -35,13 +35,7 @@ class StreamReadSessionV2(
             readOnly = true,
             init = null
         )
-    }
-
-    companion object {
-        /**
-         * An ever-increasing sequence number <collection>i_seq that is used as the last component of feature UUIDs, also available in a dedicated postgres column and indexed.
-         */
-        const val VERSION_COLUMN_SQL = "i"
+        connection.execute("SET SESSION enable_sort = off;")
     }
 
     override fun read(request: StreamRequest): Stream {
