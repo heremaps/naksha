@@ -45,7 +45,7 @@ public class HttpStorage implements IStorage {
   private final String storageId;
   private final RequestSender requestSender;
   private final HttpStorageProperties properties;
-  private final @Nullable ICircuitBreaker circuitBreaker;
+  private @Nullable ICircuitBreaker circuitBreaker = null;
 
   public HttpStorage(@NotNull Storage storage) {
     storageId = storage.getId();
@@ -62,9 +62,7 @@ public class HttpStorage implements IStorage {
             updatedAt));
     if (properties.getCircuitBreakerConfig() != null) {
       circuitBreaker = CircuitBreakerProvider.getInstance();
-      CircuitBreakerCache.registerCircuitBreakerEntry(circuitBreaker, storageId, updatedAt, properties.getCircuitBreakerConfig());
-    } else {
-      circuitBreaker = null;
+      CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(circuitBreaker, storageId, updatedAt);
     }
   }
 

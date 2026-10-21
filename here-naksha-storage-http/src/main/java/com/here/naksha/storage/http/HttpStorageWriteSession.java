@@ -54,8 +54,11 @@ public class HttpStorageWriteSession extends HttpStorageReadSession implements I
     try {
       return executeWithOptionalCircuitBreaker(() -> executeWriteRequest((WriteXyzFeatures) writeRequest));
     } catch (CircuitBreakerOpenException e) {
-      log.warn("Circuit breaker is OPEN or HALF_OPEN (no permits) for storageId: {}. Request rejected.", storageId, e);
-      return new ErrorResult(XyzError.EXCEPTION, "Circuit breaker is open - service temporarily unavailable", e);
+      log.warn(
+          "Circuit breaker is OPEN or HALF_OPEN (no permits) for storageId: {}. Request rejected.",
+          storageId,
+          e);
+      return new ErrorResult(XyzError.EXCEPTION, "Service temporarily unavailable", e);
     } catch (ConnectorInterfaceWriteExecute.ConflictException e) {
       return new ErrorResult(XyzError.CONFLICT, e.getMessage(), e);
     } catch (UnsupportedOperationException e) {

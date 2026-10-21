@@ -30,25 +30,26 @@ class CircuitBreakerCacheTest {
   }
 
   /**
-   * Verifies that registering the same storageId with same timestamp is idempotent.
+   * Verifies that checking with same timestamp is idempotent.
    */
   @Test
   void testSameStorageIdSameTimestampIsIdempotent() {
     long timestamp = 100L;
     
-    // First registration
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, timestamp, CB_CONFIG);
-    assertTrue(provider.exists(ID_1), "CB should exist after first registration");
+    // First check
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, timestamp);
+    provider.getOrCreateCircuitBreaker(ID_1, CB_CONFIG);
+    assertTrue(provider.exists(ID_1), "CB should exist after first check");
     assertEquals(timestamp, CircuitBreakerCache.getCachedTimestamp(ID_1), "Timestamp should be cached");
     
-    // Second registration with same timestamp should be no-op
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, timestamp, CB_CONFIG);
+    // Second check with same timestamp should be no-op
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, timestamp);
     assertTrue(provider.exists(ID_1), "CB should still exist");
     assertEquals(timestamp, CircuitBreakerCache.getCachedTimestamp(ID_1), "Timestamp should remain the same");
   }
 
   /**
-   * Verifies that registering with a newer timestamp recreates the circuit breaker.
+   * Verifies that checking with a newer timestamp invalidates the circuit breaker.
    */
   @Test
   void testNewerTimestampRecreatesCircuitBreaker() {
@@ -56,30 +57,33 @@ class CircuitBreakerCacheTest {
     long newTimestamp = 200L;
     
     // Register with old timestamp
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, oldTimestamp, CB_CONFIG);
-    assertTrue(provider.exists(ID_1), "CB should exist after first registration");
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, oldTimestamp);
+    provider.getOrCreateCircuitBreaker(ID_1, CB_CONFIG);
+    assertTrue(provider.exists(ID_1), "CB should exist after first check");
     assertEquals(oldTimestamp, CircuitBreakerCache.getCachedTimestamp(ID_1), "Old timestamp should be cached");
     
-    // Register with newer timestamp
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, newTimestamp, CB_CONFIG);
-    assertTrue(provider.exists(ID_1), "CB should exist after second registration");
+    // Check with newer timestamp
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, newTimestamp);
+    provider.getOrCreateCircuitBreaker(ID_1, CB_CONFIG);
+    assertTrue(provider.exists(ID_1), "CB should exist after second check");
     assertEquals(newTimestamp, CircuitBreakerCache.getCachedTimestamp(ID_1), "Timestamp should be updated to new value");
   }
 
   /**
-   * Verifies that registering with an older timestamp is ignored (no downgrade).
+   * Verifies that checking with an older timestamp is ignored (no downgrade).
    */
   @Test
   void testOlderTimestampIsIgnored() {
     long oldTimestamp = 100L;
     long newerTimestamp = 200L;
     
-    // Register with newer timestamp first
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, newerTimestamp, CB_CONFIG);
+    // Check with newer timestamp first
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, newerTimestamp);
+    provider.getOrCreateCircuitBreaker(ID_1, CB_CONFIG);
     assertEquals(newerTimestamp, CircuitBreakerCache.getCachedTimestamp(ID_1), "Newer timestamp should be cached");
     
-    // Try to register with older timestamp (should be ignored)
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, oldTimestamp, CB_CONFIG);
+    // Try to check with older timestamp (should be ignored)
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, oldTimestamp);
     
     // Timestamp should not be downgraded
     assertEquals(newerTimestamp, CircuitBreakerCache.getCachedTimestamp(ID_1), "Timestamp should not be downgraded");
@@ -94,9 +98,12 @@ class CircuitBreakerCacheTest {
     long timestamp2 = 200L;
     long timestamp3 = 300L;
     
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, timestamp1, CB_CONFIG);
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_2, timestamp2, CB_CONFIG);
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_3, timestamp3, CB_CONFIG);
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, timestamp1);
+    provider.getOrCreateCircuitBreaker(ID_1, CB_CONFIG);
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_2, timestamp2);
+    provider.getOrCreateCircuitBreaker(ID_2, CB_CONFIG);
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_3, timestamp3);
+    provider.getOrCreateCircuitBreaker(ID_3, CB_CONFIG);
     
     assertTrue(provider.exists(ID_1), "CB for ID_1 should exist");
     assertTrue(provider.exists(ID_2), "CB for ID_2 should exist");
@@ -120,14 +127,16 @@ class CircuitBreakerCacheTest {
     for (int i = 0; i < maxCacheSize; i++) {
       String storageId = "storage_" + i;
       long timestamp = 100L + i;
-      CircuitBreakerCache.registerCircuitBreakerEntry(provider, storageId, timestamp, CB_CONFIG);
+      CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, storageId, timestamp);
+      provider.getOrCreateCircuitBreaker(storageId, CB_CONFIG);
     }
     
     // Small delay to ensure all registrations complete
     Thread.sleep(50);
 
     // Add one more entry which should trigger cleanup
-    CircuitBreakerCache.registerCircuitBreakerEntry(provider, "storage_extra", 200L, CB_CONFIG);
+    CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, "storage_extra", 200L);
+    provider.getOrCreateCircuitBreaker("storage_extra", CB_CONFIG);
 
     // After cleanup, verify cache size is still reasonable (≤ 1000 or close to it)
     int finalCacheSize = 0;
@@ -141,7 +150,7 @@ class CircuitBreakerCacheTest {
   }
 
   /**
-   * Verifies concurrent registrations with same storageId converge correctly.
+   * Verifies concurrent checks with same storageId converge correctly.
    */
   @RepeatedTest(5)
   void testConcurrentRegistrationsSameStorageId() throws InterruptedException {
@@ -153,7 +162,8 @@ class CircuitBreakerCacheTest {
       new Thread(() -> {
         try {
           startLatch.await();  // Wait for all threads to be ready
-          CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, 100L, CB_CONFIG);
+          CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, 100L);
+          provider.getOrCreateCircuitBreaker(ID_1, CB_CONFIG);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         } finally {
@@ -169,7 +179,7 @@ class CircuitBreakerCacheTest {
   }
 
   /**
-   * Verifies concurrent registrations with different storageIds work correctly.
+   * Verifies concurrent checks with different storageIds work correctly.
    */
   @RepeatedTest(5)
   void testConcurrentRegistrationsDifferentStorageIds() throws InterruptedException {
@@ -183,7 +193,8 @@ class CircuitBreakerCacheTest {
         try {
           startLatch.await();
           String storageId = "storage_" + index;
-          CircuitBreakerCache.registerCircuitBreakerEntry(provider, storageId, 100L, CB_CONFIG);
+          CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, storageId, 100L);
+          provider.getOrCreateCircuitBreaker(storageId, CB_CONFIG);
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();
         } finally {
@@ -236,7 +247,8 @@ class CircuitBreakerCacheTest {
         try {
           startLatch.await();
           long timestamp = 100L + (index * 10);  // Different timestamps
-          CircuitBreakerCache.registerCircuitBreakerEntry(provider, ID_1, timestamp, CB_CONFIG);
+          CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(provider, ID_1, timestamp);
+          provider.getOrCreateCircuitBreaker(ID_1, CB_CONFIG);
           updateCount.incrementAndGet();
         } catch (InterruptedException e) {
           Thread.currentThread().interrupt();

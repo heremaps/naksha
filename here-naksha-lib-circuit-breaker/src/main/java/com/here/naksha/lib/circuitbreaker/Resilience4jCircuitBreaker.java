@@ -26,7 +26,6 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.SlidingWindowT
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.util.concurrent.Callable;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,23 +33,44 @@ import org.slf4j.LoggerFactory;
  * Resilience4j-based implementation of {@link ICircuitBreaker}. Manages per-resourceId circuit
  * breaker instances with slow-call-based state transitions.
  *
- * <p>Package-private: This class should only be instantiated through {@link CircuitBreakerProvider}
- * factory methods. Consumers must use the factory to obtain circuit breaker instances.
+ * <p>Singleton pattern enforced through {@link #getInstance()} factory method. Direct instantiation
+ * is prevented via private constructor to ensure only one instance exists application-wide.
  */
 class Resilience4jCircuitBreaker implements ICircuitBreaker {
 
   private static final Logger log = LoggerFactory.getLogger(Resilience4jCircuitBreaker.class);
+  private static Resilience4jCircuitBreaker instance = null;
 
   private final CircuitBreakerRegistry registry;
 
-  public Resilience4jCircuitBreaker() {
+  private Resilience4jCircuitBreaker() {
     this.registry = CircuitBreakerRegistry.ofDefaults();
+  }
+
+  /**
+   * Get the singleton instance of Resilience4jCircuitBreaker.
+   *
+   * @return singleton instance
+   */
+  @NotNull
+  static Resilience4jCircuitBreaker getInstance() {
+    if (instance == null) {
+      synchronized (Resilience4jCircuitBreaker.class) {
+        if (instance == null) {
+          instance = new Resilience4jCircuitBreaker();
+        }
+      }
+    }
+    return instance;
   }
 
   @Override
   public <T> T execute(@NotNull String resourceId, @NotNull Callable<T> operation) throws Exception {
     CircuitBreaker cb = registry.find(resourceId).orElse(null);
     if (cb == null) {
+      log.warn(
+          "CircuitBreaker not found for resourceId: {}. Executing operation without CircuitBreaker protection.",
+          resourceId);
       return operation.call();
     }
     try {
@@ -66,17 +86,23 @@ class Resilience4jCircuitBreaker implements ICircuitBreaker {
   @Override
   public @NotNull ICircuitBreaker getOrCreateCircuitBreaker(
       @NotNull String resourceId, @NotNull CircuitBreakerProps config) {
-    registry.circuitBreaker(resourceId, buildCircuitBreakerConfig(resourceId, config));
+    if (!exists(resourceId)) {
+      log.info("Creating CircuitBreaker for resourceId: {} with config: {}", resourceId, config);
+    }
+    registry.circuitBreaker(resourceId, buildCircuitBreakerConfig(config));
     return this;
   }
 
   @Override
   public void remove(@NotNull String resourceId) {
+    log.info("Removing CircuitBreaker for resourceId: {}", resourceId);
     registry.remove(resourceId);
   }
 
   @Override
   public void clear() {
+    int count = registry.getAllCircuitBreakers().size();
+    log.info("Clearing entire CircuitBreaker registry ({} entries)", count);
     registry.getAllCircuitBreakers().forEach(cb -> registry.remove(cb.getName()));
   }
 
@@ -92,22 +118,7 @@ class Resilience4jCircuitBreaker implements ICircuitBreaker {
     return registry.find(resourceId).isPresent();
   }
 
-  public @Nullable CircuitBreaker findCircuitBreaker(@NotNull String resourceId) {
-    return registry.find(resourceId).orElse(null);
-  }
-
-  private @NotNull CircuitBreakerConfig buildCircuitBreakerConfig(
-      @NotNull String resourceId, @NotNull CircuitBreakerProps config) {
-    log.info(
-        "Creating CircuitBreaker for resourceId: {} with config: slidingWindowSize={}, minimumNumberOfCalls={}, slowCallDurationThresholdMs={}, slowCallRateThreshold={}%, waitDurationInOpenStateMs={}, permittedNumberOfCallsInHalfOpenState={}",
-        resourceId,
-        config.getSlidingWindowSize(),
-        config.getMinimumNumberOfCalls(),
-        config.getSlowCallDurationThresholdMs(),
-        config.getSlowCallRateThreshold(),
-        config.getWaitDurationInOpenStateMs(),
-        config.getPermittedNumberOfCallsInHalfOpenState());
-
+  private @NotNull CircuitBreakerConfig buildCircuitBreakerConfig(@NotNull CircuitBreakerProps config) {
     return CircuitBreakerConfig.custom()
         .slidingWindowType(SlidingWindowType.COUNT_BASED)
         .slidingWindowSize(config.getSlidingWindowSize())

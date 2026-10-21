@@ -131,6 +131,10 @@ public class RequestSender {
         && ioe.getMessage().contains("GOAWAY"));
   }
 
+  public boolean hasPropsChanged(KeyProperties thatKeyProps) {
+    return thatKeyProps.storageUpdatedAt() > this.keyProps.storageUpdatedAt();
+  }
+
   /**
    * Set of properties that are just enough to construct the sender
    * and distinguish unambiguously between objects

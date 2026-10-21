@@ -26,8 +26,6 @@ import org.jetbrains.annotations.NotNull;
  */
 public class CircuitBreakerProvider {
 
-  private static volatile ICircuitBreaker r4jInstance;
-
   private CircuitBreakerProvider() {
     // Prevent instantiation
   }
@@ -52,14 +50,7 @@ public class CircuitBreakerProvider {
   public static ICircuitBreaker getInstance(@NotNull ECircuitBreakerImpl cbImpl) {
     switch (cbImpl) {
       case RESILIENCE4J:
-        if (r4jInstance == null) {
-          synchronized (CircuitBreakerProvider.class) {
-            if (r4jInstance == null) {
-              r4jInstance = new Resilience4jCircuitBreaker();
-            }
-          }
-        }
-        return r4jInstance;
+        return Resilience4jCircuitBreaker.getInstance();
       default:
         throw new IllegalArgumentException("Unknown circuit breaker implementation: " + cbImpl);
     }

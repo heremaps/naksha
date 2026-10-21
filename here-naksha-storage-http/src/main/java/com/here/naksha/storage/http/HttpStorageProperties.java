@@ -111,7 +111,7 @@ public class HttpStorageProperties extends XyzProperties {
   /**
    * Optional circuit breaker configuration for this storage.
    *
-   * <p>If configured, the circuit breaker monitors request this storage.
+   * <p>If configured, the circuit breaker monitors requests triggered via this storage.
    * When the slow request rate exceeds the configured threshold, the circuit breaker
    * opens to throttle traffic.
    *

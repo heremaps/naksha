@@ -19,7 +19,7 @@
 package com.here.naksha.lib.circuitbreaker;
 
 /**
- * Exception thrown when a circuit breaker is OPEN or HALF_OPEN and no permits are available.
+ * Exception thrown when a CircuitBreaker is OPEN or HALF_OPEN (exceeding permitted number of operations).
  *
  * <p>This exception indicates that a request was rejected by the circuit breaker because:
  * <ul>

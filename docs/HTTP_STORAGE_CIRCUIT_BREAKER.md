@@ -34,28 +34,27 @@ For detailed configuration properties and their validation rules, refer to:
   "type": "Storage",
   "className": "com.here.naksha.storage.http.HttpStorage",
   "properties": {
-    "type": "http",
     "url": "https://example.com/api",
-    "protocol": "json",
     "connectTimeout": 10,
     "socketTimeout": 30,
+    "httpInterface": "ffwAdapter",
     "maxRetries": 3,
     "headers": {
       "Authorization": "Bearer token123"
     },
-    "circuitBreaker": {
+    "circuitBreakerConfig": {
       "slidingWindowSize": 20,
       "minimumNumberOfCalls": 10,
-      "slowCallDurationThresholdMs": 30000,
+      "slowCallDurationThresholdMs": 29000,
       "slowCallRateThreshold": 50,
-      "waitDurationInOpenStateMs": 5000,
+      "waitDurationInOpenStateMs": 120000,
       "permittedNumberOfCallsInHalfOpenState": 4
     }
   }
 }
 ```
 
-**Note:** The `circuitBreaker` configuration is optional. If omitted, HTTP requests are sent without circuit breaking.
+**Note:** The `circuitBreakerConfig` configuration is optional. If omitted, HTTP requests are sent without circuit breaking.
 
 
 ## CircuitBreaker Behavior

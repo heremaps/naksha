@@ -121,8 +121,11 @@ public class HttpStorageReadSession implements IReadSession {
     try {
       return executeWithOptionalCircuitBreaker(() -> executeReadRequest((ReadFeaturesProxyWrapper) readRequest));
     } catch (CircuitBreakerOpenException e) {
-      log.warn("Circuit breaker is OPEN or HALF_OPEN (no permits) for storageId: {}. Request rejected.", storageId, e);
-      return new ErrorResult(XyzError.EXCEPTION, "Circuit breaker is open - service temporarily unavailable", e);
+      log.warn(
+          "Circuit breaker is OPEN or HALF_OPEN (no permits) for storageId: {}. Request rejected.",
+          storageId,
+          e);
+      return new ErrorResult(XyzError.EXCEPTION, "Service temporarily unavailable", e);
     } catch (Exception e) {
       log.warn("We got exception while executing Read request.", e);
       return new ErrorResult(XyzError.EXCEPTION, e.getMessage(), e);
@@ -131,7 +134,9 @@ public class HttpStorageReadSession implements IReadSession {
 
   protected @NotNull Result executeWithOptionalCircuitBreaker(@NotNull Callable<Result> operation) throws Exception {
     if (circuitBreaker != null && circuitBreakerConfig != null) {
-      return circuitBreaker.getOrCreateCircuitBreaker(storageId, circuitBreakerConfig).execute(storageId, operation);
+      return circuitBreaker
+          .getOrCreateCircuitBreaker(storageId, circuitBreakerConfig)
+          .execute(storageId, operation);
     }
     return operation.call();
   }

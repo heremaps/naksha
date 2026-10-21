@@ -87,7 +87,7 @@ public class CircuitBreakerProps {
    * <p>Example: A slowCallRateThreshold of 50 means if 50% or more of the requests in the
    * sliding window are slow, the circuit breaker opens.
    *
-   * <p>Unit: Percentage (0-100)
+   * <p>Unit: Percentage (1-100)
    */
   @JsonProperty(SLOW_CALL_RATE_THRESHOLD)
   private int slowCallRateThreshold;
@@ -95,9 +95,9 @@ public class CircuitBreakerProps {
   /**
    * The duration the circuit breaker waits in OPEN state before transitioning to HALF_OPEN.
    *
-   * <p>During the OPEN state, the circuit breaker rejects most requests and throttles only a
-   * small number. After this wait duration expires, it automatically transitions to HALF_OPEN to
-   * probe if the underlying service has recovered.
+   * <p>During the OPEN state, the circuit breaker rejects all requests. After this wait duration
+   * expires, it automatically transitions to HALF_OPEN to probe if the underlying service has
+   * recovered.
    *
    * <p>Example: A waitDurationInOpenStateMs of 60000 means the circuit breaker will wait 60
    * seconds in OPEN state before attempting to probe recovery via HALF_OPEN.
@@ -162,5 +162,16 @@ public class CircuitBreakerProps {
 
   public int getPermittedNumberOfCallsInHalfOpenState() {
     return permittedNumberOfCallsInHalfOpenState;
+  }
+
+  @Override
+  public String toString() {
+    return "CircuitBreakerProps{" + "slidingWindowSize="
+        + slidingWindowSize + ", minimumNumberOfCalls="
+        + minimumNumberOfCalls + ", slowCallDurationThresholdMs="
+        + slowCallDurationThresholdMs + ", slowCallRateThreshold="
+        + slowCallRateThreshold + "%" + ", waitDurationInOpenStateMs="
+        + waitDurationInOpenStateMs + ", permittedNumberOfCallsInHalfOpenState="
+        + permittedNumberOfCallsInHalfOpenState + '}';
   }
 }

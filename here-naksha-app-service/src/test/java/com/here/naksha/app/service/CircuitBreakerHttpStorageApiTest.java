@@ -275,7 +275,7 @@ class CircuitBreakerHttpStorageApiTest extends ApiTest {
       return false;
     }
     final String body = response.body();
-    return body.contains("Circuit breaker") && body.contains("temporarily unavailable");
+    return body.contains("Service temporarily unavailable");
   }
 
   private SetupIds createStorageHandlerSpace(String prefix, String storagePropertiesJson) throws Exception {

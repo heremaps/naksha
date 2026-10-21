@@ -53,7 +53,7 @@ class RequestSenderCacheTest {
   @Test
   void testOneIdSameUpdatedAtReusesCache() {
     // Setup
-    ConcurrentMap<String, RequestSenderCache.RequestSenderWithLastUpdatedAt> senders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, RequestSender> senders = new ConcurrentHashMap<>();
     RequestSenderCache cache = new RequestSenderCache(senders, 8, TimeUnit.HOURS);
 
     // Tests
@@ -72,7 +72,7 @@ class RequestSenderCacheTest {
   @Test
   void testOneIdNewerUpdatedAtRefreshesCache() {
     // Setup
-    ConcurrentMap<String, RequestSenderCache.RequestSenderWithLastUpdatedAt> senders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, RequestSender> senders = new ConcurrentHashMap<>();
     RequestSenderCache cache = new RequestSenderCache(senders, 8, TimeUnit.HOURS);
 
     // Tests
@@ -91,7 +91,7 @@ class RequestSenderCacheTest {
   @Test
   void testMultipleIds() {
     // Setup
-    ConcurrentMap<String, RequestSenderCache.RequestSenderWithLastUpdatedAt> senders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, RequestSender> senders = new ConcurrentHashMap<>();
     RequestSenderCache cache = new RequestSenderCache(senders, 8, TimeUnit.HOURS);
 
     // Tests
@@ -118,7 +118,7 @@ class RequestSenderCacheTest {
   void testCleanup() throws InterruptedException {
     // Setup
     int cleanPeriodMs = 1000;
-    ConcurrentMap<String, RequestSenderCache.RequestSenderWithLastUpdatedAt> senders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, RequestSender> senders = new ConcurrentHashMap<>();
     RequestSenderCache cache = new RequestSenderCache(senders, cleanPeriodMs, TimeUnit.MILLISECONDS);
 
     // Tests
@@ -143,7 +143,7 @@ class RequestSenderCacheTest {
   void testCleanupConcurrency() throws InterruptedException {
     // Setup
     int cleanPeriodMs = 1;
-    ConcurrentMap<String, RequestSenderCache.RequestSenderWithLastUpdatedAt> senders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, RequestSender> senders = new ConcurrentHashMap<>();
     RequestSenderCache cache = new RequestSenderCache(senders, cleanPeriodMs, TimeUnit.MILLISECONDS);
 
     // Tests
@@ -160,7 +160,7 @@ class RequestSenderCacheTest {
   @RepeatedTest(10)
   void testGetSenderConcurrency() throws InterruptedException {
     // Setup
-    ConcurrentMap<String, RequestSenderCache.RequestSenderWithLastUpdatedAt> senders = new ConcurrentHashMap<>();
+    ConcurrentMap<String, RequestSender> senders = new ConcurrentHashMap<>();
     RequestSenderCache cache = new RequestSenderCache(senders, 8, TimeUnit.HOURS);
     AtomicReference<RequestSender> senderId1 = new AtomicReference<>();
     AtomicReference<RequestSender> senderId1Copy = new AtomicReference<>();
