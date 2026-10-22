@@ -5,7 +5,6 @@ import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.AMPE
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.END;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.PLUS;
-import static naksha.model.TagNormalizer.normalizeTag;
 
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
@@ -159,6 +158,6 @@ public class TagQueryUtil {
   }
 
   private static TagExists tagExists(String tag) {
-    return new TagExists(normalizeTag(tag));
+    return new TagExists(tag);
   }
 }
