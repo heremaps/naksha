@@ -64,7 +64,7 @@ public class CircuitBreakerCache {
    */
   public static void checkOrInvalidateCircuitBreakerCache(
       @NotNull ICircuitBreaker provider, @NotNull String storageId, long lastUpdatedAt) {
-    final Long cached = getCachedTimestamp(storageId);
+    final Long cached = circuitBreakerMap.get(storageId);
     if (cached == null || lastUpdatedAt > cached) {
       boolean updated = updateInternalCache(storageId, lastUpdatedAt, provider);
       if (updated) {
@@ -72,17 +72,6 @@ public class CircuitBreakerCache {
         provider.remove(storageId);
       }
     }
-  }
-
-  /**
-   * Get cached timestamp for a storageId.
-   *
-   * @param storageId storage identifier
-   * @return cached timestamp or null if not found
-   */
-  @Nullable
-  static Long getCachedTimestamp(@NotNull String storageId) {
-    return circuitBreakerMap.get(storageId);
   }
 
   /**
@@ -105,7 +94,7 @@ public class CircuitBreakerCache {
     if (circuitBreakerMap.size() >= MAX_SIZE) {
       removeClosedEntries(provider);
       if (circuitBreakerMap.size() >= MAX_SIZE) {
-        removeRandomEntry(provider);
+        removeFirstEntry(provider);
       }
     }
 
@@ -123,31 +112,25 @@ public class CircuitBreakerCache {
   private static synchronized void removeClosedEntries(@NotNull ICircuitBreaker provider) {
     List<String> storageIds = new ArrayList<>(circuitBreakerMap.keySet());
     for (String storageId : storageIds) {
-      Long timestamp = getCachedTimestamp(storageId);
-      if (timestamp != null && provider.isClosed(storageId)) {
-        if (circuitBreakerMap.remove(storageId, timestamp)) {
-          provider.remove(storageId);
-          logger.info(
-              "Removed CLOSED CircuitBreaker for storageId: {} due to max cache size limit", storageId);
-        }
+      if (provider.isClosed(storageId)) {
+        circuitBreakerMap.remove(storageId);
+        provider.remove(storageId);
+        logger.info("Removed CLOSED CircuitBreaker for storageId: {} due to max cache size limit", storageId);
       }
     }
   }
 
   /**
-   * Remove an arbitrary entry from cache due to size limit.
+   * Remove the first entry from cache due to size limit (oldest insertion).
    *
    * @param provider circuit breaker provider to remove the entry from
    */
-  private static synchronized void removeRandomEntry(@NotNull ICircuitBreaker provider) {
+  private static synchronized void removeFirstEntry(@NotNull ICircuitBreaker provider) {
     if (!circuitBreakerMap.isEmpty()) {
-      int randomIndex = random.nextInt(circuitBreakerMap.size());
-      String storageId = (String) circuitBreakerMap.keySet().toArray()[randomIndex];
-      Long removed = circuitBreakerMap.remove(storageId);
+      String storageId = (String) circuitBreakerMap.keySet().toArray()[0];
+      circuitBreakerMap.remove(storageId);
       provider.remove(storageId);
-      if (removed != null) {
-        logger.info("Cache full ({}). Evicted circuit breaker for storageId={}", MAX_SIZE, storageId);
-      }
+      logger.info("Cache full ({}). Evicted circuit breaker for storageId={}", MAX_SIZE, storageId);
     }
   }
 
@@ -157,5 +140,17 @@ public class CircuitBreakerCache {
   @TestOnly
   public static void clearCache() {
     circuitBreakerMap.clear();
+  }
+
+  /**
+   * Get cached timestamp for a storageId. Intended for testing purposes.
+   *
+   * @param storageId storage identifier
+   * @return cached timestamp or null if not found
+   */
+  @TestOnly
+  @Nullable
+  public static Long getCachedTimestamp(@NotNull String storageId) {
+    return circuitBreakerMap.get(storageId);
   }
 }

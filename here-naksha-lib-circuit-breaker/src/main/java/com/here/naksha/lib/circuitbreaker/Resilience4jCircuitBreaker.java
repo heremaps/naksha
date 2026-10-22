@@ -88,8 +88,8 @@ class Resilience4jCircuitBreaker implements ICircuitBreaker {
       @NotNull String resourceId, @NotNull CircuitBreakerProps config) {
     if (!exists(resourceId)) {
       log.info("Creating CircuitBreaker for resourceId: {} with config: {}", resourceId, config);
+      registry.circuitBreaker(resourceId, buildCircuitBreakerConfig(config));
     }
-    registry.circuitBreaker(resourceId, buildCircuitBreakerConfig(config));
     return this;
   }
 
