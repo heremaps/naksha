@@ -22,6 +22,7 @@ import static com.here.naksha.lib.core.NakshaAdminCollection.EVENT_HANDLERS;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 import static com.here.naksha.lib.handlers.internal.PluginPropertiesValidator.pluginValidation;
 
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.NakshaContext;
 import com.here.naksha.lib.core.exceptions.NoCursor;
@@ -107,12 +108,59 @@ public class IntHandlerForStorages extends AdminFeatureEventHandler<Storage> {
     boolean isSocketTimeoutValid = isBetween(
         httpStorageProperties.getSocketTimeout(), MIN_HTTP_SOCKET_TIMEOUT_SEC, MAX_HTTP_SOCKET_TIMEOUT_SEC);
     boolean isUrlValid = isUrlValid(httpStorageProperties.getUrl());
+
+    Result cbValidationResult = validateCircuitBreakerConfig(httpStorageProperties);
+    if (cbValidationResult instanceof ErrorResult) {
+      return cbValidationResult;
+    }
+
     if (isConnectionTimeoutValid && isSocketTimeoutValid && isUrlValid) {
       return new SuccessResult();
     }
     String errorMsg =
         getErrorMsg(httpStorageProperties, isConnectionTimeoutValid, isSocketTimeoutValid, isUrlValid);
     return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, errorMsg);
+  }
+
+  private Result validateCircuitBreakerConfig(HttpStorageProperties httpStorageProperties) {
+    final CircuitBreakerProps cbConfig = httpStorageProperties.getCircuitBreakerConfig();
+    if (cbConfig == null) {
+      return new SuccessResult();
+    }
+
+    try {
+      if (cbConfig.getSlidingWindowSize() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.slidingWindowSize must be > 0");
+      }
+      if (cbConfig.getMinimumNumberOfCalls() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.minimumNumberOfCalls must be > 0");
+      }
+      if (cbConfig.getMinimumNumberOfCalls() > cbConfig.getSlidingWindowSize()) {
+        throw new IllegalArgumentException("circuitBreaker.minimumNumberOfCalls must be <= slidingWindowSize");
+      }
+      if (cbConfig.getSlowCallDurationThresholdMs() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.slowCallDurationThresholdMs must be > 0");
+      }
+      if (cbConfig.getSlowCallRateThreshold() <= 0 || cbConfig.getSlowCallRateThreshold() > 100) {
+        throw new IllegalArgumentException("circuitBreaker.slowCallRateThreshold must be in range 1..100");
+      }
+      if (cbConfig.getWaitDurationInOpenStateMs() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.waitDurationInOpenStateMs must be > 0");
+      }
+      if (cbConfig.getPermittedNumberOfCallsInHalfOpenState() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.permittedNumberOfCallsInHalfOpenState must be > 0");
+      }
+
+      long socketTimeoutMs = httpStorageProperties.getSocketTimeout() * 1000;
+      if (cbConfig.getSlowCallDurationThresholdMs() >= socketTimeoutMs) {
+        throw new IllegalArgumentException(
+            "circuitBreaker.slowCallDurationThresholdMs must be lower than socketTimeout in milliseconds");
+      }
+
+      return new SuccessResult();
+    } catch (IllegalArgumentException e) {
+      return new ErrorResult(XyzError.ILLEGAL_ARGUMENT, e.getMessage());
+    }
   }
 
   @NotNull

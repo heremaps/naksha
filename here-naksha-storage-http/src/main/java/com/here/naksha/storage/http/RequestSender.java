@@ -131,8 +131,8 @@ public class RequestSender {
         && ioe.getMessage().contains("GOAWAY"));
   }
 
-  public boolean hasKeyProps(KeyProperties thatKeyProps) {
-    return this.keyProps.equals(thatKeyProps);
+  public boolean hasPropsChanged(KeyProperties thatKeyProps) {
+    return thatKeyProps.storageUpdatedAt() > this.keyProps.storageUpdatedAt();
   }
 
   /**
@@ -146,5 +146,6 @@ public class RequestSender {
       @NotNull Map<String, String> defaultHeaders,
       long connectionTimeoutSec,
       long socketTimeoutSec,
-      long maxRetries) {}
+      long maxRetries,
+      long storageUpdatedAt) {}
 }

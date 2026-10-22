@@ -53,7 +53,7 @@ public class RequestSenderCache {
 
   private @NotNull RequestSender getUpdated(
       @Nullable RequestSender cachedSender, @NotNull KeyProperties keyProperties) {
-    if (cachedSender != null && cachedSender.hasKeyProps(keyProperties)) return cachedSender;
+    if (cachedSender != null && !cachedSender.hasPropsChanged(keyProperties)) return cachedSender;
     else return new RequestSender(keyProperties);
   }
 

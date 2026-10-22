@@ -47,7 +47,8 @@ class RequestSenderTest {
                 new HashMap<>(),
                 10,
                 10,
-                1
+                1,
+                1200
         );
 
         // Given: Mock setup for generating GOAWAY exception on first attempt
