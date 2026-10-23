@@ -26,7 +26,7 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.util.CollectionIndexPolicy;
-import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import naksha.model.objects.CustomIndexMappings;
 import com.here.naksha.lib.core.util.PropertyMemberQueryTranslator;
 import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.base.JvmBoxingUtil;
@@ -50,6 +50,7 @@ import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.apache.commons.lang3.time.StopWatch;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -137,13 +138,12 @@ public class DefaultStorageHandler extends AbstractEventHandler {
    * Translates a property search on custom index mappings into member queries, so that the storage can use the
    * generated indices. Returns the original request, when the collection has no mappings or the query can't be translated.
    */
-  private @NotNull ReadFeatures translatePropertyQuery(final @NotNull OperationData operationData) {
-    final ReadFeatures readFeatures = (ReadFeatures) operationData.getRequest();
-    final NakshaCollection configured = operationData.getCollection();
-    if (!CustomIndexMappingCompiler.hasMappings(configured)) {
+  protected @NotNull ReadFeatures translatePropertyQuery(
+      final @NotNull ReadFeatures readFeatures, final @Nullable NakshaCollection collection) {
+    if (!CustomIndexMappings.hasMappings(collection)) {
       return readFeatures;
     }
-    final ReadFeatures translated = PropertyMemberQueryTranslator.adapt(readFeatures, configured);
+    final ReadFeatures translated = PropertyMemberQueryTranslator.adapt(readFeatures, collection);
     return translated != null ? translated : readFeatures;
   }
 
@@ -212,7 +212,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationAttempt currentAttempt,
       final @NotNull StopWatch storageTimer) {
     logger.info("Processing ReadFeatures against {}", operationData.getCollectionId());
-    final ReadFeatures readFeatures = translatePropertyQuery(operationData);
+    final ReadFeatures readFeatures = translatePropertyQuery((ReadFeatures) operationData.getRequest(), operationData.getCollection());
     Response response = measuredStorageSupplier(
         () -> singleRead(operationData.getSessionOptions(), operationData.getStorageImpl(), readFeatures), storageTimer);
     if (response instanceof ErrorResponse) {
@@ -483,8 +483,10 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       logger.info(
           "Collection auto creation is enabled, attempting to create collection specified in request: {}",
           operationData.getCollectionId());
-      final NakshaCollection collectionForCreation = CollectionIndexPolicy.toNativeCollection(
-          operationData.getCollection(), operationData.getCollectionId(), operationData.getMapId());
+      final NakshaCollection collectionForCreation = operationData.getCollection();
+      collectionForCreation.setId(operationData.getCollectionId());
+      collectionForCreation.setCatalogId(operationData.getMapId());
+      CollectionIndexPolicy.normalizeForHubCreation(collectionForCreation);
       Response createCollectionResp = measuredStorageSupplier(
           () -> createMissingCollection(
               operationData.getSessionOptions(),
@@ -557,7 +559,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
         wr.getWrites().forEach(write -> {
           if (write.getFeature() instanceof NakshaCollection) {
             final NakshaCollection collectionFromRequest = (NakshaCollection) write.getFeature();
-            write.setFeature(CollectionIndexPolicy.toNativeCollection(collectionFromRequest, collectionId, mapId));
+            collectionFromRequest.setId(collectionId);
+            collectionFromRequest.setCatalogId(mapId);
+            CollectionIndexPolicy.normalizeForHubCreation(collectionFromRequest);
           }
         });
       }

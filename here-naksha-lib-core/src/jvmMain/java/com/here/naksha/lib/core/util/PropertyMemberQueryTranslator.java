@@ -1,6 +1,7 @@
 package com.here.naksha.lib.core.util;
 
 
+import naksha.model.objects.CustomIndexMappings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,26 +35,22 @@ public final class PropertyMemberQueryTranslator {
   private static final List<MemberType> TRANSLATED_TYPES = List.of(
       MemberType.BOOLEAN, MemberType.STRING, MemberType.INT8, MemberType.INT16, MemberType.INT32, MemberType.INT64,
       MemberType.FLOAT32, MemberType.FLOAT64, MemberType.TAG_LIST, MemberType.TAG_MAP);
-  /** Member types without a matching legacy value operation, only their null checks are translated. */
-  private static final List<MemberType> LEGACY_ONLY_TYPES = List.of(MemberType.BYTE_ARRAY, MemberType.SPATIAL);
   private static final Logger logger = LoggerFactory.getLogger(PropertyMemberQueryTranslator.class);
 
   private PropertyMemberQueryTranslator() {}
 
   /**
-   * Moves the legacy property query of the request onto the members generated for the custom index mappings of the given
-   * collection definition, so the storage can filter in SQL and use the ciNN indices.
+   * Moves the legacy property query of the request onto the resolved members of the given collection, so the storage can
+   * filter in SQL and use the collection's indices.
    * @return the rewritten request; null, if the request stays unchanged on the legacy path.
    */
-  public static @Nullable ReadFeatures adapt(ReadFeatures request, NakshaCollection configured) {
+  public static @Nullable ReadFeatures adapt(ReadFeatures request, NakshaCollection collection) {
     if (request.getQueryMembers() != null) return null;
-    // History windows (versions > 1) are applied after WHERE, translating would select different versions.
-    if (request.getQueryHistory() || request.getVersions() != 1) return null;
     // Nothing to translate: other criteria (tags, spatial, feature ids) are converted by the storage on the legacy path.
     IPropertyQuery expression = request.getQuery().getProperties();
     if (expression == null) return null;
     // All or nothing: one untranslatable predicate keeps the whole request on the legacy path.
-    Op propertyOp = translate(expression, CustomIndexMappingCompiler.generatedMembers(configured));
+    Op propertyOp = translate(expression, collection.useMembers());
     if (propertyOp == null) return null;
     return replaceLegacyCriteria(request, propertyOp);
   }
@@ -119,7 +116,7 @@ public final class PropertyMemberQueryTranslator {
     PQuery array = (PQuery) or.get(1);
     if (!AnyOp.CONTAINS.equals(object.getOp()) || !AnyOp.CONTAINS.equals(array.getOp())) return null;
     if (!(object.getValue() instanceof String) || !("[" + object.getValue() + "]").equals(array.getValue())) return null;
-    if (!CustomIndexMappingCompiler.samePath(object.getProperty().getPath(), array.getProperty().getPath())) return null;
+    if (!CustomIndexMappings.samePath(object.getProperty().getPath(), array.getProperty().getPath())) return null;
     return object;
   }
 
@@ -140,7 +137,7 @@ public final class PropertyMemberQueryTranslator {
   /** Returns the member of exactly the given path or, for a tag-map, of the parent of a direct key. */
   private static @Nullable Member memberFor(JsonPath path, List<Member> members) {
     for (Member member : members) {
-      if (CustomIndexMappingCompiler.samePath(member.getPath(), path)) return member;
+      if (CustomIndexMappings.samePath(member.getPath(), path)) return member;
       if (MemberType.TAG_MAP.equals(member.getDataType()) && isDirectKey(member.getPath(), path)) return member;
     }
     return null;
@@ -157,7 +154,7 @@ public final class PropertyMemberQueryTranslator {
   private static @Nullable Member exactTagMap(JsonPath path, List<Member> members) {
     Member member = memberFor(path, members);
     return member != null && MemberType.TAG_MAP.equals(member.getDataType())
-        && CustomIndexMappingCompiler.samePath(member.getPath(), path) ? member : null;
+        && CustomIndexMappings.samePath(member.getPath(), path) ? member : null;
   }
 
   private static @Nullable Op translateLeaf(PQuery query, List<Member> members) {
@@ -168,7 +165,7 @@ public final class PropertyMemberQueryTranslator {
     // An unhandled type keeps the whole property expression on PropertyFilter.
     // Property filtering then runs after the storage read, which may increase
     // feature loading and retains legacy comparison and limit behavior.
-    if (!TRANSLATED_TYPES.contains(type) && !LEGACY_ONLY_TYPES.contains(type)) {
+    if (!TRANSLATED_TYPES.contains(type)) {
       logger.warn("Member type {} of {} is not supported by PropertyMemberQueryTranslator, using the legacy path", type, member.getName());
       return null;
     }
@@ -179,7 +176,6 @@ public final class PropertyMemberQueryTranslator {
     }
     if (AnyOp.IS_NULL.equals(op)) return new IsNull(member);
     if (AnyOp.EXISTS.equals(op) || AnyOp.IS_NOT_NULL.equals(op)) return new Not(new IsNull(member));
-    if (LEGACY_ONLY_TYPES.contains(type)) return null;
     if (MemberType.BOOLEAN.equals(type)) {
       // REST encodes boolean equality in the operation, only CONTAINS carries the boolean as value.
       if (AnyOp.IS_TRUE.equals(op) || (AnyOp.CONTAINS.equals(op) && Boolean.TRUE.equals(value))) return new IsTrue(member);

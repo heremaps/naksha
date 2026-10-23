@@ -56,6 +56,24 @@ class PropertyMemberQueryTranslatorTest {
     assertEquals(expected.getClass(), actual.getClass());
   }
 
+  @Test void translatesExplicitlyDeclaredMembersWithoutMappings() {
+    NakshaCollection collection = new NakshaCollection("declared", "catalog");
+    collection.setMembers(new MemberList(new Member("score", MemberType.INT32, new JsonPath("properties", "value"))));
+
+    Equals nativeQuery = assertInstanceOf(Equals.class, translated(query(DoubleOp.EQ, 51), collection));
+    assertEquals("score", nativeQuery.getAt());
+    assertOperand(51, nativeQuery.getValue());
+  }
+
+  @Test void translatesImplicitDefaultMembers() {
+    NakshaCollection collection = new NakshaCollection("defaults", "catalog");
+    PQuery expression = new PQuery(new Property("properties", "featureType"), StringOp.EQUALS, "example.Feature");
+
+    Equals nativeQuery = assertInstanceOf(Equals.class, translated(expression, collection));
+    assertEquals("ft", nativeQuery.getAt());
+    assertOperand("example.Feature", nativeQuery.getValue());
+  }
+
   @Test void translatesBooleanOperationsAndBooleanContainment() {
     NakshaCollection schema = schema(MemberType.BOOLEAN);
     assertEquals("cm01", assertInstanceOf(IsTrue.class, translated(query(AnyOp.IS_TRUE), schema)).getAt());
@@ -67,11 +85,10 @@ class PropertyMemberQueryTranslatorTest {
   }
 
   /**
-   * Fails when a mapping type is added to {@link CustomIndexMappingCompiler} or {@link MemberType} without deciding how
-   * {@link PropertyMemberQueryTranslator} handles it: translate it in translateLeaf and add a sample query here, or keep
-   * it on the legacy path and list it in legacyOnly.
+   * Fails when {@link CustomIndexMappings} accepts a mapping type that {@link PropertyMemberQueryTranslator} doesn't fully
+   * translate: translate it in translateLeaf and add a sample query here, or don't accept it as mapping type.
    */
-  @Test void decidesTheTranslationOfEveryMappingType() {
+  @Test void translatesEveryMappingType() {
     Map<MemberType, PQuery> translatedSamples = new HashMap<>();
     translatedSamples.put(MemberType.BOOLEAN, query(AnyOp.IS_TRUE));
     translatedSamples.put(MemberType.STRING, query(StringOp.EQUALS, "abc"));
@@ -80,28 +97,21 @@ class PropertyMemberQueryTranslatorTest {
     }
     translatedSamples.put(MemberType.TAG_LIST, query(StringOp.CONTAINS, "red"));
     translatedSamples.put(MemberType.TAG_MAP, key(StringOp.EQUALS, "Berlin"));
-    List<MemberType> legacyOnly = List.of(MemberType.BYTE_ARRAY, MemberType.SPATIAL);
 
     Iterator<MemberType> types = JsEnum.iterate(JvmClassMappingKt.getKotlinClass(MemberType.class));
     int mappingTypes = 0;
     while (types.hasNext()) {
       MemberType type = types.next();
-      NakshaCollection definition = new NakshaCollection("mapped", "catalog");
-      definition.setCustomIndexMapping(new CustomIndexMappingList(new CustomIndexMapping(new JsonPath("properties", "value"), type)));
       try {
-        CustomIndexMappingCompiler.validate(definition);
+        CustomIndexMappings.validate(schema(type));
       } catch (NakshaException e) {
         continue;
       }
       mappingTypes++;
-      if (translatedSamples.containsKey(type)) {
-        assertNotNull(translated(translatedSamples.get(type), schema(type)), "no translation for " + type);
-      } else {
-        assertTrue(legacyOnly.contains(type), "Mapping type '" + type + "' is not covered by PropertyMemberQueryTranslator");
-        assertNull(translated(query(StringOp.EQUALS, "abc"), schema(type)), "legacy-only " + type + " was translated");
-      }
+      assertTrue(translatedSamples.containsKey(type), "Mapping type '" + type + "' is not covered by PropertyMemberQueryTranslator");
+      assertNotNull(translated(translatedSamples.get(type), schema(type)), "no translation for " + type);
     }
-    assertEquals(translatedSamples.size() + legacyOnly.size(), mappingTypes);
+    assertEquals(translatedSamples.size(), mappingTypes);
   }
 
   @Test void passesNumericOperandsUnchanged() {
@@ -222,7 +232,6 @@ class PropertyMemberQueryTranslatorTest {
     NakshaCollection indexed = new NakshaCollection("mapped", "catalog");
     indexed.setCustomIndexMapping(new CustomIndexMappingList(
         new CustomIndexMapping(new JsonPath("properties", "items", 0), MemberType.TAG_MAP)));
-    indexed = CustomIndexMappingCompiler.expand(indexed);
     assertNull(translated(new PQuery(new Property("properties", "items", "0", "city"), StringOp.EQUALS, "Berlin"), indexed));
     Property typed = new Property("properties", "items");
     typed.getPath().add(0);
@@ -395,18 +404,62 @@ class PropertyMemberQueryTranslatorTest {
     assertInstanceOf(And.class, adapted.getQueryMembers());
   }
 
-  @Test void keepsHistoryAndMemberQueriesOnLegacyPath() {
-    ReadFeatures request = new ReadFeatures().withPropertyQuery(query(DoubleOp.EQ, 50));
-    request.setQueryHistory(true);
-    assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
-    request.setQueryHistory(false);
-    request.setVersions(2);
-    assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
-    request.setVersions(1);
+  @Test void translatesHistoryAndVersionQueries() {
+    for (boolean history : new boolean[] {false, true}) {
+      for (int versions : new int[] {1, 2}) {
+        ReadFeatures request = new ReadFeatures().withPropertyQuery(query(DoubleOp.EQ, 51));
+        request.setQueryHistory(history);
+        request.setVersions(versions);
+        request.setMinVersion(100L);
+        request.setVersion(200L);
+        PropertyFilter filter = assertInstanceOf(PropertyFilter.class, request.getResultFilters().get(0));
+        assertSame(request, filter.getReq());
+
+        assertSame(request, PropertyMemberQueryTranslator.adapt(request, schema()));
+        Equals nativeQuery = assertInstanceOf(Equals.class, request.getQueryMembers());
+        assertEquals("cm01", nativeQuery.getAt());
+        assertOperand(51, nativeQuery.getValue());
+        assertTrue(request.getResultFilters().isEmpty());
+        assertFalse(request.hasRaw("query"));
+        assertEquals(history, request.getQueryHistory());
+        assertEquals(versions, request.getVersions());
+        assertEquals(100L, request.getMinVersion());
+        assertEquals(200L, request.getVersion());
+      }
+    }
+  }
+
+  @Test void keepsExistingMemberQueriesUntouched() {
+    PQuery expression = query(DoubleOp.EQ, 50);
+    ReadFeatures request = new ReadFeatures().withPropertyQuery(expression);
+    PropertyFilter filter = assertInstanceOf(PropertyFilter.class, request.getResultFilters().get(0));
     Equals nativeQuery = new Equals(StandardMembers.Id, "one");
     request.setQueryMembers(nativeQuery);
+
     assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
     assertSame(nativeQuery, request.getQueryMembers());
+    assertSame(expression, request.getQuery().getProperties());
+    assertEquals(List.of(filter), new ArrayList<>(request.getResultFilters()));
+  }
+
+  @Test void keepsUnsupportedHistoryQueriesOnLegacyPath() {
+    PAnd expression = new PAnd(query(DoubleOp.EQ, 51),
+        new PQuery(new Property("unmapped"), StringOp.EQUALS, "x"));
+    ReadFeatures request = new ReadFeatures().withPropertyQuery(expression);
+    request.setQueryHistory(true);
+    request.setVersions(2);
+    request.setMinVersion(100L);
+    request.setVersion(200L);
+    PropertyFilter filter = assertInstanceOf(PropertyFilter.class, request.getResultFilters().get(0));
+
+    assertNull(PropertyMemberQueryTranslator.adapt(request, schema()));
+    assertNull(request.getQueryMembers());
+    assertSame(expression, request.getQuery().getProperties());
+    assertEquals(List.of(filter), new ArrayList<>(request.getResultFilters()));
+    assertTrue(request.getQueryHistory());
+    assertEquals(2, request.getVersions());
+    assertEquals(100L, request.getMinVersion());
+    assertEquals(200L, request.getVersion());
   }
 
   @Test void translatesBboxAndTileRequests() {

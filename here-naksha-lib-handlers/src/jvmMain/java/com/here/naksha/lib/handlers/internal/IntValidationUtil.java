@@ -18,7 +18,7 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
-import com.here.naksha.lib.core.util.CustomIndexMappingCompiler;
+import naksha.model.objects.CustomIndexMappings;
 import java.util.Objects;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
@@ -66,7 +66,7 @@ class IntValidationUtil {
   static @NotNull Response collectionMappingValidation(@Nullable NakshaCollection collection) {
     try {
       if (collection != null) {
-        CustomIndexMappingCompiler.validate(collection);
+        CustomIndexMappings.validate(collection);
       }
       return SUCCESSFUL_VALIDATION;
     } catch (NakshaException e) {
