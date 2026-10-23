@@ -18,7 +18,14 @@
  */
 package com.here.naksha.lib.handlers.internal;
 
+import naksha.model.objects.CustomIndexMappings;
+import java.util.Objects;
 import naksha.base.NakshaError;
+import naksha.base.NakshaException;
+import naksha.base.PlatformUtil;
+import naksha.model.objects.CustomIndexMapping;
+import naksha.model.objects.CustomIndexMappingList;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.Response;
@@ -26,6 +33,7 @@ import naksha.model.request.SuccessResponse;
 import naksha.model.request.Write;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 class IntValidationUtil {
 
@@ -53,6 +61,43 @@ class IntValidationUtil {
       return descValidation;
     }
     return SUCCESSFUL_VALIDATION;
+  }
+
+  static @NotNull Response collectionMappingValidation(@Nullable NakshaCollection collection) {
+    try {
+      if (collection != null) {
+        CustomIndexMappings.validate(collection);
+      }
+      return SUCCESSFUL_VALIDATION;
+    } catch (NakshaException e) {
+      return new ErrorResponse(e.getError());
+    }
+  }
+
+  /** Updates must preserve the mappings saved in the Space or Handler configuration. */
+  static @NotNull Response collectionMappingUpdateValidation(
+      @Nullable NakshaCollection previous, @Nullable NakshaCollection current) {
+    CustomIndexMappingList previousMappings = previous == null ? null : previous.getCustomIndexMapping();
+    CustomIndexMappingList currentMappings = current == null ? null : current.getCustomIndexMapping();
+    if (!sameMappings(previousMappings, currentMappings)) {
+      return new ErrorResponse(NakshaError.CONFLICT, "customIndexMapping cannot be changed");
+    }
+    return SUCCESSFUL_VALIDATION;
+  }
+
+  private static boolean sameMappings(
+      @Nullable CustomIndexMappingList previous, @Nullable CustomIndexMappingList current) {
+    if (previous == null || current == null) return previous == current;
+    if (previous.size() != current.size()) return false;
+    for (int i = 0; i < previous.size(); i++) {
+      CustomIndexMapping before = previous.get(i);
+      CustomIndexMapping after = current.get(i);
+      if (!Objects.equals(before.getDataType(), after.getDataType())
+          || !PlatformUtil.deepEquals(before.getJsonPath(), after.getJsonPath())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static @NotNull Response requiredPropertyValidationError(String value, String propertyName) {

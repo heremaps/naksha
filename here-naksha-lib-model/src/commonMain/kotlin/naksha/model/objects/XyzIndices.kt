@@ -150,5 +150,18 @@ class XyzIndices private constructor() {
             XyzAppId,
             XyzAuthor
         )
+
+        /**
+         * The slim default indices for collections that don't declare indices, used by the Hub and for
+         * [custom index mappings][NakshaCollection.customIndexMapping]: tags, geometry, and feature-number with next-version.
+         * Existing collections are verified against their indices, so changing this list requires a migration.
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val HUB_SLIM_INDICES: List<Index> = listOf(
+            XyzTags,
+            StandardIndices.Geometry,
+            Index("fn_nv", StandardMembers.FeatureNumber.name, StandardMembers.NextVersion.name)
+        )
     }
 }
