@@ -71,16 +71,16 @@ data class PgIndex(
 
     internal fun create(conn: PgConnection, table: PgTable) {
         if (on.isEmpty()) throw illegalArg("Index without target columns: $name")
-        val (primaryIndex, _) = indexAndOpsOf(on.first(), name)
+        val (primaryIndex, _) = indexAndOpsOf(on.first().first, name)
         val elements = ArrayList<String>(on.size)
         for (i in 0 ..< on.size) {
-            val (method, element) = indexAndOpsOf(on[i], name)
+            val (method, element) = indexAndOpsOf(on[i].first, name)
             // The first column selects the index method (btree/gin/gist); any further columns must be
             // plain btree-type columns (valid as extra btree columns, or via btree_gist inside a gist).
             if (i > 0 && method != "btree") {
                 throw illegalArg("The member #$i (${on[i]}) can not be used as secondary index element, only primitives are allowed")
             }
-            elements.add(element)
+            elements.add(if (primaryIndex == "btree") "$element ${on[i].second}" else element)
         }
         val includeClause = if (includes.isEmpty()) "" else " INCLUDE (${includes.joinToString(", ") { column -> 
             val (index, _) = indexAndOpsOf(column, "include")
@@ -90,7 +90,7 @@ data class PgIndex(
         val indexIdent = quoteIdent(table.name, "\$ci_", name)
         val withClause = if (primaryIndex == "gin") "" else " WITH (fillfactor=${if (PgTable.isAnyHead(table.name)) 50 else 100})"
         // The partial `WHERE` must come after any `WITH (...)` clause.
-        val whereClause = if (conditional) " WHERE ${on.first().ident} IS NOT NULL" else ""
+        val whereClause = if (conditional) " WHERE ${on.first().first.ident} IS NOT NULL" else ""
         val sql = """CREATE INDEX IF NOT EXISTS $indexIdent
 ON ${table.quotedName}
 USING $primaryIndex (${elements.joinToString(", ")})$includeClause$withClause$whereClause"""

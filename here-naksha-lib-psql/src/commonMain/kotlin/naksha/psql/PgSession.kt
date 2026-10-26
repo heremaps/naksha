@@ -138,6 +138,9 @@ open class PgSession(
 
     /** The mutable connection used, if any. */
     private val _conn = AtomicRef<PgConnection>(null)
+    /** The current mutation connection, used to track advisory-lock ownership. */
+    internal val pgConnection: PgConnection?
+        get() = _conn.get()
     /** The mutable connection lock to be acquired before using the mutable connection. We only allow single threaded use of single connection. */
     private val _connLock = Platform.newLock()
 

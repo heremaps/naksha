@@ -317,7 +317,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         // create collection using upsert
         val response = executeWrite(
             WriteRequest().add(
-                Write().upsertCollection(collection)
+                Write().upsertCollection(collection, atomic = false)
             )
         )
         val createdCollection = response.features[0]!!.proxy(NakshaCollection::class)
@@ -326,7 +326,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         // update collection using upsert
         val updateResponse = executeWrite(
             WriteRequest().add(
-                Write().upsertCollection(collection)
+                Write().upsertCollection(collection, atomic = false)
             )
         )
         val updatedCollection = updateResponse.features[0]!!.proxy(NakshaCollection::class)
@@ -603,8 +603,8 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
     /** Physical columns in DDL order, mirroring PgCollection.generateColumns: _fn/_version/_nv then sorted members. */
     private fun expectedOrderedColumnNames(collection: NakshaCollection): List<String> {
-        val members = collection.validatedMembers()
-        if (!members.isSortedByIndex()) members.sortAndIndex()
+        val members = collection.validatedMembers
+        if (!members.isSortedByIndex()) members.verify()
         val names = mutableListOf(PgColumn.FnColumn.name, PgColumn.VersionColumn.name, PgColumn.NextVersionColumn.name)
         for (member in members) {
             if (member == null) continue

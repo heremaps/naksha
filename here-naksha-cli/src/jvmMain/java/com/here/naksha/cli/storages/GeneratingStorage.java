@@ -23,6 +23,10 @@ import org.jetbrains.annotations.Nullable;
 import static naksha.base.NakshaExceptionKt.unsupportedOp;
 
 public final class GeneratingStorage extends AbstractStorage<GeneratingStorageConfig> {
+    @Override
+    public @NotNull naksha.model.objects.NakshaDatabase getDatabase() {
+        throw unsupportedOp("GeneratingStorage.getDatabase");
+    }
     public static final String DEFAULT_IDS_PREFIX = "gen";
     private final JsonParser jsonParser = new JsonParser();
     private int numOfFeaturesToGenerate;
@@ -71,7 +75,7 @@ public final class GeneratingStorage extends AbstractStorage<GeneratingStorageCo
     }
 
     @Override
-    protected void initStorage(
+    public void initStorage(
         @NotNull GeneratingStorageConfig storageConfig,
         @Nullable Boolean create,
         @Nullable Boolean upgrade

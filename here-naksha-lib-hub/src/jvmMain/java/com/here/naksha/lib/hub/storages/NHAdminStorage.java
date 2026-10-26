@@ -35,6 +35,11 @@ import static naksha.base.NakshaExceptionKt.unsupportedOp;
 
 public class NHAdminStorage implements IStorage {
 
+  @Override
+  public @NotNull naksha.model.objects.NakshaDatabase getDatabase() {
+    return psqlStorage.getDatabase();
+  }
+
   public static final String ID_PREFIX = "NH_ADMIN_STORAGE_";
 
   /**

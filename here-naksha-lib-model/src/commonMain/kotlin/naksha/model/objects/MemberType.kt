@@ -198,21 +198,19 @@ class MemberType : JsEnum() {
         }
 
        init {
-            // Validate sort orders form a contiguous range [0, N); done here, after all types have loaded.
-            // Note: This order is used to sort members in storages.
-            // We first want all fixed size items with 8 byte, then 4 bytes, 2 byte, 1 byte, then flexible types.
+            // Byte alignments are shared by types, not contiguous sort-order identifiers.
             val orders = ArrayList<MemberType>()
             val i = iterate(MemberType::class)
             while (i.hasNext()) {
                 val memberType = i.next()
                 orders.add(memberType)
             }
-            orders.sortBy { it.byteAlignment }
             for (idx in orders.indices) {
                 val memberType = orders[idx]
-                if (idx != memberType.byteAlignment) throw NakshaException(
+                val alignment = memberType.byteAlignment
+                if (alignment <= 0 || (alignment and (alignment - 1)) != 0) throw NakshaException(
                     INITIALIZATION_FAILED,
-                    "MemberType sort orders must be contiguous starting at 0; expected $idx but found $memberType (all sorted: $orders)"
+                    "Invalid byte alignment ${memberType.byteAlignment} for $memberType"
                 )
             }
         }

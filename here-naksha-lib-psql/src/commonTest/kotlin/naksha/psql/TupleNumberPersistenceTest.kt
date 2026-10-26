@@ -67,13 +67,13 @@ class TupleNumberPersistenceTest : PgTestBase(collection = null, catalogId = "")
 
         // And: `storeNumber` checks out
         storage.adminConnection().use { conn ->
-            val pgMap = storage.database.getPgCatalogById(conn, collection.catalogId!!)
+            val pgMap = storage.database.getPgCatalog(Id(collection.catalogId!!).intValue, conn)
             require(pgMap != null) { "Missing map ${collection.catalogId}" }
-            val pgCollection = pgMap.getPgCollectionById(conn, collection.id)
+            val pgCollection = storage.database.getPgCollection(pgMap.id.intValue, Id(collection.id).intValue, conn)
             require(pgCollection != null) { "Missing collection ${collection.id}" }
             assertEquals(storage.id.number, persistedTuple.tupleNumber.databaseNumber)
-            assertEquals(pgMap.catalogNumber, persistedTuple.tupleNumber.catalogNumber)
-            assertEquals(pgCollection.collectionNumber, persistedTuple.tupleNumber.collectionNumber)
+            assertEquals(pgMap.id.intValue, persistedTuple.tupleNumber.catalogNumber)
+            assertEquals(pgCollection.id.intValue, persistedTuple.tupleNumber.collectionNumber)
             val featureNumber = Id.textToNumber(feature.id)
             assertEquals(featureNumber, persistedTuple.tupleNumber.featureNumber)
             assertEquals(Id.partitionNumber(featureNumber), persistedTuple.tupleNumber.partitionNumber)

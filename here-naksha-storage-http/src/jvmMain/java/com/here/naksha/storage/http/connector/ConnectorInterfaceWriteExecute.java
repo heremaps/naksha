@@ -96,7 +96,7 @@ public class ConnectorInterfaceWriteExecute {
                 // but in reality, doesn't matter what is the value
                 // and map with null is ignored by JsonSerializable.serialize(),
                 // so empty string is used instead.
-                featuresToDelete.put(write.getId(), "");
+                featuresToDelete.put(write.getId().text(), "");
             } else {
                 throw new UnsupportedOperationException("Unsupported feature OP: " + write.getOp());
             }
@@ -206,7 +206,7 @@ public class ConnectorInterfaceWriteExecute {
 
     private String singleCollectionIdFrom(WriteRequest writeRequest) {
         List<String> distinctCollectionIds = writeRequest.getWrites().stream()
-                .map(Write::getCollectionId)
+                .map(write -> write.getCollectionId() == null ? null : write.getCollectionId().text())
                 .distinct()
                 .collect(Collectors.toList());
         if (distinctCollectionIds.size() != 1) {

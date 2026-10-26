@@ -139,7 +139,7 @@ public class MockValidationHandler extends AbstractEventHandler {
       violations.addAll(getNViolationsWithFeatureReference(
           violationsCount,
           feature,
-          cwf.getWrites().get(featureCnt - 1).getCollectionId(),
+          cwf.getWrites().get(featureCnt - 1).getCollectionId().text(),
           (momType == null) ? "" : momType.toString()));
     }
     return violations;

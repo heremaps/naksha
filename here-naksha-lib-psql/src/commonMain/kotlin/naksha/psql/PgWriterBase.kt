@@ -58,20 +58,21 @@ internal abstract class PgWriterBase protected constructor(
         get() = pgWriter.session
 
     val storageNumber: Long
-        get() = pgCollection.storage.id.number
+        get() = session.storage.id.number
 
     val catalogNumber: Int
-        get() = pgCollection.catalog.catalogNumber
+        get() = pgCollection.catalogId.intValue
 
     val collectionNumber: Int
-        get() = pgCollection.collectionNumber
+        get() = pgCollection.id.intValue
 
     /** The _HEAD_ table. */
-    val headTable = pgCollection.headTable
+    // Temporary legacy descriptors until DB-06..DB-08 move mutation SQL to PgDatabase.
+    val headTable = PgHeadTable(pgCollection)
     /** The quoted name of the _HEAD_ table. */
     val headIdent = headTable.quotedName
     /** The _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
-    val historyTable = if (pgCollection.storeHistory) pgCollection.historyTable else null
+    val historyTable = if (pgCollection.storeHistory) PgHistoryTable(pgCollection) else null
     /** The quoted name of the _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
     val historyIdent = historyTable?.quotedName
     /** The `id` column */
@@ -83,7 +84,7 @@ internal abstract class PgWriterBase protected constructor(
      * The transaction to operate upon.
      * @since 3.0
      */
-    val tx = session.useTx()
+    val tx = session.useTransaction()
 
     val version: Version
         get() = tx.version
@@ -93,7 +94,7 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     val transaction: NakshaTx
-        get() = tx.nakshaTx
+        get() = tx
 
     /**
      * The rows to write.
@@ -138,7 +139,7 @@ internal abstract class PgWriterBase protected constructor(
      */
     val featureCountByPartitionJoined: String
         get() {
-            val partitions = pgCollection.nakshaCollection.partitions
+            val partitions = pgCollection.partitions
             return if (partitions <= 1) "-1: ${end - start}"
             else featureCountByPartition.entries.joinToString(", ") { "${it.key}=${it.value.value}" }
         }
@@ -149,7 +150,7 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     fun execute(conn: PgConnection) {
-        pgCollection.catalog.applySearchPath(conn)
+        pgWrites[start].dbCatalog.applySearchPath(conn)
         return doExecute(conn)
     }
 

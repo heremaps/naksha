@@ -242,7 +242,7 @@ open class PgWriter internal constructor(
                     //   check the result.
                     //
                     // To stay downward compatible, we therefore remove (as a hack) the UUID, so we ensure that we get a CREATE.
-                    val tnMember = pgWrite.dbCollection.naksha.validatedMembers().useMember(StandardMembers.Tn)
+                    val tnMember = pgWrite.dbCollection.naksha.validatedMembers.useMember(StandardMembers.Tn)
                     val feature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
                     val f = Tuple.shallowCopy(feature, arrayOf(tnMember.path))
                     tnMember.delete(f)
