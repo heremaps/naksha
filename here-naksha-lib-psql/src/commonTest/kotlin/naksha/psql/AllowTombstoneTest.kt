@@ -1,7 +1,6 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.TupleNumber
 import naksha.model.objects.NakshaCollection
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
@@ -153,7 +152,7 @@ class AllowTombstoneTest : PgTestBase() {
             assertNotNull(ts, "Tombstone must be retrievable with allowTombstone = true")
             assertFalse(ts == created_tn, "The tuple-number of the current collection head is the same as the on of the created collection, but expected an update in the cache!")
             assertTrue(
-                ts.tupleNumber?.isDeleted ?: false,
+                ts.tupleNumber?.isTombstone ?: false,
                 "HEAD state must be marked as deleted (tombstone)"
             )
             ts

@@ -9,7 +9,7 @@ import naksha.model.objects.MemberType
  * @since 3.0
  */
 @Suppress("UNCHECKED_CAST", "ArrayInDataClass")
-internal data class PgColumnWithValues(
+internal data class PgRowsColumn(
     /**
      * The [PgRows] to which this is bound.
      * @since 3.0
@@ -23,13 +23,13 @@ internal data class PgColumnWithValues(
     val index: Int,
 
     /**
-     * The database column.
+     * The column for which row values are kept.
      * @since 3.0
      */
     val pgColumn: PgColumn,
 
     /**
-     * An optional alias, if the column is mapped to a different name in the result-set.
+     * An optional alias, if the column is mapped to a different name in the result-set; otherwise the same as `member.name`.
      * @since 3.0
      */
     val alias: String = pgColumn.name,

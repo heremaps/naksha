@@ -2,9 +2,10 @@
 
 package naksha.psql
 
+import naksha.model.objects.JsonPath
+import naksha.model.objects.Member
 import naksha.model.objects.MemberType
 import naksha.model.objects.MemberType.MemberType_C.INT64
-import naksha.model.objects.StandardMembers
 import naksha.model.objects.StandardMembers.StandardMembers_C.FN
 import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
 import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
@@ -14,7 +15,7 @@ import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 
 /**
- * A column descriptor for database columns.
+ * A column descriptor for database columns, wraps [Member].
  *
  * The [extra] is used to add constraints, and the storage-method:
  * - [PLAIN] prevents either compression or out-of-line storage.
@@ -36,18 +37,11 @@ data class PgColumn(
     val index: Int,
 
     /**
-     * The name of the column.
+     * The member that the column wraps.
      * @since 3.0
      */
     @JvmField
-    val name: String,
-
-    /**
-     * The type of the column provided as [MemberType].
-     * @since 3.0
-     */
-    @JvmField
-    val memberType: MemberType,
+    val member: Member,
 
     /**
      * Optional extras for the definition, for example "NOT NULL".
@@ -55,28 +49,82 @@ data class PgColumn(
      */
     @JvmField
     val extra: String? = null,
+) {
+    /**
+     * The name of the column, actually just `member.name`.
+     * @since 3.0
+     */
+    val name: String
+        get() = member.name
+
+    /**
+     * The type of the column provided as [MemberType], actually just `member.dataType`.
+     * @since 3.0
+     */
+    val memberType: MemberType
+        get() = member.dataType
+
+    /**
+     * The [JsonPath] from where the column value should be extracted; can be an empty path for those columns that do not have a path.
+     * @since 3.0
+     */
+    val jsonPath: JsonPath
+        get() = member.path
+
+    private var _ident: String? = null
+    private var _sql: String? = null
+    private var _pgType: PgType? = null
+
+    /**
+     * The SQL quoted identifier, actually a cached version of `PgUtil.quoteIdent(col.name)`.
+     * @return the SQL quoted identifier (with optional double quotes).
+     * @see PgUtil.quoteIdent
+     * @since 3.0
+     */
+    val ident: String
+        get() {
+            var ident = _ident
+            if (ident == null) {
+                ident = PgUtil.quoteIdent(name)
+                _ident = ident
+            }
+            return ident
+        }
+
+    /**
+     * The SQL code to added into a `CREATE TABLE` statements. Usage like:
+     * ```kotlin
+     * val SQL = """CREATE TABLE t_name (
+     *   $foo.sql,
+     *   $bar.sql
+     * )""")
+     * ```
+     * @since 3.0
+     */
+    val sql: String
+        get() {
+            var sql = _sql
+            if (sql == null) {
+                sql = "$ident $pgType" + if (extra != null) " $extra" else ""
+                _sql = sql
+            }
+            return sql
+        }
 
     /**
      * The type of the column.
      * @since 3.0
      */
-    @JvmField
-    val pgType: PgType = PgType.ofMemberType(memberType),
+    val pgType: PgType
+        get() {
+            var pgType = _pgType
+            if (pgType == null) {
+                pgType = PgType.ofMemberType(memberType)
+                _pgType = pgType
+            }
+            return pgType
+        }
 
-    /**
-     * The SQL quoted identifier, the same result (just slower) can be archived using `PgUtil.quoteIdent(col.name)`.
-     * @return the SQL quoted identifier (with optional double quotes).
-     * @see PgUtil.quoteIdent
-     */
-    @JvmField
-    val ident: String = PgUtil.quoteIdent(name),
-
-    /**
-     * The SQL code to added into a `CREATE TABLE` statements.
-     */
-    @JvmField
-    val sql: String = "$ident $pgType" + if (extra != null) " $extra" else ""
-) {
     /**
      * Create a new column with the same states, just a different index.
      * @param index the new index.
@@ -84,7 +132,7 @@ data class PgColumn(
      * @since 3.0
      */
     @JsName("reindex")
-    constructor(index: Int, source: PgColumn) : this(index, source.name, source.memberType, source.extra, source.pgType, source.ident)
+    constructor(index: Int, source: PgColumn): this(index, source.member)
 
     companion object PgColumn_C {
         /**
@@ -119,7 +167,7 @@ data class PgColumn(
          */
         @JvmField
         @JsStatic
-        val FnColumn = PgColumn(0, FN, INT64, "STORAGE $PLAIN NOT NULL")
+        val FnColumn = PgColumn(0, Member(FN, INT64), "STORAGE $PLAIN NOT NULL")
 
         /**
          * The version (with action in the lower 2 bits) of this tuple.
@@ -129,7 +177,7 @@ data class PgColumn(
          */
         @JvmField
         @JsStatic
-        val VersionColumn = PgColumn(1, VERSION, INT64, "STORAGE $PLAIN NOT NULL")
+        val VersionColumn = PgColumn(1, Member(VERSION, INT64), "STORAGE $PLAIN NOT NULL")
 
         /**
          * The next-version (with action in the lower 2 bits) of this tuple, only available in the history.
@@ -139,7 +187,7 @@ data class PgColumn(
         @JsStatic
         // Nullable on purpose: HEAD rows carry NULL, history rows a real value; each table enforces the
         // right nullability via its own `$c_nv` CHECK (HEAD: IS NULL, history: IS NOT NULL).
-        val NextVersionColumn = PgColumn(2, NEXT_VERSION, INT64, "STORAGE $PLAIN")
+        val NextVersionColumn = PgColumn(2, Member(NEXT_VERSION, INT64), "STORAGE $PLAIN")
     }
 
     /**

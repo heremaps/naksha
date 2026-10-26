@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalJsExport::class)
-
 package naksha.psql
 
 import naksha.base.AnyObject
@@ -9,7 +7,6 @@ import naksha.base.StringList
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.model.objects.NakshaStorage
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
@@ -17,7 +14,6 @@ import kotlin.js.JsName
  * The PostgresQL storage configuration.
  * @since 3.0
  */
-@Suppress("unused")
 @JsExport
 class PgConfig() : NakshaStorage() {
 
@@ -47,7 +43,7 @@ class PgConfig() : NakshaStorage() {
      * The PostgresQL master to connect to.
      * @since 3.0
      */
-    var master by MASTER
+    var master: PgInstanceConfig by MASTER
 
     /**
      * Tests if the configuration has an explicit master setting.

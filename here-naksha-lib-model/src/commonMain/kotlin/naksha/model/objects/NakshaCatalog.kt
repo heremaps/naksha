@@ -7,28 +7,56 @@ import naksha.base.Id
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.Naksha
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
-import naksha.base.TupleNumber
+import naksha.base.illegalState
 import kotlin.js.JsExport
 import kotlin.js.JsName
 
 /**
- * A map within a storage; maps are used to group collections.
+ * A custom catalog within a storage.
+ *
+ * Catalogs are used to group [collections][NakshaCollection]. Every catalog does have an [internal catalog collection][NakshaCatalogCollection] (`naksha~collections`) in which the collections of the catalog are managed.
  * @since 3.0
+ * @see NakshaCatalogCollection
  */
 @JsExport
 open class NakshaCatalog() : NakshaFeature() {
+
+    /**
+     * Create a new catalog feature.
+     * @param databaseId the identifier of the database in which the catalog is located.
+     * @param catalogId the identifier of the catalog.
+     * @since 3.0
+     */
+    @JsName("newCatalog")
+    constructor(databaseId: Id, catalogId: Id): this() {
+        this.databaseId = databaseId.text
+        this.id = catalogId.text
+        this.type = typeDefaultValue()
+        this.featureType = featureTypeDefaultValue()
+    }
+
+    /**
+     * Create a new catalog feature.
+     * @param databaseId the identifier of the database in which the catalog is located.
+     * @param catalogId the identifier of the catalog.
+     * @since 3.0
+     */
+    @JsName("newCatalogText")
+    constructor(databaseId: Id, catalogId: String): this() {
+        this.databaseId = databaseId.text
+        this.id = catalogId
+        this.type = typeDefaultValue()
+        this.featureType = featureTypeDefaultValue()
+    }
 
     /**
      * Create a new map feature with the given identifier.
      * @param id the identifier to set.
      * @since 3.0
      */
-    @Suppress("LeakingThis")
-    @JsName("of")
+    @Deprecated("Avoid creating catalogs without databaseId")
+    @JsName("newCatalogByIdOnly")
     constructor(id: String): this() {
         this.id = id
         this.type = typeDefaultValue()
@@ -56,15 +84,21 @@ open class NakshaCatalog() : NakshaFeature() {
     override fun withMomType(value: String?): NakshaCatalog = super.withMomType(value) as NakshaCatalog
 
     /**
-     * The database-number of the catalog; the catalog-feature itself is stored in the same database as the catalog it describes.
+     * The database-number of the database in which this catalog is located.
      * @since 3.0
-     * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
+     * @throws NakshaException with error [ILLEGAL_STATE], when the catalog does not have a valid [tupleNumber] and no valid [databaseId].
      */
     val databaseNumber: Long
-        get() = tupleNumber?.databaseNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
+        get() {
+            val tn = tupleNumber
+            if (tn != null) return tn.databaseNumber
+            val id = this.databaseId
+            if (id != null) Id.textToNumber(id)
+            throw illegalState("The catalog has no database-id and no tuple-number")
+        }
 
     /**
-     * The database-id of the collection; **NOT** the database-id of the collection-feature itself, even while they are guaranteed to be the same.
+     * The database-id of the database in which this catalog is located.
      * @since 3.0
      */
     var databaseId: String? by DATABASE_ID
@@ -73,23 +107,17 @@ open class NakshaCatalog() : NakshaFeature() {
      * @see [databaseId]
      */
     fun withDatabaseId(value: String): NakshaCatalog {
-        val tn = tupleNumber
-        if (tn != null) {
-            if (Id.textToNumber(value) != tn.databaseNumber) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "The given database-id does not match the database-number of the collection.")
-            }
-        }
         databaseId = value
         return this
     }
 
     /**
-     * The catalog-number of the catalog, this is actually the same as the feature-number.
+     * The catalog-number of the catalog, this is actually the same as the feature-number truncated to 32-bit.
      *
      * It is **NOT** the catalog-number of this catalog-feature, so where the catalog-feature itself is stored, which has always the catalog-number `0`, because all catalog features are always stored in the catalog `naksha~admin`.
      * @since 3.0
      * @see [Id.intValue]
      */
     val catalogNumber: Int
-        get() = Id(id).intValue
+        get() = Id.numberToInt(Id.textToNumber(id))
 }

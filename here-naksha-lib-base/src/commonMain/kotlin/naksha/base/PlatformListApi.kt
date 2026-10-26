@@ -13,6 +13,19 @@ expect class PlatformListApi {
         fun array_get(array: PlatformList?, i: Int): Any?
         fun array_set(array: PlatformList?, i: Int, value: Any?): Any?
         fun array_delete(array: PlatformList?, i: Int): Any?
+
+        /**
+         * The splice method changes the contents of the given array by removing or replacing existing elements and/or adding new elements in place.
+         *
+         * About `start`:
+         * - If `start` < `-array.length`, `0` is used.
+         * - If `start` >= `array.length`, no element will be deleted, but the method will behave as an adding function, adding as many elements as provided.
+         * @param array the array to modify.
+         * @param start Zero-based index at which to start changing the array. Negative index counts back from the end of the array — if `-array.length` <= `start` < `0`, `start + array.length` is used.
+         * @param deleteCount An integer indicating the number of elements in the array to remove from start. If deleteCount is greater than or equal to the number of elements after the position specified by start, then all the elements from start to the end of the array will be deleted. If deleteCount is 0 or negative, no elements are removed.
+         * @param add The elements to add to the array, beginning from start.
+         * @since 3.0
+         */
         fun array_splice(array: PlatformList?, start: Int, deleteCount: Int = 0, vararg add: Any?): PlatformList
 
         /**
@@ -20,6 +33,7 @@ expect class PlatformListApi {
          * @param array the array to modify.
          * @param keep the elements to retain.
          * @return _true_ if the given array was modified; _false_ otherwise.
+         * @since 3.0
          */
         fun array_retain_all(array: PlatformList?, vararg keep: Any?): Boolean
 

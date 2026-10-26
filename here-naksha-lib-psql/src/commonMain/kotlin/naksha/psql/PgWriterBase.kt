@@ -138,7 +138,7 @@ internal abstract class PgWriterBase protected constructor(
      */
     val featureCountByPartitionJoined: String
         get() {
-            val partitions = pgCollection.head.partitions
+            val partitions = pgCollection.nakshaCollection.partitions
             return if (partitions <= 1) "-1: ${end - start}"
             else featureCountByPartition.entries.joinToString(", ") { "${it.key}=${it.value.value}" }
         }
@@ -149,7 +149,7 @@ internal abstract class PgWriterBase protected constructor(
      * @since 3.0
      */
     fun execute(conn: PgConnection) {
-        pgCollection.catalog.setSearchPath(conn)
+        pgCollection.catalog.applySearchPath(conn)
         return doExecute(conn)
     }
 

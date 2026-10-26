@@ -6,12 +6,47 @@ import naksha.base.Action
 import naksha.base.Id
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.Version
+import naksha.base.fn.Fn0
+import naksha.base.fn.Fx0
 import naksha.model.NakshaVersion
 import naksha.psql.PgUtil.PgUtilCompanion.quoteLiteral
+import org.postgresql.util.PSQLException
 
-actual open class PgDatabase actual constructor(storage: PgStorage, instance: PgInstance, id: Id)
-    :AbstractPgDatabase(storage, instance, id)
-{
+actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage, id: Id):PgDatabase(storage, id) {
+    companion object PgDatabaseCompanion {
+        const val INVALID_SCHEMA: String = "3F000"
+        const val UNDEFINED_TABLE: String = "42P01"
+        const val DUPLICATE_SCHEMA: String = "42P06"
+        const val DUPLICATE_TABLE: String = "42P07"
+    }
+
+    actual override fun <R> execute_sql_nullable(schema: String?, table: String?, code: Fn0<R?>): R? {
+        try {
+            return code.call()
+        } catch (e: PSQLException) {
+            // TODO: Fix me!
+            throw PgExceptionMapper.map(e)
+        }
+    }
+
+    actual override fun <R> execute_sql_notnull(schema: String?, table: String?, code: Fn0<R>): R {
+        try {
+            return code.call()
+        } catch (e: PSQLException) {
+            // TODO: Fix me!
+            throw PgExceptionMapper.map(e)
+        }
+    }
+
+    actual override fun execute_sql(schema: String?, table: String?, code: Fx0) {
+        try {
+            code.call()
+        } catch (e: PSQLException) {
+            // TODO: Fix me!
+            throw PgExceptionMapper.map(e)
+        }
+    }
+
     actual override fun upsert_naksha_admin(
         conn: PgConnection,
         id: Id,
@@ -128,19 +163,9 @@ actual open class PgDatabase actual constructor(storage: PgStorage, instance: Pg
         conn.execute("CREATE SEQUENCE IF NOT EXISTS $NAKSHA_VERSION_SEQ AS ${PgType.INT64} START ${START_VERSION.number} INCREMENT BY 4 CACHE 1;").close()
 
         logger.info("Create internal collections: collections, transactions, catalogs, and books")
-        // TODO: We may not even need these hardcoded collections, they seem no longer relevant as specials.
-        //       When we fixed this, we can just read them from the tables as normal rows?
-        //       This unifies all collection handling.
-        for (c in listOf(adminCollections, adminTransactions, adminCatalogs, adminBooks)) {
-            create_table(conn, ADMIN_CATALOG_TEXT, c.id.text, c.columns, c.headIndices, c.shift, c.partitions)
-            // TODO: Insert the rows with the collection features into `naksha~admin—>naksha~collections`.
+        for (c in listOf(pgAdminCollections, pgAdminTransactions, pgAdminCatalogs, pgAdminBooks)) {
+            collection_create_table_if_not_exits(conn, ADMIN_CATALOG_TEXT, c.id.text, c.columns, c.indices, c.shift, c.partitions)
         }
-        // TODO: Insert the row with the admin-catalog feature into `naksha~admin—>naksha~catalogs`.
-        // TODO: Eventually, we expect that these basic features are physically created.
-        //       Later, caches will fetch them and users and list all catalogs and collections.
-        //       By doing this we can get rid of all special handling, we treat them like normal collections.
-        //       Beware that there will be no transaction for the initialization, but we could create it!
-        //       We could even create a transaction log entry when upgrading!
         logger.info("Done creating internal collections")
         return adminMapOid
     }

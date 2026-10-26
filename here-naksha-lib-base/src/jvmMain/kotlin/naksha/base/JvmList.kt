@@ -218,6 +218,30 @@ open class JvmList() : JvmObject(), MutableList<Any?>, PlatformList {
         return false
     }
 
+    internal fun splice(start: Int, deleteCount: Int, add: Array<out Any?>): JvmList {
+        val oldSize = size
+        val index = if (start < 0) max(0, oldSize + start) else start.coerceAtMost(oldSize)
+        val removed = deleteCount.coerceIn(0, oldSize - index)
+        val newSize = Math.addExact(oldSize - removed, add.size)
+        val result = JvmList()
+        if (removed > 0) {
+            result.size = removed
+            System.arraycopy(elementData()!!, index, result.elementData()!!, 0, removed)
+        }
+        if (removed == 0 && add.isEmpty()) return result
+
+        if (newSize > oldSize) size = newSize
+        val elements = elementData()!!
+        val tailStart = index + removed
+        val tailSize = oldSize - tailStart
+        if (removed != add.size && tailSize > 0) {
+            System.arraycopy(elements, tailStart, elements, index + add.size, tailSize)
+        }
+        if (add.isNotEmpty()) System.arraycopy(add, 0, elements, index, add.size)
+        if (newSize < oldSize) size = newSize
+        return result
+    }
+
     override fun clear() {
         list?.clear()
     }

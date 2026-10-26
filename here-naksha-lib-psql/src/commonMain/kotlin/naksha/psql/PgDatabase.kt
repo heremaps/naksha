@@ -3,32 +3,23 @@ package naksha.psql
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.number
 import kotlinx.datetime.toLocalDateTime
-import naksha.base.ADMIN_CATALOG_QUOTED
-import naksha.base.Action
-import naksha.base.AtomicMap
-import naksha.base.Id
+import naksha.base.*
 import naksha.base.NakshaError.NakshaErrorCompanion.EXCEPTION
 import naksha.base.NakshaError.NakshaErrorCompanion.STORAGE_ID_MISMATCH
-import naksha.base.NakshaException
 import naksha.base.Platform.PlatformCompanion.logger
-import naksha.base.TupleNumber
-import naksha.base.Version
-import naksha.base.forbidden
-import naksha.base.illegalState
-import naksha.base.notInitialized
+import naksha.base.fn.Fn0
+import naksha.base.fn.Fx0
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
-import naksha.model.objects.Index
-import naksha.model.objects.NakshaCatalog
+import naksha.model.Tuple
+import naksha.model.objects.NakshaAdmin
+import naksha.model.objects.NakshaDatabase
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
-import kotlin.jvm.JvmField
-import kotlin.jvm.JvmName
+import kotlin.js.JsExport
 import kotlin.time.Instant
 
 /**
- * A wrapper around a `NakshaDatabase` _(which does not yet exist)_.
- *
- * A database is a logical entity in Naksha, the same as the catalog, the collection and the feature. Only the [Tuple][naksha.model.Tuple] is a real physical entity. The concept is that a database can be hosted by multiple storages, but only one storage should be considered the source of truth. All others are treated like replicas or snapshots. They can use different storage layout and indices, optimized for other purposes.
+ * A database is a logical concept in Naksha, see [NakshaDatabase].
  *
  * To keep the code more maintainable, we move all DDL _(data definition language)_ and SQL code into this class. So, mutation of the PostgresQL schema, tables, indices, and inserting, updating, delete rows. This class should deal with the physical reality of PostgresQL, not with the logical level of the Naksha storage concept. Therefore, this class works with `schema`, `table`, `partition` and `rows`. It should not have any knowledge about the logical part, like that a `row` represents a [Tuple][naksha.model.Tuple], it must not know about books or JBON encoding.
  *
@@ -36,39 +27,27 @@ import kotlin.time.Instant
  * @since 3.0
  * @see PgDatabaseImpl
  */
+@JsExport
 abstract class PgDatabase(
     /**
      * The storage in which the database is located.
      * @since 3.0
      */
-    @JvmField
-    val storage: PgStorage,
-
-    /**
-     * The instance object to use to acquire connections to access the database.
-     * @since 3.0
-     */
-    @JvmField
-    val instance: PgInstance,
+    override val storage: PgStorage,
 
     /**
      * The identifier of the database.
      *
      * This is installed into the admin-schema `naksha~admin` in the functions `naksha_storage_id()` and `naksha_storage_number()`.
+     *
+     * In the current implementation, this matches [IStorage.id][naksha.model.IStorage.id].
      * @since 3.0
      */
-    @JvmField
-    val id: Id
-) {
-
-    /**
-     * The physical name of the database in the PostgresQL cluster.
-     * @since 3.0
-     * @see PgInstance.database
-     */
-    @get:JvmName("name")
-    val name: String
-        get() = instance.database
+    override val id: Id = storage.id
+): PgCache(), NakshaDatabase {
+    override val isMaster: Boolean = true
+    override val isReplica: Boolean = false
+    override val parent: PgCache? = null
 
     /**
      * The page-size of the database (`current_setting('block_size')`).
@@ -122,61 +101,52 @@ abstract class PgDatabase(
      * The admin-catalog itself _(`naksha~admin`)_.
      * @since 3.0.0
      */
-    val nakshaAdmin: PgCatalog
-        get() = _adminCatalog ?: throw notInitialized("PgDatabase")
-    private var _adminCatalog: PgCatalog? = null
+    override val pgAdmin: PgCatalog
+        get() = _pgAdmin ?: throw notInitialized("PgDatabase")
+    private var _pgAdmin: PgCatalog? = null
 
     /**
-     * The collections' collection _(`naksha~collections`)_ in the admin-schema (`naksha~admin`).
+     * The collections' collection _(`naksha~collections`)_, should exist in any schema, including the admin-schema (`naksha~admin`).
      * @since 3.0.0
      */
-    val adminCollections: PgCollection
-        get() = _adminCollections ?: throw notInitialized("PgDatabase")
-    private var _adminCollections: PgCollection? = null
+    override val pgAdminCollections: PgCollection
+        get() = _pgAdminCollections ?: throw notInitialized("PgDatabase")
+    private var _pgAdminCollections: PgCollection? = null
 
     /**
-     * The transactions' collection _(`naksha~transactions`)_ in the admin-schema (`naksha~admin`).
+     * The transactions' collection _(`naksha~transactions`)_ only in the admin-schema (`naksha~admin`).
      * @since 3.0.0
      */
-    val adminTransactions: PgCollection
-        get() = _adminTransactions ?: throw notInitialized("PgDatabase")
-    private var _adminTransactions: PgCollection? = null
+    override val pgAdminTransactions: PgCollection
+        get() = _pgAdminTransactions ?: throw notInitialized("PgDatabase")
+    private var _pgAdminTransactions: PgCollection? = null
 
     /**
-     * The catalogs' collection _(`naksha~catalogs`)_ in the admin-schema (`naksha~admin`).
+     * The catalogs' collection _(`naksha~catalogs`)_ only in the admin-schema (`naksha~admin`).
      * @since 3.0.0
      */
-    val adminCatalogs: PgCollection
-        get() = _adminCatalogs ?: throw notInitialized("PgDatabase")
-    private var _adminCatalogs: PgCollection? = null
+    override val pgAdminCatalogs: PgCollection
+        get() = _pgAdminCatalogs ?: throw notInitialized("PgDatabase")
+    private var _pgAdminCatalogs: PgCollection? = null
 
     /**
-     * The books' collection _(`naksha~books`)_ in the admin-schema (`naksha~admin`).
+     * The books' collection _(`naksha~books`)_ only in the admin-schema (`naksha~admin`).
      * @since 3.0.0
      */
-    val adminBooks: PgCollection
-        get() = _adminBooks ?: throw notInitialized("PgDatabase")
-    private var _adminBooks: PgCollection? = null
+    override val pgAdminBooks: PgCollection
+        get() = _pgAdminBooks ?: throw notInitialized("PgDatabase")
+    private var _pgAdminBooks: PgCollection? = null
 
     /**
-     * Opens the database.
+     * Opens and initialized the database.
      *
      * Depending on parameters, installs SQL code, creates extensions, create `naksha~admin` schema, create admin collections, inserting the immutable features for the standard admin collections. Eventually commits the successfully created or updated database.
-     * @param conn the connection to use for the opening and optional initialization.
-     * @param adminCatalog if the database is not yet initialized, the `naksha~admin` schema.
-     * @param adminCollections if the database is not yet initialized, the `naksha~collections` collection in `naksha~admin` schema.
-     * @param adminTransactions if the database is not yet initialized, the `naksha~transactions` collection in `naksha~admin` schema.
-     * @param adminCatalogs if the database is not yet initialized, the `naksha~catalogs` collection in `naksha~admin` schema.
-     * @param adminBooks if the database is not yet initialized, the `naksha~books` collection in `naksha~admin` schema.
+     * @param doOverride Can be set to _true_ to force the storage to reinstall the admin-map, even when the existing installed version of Naksha code is up-to-date (matches the code coming together with the library).
+     * @param doCreate If the storage will create missing structures when opening a database. If explicitly _false_ and the database is not initialized, the storage will throw an [INITIALIZATION_FAILED][naksha.base.NakshaError.INITIALIZATION_FAILED].
+     * @param doUpgrade If the storage should automatically upgrade the admin-structures (e.g. stored procedures) of a database, when necessary; otherwise the initialization does not modify the admin-structure of the database. However, it will throw an [INITIALIZATION_FAILED][naksha.base.NakshaError.INITIALIZATION_FAILED] if there are incompatibilities that prevent the usage of the found database without upgrade of admin-structures.
      * @since 3.0
      */
-    fun open(
-        conn: PgConnection,
-        adminCatalog: PgCatalog,
-        adminCollections: PgCollection,
-        adminTransactions: PgCollection,
-        adminCatalogs: PgCollection,
-        adminBooks: PgCollection,
+    internal fun init(
         doOverride: Boolean = storage.config.override ?: false,
         doCreate: Boolean = storage.config.create,
         doUpgrade: Boolean = storage.config.upgrade
@@ -187,8 +157,17 @@ abstract class PgDatabase(
         val config_version = config.version
         val psql_version = if (config_version != null) NakshaVersion.of(config_version) else adminVersion
 
+        // Bootstrap the infrastructure.
+        val naksha_admin = NakshaAdmin(this.id)
+        val collection = naksha_admin.collections
+        _pgAdmin = PgCatalog( Tuple.encodeObject(naksha_admin, collection, 1L))
+        _pgAdminCatalogs = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.catalogs, collection, 1L))
+        _pgAdminCollections = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.collections, collection, 1L))
+        _pgAdminTransactions = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.transactions, collection, 1L))
+        _pgAdminBooks = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.books, collection, 1L))
+
         // Switch to admin context.
-        val conn = storage.newConnection(Naksha.adminOptions, false)
+        val conn = storage.newConnection(Naksha.useAdminOptions(), false)
         conn.use {
             logger.info("Start initStorage of database {}", conn.toUri())
             conn.autoCommit = false
@@ -235,17 +214,6 @@ SELECT basics.*, procs.* FROM basics, procs;
                 has_naksha_storage_id = cursor.column("has_naksha_storage_id") as Boolean?
                 has_naksha_storage_number = cursor.column("has_naksha_storage_number") as Boolean?
             }
-
-            // This only creates the logical structure, no database access is yet done!
-            // Beware: We need to do this here, because `PgCollection` back-refers to `maxTupleSize` !
-            // TODO: Fix this!
-            //       As we do not create the admin-catalog feature or any of the collection features,
-            //       we need to do this on demand using `insert_rows`.
-            // _adminCatalog = PgCatalog(this)
-            // _adminCollections = PgCollection(this)
-            // _adminTransactions = PgCollection(this)
-            // _adminBooks = PgCollection(this)
-            // _adminCatalogs = PgCollection(this)
 
             if (admin_schema_oid == null) {
                 if (!doCreate) throw forbidden("Creation of 'naksha~admin' needed, but forbidden by config")
@@ -319,75 +287,10 @@ SELECT basics.*, procs.* FROM basics, procs;
             conn.execute("SET search_path = \\\"naksha~admin\\\", topology, hint_plan, public").close()
             logger.info("Load OID of '$NAKSHA_VERSION_SEQ' from admin schema (schema-oid=$schemaOid)")
             val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_VERSION_SEQ'"
-            conn.execute(SQL).fetch().use { cursor ->
-                _versionSequenceOid = cursor["oid"]
-                //mapNumberSequenceOid = cursor["map_oid"]
-                //colNumberSequenceOid = cursor["col_oid"]
-            }
+            conn.execute(SQL).fetch().use { cursor -> _versionSequenceOid = cursor["oid"] }
             logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, version-seq-oid=$versionSequenceOid, commit")
             conn.commit()
         }
-    }
-
-    /**
-     * The catalog cache with the key being the catalog-number and the value being the cached catalog.
-     * @since 3.0
-     */
-    internal val catalogCache = AtomicMap<Int, PgCatalog>()
-
-    /**
-     * Store the given [PgCatalog] into the cache.
-     * @param catalog the catalog to store, must have a valid _HEAD_ state **and** must have a valid [TupleNumber].
-     * @since 3.0
-     */
-    internal fun cacheCatalog(catalog: PgCatalog) {
-        do {
-            val id = catalog.id
-            val newCatalog = catalog.nakshaCatalog
-            val catalogNumber = newCatalog.catalogNumber
-            val newVersion = newCatalog.tupleNumber?.version
-                ?: throw illegalState("Cannot store catalog '$id' in cache, missing `tupleNumber`")
-
-            val existing = catalogCache[catalogNumber]
-            val existingTn = existing?.nakshaCatalog?.tupleNumber
-            val existingVersion: Long? = if (existingTn != null && Action.fromVersion(existingTn.version) != Action.DELETE) existingTn.version else null
-            if (existingVersion != null && existingVersion > newVersion) {
-                logger.debug("Do not update catalog '$id', the existing version ($existingVersion) is newer than the new ($newVersion)")
-                break
-            }
-            if (existing != null) {
-                if (catalogCache.replace(catalogNumber, existing, catalog)) break
-            } else {
-                if (catalogCache.putIfAbsent(catalogNumber, catalog) == null) break
-            }
-        } while (true)
-    }
-
-    /**
-     * Returns the existing catalog with the given number; if any.
-     * @param conn the connection to use to access the database.
-     * @param number the catalog-number to query.
-     * @return the catalog, if it exists; `null` otherwise.
-     * @since 3.0
-     */
-    fun getPgCatalogByNumber(conn: PgConnection?, number: Int): PgCatalog? {
-        val existing = catalogCache[number]
-        if (existing != null) return existing
-        if (conn == null) return null
-
-        // Read from database.
-        conn.execute(nakshaAdmin.SET_searchPath).close()
-        val rows = PgRows().withCollection(adminCatalogs)
-        val SQL = "SELECT ${rows.aliases()} FROM \"naksha~admin\".${adminCatalogs.quotedName} WHERE fn = $1"
-        val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
-        plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }
-        if (rows.size == 0) return null
-        val tuple = rows[0] ?: return null
-        Naksha.cache.store(tuple)
-        val nakshaCatalog = tuple.decodeFeature(null).proxy(NakshaCatalog::class)
-        val pgCatalog = PgCatalog(storage, nakshaCatalog)
-        cacheCatalog(pgCatalog)
-        return pgCatalog
     }
 
     // ——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
@@ -396,7 +299,7 @@ SELECT basics.*, procs.* FROM basics, procs;
     // column (PgColumn), or an index (PgIndex).
     // ——————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
 
-    /**
+   /**
      * Return a list of the names of all database available _(not necessarily all being Naksha databases)_.
      * @return the list of the names of all databases available in the storage.
      * @since 3.0
@@ -429,6 +332,9 @@ SELECT basics.*, procs.* FROM basics, procs;
 
     /**
      * Allocate a new version and return the details of it.
+     *
+     * ### Warning
+     * The method will invoke `commit` on the given database connection, before returning the new version information.
      * @param conn the connection to use to access the database.
      * @return the allocated version.
      * @since 3.0.0
@@ -519,26 +425,97 @@ SELECT basics.*, procs.* FROM basics, procs;
     ): Int
 
     /**
-     * Create a schema, which actually represents a catalog.
+     * Execute the given SQL code, when throwing, this method will catch all exceptions and ensure that a valid [NakshaException] is thrown.
+     * @param schema the schema being used.
+     * @param table the table being used.
+     * @param code the function that executes SQL code, it does not need to use any exception handling.
+     * @return the result `code` function.
+     * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
+     */
+    protected abstract fun <R> execute_sql_nullable(schema: String? = null, table: String? = null, code: Fn0<R?>): R?
+
+    /**
+     * Execute the given SQL code, when throwing, this method will catch all exceptions and ensure that a valid [NakshaException] is thrown.
+     * @param schema the schema being used.
+     * @param table the table being used.
+     * @param code the function that executes SQL code, it does not need to use any exception handling.
+     * @return the result `code` function.
+     * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
+     */
+    protected abstract fun <R> execute_sql_notnull(schema: String? = null, table: String? = null, code: Fn0<R>): R
+
+    /**
+     * Execute the given SQL code, when throwing, this method will catch all exceptions and ensure that a valid [NakshaException] is thrown.
+     * @param schema the schema being used.
+     * @param table the table being used.
+     * @param code the function that executes SQL code, it does not need to use any exception handling.
+     * @throws NakshaException if the code raised any exception, converting especially SQL exceptions into correct [NakshaError] objects.
+     */
+    protected abstract fun execute_sql(schema: String? = null, table: String? = null, code: Fx0)
+
+    //
+    // Note: We can't ensure that another schema or table with a different name, but same number is created.
+    // To prevent collisions, we need to reply upon the `naksha~catalogs` or `naksha~collections` and we need
+    // to ensure that the feature-number in there is truncated to 32-bit!
+    //
+
+    /**
+     * Returns the `OID` of the schema with the given name.
      * @param conn the connection to use.
      * @param name the unquoted name of the schema.
-     * @return the `OID` of the created schema.
+     * @return if the schema exists, the 32-bit unsigned `OID` of the schema; `-1` if no such schema exists.
+     * @since 3.0
      */
-    internal fun create_schema(conn: PgConnection, name: String): Int {
-        // TODO: We need to ensure that there is no other schema with the same feature-number:
-        // Write: `ALTER SCHEMA ${catalog.quotedId} SET SCHEMA OPTION 'featureNumber' 'stringifiedFN';`
-        // Read:
-        // SELECT nspname, nspconfig FROM pg_namespace WHERE nspname = '${catalog.id}';
-        // SELECT nspname, split_part(kv, '=', 2) AS feature_number
-        // FROM pg_namespace, unnest(nspconfig) AS kv
-        // WHERE nspname = '${catalog.id}' AND split_part(kv, '=', 1) = 'featureNumber';
-        conn.execute("CREATE SCHEMA IF NOT EXISTS ${quoteIdent(name)}").close()
-        // TODO: Return OID of created schema!
-        return 0
+    internal fun catalog_get_schema_oid(conn: PgConnection, name: String): Long {
+        return execute_sql_notnull(schema = name) {
+            TODO("SELECT '\"naksha~admin\"'::regnamespace::oid;")
+            // Note: long oid = resultSet.getLong("oid");
+            0L
+        }
     }
 
-    internal fun drop_schema(conn: PgConnection, name: String) {}
-    internal fun create_table(
+    /**
+     * Create the schema of a catalog plus the `naksha~collections` table, if it does not yet exist.
+     *
+     * This method works fine all catalogs, except for `naksha~admin`, where we need to create additionally the tables `naksha~catalogs`, `naksha~transactions`, and `naksha~books`.
+     * @param conn the connection to use.
+     * @param name the unquoted name of the schema.
+     * @return the 32-bit unsigned `OID` of the created schema, returns a negative `OID` if the schema existed already.
+     * @since 3.0
+     */
+    internal fun catalog_get_or_create_schema(conn: PgConnection, name: String): Long {
+        return execute_sql_notnull(schema = name) {
+            TODO("Create the schema, catalog-number collisions must be caught in naksha~catalogs")
+            // conn.execute("CREATE SCHEMA IF NOT EXISTS ${quoteIdent(name)}").close()
+            0L
+        }
+    }
+
+    /**
+     * Drops the catalog schema cascading _(recursive, so including all tables, indices, ...)_.
+     * @param conn the connection to use.
+     * @param name the unquoted name of the schema.
+     * @since 3.0
+     */
+    internal fun catalog_drop_schema(conn: PgConnection, name: String) {
+        execute_sql(schema = name) {
+            TODO("Drop the schema cascading, if it exists")
+        }
+    }
+
+    /**
+     * Create the table with the specified criteria.
+     * @param conn the connection to use.
+     * @param schema the unquoted name of the schema in which to create the table; must exist already.
+     * @param table the unquoted name of the table to create; must not exist.
+     * @param columns the columns to create.
+     * @param indices the indices to create.
+     * @param shift the shift to be used for history.
+     * @param partitions the amount of performance partitions to create, must be a value between 1 and 256.
+     * @throws NakshaException if the creation failed.
+     * @since 3.0
+     */
+    internal fun collection_create_table_if_not_exits(
         conn: PgConnection,
         schema: String,
         table: String,
@@ -546,12 +523,35 @@ SELECT basics.*, procs.* FROM basics, procs;
         indices: Array<PgIndex>,
         shift: Int,
         partitions: Int
-    ) {}
-    internal fun drop_table(conn: PgConnection, name: String) {}
+    ) {
+        execute_sql(schema = schema, table = table) {
+            val quotedSchema = quoteIdent(schema)
+            val quotedTable = quoteIdent(table)
+            val CREATE_DDL = """CREATE TABLE IF NOT EXISTS $quotedTable (
+  fn bigint NOT NULL,
+  version bigint NOT NULL,
+  nv bigint NOT NULL DEFAULT 9007199254740991,
+  PRIMARY KEY (nv DESC, fn DESC, version DESC)
+) PARTITION BY RANGE (nv);"""
+            // TODO: Create the database table, use pg_partman.
+            //       Default contains head, so needs an additional check for `nv` being 9007199254740991
+            //       Now, each partition should be partitioned again by `fn`
+            //       As always only need `fn`, `version`, and `nv`, we need them to be in any index for index-only scans!
+        }
+    }
 
-    // TODO: Future index adding and removing
-    internal fun create_index_concurrently(conn: PgConnection, index: Index) {}
-    internal fun drop_index(conn: PgConnection, index: Index) {}
+    /**
+     * Drops the table cascading, if it exists. Does not fail, if the table does not exist.
+     * @param conn the connection to use.
+     * @param schema the unquoted name of the schema in which to drop the table; must exist already.
+     * @param table the unquoted name of the table to drop; must not exist.
+     * @since 3.0
+     */
+    internal fun collection_drop_if_exists(conn: PgConnection, schema: String, table: String) {
+        execute_sql(schema = schema, table = table) {
+
+        }
+    }
 
     // TODO: When executing upsert, update or delete, we need to verify the result of the purge query.
     //       It tells us which state each row had before execution. When the state is not the expected one,
@@ -559,16 +559,121 @@ SELECT basics.*, procs.* FROM basics, procs;
     //       conditional queries, everything just relies upon an index-only scan of the primary-key index,
     //       so above (nv, fn, version). It will be faster when being successful (that is what we hope for
     //       in most cases), while we will be slower when a real conflict arises (which we expect to be rare).
-    internal fun insert_rows(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
-    internal fun upsert_rows(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
-    internal fun update_rows(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
-    internal fun delete_rows_old_state(conn: PgConnection, schema: String, table: String, ids: Array<Id>?) {}
-    internal fun purge_rows(conn: PgConnection, schema: String, table: String, ids: Array<Id>) {}
+    internal fun rows_insert(conn: PgConnection, schema: String, table: String, rows: PgRows) {
+        execute_sql(schema = schema, table = table) {
+
+        }
+    }
+    internal fun rows_upsert(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
+    internal fun rows_update(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
+    internal fun rows_purge(conn: PgConnection, schema: String, table: String, ids: Array<Id>) {}
     // TODO: Executing a query generally should now be easier.
     //       We need the WHERE builder, but can we simplify this, so we can test better and just use from writer?
-    internal fun query_rows(conn: PgConnection, schema: String, table: String, query: PgQuery) {}
-
+    internal fun rows_query(conn: PgConnection, schema: String, table: String, query: PgQuery) {}
+    internal fun rows_delete_keep_old_state(conn: PgConnection, schema: String, table: String, ids: Array<Id>?) {}
     // TODO: Future delete mechanisms: first for storage-api, second as new standard way, because it is much faster and sufficient
-    internal fun delete_rows_new_states(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
-    internal fun delete_rows_no_states(conn: PgConnection, schema: String, table: String) {}
+    internal fun rows_delete_with_new_state(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
+    internal fun rows_delete_without_state(conn: PgConnection, schema: String, table: String) {}
+}
+
+/**
+ * An array that contains `0` for characters being valid as first character of a name, `1` for characters valid anywhere and `2` for invalid characters.
+ * @since 3.0
+ */
+private val validChars = IntArray(128) {
+    when (it) {
+        in 'a'.code..'z'.code -> 0
+        in '0'.code..'9'.code -> 1
+        '_'.code -> 1
+        else -> 2
+    }
+}
+
+/**
+ * Tests if the given character is a valid first character as database name.
+ * @since 3.0
+ */
+private fun isValidFirstChar(c: Char): Boolean = c.code < validChars.size && validChars[c.code] == 0
+/**
+ * Tests if the given character is a valid character as database name.
+ * @since 3.0
+ */
+private fun isValidChar(c: Char): Boolean = c.code < 256 && validChars[c.code] < 2
+
+/**
+ * Tests if the given string only contains valid character as database name, and does not start with the internal prefix `naksha_`.
+ * @since 3.0
+ */
+private fun isValidName(name: String, maxLength: Int): Boolean {
+    if (name.isEmpty()) return false
+    if (name.length > maxLength) return false
+    if (!isValidFirstChar(name[0])) return false
+    for (i in 1 until name.length) if (!isValidChar(name[i])) return false
+    return !name.startsWith("naksha_")
+}
+
+private fun int_to_string_with_dollar(prefix: String, value: Int): String {
+    val sb = StringBuilder()
+    sb.append(prefix)
+    sb.append(value)
+    if (sb[prefix.length] == '-') sb[prefix.length] = '$'
+    return sb.toString()
+}
+
+/**
+ * Extract the `lib-psql` name of the database from the given identifier.
+ *
+ * Technically, we match the identifier against `[a-z][a-z0-9_]{41}`, when it matches, we use this name; otherwise this method throws an exception.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT], if the given database name is invalid.
+ */
+internal fun Id.databaseName(): String {
+    if (isValidName(this.text, 42)) return this.text
+    throw illegalId(this.text)
+}
+
+/**
+ * Extract the `lib-psql` name of the catalog from the given identifier.
+ *
+ * Technically, we match the identifier against `[a-z][a-z0-9_]{24}`, when it matches, we use this name, otherwise we use `s_{id.intValue}`, but replace the minus with a dollar, e.g. `s_-12345` becomes `s_$12345`.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ */
+internal fun Id.catalogName(): String {
+    if (isValidName(this.text, 25)) return this.text
+    return int_to_string_with_dollar("s_", this.intValue)
+}
+
+/**
+ * Extract the `lib-psql` name of the collection from the given identifier.
+ *
+ * Technically, we match the identifier against `[a-z][a-z0-9_]{24}`, when it matches, we use this name, otherwise we use `t_{id.intValue}`, but replace the minus with a dollar, e.g. `t_-12345` becomes `t_$12345`.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ */
+internal fun Id.collectionName(): String {
+    if (isValidName(this.text, 25)) return this.text
+    return int_to_string_with_dollar("t_", this.intValue)
+}
+
+/**
+ * Extract the `lib-psql` name of the database from the given identifier.
+ *
+ * Technically, we match the identifier against `[a-z][a-z0-9_]{41}`, when it matches, we use this name, otherwise we use `c_{id.intValue}`, but replace the minus with a dollar, e.g. `c_-12345` becomes `c_$12345`.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ */
+internal fun Id.columnName(): String {
+    if (isValidName(this.text, 42)) return this.text
+    return int_to_string_with_dollar("c_", this.intValue)
+}
+
+/**
+ * Returns the SQL quoted name of the identifier. This method will only quote when necessary.
+ * @return the identifier to be used in the database.
+ * @since 3.0
+ */
+internal fun Id.quotedName(): String {
+    return quoteIdent(text)
 }

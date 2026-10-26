@@ -15,6 +15,8 @@ CREATE EXTENSION IF NOT EXISTS plv8;
 CREATE SCHEMA IF NOT EXISTS "public";
 CREATE SCHEMA IF NOT EXISTS "topology";
 CREATE SCHEMA IF NOT EXISTS "naksha~admin";
+CREATE SCHEMA IF NOT EXISTS jobmon; -- https://github.com/omniti-labs/pg_jobmon
+CREATE SCHEMA IF NOT EXISTS partman; -- https://github.com/pgpartman/pg_partman
 
 SET SESSION search_path TO public, topology;
 CREATE EXTENSION IF NOT EXISTS postgis;
@@ -26,7 +28,13 @@ CREATE EXTENSION IF NOT EXISTS pg_buffercache; -- https://www.postgresql.org/doc
 CREATE EXTENSION IF NOT EXISTS pg_prewarm; -- https://www.postgresql.org/docs/current/pgprewarm.html
 CREATE EXTENSION IF NOT EXISTS pg_stat_statements; -- https://www.postgresql.org/docs/current/pgstatstatements.html
 CREATE EXTENSION IF NOT EXISTS pg_visibility; -- https://www.postgresql.org/docs/current/pgvisibility.html
---CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_jobmon SCHEMA jobmon; -- https://github.com/citusdata/pg_cron#setting-up-pg_cron
+-- shared_preload_libraries = 'pg_cron'
+CREATE EXTENSION IF NOT EXISTS pg_partman SCHEMA partman; -- https://github.com/pgpartman/pg_partman#setup
+-- shared_preload_libraries = 'pg_partman_bgw'
+CREATE EXTENSION IF NOT EXISTS pg_cron; -- https://github.com/citusdata/pg_cron#setting-up-pg_cron
+-- shared_preload_libraries = 'pg_cron'
+-- Hardcodes schema to `cron`!
 
 -- Set search path and install extension.
 SET SESSION search_path TO "naksha~admin", public, topology;

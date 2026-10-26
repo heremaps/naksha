@@ -139,13 +139,28 @@ open class Write : AnyObject() {
         }
 
     /** Fluent setter for [catalogId]. */
+    @Deprecated("Renamed", ReplaceWith("withCatalogId(catalogId)"))
     fun withMapId(value: Id?): Write {
         catalogId = value
         return this
     }
 
     /** Fluent setter for [catalogId]. */
+    @Deprecated("Renamed", ReplaceWith("withCatalogId(catalogId)"))
+    @JsName("withMapName")
     fun withMapId(value: String?): Write {
+        catalogId = if (value != null) Id(value) else null
+        return this
+    }
+
+    /** Fluent setter for [catalogId]. */
+    fun withCatalogId(catalog: Id?): Write {
+        catalogId = catalog
+        return this
+    }
+
+    /** Fluent setter for [catalogId]. */
+    fun withCatalogName(value: String?): Write {
         catalogId = if (value != null) Id(value) else null
         return this
     }
@@ -186,6 +201,7 @@ open class Write : AnyObject() {
     }
 
     /** Fluent setter for [collectionId]. */
+    @JsName("withCollectionName")
     fun withCollectionId(value: String?): Write {
         catalogId = if (value != null) Id(value) else null
         return this
@@ -222,6 +238,7 @@ open class Write : AnyObject() {
     }
 
     /** Fluent setter for [id]. */
+    @JsName("withName")
     fun withId(value: String?): Write {
         if (value == null) removeRaw("id") else setRaw("id", value)
         return this
@@ -258,6 +275,7 @@ open class Write : AnyObject() {
         }
 
     /** Fluent setter for [version]. */
+    @JsName("withVersionInt64")
     fun withVersion(value: Long?): Write {
         version = value
         return this
@@ -301,20 +319,25 @@ open class Write : AnyObject() {
         return this
     }
 
+    @Deprecated("Renamed", ReplaceWith("createCatalog(catalog)"))
+    fun createMap(catalog: NakshaCatalog): Write = createCatalog(catalog)
+
     /**
      * Create a new catalog.
      * @param catalog the catalog to create.
      * @return this.
      * @since 3.0
      */
-    // TODO: Rename to createCatalog!
-    fun createMap(catalog: NakshaCatalog): Write {
+    fun createCatalog(catalog: NakshaCatalog): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.CREATE
         this.feature = catalog
         return this
     }
+
+    @Deprecated("Renamed", ReplaceWith("updateCatalog(catalog, atomic)"))
+    fun updateMap(catalog: NakshaCatalog, atomic: Boolean): Write = updateCatalog(catalog, atomic)
 
     /**
      * Update a catalog.
@@ -323,8 +346,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
-    // TODO: Rename to updateCatalog!
-    fun updateMap(catalog: NakshaCatalog, atomic: Boolean): Write {
+    fun updateCatalog(catalog: NakshaCatalog, atomic: Boolean): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.UPDATE
@@ -333,6 +355,9 @@ open class Write : AnyObject() {
         return this
     }
 
+    @Deprecated("Renamed", ReplaceWith("upsertCatalog(catalog, atomic)"))
+    fun upsertMap(catalog: NakshaCatalog, atomic: Boolean): Write = upsertCatalog(catalog, atomic)
+
     /**
      * Update or create a catalog.
      * @param catalog the catalog to update or create.
@@ -340,8 +365,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
-    // TODO: Rename to upsertCatalog!
-    fun upsertMap(catalog: NakshaCatalog, atomic: Boolean): Write {
+    fun upsertCatalog(catalog: NakshaCatalog, atomic: Boolean): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.UPSERT
@@ -349,6 +373,9 @@ open class Write : AnyObject() {
         this.version = if (atomic) (catalog.tupleNumber?.version ?: throw illegalState("Missing version")) else null
         return this
     }
+
+    @Deprecated("Renamed", ReplaceWith("deleteCatalog(catalog, atomic)"))
+    fun deleteMap(catalog: NakshaCatalog, atomic: Boolean): Write = deleteCatalog(catalog, atomic)
 
     /**
      * Delete a catalog.
@@ -359,8 +386,7 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
-    // TODO: Rename to deleteCatalog!
-    fun deleteMap(catalog: NakshaCatalog, atomic: Boolean): Write {
+    fun deleteCatalog(catalog: NakshaCatalog, atomic: Boolean): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.DELETE
@@ -368,6 +394,10 @@ open class Write : AnyObject() {
         this.version = if (atomic) (catalog.tupleNumber?.version ?: throw illegalState("Missing version")) else null
         return this
     }
+
+    @Deprecated("Renamed", ReplaceWith("deleteCatalogById(id, requireVersion)"))
+    @JvmOverloads
+    fun deleteMapById(id: String, requireVersion: Version? = null): Write = deleteCatalogById(id, requireVersion)
 
     /**
      * Delete a catalog.
@@ -378,9 +408,8 @@ open class Write : AnyObject() {
      * @return this.
      * @since 3.0
      */
-    // TODO: Rename to deleteCatalogById!
     @JvmOverloads
-    fun deleteMapById(id: String, requireVersion: Version? = null): Write {
+    fun deleteCatalogById(id: String, requireVersion: Version? = null): Write {
         this.catalogId = ADMIN_CATALOG_ID
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.DELETE

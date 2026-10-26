@@ -46,7 +46,7 @@ class PgHistoryPartition(
 
     override fun CREATE_SQL(): String {
         val (CREATE_TABLE, TABLESPACE) = CREATE_TABLE_and_TABLESPACE()
-        val toast_tuple_target:Int = collection.catalog.storage.adminCatalog.maxTupleSize
+        val toast_tuple_target:Int = collection.catalog.storage.database.maxTupleSize
         val parent = this.parent as PgHistoryTable
         val ID = collection.column(Id)
         val NEXT_VERSION = collection.column(NextVersion)

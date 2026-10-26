@@ -2,8 +2,9 @@ package naksha.psql
 
 import naksha.base.illegalArg
 import naksha.model.objects.Index
-import naksha.model.objects.Member
 import naksha.model.objects.MemberType
+import naksha.model.request.OrderBy
+import naksha.model.request.query.SortOrder
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -24,11 +25,11 @@ data class PgIndex(
     val name: String,
 
     /**
-     * The columns to index.
+     * The columns to index in the order in which to index.
      * @since 3.0
      */
     @JvmField
-    var on: Array<PgColumn>,
+    var on: Array<Pair<PgColumn, PgOrder>>,
 
     /**
      * The columns to include into the index to improve queries.
@@ -38,19 +39,12 @@ data class PgIndex(
     var includes: Array<PgColumn> = emptyArray(),
 
     /**
-     * Whether the index enforces uniqueness across the [on] columns (emits `CREATE UNIQUE INDEX`).
-     * @since 3.0
-     */
-    @JvmField
-    var unique: Boolean = false,
-
-    /**
      * Whether the index is partial, i.e. only covers rows where the leading [on] column is not null
      * (emits a `WHERE <leading column> IS NOT NULL` predicate).
      * @since 3.0
      */
     @JvmField
-    var partial: Boolean = false
+    var conditional: Boolean = false
 ) {
 
     companion object PgIndex_C {
@@ -96,9 +90,8 @@ data class PgIndex(
         val indexIdent = quoteIdent(table.name, "\$ci_", name)
         val withClause = if (primaryIndex == "gin") "" else " WITH (fillfactor=${if (PgTable.isAnyHead(table.name)) 50 else 100})"
         // The partial `WHERE` must come after any `WITH (...)` clause.
-        val whereClause = if (partial) " WHERE ${on.first().ident} IS NOT NULL" else ""
-        val uniqueKeyword = if (unique) "UNIQUE " else ""
-        val sql = """CREATE ${uniqueKeyword}INDEX IF NOT EXISTS $indexIdent
+        val whereClause = if (conditional) " WHERE ${on.first().ident} IS NOT NULL" else ""
+        val sql = """CREATE INDEX IF NOT EXISTS $indexIdent
 ON ${table.quotedName}
 USING $primaryIndex (${elements.joinToString(", ")})$includeClause$withClause$whereClause"""
         conn.execute(sql).close()
@@ -117,8 +110,7 @@ USING $primaryIndex (${elements.joinToString(", ")})$includeClause$withClause$wh
         if (name != other.name) return false
         if (!on.contentEquals(other.on)) return false
         if (!includes.contentEquals(other.includes)) return false
-        if (unique != other.unique) return false
-        if (partial != other.partial) return false
+        if (conditional != other.conditional) return false
         return true
     }
 
@@ -126,8 +118,7 @@ USING $primaryIndex (${elements.joinToString(", ")})$includeClause$withClause$wh
         var result = name.hashCode()
         result = 31 * result + on.contentHashCode()
         result = 31 * result + includes.contentHashCode()
-        result = 31 * result + unique.hashCode()
-        result = 31 * result + partial.hashCode()
+        result = 31 * result + conditional.hashCode()
         return result
     }
 

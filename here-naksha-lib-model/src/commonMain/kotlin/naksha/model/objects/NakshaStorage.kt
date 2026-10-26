@@ -6,7 +6,6 @@ import naksha.base.*
 import naksha.geo.SpBoundingBox
 import naksha.geo.SpGeometry
 import naksha.geo.SpPoint
-import naksha.model.Naksha
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaException
 import kotlin.js.*
@@ -50,8 +49,8 @@ open class NakshaStorage() : NakshaFeature() {
         private val ID = NotNullProperty<NakshaStorage, String>(String::class)
         private val CLASSNAME = NotNullProperty<NakshaStorage, String>(String::class, CLASSNAME_FIELD) { self, _ -> self.defaultClassName() }
         private val HARDCAP = NotNullProperty<NakshaStorage, Int>(Int::class) { _, _ -> 0 }
-        private val CREATE = NotNullProperty<NakshaStorage, Boolean>(Boolean::class) { _, _ -> false }
-        private val UPGRADE = NotNullProperty<NakshaStorage, Boolean>(Boolean::class) { _, _ -> false }
+        private val BOOLEAN_TRUE = NotNullProperty<NakshaStorage, Boolean>(Boolean::class) { _, _ -> true }
+        private val BOOLEAN_FALSE = NotNullProperty<NakshaStorage, Boolean>(Boolean::class) { _, _ -> false }
         //private val DB_NUMBER = NotNullProperty<NakshaStorage, Long>(Long::class) { self, _ -> Naksha.featureNumber(self.id) }
 
         /**
@@ -109,10 +108,10 @@ open class NakshaStorage() : NakshaFeature() {
     }
 
     /**
-     * If _true_, then the storage will create missing structures when being initialized; if _false_, the initialization does not modify the storage, but rather throw an [NakshaError.INITIALIZATION_FAILED].
+     * If the storage will create missing structures when opening a database. If explicitly _false_ and the database is not initialized, the storage will throw an [INITIALIZATION_FAILED][NakshaError.INITIALIZATION_FAILED]. Defaults to _true_, so when a database is not yet initialized, the storage will try to initialize it.
      * @since 3.0
      */
-    var create by CREATE
+    var create: Boolean by BOOLEAN_TRUE
 
     /**
      * Set [create] state.
@@ -126,10 +125,10 @@ open class NakshaStorage() : NakshaFeature() {
     }
 
     /**
-     * if _true_, then the storage will upgrade the admin-structures (e.g. stored procedures), when necessary; if _false_, the initialization does not modify the storage, but rather throw an [NakshaError.INITIALIZATION_FAILED].
+     * If the storage should automatically upgrade the admin-structures (e.g. stored procedures) of a database, when necessary; otherwise the initialization does not modify the admin-structure of the database. However, it will throw an [INITIALIZATION_FAILED][NakshaError.INITIALIZATION_FAILED] if there are incompatibilities that prevent the usage of the found database without upgrade of admin-structures. Defaults to _false_.
      * @since 3.0
      */
-    var upgrade by UPGRADE
+    var upgrade: Boolean by BOOLEAN_FALSE
 
     /**
      * Set [upgrade] state.

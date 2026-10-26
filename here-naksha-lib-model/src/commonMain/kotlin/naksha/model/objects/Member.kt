@@ -18,11 +18,18 @@ import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.base.Platform.PlatformCompanion.UNDEFINED
+import naksha.base.PlatformIterator
+import naksha.base.PlatformMapApi
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
+import naksha.base.PlatformUtil
+import naksha.base.PlatformUtil.PlatformUtilCompanion.hashCodeOf
 import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import naksha.model.TagList
 import naksha.model.TagMap
 import naksha.model.Tuple
 import naksha.base.TupleNumber
+import naksha.base.illegalState
+import naksha.base.platformHash
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmOverloads
@@ -225,11 +232,13 @@ open class Member() : AnyObject(), Comparator<Member> {
     infix fun eq(other: Member?): Boolean = isSameAs(other)
 
     /**
-     * Ensures that the given `found` member is the same as the `expected` member, allow different path.
+     * Tests if this member has the same [name] and [dataType] as the given `other` member, optionally comparing the [path][Member.path] as well.
      * @param other The member to compare this member with.
      * @param comparePath If the path must be the same as well, defaults to _false_.
      * @return _true_ if the two members are the same; _false_ otherwise.
+     * @since 3.0
      */
+    @JvmOverloads
     fun isSameAs(other: Member?, comparePath: Boolean = false): Boolean {
         if (other == null) return false
         if (this === other) return true
@@ -241,11 +250,11 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
-     * Ensures that the given `other` member is the same as this.
+     * Ensures that the given `other` member is the same as this, so with the same [name], [dataType], and optionally the same [path].
      *
-     * The purpose of the method is generally to do:
+     * The purpose of the method is generally to do somthing like this:
      * ```kotlin
-     * val member = StandardMember.Id.asSame(someCustomMember)
+     * val member = Id.asOther(members["id"])
      * ```
      * Which will return the given custom member, ensuring that it still is the standard `id` member, but allows different paths.
      * @param other The member to compare this with.
@@ -253,18 +262,19 @@ open class Member() : AnyObject(), Comparator<Member> {
      * @return The `other` member, if it is the same as this.
      * @throws NakshaException with error [ILLEGAL_STATE], when the given `other` members does not match this member.
      */
-    fun asSame(other: Member?, comparePath: Boolean = false): Member {
-        if (other == null) throw NakshaException(ILLEGAL_STATE, "The other member is NULL")
+    @JvmOverloads
+    fun asOther(other: Member?, comparePath: Boolean = false): Member {
+        if (other == null) throw illegalState("The other member is NULL")
         if (other === this) return other
         // We require same name and data-type, but not same JSON path.
         if (name != other.name) {
-            throw NakshaException(ILLEGAL_STATE, "The other member has different name: '${other.name}', expected: '${name}'")
+            throw illegalState("The other member has different name: '${other.name}', expected: '${name}'")
         }
-        if (dataType != other.dataType) {
-            throw NakshaException(ILLEGAL_STATE, "The other member has wrong data type: '${other.dataType}', expected '${dataType}'")
+        if (dataType !== other.dataType) {
+            throw illegalState("The other member has wrong data type: '${other.dataType}', expected '${dataType}'")
         }
         if (comparePath && !path.contentDeepEquals(other.path)) {
-            throw NakshaException(ILLEGAL_STATE, "The other member has a different path: '${other.path.joinToString("->")}', expected: '${path.joinToString("->")}'")
+            throw illegalState("The other member has a different path: '${other.path.joinToString("->")}', expected: '${path.joinToString("->")}'")
         }
         return other
     }
@@ -547,7 +557,7 @@ open class Member() : AnyObject(), Comparator<Member> {
      */
     fun delete(feature: MapProxy<*,*>): Any? = feature.setPath(UNDEFINED, path)
 
-    override fun compare(a: Member, b: Member): Int = a.dataType.sortOrder - b.dataType.sortOrder
+    override fun compare(a: Member, b: Member): Int = a.dataType.byteAlignment - b.dataType.byteAlignment
 
     companion object Member_C {
         private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
@@ -606,5 +616,11 @@ open class Member() : AnyObject(), Comparator<Member> {
     fun asTagMapMember(): TagMapMember = proxy(TagMapMember::class)
     fun asTagListMember(): TagListMember = proxy(TagListMember::class)
 
+    override fun hashCode(): Int = this.platformHash()
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other is Member) return this.platformHash() == other.platformHash()
+        return false
+    }
     override fun toString(): String = name
 }

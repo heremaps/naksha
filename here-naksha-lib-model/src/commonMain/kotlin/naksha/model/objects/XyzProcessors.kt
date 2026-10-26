@@ -4,7 +4,17 @@ import naksha.base.Fnv1a32
 import naksha.base.Platform
 import naksha.geo.HereTile
 import naksha.base.Action
+import naksha.geo.SpGeometry
+import naksha.geo.SpPoint
 import naksha.model.IMemberProcessor
+import naksha.model.NakshaContext
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthor
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthorTimestamp
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzCreatedAt
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzGeometry
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzId
+import naksha.model.objects.XyzMembers.XyzMembers_C.XyzReferencePoint
 import kotlin.jvm.JvmStatic
 
 /**
@@ -30,19 +40,20 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 class XyzProcessors private constructor() {
-    companion object XyzProcessor_C {
+    companion object XyzProcessorsCompanion {
         /**
          * Ensures that [XyzCreatedAt][naksha.model.objects.XyzMembers.XyzMembers_C.XyzCreatedAt] is set correctly.
          * @since 3.0
          */
         @JvmStatic
-        val xyzCreatedAt = IMemberProcessor { _, collection, feature, _, value ->
+        val xyzCreatedAt = IMemberProcessor { _, memberList, feature, _, value ->
             when (value) {
                 is Long -> value
                 is Number -> value.toLong()
                 else -> {
-                    val action = collection.useMember(StandardMembers.Tn).readTupleNumber(feature)?.action
-                    if (action == Action.CREATE) null else feature.properties.xyz.createdAt
+                    val action = memberList.useMember(StandardMembers.Tn).readTupleNumber(feature)?.action
+                    if (action != Action.CREATE) XyzCreatedAt.readLong(feature) ?: Platform.currentMillis()
+                    else Platform.currentMillis()
                 }
             }
         }
@@ -52,30 +63,37 @@ class XyzProcessors private constructor() {
          * @since 3.0
          */
         @JvmStatic
-        val xyzUpdatedAt = IMemberProcessor { _, _, _, _, _ -> Platform.currentMillis().toLong() }
+        val xyzUpdatedAt = IMemberProcessor { _, _, _, _, _ -> Platform.currentMillis() }
 
         /**
          * Ensures that [XyzAppId][naksha.model.objects.XyzMembers.XyzMembers_C.XyzAppId] is set correctly.
          * @since 3.0
          */
         @JvmStatic
-        val xyzAppId = IMemberProcessor { session, _, _, _, _ -> session.options.appId }
+        val xyzAppId = IMemberProcessor { session, _, _, _, _ ->
+            session?.options?.appId ?: NakshaContext.currentContext().appId
+        }
 
         /**
          * Ensures that [XyzAuthor][naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthor] is set correctly.
          * @since 3.0
          */
         @JvmStatic
-        val xyzAuthor = IMemberProcessor { session, _, _, _, value -> session.options.author ?: value as String? }
+        val xyzAuthor = IMemberProcessor { session, _, _, _, value ->
+            session?.options?.author ?: value as String? ?: NakshaContext.currentContext().author
+        }
 
         /**
          * Ensures that [XyzAuthorTimestamp][naksha.model.objects.XyzMembers.XyzMembers_C.XyzAuthorTimestamp] is set correctly.
          * @since 3.0
          */
         @JvmStatic
-        val xyzAuthorTimestamp = IMemberProcessor { session, _, _, _, value ->
-            if (session.options.author != null) Platform.currentMillis().toLong()
-            else value as? Long ?: if (value is Number) value.toLong() else null
+        val xyzAuthorTimestamp = IMemberProcessor { session, _, feature, _, _ ->
+            val new_author: String? = session?.options?.author
+                ?: XyzAuthor.get(feature)
+                ?: NakshaContext.currentContext().author
+            if (new_author != null) session?.getTransaction()?.time ?: Platform.currentMillis()
+            else XyzAuthorTimestamp.get(feature) ?: Platform.currentMillis()
         }
 
         /**
@@ -85,8 +103,13 @@ class XyzProcessors private constructor() {
          */
         @JvmStatic
         val xyzHereTile = IMemberProcessor { _, _, feature, _, _ ->
-            val point = feature.referencePoint ?: feature.geometry?.calculateCentroid()
-            if (point != null) HereTile(point.latitude, point.longitude).intKey else Fnv1a32.string(0, feature.id)
+            val refPoint: SpGeometry? = XyzReferencePoint.get(feature) ?: XyzGeometry.get(feature)
+            val point: SpPoint? = refPoint as? SpPoint ?: refPoint?.calculateCentroid()
+            if (point != null) HereTile(point.latitude, point.longitude).intKey
+            else {
+                val id: String? = XyzId.get(feature) ?: StandardMembers.Id.get(feature)
+                if (id != null) Fnv1a32.string(0, id) else 0
+            }
         }
 
         /**
@@ -94,6 +117,9 @@ class XyzProcessors private constructor() {
          * @since 3.0
          */
         @JvmStatic
-        val xyzHash = IMemberProcessor { _, _, feature, _, _ -> Fnv1a32.string(0, feature.id) }
+        val xyzHash = IMemberProcessor { _, _, feature, _, _ ->
+            val id: String? = XyzId.get(feature) ?: StandardMembers.Id.get(feature)
+            if (id != null) Fnv1a32.string(0, id) else 0
+        }
     }
 }

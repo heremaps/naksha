@@ -31,9 +31,6 @@ import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.UNDEFINED
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
-import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
-import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
-import naksha.base.PlatformObject
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.illegalArg
@@ -42,25 +39,28 @@ import naksha.base.internalError
 import naksha.base.proxy
 import naksha.geo.GeoUtil.GeoUtil_C.fromTWKB
 import naksha.model.objects.JsonPath
+import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType
+import naksha.model.objects.NakshaCatalog
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.NakshaTx
 import naksha.model.objects.StandardMembers
 import naksha.model.objects.StandardMembers.StandardMembers_C.CHANGE_COUNT
 import naksha.model.objects.StandardMembers.StandardMembers_C.GLOBAL_BOOK_FN
 import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
 import naksha.model.objects.StandardMembers.StandardMembers_C.ORIGIN
 import naksha.model.objects.StandardMembers.StandardMembers_C.TN
-import naksha.model.objects.XyzMembers
-import naksha.model.objects.XyzMembers.XyzMembers_C.XyzTn
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmName
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
+import kotlin.reflect.KClass
 
 /**
- * A tuple represents a specific immutable state of a feature.
+ * A tuple represents a specific immutable state of a feature in binary encoding.
  * @since 3.0
  */
 @JsExport
@@ -69,13 +69,15 @@ data class Tuple @JvmOverloads constructor(
      * The uncompressed `JBON` binary of the Feature, to be read with `JbonDecoder`.
      * @since 3.0
      */
-    @JvmField val featureBytes: ByteArray,
+    val featureBytes: ByteArray,
 
     /**
-     * The _HEAP_ decoded members book provided by storage at read time. Contains the values of the [Member].
+     * The reference to a reader for the member's book.
+     *
+     * This can either be just a small instance that decodes the data from the [featureBytes] or it can be some special _HEAP_ decoded members book provided by storage at read time. Generally, this Contains the values of the [Member].
      * @since 3.0
      */
-    @JvmField val membersBook: IBook,
+    val membersBook: IBook,
 
     /**
      * After encoding an object into a [Tuple] using [encodeFeature] method, the [previousTupleNumber] will be set in the generated [Tuple]. It will only be set by the encoder, if the given object contains a [TupleNumber][naksha.base.TupleNumber] of the state it had before being modified. In the XYZ specification this information was historically located in the jsonpath `properties->@ns:com:here:xyz->uuid`, but with modern `lib-base` support, the position can be freely selected.
@@ -86,20 +88,29 @@ data class Tuple @JvmOverloads constructor(
     @JvmField var previousTupleNumber: TupleNumber? = null
 ) {
 
+    // TODO: We need to extend the `Tuple` class.
+    //       We need to add a `val bytes: ByteArray` member.
+    //       When being read, the tuple must be, if not yet done, encoded into a single binary.
+    //       We should still support `featureBytes`. Its just another option to keep the object at the JVM heap.
+    //       We need to support both modes. Ones the `bytes` have been generated, `featureBytes` must be extracted from `bytes`.
+    //       Generally we want to keep data on the heap automatically compacted, when not actively used, so as a single compact binary.
+    //       Therefore, we should have some internal `compact()` method that ensures this, it should replace the members book
+    //       with a pseudo instance, that just decodes from the `bytes`. The `featureBytes` in that case are as well just decoded
+    //       from the `bytes` _(this is actually just a section of the bytes)_.
+    //       The concept is, when being returned from the storage, we have the on HEAP representation, the compaction should happen
+    //       when not being accessed for some time, using a background job, or when explicitly requested by the application.
+    //       Applications that want to store the tuple as binary or transfer it over the network, require the single binary !!!
+
     companion object Tuple_C {
         /**
-         * Encodes the given [NakshaFeature] into JBON2 bytes and members book.
-         *
-         * ### Note
-         * Does not modify the given Feature, unless `mutateInput` is `true`; on demand convert the returned tuple into a new NakshaFeature!
+         * Encodes the given [NakshaFeature] into `JBON2` bytes.
          *
          * @param feature the feature to encode.
          * @param collection the collection for which to encode the feature; declares the members.
          * @param session the session for which to encode; declares the version.
          * @param globalBook the global book to use for encoding; if any.
-         * @param requestedAction an action the client wants to perform; if `null`, auto-decided.
+         * @param action an action the client wants to perform; if `null`, auto-decided.
          * @param atomic a hint if the operation **must** be atomic; if `null`, auto-decided.
-         * @param mutateInput if `true`, the given feature could be mutated, if false then we guarantee the inputs are not mutated. Default is `false`.
          * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
          * @since 3.0
          * @throws NakshaException if any error happens when encoding.
@@ -112,37 +123,109 @@ data class Tuple @JvmOverloads constructor(
             collection: NakshaCollection,
             session: IWriteSession,
             globalBook: IBook? = null,
+            action: Action? = null,
+            atomic: Boolean? = null,
+        ): Tuple {
+            return encodeRaw(
+                raw = feature,
+                databaseNumber = collection.databaseNumber,
+                catalogNumber = collection.catalogNumber,
+                collectionNumber = collection.collectionNumber,
+                memberList = collection.validatedMembers,
+                session = session,
+                globalBook = globalBook,
+                processors = session.processors,
+                requestedAction = action,
+                atomic = atomic,
+            )
+        }
+
+        /**
+         * Encodes the given object into `JBON2` bytes.
+         *
+         * @param feature the feature to encode.
+         * @param collection the collection for which to encode the feature; declares the members.
+         * @param version the version in which to encode.
+         * @param processors the [IMemberProcessor]'s to process extracted [Member]'s; if any.
+         * @param globalBook the global book to use for encoding; if any.
+         * @param action an action the client wants to perform; if `null`, auto-decided.
+         * @param atomic a hint if the operation **must** be atomic; if `null`, auto-decided.
+         * @return the encoded feature bytes (JBON2, optionally GZIP-compressed).
+         * @since 3.0
+         * @throws NakshaException if any error happens when encoding.
+         */
+        @JsStatic
+        @JvmStatic
+        @JvmOverloads
+        fun encodeObject(
+            feature: AnyObject,
+            collection: NakshaCollection,
+            version: Long,
+            processors: MemberProcessorMap? = null,
+            globalBook: IBook? = null,
+            action: Action? = null,
+            atomic: Boolean? = null,
+        ): Tuple {
+            return encodeRaw(
+                raw = feature,
+                databaseNumber = collection.databaseNumber,
+                catalogNumber = collection.catalogNumber,
+                collectionNumber = collection.collectionNumber,
+                memberList = collection.validatedMembers,
+                session = null,
+                version = version,
+                globalBook = globalBook,
+                processors = processors,
+                requestedAction = action,
+                atomic = atomic,
+            )
+        }
+
+        /**
+         * Encode the given raw object into `JBON2` bytes.
+         * @param raw the raw `JSON` object.
+         * @param databaseNumber the database-number of the database for which to encode the object.
+         * @param catalogNumber the catalog-number of the catalog for which to encode the object.
+         * @param collectionNumber the collection-number of the collection for which to encode the object.
+         * @param memberList the [MemberList] to use for encoding _(separates members into the storage book of the `JBON`)_.
+         * @param session the [write-session][IWriteSession] in which context this is performed; optional, used only by [member processors][IMemberProcessor].
+         * @param version the version in which to encode the raw object; if a session is given, it is read from it; otherwise this must be provided explicitly.
+         * @param globalBook the global book to use for data compression; defaults to `null` _(no global book compression)_.
+         * @param processors the processors to use to process members; defaults to `session.processors` if a session is given; otherwise `null` _(no processors)_.
+         * @param requestedAction an action the client wants to perform; defaults to `null` meaning auto-detected.
+         * @param atomic a hint if the operation **must** be atomic; defaults to `null` meaning auto-detected.
+         */
+        @JsStatic
+        @JvmStatic
+        @JvmOverloads
+        fun encodeRaw(
+            raw: AnyObject,
+            databaseNumber: Long,
+            catalogNumber: Int,
+            collectionNumber: Int,
+            memberList: MemberList,
+            session: IWriteSession? = null,
+            version: Long = session?.version?.number ?: throw illegalArg("Missing version"),
+            globalBook: IBook? = null,
+            processors: MemberProcessorMap? = session?.processors,
             requestedAction: Action? = null,
             atomic: Boolean? = null,
-            mutateInput: Boolean = false
         ): Tuple {
-            val members = collection.useMembers()
-            val processors = session.processors
-
-            // Get the tuple-number of the collection itself.
-            // Note: The internal objects of Naksha are stored in XYZ member format!
-            // This will provide us with the database, catalog, and collection for which the feature should be encoded
-            val colTn = XyzTn.readTupleNumber(collection) ?:
-                throw illegalArg("The given NakshaCollection does not have a valid tuple-number (uuid)")
-            if (colTn.featureNumber > Int.MAX_VALUE || colTn.featureNumber < Int.MIN_VALUE)
-                throw illegalArg("The given collection does have an invalid feature-number (uuid)")
-
             // Find members.
-            val idMember = collection.useMember(StandardMembers.Id)
-            val tnMember = collection.useMember(StandardMembers.Tn)
-            val nextVersionMember = collection.useMember(StandardMembers.NextVersion)
-            val globalBookFnMember = collection.useMember(StandardMembers.GlobalBookFeatureNumber)
-            val originMember = collection.findMember(StandardMembers.Origin)
+            val idMember = memberList.useMember(StandardMembers.Id)
+            val tnMember = memberList.useMember(StandardMembers.Tn) // uuid
+            val nextVersionMember = memberList.useMember(StandardMembers.NextVersion)
+            val globalBookFnMember = memberList.useMember(StandardMembers.GlobalBookFeatureNumber)
+            val originMember = memberList.findMember(StandardMembers.Origin)
+
+            // Create feature with modified members copied.
+            val f = shallowCopy(raw, arrayOf(tnMember.path, nextVersionMember.path, globalBookFnMember.path, originMember?.path))
 
             // Read members.
-            val id = idMember.readString(feature) ?: throw illegalArg("Missing 'id' in NakshaFeature")
-            val featureNumber = when (collection.id) {
-                Naksha.COLLECTIONS_COL_ID, Naksha.CATALOGS_COL_ID -> Id(id).intValue.toLong()
-                else -> Id.textToNumber(id)
-            }
+            val id = Id(idMember.readString(raw) ?: throw illegalArg("Missing 'id' in NakshaFeature"))
             var prevTn: TupleNumber?
-            var origin: String? = originMember?.readString(feature)
-            val rawUuid = feature.getPath(tnMember.path)
+            var origin: String? = originMember?.readString(raw)
+            val rawUuid = raw.getPath(tnMember.path)
             val uuidParts = (rawUuid as? String)?.split(":")?.size
 
             if (uuidParts != null &&
@@ -154,31 +237,30 @@ data class Tuple @JvmOverloads constructor(
                 prevTn = null
                 origin = rawUuid
             } else {
-                prevTn = tnMember.readTupleNumber(feature)
+                prevTn = tnMember.readTupleNumber(raw)
             }
 
-            // Detect CREATE, UPDATE , fork, and update.
+            // Detect CREATE, UPDATE, fork, and update.
             val action: Action
             if (prevTn != null) {
-                if (colTn.databaseNumber != prevTn.databaseNumber ||
-                    colTn.catalogNumber != prevTn.catalogNumber ||
-                    // Note: The feature-number of the collection is the collection-number of the feature stored in it!
-                    colTn.featureNumber != prevTn.collectionNumber.toLong() ||
-                    featureNumber != prevTn.featureNumber)
+                if (databaseNumber != prevTn.databaseNumber ||
+                    catalogNumber != prevTn.catalogNumber ||
+                    collectionNumber != prevTn.collectionNumber ||
+                    id.number != prevTn.featureNumber)
                 {
                     // FORK: Client copied a feature from another collection or changed the `id`.
                     origin = prevTn.toString()
                     prevTn = null
                     action = when (requestedAction) {
-                        Action.CREATE-> Action.CREATE
-                        Action.UPDATE -> throw illegalArg("Requested action UPDATE, but client provided a foreign state as 'uuid'")
+                        Action.CREATE -> Action.CREATE
+                        Action.UPDATE -> throw illegalArg("Requested action UPDATE, but client provided a foreign object")
                         Action.DELETE -> Action.DELETE
                         else -> Action.CREATE
                     }
                 } else { // Client modified an existing state.
                     action = when (requestedAction) {
-                        Action.CREATE-> {
-                            if (prevTn.action != Action.DELETE) throw illegalArg("Requested ${if(atomic!=true)"" else "atomic "} action CREATE, but client provided the expected state as 'uuid'")
+                        Action.CREATE -> {
+                            if (prevTn.action != Action.DELETE) throw illegalArg("Requested ${if(atomic!=true) "" else "atomic "} action CREATE, but client provided a modified object")
                             Action.CREATE
                         }
                         Action.UPDATE -> Action.UPDATE
@@ -197,13 +279,12 @@ data class Tuple @JvmOverloads constructor(
 
             // The transaction version carries the VERSION sentinel (=3) in its low two action bits; each
             // feature records its OWN action (CREATE/UPDATE/DELETE) there so the row reads as live.
-            val version = (session.useTransaction().version.number and -4L) or action.longValue
             val newTn = TupleNumber(
-                colTn.databaseNumber,
-                colTn.catalogNumber,
-                colTn.featureNumber.toInt(),
-                featureNumber,
-                version
+                databaseNumber,
+                catalogNumber,
+                collectionNumber,
+                id.number,
+                (version and -4L) or action.longValue
             )
 
             val globalBookTn: TupleNumber?
@@ -216,7 +297,6 @@ data class Tuple @JvmOverloads constructor(
                 globalBookTn = null
             }
 
-            val f = if (mutateInput) feature else copyOnWrite(feature, XyzMembers.XYZ_JSON_PATH)
             originMember?.write(f, origin)
             tnMember.write(f, newTn)
             nextVersionMember.write(f, UNDEFINED)
@@ -226,8 +306,8 @@ data class Tuple @JvmOverloads constructor(
             // This is important, because references are positional indices into the members book,
             // and the reader (PgRows.getTuple) restores the tuple in the same order.
             val membersBook = HeapBook(BookType.MEMBER_BOOK)
-            members@ for (i in 0 until members.size) {
-                val member = members[i] ?: throw illegalState("Member must not be null")
+            members@ for (i in 0 until memberList.size) {
+                val member = memberList[i] ?: throw illegalState("Member must not be null")
                 val memberName = member.name
                 if (member.isVirtual()) continue
                 var memberValue: Any? = when (memberName) {
@@ -238,10 +318,10 @@ data class Tuple @JvmOverloads constructor(
                     CHANGE_COUNT -> (member.readLong(f) ?: 0L) + 1L
                     else -> member.read(f)
                 }
-                val procs = processors[memberName]
+                val procs = processors?.get(memberName)
                 if (procs != null) {
                     for (proc in procs) {
-                        memberValue = proc.processMember(session, collection, f, member, memberValue)
+                        memberValue = proc.processMember(session, memberList, f, member, memberValue)
                     }
                 }
                 memberValue = coerce(memberValue, member.dataType, id, memberName)
@@ -252,8 +332,8 @@ data class Tuple @JvmOverloads constructor(
             val encoder = JbEncoder2(globalBook)
             encoder.withMemberEncoder { path: Array<Any?>, pathEnd: Int, _: Any? ->
                 // Find the member whose declared path matches the current position and redirect its value into the members-book.
-                members@ for (i in 0 until members.size) {
-                    val member = members[i] ?: continue
+                members@ for (i in 0 until memberList.size) {
+                    val member = memberList[i] ?: continue
                     if (member.isVirtual()) continue
                     val memberName = member.name
                     val memberPath = member.path
@@ -270,21 +350,71 @@ data class Tuple @JvmOverloads constructor(
             }
 
             // Encode the feature.
-            val raw = encoder.buildTupleFromMap(f)
+            val featureBytes = encoder.buildTupleFromMap(f)
 
             // Optionally GZIP.
-            if (raw.size >= 1000) {
-                val compressed = gzipDeflate(raw)
-                if (compressed.size < raw.size) {
+            if (featureBytes.size >= 1000) {
+                val compressed = gzipDeflate(featureBytes)
+                if (compressed.size < featureBytes.size) {
                     return Tuple(compressed, membersBook, prevTn)
                 }
             }
-            return Tuple(raw, membersBook, prevTn)
+            return Tuple(featureBytes, membersBook, prevTn)
         }
 
         /**
-         * Copy-on-write view of [NakshaFeature]: every container along the [naksha.model.objects.Member.path] is replaced by a shallow copy, everything else is shared with [NakshaFeature]. Member writes into the result therefore never touch [NakshaFeature].
+         * Minimal copy of [NakshaFeature].
+         *
+         * The method creates shallow _(not recursive)_ root copy of the given feature. Then it iterates all given paths and makes yet another shallow copy of each given path in order. The copy along the given `path` is replaced by a shallow copy, everything else is shared with [NakshaFeature].
+         * @param original the original feature.
+         * @param paths the paths to make a shallow copy of.
+         * @return a new feature that shares everything, but the given path with `original`.
+         * @since 3.0
          */
+        @Deprecated(message = "This method is going to be removed as soon as we have real read-only support with real copy")
+        fun <T: AnyObject> shallowCopy(original: T, paths: Array<JsonPath?>): T {
+            val copy_root = Platform.copy(original.platformObject(), false) as PlatformMap
+            for (path in paths) {
+                if (path == null) continue
+                var origin_current: Any? = original.platformObject()
+                var copy_current: Any? = copy_root
+                for (i in 0 until path.size - 1) {
+                    val key = path[i]
+                    val origin_parent = origin_current
+                    val copy_parent = copy_current
+                    if (key is String && origin_parent is PlatformMap && copy_parent is PlatformMap) {
+                        val origin_child: Any? = map_get(origin_parent, key)
+                        var copy_child: Any? = map_get(copy_parent, key)
+                         if (copy_child === origin_child) {
+                             // No valid copy has been made yet, do it now.
+                             copy_child = Platform.copy(origin_child, false)
+                             map_set(copy_parent, key, copy_child)
+                        }
+                        origin_current = origin_child
+                        copy_current = copy_child
+                        continue
+                    }
+                    if (key is Number && origin_parent is PlatformList && copy_parent is PlatformList) {
+                        val origin_child: Any? = array_get(origin_parent, key.toInt())
+                        var copy_child: Any? = array_get(copy_parent, key.toInt())
+                         if (copy_child === origin_child) {
+                             // No valid copy has been made yet, do it now.
+                             copy_child = Platform.copy(origin_child, false)
+                             array_set(copy_parent, key.toInt(), copy_child)
+                        }
+                        origin_current = origin_child
+                        copy_current = copy_child
+                        continue
+                    }
+                    // We reached the end of the path, no more copies can be made.
+                    // The path contains something that is no map or list.
+                    break
+                }
+            }
+            return copy_root.proxy(original::class)
+        }
+
+        /** Copy every container along [path], leaving unrelated feature data shared. */
         fun copyOnWrite(original: NakshaFeature, path: JsonPath): NakshaFeature {
             val root = Platform.copy(original.platformObject(), false) as PlatformMap
             var current: PlatformObject = root
@@ -296,7 +426,6 @@ data class Tuple @JvmOverloads constructor(
                     is PlatformList if key is Number -> array_get(parent, key.toInt())
                     else -> null
                 }
-                // Absent or scalar: nothing to protect, setPath()/delete() will create it inside the copy.
                 if (child !is PlatformMap && child !is PlatformList) break
                 val childCopy = Platform.copy(child, false) as PlatformObject
                 if (parent is PlatformMap) map_set(parent, key as String, childCopy)
@@ -323,26 +452,6 @@ data class Tuple @JvmOverloads constructor(
                     b == 0x0A.toByte() || b == 0x0D.toByte()
         }
 
-
-        /**
-         * Descend a [NakshaFeature] using the given [path] segments; returns _null_ if any segment is missing.
-         *
-         * @param feature the feature to walk.
-         * @param path the list of path segments (e.g. `["properties", "@ns:com:here:xyz", "updatedAt"]`).
-         * @return the value at the path, or _null_ if the path does not exist.
-         */
-        private fun walkFeature(feature: NakshaFeature, path: List<String>): Any? {
-            var current: Any? = feature
-            for (segment in path) {
-                if (current == null) return null
-                current = when (current) {
-                    is AnyObject -> current.getRaw(segment)
-                    else -> return null
-                }
-            }
-            return current
-        }
-
         /**
          * Coerce a raw value to the type expected by the member.
          *
@@ -355,7 +464,7 @@ data class Tuple @JvmOverloads constructor(
          * @param memberName the member name (for logging).
          * @return the coerced value, or _null_ if coercion failed.
          */
-        private fun coerce(value: Any?, type: MemberType, featureId: String, memberName: String): Any? {
+        private fun coerce(value: Any?, type: MemberType, featureId: Id, memberName: String): Any? {
             if (value == null) return null
             return when (type) {
                 MemberType.BOOLEAN -> coerceBoolean(value, featureId, memberName)
@@ -382,12 +491,12 @@ data class Tuple @JvmOverloads constructor(
         // Individual coercion implementations
         // -------------------------------------------------------------------------
 
-        private fun coerceBoolean(value: Any, featureId: String, memberName: String): Boolean? = when (value) {
+        private fun coerceBoolean(value: Any, featureId: Id, memberName: String): Boolean? = when (value) {
             is Boolean -> value
             else -> { warnMismatch(featureId, memberName, "Boolean", value); null }
         }
 
-        private fun coerceInt8(value: Any, featureId: String, memberName: String): Byte? {
+        private fun coerceInt8(value: Any, featureId: Id, memberName: String): Byte? {
             val asLong = numberToLongOrNull(value) ?: return null.also { warnMismatch(featureId, memberName, "Byte", value) }
             if (asLong !in Byte.MIN_VALUE.toLong()..Byte.MAX_VALUE.toLong()) {
                 warnMismatch(featureId, memberName, "Byte", value)
@@ -396,7 +505,7 @@ data class Tuple @JvmOverloads constructor(
             return asLong.toByte()
         }
 
-        private fun coerceInt16(value: Any, featureId: String, memberName: String): Short? {
+        private fun coerceInt16(value: Any, featureId: Id, memberName: String): Short? {
             val asLong = numberToLongOrNull(value) ?: return null.also { warnMismatch(featureId, memberName, "Short", value) }
             if (asLong !in Short.MIN_VALUE.toLong()..Short.MAX_VALUE.toLong()) {
                 warnMismatch(featureId, memberName, "Short", value)
@@ -405,7 +514,7 @@ data class Tuple @JvmOverloads constructor(
             return asLong.toShort()
         }
 
-        private fun coerceInt32(value: Any, featureId: String, memberName: String): Int? {
+        private fun coerceInt32(value: Any, featureId: Id, memberName: String): Int? {
             val asLong = numberToLongOrNull(value) ?: return null.also { warnMismatch(featureId, memberName, "Int", value) }
             if (asLong !in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) {
                 warnMismatch(featureId, memberName, "Int", value)
@@ -414,7 +523,7 @@ data class Tuple @JvmOverloads constructor(
             return asLong.toInt()
         }
 
-        private fun coerceInt64(value: Any, featureId: String, memberName: String): Long? = when (value) {
+        private fun coerceInt64(value: Any, featureId: Id, memberName: String): Long? = when (value) {
             is Int -> value.toLong()
             is Long -> value
             is Short -> value.toLong()
@@ -436,7 +545,7 @@ data class Tuple @JvmOverloads constructor(
             else -> null
         }
 
-        private fun coerceFloat32(value: Any, featureId: String, memberName: String): Float? {
+        private fun coerceFloat32(value: Any, featureId: Id, memberName: String): Float? {
             val v = float32OrNull(value)
             if (v == null) warnMismatch(featureId, memberName, "Float", value)
             return v
@@ -452,19 +561,19 @@ data class Tuple @JvmOverloads constructor(
             else -> null
         }
 
-        private fun coerceFloat64(value: Any, featureId: String, memberName: String): Double? {
+        private fun coerceFloat64(value: Any, featureId: Id, memberName: String): Double? {
             val v = float64OrNull(value)
             if (v == null) warnMismatch(featureId, memberName, "Double", value)
             return v
         }
 
-        private fun coerceString(value: Any, featureId: String, memberName: String): String? = when (value) {
+        private fun coerceString(value: Any, featureId: Id, memberName: String): String? = when (value) {
             is String -> value
             is Char, is CharSequence -> value.toString()
             else -> { warnMismatch(featureId, memberName, "String", value); null }
         }
 
-        private fun coerceByteArray(value: Any, featureId: String, memberName: String): ByteArray? = when (value) {
+        private fun coerceByteArray(value: Any, featureId: Id, memberName: String): ByteArray? = when (value) {
             is ByteArray -> value
             else -> { warnMismatch(featureId, memberName, "ByteArray", value); null }
         }
@@ -479,7 +588,7 @@ data class Tuple @JvmOverloads constructor(
         /**
          * Coerce a tuple-number value: an already-materialized [naksha.base.TupleNumber], or a string/byte-array encoding.
          */
-        private fun coerceTupleNumber(value: Any, featureId: String, memberName: String): TupleNumber? {
+        private fun coerceTupleNumber(value: Any, featureId: Id, memberName: String): TupleNumber? {
             val v = tupleNumberOrNull(value)
             if (v == null) warnMismatch(featureId, memberName, "TupleNumber", value)
             return v
@@ -488,7 +597,7 @@ data class Tuple @JvmOverloads constructor(
         /**
          * Coerce a spatial value to a [SpGeometry].
          */
-        private fun coerceSpatial(value: Any, featureId: String, memberName: String): SpGeometry? {
+        private fun coerceSpatial(value: Any, featureId: Id, memberName: String): SpGeometry? {
             val geometry = when (value) {
                 is SpGeometry -> value
                 is ByteArray -> fromTWKB(value)
@@ -499,14 +608,14 @@ data class Tuple @JvmOverloads constructor(
             return null
         }
 
-        private fun coerceTagMap(value: Any, featureId: String, memberName: String): TagMap? {
+        private fun coerceTagMap(value: Any, featureId: Id, memberName: String): TagMap? {
             val tagMap = value.proxy(TagMap::class)
             if (tagMap != null) return tagMap
             warnMismatch(featureId, memberName, "TagMap", value)
             return null
         }
 
-        private fun coerceTagList(value: Any, featureId: String, memberName: String): TagList? {
+        private fun coerceTagList(value: Any, featureId: Id, memberName: String): TagList? {
             val list = when (value) {
                 is TagList -> value
                 is PlatformList -> value.proxy(TagList::class)
@@ -535,7 +644,7 @@ data class Tuple @JvmOverloads constructor(
             else -> null
         }
 
-        private fun warnMismatch(featureId: String, memberName: String, expected: String, value: Any) {
+        private fun warnMismatch(featureId: Id, memberName: String, expected: String, value: Any) {
             logger.warn("Member '$memberName' on feature '$featureId': expected $expected, got ${value::class.simpleName}")
         }
     }
@@ -567,19 +676,42 @@ data class Tuple @JvmOverloads constructor(
      * The [TupleNumber] of the [Tuple].
      * @since 3.0
      */
-    @JvmField
-    val tupleNumber: TupleNumber = membersBook[TN] as TupleNumber
+    val tupleNumber: TupleNumber
+        get() = membersBook[TN] as TupleNumber
 
     /**
-     * The next-version at which this tuple was superseded. `NULL`-sentinel indicates the tuple is the current _([Version.HEAD])_ state.
+     * The action of the [Tuple], actually similar to `tupleNumber.action`.
+     * @since 3.0
+     */
+    val action: Action
+        get() = tupleNumber.action
+
+    /**
+     * The version of the [Tuple], actually similar to `tupleNumber.version`.
+     * @since 3.0
+     */
+    val version: Long
+        get() = tupleNumber.version
+
+    /**
+     * Tests if the `Tuple` is a tombstone, so a deleted state, actually similar to `tupleNumber.isTombstone`.
+     * @since 3.0
+     * @see TupleNumber.isTombstone
+     */
+    @get:JvmName("isTombstone")
+    val isTombstone: Boolean
+        get() = tupleNumber.isTombstone
+
+    /**
+     * The next-version at which this tuple was superseded, `null` indicates the tuple is the current _([Version.HEAD])_ state.
      * @since 3.0
      */
     var nextVersion: Long
         get() = membersBook[StandardMembers.NextVersion.name] as Long? ?: Version.HEAD.number
-        set(version: Long) {
+        set(value) {
             val members = this.membersBook
             if (members is HeapBook) {
-                members.put(StandardMembers.NextVersion.name, version)
+                members.put(StandardMembers.NextVersion.name, value)
             } else {
                 throw NakshaException(ILLEGAL_STATE, "Members book is immutable, failed to set nextVersion")
             }
@@ -620,28 +752,31 @@ data class Tuple @JvmOverloads constructor(
             return globalBookTn
         }
 
-    private var _id: String? = null
+    private var _id: Id? = null
 
     /**
-     * The custom feature identifier.
-     * - If the feature-number is non-negative, returns the stringified feature-number.
-     * - If the feature-number is negative, reads the custom identifier from [membersBook].
+     * The identifier of the feature.
+     *
+     * The [Id] instance will be cached, and is only generated ones in the lifetime of a [Tuple].
      * @since 3.0
-     * @throws NakshaException with error [ILLEGAL_STATE] if the feature number
+     * @throws NakshaException with error [ILLEGAL_STATE] if the feature-number is negative, but no textual identifier is contained.
      */
-    val id: String
+    val id: Id
         get() {
-            var id: String? = _id
+            var id: Id? = _id
             if (id != null) return id
-            id = membersBook[StandardMembers.Id.name] as String?
-            if (id != null) {
+            val text = membersBook[StandardMembers.Id.name] as String?
+            val number = tupleNumber.featureNumber
+            if (text == null) {
+                if (number < 0) {
+                    throw illegalState("The tuple does not encode the textual identifier, but has a negative feature-number")
+                }
+                id = Id(number)
                 _id = id
                 return id
             }
-            val featureNumber = tupleNumber.featureNumber
-            id = if (featureNumber >= 0) featureNumber.toString() else {
-                throw NakshaException(ILLEGAL_STATE, "Missing 'id' member for tuple with negative feature-number: $tupleNumber")
-            }
+            // The database must restore the 64-bit feature-number even for catalogs and collections.
+            id = Id(text, number, skipVerification = true)
             _id = id
             return id
         }
@@ -663,8 +798,7 @@ data class Tuple @JvmOverloads constructor(
             return dataType == null || dataType.isInstance(value)
         }
         val index = membersBook.indexOfName(member.name)
-        if (index < 0) return false
-        return dataType == null || dataType.isInstance(membersBook.get(index))
+        return index >= 0 && (dataType == null || dataType.isInstance(membersBook[index]))
     }
 
     /**
@@ -674,7 +808,7 @@ data class Tuple @JvmOverloads constructor(
     private fun rawMember(member: Member): Any? = when (member.name) {
         StandardMembers.FeatureNumber.name -> tupleNumber.featureNumber
         StandardMembers.FeatureVersion.name -> tupleNumber.version
-        StandardMembers.Action.name -> tupleNumber.action.intValue
+        StandardMembers.Action.name -> tupleNumber.action
         else -> membersBook[member.name]
     }
 
@@ -813,7 +947,7 @@ data class Tuple @JvmOverloads constructor(
      * @return the value from the [membersBook] book or `null`, if the member is missing, the value is `null`, or not the requested type.
      * @since 3.0
      */
-    fun getTags(member: Member): TagMap? {
+    fun getTagMap(member: Member): TagMap? {
         val raw = membersBook[member.name]
         if (raw is TagMap) return raw
         if (raw is PlatformMap) return raw.proxy(TagMap::class)
@@ -839,17 +973,46 @@ data class Tuple @JvmOverloads constructor(
     }
 
     /**
-     * Get the set value of the member.
-     * @param member The member to query, only uses the [Member.name].
-     * @return the value from the [membersBook] book or `null`, if the member is missing, the value is `null`, or not the requested type.
+     * Decode this [Tuple] into an object.
+     * @param globalBook The global book to use to decode the [Tuple]. Need to be loaded from the storage, if [globalBookTn] is not `null`.
+     * @return the decoded [AnyObject].
      * @since 3.0
+     * @throws NakshaException if any error occurs.
      */
-    fun getSet(member: Member): ListProxy<*>? {
-        val raw = membersBook[member.name]
-        if (raw is ListProxy<*>) return raw
-        if (raw is PlatformList) return raw.proxy(AnyList::class)
-        return null
+    fun decodeObject(globalBook: IBook?): AnyObject {
+        val rawBytes = if (isGzipped(featureBytes)) gzipInflate(featureBytes) else featureBytes
+        val decoder = JbDecoder2(globalBook, membersBook)
+        decoder.mapBytes(rawBytes)
+        return decoder.toAnyObject()
     }
+
+    /**
+     * Decode this [Tuple] into a [NakshaCatalog].
+     * @return the decoded [NakshaCatalog].
+     * @since 3.0
+     * @throws NakshaException if any error occurs.
+     */
+    fun decodeCatalog(): NakshaCatalog = decodeObject(null).proxy(NakshaCatalog::class)
+
+    /**
+     * Decode this [Tuple] into a [NakshaCollection].
+     * @return the decoded [NakshaCollection].
+     * @since 3.0
+     * @throws NakshaException if any error occurs.
+     */
+    fun decodeCollection(): NakshaCollection = decodeObject(null).proxy(NakshaCollection::class)
+
+    /**
+     * Decode this [Tuple] into a [NakshaTx].
+     * @return the decoded [NakshaTx].
+     * @since 3.0
+     * @throws NakshaException if any error occurs.
+     */
+    fun decodeTransaction(): NakshaTx = decodeObject(null).proxy(NakshaTx::class)
+
+    // TODO: decodeBook(): ?
+    //       Add `val globalBookTn: TupleNumber?` and decode this, if there is a global book needed for decoding.
+    //       We need to have some helper at the session that returns books like `getBook(tn: TupleNumber)`
 
     /**
      * Decode this [Tuple] into a [NakshaFeature].
@@ -858,27 +1021,16 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      * @throws NakshaException if any error occurs.
      */
-    fun decodeFeature(globalBook: IBook?): NakshaFeature {
-        val rawBytes = if (isGzipped(featureBytes)) gzipInflate(featureBytes) else featureBytes
-        val decoder = JbDecoder2(globalBook, membersBook)
-        decoder.mapBytes(rawBytes)
-        return decoder.toAnyObject().proxy(NakshaFeature::class)
-    }
+    fun decodeFeature(globalBook: IBook?): NakshaFeature = decodeObject(globalBook).proxy(NakshaFeature::class)
 
     /**
-     * Like [decodeFeature], but also overlays the XYZ metadata namespace (`app_id`, `author`, timestamps, …)
-     * and `tags` from the tuple's dedicated columns, which the feature blob does not carry.
-     * @param globalBook the global book to use to decode the [Tuple]; if any.
-     * @return the decoded [NakshaFeature] with its XYZ namespace populated.
+     * Decode this [Tuple] into a given proxy.
+     * @param klass the type to proxy.
+     * @param globalBook The global book to use to decode the [Tuple]. Need to be loaded from the storage, if [globalBookTn] is not `null`.
+     * @return the tuple decoded as given proxy.
      * @since 3.0
+     * @throws NakshaException if any error occurs.
      */
     @JvmOverloads
-    fun toNakshaFeature(globalBook: IBook? = null): NakshaFeature {
-        val feature = decodeFeature(globalBook)
-        if (feature.getAs("id", String::class) == null) feature.id = id
-        feature.properties.xyz = XyzNs.fromTuple(this)
-        val tags = getTagList(XyzMembers.XyzTags)
-        if (tags != null) feature.properties.xyz.tags = tags
-        return feature
-    }
+    fun <T: AnyObject> decodeAs(klass: KClass<T>, globalBook: IBook? = null ): T = decodeObject(globalBook).proxy(klass)
 }

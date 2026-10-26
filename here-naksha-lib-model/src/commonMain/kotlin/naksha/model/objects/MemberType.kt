@@ -2,6 +2,7 @@
 
 package naksha.model.objects
 
+import naksha.base.AtomicInt
 import naksha.base.JsEnum
 import naksha.geo.SpGeometry
 import naksha.base.NakshaError.NakshaErrorCompanion.INITIALIZATION_FAILED
@@ -12,7 +13,6 @@ import naksha.base.TupleNumber
 import naksha.base.proxy
 import naksha.geo.GeoUtil
 import naksha.model.TagList
-import naksha.model.TagNormalizer.TagNormalizer_C.normalizeTag
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
@@ -40,50 +40,17 @@ class MemberType : JsEnum() {
     override fun initClass() {}
 
     companion object MemberType_C {
-        // TODO: We need to update the documentation of the members, so that they match the up-to-date one provided for the class!
-
         /**
-         * [Boolean] — Boolean.
+         * [TupleNumber] — A tuple-number, represented as [TupleNumber].
          * @since 3.0
          */
         @JvmField
-        val BOOLEAN = defIgnoreCase(MemberType::class, "boolean") {
-            self -> self.sortOrder = 6
-            self.subtype = BoolMember::class
-            self.valuesType = Boolean::class
-        }
-
-        /**
-         * [Byte] — 8-bit signed integer in storage, but when reading from book.
-         * @since 3.0
-         */
-        @JvmField
-        val INT8 = defIgnoreCase(MemberType::class, "int8") {
-            self -> self.sortOrder = 5
-            self.subtype = Int16Member::class
-            self.valuesType = Int::class
-        }
-
-        /**
-         * [Short] — 16-bit signed integer in storage, but when reading from book.
-         * @since 3.0
-         */
-        @JvmField
-        val INT16 = defIgnoreCase(MemberType::class, "int16") {
-            self -> self.sortOrder = 4
-            self.subtype = Int16Member::class
-            self.valuesType = Int::class
-        }
-
-        /**
-         * [Int] — 32-bit signed integer in storage, but when reading from book.
-         * @since 3.0
-         */
-        @JvmField
-        val INT32 = defIgnoreCase(MemberType::class, "int32") {
-            self -> self.sortOrder = 2
-            self.subtype = Int32Member::class
-            self.valuesType = Int::class
+        val TUPLE_NUMBER = defIgnoreCase(MemberType::class, "tuple_number") { self ->
+            // We know that tuple-number are always 32-byte (256-bit) long.
+            // We try to align them at 32-byte boundary for SIMD instructions to be used.
+            self.byteAlignment = 32
+            self.subtype = TupleNumberMember::class
+            self.valuesType = TupleNumber::class
         }
 
         /**
@@ -91,21 +58,10 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val INT64 = defIgnoreCase(MemberType::class, "int64") {
-            self -> self.sortOrder = 0
+        val INT64 = defIgnoreCase(MemberType::class, "int64") { self ->
+            self.byteAlignment = 8
             self.subtype = Int64Member::class
             self.valuesType = Long::class
-        }
-
-        /**
-         * [Float] — 32-bit IEEE-754 floating point in storage, but when reading from book.
-         * @since 3.0
-         */
-        @JvmField
-        val FLOAT32 = defIgnoreCase(MemberType::class, "float32") {
-            self -> self.sortOrder = 3
-            self.subtype = Float32Member::class
-            self.valuesType = Float::class
         }
 
         /**
@@ -113,10 +69,65 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val FLOAT64 = defIgnoreCase(MemberType::class, "float64") {
-            self -> self.sortOrder = 1
+        val FLOAT64 = defIgnoreCase(MemberType::class, "float64") { self ->
+            self.byteAlignment = 8
             self.subtype = Float64Member::class
             self.valuesType = Double::class
+        }
+
+        /**
+         * [Int] — 32-bit signed integer in storage, but when reading from book.
+         * @since 3.0
+         */
+        @JvmField
+        val INT32 = defIgnoreCase(MemberType::class, "int32") { self ->
+            self.byteAlignment = 4
+            self.subtype = Int32Member::class
+            self.valuesType = Int::class
+        }
+
+        /**
+         * [Float] — 32-bit IEEE-754 floating point in storage, but when reading from book.
+         * @since 3.0
+         */
+        @JvmField
+        val FLOAT32 = defIgnoreCase(MemberType::class, "float32") { self ->
+            self.byteAlignment = 4
+            self.subtype = Float32Member::class
+            self.valuesType = Float::class
+        }
+
+        /**
+         * [Short] — 16-bit signed integer in storage, but when reading from book.
+         * @since 3.0
+         */
+        @JvmField
+        val INT16 = defIgnoreCase(MemberType::class, "int16") { self ->
+            self.byteAlignment = 2
+            self.subtype = Int16Member::class
+            self.valuesType = Int::class
+        }
+
+        /**
+         * [Byte] — 8-bit signed integer in storage, but when reading from book.
+         * @since 3.0
+         */
+        @JvmField
+        val INT8 = defIgnoreCase(MemberType::class, "int8") { self ->
+            self.byteAlignment = 1
+            self.subtype = Int16Member::class
+            self.valuesType = Int::class
+        }
+
+        /**
+         * [Boolean] — Boolean.
+         * @since 3.0
+         */
+        @JvmField
+        val BOOLEAN = defIgnoreCase(MemberType::class, "boolean") { self ->
+            self.byteAlignment = 1
+            self.subtype = BoolMember::class
+            self.valuesType = Boolean::class
         }
 
         /**
@@ -124,8 +135,8 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val STRING = defIgnoreCase(MemberType::class, "string") {
-            self -> self.sortOrder = 7
+        val STRING = defIgnoreCase(MemberType::class, "string") { self ->
+            self.byteAlignment = 1
             self.subtype = StringMember::class
             self.valuesType = String::class
         }
@@ -135,21 +146,10 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val BYTE_ARRAY = defIgnoreCase(MemberType::class, "byte_array") {
-            self -> self.sortOrder = 12
+        val BYTE_ARRAY = defIgnoreCase(MemberType::class, "byte_array") { self ->
+            self.byteAlignment = 1
             self.subtype = ByteArrayMember::class
             self.valuesType = ByteArray::class
-        }
-
-        /**
-         * [TupleNumber] — A tuple-number, represented as [TupleNumber].
-         * @since 3.0
-         */
-        @JvmField
-        val TUPLE_NUMBER = defIgnoreCase(MemberType::class, "tuple_number") {
-            self -> self.sortOrder = 11
-            self.subtype = TupleNumberMember::class
-            self.valuesType = TupleNumber::class
         }
 
         /**
@@ -157,8 +157,8 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val SPATIAL = defIgnoreCase(MemberType::class, "spatial") {
-            self -> self.sortOrder = 10
+        val SPATIAL = defIgnoreCase(MemberType::class, "spatial") { self ->
+            self.byteAlignment = 1
             self.subtype = SpatialMember::class
             self.valuesType = SpGeometry::class
         }
@@ -180,8 +180,8 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val TAG_LIST = defIgnoreCase(MemberType::class, "tag_list") {
-            self -> self.sortOrder = 9
+        val TAG_LIST = defIgnoreCase(MemberType::class, "tag_list") { self ->
+            self.byteAlignment = 1
             self.subtype = TagListMember::class
             self.valuesType = TagList::class
         }
@@ -191,8 +191,8 @@ class MemberType : JsEnum() {
          * @since 3.0
          */
         @JvmField
-        val TAG_MAP = defIgnoreCase(MemberType::class, "tag_map") {
-            self -> self.sortOrder = 8
+        val TAG_MAP = defIgnoreCase(MemberType::class, "tag_map") { self ->
+            self.byteAlignment = 1
             self.subtype = TagMapMember::class
             self.valuesType = TagMap::class
         }
@@ -201,14 +201,18 @@ class MemberType : JsEnum() {
             // Validate sort orders form a contiguous range [0, N); done here, after all types have loaded.
             // Note: This order is used to sort members in storages.
             // We first want all fixed size items with 8 byte, then 4 bytes, 2 byte, 1 byte, then flexible types.
-            val orders = ArrayList<Int>()
+            val orders = ArrayList<MemberType>()
             val i = iterate(MemberType::class)
-            while (i.hasNext()) orders.add(i.next().sortOrder)
-            orders.sort()
+            while (i.hasNext()) {
+                val memberType = i.next()
+                orders.add(memberType)
+            }
+            orders.sortBy { it.byteAlignment }
             for (idx in orders.indices) {
-                if (orders[idx] != idx) throw NakshaException(
+                val memberType = orders[idx]
+                if (idx != memberType.byteAlignment) throw NakshaException(
                     INITIALIZATION_FAILED,
-                    "MemberType sort orders must be contiguous starting at 0; expected $idx but found ${orders[idx]} (all sorted: $orders)"
+                    "MemberType sort orders must be contiguous starting at 0; expected $idx but found $memberType (all sorted: $orders)"
                 )
             }
         }
@@ -234,8 +238,6 @@ class MemberType : JsEnum() {
 
     /**
      * Tests if the given value is of this type.
-     *
-     * **Note**: For [TAG_MAP_FROM_TAG_LIST] the expectation is [TagList], **not** [TagMap]!
      * @param value the value to test.
      * @return `true` if the value is of this type; false otherwise.
      */
@@ -294,10 +296,10 @@ class MemberType : JsEnum() {
     }
 
     /**
-     * The sort order of the type to ensure no padding is needed, so `INT8`, `FLOAT8`, `INT4`, `FLOAT4`, ...
+     * The alignment in byte the value needs, for example an [INT64] normally need to be aligned at `8`, while [INT8] is aligned by `1`. This is used to sort members, so there is the least amount of padding.
      * @since 3.0
      */
-    var sortOrder: Int = -1
+    var byteAlignment: Int = 1
         // Validated in the companion `init` block above; the setter must not call iterate() (re-entrant during init).
         private set
 }

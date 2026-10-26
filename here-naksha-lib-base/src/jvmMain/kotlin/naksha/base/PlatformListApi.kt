@@ -1,7 +1,5 @@
 package naksha.base
 
-import kotlin.math.max
-
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class PlatformListApi {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array
@@ -68,16 +66,7 @@ actual class PlatformListApi {
             vararg add: Any?
         ): PlatformList {
             require(array is JvmList)
-            val result = JvmList(deleteCount)
-            var i = if (start < 0) max(0, array.size + start) else start
-            var delete = deleteCount
-            while (delete-- > 0) result.add(array.removeAt(i))
-            if (add.isNotEmpty()) {
-                array.ensureSize(i + 1)
-                var a = 0
-                while (a < add.size) array.add(i++, add[a++])
-            }
-            return result
+            return array.splice(start, deleteCount, add)
         }
 
         /**

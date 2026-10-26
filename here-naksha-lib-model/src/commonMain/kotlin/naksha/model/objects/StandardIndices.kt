@@ -38,6 +38,13 @@ class StandardIndices private constructor() {
         val Geometry = Index("geo", StandardMembers.Geometry.name)
 
         /**
+         * `tags` — index over the [standard tags member][StandardMembers.Tags].
+         * @since 3.0
+         */
+        @JvmField @JsStatic
+        val Tags = Index("tags", StandardMembers.Tags.name)
+
+        /**
          * `pn` — index over the publish-number member, for efficient ordering and range queries by
          * publish-number. Used in `naksha~transactions`.
          * @since 3.0

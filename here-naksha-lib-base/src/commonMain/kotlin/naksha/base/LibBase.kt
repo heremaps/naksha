@@ -5,6 +5,7 @@
 // - jn Java at the class naksha.base.LibBaseKt.{name}
 package naksha.base
 
+import naksha.base.PlatformUtil.PlatformUtilCompanion.hashCodeOf
 import kotlin.js.JsExport
 import kotlin.reflect.KClass
 import kotlin.reflect.cast
@@ -150,6 +151,19 @@ infix fun <T : Any> Any?.As(type: KClass<out T>): T? {
     } as T?
 }
 
+/**
+ * Calculate a recursive hash above this using the Java string hash algorithm.
+ *
+ * When using this to implement hash, equals can be added the same way:
+ * ```kotlin
+ * override fun hashCode(): Int = this.platformHash()
+ *
+ * override fun equals(other: Any?): Boolean = this === other || other is MemberList && this.platformHash() == other.platformHash()
+ * ```
+ * @return the recursive hash above this.
+ * @see PlatformUtil.hashCodeOf
+ */
+inline fun Any?.platformHash(): Int = if (this == null) 0 else hashCodeOf(this)
 inline fun <K : Any, V : Any> AtomicMap(): AtomicMap<K, V> = Platform.newAtomicMap()
 inline fun AtomicBool(initialValue: Boolean = false): AtomicBool = Platform.newAtomicBool(initialValue)
 inline fun AtomicInt(initialValue: Int = 0): AtomicInt = Platform.newAtomicInt(initialValue)

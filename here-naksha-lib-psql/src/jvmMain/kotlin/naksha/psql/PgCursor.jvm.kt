@@ -2,6 +2,7 @@ package naksha.psql
 
 import naksha.base.AnyObject
 import naksha.base.Platform
+import naksha.base.illegalState
 import java.sql.ResultSet
 import java.sql.Statement
 import kotlin.reflect.KClass
@@ -11,19 +12,11 @@ import kotlin.reflect.KClass
  * @property stmt the statement to which this cursor is bound.
  * @property closeStmt if the statement should be closed, when the cursor is closed.
  */
-class PsqlCursor internal constructor(private val stmt: Statement, private val closeStmt: Boolean) : PgCursor, AutoCloseable {
-    private var row = 0
-    private var affectedRows = 0
-    private var resultSets: Array<ResultSet>
-    private var columnCount = 0
-    private var columnIndices: MutableMap<String, Int>? = null
-    private var columnNames: Array<String>? = null
-    private var columnTypes: Array<String>? = null
-    private var isRow = false
-    private var rsNext = 0
-    private var rs: ResultSet? = null
+actual class PgCursor private actual constructor(): AutoCloseable {
 
-    init {
+    internal constructor(stmt: Statement, closeStmt: Boolean): this() {
+        this.stmt = stmt
+        this.closeStmt = closeStmt
         // Fetch all result sets, accumulate the affected rows.
         var resultSets = emptyArray<ResultSet>()
         val stmt = this.stmt
@@ -40,6 +33,20 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
         } while (stmt.getMoreResults(Statement.KEEP_CURRENT_RESULT))
         this.resultSets = resultSets
     }
+
+    private lateinit var stmt: Statement
+    private var closeStmt: Boolean = false
+
+    private var row = 0
+    private var affectedRows = 0
+    private lateinit var resultSets: Array<ResultSet>
+    private var columnCount = 0
+    private var columnIndices: MutableMap<String, Int>? = null
+    private var columnNames: Array<String>? = null
+    private var columnTypes: Array<String>? = null
+    private var isRow = false
+    private var rsNext = 0
+    private var rs: ResultSet? = null
 
     private fun updateColumns() {
         val rs = this.rs
@@ -83,43 +90,33 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
     /**
      * Returns the result-set and verifies that it is positioned above a row.
      * @return the result-set, positioned above a row.
-     * @throws IllegalStateException if this cursor is not result-set or
+     * @throws naksha.base.NakshaException with error [ILLEGAL_STATE][naksha.base.NakshaError.ILLEGAL_STATE] if this cursor is no result-set or no row is selected currently.
+     * @see isRow
      */
     private fun rsAtRow(): ResultSet {
         val rs = rs()
-        check(isRow) { "The cursor is not positioned at a row" }
+        if(!isRow) throw illegalState("The cursor is not positioned at a row")
         return rs
     }
 
-    /**
-     * The names of the columns, indexed from 0, while in a SQL statement the index starts with 1.
-     */
-    override fun columnNames(): Array<String> =
-        columnNames ?: throw IllegalStateException("Initialization error: Missing column names array")
+    actual fun columnNames(): Array<String> =
+        columnNames ?: throw illegalState("Initialization error: Missing column names array")
 
     /**
      * The types of the columns, indexed from 0, while in a SQL statement the index starts with 1.
      */
     private fun columnTypes(): Array<String> =
-        columnTypes ?: throw IllegalStateException("Initialization error: Missing column type array")
+        columnTypes ?: throw illegalState("Initialization error: Missing column type array")
 
     /**
      * A map between the name of a column and the index in [columnNames] and [columnTypes].
      */
     private fun columnIndices(): MutableMap<String, Int> =
-        columnIndices ?: throw IllegalStateException("Initialization error: Missing column indices map")
+        columnIndices ?: throw illegalState("Initialization error: Missing column indices map")
 
-    /**
-     * Returns the number of affected row when this is the cursor of an update query.
-     * @return the number of affected row; -1 if the query was a SELECT or UPDATE with RETURNS.
-     */
-    override fun affectedRows(): Int = affectedRows
+    actual fun affectedRows(): Int = affectedRows
 
-    /**
-     * Move the cursor to the next row.
-     * @return _true_ if the cursor is positioned at a row; _false_ is the cursor is behind the last row.
-     */
-    override tailrec fun next(): Boolean {
+    actual tailrec fun next(): Boolean {
         if (rs?.next() == true) {
             isRow = true
             return true
@@ -133,41 +130,25 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
         return next()
     }
 
-    /**
-     * Move the cursor to the next row.
-     * @return this.
-     */
-    override fun fetch(): PgCursor {
+    actual fun fetch(): PgCursor {
         next()
         return this
     }
 
-    /**
-     * Tests if the cursor is currently positioned at a valid row.
-     * @return _true_ if the cursor is positioned at a row; _false_ is the cursor is behind the last row or before the first.
-     */
-    override fun isRow(): Boolean = isRow
+    actual fun isRow(): Boolean = isRow
 
-    /**
-     * Returns the current row number. The first row is 1, the row before the first row is 0.
-     * @return the current row number (0 to n, where 0 is before the first row).
-     */
-    override fun rowNumber(): Int = rs?.row ?: -1
+    actual fun rowNumber(): Int = rs?.row ?: -1
 
-    /**
-     * Tests if the current row has the given colum.
-     * @param name the name of the column
-     * @return _true_ if the current row contains a column with the given name.
-     * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
-     */
-    override fun contains(name: String): Boolean {
+    actual operator fun contains(name: String): Boolean {
         rsAtRow()
         return columnIndices()[name] != null
     }
 
+    actual operator fun contains(column: PgColumn): Boolean = contains(column.name)
+
     @Suppress("NOTHING_TO_INLINE")
     private inline fun valueOrNull(rs: ResultSet, value: Any?): Any?
-        = if (rs.wasNull()) null else value
+            = if (rs.wasNull()) null else value
 
     private fun readArray(rs: ResultSet, pgArray: java.sql.Array): Array<Any?>? {
         if (rs.wasNull()) return null
@@ -226,36 +207,28 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
         }
     }
 
-    /**
-     * Returns the column value of the current row.
-     * @param name the name of the column
-     * @return the value of the column; _null_ if the value is _null_ or no such column exists.
-     * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
-     */
-    override fun column(name: String): Any? {
+    actual fun column(name: String): Any? {
         val rs = rsAtRow()
         val i = columnIndices()[name] ?: return null
         val type = columnTypes()[i]
         return columnValue(i + 1, type, rs)
     }
 
-    /**
-     * Returns the column value of the current row.
-     * @param name the name of the column
-     * @return the value of the column.
-     * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
-     * @throws ClassCastException if casting the value failed.
-     * @throws NullPointerException if the value is null.
-     */
-    @Suppress("UNCHECKED_CAST")
-    override fun <T : Any> get(name: String): T = column(name) as T
+    actual fun column(column: PgColumn): Any? = column(column.name)
 
-    /**
-     * Reads the current row into a proxy object.
-     * @param klass the type of the proxy object to create.
-     * @return the created proxy object.
-     */
-    override fun <T : AnyObject> map(klass: KClass<T>): T {
+    @Suppress("UNCHECKED_CAST")
+    actual fun <T : Any> columnOr(name: String, alternative: T): T {
+        val v = column(name)
+        val klass = Platform.klassOf(alternative)
+        return if (klass.isInstance(v)) v as T else alternative
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    actual operator fun <T : Any> get(name: String): T = column(name) as T
+
+    actual operator fun <T : Any> get(column: PgColumn): T = get(column.name)
+
+    actual fun <T : AnyObject> map(klass: KClass<T>): T {
         val rs = rsAtRow()
         val columnNames = columnNames()
         val columnTypes = columnTypes()
@@ -271,7 +244,7 @@ class PsqlCursor internal constructor(private val stmt: Statement, private val c
         return row
     }
 
-    override fun close() {
+    actual override fun close() {
         try {
             if (closeStmt) stmt.close()
             else for (rs in resultSets) rs.close()

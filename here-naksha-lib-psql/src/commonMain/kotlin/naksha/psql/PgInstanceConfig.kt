@@ -1,13 +1,11 @@
-@file:OptIn(ExperimentalJsExport::class)
-
 package naksha.psql
 
 import naksha.base.AnyObject
 import naksha.base.NotNullProperty
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaException
-import kotlin.js.ExperimentalJsExport
 import kotlin.js.JsExport
+import kotlin.jvm.JvmOverloads
 
 /**
  * The configuration of a single PostgresQL instance.
@@ -83,7 +81,7 @@ class PgInstanceConfig : AnyObject() {
      * The host to connect to.
      * @since 3.0
      */
-    var host by HOST
+    var host: String by HOST
 
     /**
      * Set the host.
@@ -100,7 +98,7 @@ class PgInstanceConfig : AnyObject() {
      * The port to connect to, defaults to `5432`.
      * @since 3.0
      */
-    var port by PORT
+    var port: Int by PORT
 
     /**
      * Set the port.
@@ -117,7 +115,7 @@ class PgInstanceConfig : AnyObject() {
      * The database to open.
      * @since 3.0
      */
-    var db by DATABASE
+    var db: String by DATABASE
 
     /**
      * Set the database.
@@ -134,7 +132,7 @@ class PgInstanceConfig : AnyObject() {
      * The user to authenticate with.
      * @since 3.0
      */
-    var user by USER
+    var user: String by USER
 
     /**
      * Set the user.
@@ -151,7 +149,7 @@ class PgInstanceConfig : AnyObject() {
      * The password to authenticate with.
      * @since 3.0
      */
-    var password by PASSWORD
+    var password: String by PASSWORD
 
     /**
      * Set the password.
@@ -168,7 +166,7 @@ class PgInstanceConfig : AnyObject() {
      * If the instance is read-only (replica).
      * @since 3.0
      */
-    var readOnly by READ_ONLY
+    var readOnly: Boolean by READ_ONLY
 
     /**
      * Set the read-only attribute.
@@ -187,7 +185,7 @@ class PgInstanceConfig : AnyObject() {
      * All master instances must at least support one admin-connection, additionally to this limit.
      * @since 3.0
      */
-    var connectionLimit by CONNECTION_LIMIT
+    var connectionLimit: Int by CONNECTION_LIMIT
 
     /**
      * Set the connection-limit.
@@ -202,8 +200,24 @@ class PgInstanceConfig : AnyObject() {
 
     /**
      * Returns the standard JDBC URI, basically `jdbc:postgresql://{host}:{port}/{db}?user={user}&password={password}&ssl=true[&readOnly]`.
-     * @return the JDBC URI.
+     *
+     * This version does suppress the password, so replaces it with `***`.
+     * @return the JDBC URI without password.
+     * @since 3.0
+     * @see toJdbcUri
      */
     override fun toString(): String
-        = "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=${password}&ssl=true${if (readOnly) "&readOnly" else ""}"
+        = toJdbcUri(false)
+
+    /**
+     * Returns the JDBC URI, basically `jdbc:postgresql://{host}:{port}/{db}?user={user}&password={password}&ssl=true[&readOnly]`.
+     * @param addPassword if _false_, then the password is replaced with `***`; otherwise the real password is added.
+     * @return the URI.
+     * @since 3.0
+     * @see toString
+     */
+    fun toJdbcUri(addPassword: Boolean): String = if (addPassword)
+        "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=***&ssl=true${if (readOnly) "&readOnly" else ""}"
+    else
+        "jdbc:postgresql://${host}:${port}/${db}?user=${user}&password=${password}&ssl=true${if (readOnly) "&readOnly" else ""}"
 }
