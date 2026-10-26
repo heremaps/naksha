@@ -142,7 +142,7 @@ class OrderBy() : AnyObject() {
     }
 
     /**
-     * Tests if this represents deterministic ordering, which means that no specific column is selected (`null`), the order is [Any], and no other conditions are given ([next] = `null`).
+     * Tests if this represents deterministic ordering, which means that no specific column is selected (`null`), the order is [ANY], and no other conditions are given ([next] = `null`).
      * @return `true` if this represents the deterministic order; `false` otherwise.
      */
     fun isDeterministic(): Boolean = member == null && sortOrder == ANY && next == null

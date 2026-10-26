@@ -9,6 +9,7 @@ import naksha.base.Action
 import naksha.base.Action.Action_C.CREATE
 import naksha.base.Action.Action_C.DELETE
 import naksha.base.Action.Action_C.UPDATE
+import naksha.base.Id
 import naksha.base.NakshaError
 import naksha.base.NakshaException
 import naksha.base.TupleNumber
@@ -25,37 +26,39 @@ class NakshaTxCollection() : AnyObject() {
 
     /**
      * Create a new collection info.
-     * @param id the collection-id.
-     * @param number the collection-number.
+     * @param id the [Id] of the collection.
      * @param action the _(optional)_ action done to this collection; `null` if the collection was not modified.
      */
     @JvmOverloads
     @JsName("of")
-    constructor(id: String, number: Int, action: Action? = null) : this() {
-        this.id = id
-        this.number = number
+    constructor(id: Id, action: Action? = null) : this() {
+        this.id = id.text
+        this.number = id.intValue
         this.action = action
     }
 
     companion object {
         private val ID = NotNullProperty<NakshaTxCollection, String>(String::class)
-        private val NUMBER = NotNullProperty<NakshaTxCollection, Int>(Int::class)
+        private val NUMBER = NotNullProperty<NakshaTxCollection, Int>(Int::class) { self, _ ->
+            // If the number misses in the JSON, we can calculate it.
+            Id.numberToInt(Id.textToNumber(self.id))
+        }
         private val ACTION_OR_NULL = NullableProperty<NakshaTxCollection, Action>(Action::class)
         private val COUNT = NotNullProperty<NakshaTxCollection, Int>(Int::class) { _, _ -> 0 }
         private val FEATURES_BY_PARTITION = NullableProperty<NakshaTxCollection, NakshaTxFeatureByPartition>(NakshaTxFeatureByPartition::class)
     }
 
     /**
-     * The collection-id.
+     * The textual collection identifier.
      * @since 3.0
      */
-    var id by ID
+    var id: String by ID
 
     /**
-     * The collection-number.
+     * The numeric collection identifier.
      * @since 3.0
      */
-    var number by NUMBER
+    var number: Int by NUMBER
 
     /**
      * The [Action] done to the collection, if the collection was modified within the transaction, `null` if only children _(features)_ of the collection were modified.
@@ -97,7 +100,7 @@ class NakshaTxCollection() : AnyObject() {
      * If the collection is partitioned, which partition got how many writes.
      * @since 3.0
      */
-    var featuresByPartition by FEATURES_BY_PARTITION
+    var featuresByPartition: NakshaTxFeatureByPartition? by FEATURES_BY_PARTITION
 
     /**
      * Helper method to add one change.

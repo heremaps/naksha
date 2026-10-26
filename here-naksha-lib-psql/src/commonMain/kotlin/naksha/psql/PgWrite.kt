@@ -1,22 +1,21 @@
 package naksha.psql
 
 import naksha.base.Action
-import naksha.base.CATALOGS_COL_NUMBER
-import naksha.base.CATALOGS_COL_TEXT
-import naksha.base.COLLECTIONS_COL_NUMBER
-import naksha.base.COLLECTIONS_COL_TEXT
 import naksha.base.Id
 import naksha.base.TupleNumber
-import naksha.base.Version
+import naksha.base.illegalState
 import naksha.model.*
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
 import naksha.model.objects.NakshaCatalog
+import naksha.model.objects.NakshaTx
 import naksha.model.request.Write
 import naksha.model.request.WriteOp
 
 /**
- * Pure data class to enrich a write operation with additional information, used by [PgWriter].
+ * A wrapper around `original` [Write] instructions provided by the client. Used to enrich the `original` write operation with additional information needed by [PgWriter].
+ * @property original the original write instructions as provided by the client.
+ * @property i the index in the input data _(needed to order the results)_.
  * @since 3.0
  * @see [Write]
  * @see [PgWriter]
@@ -24,25 +23,31 @@ import naksha.model.request.WriteOp
 internal data class PgWrite(val original: Write, val i: Int) {
 
     /**
-     * The map into which to write.
+     * The catalog into which to write _(as session local copy)_.
      *
-     * - If a map is modified, this is [Naksha.ADMIN_MAP][naksha.model.Naksha.ADMIN_CATALOG_ID], [asPgCatalog] and [asNakshaMap] will be set.
-     * - If a collection is modified, this is the map in which [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL_ID] is located, [asPgCollection] and [asNakshaCollection] will be set.
+     * - If a catalog is modified, this is the admin-catalog _(`naksha~admin`)_, [asNakshaCatalog] will be set.
+     * - If a collection is modified, this is the catalog in which the collection is located, [asNakshaCollection] will be set.
+     * - If a feature is modified, this is the catalog in which the feature is stored.
+     *
+     * This property is set by [PgWriter.prepareWrite].
      * @since 3.0
      */
-    lateinit var catalog: PgCatalog
+    lateinit var dbCatalog: PgCatalog
 
     /**
-     * The collection into which to write.
+     * The collection into which to write _(as session local copy)_.
      *
-     * - If a map is modified, this is [Naksha.CATALOGS_COL][naksha.model.Naksha.CATALOGS_COL_ID], [asPgCatalog] and [asNakshaMap] will be set.
-     * - If a collection is modified, this is [Naksha.COLLECTIONS_COL][naksha.model.Naksha.COLLECTIONS_COL_ID], [asPgCollection] and [asNakshaCollection] will be set.
+     * - If a catalog is modified, this is the admin-catalog _(`naksha~admin`)_, [asNakshaCatalog] will be set.
+     * - If a collection is modified, this is the admin-collection _(`naksha~collections`)_, [asNakshaCollection] will be set.
+     * - If a feature is modified, this is the collection in which the feature is stored.
+     *
+     * This property is set by [PgWriter.prepareWrite].
      * @since 3.0
      */
-    lateinit var collection: PgCollection
+    lateinit var dbCollection: PgCollection
 
     /**
-     * The write operation to perform, [WriteOp.CREATE], [WriteOp.UPDATE], [WriteOp.UPSERT], [WriteOp.DELETE], or [WriteOp.PURGE].
+     * The write operation to perform, [WriteOp.CREATE], [WriteOp.UPDATE], [WriteOp.UPSERT], [WriteOp.DELETE], or [WriteOp.PURGE]. Actually just reads `original.op`.
      * @since 3.0
      */
     val op: WriteOp
@@ -60,123 +65,95 @@ internal data class PgWrite(val original: Write, val i: Int) {
     }
 
     /**
-     * If the operation should be performed atomic.
-     * @since 3.0
-     */
-    var atomic: Boolean = original.atomic
-
-    /**
      * The identifier of the feature to modify.
      * @since 3.0
      */
-    val id: String
-        get() = original.id
+    val id: Id = original.id
 
     /**
-     * The feature-number (`fn`) derived from [id].
+     * The partition-number for this feature, the same as [id.partitionNumber][Id.partitionNumber].
      *
-     * - Named features (`id` is a non-numeric string): `fn < 0` — lower 16 bits of the MD5 hash with the sign bit set.
-     * - Numeric features (`id` is a valid 63-bit unsigned decimal): `fn >= 0` — `Long.parseLong(id)`.
-     *
-     * This is the authoritative routing key for physical partition assignment.
+     * Value is between `0` and `255` _(inclusive)_.
      * @since 3.0
      */
-    val featureNumber: Long = when (original.collectionId) {
-        COLLECTIONS_COL_TEXT -> COLLECTIONS_COL_NUMBER
-        CATALOGS_COL_TEXT -> CATALOGS_COL_NUMBER
-        else -> Id.textToNumber(id)
-    }
+    val partitionNumber: Int = id.partitionNumber
 
     /**
-     * The partition-number for this feature, derived from the lower 8 bits of [featureNumber].
-     *
-     * Always computed from [featureNumber] (i.e. from `fn`), never directly from the [id] string.
-     * Value is between `0` and `255` (inclusive).
-     * @since 3.0
-     * @see [partition]
-     */
-    val partitionNumber: Int = Id.partitionNumber(featureNumber)
-
-    /**
-     * The partition-index, being `-1` if the collection does not have any performance-partitions, otherwise a value between `0` and `collection.partitions` _(exclusive)_. Must not be called unless [collection] has been initialized _(as it is a `lateinit` variable)_.
-     *
-     * Routing is always by [featureNumber] (`fn`). Both named and numeric features are routed identically
-     * via the lower 8 bits of `fn`.
-     * @since 3.0
-     * @see [partitionNumber]
-     */
-    val partition: Int
-        get() = if (collection.partitions > 1) partitionNumber % collection.partitions else -1
-
-    /**
-     * If the operation is atomic, the version in which the _HEAD_ is expected to be; otherwise `null`.
+     * Simply returns [original.version][Write.version].
      * @since 3.0
      */
-    val version: Version?
-        get() = if (original.atomic && op != WriteOp.CREATE && op != WriteOp.UPSERT)
-        // Expected prior HEAD version: explicit version/tuple-number, else the one captured at encode time.
-            original.version
-                ?: original.tupleNumber?.let { Version(it.version) }
-                ?: tuple?.previousTupleNumber?.let { Version(it.version) }
-        else
-            null
+    val requireVersion: Long?
+        get() = original.version
 
     /**
      * The [Tuple] representation of the modified feature.
      *
      * For [DELETE][naksha.model.request.WriteOp.DELETE] and [PURGE][naksha.model.request.WriteOp.PURGE] we do not have a [tuple][Tuple], or a [feature].
+     *
+     * This property is set by [PgWriter.prepareWrite].
      * @since 3.0
      */
     var tuple: Tuple? = null
 
+    /** Same as [original.isCatalogModification][Write.isCatalogModification]. */
     val isCatalogModification: Boolean
-        get() = original.isMapModification()
+        get() = original.isCatalogModification()
+    /** Same as [original.isCollectionModification][Write.isCollectionModification]. */
     val isCollectionModification: Boolean
         get() = original.isCollectionModification()
+    /** Same as [original.isBookModification][Write.isBookModification]. */
+    val isBookModification: Boolean
+        get() = original.isBookModification()
+    /** Same as [original.isTransactionModification][Write.isTransactionModification]. */
     val isTransactionModification: Boolean
-        get() = Naksha.ADMIN_CATALOG_ID == catalog.id && Naksha.TRANSACTIONS_COL_ID == collection.id
-    // This variant differs from write.isFeatureModification, because it includes dictionaries, which are just features for us!
+        get() = original.isTransactionModification()
+    /** Same as [original.isFeatureModification][Write.isFeatureModification]. */
     val isFeatureModification: Boolean
-        get() = !isTransactionModification && !isCatalogModification && !isCollectionModification
+        get() = original.isFeatureModification()
 
     /**
-     * If the feature is a map, the [PgCatalog] representation.
-     * @since 3.0
-     */
-    var asPgCatalog: PgCatalog? = null
-
-    /**
-     * If this modifies a map, the feature cast to [NakshaCatalog].
-     * @since 3.0
-     */
-    var asNakshaMap: NakshaCatalog? = null
-
-    /**
-     * If the feature is a collection, the [PgCollection] representation.
-     * @since 3.0
-     */
-    var asPgCollection: PgCollection? = null
-
-    /**
-     * If this modifies a collection, the feature cast to [NakshaCollection].
-     * @since 3.0
-     */
-    var asNakshaCollection: NakshaCollection? = null
-
-    /**
-     * Returns the target feature as correct type, so either [asNakshaMap], [asNakshaCollection], [`original.feature`][Write.feature] or `null`, if no feature is available, for [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE].
+     * The new state as feature of correct type.
      *
-     * @return the target feature.
+     * This property is set by [PgWriter.prepareWrite] as will be [NakshaCatalog], [NakshaCollection], [NakshaFeature], or `null` for `PURGE`. For `DELETE` the feature can be given and it can be `null`, depending on the client wanting a specific tombstone state.
      * @since 3.0
      */
-    val feature: NakshaFeature?
-        get() = asNakshaMap ?: asNakshaCollection ?: original.feature
+    var feature: NakshaFeature? = null
+
+    /** Just [feature] cast into [NakshaCatalog] */
+    val asCatalog: NakshaCatalog
+        get() = feature as? NakshaCatalog ?: throw illegalState("Require feature to be a catalog")
+
+    /** Just [feature] cast into [NakshaCatalog] */
+    val asCollection: NakshaCollection
+        get() = feature as? NakshaCollection ?: throw illegalState("Require feature to be a collection")
+
+    /** Just [feature] cast into [NakshaTx] */
+    val asTx: NakshaTx
+        get() = feature as? NakshaTx ?: throw illegalState("Require feature to be a transaction")
 
     /**
-     * If the operation was performed, this will be the [naksha.base.TupleNumber] of the new state.
+     * If the operation was performed, this will be the [TupleNumber] of the new state.
      *
-     * For [DELETE][WriteOp.DELETE] and [PURGE][WriteOp.PURGE] this will be `null`, if the feature did not exist, and no atomic delete was request, otherwise it will be the [naksha.base.TupleNumber] of the tombstone state; deleting a feature does actually produce a new tombstone state.
+     * For [DELETE][WriteOp.DELETE] this can be `null`, if the feature did not exist. [PURGE][WriteOp.PURGE] does not produce a new state, therefore this will always be `null` when a purged was requested.
+     *
+     * This property is set by [PgWriter.executeWrite].
      * @since 3.0
      */
     var tupleNumber: TupleNumber? = null
+
+    /**
+     * If this modified a catalog, the [PgCatalog] wrapper around the [tuple].
+     *
+     * This property is set by [PgWriter.executeWrite].
+     * @since 3.0
+     */
+    var pgCatalog: PgCatalog? = null
+
+    /**
+     * If this modified a collection, the [PgCollection] wrapper around the [tuple].
+     *
+     * This property is set by [PgWriter.executeWrite].
+     * @since 3.0
+     */
+    var pgCollection: PgCollection? = null
 }

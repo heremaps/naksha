@@ -1,18 +1,14 @@
 package naksha.psql
 
 import naksha.base.AnyObject
-import naksha.base.Platform
-import kotlin.js.JsExport
-import kotlin.js.JsName
 import kotlin.reflect.KClass
 
 /**
  * A cursor as it is returned by the [PLV8](https://plv8.github.io/) engine. In Java this is a thin wrapper around a
  * [ResultSet](https://docs.oracle.com/javase/8/docs/api/java/sql/ResultSet.html). The cursor is initially positions before the first row.
+ * @since 3.0
  */
-@Suppress("OPT_IN_USAGE")
-@JsExport
-interface PgCursor : AutoCloseable {
+expect class PgCursor private constructor(): AutoCloseable {
 
     /**
      * Returns the number of affected row when this is the cursor of an update query.
@@ -23,12 +19,14 @@ interface PgCursor : AutoCloseable {
     /**
      * Move the cursor to the next row.
      * @return _true_ if the cursor is positioned at a row; _false_ is the cursor is behind the last row.
+     * @see fetch
      */
     fun next(): Boolean
 
     /**
      * Move the cursor to the next row.
      * @return this.
+     * @see next
      */
     fun fetch(): PgCursor
 
@@ -45,13 +43,17 @@ interface PgCursor : AutoCloseable {
     fun rowNumber(): Int
 
     /**
-     * Returns the names of the selected columns.
+     * Returns the names of the columns of the current row.
+     *
+     * #### Warning
+     * Requires that [isRow] is _true_, so that at least one row has been fetched. Therefore, call [fetch] or [next] before this.
      * @return the names of the selected columns.
+     * @throws naksha.base.NakshaException with error [ILLEGAL_STATE][naksha.base.NakshaError.ILLEGAL_STATE], if no row is selected, so [isRow] is _false_.
      */
     fun columnNames(): Array<String>
 
     /**
-     * Tests if the current row has the given colum.
+     * Tests if the current row has the given column.
      * @param name the name of the column
      * @return _true_ if the current row contains a column with the given name.
      * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
@@ -59,13 +61,12 @@ interface PgCursor : AutoCloseable {
     operator fun contains(name: String): Boolean
 
     /**
-     * Tests if the current row has the given colum.
+     * Tests if the current row has the given column.
      * @param column the column
      * @return _true_ if the current row contains the column.
      * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
      */
-    @JsName("has")
-    operator fun contains(column: PgColumn): Boolean = contains(column.name)
+    operator fun contains(column: PgColumn): Boolean
 
     /**
      * Returns the column value of the current row.
@@ -75,8 +76,13 @@ interface PgCursor : AutoCloseable {
      */
     fun column(name: String): Any?
 
-    @JsName("getPgColumnOrNull")
-    fun column(column: PgColumn): Any? = column(column.name)
+    /**
+     * Returns the column value of the current row.
+     * @param column the column
+     * @return the value of the column; _null_ if the value is _null_ or no such column exists.
+     * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
+     */
+    fun column(column: PgColumn): Any?
 
     /**
      * Returns the column value of the current row.
@@ -85,12 +91,7 @@ interface PgCursor : AutoCloseable {
      * @return the value of the column or the [alternative], if the value is _null_ or no such column exists.
      * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
      */
-    fun <T : Any> columnOr(name: String, alternative: T): T {
-        val v = column(name)
-        val klass = Platform.klassOf(alternative)
-        @Suppress("UNCHECKED_CAST")
-        return if (klass.isInstance(v)) v as T else alternative
-    }
+    fun <T : Any> columnOr(name: String, alternative: T): T
 
     /**
      * Returns the column value of the current row.
@@ -102,8 +103,15 @@ interface PgCursor : AutoCloseable {
      */
     operator fun <T : Any> get(name: String): T
 
-    @JsName("getPgColumn")
-    operator fun <T : Any> get(column: PgColumn): T = get(column.name)
+    /**
+     * Returns the column value of the current row.
+     * @param column the column
+     * @return the value of the column.
+     * @throws IllegalStateException if the cursor is not positioned above a valid row, [isRow] returns _false_.
+     * @throws ClassCastException if casting the value failed.
+     * @throws NullPointerException if the value is null.
+     */
+    operator fun <T : Any> get(column: PgColumn): T
 
     /**
      * Convert the current row into a map, and return the corresponding proxy.
@@ -115,6 +123,8 @@ interface PgCursor : AutoCloseable {
 
     /**
      * Closes the cursor.
+     * @since 3.0
+     * @see PgCursor
      */
     override fun close()
 }

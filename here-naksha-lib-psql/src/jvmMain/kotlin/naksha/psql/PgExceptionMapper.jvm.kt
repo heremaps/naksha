@@ -35,9 +35,9 @@ actual class PgExceptionMapper {
 
 
         /**
-         * Internal variant of [nakshaExceptionFrom].
+         * Internal variant of [map].
          *
-         * The difference (and the reason for this being private) is [topLevelCause], that is internally handled as potential cause to override the [NakshaException.cause] - needed for cases like [BatchUpdateException].
+         * The difference _(and the reason for this being private)_ [topLevelCause], needed for recursive calls, internally handled as potential cause to override the [NakshaException.cause] — needed for cases like [BatchUpdateException].
          *
          * @param throwable original [Throwable] to map.
          * @param topLevelCause potential cause to override the [NakshaException.cause].

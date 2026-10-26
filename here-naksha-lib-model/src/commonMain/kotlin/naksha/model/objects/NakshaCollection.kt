@@ -11,7 +11,6 @@ import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
 import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaException
 import naksha.model.NakshaIdType
-import naksha.base.TupleNumber
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.js.JsStatic
@@ -19,7 +18,9 @@ import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
 
 /**
- * A Naksha collection.
+ * The logical representation of a collection in Naksha.
+ *
+ * A collection stores features and describes which parts of the features should be separated as [members][Member]. The [members][Member] can be indexed using [Index], and they can be queried using the [queryMembers][naksha.model.request.ReadFeatures.queryMembers] operation of the [ReadFeatures][naksha.model.request.ReadFeatures] request.
  * @since 3.0
  */
 @JsExport
@@ -28,7 +29,7 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * Create a Naksha collection with settings.
      * @param id the collection-identifier.
-     * @param mapId the map-identifier of the map in which the collection should be created
+     * @param catalogId the catalog-identifier of the map in which the collection should be created
      * @param partitions the partitions to create; defaults to `1`
      * @param storageClass the [storage-class][storageClass] to create; defaults to `null`
      * @param storeDeleted if [deleted states should be stored][storeDeleted], defaults to [StoreMode.ON]
@@ -39,7 +40,7 @@ open class NakshaCollection() : NakshaFeature() {
     @JvmOverloads
     constructor(
         id: String,
-        mapId: String? = null,
+        catalogId: String? = null,
         partitions: Int = 1,
         storageClass: String? = null,
         storeDeleted: StoreMode = StoreMode.ON,
@@ -47,7 +48,7 @@ open class NakshaCollection() : NakshaFeature() {
         storeMeta: StoreMode = StoreMode.ON,
     ) : this() {
         this.id = id
-        this.catalogId = mapId
+        this.catalogId = catalogId
         this.storageClass = storageClass
         this.partitions = partitions
         this.storeDeleted = storeDeleted
@@ -83,12 +84,6 @@ open class NakshaCollection() : NakshaFeature() {
      * @see [databaseId]
      */
     fun withDatabaseId(value: String): NakshaCollection {
-        val tn = tupleNumber
-        if (tn != null) {
-            if (Id.textToNumber(value) != tn.databaseNumber) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "The given database-id does not match the database-number of the collection.")
-            }
-        }
         databaseId = value
         return this
     }
@@ -99,7 +94,13 @@ open class NakshaCollection() : NakshaFeature() {
      * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
      */
     val catalogNumber: Int
-        get() = tupleNumber?.catalogNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
+        get() {
+            val number = tupleNumber?.catalogNumber
+            if (number != null) return number
+            val catalogId = this.catalogId
+            if (catalogId != null) return Id.numberToInt(Id.textToNumber(catalogId))
+            throw illegalState("The collection has no tuple-number")
+        }
 
     /**
      * The custom identifier of the catalog in which the collection is located; the collection-feature itself is stored in the same catalog as the collection it describes.
@@ -112,25 +113,25 @@ open class NakshaCollection() : NakshaFeature() {
      */
     fun withCatalogId(value: String): NakshaCollection {
         catalogId = value
-        val tn = tupleNumber
-        if (tn != null) {
-            if (Id(value).intValue != tn.catalogNumber) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "The given catalog-id does not match the catalog-number of the collection.")
-            }
-        }
-        databaseId = value
         return this
     }
 
     /**
-     * The collection-number of the collection, this is actually the same as the feature-number.
+     * The collection-number of the collection represented by this feature.
      *
-     * It is **NOT** the collection-number of this collection-feature, so where the collection-feature itself is stored, which has always the collection-number `0`, because all collection features are always stored in the collection `naksha~collections`.
+     * This is actually derived from the `id` using [Id.textToNumber] and then [Id.numberToInt]:
+     *
+     * ```kotlin
+     * Id.numberToInt(Id.textToNumber(id))
+     * ```
+     *
+     * #### Warning
+     * It is **NOT** the collection-number of where this collection-feature is stored, which has always `0`, because all collection features are always stored in the collection `naksha~collections` which has by definition the feature-number `0`.
      * @since 3.0
      * @see [Id.intValue]
      */
     val collectionNumber: Int
-        get() = Id(id).intValue
+        get() = Id.numberToInt(Id.textToNumber(id))
 
     /**
      * If partitions is given, then the collection is internally partitioned in the storage, optimised for large quantities of features. The default is no partitions; as a rule of thumb, add one more partition for every 10 to 20 million features expected.
@@ -182,11 +183,16 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * The bit-shift applied to a transaction number to derive the history partition key.
      *
-     * History is partitioned by range over `(txn >> shift)`. Each partition covers one contiguous
-      * range of the shifted value. With the default `shift = 37`, normal transaction versions
-      * are grouped approximately monthly.
+     * History is partitioned by range over `(txn >> shift)`. Each partition covers one contiguous range of the shifted value, defaults to `37`.
      *
-     * Valid values: `1..62` (inclusive). Any other value is rejected.
+     * The values with a special meaning for dated versions are:
+     * - `41`: Partitions history by year.
+     * - `37`: Partitions history by month _(default)_.
+     * - `32`: Partitions history by day.
+     *
+     * Values being smaller than 32 will generate less than daily history partitions and are rarely useful. It is strongly recommended to leave this setting to the default value of `37`.
+     *
+     * Valid values: `12..41` _(inclusive)_. Any other value is rejected.
      *
      * **{Create-Only}** — changing this after collection creation has no effect.
      * @since 3.0
@@ -197,7 +203,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @see [shift]
      */
     open fun withShift(value: Int): NakshaCollection {
-        require(value in 1..62) { "shift must be in 1..62, got $value" }
+        require(value in 12..41) { "shift must be in 12..41, got $value" }
         this.shift = value
         return this
     }
@@ -291,72 +297,81 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * The columns to materialize on this collection.
+     * The materialized parts of the features stored in the collection.
      *
-     * Each [Member] declares a name, a [MemberType] (defaults to [MemberType.STRING]), and an optional [JsonPath] to extract the value from the feature. At write time, the storage walks the feature using the path, coerces the value to the declared type, and stores it as a dedicated member alongside the encoded feature blob. The value also remains in the encoded feature blob.
+     * Each [Member] declares a name, a [MemberType], an optional [JsonPath] to extract the value from, and a [retain strategy][MemberRetain]. At write time, the storage walks the feature using the path, coerces the value to the declared type, and stores it as a dedicated member alongside the encoded feature blob. The value also remains in the encoded feature blob.
      *
-     * When `null` (key absent), the storage uses the full default schema (all built-in optional members + indices) — backward-compatible mode. When explicitly set (even to an empty list), the storage uses only the mandatory members plus the declared members.
+     * When `null` _(key absent)_, the storage uses the [Xyz members definition][XyzMembers] — this is a backward-compatible mode. When explicitly set _(even to an empty list)_, the storage uses only the mandatory members plus the declared members.
      *
-     * Mandatory members (e.g. `fn`, `version`, `id`, `feature`) are injected by the storage and must not be redeclared with a different type.
+     * The mandatory members [feature-number][StandardMembers.FeatureNumber], [id][StandardMembers.Id], [version][StandardMembers.FeatureVersion], and [next-version][StandardMembers.NextVersion] are injected by the storage, if not explicitly declared as copy with relocation. It is not allowed to change the type of mandatory members, and they can't be removed _(as the storage will always inject them, when they are missing)_. They can only be relocated to another [JsonPath].
      *
      * @since 3.0
+     * @see Member
+     * @see NakshaCollection.indices
      */
     var members: MemberList? by MEMBERS
 
-    private var validatedMembers: MemberList? = null
+    private var _validatedMembers: MemberList? = null
 
     /**
-     * @see [members]
+     * Clears the current [members] and copies the members from the given list into this [members].
+     * @since 3.0
+     * @throws NakshaException with [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the maximum number of members is exceeded.
      */
     @JsName("withMemberList")
-    open fun withMembers(values: MemberList): NakshaCollection {
+    open fun withMembers(values: List<Member?>): NakshaCollection {
+        if (values.size > MemberList.MAX_MEMBERS) {
+            throw illegalArg("Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
+        }
         val list = MemberList()
         list.setCapacity(values.size)
-        list.addAll(values.toList())
-        this.members = list
+        members = list
+        _validatedMembers = null
+        for (member in values) {
+            if (member != null) list.add(member)
+        }
         return this
     }
 
     /**
-     * @see [members]
+     * Clears the current [members] and replaces them with the given ones.
+     * @since 3.0
+     * @throws NakshaException with [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the maximum number of members is exceeded.
      */
     open fun withMembers(vararg values: Member): NakshaCollection {
+        if (values.size > MemberList.MAX_MEMBERS) {
+            throw illegalArg("Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
+        }
         val list = MemberList()
         list.setCapacity(values.size)
         for (v in values) list.add(v)
         this.members = list
+        this._validatedMembers = null
         return this
     }
 
     /**
-     * Adds the given [Member] to [members].
+     * Safely adds the given member to [members].
      *
-     * Validates that the [Member.name] is a valid Naksha identifier (see [Naksha.verifyId]) and does not already exist on this collection. Caps the list at [MemberList.MAX_MEMBERS] entries.
+     * This method clears the validated members.
      * @param value the member to add.
      * @return this.
      * @since 3.0
+     * @throws NakshaException with [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the maximum number of members has been reached or another member with the same name exists already.
      */
     open fun addMember(value: Member): NakshaCollection {
         NakshaIdType.INTERNAL_MEMBER.verify(value.name)
         var list = this.members
         if (list == null) {
             list = MemberList()
+            list.add(value)
             this.members = list
+        } else {
+            list.plus(value)
         }
-        for (existing in list) {
-            if (existing != null && existing.name == value.name) {
-                throw NakshaException(ILLEGAL_ARGUMENT, "Duplicate member name: '${value.name}'")
-            }
-        }
-        if (list.size >= MemberList.MAX_MEMBERS) {
-            throw NakshaException(ILLEGAL_ARGUMENT, "Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
-        }
-        validatedMembers = null
-        list.add(value)
+        this._validatedMembers = null
         return this
     }
-
-    // TODO: Add a removeMember method.
 
     /**
      * Initializes the [members] to the bare minimum, therefore [mandatory members][StandardMembers.MANDATORY].
@@ -381,91 +396,56 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
-     * Initializes the [members] to [those for admin collections][XyzMembers.ADMIN_COLLECTION_MEMBERS].
-     *
-     * @since 3.0
-     */
-    fun withAdminMembers(): NakshaCollection {
-        members = MemberList(XyzMembers.ADMIN_COLLECTION_MEMBERS)
-        return this
-    }
-
-    /**
-     * Returns the validated members list.
+     * The validated members list.
      *
      * If the member list is currently `null`, the collection is in backward-compatible default mode: the members are created from [XyzMembers.ALL], and — so the persisted collection stays consistent across reloads — a still-`null` [indices] list is defaulted to [XyzIndices.ALL] as well. If the list does not contain the mandatory members, they will be added.
      * @return the members list of this collection.
      * @since 3.0
      * @throws NakshaException with [ILLEGAL_STATE]
      */
-    open fun useMembers(): MemberList {
-        val current = this.members
-        val cached = validatedMembers
-        if (cached != null && cached === current) return cached
-        var write = false
-        var list = this.members
-        if (list == null) {
-            list = MemberList(XyzMembers.ALL)
-            write = true
-            if (this.indices == null) this.indices = IndexList(XyzIndices.ALL)
-        }
-        // Ensure that the list does not contain null or duplicates.
-        list.validate()
-        // Ensure that the mandatory members are in.
-        for (mandatory in StandardMembers.MANDATORY) {
-            val found: Member? = list.get(mandatory.name)
-            if (found != null) {
-                mandatory.asSame(found, comparePath = false)
-            } else {
-                // Collection Tn lives at xyz.uuid (the tupleNumber accessor), so backfill XyzTn not the generic Tn.
-                list.add(if (mandatory === StandardMembers.Tn) XyzMembers.XyzTn else mandatory)
+    open val validatedMembers: MemberList
+        get() {
+            val current = this.members
+            val cached = _validatedMembers
+            if (cached != null && cached === current) return cached
+            var write = false
+            var list = this.members
+            if (list == null) {
+                list = MemberList(XyzMembers.ALL)
                 write = true
+                if (this.indices == null) this.indices = IndexList(XyzIndices.ALL)
             }
+            // Ensure that the list does not contain null or duplicates.
+            list.validateAndSort()
+            // Ensure that the mandatory members are in.
+            for (mandatory in StandardMembers.MANDATORY) {
+                val found: Member? = list.get(mandatory.name)
+                if (found != null) {
+                    mandatory.asOther(found, comparePath = false)
+                } else {
+                    // Collection Tn lives at xyz.uuid (the tupleNumber accessor), so backfill XyzTn not the generic Tn.
+                    list.add(if (mandatory === StandardMembers.Tn) XyzMembers.XyzTn else mandatory)
+                    write = true
+                }
+            }
+            if (write) this.members = list
+            _validatedMembers = list
+            return list
         }
-        if (write) this.members = list
-        validatedMembers = list
-        return list
-    }
-
-    /**
-     * Search for the given member in this collection.
-     * @param member The member to search for, compares name and type.
-     * @param comparePath If _true_, then the path is as well compared; otherwise any path is accepted.
-     * @return the found member.
-     * @throws NakshaException If no such member was found.
-     */
-    @JvmOverloads
-    open fun useMember(member: Member, comparePath: Boolean = false): Member = member.asSame(useMembers().get(member.name), comparePath)
-
-    /**
-     * Search for the given member in this collection.
-     * @param memberName the name of the member to use.
-     * @return the member.
-     * @throws NakshaException with error [ILLEGAL_STATE], if no such member was found.
-     */
-    @JsName("useMemberByName")
-    open fun useMember(memberName: String): Member = useMembers().get(memberName) ?: throw NakshaException(ILLEGAL_STATE, "Member $memberName does not exist")
-
-    /**
-     * Search for the given member in this collection.
-     * @param member The member to search for, compares name and type.
-     * @param comparePath If _true_, then the path is as well compared; otherwise any path is accepted.
-     * @return the found member or `null`, if no such member is declared in this collection.
-     */
-    @JvmOverloads
-    open fun findMember(member: Member, comparePath: Boolean = false): Member? {
-        val found = useMembers().get(member.name)
-        if (member.isSameAs(found, comparePath)) return found
-        return null
-    }
 
     /**
      * The indices to maintain on this collection.
      *
-     * Each [Index] declares a name, an [IndexType] ([IndexType.BTREE] / [IndexType.SPATIAL] / [IndexType.TAG_MAP] / [IndexType.TAG_LIST]), the column(s) to index, an optional include-list (for [IndexType.BTREE]), and a `unique` flag.
+     * Each [Index] declares a `name`, the column(s) to index, an optional included columns.
      *
-     * Indices are applied to every variant of the collection (head, history, deleted, meta) by the storage. The storage indexes the mandatory members implicitly. Following [members], when this list is `null` and no members are declared either, the storage falls back to the default [XyzIndices.ALL] (backward-compatible mode); once members are declared, an index list must be provided here (an empty list is allowed).
+     * ### Warning
+     * Do not create an index above [id][StandardMembers.Id], the [feature-number][StandardMembers.FeatureNumber] can be derived from the [id][StandardMembers.Id] and the storage will know this. Therefore, searching for [id][StandardMembers.Id] will automatically be redirected into the primary key _(which includes the [feature-number][StandardMembers.FeatureNumber])_.
+     *
+     * ### Primary Key
+     * There is always one index applied automatically by all storages above the primary key. The primary key consists out of [next-version][StandardMembers.NextVersion], [feature-number][StandardMembers.FeatureNumber], and [version][StandardMembers.FeatureVersion], in that exact order. All indices defined will always at least include these three values, they are necessary for index-only scans _(no matter how exactly this done by the implementation)_.
      * @since 3.0
+     * @see Index
+     * @see NakshaCollection.members
      */
     var indices: IndexList? by INDICES
 
@@ -488,16 +468,6 @@ open class NakshaCollection() : NakshaFeature() {
      */
     fun withXyzIndices(): NakshaCollection {
         indices = IndexList(XyzIndices.ALL)
-        return this
-    }
-
-    /**
-     * Initializes the [indices] to the [admin collection indices][XyzIndices.ADMIN_COLLECTION_INDICES].
-     *
-     * @since 3.0
-     */
-    fun withAdminIndices(): NakshaCollection {
-        indices = IndexList(XyzIndices.ADMIN_COLLECTION_INDICES)
         return this
     }
 

@@ -20,104 +20,102 @@ class XyzIndices private constructor() {
     companion object XyzIndices_C {
 
         /**
-         * `here_tile` — index on `here_tile`, `_fn`, `_version` (WHERE `here_tile IS NOT NULL`).
+         * `here_tile` — conditional index on `here_tile`.
          * See [XyzMembers.XyzHereTile].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzHereTile = Index("here_tile", XyzMembers.XyzHereTile.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzHereTile = Index("here_tile", XyzMembers.XyzHereTile.name)
 
         /**
-         * `app_id` — index on `app_id`, `updated_at`, `_fn`, `_version` (WHERE `app_id IS NOT NULL`).
+         * `app_id` — conditional index on `app_id`, and `updated_at`.
          * See [XyzMembers.XyzAppId].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzAppId = Index("app_id", XyzMembers.XyzAppId.name, XyzMembers.XyzUpdatedAt.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzAppId = Index("app_id", XyzMembers.XyzAppId.name, XyzMembers.XyzUpdatedAt.name)
 
         /**
-         * `author` — index on the effective author and author timestamp, `_fn`, `_version`
-         * (WHERE effective author IS NOT NULL). See [XyzMembers.XyzAuthor].
+         * `author` — conditional index on the effective author and author timestamp, see [XyzMembers.XyzAuthor].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzAuthor = Index("author", XyzMembers.XyzAuthor.name, XyzMembers.XyzAuthorTimestamp.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzAuthor = Index("author", XyzMembers.XyzAuthor.name, XyzMembers.XyzAuthorTimestamp.name)
 
         /**
-         * `tags` — inverted ([IndexType.TAG_LIST]) index over the `tags` member, supporting element
-         * containment queries. See [XyzMembers.XyzTags].
+         * `tags` — conditional index on the `tags` member, see [XyzMembers.XyzTags].
          * @since 3.0
          */
         @JvmField @JsStatic
         val XyzTags = Index("tags", XyzMembers.XyzTags.name)
 
         /**
-         * `feature_type` — index on `ft`, `_fn`, `_version` (WHERE `ft IS NOT NULL`).
+         * `feature_type` — conditional index on the feature-type.
          * See [XyzMembers.XyzFeatureType].
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzFeatureType = Index("feature_type", XyzMembers.XyzFeatureType.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzFeatureType = Index("feature_type", XyzMembers.XyzFeatureType.name)
 
         /**
-         * `cv0` — index on custom numeric value 0, `_fn`, `_version` (WHERE `cv0 IS NOT NULL`).
+         * `cv0` — conditional index on custom numeric value 0.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue0 = Index("cv0", XyzMembers.XyzCustomValue0.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomValue0 = Index("cv0", XyzMembers.XyzCustomValue0.name)
 
         /**
-         * `cv1` — index on custom numeric value 1, `_fn`, `_version` (WHERE `cv1 IS NOT NULL`).
+         * `cv1` — conditional index on custom numeric value 1.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue1 = Index("cv1", XyzMembers.XyzCustomValue1.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomValue1 = Index("cv1", XyzMembers.XyzCustomValue1.name)
 
         /**
-         * `cv2` — index on custom numeric value 2, `_fn`, `_version` (WHERE `cv2 IS NOT NULL`).
+         * `cv2` — conditional index on custom numeric value 2.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue2 = Index("cv2", XyzMembers.XyzCustomValue2.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomValue2 = Index("cv2", XyzMembers.XyzCustomValue2.name)
 
         /**
-         * `cv3` — index on custom numeric value 3, `_fn`, `_version` (WHERE `cv3 IS NOT NULL`).
+         * `cv3` — conditional index on custom numeric value 3.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomValue3 = Index("cv3", XyzMembers.XyzCustomValue3.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomValue3 = Index("cv3", XyzMembers.XyzCustomValue3.name)
 
         /**
-         * `cs0` — index on custom string value 0, `_fn`, `_version` (WHERE `cs0 IS NOT NULL`).
+         * `cs0` — conditional index on custom string value 0.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString0 = Index("cs0", XyzMembers.XyzCustomString0.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomString0 = Index("cs0", XyzMembers.XyzCustomString0.name)
 
         /**
-         * `cs1` — index on custom string value 1, `_fn`, `_version` (WHERE `cs1 IS NOT NULL`).
+         * `cs1` — conditional index on custom string value 1.
 
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString1 = Index("cs1", XyzMembers.XyzCustomString1.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomString1 = Index("cs1", XyzMembers.XyzCustomString1.name)
 
         /**
-         * `cs2` — index on custom string value 2, `_fn`, `_version` (WHERE `cs2 IS NOT NULL`).
+         * `cs2` — conditional index on custom string value 2.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString2 = Index("cs2", XyzMembers.XyzCustomString2.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomString2 = Index("cs2", XyzMembers.XyzCustomString2.name)
 
         /**
-         * `cs3` — index on custom string value 3, `_fn`, `_version` (WHERE `cs3 IS NOT NULL`).
+         * `cs3` — conditional index on custom string value 3.
          * @since 3.0
          */
         @JvmField @JsStatic
-        val XyzCustomString3 = Index("cs3", XyzMembers.XyzCustomString3.name, StandardMembers.FeatureNumber.name, StandardMembers.FeatureVersion.name)
+        val XyzCustomString3 = Index("cs3", XyzMembers.XyzCustomString3.name)
 
         /**
-         * `ref_point` — spatial index over the reference-point geometry member.
+         * `ref_point` — conditional spatial index over the reference-point geometry member.
          * @since 3.0
          * @see [XyzMembers.XyzReferencePoint]
          */
@@ -139,16 +137,6 @@ class XyzIndices private constructor() {
             XyzCustomString0, XyzCustomString1, XyzCustomString2, XyzCustomString3,
             XyzReferencePoint,
             StandardIndices.Geometry,
-        )
-
-        /**
-         * Indices for an admin collection.
-         * @since 3.0
-         */
-        @JvmField @JsStatic
-        val ADMIN_COLLECTION_INDICES: List<Index> = listOf(
-            XyzAppId,
-            XyzAuthor
         )
     }
 }

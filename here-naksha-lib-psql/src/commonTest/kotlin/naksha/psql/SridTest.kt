@@ -46,7 +46,7 @@ class SridTest : PgTestBase() {
         executeWrite(
             WriteRequest().add(
                 Write().createFeature(
-                    mapId = catalog.id,
+                    catalogId = catalog.id,
                     collectionId = COLLECTION_ID,
                     feature = feature
                 )

@@ -6,6 +6,7 @@ import naksha.base.StringList
 import naksha.model.Naksha
 import naksha.base.NakshaError
 import naksha.base.NakshaException
+import naksha.base.Platform.PlatformCompanion.FAL
 import naksha.base.illegalArg
 import naksha.base.unsupportedOp
 import naksha.geo.SpGeometry
@@ -39,6 +40,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
      * @since 3.0
      */
     val where = StringBuilder()
+
+    /**
+     * The modified columns by their name.
+     * @since 3.0
+     */
+    val columns = mutableMapOf<String, PgColumn>()
 
     /**
      * The values of the arguments in order, the entry at index `0` matches the argument `$1`.
@@ -83,7 +90,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             applyOp(op)
         }
         if (where.isEmpty()) return null
-        return PgQueryWhereClause(collection, where.toString(), argValues, argTypes)
+        return PgQueryWhereClause(collection, where.toString(), columns, argValues, argTypes)
     }
 
     /**
@@ -166,13 +173,15 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             }
         }
         val memberName: String = op.at ?: throw illegalArg("Missing 'at' (member name) for operation '${op.op}'")
-        val memberType = collection.column(memberName)?.memberType ?: when (memberName) {
+        val pgColumn = collection.column(memberName)
+        val memberType = pgColumn?.memberType ?: when (memberName) {
             Action.name -> MemberType.INT32
             FeatureVersion.name -> MemberType.INT64
             FeatureNumber.name -> MemberType.INT64
             Tn.name -> throw illegalArg("PgQueryWhereBuilder: The tuple-number can't be queried in lib-psql")
-            else -> throw illegalArg("PgQueryWhereBuilder: Unknown member '$memberName' in collection '${collection.id}'")
+            else -> throw illegalArg("Unknown member '$memberName' in collection '${collection.id}'")
         }
+        if (pgColumn != null && !columns.containsKey(pgColumn.name)) columns[pgColumn.name] = pgColumn
         when (op) {
             is IsNull -> _IsNull(negate, memberName, op, memberType)
             is IsTrue -> _IsTrue(negate, memberName, op, memberType)

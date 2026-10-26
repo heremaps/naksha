@@ -12,10 +12,10 @@ import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.TupleNumber
 import naksha.model.objects.MemberType
 import naksha.base.Version
-import naksha.base.illegalArg
 import naksha.base.internalError
 import naksha.base.proxy
 import naksha.geo.GeoUtil
+import naksha.model.objects.Member
 import naksha.model.objects.MemberType.MemberType_C.BOOLEAN
 import naksha.model.objects.MemberType.MemberType_C.BYTE_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.FLOAT32
@@ -38,15 +38,16 @@ import kotlin.math.max
 /**
  * Helper class to convert rows into arrays of column-data and vice versa.
  *
- * The main purpose is to read and write tuples, but it supports basically as well virtual columns. This class translates the correct member [book][naksha.jbon.IBook] _HEAD_ values into what the storage expects. For example, the encoder will place into the member [book][naksha.jbon.IBook] the reference to [TagList] or [TagMap], and this class will know the physical representation. For example a [TagList] need to be encoded as `text[]`, while a [TagMap] need to be encoded as `JSONB`, which effectively is a `JSON` string. This class will do the serialization and deserialization.
+ * The main purpose is to read and write [Tuple], but it supports basically as well virtual columns. This class translates the correct member [book][naksha.jbon.IBook] _HEAD_ values into what the storage expects. For example, the encoder will place into the member [book][naksha.jbon.IBook] the reference to [TagList] or [TagMap], and this class will know the physical representation. For example a [TagList] need to be encoded as `text[]`, while a [TagMap] need to be encoded as `JSONB`, which effectively is a `JSON` string. This class will do the serialization and deserialization.
  * @since 3.0
  */
-internal class PgRows {
+internal class PgRows(
+) {
     /**
      * All columns being added already.
      * @since 3.0
      */
-    val columns = mutableListOf<PgColumnWithValues>()
+    val columns = mutableListOf<PgRowsColumn>()
     private var aliases: String? = null
     private var namesAggregate: String? = null
     private var placeholders: String? = null
@@ -94,19 +95,24 @@ internal class PgRows {
     }
 
     /**
-     * When set, clear the [columns], add all columns of the given [PgCollection], and set the [collectionNumber], [catalogNumber], and [databaseNumber]. Eventually this will read all columns, so a full member-book, from a specific database table, no matter if from _HISTORY_ or _HEAD_.
+     * Mutating the field clears the [columns] and resets the [cache][clearCache].
+     *
+     * If a valid collection is set, the setter will all columns of the given [collection][PgCollection] and set the [collectionNumber], [catalogNumber], and [databaseNumber] to the one of the given [collection][PgCollection]. Eventually this will have all columns in sync with the given [collection][PgCollection] so that reading and writing of [Tuple] as row works.
+     *
+     * Ones the collection has been set, it is possible to add more columns to have additional virtual columns for reading results.
      * @since 3.0
      */
     var collection: PgCollection? = null
         set(collection) {
+            if (field === collection) return
+            clearCache()
+            columns.clear()
             if (collection != null) {
-                clearCache()
-                columns.clear()
-                collectionNumber = collection.collectionNumber
-                catalogNumber = collection.catalog.catalogNumber
-                databaseNumber = collection.catalog.storage.id.number
+                databaseNumber = collection.catalog.database.id.number
+                catalogNumber = collection.catalog.id.intValue
+                collectionNumber = collection.id.intValue
                 for (pgColumn in collection.columns) {
-                    columns.add(PgColumnWithValues(this, this.columns.size, pgColumn))
+                    columns.add(PgRowsColumn(this, this.columns.size, pgColumn))
                 }
             }
             field = collection
@@ -121,6 +127,16 @@ internal class PgRows {
      */
     fun withCollection(col: PgCollection): PgRows {
         this.collection = col
+        return this
+    }
+
+    /**
+     * Removes the collection, clears the [columns].
+     * @since 3.0
+     */
+    fun withoutCollection(): PgRows {
+        this.collection = null
+        this.columns.clear()
         return this
     }
 
@@ -184,7 +200,7 @@ internal class PgRows {
             val alias = column.name
             val existing = getColumn(alias)
             if (existing != null) continue
-            this.columns.add(PgColumnWithValues(this, this.columns.size, column, alias))
+            this.columns.add(PgRowsColumn(this, this.columns.size, column, alias))
         }
         return this
     }
@@ -193,7 +209,7 @@ internal class PgRows {
         clearCache()
         val existing = getColumn(alias)
         if (existing == null) {
-            columns.add(PgColumnWithValues(this, this.columns.size, column, alias))
+            columns.add(PgRowsColumn(this, this.columns.size, column, alias))
         }
         return this
     }
@@ -201,17 +217,17 @@ internal class PgRows {
         clearCache()
         val existing = getColumn(alias)
         if (existing == null) {
-            val pgColumn = PgColumn(-1, alias, type)
-            columns.add(PgColumnWithValues(this, this.columns.size, pgColumn))
+            val pgColumn = PgColumn(-1, Member(alias, type), alias)
+            columns.add(PgRowsColumn(this, this.columns.size, pgColumn))
         }
         return this
     }
 
-    fun getColumn(alias: String): PgColumnWithValues? {
+    fun getColumn(alias: String): PgRowsColumn? {
         for (column in columns) if (column.alias == alias) return column
         return null
     }
-    fun getColumn(index: Int): PgColumnWithValues? = if (index in 0 until columns.size) columns[index] else null
+    fun getColumn(index: Int): PgRowsColumn? = if (index in 0 until columns.size) columns[index] else null
     fun hasColumn(alias: String): Boolean = getColumn(alias) != null
     fun hasColumn(index: Int): Boolean = getColumn(index) != null
 
@@ -293,7 +309,7 @@ internal class PgRows {
         // Rebuild the members-book in the same canonical member order as Tuple.encodeFeature
         // (collection.useMembers()) so the blob's positional member references resolve; the
         // tuple-number is reconstructed from the split `_fn`/`_version` columns.
-        val members = collection.head.useMembers()
+        val members = collection.nakshaCollection.useMembers()
         val membersBook = HeapBook(BookType.MEMBER_BOOK)
         var featureBytes: ByteArray? = null
         for (i in 0 until members.size) {

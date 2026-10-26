@@ -86,7 +86,7 @@ open class NakshaFeature() : AnyObject() {
      * The unique identifier of the feature.
      * @since 3.0
      */
-    open var id by ID_RANDOM
+    open var id: String by ID_RANDOM
 
     /**
      * @see id
@@ -255,4 +255,11 @@ open class NakshaFeature() : AnyObject() {
      * Human-readable description.
      */
     open var description by DESCRIPTION_NULL
+
+    /**
+     * The state of the feature, `null` if this feature is not yet persisted anywhere.
+     * @since 3.0
+     */
+    val action: Action?
+        get() = tupleNumber?.action
 }

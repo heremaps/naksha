@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.base.ListProxy
 import naksha.model.TagList
 import naksha.model.Tuple
@@ -35,7 +36,7 @@ class TagListMember() : TypedMember<TagListMember>() {
     }
 
     /** Retrieves the tag list value of this member from the given feature. */
-    fun get(feature: NakshaFeature): TagList? = readTagList(feature)
+    fun get(feature: AnyObject): TagList? = readTagList(feature)
 
     /**
      * Retrieves the tag list value of this member from the given tuple.
@@ -45,5 +46,5 @@ class TagListMember() : TypedMember<TagListMember>() {
     fun get(tuple: Tuple): TagList? = readTagList(tuple)
 
     /** Sets the tag list value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: ListProxy<*>): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: ListProxy<*>): Any? = setPath(feature, path, value)
 }

@@ -37,7 +37,7 @@ internal class PgWriterUpdate(
         loadAllTuple { row, tuple, pgWrite ->
             writeByFn[tuple.tupleNumber.featureNumber] = pgWrite
             // Separate column for the expected HEAD version.
-            inRows.setColumn("expected_version", row, pgWrite.version?.number)
+            inRows.setColumn("expected_version", row, pgWrite.requireVersion?.number)
         }
     }
 
@@ -160,7 +160,7 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
                 val version = outRows.getLong(row, VersionColumn) ?: throw illegalState("Column '$VersionColumn' in result must not be null")
                 val newTn = TupleNumber(storageNumber, catalogNumber, collectionNumber, fn, version)
                 val pgWrite = writeByFn[fn] ?: throw illegalState("Missing write record for feature-number: $fn")
-                val expected_version: Long? = pgWrite.version?.number
+                val expected_version: Long? = pgWrite.requireVersion?.number
 
                 // Feature should have existed.
                 val existing_fn = outRows.getLong(row, "_existing_fn")

@@ -156,6 +156,25 @@ open class ListProxy<E : Any>(private var _elementKlass: KClass<out E>) : Proxy(
         return box(array_delete(data, index), _elementKlass)
     }
 
+    /**
+     * Splices the list at `index`, first removes up to the given amount of elements or as many as there are left, then adds the given amount of elements. If the `index` is equal the length, `adds` are appended, if the `index` is behind the end `null` values are added until `index` is reached, then the `adds` are added.
+     * @param index the index of the first element to modify.
+     * @param remove the amount of elements to remove, starting with the one at `index`.
+     * @param adds the elements to add, moving existing elements behind. The first element given is added at `index`, then next at `index+1`, aso., while existing ones are all moved behind.
+     * @since 3.0
+     */
+    open fun splice(index: Int, remove: Int, vararg adds: E?) {
+        if (index < 0) throw illegalArg("The given index is negative")
+        val array = platformObject()
+        if (adds.isEmpty()) {
+            array_splice(array, index, remove)
+            return
+        }
+        val unboxed = Array(adds.size) { i -> unbox(adds[i]) }
+        array_splice(array, index, remove, unboxed)
+        return
+    }
+
     override fun subList(fromIndex: Int, toIndex: Int): ListProxy<E> {
         val list = Platform.allocateInstance(this::class)
         list._elementKlass = _elementKlass

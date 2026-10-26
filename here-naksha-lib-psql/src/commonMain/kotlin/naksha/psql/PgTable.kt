@@ -159,17 +159,17 @@ abstract class PgTable(
         return when (collection.storageClass) {
             PgStorageClass.Ephemeral -> Pair(
                 "CREATE TABLE IF NOT EXISTS ",
-                if (collection.catalog.storage.adminCatalog.ephemeralTableSpace != null) " TABLESPACE ${collection.catalog.storage.adminCatalog.ephemeralTableSpace}" else ""
+                if (collection.catalog.storage.database.ephemeralTableSpace != null) " TABLESPACE ${collection.catalog.storage.database.ephemeralTableSpace}" else ""
             )
 
             PgStorageClass.Brittle -> Pair(
                 "CREATE UNLOGGED TABLE IF NOT EXISTS ",
-                if (collection.catalog.storage.adminCatalog.brittleTableSpace != null) " TABLESPACE ${collection.catalog.storage.adminCatalog.brittleTableSpace}" else ""
+                if (collection.catalog.storage.database.brittleTableSpace != null) " TABLESPACE ${collection.catalog.storage.database.brittleTableSpace}" else ""
             )
 
             PgStorageClass.Temporary -> Pair(
                 "CREATE UNLOGGED TABLE IF NOT EXISTS ",
-                if (collection.catalog.storage.adminCatalog.tempTableSpace != null) " TABLESPACE ${collection.catalog.storage.adminCatalog.tempTableSpace}" else ""
+                if (collection.catalog.storage.database.tempTableSpace != null) " TABLESPACE ${collection.catalog.storage.database.tempTableSpace}" else ""
             )
 
             else -> Pair("CREATE TABLE IF NOT EXISTS ", "")

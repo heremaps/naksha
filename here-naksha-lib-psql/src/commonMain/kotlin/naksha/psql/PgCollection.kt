@@ -3,25 +3,22 @@ package naksha.psql
 import naksha.base.*
 import naksha.base.fn.Fn1
 import naksha.model.*
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_ARGUMENT
-import naksha.base.NakshaError.NakshaErrorCompanion.ILLEGAL_STATE
 import naksha.base.NakshaError.NakshaErrorCompanion.INTERNAL_ERROR
 import naksha.model.objects.Index
 import naksha.model.objects.IndexList
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
 import naksha.model.objects.MemberType.MemberType_C.BYTE_ARRAY
-import naksha.model.objects.MemberType.MemberType_C.INT64
 import naksha.model.objects.MemberType.MemberType_C.SPATIAL
 import naksha.model.objects.MemberType.MemberType_C.STRING
 import naksha.model.objects.MemberType.MemberType_C.TAG_LIST
 import naksha.model.objects.MemberType.MemberType_C.TAG_MAP
 import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
+import naksha.model.objects.StandardMembers
 import naksha.model.objects.XyzIndices
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
-import naksha.model.objects.StandardMembers.StandardMembers_C.Id
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.Tn
 import naksha.model.objects.StoreMode
@@ -29,134 +26,88 @@ import naksha.psql.PgColumn.PgColumn_C.EXTENDED
 import naksha.psql.PgColumn.PgColumn_C.EXTERNAL
 import naksha.psql.PgColumn.PgColumn_C.MAIN
 import naksha.psql.PgColumn.PgColumn_C.PLAIN
+import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.js.JsName
 import kotlin.jvm.JvmField
+import kotlin.jvm.JvmOverloads
 
 /**
- * A collection is a set of database tables that together form a logical feature store. This lower level implementation supports methods to create the collection physically (so the whole set of tables), to refresh the information about the collection, drop the tables, to add, or remove indices at runtime, aso.
- *
- * This is a wrapper around the [NakshaCollection].
- *
+ * A collection is a set of database tables that together form a logical feature container.
  * @since 3.0
  */
 @Suppress("OPT_IN_USAGE")
 @JsExport
-open class PgCollection internal constructor(
+open class PgCollection @JvmOverloads constructor(
     /**
-     * The catalog in which the collection is located.
+     * The [Id] of the catalog in which the collection is located.
      * @since 3.0
      */
-    val catalog: PgCatalog,
+    @JvmField
+    val catalogId: Id,
 
     /**
-     * The HEAD state of the collection.
+     * The state of the collection.
      * @since 3.0
      */
-    nakshaCollection: NakshaCollection,
+    @JvmField
+    val tuple: Tuple,
+
+    /**
+     * The cached **read-only** [NakshaCollection] representing of the [_HEAD_][tuple] state.
+     *
+     * ### DO NOT MODIFY THIS FEATURE
+     * If you need a copy for modification, invoke [head.decodeCollection()][Tuple.decodeCollection].
+     * @since 3.0
+     */
+    @JvmField // TODO: We need to make this immutable, we need better base classes!
+    val naksha: NakshaCollection = tuple.decodeCollection(),
 ) {
-
     /**
-     * The custom-identifier of the collection.
+     * The epoch time in milliseconds when created.
      * @since 3.0
      */
     @JvmField
-    val id: String = nakshaCollection.id
+    val cacheCreateMillis: Long = Platform.currentMillis()
 
     /**
-     * The collection-number of the collection, actually the same as the feature-number of the [NakshaCollection] feature.
+     * The epoch time in milliseconds when last read.
      * @since 3.0
      */
     @JvmField
-    val collectionNumber: Int = Id(id).intValue
+    var cacheReadMillis: Long = Platform.currentMillis()
 
     /**
-     * The amount of bit the [next-version][PgColumn.NextVersionColumn] should be shifted right to calculate the history-partition.
-     * @since 3.0
-     * @see [PgHistoryTable]
-     */
-    @JvmField
-    val shift: Int = nakshaCollection.shift
-
-    /**
-     * Whether the collection is in backward-compatibility mode: the client declared no [members][NakshaCollection.members]
-     * (the raw property is `null`, before [NakshaCollection.useMembers] backfills the defaults). In that mode a `null`
-     * [indices][NakshaCollection.indices] list falls back to the standard [XyzIndices.ALL]. Captured up-front, because
-     * building [columns] materializes the default members and thereby clears the `null` state.
-     */
-    private val defaultXyz: Boolean = nakshaCollection.members == null
-
-    /**
-     * Returns the partition index of the [PgHistoryPartition] in which features can be found, that are modified in the given version.
-     * @param version the version in which features are modified.
-     * @return the partition index of the [PgHistoryPartition] into which _HEAD_ features will be moved, when modified in the given version.
+     * Updates [cacheReadMillis] and returns this.
      * @since 3.0
      */
-    fun historyPartitionNumberOf(version: Long): Int = (version shr shift).toInt()
-
-    /**
-     * Convert the given member into a [PgColumn], only fails for the standard member [Tn].
-     * @param member the member to convert, must not me [Tuple-Number][Tn].
-     * @param index the real index in the physical table at which to place the member.
-     * @return the [PgColumn] for the member.
-     * @throws NakshaException with error [INTERNAL_ERROR], if the given member is [Tn].
-     * @since 3.0
-     */
-    private fun fromMember(member: Member, index: Int): PgColumn {
-        val memberType = member.dataType
-        if (TUPLE_NUMBER == memberType) throw NakshaException(INTERNAL_ERROR, "TUPLE_NUMBER member type can't be converted using PgCollection.fromMember()")
-        val memberName = member.name
-        // These mandatory members get special storage handling.
-        when (memberName) {
-            GlobalBookFeatureNumber.name -> return PgColumn(index, memberName, INT64, "STORAGE $PLAIN")
-            Id.name -> return PgColumn(index, memberName, STRING, "STORAGE $PLAIN COLLATE \"C\"")
-            FeatureBytes.name -> return PgColumn(index, memberName, BYTE_ARRAY, "STORAGE $EXTERNAL")
-        }
-
-        return when (memberType) {
-            // The standard tuple-number (tn) is handled differently, split into feature-number and version
-            // Other tuple-numbers are currently not supported, but they will be, we will store them as byte-array
-            BYTE_ARRAY, TUPLE_NUMBER -> PgColumn(index, memberName, memberType, "STORAGE $EXTENDED")
-            STRING -> PgColumn(index, memberName, STRING, "STORAGE $MAIN COLLATE \"C\"")
-            TAG_MAP, TAG_LIST -> PgColumn(index, memberName, memberType, "STORAGE $MAIN")
-            SPATIAL -> PgColumn(index, memberName, memberType, "STORAGE $EXTERNAL")
-            else -> PgColumn(index, memberName, memberType, "STORAGE $PLAIN")
-        }
+    fun readNow(): PgCollection {
+        cacheReadMillis = Platform.currentMillis()
+        return this
     }
 
     /**
-     * Read the [members][NakshaCollection.members] from the given [NakshaCollection] and turn them into a [PgColumn] list. If the members of the given [NakshaCollection] and not yet [ordered by index][MemberList.isSortedByIndex], then the method will invoke a [sort by type][MemberList.sortByDataTypeAndAssignIndex].
-     * @param nakshaCollection the collection from which to extract the [PgColumn]'s.
-     * @return an array with all extracted [PgColumn]'s.
+     * The identifier of the collection.
+     * @since 3.0
      */
-    private fun generateColumns(nakshaCollection: NakshaCollection): Array<PgColumn> {
-        val members: MemberList = nakshaCollection.useMembers()
-        if (!members.isSortedByIndex()) {
-            members.sortByDataTypeAndAssignIndex()
-        }
-        var i = 0
-        // We split tuple-number into `fn` and `version`, therefore we need size + 1.
-        return Array(members.size + 1) {
-            when (it) {
-                // The first three members are fixed to:
-                0 -> PgColumn.FnColumn
-                1 -> PgColumn.VersionColumn
-                2 -> PgColumn.NextVersionColumn
-                else -> {
-                    val col: PgColumn
-                    var member = members[i++] ?: throw NakshaException(ILLEGAL_STATE, "Member #${i-1} is null")
-                    var name = member.name
-                    // Tn is already added as `fn` and `version`, and `next_version` is as well already added.
-                    while (name==Tn.name || name==NextVersion.name) {
-                        member = members[i++] ?: throw NakshaException(ILLEGAL_STATE, "Member #${i-1} is null")
-                        name = member.name
-                    }
-                    col = fromMember(member, it)
-                    col
-                }
-            }
-        }
-    }
+    @JvmField
+    val id: Id = tuple.id
+
+    /**
+     * The name of the table of the collection.
+     * @since 3.0
+     * @see quotedName
+     */
+    @JvmField
+    val name: String = id.text
+
+    /**
+     * The name of the table of the collection, optionally quoted in double quotes.
+     * @since 3.0
+     * @see name
+     */
+    @JvmField
+    val quotedName: String = quoteIdent(name)
 
     /**
      * The columns to expect in the table.
@@ -165,7 +116,36 @@ open class PgCollection internal constructor(
      * @since 3.0
      */
     @JvmField
-    val columns: Array<PgColumn> = generateColumns(nakshaCollection)
+    val columns: Array<PgColumn> = generateColumns(naksha)
+
+    /**
+     * The indices of the HISTORY table.
+     * @since 3.0
+     */
+    @JvmField
+    val indices: Array<PgIndex> = generateIndices(naksha, columns)
+
+    /**
+     * The cached [TupleNumber] of the _HEAD_ state of the collection.
+     * @since 3.0
+     */
+    @JvmField
+    val tupleNumber: TupleNumber = tuple.tupleNumber
+
+    /**
+     * The amount of bit the [next-version][PgColumn.NextVersionColumn] should be shifted right to calculate the history-partition. Must be a value between 12 and 42 _(exclusive)_. Some values have a special meaning for dated versions:
+     *
+     * - `41`: Partitions history by year.
+     * - `37`: Partitions history by month _(default)_.
+     * - `32`: Partitions history by day.
+     *
+     * Values being smaller than 32 will generate less than daily history partitions and are rarely useful. It is strongly recommended to leave this setting to the default value of `37`.
+     * @since 3.0
+     * @see [NakshaCollection.shift]
+     */
+    @JvmField
+    val shift: Int = if (naksha.shift in 12..41) naksha.shift
+                     else throw illegalArg("The shift value is out of range: ${naksha.shift}, expected 12 .. 41")
 
     /**
      * Join the identities of all [columns], separated by comma, optionally filtered by the given filter.
@@ -186,151 +166,37 @@ open class PgCollection internal constructor(
         return sb.toString()
     }
 
-    private fun indicesFor(nakshaCollection: NakshaCollection, onHead: Boolean): Array<PgIndex> {
-        val indices = IndexList()
-        val declared: IndexList? = nakshaCollection.indices
-        val requested: List<Index> = when {
-            declared != null -> List(declared.size) { declared[it] ?: throw NakshaException(ILLEGAL_STATE, "Index #$it must not be null") }
-            defaultXyz -> XyzIndices.ALL
-            else -> throw NakshaException(ILLEGAL_ARGUMENT, "Collection '${nakshaCollection.id}' declares custom members but no indices; declare an index list (an empty list is allowed)")
-        }
-        for (requestedIndex in requested) {
-            if (!indices.contains(requestedIndex)) indices.add(requestedIndex)
-        }
-        return Array(indices.size) { i ->
-            val index = indices[i] ?: throw NakshaException(ILLEGAL_STATE, "Index #$i must not be null")
-            val indexName = index.name
-
-            val nakshaOn = index.on
-            val on: ArrayList<PgColumn> = ArrayList(nakshaOn.size)
-            on@ for (i in 0 ..< nakshaOn.size) {
-                val name = nakshaOn[i] ?: throw NakshaException(ILLEGAL_STATE, "Index '$indexName->on[$i]' must not be null")
-                if (onHead && NextVersion.name == name) continue // no NEXT_VERSION in HEAD
-                for (column in columns) {
-                    if (column.name == name) {
-                        on.add(column)
-                        continue@on
-                    }
-                }
-                throw NakshaException(ILLEGAL_ARGUMENT, "Index '$indexName->on[$i]' refers to member '$name', but no such member exists")
-            }
-            val nakshaInclude = index.include
-            val include: ArrayList<PgColumn>?
-            if (!nakshaInclude.isNullOrEmpty()) {
-                include = ArrayList(nakshaInclude.size)
-                include@ for (i in 0 ..< nakshaInclude.size) {
-                    val name = nakshaInclude[i] ?: throw NakshaException(ILLEGAL_STATE, "Index '$indexName->include[$i]' must not be null")
-                    if (onHead && NextVersion.name == name) continue // no NEXT_VERSION in HEAD
-                    for (column in columns) {
-                        if (column.name == name) {
-                            include.add(column)
-                            continue@include
-                        }
-                    }
-                    throw NakshaException(ILLEGAL_ARGUMENT,"Index '$indexName->include[$i]' refers to member '$name', but no such member exists")
-                }
-            } else {
-                include = null
-            }
-            PgIndex(
-                indexName,
-                on.toTypedArray(),
-                include?.toTypedArray() ?: emptyArray(),
-                unique = index.isUnique(),
-                partial = index.isConditional()
-            )
-        }
-    }
-
-    /**
-     * The indices of the HEAD table.
-     * @since 3.0
-     */
-    @JvmField
-    val headIndices: Array<PgIndex> = indicesFor(nakshaCollection, onHead = true)
-
-    /**
-     * The indices of the HISTORY table.
-     * @since 3.0
-     */
-    @JvmField
-    val historyIndices: Array<PgIndex> = indicesFor(nakshaCollection, onHead = false)
-
     /**
      * Tests if the history should be stored.
      * @since 3.0
      */
-    val storeHistory: Boolean
-        get() = head.storeHistory === StoreMode.ON
+    @JvmField
+    val storeHistory: Boolean = naksha.storeHistory === StoreMode.ON
 
     /**
      * Tests if deleted [Tuple] should be kept in _HEAD_; if not they are automatically purged when being deleted.
      * @since 3.0
      */
-    val storeDeleted: Boolean
-        get() = head.storeDeleted === StoreMode.ON
-
-    /**
-     * The weak-reference to this [PgCollection], should be used when the collection should be cached.
-     * @since 3.0
-     */
-    @Suppress("LeakingThis")
-    val weakRef = WeakRef(this)
-    
-    /**
-     * The storage in which the collection is located.
-     * @since 3.0
-     */
-    val storage: PgStorage
-        get() = catalog.storage
-
-    /**
-     * The _HEAD_ state of the collection.
-     * @since 3.0
-     */
-    val headRef = AtomicNonNullRef(nakshaCollection)
-
-    /**
-     * Reads [headRef].
-     * @see [headRef]
-     * @since 3.0
-     */
-    val head: NakshaCollection
-        get() = headRef.get()
+    @JvmField
+    val storeDeleted: Boolean = naksha.storeDeleted === StoreMode.ON
 
     /**
      * The storage class of the collection.
-     */
-    var storageClass: PgStorageClass = JsEnum.getDefined(nakshaCollection.storageClass, PgStorageClass::class) ?: PgStorageClass.Unknown
-        internal set
-
-    /**
-     * The amount of performance partitions.
-     */
-    val partitions: Int
-        get() = head.partitions
-
-    /**
-     * The `HEAD` table, so where to store features into.
-     *
-     * If this is an ordinary table, that can be partitioned using [PgPlatform.partitionNumber] above the [feature-number][PgColumn.FnColumn].
-     *
-     * Writing directly into partitions, or reading from them, is discouraged, but in some cases necessary to improve performance drastically. In AWS the speed of every [single-flow](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-instance-network-bandwidth.html) connection is limited to 5 Gbps (10 Gbps when being in the same [cluster placement group](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/placement-strategies.html#placement-groups-cluster)), but still always limited. When the PostgresQL database and the client both have higher bandwidth, then multiple parallel connection need to be used, for example to saturate the HERE temporary or consistent store bandwidth of 200 Gbps, between 20 and 40 connections are needed.
-     *
-     * **Notes**:
-     * - The `TRANSACTION` table is not designed for ultra-high throughput, but rather as a storage that allows easy and fast garbage collection and to query ordered by transaction numbers or _sequence numbers_.
-     * - Internal tables do not allow to add or remove indices, while ordinary consumer tables do allow this.
+     * @since 3.0
      */
     @JvmField
-    val headTable: PgHeadTable = PgHeadTable(this)
+    val storageClass: PgStorageClass = JsEnum.getDefined(naksha.storageClass, PgStorageClass::class) ?: PgStorageClass.Unknown
 
     /**
-     * The history table of the collection.
-     *
-     * The history table is always partitioned by the [next-version][PgColumn.NextVersionColumn], which is shifted right by a [shift]. Each [history partition][PgHistoryPartition] is partitioned again the same way that [HEAD][headTable] is partitioned. Not doing this would create a bottleneck when modifying features in parallel, because then the parallel connections would have a congestion in the history, when moving old data into history. The history is therefore managed the same way as [HEAD][headTable], so using the [PgPlatform.partitionNumber] above the [feature-number][PgColumn.FnColumn].
+     * The amount of performance partitions, a value between 1 and 256.
+     * @since 3.0
      */
     @JvmField
-    val historyTable: PgHistoryTable = PgHistoryTable(this)
+    val partitions: Int = when (val partitions = naksha.partitions) {
+        in 0..1 -> 1
+        in 2..256 -> partitions
+        else -> throw illegalArg("The partitions are out of range: $partitions, expected: 1 .. 256")
+    }
 
     /**
      * Returns the [PgColumn] that corresponds to the given member.
@@ -355,28 +221,135 @@ open class PgCollection internal constructor(
         return null
     }
 
-    /**
-     * If this is an internal collection.
-     *
-     * Internal collections have some limitation, for example it is not possible to add or drop indices, nor can they be created through normal methods. They are basically immutable by design, but the content can be read and modified to some degree.
-     */
-    @JvmField
-    val internal: Boolean = id.startsWith("naksha~")
+    companion object PgCollectionCompanion {
+        /**
+         * Whether the collection is in backward-compatibility mode: the client declared no [members][NakshaCollection.members] (the raw property is `null`, before [NakshaCollection.validatedMembers] backfills the defaults). In that mode a `null` [indices][NakshaCollection.indices] list falls back to the standard [XyzIndices.ALL]. Captured up-front, because building [columns] materializes the default members and thereby clears the `null` state.
+         * @param nakshaCollection the collection to test.
+         * @return _true_ if the collection is in backward-compatibility mode; _false_ otherwise.
+         * @since 3.0
+         */
+        private fun backwardCompatibilityRequested(nakshaCollection: NakshaCollection): Boolean = nakshaCollection.members == null
 
-    /**
-     * Verify the given new _HEAD_ state, ensure that none of the following values is modified:
-     * - [NakshaCollection.members] - Ensure that they result in the same [columns].
-     * - [NakshaCollection.indices] - Ensure that they result in the same [headIndices] and [historyIndices].
-     * - [NakshaCollection.shift] - The shift must not change, because it impacts partitioning.
-     * - [NakshaCollection.id] - Must match [id] and the resulting calculated [collectionNumber] must match as well.
-     * - [NakshaCollection.storageClass] - Must match [storageClass], changing the storage class is not allowed.
-     * - [NakshaCollection.partitions] - Must patch [partitions], changing the number of partitions is not allowed.
-     *
-     * Actually all other values can be changes, with only some having an impact to this object.
-     * @param newHead the new _HEAD_ state to be verified.
-     * @throws NakshaException with error [ILLEGAL_STATE] if the columns or indices in the given `newHead` have been changed.
-     */
-    fun verifyNewHeadState(newHead: NakshaCollection) {
-        // TODO: Implement me!
+        /**
+         * Convert the given member into a [PgColumn], only fails for the standard member [Tn].
+         * @param member the member to convert, must not me [Tuple-Number][Tn].
+         * @param index the real index in the physical table at which to place the member.
+         * @return the [PgColumn] for the member.
+         * @throws NakshaException with error [INTERNAL_ERROR], if the given member is [Tn].
+         * @since 3.0
+         */
+        private fun fromMember(member: Member, index: Int): PgColumn {
+            val memberType = member.dataType
+            if (TUPLE_NUMBER == memberType) {
+                throw NakshaException(INTERNAL_ERROR, "TUPLE_NUMBER member type can't be converted using PgCollection.fromMember()")
+            }
+            // These mandatory members get special storage handling.
+            when (member.name) {
+                GlobalBookFeatureNumber.name -> return PgColumn(index, member, "STORAGE $PLAIN")
+                StandardMembers.Id.name -> return PgColumn(index, member, "STORAGE $PLAIN COLLATE \"C\"")
+                FeatureBytes.name -> return PgColumn(index, member, "STORAGE $EXTERNAL")
+            }
+
+            return when (memberType) {
+                // The standard tuple-number (tn) is handled differently, split into feature-number and version
+                // Other tuple-numbers are currently not supported, but they will be, we will store them as byte-array
+                BYTE_ARRAY, TUPLE_NUMBER -> PgColumn(index, member, "STORAGE $EXTENDED")
+                STRING -> PgColumn(index, member, "STORAGE $MAIN COLLATE \"C\"")
+                TAG_MAP, TAG_LIST -> PgColumn(index, member, "STORAGE $MAIN")
+                SPATIAL -> PgColumn(index, member, "STORAGE $EXTERNAL")
+                else -> PgColumn(index, member, "STORAGE $PLAIN")
+            }
+        }
+
+        /**
+         * Read the [members][NakshaCollection.members] from the given [NakshaCollection] and turn them into a [PgColumn] list. If the members of the given [NakshaCollection] and not yet [ordered by index][MemberList.isSortedByIndex], then the method will invoke a [sort by type][MemberList.verify].
+         * @param naksha the collection from which to extract the [PgColumn]'s.
+         * @return an array with all extracted [PgColumn]'s.
+         * @since 3.0
+         */
+        private fun generateColumns(naksha: NakshaCollection): Array<PgColumn> {
+            val members: MemberList = naksha.validatedMembers
+            if (!members.isSortedByIndex()) {
+                members.verify()
+            }
+            var i = 0
+            // We split tuple-number into `fn` and `version`, therefore we need size + 1.
+            return Array(members.size + 1) { index ->
+                when (index) {
+                    // The first three members are fixed to:
+                    0 -> PgColumn.FnColumn
+                    1 -> PgColumn.VersionColumn
+                    2 -> PgColumn.NextVersionColumn
+                    else -> {
+                        val col: PgColumn
+                        var member = members[i++] ?: throw illegalState("Member #${i-1} is null")
+                        var name = member.name
+                        // Tn is already added as `fn` and `version`, and `next_version` is as well already added.
+                        // We loop, because Tn and NextVersion could be located behind each other, then we need to skip
+                        // both (and we do not care about order, so instead of complicated two ifs one loop).
+                        while (name==Tn.name || name==NextVersion.name) {
+                            member = members[i++] ?: throw illegalState("Member #${i-1} is null")
+                            name = member.name
+                        }
+                        col = fromMember(member, index)
+                        col
+                    }
+                }
+            }
+        }
+
+        private fun generateIndices(naksha: NakshaCollection, columns: Array<PgColumn>): Array<PgIndex> {
+            val indices = IndexList()
+            val declared: List<Index?> = naksha.indices?.toList() ?: XyzIndices.ALL
+            indices.setCapacity(declared.size + 1)
+            for (declaredIndex in declared) {
+                if (declaredIndex != null && !indices.contains(declaredIndex)) indices.add(declaredIndex)
+            }
+            return Array(indices.size) { i ->
+                val index = indices[i] ?: throw illegalState("Index #$i must not be null")
+                val indexName = index.name
+
+                val nakshaOn = index.on
+                val nakshaOrder = index.order
+                val on: ArrayList<Pair<PgColumn, PgOrder>> = ArrayList(nakshaOn.size)
+                on@ for (i in 0 ..< nakshaOn.size) {
+                    val name = nakshaOn[i] ?: throw illegalState("Index '$indexName->on[$i]' must not be null")
+                    val order = if (nakshaOrder != null
+                        && i < nakshaOrder.size
+                        && PgOrder.ASC.name.equals(nakshaOrder[i], true)
+                    ) PgOrder.ASC else PgOrder.DESC
+                    var ci = -1
+                    while (++ci < columns.size) {
+                        val column = columns[ci]
+                        if (column.name == name) {
+                            on.add(Pair(column, order))
+                            continue@on
+                        }
+                    }
+                    throw illegalArg("Index '$indexName->on[$i]' refers to member '$name', but no such member exists")
+                }
+                val nakshaInclude = index.include
+                val include: ArrayList<PgColumn>? = if (nakshaInclude.isNullOrEmpty()) null else {
+                    val list = ArrayList<PgColumn>(nakshaInclude.size)
+                    include@ for (i in 0 ..< nakshaInclude.size) {
+                        val name = nakshaInclude[i] ?: throw illegalState("Index '$indexName->include[$i]' must not be null")
+                        for (column in columns) {
+                            if (column.name == name) {
+                                list.add(column)
+                                continue@include
+                            }
+                        }
+                        throw illegalArg("Index '$indexName->include[$i]' refers to member '$name', but no such member exists")
+                    }
+                    list
+                }
+                PgIndex(
+                    indexName,
+                    on.toTypedArray(),
+                    include?.toTypedArray() ?: emptyArray(),
+                    index.isConditional()
+                )
+            }
+        }
     }
 }

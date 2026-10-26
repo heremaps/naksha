@@ -10,4 +10,4 @@ import kotlin.js.JsExport
  * @since 3.0
  */
 @JsExport
-class NakshaTxMapById : MapProxy<String, NakshaTxMap>(String::class, NakshaTxMap::class)
+class NakshaTxCatalogByName : MapProxy<String, NakshaTxCatalog>(String::class, NakshaTxCatalog::class)

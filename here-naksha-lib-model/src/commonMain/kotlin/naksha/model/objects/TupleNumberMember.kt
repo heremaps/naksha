@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.TupleNumber
 import naksha.base.illegalArg
@@ -34,7 +35,7 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
     }
 
     /** Retrieves the tuple number value of this member from the given feature. */
-    fun get(feature: NakshaFeature): TupleNumber? = readTupleNumber(feature)
+    fun get(feature: AnyObject): TupleNumber? = readTupleNumber(feature)
 
     /**
      * Retrieves the tuple number value of this member from the given tuple.
@@ -44,5 +45,5 @@ class TupleNumberMember() : TypedMember<TupleNumberMember>() {
     fun get(tuple: Tuple): TupleNumber? = readTupleNumber(tuple)
 
     /** Sets the tuple number value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: TupleNumber): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: TupleNumber): Any? = setPath(feature, path, value)
 }

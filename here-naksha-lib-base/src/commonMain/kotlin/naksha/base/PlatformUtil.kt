@@ -1,6 +1,9 @@
 package naksha.base
 
 import naksha.base.Platform.PlatformCompanion.random
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
@@ -226,23 +229,35 @@ class PlatformUtil {
         }
 
         /**
-         * Calculates a hash code above all given values.
-         * @param values the value above which to calculate a hash-code.
-         * @return the calculated hash-code.
+         * Calculates an additive recursive hash code above all given values.
+         * @param values the value(s) above which to calculate a hash-code.
+         * @return the calculated additive hash-code.
          */
         @JvmStatic
         @JsStatic
         fun hashCodeOf(vararg values: Any?): Int = hashCodeOf(0, *values)
 
-        private fun hashCodeOf(hashInput: Int, vararg values: Any?): Int {
-            var hash = hashInput
-            for (v in values) {
+        private fun hashCodeOf(currentHash: Int, vararg values: Any?): Int {
+            var hash = currentHash
+            for (value in values) {
+                val v = if (value is Proxy) value.platformObject() else value
                 when (v) {
                     null -> hash *= 31
+                    is PlatformMap -> {
+                        val it = map_iterator(v)
+                        var next = it.next()
+                        while (!next.done) {
+                            hash = hashCodeOf(hash, next.value)
+                            next = it.next()
+                        }
+                    }
+                    is PlatformList -> for (i in 0 until array_get_length(v)) {
+                        hash = hashCodeOf(hash, array_get(v, i))
+                    }
                     is ByteArray -> hash = hash * 31 + v.contentHashCode()
-                    is Array<*> -> for (e in v) hash = hashCodeOf(e)
-                    is List<*> -> for (e in v) hash = hashCodeOf(e)
-                    is Map<*,*> -> for (e in v) hash = hashCodeOf(e.value)
+                    is Array<*> -> for (e in v) hash = hashCodeOf(hash, e)
+                    is List<*> -> for (e in v) hash = hashCodeOf(hash, e)
+                    is Map<*,*> -> for ((key, value) in v) hash = hashCodeOf(hash, key, value)
                     else -> hash = hash * 31 + v.hashCode()
                 }
             }

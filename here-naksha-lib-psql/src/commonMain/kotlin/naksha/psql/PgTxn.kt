@@ -13,7 +13,7 @@ import kotlin.js.JsExport
 @JsExport
 data class PgTxn(
     /**
-     * The transaction-number.
+     * The version.
      * @since 3.0.0
      */
     val number: Long,

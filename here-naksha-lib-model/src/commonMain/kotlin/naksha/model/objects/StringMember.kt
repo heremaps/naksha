@@ -1,5 +1,6 @@
 package naksha.model.objects
 
+import naksha.base.AnyObject
 import naksha.model.Tuple
 import naksha.base.illegalArg
 import naksha.base.illegalState
@@ -33,7 +34,7 @@ class StringMember() : TypedMember<StringMember>() {
     }
 
     /** Retrieves the string value of this member from the given feature. */
-    fun get(feature: NakshaFeature): String? = readString(feature)
+    fun get(feature: AnyObject): String? = readString(feature)
 
     /**
      * Retrieves the string value of this member from the given tuple.
@@ -43,5 +44,5 @@ class StringMember() : TypedMember<StringMember>() {
     fun get(tuple: Tuple): String? = readString(tuple)
 
     /** Sets the string value of this member on the given feature. */
-    fun set(feature: NakshaFeature, value: String): Any? = setPath(feature, path, value)
+    fun set(feature: AnyObject, value: String): Any? = setPath(feature, path, value)
 }

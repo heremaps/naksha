@@ -134,7 +134,7 @@ open class Index() : AnyObject() {
     }
 
     /** Fluent setter for [include]; returns this for chaining. */
-    fun includes(vararg names: String): Index {
+    fun withIncludes(vararg names: String): Index {
         val original = this.include
         val include = original ?: StringList()
         for (name in names) {
@@ -145,7 +145,8 @@ open class Index() : AnyObject() {
     }
 
     /** Fluent setter for [include]; returns this for chaining. */
-    fun includes(vararg members: Member): Index {
+    @JsName("withIncludesMembers")
+    fun withIncludes(vararg members: Member): Index {
         val original = this.include
         val include = original ?: StringList()
         for (member in members) {
