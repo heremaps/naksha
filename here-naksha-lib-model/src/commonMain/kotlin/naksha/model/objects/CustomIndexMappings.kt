@@ -46,15 +46,15 @@ class CustomIndexMappings private constructor() {
         /**
          * Validates the mappings of the given collection, without changing it.
          * @param collection the collection to validate.
-         * @throws NakshaException with [ILLEGAL_ARGUMENT] for an unknown field, a missing or unsupported data type, an
-         * invalid JSON path, a path that is mapped twice or already used by another member, a generated member or index
-         * name that is already used differently, or too many members (including the mandatory ones).
+         * @throws NakshaException with [ILLEGAL_ARGUMENT] for a missing or unsupported data type, an invalid JSON path, a
+         * path that is mapped twice or already used by another member, a generated member or index name that is already
+         * used differently, or too many members (including the mandatory ones). Unknown fields of a mapping are ignored.
          * @since 3.0
          */
         @JvmStatic @JsStatic
         fun validate(collection: NakshaCollection) {
-            val members = collection.rawMembers() ?: MemberList(XyzMembers.ALL)
-            val indices = collection.rawIndices()
+            val members = collection.members ?: MemberList(XyzMembers.ALL)
+            val indices = collection.indices
             val generated = generatedMembers(collection)
             // The storage adds the missing mandatory members, see NakshaCollection.useMembers.
             var count = members.size
@@ -157,9 +157,6 @@ class CustomIndexMappings private constructor() {
             for (i in 0 until mappings.size) {
                 val field = "customIndexMapping[$i]"
                 val mapping = mappings[i] ?: throw invalid(field, "must not be null")
-                for (key in mapping.keys) {
-                    if (key != "jsonPath" && key != "dataType") throw invalid("$field.$key", "unknown field; names are generated internally")
-                }
                 val type = mapping.dataType ?: throw invalid("$field.dataType", "is required")
                 if (type !in SUPPORTED_TYPES) throw invalid("$field.dataType", "unsupported member type '$type'")
                 val path = mapping.jsonPath ?: throw invalid("$field.jsonPath", "is required")

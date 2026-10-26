@@ -36,12 +36,13 @@ class CustomIndexMappingTest {
   }
 
   private Member memberForPath(NakshaCollection compiled, JsonPath path) {
-    return compiled.getMembers().stream()
+    return compiled.useMembers().stream()
         .filter(member -> member != null && CustomIndexMappings.samePath(member.getPath(), path))
         .findFirst().orElse(null);
   }
 
   private List<String> indexNames(NakshaCollection definition) {
+    definition.useMembers();
     return definition.getIndices().stream().map(Index::getName).collect(Collectors.toList());
   }
 
@@ -54,29 +55,46 @@ class CustomIndexMappingTest {
     assertEquals(indexNames(compiled), indexNames(reordered));
   }
 
-  @Test void appliesMappingsOnlyWhenMembersOrIndicesAreRead() {
+  @Test void appliesMappingsOnlyInUseMembers() {
     NakshaCollection input = definition(mapping("score", MemberType.INT32));
     String original = Platform.toJSON(input);
-    // Configuration handling (validation, mapping checks) doesn't change the definition.
+    // Configuration handling and the declared members and indices don't change the definition.
     CustomIndexMappings.validate(input);
     assertTrue(CustomIndexMappings.hasMappings(input));
+    assertNull(input.getMembers());
+    assertNull(input.getIndices());
     assertEquals(original, Platform.toJSON(input));
-    // Reading the indices or members applies the XYZ members, the slim indices and the generated ones.
+    // useMembers applies the XYZ and mandatory members, the slim indices and the generated ones.
+    MemberList members = input.useMembers();
+    assertEquals("cm01", memberForPath(input, new JsonPath("properties", "score")).getName());
+    assertSame(members, input.getMembers());
     assertEquals(List.of("tags", "geo", "fn_nv", "ci01"), indexNames(input));
-    assertEquals(XyzMembers.ALL.size() + 1, input.getMembers().size());
     assertTrue(input.hasRaw("customIndexMapping"));
     // Applying again changes nothing.
     String applied = Platform.toJSON(input);
-    input.getMembers();
-    input.getIndices();
+    input.useMembers();
     assertEquals(applied, Platform.toJSON(input));
+  }
+
+  @Test void replacedIndicesAreCompletedAgain() {
+    NakshaCollection input = definition(mapping("score", MemberType.INT32));
+    input.useMembers();
+    input.withMinimalIndices();
+    input.useMembers();
+    assertEquals(List.of("ci01"), indexNames(input));
+    NakshaCollection reparsed = Platform.javaProxy(Platform.fromJSON(Platform.toJSON(input)), NakshaCollection.class);
+    assertEquals(indexNames(reparsed), indexNames(input));
+    // A conflicting index replaced after the first use is rejected as well.
+    input.setIndices(new IndexList(new Index("ci01", "id")));
+    NakshaException error = assertThrows(NakshaException.class, input::useMembers);
+    assertEquals(NakshaError.ILLEGAL_ARGUMENT, error.getError().getCode());
   }
 
   @Test void keepsExplicitMembersAndIndices() {
     NakshaCollection input = definition(mapping("score", MemberType.INT32));
     input.setMembers(new MemberList(new Member("speed", MemberType.INT32, new JsonPath("properties", "speed"))));
     input.setIndices(new IndexList(new Index("speed_idx", "speed")));
-    assertEquals(List.of("speed", "cm01"), input.getMembers().stream().map(Member::getName).collect(Collectors.toList()));
+    assertEquals(List.of("speed", "cm01"), input.useMembers().stream().limit(2).map(Member::getName).collect(Collectors.toList()));
     assertEquals(List.of("speed_idx", "ci01"), indexNames(input));
   }
 
@@ -89,8 +107,7 @@ class CustomIndexMappingTest {
   @Test void invalidMappingsFailOnSchemaAccess() {
     NakshaCollection input = definition(mapping("a"), mapping("a"));
     String original = Platform.toJSON(input);
-    assertThrows(NakshaException.class, input::getMembers);
-    assertThrows(NakshaException.class, input::getIndices);
+    assertThrows(NakshaException.class, input::useMembers);
     assertEquals(original, Platform.toJSON(input));
   }
 
@@ -99,7 +116,7 @@ class CustomIndexMappingTest {
     NakshaCollection otherPath = definition(mapping("score", MemberType.INT32));
     otherPath.setMembers(new MemberList(new Member("cm01", MemberType.INT32, new JsonPath("properties", "speed"))));
     assertThrows(NakshaException.class, () -> CustomIndexMappings.validate(otherPath));
-    assertThrows(NakshaException.class, otherPath::getMembers);
+    assertThrows(NakshaException.class, otherPath::useMembers);
     NakshaCollection otherType = definition(mapping("score", MemberType.INT32));
     otherType.setMembers(new MemberList(new Member("cm01", MemberType.STRING, new JsonPath("properties", "score"))));
     assertThrows(NakshaException.class, () -> CustomIndexMappings.validate(otherType));
@@ -130,27 +147,33 @@ class CustomIndexMappingTest {
 
   @Test void appliedMappingsAreNotProcessedAgain() {
     NakshaCollection input = definition(mapping("score", MemberType.INT32));
-    MemberList members = input.getMembers();
+    MemberList members = input.useMembers();
     // Mappings don't change in place, a later read uses the result of the first application.
     input.getCustomIndexMapping().add(mapping("score", MemberType.INT32));
-    assertSame(members, input.getMembers());
+    assertSame(members, input.useMembers());
     // Replacing the mappings applies them again.
     input.setCustomIndexMapping(new CustomIndexMappingList(mapping("score", MemberType.INT32), mapping("score", MemberType.INT32)));
-    assertThrows(NakshaException.class, input::getMembers);
+    assertThrows(NakshaException.class, input::useMembers);
   }
 
   @Test void booleanMappingsCreateMembersWithoutIndices() {
     NakshaCollection compiled = compiled(definition(mapping("score", MemberType.INT32), mapping("active", MemberType.BOOLEAN)));
-    assertEquals(MemberType.BOOLEAN, compiled.getMembers().get("cm01").getDataType());
-    assertEquals(MemberType.INT32, compiled.getMembers().get("cm02").getDataType());
+    assertEquals(MemberType.BOOLEAN, compiled.useMembers().get("cm01").getDataType());
+    assertEquals(MemberType.INT32, compiled.useMembers().get("cm02").getDataType());
     assertEquals(List.of("tags", "geo", "fn_nv", "ci02"), indexNames(compiled));
   }
 
-  @Test void rejectsInvalidMappings() {
-    CustomIndexMapping named = mapping("a");
+  @Test void ignoresUnknownMappingFields() {
+    CustomIndexMapping named = mapping("score", MemberType.INT32);
     named.put("memberName", "user_name");
+    NakshaCollection definition = compiled(definition(named));
+    assertEquals("cm01", memberForPath(definition, new JsonPath("properties", "score")).getName());
+    assertNull(definition.useMembers().get("user_name"));
+  }
+
+  @Test void rejectsInvalidMappings() {
     List<NakshaCollection> invalid = List.of(
-        definition(named), definition(mapping("a", MemberType.TUPLE_NUMBER)), definition(mapping("a", MemberType.INT8)),
+        definition(mapping("a", MemberType.TUPLE_NUMBER)), definition(mapping("a", MemberType.INT8)),
         definition(mapping("a"), mapping("a")),
         definition(new CustomIndexMapping(new JsonPath("geometry"), MemberType.SPATIAL)),
         // Only types that are fully translated into member queries can be mapped.
@@ -195,7 +218,7 @@ class CustomIndexMappingTest {
     int capacity = MemberList.MAX_MEMBERS - XyzMembers.ALL.size();
     List<CustomIndexMapping> mappings = new ArrayList<>();
     for (int i = 0; i < capacity; i++) mappings.add(mapping("p" + i));
-    assertEquals(MemberList.MAX_MEMBERS, compiled(definition(mappings.toArray(new CustomIndexMapping[0]))).getMembers().size());
+    assertEquals(MemberList.MAX_MEMBERS, compiled(definition(mappings.toArray(new CustomIndexMapping[0]))).useMembers().size());
     mappings.add(mapping("p" + capacity));
     assertThrows(NakshaException.class, () -> compiled(definition(mappings.toArray(new CustomIndexMapping[0]))));
   }

@@ -281,20 +281,11 @@ open class NakshaCollection() : NakshaFeature() {
      *
      * Mandatory members (e.g. `fn`, `version`, `id`, `feature`) are injected by the storage and must not be redeclared with a different type.
      *
+     * These are the declared members, as configured. Use [useMembers] for the effective members of the collection,
+     * including the default, mandatory and [custom index mapping][customIndexMapping] members.
      * @since 3.0
      */
-    var members: MemberList?
-        get() {
-            applyCustomIndexMapping()
-            return MEMBERS.getValue(this, ::members)
-        }
-        set(value) = MEMBERS.setValue(this, ::members, value)
-
-    /** The members as stored in this collection, without applying the [customIndexMapping]. */
-    internal fun rawMembers(): MemberList? = MEMBERS.getValue(this, ::members)
-
-    /** The indices as stored in this collection, without applying the [customIndexMapping]. */
-    internal fun rawIndices(): IndexList? = INDICES.getValue(this, ::indices)
+    var members: MemberList? by MEMBERS
 
     private var validatedMembers: MemberList? = null
 
@@ -387,20 +378,42 @@ open class NakshaCollection() : NakshaFeature() {
      * Returns the validated members list.
      *
      * If the member list is currently `null`, the collection is in backward-compatible default mode: the members are created from [XyzMembers.ALL], and — so the persisted collection stays consistent across reloads — a still-`null` [indices] list is defaulted to [XyzIndices.ALL] as well. If the list does not contain the mandatory members, they will be added.
+     *
+     * For a collection with [customIndexMapping], the members and indices generated for the mappings (`cmNN`, `ciNN`) are
+     * added as well, and a still-`null` [indices] list is defaulted to the [slim indices][XyzIndices.HUB_SLIM_INDICES].
+     * The result is cached until the members or the mappings are replaced.
      * @return the members list of this collection.
      * @since 3.0
-     * @throws NakshaException with [ILLEGAL_STATE]
+     * @throws NakshaException with [ILLEGAL_STATE]; or with [ILLEGAL_ARGUMENT], if the mappings are invalid, see [CustomIndexMappings.validate].
      */
     open fun useMembers(): MemberList {
         val current = this.members
+        val mappings = this.customIndexMapping
         val cached = validatedMembers
-        if (cached != null && cached === current) return cached
+        if (cached != null && cached === current && mappings === validatedMappings
+            && this.indices === validatedIndices) return cached
+        // Validate before changing anything, so invalid mappings leave the collection unchanged.
+        val mapped = CustomIndexMappings.hasMappings(this)
+        if (mapped) CustomIndexMappings.validate(this)
         var write = false
         var list = this.members
         if (list == null) {
             list = MemberList(XyzMembers.ALL)
             write = true
-            if (this.indices == null) this.indices = IndexList(XyzIndices.ALL)
+        }
+        if (this.indices == null && (current == null || mapped)) {
+            this.indices = IndexList(if (mapped) XyzIndices.HUB_SLIM_INDICES else XyzIndices.ALL)
+        }
+        if (mapped) {
+            val indices = this.indices!!
+            for (member in CustomIndexMappings.generatedMembers(this)) {
+                if (list.get(member.name) == null) {
+                    list.add(member)
+                    write = true
+                }
+                val indexName = CustomIndexMappings.indexName(member) ?: continue
+                if (indices.none { it?.name == indexName }) indices.add(Index(indexName, member.name))
+            }
         }
         // Ensure that the list does not contain null or duplicates.
         list.validate()
@@ -417,8 +430,16 @@ open class NakshaCollection() : NakshaFeature() {
         }
         if (write) this.members = list
         validatedMembers = list
+        validatedMappings = mappings
+        validatedIndices = this.indices
         return list
     }
+
+    /** The mapping list, the [validatedMembers] were completed with; not serialized. */
+    private var validatedMappings: CustomIndexMappingList? = null
+
+    /** The index list, the [validatedMembers] were completed with; not serialized. */
+    private var validatedIndices: IndexList? = null
 
     /**
      * Search for the given member in this collection.
@@ -458,14 +479,12 @@ open class NakshaCollection() : NakshaFeature() {
      * Each [Index] declares a name, an [IndexType] ([IndexType.BTREE] / [IndexType.SPATIAL] / [IndexType.TAG_MAP] / [IndexType.TAG_LIST]), the column(s) to index, an optional include-list (for [IndexType.BTREE]), and a `unique` flag.
      *
      * Indices are applied to every variant of the collection (head, history, deleted, meta) by the storage. The storage indexes the mandatory members implicitly. Following [members], when this list is `null` and no members are declared either, the storage falls back to the default [XyzIndices.ALL] (backward-compatible mode); once members are declared, an index list must be provided here (an empty list is allowed).
+     *
+     * These are the declared indices, as configured. [useMembers] completes them with the default indices and those
+     * generated for the [customIndexMapping], call it before reading the effective indices.
      * @since 3.0
      */
-    var indices: IndexList?
-        get() {
-            applyCustomIndexMapping()
-            return INDICES.getValue(this, ::indices)
-        }
-        set(value) = INDICES.setValue(this, ::indices, value)
+    var indices: IndexList? by INDICES
 
     /**
      * JSON properties of features that should be materialized as custom members and indexed.
@@ -476,49 +495,6 @@ open class NakshaCollection() : NakshaFeature() {
      */
     var customIndexMapping: CustomIndexMappingList? by CUSTOM_INDEX_MAPPING
 
-    /**
-     * Adds the [members] and [indices] generated for the [customIndexMapping], when they are read. Without explicit
-     * members, the [XYZ members][XyzMembers.ALL] are used, without explicit indices the [slim indices][XyzIndices.HUB_SLIM_INDICES].
-     * Generated members and indices that already exist are kept, so applying the mapping again changes nothing.
-     * @throws NakshaException with [ILLEGAL_ARGUMENT], if the mappings are invalid, see [CustomIndexMappings.validate].
-     */
-    private fun applyCustomIndexMapping() {
-        val mappings = CUSTOM_INDEX_MAPPING.getValue(this, ::customIndexMapping)
-        if (mappings == null || mappings.isEmpty()) return
-        // Cheap path: nothing was replaced since the last application.
-        val rawMappings = mappings.platformObject()
-        if (rawMappings === appliedMappings
-            && rawMembers()?.platformObject() === appliedMembers
-            && rawIndices()?.platformObject() === appliedIndices) return
-        CustomIndexMappings.validate(this)
-        val generated = CustomIndexMappings.generatedMembers(this)
-        var members = rawMembers()
-        if (members == null) {
-            members = MemberList(XyzMembers.ALL)
-            MEMBERS.setValue(this, ::members, members)
-        }
-        var indices = rawIndices()
-        if (indices == null) {
-            indices = IndexList(XyzIndices.HUB_SLIM_INDICES)
-            INDICES.setValue(this, ::indices, indices)
-        }
-        for (member in generated) {
-            if (members.get(member.name) == null) {
-                members.add(member)
-                validatedMembers = null
-            }
-            val indexName = CustomIndexMappings.indexName(member) ?: continue
-            if (indices.none { it?.name == indexName }) indices.add(Index(indexName, member.name))
-        }
-        appliedMappings = rawMappings
-        appliedMembers = rawMembers()?.platformObject()
-        appliedIndices = rawIndices()?.platformObject()
-    }
-
-    // The raw lists of the last application of the customIndexMapping, not serialized.
-        private var appliedMappings: Any? = null
-        private var appliedMembers: Any? = null
-        private var appliedIndices: Any? = null
 
     /**
      * Initializes the [indices] to the bare minimum.
