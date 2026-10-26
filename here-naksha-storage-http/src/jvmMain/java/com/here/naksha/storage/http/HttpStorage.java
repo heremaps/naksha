@@ -44,6 +44,11 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
 
   }
 
+  @Override
+  public @NotNull naksha.model.objects.NakshaDatabase getDatabase() {
+    throw unsupportedOp("HttpStorage.getDatabase");
+  }
+
   private static @NotNull HttpStorageProperties getProperties(@NotNull NakshaStorage storage) {
     HttpStorageProperties storageProperties = JvmBoxingUtil.box(storage.getProperties(), HttpStorageProperties.class);
     if (storageProperties == null) {
@@ -53,7 +58,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
   }
 
   @Override
-  protected void initStorage(@NotNull NakshaStorage config, @Nullable Boolean create, @Nullable Boolean upgrade) {
+  public void initStorage(@NotNull NakshaStorage config, @Nullable Boolean create, @Nullable Boolean upgrade) {
     this.storageConfig = config;
     this.httpStorageProperties = getProperties(config);
     if (httpStorageProperties == null || httpStorageProperties.getUrl() == null) {

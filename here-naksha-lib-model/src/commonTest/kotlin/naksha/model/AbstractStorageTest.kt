@@ -114,6 +114,8 @@ class AbstractStorageTest {
     }
 
     private class UnmodifiedTestStorage : AbstractStorage<NakshaStorage>() {
+        override val database: naksha.model.objects.NakshaDatabase
+            get() = error("Not used by this test")
         override val configKlass: KClass<NakshaStorage> = NakshaStorage::class
         fun newVersion(): Version = super.newVirtualVersion()
         override fun initStorage(config: NakshaStorage, create: Boolean?, upgrade: Boolean?) = Unit
@@ -125,6 +127,8 @@ class AbstractStorageTest {
     }
 
     private class TestStorage : AbstractStorage<NakshaStorage>() {
+        override val database: naksha.model.objects.NakshaDatabase
+            get() = error("Not used by this test")
         override val configKlass: KClass<NakshaStorage> = NakshaStorage::class
         private var fakeTimes: MutableList<LocalDateTime>? = null
         private var afterAcquire: (() -> Unit)? = null

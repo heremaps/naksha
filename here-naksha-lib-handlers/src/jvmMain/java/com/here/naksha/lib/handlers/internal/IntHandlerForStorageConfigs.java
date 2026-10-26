@@ -97,7 +97,7 @@ public class IntHandlerForStorageConfigs extends AdminFeatureEventHandler<Naksha
 
   private Response noActiveHandlerValidation(Write codec) {
     // Search for active event handlers still using this storage
-    String storageId = codec.getId();
+    String storageId = codec.getId().text();
     if (storageId == null) {
       if (codec.getFeature() == null) {
         return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, "No storage ID supplied.");

@@ -102,7 +102,7 @@ public class EndorsementHandler extends AbstractEventHandler {
 
     // create and forward request for next handler in the pipeline
     final ContextWriteFeatures upstreamRequest = HandlerUtil.createContextWriteRequestFromFeatureList(
-        cwf.getWrites().stream().map(Write::getCollectionId).collect(Collectors.toList()),
+        cwf.getWrites().stream().map(write -> write.getCollectionId().text()).collect(Collectors.toList()),
         updatedFeatures,
         cwf.getContext(),
         violations);

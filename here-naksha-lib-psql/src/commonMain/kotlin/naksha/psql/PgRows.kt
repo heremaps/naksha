@@ -108,8 +108,8 @@ internal class PgRows(
             clearCache()
             columns.clear()
             if (collection != null) {
-                databaseNumber = collection.catalog.database.id.number
-                catalogNumber = collection.catalog.id.intValue
+                databaseNumber = collection.tuple.tupleNumber.databaseNumber
+                catalogNumber = collection.catalogId.intValue
                 collectionNumber = collection.id.intValue
                 for (pgColumn in collection.columns) {
                     columns.add(PgRowsColumn(this, this.columns.size, pgColumn))
@@ -309,7 +309,7 @@ internal class PgRows(
         // Rebuild the members-book in the same canonical member order as Tuple.encodeFeature
         // (collection.useMembers()) so the blob's positional member references resolve; the
         // tuple-number is reconstructed from the split `_fn`/`_version` columns.
-        val members = collection.nakshaCollection.useMembers()
+        val members = collection.naksha.validatedMembers
         val membersBook = HeapBook(BookType.MEMBER_BOOK)
         var featureBytes: ByteArray? = null
         for (i in 0 until members.size) {

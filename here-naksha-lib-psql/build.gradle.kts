@@ -18,6 +18,9 @@ kotlin {
             }
         }
         jvmMain {
+            // Legacy implementations awaiting removal after the PgDatabase migration (ai/work.md).
+            kotlin.exclude("**/PgAdminCatalogGc.jvm.kt", "**/PsqlAdminCatalog.kt",
+                "**/PsqlCatalog.kt", "**/PsqlCollection.kt", "**/PsqlStorageListener.kt")
             dependencies {
                 implementation(libs.commons.lang3)
                 implementation(libs.postgres)
@@ -34,6 +37,9 @@ kotlin {
             resources.setSrcDirs(resources.srcDirs + "${project.rootDir}/here-naksha-lib-psql/build/dist/js/productionLibrary/")
         }
         jsMain {
+            // Superseded by the Pg* actual implementations; kept for migration reference.
+            kotlin.exclude("**/PgAdminCatalogManager.js.kt", "**/Plv8Cluster.kt",
+                "**/Plv8Cursor.kt", "**/Plv8Plan.kt", "**/Plv8Storage.kt")
             dependencies {
             }
         }

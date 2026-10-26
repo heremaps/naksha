@@ -43,7 +43,7 @@ internal class PgWriterDelete(
         for (i in start until end) {
             val pgWrite = pgWrites[i]
             inRows.setColumn(FnColumn.ident, row, pgWrite.id.number)
-            inRows.setColumn("expected_version", row, pgWrite.requireVersion?.number)
+            inRows.setColumn("expected_version", row, pgWrite.requireVersion)
             row++
         }
         check(row == (end-start))
@@ -190,7 +190,7 @@ ${if (purge) "LEFT JOIN head_deleted ON head_deleted.$FnColumn = query.$FnColumn
                 val id = pgWrite.id
                 //val op = pgWrite.op
                 //val fn = pgWrite.featureNumber
-                val expected_version = pgWrite.requireVersion?.number
+                val expected_version = pgWrite.requireVersion
 
                 // `existing_fn` and `existing_version` are existing rows in HEAD, no matter in what state.
                 // val existing_fn = outRows.getInt64(row, "existing_fn")

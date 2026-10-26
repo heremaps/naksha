@@ -254,7 +254,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
 
   private Response noActiveSpaceValidation(Write codec) {
     // Search for active event handlers still using this storage
-    String handlerId = codec.getId();
+    String handlerId = codec.getId().text();
     if (handlerId == null) {
       if (codec.getFeature() == null) {
         return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, "No handler ID supplied.");

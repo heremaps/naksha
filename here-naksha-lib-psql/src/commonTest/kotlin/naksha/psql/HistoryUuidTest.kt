@@ -77,7 +77,7 @@ class HistoryUuidTest: PgTestBase(NakshaCollection(
         // And:
         val upsertFeatureReq = WriteRequest().add(Write().upsertFeature(collection, createdFeature.apply {
             title = "updated_version"
-        }))
+        }, atomic = false))
         executeWrite(upsertFeatureReq)
 
         // And:

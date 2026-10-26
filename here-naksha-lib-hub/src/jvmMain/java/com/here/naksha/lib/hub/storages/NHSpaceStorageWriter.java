@@ -87,7 +87,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
       throw new IllegalArgumentException(
           "Currently supporting WriteRequest for single collection only, got multiple: " + collectionWrites.size());
     }
-    return executeSingleCollectionWrite(writeRequest, collectionWrites.get(0).getCollectionId());
+    return executeSingleCollectionWrite(writeRequest, collectionWrites.get(0).getCollectionId().text());
   }
 
   private @NotNull Response executeSingleCollectionWrite(
@@ -151,12 +151,12 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
 
   private @NotNull Response executeDeleteSpace(@NotNull WriteRequest deleteSpaceEntryReq) {
     Write originalWrite = deleteSpaceEntryReq.getWrites().get(0);
-    String spaceId = originalWrite.getId();
+    String spaceId = originalWrite.getId().text();
     WriteRequest deleteCollectionReq = new WriteRequest()
             .add(new Write().deleteCollection(new NakshaCollection(spaceId), false));
     Response deleteCollectionRes = executeSingleCollectionWrite(deleteCollectionReq, spaceId);
     if (deleteCollectionRes instanceof SuccessResponse) {
-      return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId());
+      return executeWriteToAdminSpaces(deleteSpaceEntryReq, originalWrite.getCollectionId().text());
     } else {
       return deleteCollectionRes;
     }
@@ -176,7 +176,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     Response upsertSpaceRes = null;
     if (collection != null) {
       // submit Update Collection request to Custom Space based pipeline
-      WriteRequest upsertCollectionReq = new WriteRequest().add(new Write().upsertCollection(collection));
+      WriteRequest upsertCollectionReq = new WriteRequest().add(new Write().upsertCollection(collection, false));
       upsertSpaceRes = executeSingleCollectionWrite(upsertCollectionReq, space.getId());
       if(upsertSpaceRes instanceof SuccessResponse) {
         // we update the space only if the collection was changed correctly
@@ -191,7 +191,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
   }
 
   private String singleCollectionIdFrom(WriteRequest writeRequest) {
-    List<String> distinctCollectionIds = writeRequest.getWrites().stream().map(Write::getCollectionId).distinct().toList();
+    List<String> distinctCollectionIds = writeRequest.getWrites().stream().map(write -> write.getCollectionId() == null ? null : write.getCollectionId().text()).distinct().toList();
     if (distinctCollectionIds.size() != 1) {
       throw new IllegalArgumentException(
           "Expected Writes of WriteRequest to indicate single collection, got multiple: " + distinctCollectionIds);

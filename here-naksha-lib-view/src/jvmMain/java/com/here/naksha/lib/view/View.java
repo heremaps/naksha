@@ -81,6 +81,11 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
   }
 
   @Override
+  public @NotNull naksha.model.objects.NakshaDatabase getDatabase() {
+    throw unsupportedOp("View.getDatabase");
+  }
+
+  @Override
   protected void afterInit() {
     // Nothing to do
   }
@@ -96,7 +101,7 @@ public class View extends AbstractStorage<NakshaStorage> implements IView {
   }
 
   @Override
-  protected void initStorage(@NotNull NakshaStorage nakshaStorage, @Nullable Boolean create, @Nullable Boolean upgrade) {
+  public void initStorage(@NotNull NakshaStorage nakshaStorage, @Nullable Boolean create, @Nullable Boolean upgrade) {
     // Nothing to do
   }
 

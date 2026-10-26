@@ -23,7 +23,7 @@ import kotlin.jvm.JvmField
 class PgHistoryTable(
     /** The collection to which this HEAD table belongs. */
     collection: PgCollection,
-) : PgTable(collection, collection.id + "\$hst", null) {
+) : PgTable(collection, collection.name + "\$hst", null) {
 
     /**
      * All history partitions with the key being the partition-number and the value being the partition.

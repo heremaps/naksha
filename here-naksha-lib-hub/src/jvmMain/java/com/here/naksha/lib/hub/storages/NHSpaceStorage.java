@@ -50,6 +50,11 @@ import org.jetbrains.annotations.Nullable;
 
 public class NHSpaceStorage implements IStorage {
 
+  @Override
+  public @NotNull naksha.model.objects.NakshaDatabase getDatabase() {
+    throw naksha.base.NakshaExceptionKt.unsupportedOp("NHSpaceStorage.getDatabase");
+  }
+
   protected final @NotNull INaksha nakshaHub;
 
   /**

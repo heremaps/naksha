@@ -19,7 +19,7 @@ import kotlin.jvm.JvmField
 class PgHeadTable(
     /** The collection to which this HEAD table belongs. */
     collection: PgCollection,
-) : PgTable(collection, collection.id, null) {
+) : PgTable(collection, collection.name, null) {
 
     /**
      * All distribution partitions; if not partitioned, then an empty array.
