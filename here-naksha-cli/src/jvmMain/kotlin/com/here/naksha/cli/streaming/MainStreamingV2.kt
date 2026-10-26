@@ -41,8 +41,9 @@ class MainStreamingV2 {
                 databaseId = Id(db),
                 catalogId = Id(catalog),
                 collectionId = Id(collection),
-                minVersion = 2026101600000004355,  // TODO: make this configurable 2026101600000004355, 133039218
+                minVersion = 133039218,  // TODO: make this configurable 2026101600000004355, 133039218
                 //version = 133040256      // TODO: make this configurable
+                ignoreTransactions = true,
                 chunkSize = 2
             )
             val stream = streamSession.read(streamRequest)

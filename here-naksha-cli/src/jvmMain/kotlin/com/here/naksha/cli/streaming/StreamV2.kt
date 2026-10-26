@@ -23,8 +23,8 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         private const val TXN_INDEX_SQL = "(jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint"
         private const val LEGACY_DATUM_FACTOR = 100_000_000_000L
 
-        /** Converts legacy `yyyyMMdd * 10^11 + seq` into the V3 [Version] format. */
-        fun legacyToV3Version(legacy: Long): Version {
+        /** Converts legacy `yyyyMMdd * 10^11 + seq` txn into the V3 [Version] format. */
+        fun legacyTxnToV3Version(legacy: Long): Version {
             val date = legacy / LEGACY_DATUM_FACTOR
             val seq = legacy % LEGACY_DATUM_FACTOR
             val year = (date / 10_000).toInt()
@@ -72,7 +72,7 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         if (request.version < Version.HEAD.number) {
             whereClause.append(" AND $VERSION_COLUMN_SQL <= ${request.version}")
         }
-        return "SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId}$whereClause ORDER BY $VERSION_COLUMN_SQL ASC LIMIT ${request.chunkSize};"
+        return "SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${request.catalogId}.${request.collectionId}$whereClause ORDER BY $VERSION_COLUMN_SQL ASC LIMIT ${request.chunkSize};"
     }
 
     private fun queryByTransactionSql(request: StreamRequest, previousTxn: Long): String {
@@ -91,13 +91,13 @@ UNION ALL
 min_txn AS (
  SELECT MIN(t) AS txn FROM next_txn
 )
-SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${headTableName} head, min_txn n
+SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${headTableName} head, min_txn n
  WHERE ${txnIndexSqlWithTableAlias("head")}=n.txn
 UNION ALL
-SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${headTableName}_del del, min_txn n
+SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${headTableName}_del del, min_txn n
  WHERE ${txnIndexSqlWithTableAlias("del")}=n.txn
 UNION ALL
-SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${headTableName}_hst hst, min_txn n
+SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${headTableName}_hst hst, min_txn n
  WHERE ${txnIndexSqlWithTableAlias("hst")}=n.txn;
 """
     }
@@ -114,18 +114,22 @@ SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${headTableName}_hst hst, min_txn
         val cursor = v2Session.connection.execute(sql)
         val tuples = ArrayList<StreamTuple>()
         var txn : Long? = null
+        var txnAsVersion : Version? = null
         while (cursor.next()) {
             val jsonData : JvmMap = cursor["jsondata"]
             val geoData : ByteArray = cursor["geo"]
-            val version : Long = cursor["i"]
             val feature = jsonData.proxy(NakshaFeature::class)
-            txn = (txn ?: feature.properties.xyz.get("txn")) as Long? //we cannot get txn from xyz because the underlying code is strictly V3 compatible.
+            val xyz = feature.properties.xyz
+            val version = (xyz.get("uuid") as String).substringAfterLast(':').toLong()
+            txn = checkNotNull(txn ?: xyz.get("txn")) as Long //we cannot get txn from xyz because the underlying code is strictly V3 compatible.
+            txnAsVersion = txnAsVersion ?: legacyTxnToV3Version(txn)
+            val action = xyz.action
             feature.geometry = GeoUtil.fromEWKB(geoData)
             val id = Id(feature.id)
             val streamTuple = StreamTuple(
                 id = id,
                 feature = feature.platformObject(),
-                version = version,
+                version = Version.auto(txnAsVersion.year, txnAsVersion.month, txnAsVersion.day, version, action).number,
             )
             tuples.add(streamTuple)
         }
@@ -134,13 +138,13 @@ SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${headTableName}_hst hst, min_txn
                 StreamChunk(this, tuples.toTypedArray())
             else StreamTransaction(stream = this,
                 id = null,
-                version = legacyToV3Version(txn ?: throw IllegalStateException("Transaction ID not found")).number,
+                version = txnAsVersion!!.number,
                 features = tuples.toTypedArray(),
                 transaction = null)
         _chunks.add(chunk)
         nextVersionToRead =
             if (request.ignoreTransactions)
-                chunk.tuples.maxOfOrNull { it.version }?.plus(1) ?: nextVersionToRead
+                chunk.tuples.maxOfOrNull { it.version }?.let { ((it ushr 2) and Version.SEQ_MAX) + 1 } ?: nextVersionToRead
             else
                 txn ?: throw IllegalStateException("Transaction ID not found")
         return chunk
