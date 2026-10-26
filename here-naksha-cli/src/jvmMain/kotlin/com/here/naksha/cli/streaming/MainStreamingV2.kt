@@ -41,7 +41,7 @@ class MainStreamingV2 {
                 databaseId = Id(db),
                 catalogId = Id(catalog),
                 collectionId = Id(collection),
-                minVersion = 133039218,  // TODO: make this configurable
+                minVersion = 2026101600000004355,  // TODO: make this configurable 2026101600000004355, 133039218
                 //version = 133040256      // TODO: make this configurable
                 chunkSize = 2
             )

@@ -1,5 +1,6 @@
 package com.here.naksha.cli.streaming
 
+import naksha.base.Action
 import naksha.base.Id
 import naksha.base.JvmMap
 import naksha.base.NakshaError
@@ -20,6 +21,17 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
          */
         const val VERSION_COLUMN_SQL = "i"
         private const val TXN_INDEX_SQL = "(jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint"
+        private const val LEGACY_DATUM_FACTOR = 100_000_000_000L
+
+        /** Converts legacy `yyyyMMdd * 10^11 + seq` into the V3 [Version] format. */
+        fun legacyToV3Version(legacy: Long): Version {
+            val date = legacy / LEGACY_DATUM_FACTOR
+            val seq = legacy % LEGACY_DATUM_FACTOR
+            val year = (date / 10_000).toInt()
+            val month = ((date / 100) % 100).toInt()
+            val day = (date % 100).toInt()
+            return Version.auto(year, month, day, seq, Action.VERSION)
+        }
     }
 
     private fun txnIndexSqlWithTableAlias(alias: String): String {
@@ -44,10 +56,11 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
     private val _chunks = ArrayList<StreamChunk>()
     private val _acknowledgedChunksList = ArrayList<StreamChunk>()
     private var minAckChunkIndex = -1
-    private var minVersionToRead = request.minVersion
+    private var nextVersionToRead = request.minVersion
 
     override fun hasNext(): Boolean {
-        return minVersionToRead <= request.version
+        return true
+//        return (request.ignoreTransactions) && (minVersionToRead <= request.version) TODO
     }
 
     override fun isAcknowledged(timeoutMillis: Long): Boolean {
@@ -63,28 +76,28 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
     }
 
     private fun queryByTransactionSql(request: StreamRequest, previousTxn: Long): String {
+        val headTableName = "${request.catalogId}.${request.collectionId}"
         return """
 WITH next_txn AS (
- (SELECT $TXN_INDEX_SQL AS t FROM ${request.catalogId}.${request.collectionId} WHERE $TXN_INDEX_SQL>$previousTxn
+ (SELECT $TXN_INDEX_SQL AS t FROM ${headTableName} WHERE $TXN_INDEX_SQL>$previousTxn
  ORDER BY t ASC LIMIT 1)
 UNION ALL
- (SELECT $TXN_INDEX_SQL AS t FROM ${request.catalogId}.${request.collectionId}_del WHERE $TXN_INDEX_SQL>$previousTxn
+ (SELECT $TXN_INDEX_SQL AS t FROM ${headTableName}_del WHERE $TXN_INDEX_SQL>$previousTxn
  ORDER BY t ASC LIMIT 1)
 UNION ALL
- (SELECT $TXN_INDEX_SQL AS t FROM ${request.catalogId}.${request.collectionId}_hst WHERE $TXN_INDEX_SQL>$previousTxn
+ (SELECT $TXN_INDEX_SQL AS t FROM ${headTableName}_hst WHERE $TXN_INDEX_SQL>$previousTxn
  ORDER BY t ASC LIMIT 1)
 ),
 min_txn AS (
- SELECT MIN(t) AS txn
- FROM next_txn
+ SELECT MIN(t) AS txn FROM next_txn
 )
-SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId} head, min_txn n
+SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${headTableName} head, min_txn n
  WHERE ${txnIndexSqlWithTableAlias("head")}=n.txn
 UNION ALL
-SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId}_del del, min_txn n
+SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${headTableName}_del del, min_txn n
  WHERE ${txnIndexSqlWithTableAlias("del")}=n.txn
 UNION ALL
-SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.collectionId}_hst hst, min_txn n
+SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${headTableName}_hst hst, min_txn n
  WHERE ${txnIndexSqlWithTableAlias("hst")}=n.txn;
 """
     }
@@ -94,15 +107,19 @@ SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.co
             throw NoSuchElementException("No more chunks available")
         }
         val sql =
-            if (request.ignoreTransactions) queryByTransactionSql(request, minVersionToRead) else
-                queryHeadSql(request, minVersionToRead)
+            if (!request.ignoreTransactions)
+                queryByTransactionSql(request, nextVersionToRead)
+            else
+                queryHeadSql(request, nextVersionToRead)
         val cursor = v2Session.connection.execute(sql)
         val tuples = ArrayList<StreamTuple>()
+        var txn : Long? = null
         while (cursor.next()) {
             val jsonData : JvmMap = cursor["jsondata"]
             val geoData : ByteArray = cursor["geo"]
             val version : Long = cursor["i"]
             val feature = jsonData.proxy(NakshaFeature::class)
+            txn = (txn ?: feature.properties.xyz.get("txn")) as Long? //we cannot get txn from xyz because the underlying code is strictly V3 compatible.
             feature.geometry = GeoUtil.fromEWKB(geoData)
             val id = Id(feature.id)
             val streamTuple = StreamTuple(
@@ -113,11 +130,19 @@ SELECT jsondata, ST_AsEWKB(geo) as geo, i FROM ${request.catalogId}.${request.co
             tuples.add(streamTuple)
         }
         val chunk =
-//            if (request.ignoreTransactions)
-            StreamChunk(this, tuples.toTypedArray())
-//        else StreamTransaction(this, version = tuples[0].version, features = tuples.toTypedArray())
+            if (request.ignoreTransactions)
+                StreamChunk(this, tuples.toTypedArray())
+            else StreamTransaction(stream = this,
+                id = null,
+                version = legacyToV3Version(txn ?: throw IllegalStateException("Transaction ID not found")).number,
+                features = tuples.toTypedArray(),
+                transaction = null)
         _chunks.add(chunk)
-        minVersionToRead = chunk.tuples.maxOfOrNull { it.version }?.plus(1) ?: minVersionToRead
+        nextVersionToRead =
+            if (request.ignoreTransactions)
+                chunk.tuples.maxOfOrNull { it.version }?.plus(1) ?: nextVersionToRead
+            else
+                txn ?: throw IllegalStateException("Transaction ID not found")
         return chunk
     }
 
