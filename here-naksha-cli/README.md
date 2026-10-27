@@ -33,7 +33,7 @@ You can add your own storage implementation by:
 
 ## Streaming (POC)
 
-These commands copy collections using the streaming API, see [STREAMING_CLI.md](../docs/drafts/STREAMING_CLI.md). Storages and streams are configured once, by answering some questions, and stored in `~/.config/naksha/cli/` _(change it with the environment variable `NAKSHA_CLI_HOME`)_. The POC only contains the built-in providers `null` and `random`.
+These commands copy collections using the streaming API, see [STREAMING_CLI.md](../docs/drafts/STREAMING_CLI.md). Storages and streams are configured once, by answering some questions, and stored in `~/.config/naksha/cli/` _(change it with the environment variable `NAKSHA_CLI_HOME`)_. The POC contains the built-in providers `null` and `random`, and `v3`, which reads a Naksha v3 PostgresQL storage _(`here-naksha-lib-psql`, writing is not yet supported)_. The questions of `v3` ask for the storage id, as installed in the database, and the connection.
 
 | Command                             | Description                                                                                             |
 |-------------------------------------|---------------------------------------------------------------------------------------------------------|
