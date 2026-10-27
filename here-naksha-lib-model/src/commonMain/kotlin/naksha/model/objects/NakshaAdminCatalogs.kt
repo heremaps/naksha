@@ -1,7 +1,7 @@
 package naksha.model.objects
 
-import naksha.base.ADMIN_CATALOG_TEXT
-import naksha.base.CATALOGS_COL_TEXT
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_TEXT
+import naksha.base.Id.IdCompanion.CATALOGS_COL_TEXT
 import naksha.base.Id
 import naksha.base.Id.IdCompanion.ADMIN_CATALOG_ID
 import naksha.base.Id.IdCompanion.COLLECTIONS_COL_ID
@@ -30,4 +30,3 @@ class NakshaAdminCatalogs @Deprecated("This constructor is for reflection only")
         indices = IndexList.of(StandardIndices.Tags)
     }
 }
-

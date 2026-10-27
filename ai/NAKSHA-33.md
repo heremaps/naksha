@@ -64,6 +64,7 @@ installation entries. Verify and finish these rather than duplicating them.
 - **db-00-a · DONE:** Adapted stale identifier/member/transaction APIs in psql writers, row helpers,
   tests, and downstream Java callers. Added a test-only `adminConnection` helper
   using `newConnection`; existing tests remain included.
+  - **Rebase follow-up commit summary:** Fix identifier-constant imports and tuple-copy helper imports after rebasing onto upstream.
 - **db-00-b · DONE:** Temporarily excluded superseded implementations through the psql Gradle source
   sets, preserving the source files for reference:
   - JVM: `PgAdminCatalogGc.jvm.kt`, `PsqlAdminCatalog.kt`, `PsqlCatalog.kt`,
@@ -358,4 +359,14 @@ writer SQL depends on separate HEAD/history tables.
 - db-01-a: defined the physical operation API shape, added index signatures,
   replaced unused row no-ops with explicit stubs, and corrected the collection
   creation method name. JVM/JS main and JVM test-source compilation pass; ready
-  for review before db-01-b.
+   for review before db-01-b.
+- Rebase onto `33dc1827d` completed. Conflict resolutions preserve upstream's
+  streaming API, identifier helpers, HTTP logging, collection-index normalization,
+  and PostgreSQL 18.6 test image. Tuple copying retains both the existing
+  `copyOnWrite` API and the new multi-path `shallowCopy`, with cloned containers
+  attached to the copied root. Post-rebase constant/helper import fixes are left
+  uncommitted for review.
+- Post-rebase verification: `./gradlew compileKotlinJvm compileTestKotlinJvm
+  compileKotlinJs --console=plain` passes. The 21 focused psql tests listed in
+  db-00, `IdTest`, and `StreamRequestBuilderTest` also pass. No database-backed
+  integration tests were run.

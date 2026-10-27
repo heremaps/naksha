@@ -2,7 +2,7 @@ package naksha.psql
 
 import naksha.base.Action.Action_C.DELETE
 import naksha.base.AtomicMap
-import naksha.base.COLLECTIONS_COL_QUOTED
+import naksha.base.Id.IdCompanion.COLLECTIONS_COL_QUOTED
 import naksha.base.Id
 import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.base.Platform.PlatformCompanion.logger
