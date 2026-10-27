@@ -67,6 +67,9 @@ tasks {
         archiveBaseName = fatJarBaseName
         archiveClassifier = ""
         archiveVersion = scmVersion.version
+        // Shadow 9 drops duplicates before transformers run, so service files need INCLUDE to be merged.
+        filesMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
+        mergeServiceFiles()
         manifest {
             attributes["Main-Class"] = mainCliClass
             attributes["Implementation-Version"] = scmVersion.version
@@ -80,6 +83,8 @@ tasks {
         archiveBaseName = fatJarBaseName
         archiveClassifier = ""
         archiveVersion = scmVersion.undecoratedVersion
+        filesMatching("META-INF/services/**") { duplicatesStrategy = DuplicatesStrategy.INCLUDE }
+        mergeServiceFiles()
         manifest {
             attributes["Main-Class"] = mainCliClass
             attributes["Implementation-Version"] = scmVersion.undecoratedVersion
