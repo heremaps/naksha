@@ -214,7 +214,7 @@ open class PgWriter internal constructor(
                         session.cachePgCatalog(pgCatalog) // This allows following write instructions to succeed.
                     } else if (f is NakshaCollection) {
                         val pgCollection = PgCollection(catalogId, tuple)
-                        storage.database.collection_create_table_if_not_exits(
+                        storage.database.collection_create_table_if_not_exists(
                             conn = conn,
                             schema = pgWrite.dbCatalog.name,
                             table = id.text,
@@ -256,7 +256,7 @@ open class PgWriter internal constructor(
                         session.cachePgCatalog(pgCatalog) // This allows following write instructions to succeed.
                     } else if (f is NakshaCollection) {
                         val pgCollection = PgCollection(catalogId, tuple)
-                        storage.database.collection_create_table_if_not_exits(
+                        storage.database.collection_create_table_if_not_exists(
                             conn = conn,
                             schema = pgWrite.dbCatalog.name,
                             table = id.text,
