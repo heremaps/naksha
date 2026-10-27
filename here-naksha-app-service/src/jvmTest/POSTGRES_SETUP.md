@@ -6,38 +6,50 @@ Currently, there are two options to provision Postgres in test environment
 - utilizing TestContainers library that initializes container with Postgres image ([described in detail below](#test-containers))
 
 
-To choose the desired option, one should define `NAKSHA_LOCAL_TEST_CONTEXT` environment variable which is checked upon test start to decide how to act.
+The app-service tests use `NAKSHA_APP_SERVICE_TEST_CONTEXT` to choose how Postgres is provided. If the variable is unset, tests use a standalone Postgres instance.
 
-| NAKSHA_LOCAL_TEST_CONTEXT | Chosen option |
+| `NAKSHA_APP_SERVICE_TEST_CONTEXT` | Chosen option |
 | - | - |
 | undefined / empty | Local standalone Postgres instance |
-| 'LOCAL_STANDALONE' | Local standalone Postgres instance |
-| 'TEST_CONTAINERS' | Container spawned by TestContainers |
-| 'unknown value' | Local standalone Postgres instance |
+| `LOCAL_STANDALONE` | Local standalone Postgres instance |
+| `TEST_CONTAINERS` | Container spawned by Testcontainers |
+| Unknown value | Local standalone Postgres instance |
+
+For tests that use a standalone database, the shared URL variable `NAKSHA_TEST_DB_URL` can configure
+the connection for `here-naksha-lib-psql` as well as both admin and data storage tests in
+`here-naksha-app-service`. The specific variables `NAKSHA_TEST_PSQL_DB_URL`,
+`NAKSHA_TEST_ADMIN_DB_URL`, and `NAKSHA_TEST_DATA_DB_URL` can override the shared URL when a test
+needs a separate database. When running both suites against the same database, their admin catalog
+IDs must match: `NAKSHA_TEST_STORAGE_ID` defaults to `local_psql_test_storage`, and the Gradle test
+tasks default `HUB_ADMIN_STORAGE_ID` to the same value, so neither has to be set. Ensure the URL points to a dedicated test database: the tests may drop Naksha schemas during
+setup.
+
+For app-service tests, per-storage URLs in `~/.config/naksha/test_admin_db.url` and
+`~/.config/naksha/test_data_db.url` take precedence over environment variables.
 
 Running tests (or any other `gradle` task) that triggers JUnit pipeline "happens as usual":
 
 | Command | Behavior |
 | - | - |
 | `gradle test` | will run gradle tests expecting local standalone Postgres instance |
-| `NAKSHA_LOCAL_TEST_CONTEXT=TEST_CONTAINERS gradle test` | will run gradle test in TestContainers mode |
-| `NAKSHA_LOCAL_TEST_CONTEXT=LOCAL_STANDALONE gradle test` | will run gradle tests expecting local standalone Postgres instance |
+| `NAKSHA_APP_SERVICE_TEST_CONTEXT=TEST_CONTAINERS gradle test` | will run gradle test in Testcontainers mode |
+| `NAKSHA_APP_SERVICE_TEST_CONTEXT=LOCAL_STANDALONE gradle test` | will run gradle tests expecting local standalone Postgres instance |
 
 The same applies to other gradle tasks one might want to use that depend on `test` task (like `shadowJar`). See [the main project README](../../../README.md) to get familiar with all options.
 
 ### Local standalone Postgres instance \[default\]
 
 This is the default and most basic approach. It assumes that there's a Postgres DB running in our local environment.\
-That is also the way our tests are executed on GH pipeline.
+The CI pipeline may use either this option or Testcontainers; see the workflow configuration for the selected mode.
 
 #### Prerequisites:
 - Postgres with PostGIS extension running on localhost
-- Postgres instance must be publishing **5432** port
-- Environment variable `NAKSHA_LOCAL_TEST_CONTEXT` must be null, empty or set to `LOCAL_STANDALONE`
+- By default, Postgres is expected on localhost port **5432**; use `NAKSHA_TEST_DB_URL` to specify another host or port
+- Environment variable `NAKSHA_APP_SERVICE_TEST_CONTEXT` can be unset or set to `LOCAL_STANDALONE`
 
 #### Notes:
 - The schema used by tests: `naksha_data_schema`
-- This schema will dropped before test suite starts
+- This schema will be dropped before the test suite starts
 - When running tests with local standalone instance, tests don't expect any extensions enabled (see [test-config.json](../jvmMain/resources/test-config.json)
 - Related class: `com.here.naksha.app.init.context.LocalTestContext`
 
