@@ -220,8 +220,9 @@ open class PgWriter internal constructor(
                             table = id.text,
                             columns = pgCollection.columns,
                             indices = pgCollection.indices,
-                            shift = pgCollection.shift,
-                            partitions = pgCollection.partitions,
+                            options = pgCollection.creationOptions(
+                                storage.config, storage.database.maxTupleSize
+                            ),
                         )
                         pgWrite.pgCollection = pgCollection
                         session.cachePgCollection(pgCollection) // This allows following write instructions to succeed.
@@ -262,8 +263,9 @@ open class PgWriter internal constructor(
                             table = id.text,
                             columns = pgCollection.columns,
                             indices = pgCollection.indices,
-                            shift = pgCollection.shift,
-                            partitions = pgCollection.partitions,
+                            options = pgCollection.creationOptions(
+                                storage.config, storage.database.maxTupleSize
+                            ),
                         )
                         pgWrite.pgCollection = pgCollection
                         session.cachePgCollection(pgCollection) // This allows following write instructions to succeed.

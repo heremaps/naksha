@@ -199,6 +199,30 @@ open class PgCollection @JvmOverloads constructor(
     }
 
     /**
+     * Snapshot logical collection settings into the physical creation contract.
+     * @param config storage configuration providing the per-storage-class tablespace names.
+     * @param toastTupleTarget the initialized database's TOAST target in bytes.
+     * @return create-only physical settings; columns and indexes are passed separately.
+     */
+    internal fun creationOptions(config: PgConfig, toastTupleTarget: Int): PgCollectionCreateOptions =
+        PgCollectionCreateOptions(
+            storeHistory = storeHistory,
+            partitions = partitions,
+            shift = shift,
+            retain = naksha.retain,
+            backward = naksha.backward,
+            forward = naksha.forward,
+            storageClass = storageClass,
+            tablespace = when (storageClass) {
+                PgStorageClass.Ephemeral -> config.ephemeral_tablespace
+                PgStorageClass.Brittle -> config.brittle_tablespace
+                PgStorageClass.Temporary -> config.temp_tablespace
+                else -> null
+            },
+            toastTupleTarget = toastTupleTarget
+        )
+
+    /**
      * Returns the [PgColumn] that corresponds to the given member.
      * @param member the [Member] for which to return the column.
      * @return the [PgColumn] that with the given name; `null` if no such column exists.

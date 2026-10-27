@@ -164,7 +164,14 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
 
         logger.info("Create internal collections: collections, transactions, catalogs, and books")
         for (c in listOf(pgAdminCollections, pgAdminTransactions, pgAdminCatalogs, pgAdminBooks)) {
-            collection_create_table_if_not_exists(conn, ADMIN_CATALOG_TEXT, c.id.text, c.columns, c.indices, c.shift, c.partitions)
+            collection_create_table_if_not_exists(
+                conn = conn,
+                schema = ADMIN_CATALOG_TEXT,
+                table = c.id.text,
+                columns = c.columns,
+                indices = c.indices,
+                options = c.creationOptions(storage.config, maxTupleSize)
+            )
         }
         logger.info("Done creating internal collections")
         return adminMapOid
