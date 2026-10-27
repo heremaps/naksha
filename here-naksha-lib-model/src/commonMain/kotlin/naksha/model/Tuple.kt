@@ -129,13 +129,14 @@ data class Tuple @JvmOverloads constructor(
             action: Action? = null,
             atomic: Boolean? = null,
         ): Tuple {
-            return encodeRaw(
+            return encode(
                 raw = feature,
                 databaseNumber = collection.databaseNumber,
                 catalogNumber = collection.catalogNumber,
                 collectionNumber = collection.collectionNumber,
                 memberList = collection.validatedMembers,
                 session = session,
+                version = session.version.number,
                 globalBook = globalBook,
                 processors = session.processors,
                 requestedAction = action,
@@ -169,7 +170,7 @@ data class Tuple @JvmOverloads constructor(
             action: Action? = null,
             atomic: Boolean? = null,
         ): Tuple {
-            return encodeRaw(
+            return encode(
                 raw = feature,
                 databaseNumber = collection.databaseNumber,
                 catalogNumber = collection.catalogNumber,
@@ -191,10 +192,9 @@ data class Tuple @JvmOverloads constructor(
          * @param catalogNumber the catalog-number of the catalog for which to encode the object.
          * @param collectionNumber the collection-number of the collection for which to encode the object.
          * @param memberList the [MemberList] to use for encoding _(separates members into the storage book of the `JBON`)_.
-         * @param session the [write-session][IWriteSession] in which context this is performed; optional, used only by [member processors][IMemberProcessor].
-         * @param version the version in which to encode the raw object; if a session is given, it is read from it; otherwise this must be provided explicitly.
+         * @param version the version in which to encode the raw object, see [IWriteSession.version].
          * @param globalBook the global book to use for data compression; defaults to `null` _(no global book compression)_.
-         * @param processors the processors to use to process members; defaults to `session.processors` if a session is given; otherwise `null` _(no processors)_.
+         * @param processors the processors to use to process members, see [IWriteSession.processors].
          * @param requestedAction an action the client wants to perform; defaults to `null` meaning auto-detected.
          * @param atomic a hint if the operation **must** be atomic; defaults to `null` meaning auto-detected.
          */
@@ -207,12 +207,51 @@ data class Tuple @JvmOverloads constructor(
             catalogNumber: Int,
             collectionNumber: Int,
             memberList: MemberList,
-            session: IWriteSession? = null,
-            version: Long = session?.version?.number ?: throw illegalArg("Missing version"),
+            version: Long,
             globalBook: IBook? = null,
-            processors: MemberProcessorMap? = session?.processors,
+            processors: MemberProcessorMap? = null,
             requestedAction: Action? = null,
             atomic: Boolean? = null,
+        ): Tuple = encode(
+            raw = raw,
+            databaseNumber = databaseNumber,
+            catalogNumber = catalogNumber,
+            collectionNumber = collectionNumber,
+            memberList = memberList,
+            session = null,
+            version = version,
+            globalBook = globalBook,
+            processors = processors,
+            requestedAction = requestedAction,
+            atomic = atomic,
+        )
+
+        /**
+         * Encode the given raw object into `JBON2` bytes.
+         * @param raw the raw `JSON` object.
+         * @param databaseNumber the database-number of the database for which to encode the object.
+         * @param catalogNumber the catalog-number of the catalog for which to encode the object.
+         * @param collectionNumber the collection-number of the collection for which to encode the object.
+         * @param memberList the [MemberList] to use for encoding _(separates members into the storage book of the `JBON`)_.
+         * @param session the [write-session][IWriteSession] in which context this is performed; optional, used only by [member processors][IMemberProcessor].
+         * @param version the version in which to encode the raw object; if a session is given, it is read from it; otherwise this must be provided explicitly.
+         * @param globalBook the global book to use for data compression; defaults to `null` _(no global book compression)_.
+         * @param processors the processors to use to process members; defaults to `session.processors` if a session is given; otherwise `null` _(no processors)_.
+         * @param requestedAction an action the client wants to perform; defaults to `null` meaning auto-detected.
+         * @param atomic a hint if the operation **must** be atomic; defaults to `null` meaning auto-detected.
+         */
+        private fun encode(
+            raw: AnyObject,
+            databaseNumber: Long,
+            catalogNumber: Int,
+            collectionNumber: Int,
+            memberList: MemberList,
+            session: IWriteSession?,
+            version: Long,
+            globalBook: IBook?,
+            processors: MemberProcessorMap?,
+            requestedAction: Action?,
+            atomic: Boolean?,
         ): Tuple {
             // Find members.
             val idMember = memberList.useMember(StandardMembers.Id)
