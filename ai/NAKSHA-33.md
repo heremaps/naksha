@@ -31,12 +31,14 @@ dedicated database functions.
 - Ticket identifiers are lowercase (`db-01`). Each task has an addressable letter
   suffix (`db-01-a`, `db-01-b`, etc.) and its own status. Complete all sub-steps
   and the acceptance checks before marking the parent ticket done.
-- `PgWriter*` owns request validation, tuple encoding/reconstruction, operation
-  dispatch, result interpretation, and transaction bookkeeping.
+- `PgWriter*` owns request validation, feature-to-tuple encoding, operation
+  dispatch, response construction, and transaction bookkeeping.
 - `PgDatabase` owns schema/table/index DDL, partition management, row mutation SQL,
-  preparation/execution, and physical metadata queries. Its row operations use
-  explicit physical names/options and row data, rather than `Write`, `Tuple`,
-  JBON, or admin-feature business logic.
+  preparation/execution, physical metadata queries, and tuple persistence/result
+  reconstruction. Mutation callers supply immutable `NewTuple` wrappers and
+  receive final `Tuple` states. `PgRows` is an internal transport detail.
+  Request processing, member processors, feature encoding, and admin-feature
+  business logic remain outside `PgDatabase`.
 - Keep `PgRows` and its columnar binding/reading helpers, `PgRowsColumn`,
   `PgColumn` (the current singular class), and `PgIndex`. Keep logical
   `PgCatalog`/`PgCollection` wrappers. Small SQL-fragment helpers in these types
@@ -114,29 +116,32 @@ unfinished, and bootstrap/write functionality requires the tickets below.
 ### db-01 — Agree the database boundary and operation contracts
 **Status:** REVIEW · **Depends on:** none
 
-- **db-01-a · DONE:** Finalize `catalog_*`, `collection_*`, index, and `rows_*` signatures before
-  switching callers. Correct `collection_create_table_if_not_exits` spelling.
+- **db-01-a · DONE:** Finalize `catalog_*`, `collection_*`, index, and `rows_*` signatures before switching callers. Correct `collection_create_table_if_not_exits` spelling.
   - **Commit summary:** Define PgDatabase operation signatures, add index APIs, and fix collection creation naming.
   - **Review follow-up commit summary:** Document physical database operations and return nullable mutation errors while updating PgRows in place.
-- **db-01-b · DONE:** Pass explicit columns/indices and physical options: history mode, partition
-  count, shift, retain, backward, forward, and supported
-  storage/tablespace settings. Use a small options value if preferable to many
-  parameters; it must not become a replacement `PgTable` hierarchy.
+- **db-01-b · DONE:** Pass explicit columns/indices and physical options: history mode, partition count, shift, retain, backward, forward, and supported storage/tablespace settings. Use a small options value if preferable to many parameters; it must not become a replacement `PgTable` hierarchy.
   - **Commit summary:** Pass physical collection creation settings to PgDatabase while leaving partition management to pg_partman.
-- **db-01-c · TODO:** Define mutation input/result columns using `PgRows`: correlation key, previous
-  version/state, final version, operation outcome, and final byte-array/change-
-  count values needed by writers. Do not rely on PostgreSQL result row order.
-- **db-01-d · TODO:** Include expected-version data for atomic operations; the current purge API
-  accepting only `Array<Id>` is insufficient. Specify cursor/plan ownership and
-  SQL logging/EXPLAIN hooks so diagnostics survive the move.
+- **db-01-c · REVIEW:** Revise the plan for tuple-based persistence, immutable `NewTuple` input, thrown `NakshaException` errors, and UPDATE/UPSERT atomicity. Identify remaining decisions before implementation.
+  - **Commit summary:** Plan immutable NewTuple mutation inputs, tuple results, and exception-based database errors.
+- **db-01-d · TODO:** Agree previous-tuple validity/version matching, structured error details, DELETE/PURGE inputs/results, and batch behavior. Specify cursor/plan ownership and SQL logging/EXPLAIN hooks.
 - **db-01-e · TODO:** Write a compact behavior matrix for missing/live/deleted HEAD rows across
   CREATE, UPDATE, UPSERT, DELETE, PURGE and both history modes. Resolve the open
   decisions below before implementing the affected operations.
+- **db-01-f · TODO:** Implement immutable `NewTuple(tuple, previousTupleNumber)` in the model and remove `previousTupleNumber` from `Tuple`. Change `Tuple.encodeFeature`, `Tuple.encodeObject`, and `Tuple.encodeRaw` to return `NewTuple` and populate its predecessor metadata. Migrate encoding/bootstrap/writer/copy call sites without mutating cached tuples; verify JVM/JS compatibility and cache isolation.
+- **db-01-g · TODO:** Replace the reviewed-but-superseded row-buffer mutation signatures/KDoc in `PgDatabase` with `NewTuple` inputs/results and thrown `NakshaException`. INSERT returns supplied tuple states; UPDATE/UPSERT return ordered `List<NewTuple>` carrying actual predecessor information. Keep `PgRows` private to persistence implementation and wire agreed DELETE/PURGE signatures.
 
-**Done when:** signatures, result schema, rollback ownership, and behavior matrix
-are documented and agreed; no row-level database function needs tuple knowledge.
+**Done when:** the revised tuple contract, error details, rollback ownership, and
+behavior matrix are approved; immutable wrapper/model and API changes compile.
+Implementation starts only after review of this revised plan and resolution of
+the relevant decisions below. db-01-a/b remain historical completed steps; their
+mutation contract is superseded by db-01-c..db-01-g.
 
 #### db-01-a — API shape for review
+
+**Historical contract:** the row-mutation signatures/results below describe the
+completed db-01-a implementation, not the new target. The tuple-based contract
+in db-01-c supersedes its `PgRows`/`NakshaError?` mutation API. Schema/index and
+query preparation contracts remain applicable unless explicitly revised.
 
 All operations receive the caller's `PgConnection`. Schema/table arguments are
 unquoted physical names; quoting and qualification belong to `PgDatabase`.
@@ -228,6 +233,157 @@ Verification: **BUILD SUCCESSFUL** for JVM/JS main and JVM test-source compilati
 using the db-01-a command above; `git diff --check` passes. No runtime tests were
 run for this parameter-wiring change.
 
+#### db-01-c — Revised tuple persistence contract (plan in REVIEW)
+
+This section records the user's new direction. It changes the planned API, not
+production code in this documentation change.
+
+##### Confirmed direction
+
+- Remove the mutable `previousTupleNumber` field from `Tuple`. Cached tuples
+  represent immutable states and must not carry mutable operation expectations.
+- Introduce an immutable model wrapper (working shape):
+
+  ```kotlin
+  data class NewTuple(
+      val tuple: Tuple,
+      val previousTupleNumber: TupleNumber? = null
+  )
+  ```
+
+  The wrapper holds a tuple reference plus the expected predecessor. It has no
+  mutable fields; additional operation metadata can be added later. It is not a
+  new persisted tuple format or a cache entry. Migration must cover the existing
+  `Tuple` constructor/copy usages as well as future encoding paths; current
+  UPDATE/UPSERT writers attach predecessor information through `Tuple.copy`.
+- Change the new-state encoding entry points `Tuple.encodeFeature`,
+  `Tuple.encodeObject`, and `Tuple.encodeRaw` to return `NewTuple`. The encoder
+  already extracts and checks the source state's tuple number (`prevTn`); it
+  must return that information in `NewTuple.previousTupleNumber` together with
+  the encoded `tuple`, rather than attaching it to a cached/persisted `Tuple`.
+  Forwarding overloads preserve the wrapper from the underlying encoder.
+  Existing decoding/loading APIs continue returning `Tuple` because they read
+  persisted states, not new mutation instructions. Callers that only need the
+  encoded state (for example admin bootstrap) explicitly use `.tuple`.
+  Resolve the existing `atomic` hint's effect on predecessor metadata in db-01-d:
+  unconditional encoding must not accidentally become atomic merely because
+  the source feature contains a valid old tuple number.
+- A present, valid `NewTuple.previousTupleNumber` requests an atomic UPDATE;
+  otherwise UPDATE is unconditional. No separate atomic flag is needed at this
+  persistence boundary. Request adapters may still accept their existing flags
+  and translate them into wrapper metadata.
+- Operation failures construct a `NakshaError`, wrap it in `NakshaException`,
+  and throw. No nullable-error return and no success/failure union result.
+  SQL causes/context must survive exception mapping. Extend `NakshaError` only
+  with details needed to describe actionable conflicts.
+- `PgDatabase` takes new states and returns final persisted states, with
+  immutable `NewTuple` result wrappers for UPDATE/UPSERT. `PgRows`, helper columns, statement results, and row
+  correlation are internal. Inputs and cached tuples are never mutated.
+- INSERT requires every input `previousTupleNumber` to be null; otherwise throw
+  an illegal-argument `NakshaException` carrying `NakshaError.ILLEGAL_ARGUMENT`.
+  Validate this before purging or inserting. INSERT returns the given tuple states.
+- UPDATE returns `NewTuple` with `previousTupleNumber` set to the actual live
+  HEAD state replaced, including for unconditional UPDATE. The returned `tuple`
+  is intended to be the supplied new state; payload resolution remains an open
+  question below. Input predecessor metadata is an expectation; output metadata
+  describes the predecessor actually replaced.
+- UPSERT returns `NewTuple` with `previousTupleNumber` set when UPDATE was
+  performed, and null when INSERT was performed. Re-creation after purging a
+  DELETE HEAD counts as INSERT, so the result predecessor is null in that case.
+  The final tuple may differ from input due to branch-specific state changes.
+  Returned tuples/wrappers may reuse input references only when all values match;
+  inputs and cached tuples are never modified to populate result metadata.
+- Schema/index APIs continue receiving physical names/settings/descriptors.
+  The tuple persistence boundary still needs target columns/configuration;
+  tuples alone do not describe the collection's full physical schema.
+
+##### Operation sequence
+
+| Operation             | Planned behavior                                                                                                                                                                                                                                                             |
+|-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| INSERT | Require null input `previousTupleNumber`, otherwise throw illegal argument before mutation. Purge matching HEAD states only when DELETE, then insert. A live HEAD causes an error. Return the supplied tuple states. |
+| UPDATE, unconditional | Require an existing live HEAD and replace it. Return `NewTuple` with the new state and the actual replaced HEAD's tuple number as `previousTupleNumber`. |
+| UPDATE, atomic | Require a matching live HEAD according to the expected predecessor. On mismatch throw a structured error. Return `NewTuple` with the new state and the actual replaced HEAD's tuple number. |
+| UPSERT | Purge DELETE HEAD states, attempt INSERT, then UPDATE the existing-live branch atomically or unconditionally according to input metadata. Return `NewTuple` with predecessor set only for UPDATE, null for INSERT (including re-creation). |
+| DELETE / PURGE        | Inputs, atomicity, missing/deleted behavior, and returned-state meaning still require decisions below. Do not silently force these operations into a new-state wrapper when no new state exists.                                                                             |
+
+Archival remains the agreed root-table behavior: change predecessor `nv` when
+history is enabled; replace/remove current state without retaining history when
+disabled. pg_partman owns partition provisioning. The UPSERT sequence is a
+behavioral contract, not yet a choice of one SQL statement versus several;
+locking and concurrent INSERT/UPDATE races must preserve it.
+
+##### Proposed interface shape for review
+
+```kotlin
+// Schematic: target/schema options are omitted here, not removed from the API.
+fun rows_insert(/* target/config */, tuples: List<NewTuple>): List<Tuple>
+fun rows_update(/* target/config */, tuples: List<NewTuple>): List<NewTuple>
+fun rows_upsert(/* target/config */, tuples: List<NewTuple>): List<NewTuple>
+// Failure: throw NakshaException(error: NakshaError).
+```
+
+Use the common wrapper for new-state operations. INSERT rejects non-null
+predecessor metadata; UPDATE/UPSERT results expose the actual predecessor only
+when a live HEAD was updated.
+Proposed result ordering is input order, including mixed CREATE/UPDATE UPSERT
+batches; SQL result order must never be assumed.
+
+##### Remaining decisions before mutation implementation
+
+1. **Valid expected predecessor:** `TupleNumber` currently has no universal
+   `isValid` predicate. Define permitted version/action values and whether its
+   database/catalog/collection/feature must match the new tuple's address.
+   Proposed: null/invalid means unconditional as requested; a structurally valid
+   predecessor for a different feature/target is an illegal argument rather than
+   silently downgrading atomicity. Confirm this distinction.
+2. **Version comparison:** compare the complete tuple number/version including
+   action bits, or mask the low two action bits as current writer SQL does?
+   Keep the live-HEAD condition regardless of the choice.
+3. **Atomic UPSERT insert branch:** when an expected predecessor is present but
+   HEAD is missing or DELETE, does insertion still succeed? The stated sequence
+   applies atomicity to UPDATE, suggesting yes. Confirm whether an expectation
+   only constrains the live-HEAD UPDATE branch or the entire UPSERT.
+4. **Exact UPDATE/INSERT return state:** existing SQL may preserve byte arrays
+   marked `undefined`, increment change count, and normalize action bits. Returning
+   the original immutable tuple is only correct if its values already describe
+   the stored state. Decide whether callers must provide fully resolved new
+   states, or whether persistence may return a replacement tuple for these cases.
+   Do not mutate the input to reconcile the difference.
+5. **Error payload:** proposed conflict fields are operation, batch input index,
+   target/feature identity, expected tuple number, actual tuple number (nullable
+   when missing), and a reason distinguishing missing/deleted/version mismatch.
+   `NakshaError` already has database/catalog/collection/id and a code/message;
+   avoid a base-to-model dependency when adding tuple-number details (the base
+   `TupleNumber` type or serialized form is available). Decide code compatibility
+   (`CONFLICT` versus existing not-found/exists codes) and first-error versus
+   aggregated batch errors.
+6. **DELETE/PURGE:** choose selection arguments when no new tuple exists; decide
+   whether DELETE uses `NewTuple` for supplied tombstone states, how old-state or
+   empty-state DELETE works, and whether PURGE returns removed states or no
+   tuples. Confirm already-deleted HEAD and atomic no-op behavior.
+7. **Batch/transaction guarantee:** proposal is all-or-error with no partial result
+   list. A thrown exception can follow SQL changes; request-level savepoint/full
+   rollback must restore them before the caller continues. Decide handling of
+   duplicate feature numbers in one batch (reject or process in a defined order),
+   error correlation, and results for no-ops before defining internal row columns.
+
+##### Ordered implementation after plan approval
+
+1. Resolve the relevant decisions in db-01-d/e, including the return-state issue.
+2. Implement the immutable model migration in db-01-f, including `NewTuple`
+   return types and predecessor population across all three encoding entry
+   points. Check encoder forwarding, bootstrap, writers, cache users, and JVM/JS
+   exports; keep the project compiling at each step.
+3. Implement revised declarations/KDoc in db-01-g. Keep internal row-layout
+   choices within the database implementation rather than exposing helper columns.
+4. Implement request-level rollback/error context in db-05, then move INSERT,
+   UPDATE/UPSERT, and DELETE/PURGE SQL/reconstruction in db-06..db-08.
+
+Plan verification: reviewed current `Tuple`, `TupleNumber`, `NakshaError`, and all
+production `previousTupleNumber` usages. Documentation-only change; no compilation
+or tests run. This task remains REVIEW until the user approves the revised plan.
+
 ### db-02 — Verify pg_partman topology against the deployed version
 **Status:** TODO · **Depends on:** db-01
 
@@ -302,12 +458,14 @@ successful DDL becomes visible to other sessions only after commit.
 ### db-06 — Move CREATE into PgDatabase
 **Status:** TODO · **Depends on:** db-04, db-05
 
-- **db-06-a · TODO:** Implement `rows_insert`; make `PgWriterInsert` assemble rows, call the database,
-  and interpret results. Move its SQL/plan preparation out of the writer.
+- **db-06-a · TODO:** Implement tuple-based `rows_insert`; make `PgWriterInsert` supply new states
+  through the agreed wrapper and use returned tuples. Move row conversion, SQL,
+  and result reconstruction inside `PgDatabase`.
 - **db-06-b · TODO:** Insert through the root with nv=HEAD. Re-create over a tombstone archives by
   changing nv when history is ON; history-OFF replaces current state in place.
 - **db-06-c · TODO:** Preserve duplicate-live conflicts, lifecycle reset, undefined byte-array
-  handling, batch correlation, and returned tuples.
+  handling as agreed in db-01-d/e, batch correlation, and original-state return
+  guarantees. Fail with `NakshaException` carrying structured `NakshaError`.
 
 **Done when:** insert/re-create cases work in both history modes and CREATE has
 no dependency on old table descriptors or direct history INSERTs.
@@ -315,23 +473,31 @@ no dependency on old table descriptors or direct history INSERTs.
 ### db-07 — Move UPDATE and UPSERT into PgDatabase
 **Status:** TODO · **Depends on:** db-06
 
-- **db-07-a · TODO:** Implement `rows_update` / `rows_upsert` and switch their writers to delegation.
+- **db-07-a · TODO:** Implement tuple-based `rows_update` / `rows_upsert` and switch their writers
+  to `NewTuple` inputs and returned final tuples. Keep internal `PgRows` and
+  reconstruction in `PgDatabase`; never update cached tuple metadata.
 - **db-07-b · TODO:** Archive by UPDATE of nv through the root, then write the successor; with
   history OFF update HEAD in place. Prove SQL statement/CTE dependencies and
   concurrent-writer locking rather than assuming textual CTE order.
 - **db-07-c · TODO:** Preserve missing/deleted state checks, atomic expected-version semantics,
-  CREATE/UPDATE action selection, change counts, previous tuple numbers, and
-  undefined-versus-null byte-array behavior.
+  CREATE/UPDATE action selection, change counts, and undefined-versus-null
+  byte-array behavior according to db-01 decisions. Read atomic expectations from
+  immutable `NewTuple.previousTupleNumber`, not from a mutable `Tuple` field;
+  throw structured conflict exceptions. UPSERT purges DELETE HEAD, attempts
+  INSERT, then applies conditional/unconditional UPDATE to the live branch.
 - **db-07-d · TODO:** Close all plans/cursors and keep query logging/EXPLAIN available.
 
 **Done when:** update/upsert behavior and concurrent conflicts are verified in
-both history modes; writers contain orchestration and tuple reconstruction only.
+both history modes; writers handle orchestration/responses and `PgDatabase`
+returns final immutable tuples.
 
 ### db-08 — Move DELETE/PURGE and metadata deletion into PgDatabase
 **Status:** TODO · **Depends on:** db-07
 
 - **db-08-a · TODO:** Implement existing delete-with-old-state and purge behavior using root row
-  operations and the agreed behavior matrix; preserve atomic/no-op outcomes.
+  operations and the agreed behavior matrix; use the selection/result signatures
+  agreed in db-01-d/e and throw `NakshaException` on errors. Keep row transport
+  and tuple reconstruction internal; preserve atomic/no-op outcomes.
 - **db-08-b · TODO:** Keep tombstones non-null in nv and preserve temporal lifetime semantics.
 - **db-08-c · TODO:** Connect catalog/collection physical drop to successful logical metadata writes
   in the same transaction; do not drop physical data before state validation.
@@ -393,7 +559,11 @@ writer SQL depends on separate HEAD/history tables.
 3. **Delete scope:** default proposal is to move the existing old-state API first.
    Confirm PURGE behavior for an already-deleted HEAD (current SQL filters it out
    despite comments describing tombstone removal), and whether new-state/empty-
-   state deletes belong in this migration.
+    state deletes belong in this migration.
+4. **Tuple persistence contract:** resolve the seven decisions under db-01-c
+   before implementing affected mutations. The new `NewTuple`/exception contract
+   supersedes the earlier exposed row-buffer/nullable-error API and the original
+   strict physical-rows-only boundary described in `partman.md`.
 
 ## Progress log
 
@@ -410,6 +580,10 @@ writer SQL depends on separate HEAD/history tables.
 - db-01-b: added immutable physical creation options and wired writer
   CREATE/UPSERT and JVM admin bootstrap through the complete input contract.
   JVM/JS main and JVM test-source compilation pass; explicitly approved by the user.
+- db-01-c (REVIEW): revised the plan for immutable `NewTuple` expectations,
+  tuple-based persistence/results, internal row buffers, and thrown structured
+  errors. Added model/API migration tasks db-01-f/g and remaining behavioral
+  questions; no production code changed.
 - Rebase onto `33dc1827d` completed. Conflict resolutions preserve upstream's
   streaming API, identifier helpers, HTTP logging, collection-index normalization,
   and PostgreSQL 18.6 test image. Tuple copying retains both the existing
