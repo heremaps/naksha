@@ -11,11 +11,23 @@ dedicated database functions.
 
 - Work in ticket order, one reviewable change at a time. Update status and record
   verification/results here after each ticket.
-- After completing each step, add a short commit summary as a nested sub-point
-  directly below that task, and include it in the response for use after review
-  and approval.
-- Status: `TODO`, `ACTIVE`, `BLOCKED`, `DONE`. Dependencies must be complete before
-  a ticket is marked done.
+- Task lifecycle: `TODO` → `REVIEW` → `DONE`. Start with `TODO`; after implementing
+  and verifying a change, switch it to `REVIEW`. Only explicit user approval
+  permits switching it to `DONE`. Dependencies must be complete before a task
+  is marked done. A parent with work under review is `REVIEW` until all sub-steps
+  and acceptance checks are approved.
+- Maintain one short **Commit summary** as a nested sub-point directly below each
+  task, and include it in the response. Revise that same summary throughout review
+  to describe the current changes; do not append separate review/follow-up commit
+  summaries for an unapproved task.
+- Keep changes uncommitted during `REVIEW`. When the user explicitly approves a
+  task, mark it `DONE` and commit its intended changes using the agreed summary.
+  Inspect status, diff, and recent history first, and stage only the approved task's
+  files. Every such commit must include this exact sign-off trailer:
+
+  ```text
+  Signed-off-by: Alexander Lowey-Weber <alexander.weber@here.com>
+  ```
 - Ticket identifiers are lowercase (`db-01`). Each task has an addressable letter
   suffix (`db-01-a`, `db-01-b`, etc.) and its own status. Complete all sub-steps
   and the acceptance checks before marking the parent ticket done.
@@ -33,6 +45,10 @@ dedicated database functions.
   read SQL through the database boundary after writers work; avoid making this a
   prerequisite for every writer change.
 - Support clean/new databases, as agreed in `partman.md`.
+- Reviewed partition ownership: pg_partman manages history **and performance**
+  partitions. Naksha supplies configuration, not an initial transaction version
+  or manually provisioned partition set. This supersedes the caller-calculated
+  initial-version/start-boundary approach in the original `partman.md` plan.
 
 ## Current-code findings
 
@@ -96,16 +112,17 @@ integration tests were not run: the schema/row methods in `PgDatabase` remain
 unfinished, and bootstrap/write functionality requires the tickets below.
 
 ### db-01 — Agree the database boundary and operation contracts
-**Status:** ACTIVE · **Depends on:** none
+**Status:** REVIEW · **Depends on:** none
 
 - **db-01-a · DONE:** Finalize `catalog_*`, `collection_*`, index, and `rows_*` signatures before
   switching callers. Correct `collection_create_table_if_not_exits` spelling.
   - **Commit summary:** Define PgDatabase operation signatures, add index APIs, and fix collection creation naming.
   - **Review follow-up commit summary:** Document physical database operations and return nullable mutation errors while updating PgRows in place.
-- **db-01-b · TODO:** Pass explicit columns/indices and physical options: history mode, partition
-  count, shift, retain, backward, forward, initial finite version, and supported
+- **db-01-b · DONE:** Pass explicit columns/indices and physical options: history mode, partition
+  count, shift, retain, backward, forward, and supported
   storage/tablespace settings. Use a small options value if preferable to many
   parameters; it must not become a replacement `PgTable` hierarchy.
+  - **Commit summary:** Pass physical collection creation settings to PgDatabase while leaving partition management to pg_partman.
 - **db-01-c · TODO:** Define mutation input/result columns using `PgRows`: correlation key, previous
   version/state, final version, operation outcome, and final byte-array/change-
   count values needed by writers. Do not rely on PostgreSQL result row order.
@@ -170,9 +187,9 @@ Scope of this sub-step:
   explicitly throw `TODO` instead of silently doing nothing.
 - Defined return types and input categories before operation writers switch over.
   Existing writers continue using their current SQL pending db-06..db-08.
-- Creation options remain the existing `shift`/`partitions` parameters in code;
-  db-01-b expands them to the full option set. Exact row columns, expected-version
-  representation, diagnostics, and behavior rules remain db-01-c..db-01-e.
+- db-01-b expands the original `shift`/`partitions` parameters to the full option
+  set described below. Exact row columns, expected-version representation,
+  diagnostics, and behavior rules remain db-01-c..db-01-e.
 
 Verification: **BUILD SUCCESSFUL** for the following command; `git diff --check`
 also passes. No runtime tests were needed for these declarations and unused stubs.
@@ -180,6 +197,36 @@ also passes. No runtime tests were needed for these declarations and unused stub
 ```bash
 ./gradlew :here-naksha-lib-psql:compileKotlinJvm :here-naksha-lib-psql:compileKotlinJs :here-naksha-lib-psql:compileTestKotlinJvm --console=plain
 ```
+
+#### db-01-b — Physical collection creation inputs
+
+`collection_create_table_if_not_exists` now takes explicit column/index arrays
+and an immutable, internal `PgCollectionCreateOptions` value containing:
+
+- `storeHistory`, `partitions`, `shift`, `retain`, `backward`, and `forward`;
+- `storageClass`, an unquoted nullable `tablespace`, and `toastTupleTarget`.
+
+`PgCollection.creationOptions` snapshots collection settings and maps the storage
+class to `PgConfig.ephemeral_tablespace`, `brittle_tablespace`, or
+`temp_tablespace`; other classes use PostgreSQL's default tablespace. The helper
+keeps logical-to-physical configuration mapping outside `PgDatabase`. The options
+value contains only settings, with no hierarchy, connection, or executable SQL.
+
+Writer CREATE/UPSERT and JVM admin bootstrap use the same mapping and the
+initialized database's maximum tuple size. No transaction version is passed to
+collection creation. pg_partman owns history and performance partition
+provisioning; Naksha configures its interval, coverage, retention, and
+subpartitioning. The supported pg_partman configuration is verified in db-02,
+including how backward coverage is expressed without a caller-selected start.
+
+The creation KDoc documents history-OFF, initial coverage, retention, and
+create-only semantics. Validation/range arithmetic remain in db-03-a; physical
+DDL, persistence support, tablespace/TOAST application to leaves, and future
+partition provisioning remain in db-04. The creation method is still a DDL stub.
+
+Verification: **BUILD SUCCESSFUL** for JVM/JS main and JVM test-source compilation
+using the db-01-a command above; `git diff --check` passes. No runtime tests were
+run for this parameter-wiring change.
 
 ### db-02 — Verify pg_partman topology against the deployed version
 **Status:** TODO · **Depends on:** db-01
@@ -200,7 +247,7 @@ the supported DDL sequence is recorded here before library DDL is implemented.
 **Status:** TODO · **Depends on:** db-01, db-02
 
 - **db-03-a · TODO:** Complete validation of create-only partition options and checked interval,
-  retention, aligned start, and encoded-fn bounds calculations.
+  retention, and feature-number encoding/routing configuration for pg_partman.
 - **db-03-b · TODO:** Add equivalent Kotlin/JVM/JS fn conversion helpers and the initialization SQL
   functions specified in `partman.md`. Define conversion ownership once so
   `PgRows`, raw-id deletes, query arguments, metadata loads, and returned helper
@@ -360,6 +407,9 @@ writer SQL depends on separate HEAD/history tables.
   replaced unused row no-ops with explicit stubs, and corrected the collection
   creation method name. JVM/JS main and JVM test-source compilation pass; ready
    for review before db-01-b.
+- db-01-b: added immutable physical creation options and wired writer
+  CREATE/UPSERT and JVM admin bootstrap through the complete input contract.
+  JVM/JS main and JVM test-source compilation pass; explicitly approved by the user.
 - Rebase onto `33dc1827d` completed. Conflict resolutions preserve upstream's
   streaming API, identifier helpers, HTTP logging, collection-index normalization,
   and PostgreSQL 18.6 test image. Tuple copying retains both the existing

@@ -519,19 +519,22 @@ SELECT basics.*, procs.* FROM basics, procs;
      *
      * The root routes rows by `nv`; current rows use [Version.HEAD] and history rows use finite
      * successor versions. The default partition is restricted to HEAD. When performance partitioning
-     * is enabled, children route physical `fn` values into range leaves. pg_partman manages finite
-     * history ranges. Creation must finish initial partition/index setup before accepting writes.
+     * is enabled, children route physical `fn` values into range leaves. pg_partman owns both history
+     * and performance partition provisioning and maintenance. Naksha configures it rather than
+     * selecting or manually creating individual partitions. Creation must finish pg_partman's
+     * initial setup before accepting writes.
      * An existing root is left unchanged; this method does not reconcile or upgrade its schema.
      *
-     * The complete history/retention creation options are added in db-01-b.
      * @param conn the caller-owned connection; DDL is part of its transaction and is not committed here.
      * @param schema the unquoted name of the schema in which to create the table; must exist already.
      * @param table the unquoted name of the root table; creation is skipped if it exists.
      * @param columns the physical column definitions, including mandatory `fn`, `version`, and `nv`.
      * @param indices custom index descriptors; mandatory keys are created intrinsically.
-     * @param shift the history interval exponent; the finite range width is `1L shl shift`.
-     * @param partitions the number of physical feature-number range groups, between 1 and 256;
-     * `1` disables the second partitioning level.
+     * @param options create-only history, range coverage, durability, tablespace, and TOAST settings.
+     * History-OFF creates only HEAD and does not register history with pg_partman. With history ON,
+     * configure pg_partman's interval, backward/forward coverage, retention, and fn subpartitioning.
+     * Do not derive a starting partition from a caller-supplied transaction version. Validate the
+     * configuration before issuing DDL; do not infer options from cached logical objects.
      * @throws NakshaException if the creation failed.
      * @since 3.0
      */
@@ -541,8 +544,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         table: String,
         columns: Array<PgColumn>,
         indices: Array<PgIndex>,
-        shift: Int,
-        partitions: Int
+        options: PgCollectionCreateOptions
     ) {
         execute_sql(schema = schema, table = table) {
             val quotedSchema = quoteIdent(schema)
