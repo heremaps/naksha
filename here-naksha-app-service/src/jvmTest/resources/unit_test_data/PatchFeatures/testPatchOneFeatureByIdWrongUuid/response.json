@@ -1,5 +1,5 @@
 {
   "type": "ErrorResponse",
   "error": "Conflict",
-  "errorMessage": "Error encountered while writing the patched features to storage"
+  "errorMessage": "Max retry attempt for PATCH REST API reached, too many concurrent modification, error: Failed to execute unknown query, reason: ERROR: duplicate key value violates unique constraint \"um-mod-dev:topology$c_pkey\"\n  Detail: Key (fn)=(-2354656734725692669) already exists."
 }
