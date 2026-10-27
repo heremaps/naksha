@@ -461,7 +461,10 @@ SELECT basics.*, procs.* FROM basics, procs;
 
     /**
      * Returns the `OID` of the schema with the given name.
-     * @param conn the connection to use.
+     *
+     * Looks up the physical PostgreSQL namespace without creating it or loading Naksha metadata.
+     * The unsigned PostgreSQL OID is represented as a positive [Long].
+     * @param conn the caller-owned connection; this method does not commit or close it.
      * @param name the unquoted name of the schema.
      * @return if the schema exists, the 32-bit unsigned `OID` of the schema; `-1` if no such schema exists.
      * @since 3.0
@@ -475,10 +478,13 @@ SELECT basics.*, procs.* FROM basics, procs;
     }
 
     /**
-     * Create the schema of a catalog plus the `naksha~collections` table, if it does not yet exist.
+     * Create the physical schema of a catalog, if it does not yet exist.
      *
-     * This method works fine all catalogs, except for `naksha~admin`, where we need to create additionally the tables `naksha~catalogs`, `naksha~transactions`, and `naksha~books`.
-     * @param conn the connection to use.
+     * Internal tables are created separately through [collection_create_table_if_not_exists].
+     * Identifier collisions are checked by the caller's administrative writes.
+     * An existing schema is reused without modifying its contents. Creation participates in the
+     * caller's transaction; the signed return value distinguishes creation from reuse.
+     * @param conn the caller-owned connection; this method does not commit or close it.
      * @param name the unquoted name of the schema.
      * @return the 32-bit unsigned `OID` of the created schema, returns a negative `OID` if the schema existed already.
      * @since 3.0
@@ -493,7 +499,10 @@ SELECT basics.*, procs.* FROM basics, procs;
 
     /**
      * Drops the catalog schema cascading _(recursive, so including all tables, indices, ...)_.
-     * @param conn the connection to use.
+     *
+     * An absent schema is a successful no-op. Physical partition-management configuration associated
+     * with the schema must also be removed. The caller separately updates logical catalog metadata.
+     * @param conn the caller-owned connection; this method does not commit or close it.
      * @param name the unquoted name of the schema.
      * @since 3.0
      */
@@ -504,18 +513,27 @@ SELECT basics.*, procs.* FROM basics, procs;
     }
 
     /**
-     * Create the table with the specified criteria.
-     * @param conn the connection to use.
+     * Create a collection's physical root table, partitions, and indexes if the root does not exist.
+     *
+     * The root routes rows by `nv`; current rows use [Version.HEAD] and history rows use finite
+     * successor versions. The default partition is restricted to HEAD. When performance partitioning
+     * is enabled, children route physical `fn` values into range leaves. pg_partman manages finite
+     * history ranges. Creation must finish initial partition/index setup before accepting writes.
+     * An existing root is left unchanged; this method does not reconcile or upgrade its schema.
+     *
+     * The complete history/retention creation options are added in db-01-b.
+     * @param conn the caller-owned connection; DDL is part of its transaction and is not committed here.
      * @param schema the unquoted name of the schema in which to create the table; must exist already.
-     * @param table the unquoted name of the table to create; must not exist.
-     * @param columns the columns to create.
-     * @param indices the indices to create.
-     * @param shift the shift to be used for history.
-     * @param partitions the amount of performance partitions to create, must be a value between 1 and 256.
+     * @param table the unquoted name of the root table; creation is skipped if it exists.
+     * @param columns the physical column definitions, including mandatory `fn`, `version`, and `nv`.
+     * @param indices custom index descriptors; mandatory keys are created intrinsically.
+     * @param shift the history interval exponent; the finite range width is `1L shl shift`.
+     * @param partitions the number of physical feature-number range groups, between 1 and 256;
+     * `1` disables the second partitioning level.
      * @throws NakshaException if the creation failed.
      * @since 3.0
      */
-    internal fun collection_create_table_if_not_exits(
+    internal fun collection_create_table_if_not_exists(
         conn: PgConnection,
         schema: String,
         table: String,
@@ -542,9 +560,12 @@ SELECT basics.*, procs.* FROM basics, procs;
 
     /**
      * Drops the table cascading, if it exists. Does not fail, if the table does not exist.
-     * @param conn the connection to use.
+     *
+     * Removes the collection root and dependent HEAD/history leaves and indexes, together with its
+     * pg_partman registration and owned templates. Logical collection metadata is the caller's concern.
+     * @param conn the caller-owned connection; the drop is not committed here.
      * @param schema the unquoted name of the schema in which to drop the table; must exist already.
-     * @param table the unquoted name of the table to drop; must not exist.
+     * @param table the unquoted name of the root table to drop; may be absent.
      * @since 3.0
      */
     internal fun collection_drop_if_exists(conn: PgConnection, schema: String, table: String) {
@@ -553,27 +574,225 @@ SELECT basics.*, procs.* FROM basics, procs;
         }
     }
 
-    // TODO: When executing upsert, update or delete, we need to verify the result of the purge query.
-    //       It tells us which state each row had before execution. When the state is not the expected one,
-    //       we will actually do a rollback and return back the error. This avoids all kind of
-    //       conditional queries, everything just relies upon an index-only scan of the primary-key index,
-    //       so above (nv, fn, version). It will be faster when being successful (that is what we hope for
-    //       in most cases), while we will be slower when a real conflict arises (which we expect to be rare).
-    internal fun rows_insert(conn: PgConnection, schema: String, table: String, rows: PgRows) {
-        execute_sql(schema = schema, table = table) {
+    /**
+     * Create a custom root index, including the configuration needed by future partitions.
+     * [schema] and [table] are unquoted physical names; [index] is a descriptor, not a table object.
+     * Mandatory indexes are intrinsic to collection creation.
+     *
+     * Creates/attaches the index for existing children and updates the supported partition-management
+     * configuration so future children receive it. Index method and INCLUDE rules must be validated
+     * before issuing DDL; the per-method contract is agreed separately.
+     * @param conn the caller-owned connection; this method does not commit or close it.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name, not a partition name.
+     * @param index the custom key columns/order, includes, and conditional predicate descriptor.
+     * @throws NakshaException if index validation or DDL fails.
+     * @since 3.0
+     */
+    internal fun collection_create_index(conn: PgConnection, schema: String, table: String, index: PgIndex): Unit =
+        TODO("db-04: create root index and configure future partitions")
 
-        }
-    }
-    internal fun rows_upsert(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
-    internal fun rows_update(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
-    internal fun rows_purge(conn: PgConnection, schema: String, table: String, ids: Array<Id>) {}
-    // TODO: Executing a query generally should now be easier.
-    //       We need the WHERE builder, but can we simplify this, so we can test better and just use from writer?
-    internal fun rows_query(conn: PgConnection, schema: String, table: String, query: PgQuery) {}
-    internal fun rows_delete_keep_old_state(conn: PgConnection, schema: String, table: String, ids: Array<Id>?) {}
-    // TODO: Future delete mechanisms: first for storage-api, second as new standard way, because it is much faster and sufficient
-    internal fun rows_delete_with_new_state(conn: PgConnection, schema: String, table: String, rows: PgRows) {}
-    internal fun rows_delete_without_state(conn: PgConnection, schema: String, table: String) {}
+    /**
+     * Drop a custom root index, its attached child indexes, and its future-partition configuration.
+     * An absent index is a successful no-op. This operation does not remove mandatory collection keys.
+     * @param conn the caller-owned connection; this method does not commit or close it.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name.
+     * @param index the descriptor identifying the custom index to remove.
+     * @throws NakshaException if the DDL fails.
+     * @since 3.0
+     */
+    internal fun collection_drop_index(conn: PgConnection, schema: String, table: String, index: PgIndex): Unit =
+        TODO("db-04: drop root index and update future partitions")
+
+    // Row-operation boundary (ai/NAKSHA-33.md, db-01-a):
+    // - schema/table are unquoted physical root names; conn belongs to the caller.
+    // - PgRows carries input columns/values and is updated in place with results.
+    // - storeHistory selects archival versus current-only mutation.
+    // - version is the operation's transaction version; delete/purge need it even without a new row.
+    // - Mutation return: null on success, NakshaError on failure; the caller chooses whether to throw.
+    // - Results identify the input and previous/final state. Exact columns follow in db-01-c.
+    // - The caller interprets outcomes and owns transaction rollback; these functions never commit.
+    // - An error can follow partial mutation: rows are not a successful result and the caller must
+    //   roll back the operation before continuing. Returning an error does not repair an aborted SQL transaction.
+
+    /**
+     * Insert new HEAD states, first purging existing HEAD states only when their action is DELETE.
+     *
+     * For each input feature number, an existing DELETE state is removed from HEAD before insertion.
+     * With history enabled, purging archives that state by changing its `nv`, allowing PostgreSQL to
+     * route it into history; without history it is removed without an archive. An existing CREATE or
+     * UPDATE state must not be purged: inserting over a live state reports an error. New states are
+     * inserted through the root with `nv = Version.HEAD.number` and CREATE action.
+     *
+     * Database results update [rows] in place. No transaction is committed or rolled back here.
+     * @param conn the caller-owned mutable connection; it is not closed by this method.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name.
+     * @param rows the mutable batch containing feature numbers, new versions, and payload columns;
+     * updated in place with the final inserted state and operation results.
+     * @param storeHistory whether purged DELETE states are archived instead of discarded.
+     * @return `null` when the whole batch succeeds; otherwise the [NakshaError] for the caller to
+     * inspect or throw. On error the caller must roll back the operation; [rows] may be partially updated.
+     * @since 3.0
+     */
+    internal fun rows_insert(
+        conn: PgConnection, schema: String, table: String, rows: PgRows, storeHistory: Boolean
+    ): NakshaError? = TODO("db-06: insert rows through the root")
+
+    /**
+     * Replace current HEAD states or insert missing states through the collection root.
+     *
+     * Existing HEAD states are removed from HEAD (archived by changing `nv` when history is enabled)
+     * before the successor is inserted. A live predecessor produces UPDATE action; an absent or DELETE
+     * predecessor starts a new lifecycle with CREATE action. With history disabled, an existing HEAD
+     * row is replaced in place and retains `nv = Version.HEAD.number`.
+     *
+     * Final versions, previous states, change counts, and retained payload values are written back to
+     * [rows] for the caller to interpret. No transaction is committed or rolled back here.
+     * @param conn the caller-owned mutable connection; it is not closed by this method.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name.
+     * @param rows the mutable batch of new states and any expected-version data; receives results in
+     * place, including values retained when an input byte-array uses the undefined sentinel.
+     * @param storeHistory whether replaced HEAD states are archived rather than discarded.
+     * @return `null` on batch success, or a [NakshaError] for caller-controlled error handling.
+     * On error the caller must roll back the operation and must not treat [rows] as successful results.
+     * @since 3.0
+     */
+    internal fun rows_upsert(
+        conn: PgConnection, schema: String, table: String, rows: PgRows, storeHistory: Boolean
+    ): NakshaError? = TODO("db-07: upsert rows through the root")
+
+    /**
+     * Replace existing live HEAD states, reporting missing/deleted states or expected-version conflicts.
+     *
+     * With history enabled, changes to the old HEAD's `nv` archive it before inserting its successor
+     * with UPDATE action and `nv = Version.HEAD.number`. With history disabled, the HEAD row is updated
+     * in place without changing `nv` away from HEAD. The operation preserves undefined byte-array
+     * values and writes final payload/control values and previous-state information back to [rows].
+     * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name.
+     * @param rows the mutable batch of successor states and optional expected versions; updated in
+     * place with final states and operation results.
+     * @param storeHistory whether previous HEAD states are archived rather than overwritten.
+     * @return `null` on batch success, or a [NakshaError] that the caller may inspect or throw.
+     * The caller must roll back the operation on error; [rows] may be partially updated.
+     * @since 3.0
+     */
+    internal fun rows_update(
+        conn: PgConnection, schema: String, table: String, rows: PgRows, storeHistory: Boolean
+    ): NakshaError? = TODO("db-07: update rows through the root")
+
+    /**
+     * Remove selected current rows. [rows] carries explicit row selection and optional expected versions.
+     * No nullable selection or implicit whole-table operation is supported.
+     *
+     * Successful purges leave no HEAD row. With history enabled, prior states are archived and the
+     * feature's closed lifetime is recorded; without history, current state is removed directly.
+     * Handling of already-deleted states is finalized by the delete behavior matrix (db-01-e).
+     * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name.
+     * @param rows the mutable selection batch containing feature numbers and optional expected versions;
+     * updated in place with previous states and purge outcomes, not new HEAD states.
+     * @param version the transaction version used to close lifetimes; operation action bits are derived from it.
+     * @param storeHistory whether removed states/lifetime markers are retained in finite history ranges.
+     * @return `null` on batch success, or a [NakshaError] for caller-controlled error handling.
+     * On error the caller must roll back the operation; [rows] may be partially updated.
+     * @since 3.0
+     */
+    internal fun rows_purge(
+        conn: PgConnection, schema: String, table: String, rows: PgRows, version: Long, storeHistory: Boolean
+    ): NakshaError? = TODO("db-08: purge selected rows through the root")
+
+    /**
+     * Write a deleted state preserving the old payload.
+     * [rows] carries row selection; [columns] describes the payload to preserve and return.
+     *
+     * Archives the prior live HEAD by changing `nv` when history is enabled, then creates a HEAD
+     * tombstone with DELETE action while retaining the old payload. Without history, the existing
+     * HEAD is changed in place. Tombstones use `nv = Version.HEAD.number`, never SQL NULL.
+     * Missing/already-deleted and atomic outcomes follow the behavior matrix agreed in db-01-e.
+     * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name.
+     * @param rows the mutable selection/expected-version batch; receives final deleted states,
+     * preserved payload values, previous-state information, and outcomes in place.
+     * @param columns the physical columns to preserve from the predecessor and include in the result.
+     * @param version the transaction version from which to derive the tombstone's DELETE version.
+     * @param storeHistory whether prior live states are archived before creating tombstones.
+     * @return `null` on batch success, or a [NakshaError] that the caller may inspect or throw.
+     * The caller must roll back the operation on error; [rows] may be partially updated.
+     * @since 3.0
+     */
+    internal fun rows_delete_keep_old_state(
+        conn: PgConnection, schema: String, table: String, rows: PgRows,
+        columns: Array<PgColumn>, version: Long, storeHistory: Boolean
+    ): NakshaError? = TODO("db-08: delete selected rows preserving their payload")
+
+    /**
+     * Write HEAD tombstones using the supplied replacement payload instead of the old live payload.
+     *
+     * If supported by the agreed delete scope (db-01-e), archives prior HEAD states when history is
+     * enabled and writes the supplied states with DELETE action and `nv = Version.HEAD.number`.
+     * With history disabled, existing HEAD rows are changed in place. This declaration does not yet
+     * define missing/already-deleted-state behavior; that belongs to the delete behavior matrix.
+     * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name.
+     * @param rows the mutable batch of new tombstone versions/payloads and optional expected versions;
+     * updated in place with final states and operation outcomes.
+     * @param storeHistory whether replaced HEAD states are archived rather than discarded.
+     * @return `null` on batch success, or a [NakshaError] for caller-controlled error handling.
+     * The caller must roll back the operation on error; [rows] may be partially updated.
+     * @since 3.0
+     */
+    internal fun rows_delete_with_new_state(
+        conn: PgConnection, schema: String, table: String, rows: PgRows, storeHistory: Boolean
+    ): NakshaError? = TODO("db-08: decide support for client-supplied deleted states")
+
+    /**
+     * Write minimal HEAD tombstones for selected features, without retaining their old payload.
+     *
+     * If supported by the agreed delete scope (db-01-e), archives prior states when history is enabled
+     * and writes DELETE states containing the required control/identity values and no old user payload.
+     * Required physical columns must still satisfy table constraints. With history disabled, current
+     * state is replaced in place. Selection is explicit; this is never a whole-table operation.
+     * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
+     * @param schema the unquoted physical schema containing the root.
+     * @param table the unquoted physical collection root name.
+     * @param rows the mutable feature-number/expected-version selection batch; receives final minimal
+     * deleted states, previous-state information, and outcomes in place.
+     * @param version the transaction version from which to derive the tombstone's DELETE version.
+     * @param storeHistory whether prior HEAD states are archived rather than discarded.
+     * @return `null` on batch success, or a [NakshaError] that the caller may inspect or throw.
+     * The caller must roll back the operation on error; [rows] may be partially updated.
+     * @since 3.0
+     */
+    internal fun rows_delete_without_state(
+        conn: PgConnection, schema: String, table: String, rows: PgRows, version: Long, storeHistory: Boolean
+    ): NakshaError? = TODO("db-08: decide support for minimal deleted states")
+
+    /**
+     * Prepare a physical SQL query without depending on the logical [PgQuery] wrapper.
+     * The caller binds values and closes the returned plan and its cursors.
+     * [schema] and [table] supply error context; [sql] contains the qualified query.
+     * This only prepares the query: it does not execute it, consume rows, or modify an input batch.
+     * @param conn the caller-owned connection on which the returned plan will execute.
+     * @param schema the unquoted physical schema for error reporting.
+     * @param table the unquoted physical root table for error reporting.
+     * @param sql the query text, with qualified/quoted relation names and parameter placeholders.
+     * @param argTypes the PostgreSQL parameter type names in placeholder order.
+     * @return the prepared plan; its lifetime must not exceed the connection's lifetime.
+     * @throws NakshaException if preparation fails; unlike mutations, this method returns a plan,
+     * not an error status.
+     * @since 3.0
+     */
+    internal fun rows_query(
+        conn: PgConnection, schema: String, table: String, sql: String, argTypes: Array<String>
+    ): PgPlan = TODO("db-09: prepare physical row query")
 }
 
 /**
