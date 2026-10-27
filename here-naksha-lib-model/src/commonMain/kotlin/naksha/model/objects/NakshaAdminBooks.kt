@@ -1,7 +1,7 @@
 package naksha.model.objects
 
-import naksha.base.ADMIN_CATALOG_TEXT
-import naksha.base.BOOKS_COL_TEXT
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_TEXT
+import naksha.base.Id.IdCompanion.BOOKS_COL_TEXT
 import naksha.base.Id
 import naksha.base.Id.IdCompanion.ADMIN_CATALOG_ID
 import naksha.base.Id.IdCompanion.BOOKS_COL_ID

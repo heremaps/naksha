@@ -14,7 +14,9 @@ import naksha.base.Platform.PlatformCompanion.gzipDeflate
 import naksha.base.Platform.PlatformCompanion.gzipInflate
 import naksha.base.PlatformList
 import naksha.base.PlatformMap
+import naksha.base.PlatformObject
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_get
+import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_set
 import naksha.base.WeakRef
 import naksha.jbon.IBook
 import naksha.model.objects.Member
@@ -31,6 +33,7 @@ import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.UNDEFINED
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
+import naksha.base.PlatformListApi.PlatformListApiCompanion.array_set
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.illegalArg

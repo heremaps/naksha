@@ -2,6 +2,8 @@
 
 package naksha.psql
 
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_TEXT
+
 import naksha.base.*
 import naksha.model.Tuple
 import naksha.model.objects.NakshaCatalog

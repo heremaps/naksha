@@ -2,8 +2,8 @@
 
 package naksha.model.request
 
-import naksha.base.ADMIN_CATALOG_TEXT
-import naksha.base.TRANSACTIONS_COL_TEXT
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_TEXT
+import naksha.base.Id.IdCompanion.TRANSACTIONS_COL_TEXT
 import naksha.base.Version
 import naksha.base.illegalState
 import naksha.model.objects.StandardMembers

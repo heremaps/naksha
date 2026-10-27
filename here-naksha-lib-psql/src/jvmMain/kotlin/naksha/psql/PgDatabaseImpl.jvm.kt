@@ -1,7 +1,7 @@
 package naksha.psql
 
-import naksha.base.ADMIN_CATALOG_QUOTED
-import naksha.base.ADMIN_CATALOG_TEXT
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_QUOTED
+import naksha.base.Id.IdCompanion.ADMIN_CATALOG_TEXT
 import naksha.base.Action
 import naksha.base.Id
 import naksha.base.Platform.PlatformCompanion.logger
