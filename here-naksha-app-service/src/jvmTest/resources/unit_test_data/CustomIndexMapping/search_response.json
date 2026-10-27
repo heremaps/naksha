@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "id": "match",
+      "type": "Feature",
+      "properties": {
+        "score": 51,
+        "labels": [
+          "red"
+        ]
+      }
+    }
+  ]
+}

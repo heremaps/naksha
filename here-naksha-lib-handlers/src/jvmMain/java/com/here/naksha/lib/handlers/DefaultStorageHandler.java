@@ -26,6 +26,8 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.util.CollectionIndexPolicy;
+import naksha.model.objects.CustomIndexMappingUtil;
+import com.here.naksha.lib.core.util.PropertyMemberQueryTranslator;
 import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.base.JvmBoxingUtil;
 import naksha.model.IStorage;
@@ -48,6 +50,7 @@ import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.apache.commons.lang3.time.StopWatch;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -131,6 +134,19 @@ public class DefaultStorageHandler extends AbstractEventHandler {
     }
   }
 
+  /**
+   * Translates a property search on custom index mappings into member queries, so that the storage can use the
+   * generated indices. Returns the original request, when the collection has no mappings or the query can't be translated.
+   */
+  protected @NotNull ReadFeatures translatePropertyQuery(
+      final @NotNull ReadFeatures readFeatures, final @Nullable NakshaCollection collection) {
+    if (!CustomIndexMappingUtil.hasMappings(collection)) {
+      return readFeatures;
+    }
+    final ReadFeatures translated = PropertyMemberQueryTranslator.adapt(readFeatures, collection);
+    return translated != null ? translated : readFeatures;
+  }
+
   private String extractMapIdFromStorageProps(@NotNull IStorage storage) {
     NakshaStorage storageConfig = storage.getConfig();
     if(storageConfig == null) {
@@ -196,8 +212,9 @@ public class DefaultStorageHandler extends AbstractEventHandler {
       final @NotNull OperationAttempt currentAttempt,
       final @NotNull StopWatch storageTimer) {
     logger.info("Processing ReadFeatures against {}", operationData.getCollectionId());
+    final ReadFeatures readFeatures = translatePropertyQuery((ReadFeatures) operationData.getRequest(), operationData.getCollection());
     Response response = measuredStorageSupplier(
-        () -> singleRead(operationData.getSessionOptions(), operationData.getStorageImpl(), (ReadFeatures) operationData.getRequest()), storageTimer);
+        () -> singleRead(operationData.getSessionOptions(), operationData.getStorageImpl(), readFeatures), storageTimer);
     if (response instanceof ErrorResponse) {
       ErrorResponse errorResponse = (ErrorResponse) response;
       return reattemptFeatureRequest(operationData, currentAttempt, errorResponse, storageTimer);

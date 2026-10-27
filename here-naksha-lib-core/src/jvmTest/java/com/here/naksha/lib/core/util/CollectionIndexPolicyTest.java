@@ -43,7 +43,7 @@ class CollectionIndexPolicyTest {
     assertFalse(fnNv.isConditional());
     assertSame(XyzIndices.XyzTags, first.get(0));
     assertSame(StandardIndices.Geometry, first.get(1));
-    assertNotSame(first.get(2), second.get(2));
+    assertSame(XyzIndices.HUB_SLIM_INDICES.get(2), first.get(2));
   }
 
   @Test

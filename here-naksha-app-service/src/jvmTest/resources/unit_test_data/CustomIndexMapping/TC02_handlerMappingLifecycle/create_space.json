@@ -1,0 +1,9 @@
+{
+  "id": "mapped_handler_space",
+  "type": "Space",
+  "title": "Handler-backed Space",
+  "description": "Lifecycle test",
+  "eventHandlerIds": [
+    "mapped_handler_lifecycle"
+  ]
+}

@@ -55,7 +55,12 @@ public class IntHandlerForSpaces extends AdminFeatureEventHandler<Space> {
       return basicValidation;
     }
     Space space = (Space) write.getFeature();
-    return handlerExistenceValidation(space);
+    Response handlerExistence = handlerExistenceValidation(space);
+    if (handlerExistence instanceof ErrorResponse) {
+      return handlerExistence;
+    }
+    return collectionMappingValidation(
+        write, space.getProperties().getCollection(), saved -> saved.getProperties().getCollection());
   }
 
   private @NotNull Response handlerExistenceValidation(Space space) {
