@@ -26,7 +26,7 @@ import com.here.naksha.lib.core.models.naksha.EventTarget;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
 import com.here.naksha.lib.core.util.CollectionIndexPolicy;
-import naksha.model.objects.CustomIndexMappings;
+import naksha.model.objects.CustomIndexMappingUtil;
 import com.here.naksha.lib.core.util.PropertyMemberQueryTranslator;
 import naksha.model.util.CustomStoragePropertiesUtil;
 import naksha.base.JvmBoxingUtil;
@@ -140,7 +140,7 @@ public class DefaultStorageHandler extends AbstractEventHandler {
    */
   protected @NotNull ReadFeatures translatePropertyQuery(
       final @NotNull ReadFeatures readFeatures, final @Nullable NakshaCollection collection) {
-    if (!CustomIndexMappings.hasMappings(collection)) {
+    if (!CustomIndexMappingUtil.hasMappings(collection)) {
       return readFeatures;
     }
     final ReadFeatures translated = PropertyMemberQueryTranslator.adapt(readFeatures, collection);

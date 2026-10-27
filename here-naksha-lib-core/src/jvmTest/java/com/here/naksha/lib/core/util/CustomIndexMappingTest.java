@@ -31,13 +31,13 @@ class CustomIndexMappingTest {
 
   /** Validates the definition like a configuration save, the members and indices are applied when they are read. */
   private NakshaCollection compiled(NakshaCollection definition) {
-    CustomIndexMappings.validate(definition);
+    CustomIndexMappingUtil.validate(definition);
     return definition;
   }
 
   private Member memberForPath(NakshaCollection compiled, JsonPath path) {
     return compiled.useMembers().stream()
-        .filter(member -> member != null && CustomIndexMappings.samePath(member.getPath(), path))
+        .filter(member -> member != null && CustomIndexMappingUtil.samePath(member.getPath(), path))
         .findFirst().orElse(null);
   }
 
@@ -59,8 +59,8 @@ class CustomIndexMappingTest {
     NakshaCollection input = definition(mapping("score", MemberType.INT32));
     String original = Platform.toJSON(input);
     // Configuration handling and the declared members and indices don't change the definition.
-    CustomIndexMappings.validate(input);
-    assertTrue(CustomIndexMappings.hasMappings(input));
+    CustomIndexMappingUtil.validate(input);
+    assertTrue(CustomIndexMappingUtil.hasMappings(input));
     assertNull(input.getMembers());
     assertNull(input.getIndices());
     assertEquals(original, Platform.toJSON(input));
@@ -115,19 +115,19 @@ class CustomIndexMappingTest {
     // An existing cm01 for another property must not be taken as the member of properties.score.
     NakshaCollection otherPath = definition(mapping("score", MemberType.INT32));
     otherPath.setMembers(new MemberList(new Member("cm01", MemberType.INT32, new JsonPath("properties", "speed"))));
-    assertThrows(NakshaException.class, () -> CustomIndexMappings.validate(otherPath));
+    assertThrows(NakshaException.class, () -> CustomIndexMappingUtil.validate(otherPath));
     assertThrows(NakshaException.class, otherPath::useMembers);
     NakshaCollection otherType = definition(mapping("score", MemberType.INT32));
     otherType.setMembers(new MemberList(new Member("cm01", MemberType.STRING, new JsonPath("properties", "score"))));
-    assertThrows(NakshaException.class, () -> CustomIndexMappings.validate(otherType));
+    assertThrows(NakshaException.class, () -> CustomIndexMappingUtil.validate(otherType));
     NakshaCollection otherIndex = definition(mapping("score", MemberType.INT32));
     otherIndex.setIndices(new IndexList(new Index("ci01", "id")));
-    assertThrows(NakshaException.class, () -> CustomIndexMappings.validate(otherIndex));
+    assertThrows(NakshaException.class, () -> CustomIndexMappingUtil.validate(otherIndex));
     // The same definitions are reused, e.g. for a collection read back from the storage.
     NakshaCollection same = definition(mapping("score", MemberType.INT32));
     same.setMembers(new MemberList(new Member("cm01", MemberType.INT32, new JsonPath("properties", "score"))));
     same.setIndices(new IndexList(new Index("ci01", "cm01")));
-    CustomIndexMappings.validate(same);
+    CustomIndexMappingUtil.validate(same);
     assertEquals(List.of("ci01"), indexNames(same));
   }
 
@@ -137,12 +137,12 @@ class CustomIndexMappingTest {
     for (int i = 0; i < capacity; i++) mappings.add(mapping("p" + i));
     NakshaCollection fits = definition(mappings.toArray(new CustomIndexMapping[0]));
     fits.setMembers(new MemberList());
-    CustomIndexMappings.validate(fits);
+    CustomIndexMappingUtil.validate(fits);
     assertEquals(MemberList.MAX_MEMBERS, fits.useMembers().size());
     mappings.add(mapping("p" + capacity));
     NakshaCollection tooMany = definition(mappings.toArray(new CustomIndexMapping[0]));
     tooMany.setMembers(new MemberList());
-    assertThrows(NakshaException.class, () -> CustomIndexMappings.validate(tooMany));
+    assertThrows(NakshaException.class, () -> CustomIndexMappingUtil.validate(tooMany));
   }
 
   @Test void appliedMappingsAreNotProcessedAgain() {
@@ -203,7 +203,7 @@ class CustomIndexMappingTest {
   @Test void missingNullOrScalarMappingsAreAbsent() {
     for (String raw : Arrays.asList(null, "null", "42", "\"properties.a\"")) {
       NakshaCollection definition = fromJson(raw);
-      assertFalse(CustomIndexMappings.hasMappings(definition), raw);
+      assertFalse(CustomIndexMappingUtil.hasMappings(definition), raw);
       assertNull(definition.getMembers(), raw);
     }
   }

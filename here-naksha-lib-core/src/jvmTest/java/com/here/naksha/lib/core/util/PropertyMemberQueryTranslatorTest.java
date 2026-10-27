@@ -85,7 +85,7 @@ class PropertyMemberQueryTranslatorTest {
   }
 
   /**
-   * Fails when {@link CustomIndexMappings} accepts a mapping type that {@link PropertyMemberQueryTranslator} doesn't fully
+   * Fails when {@link CustomIndexMappingUtil} accepts a mapping type that {@link PropertyMemberQueryTranslator} doesn't fully
    * translate: translate it in translateLeaf and add a sample query here, or don't accept it as mapping type.
    */
   @Test void translatesEveryMappingType() {
@@ -103,7 +103,7 @@ class PropertyMemberQueryTranslatorTest {
     while (types.hasNext()) {
       MemberType type = types.next();
       try {
-        CustomIndexMappings.validate(schema(type));
+        CustomIndexMappingUtil.validate(schema(type));
       } catch (NakshaException e) {
         continue;
       }

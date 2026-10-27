@@ -23,7 +23,7 @@ import com.here.naksha.lib.core.IEventHandler;
 import com.here.naksha.lib.core.INaksha;
 import com.here.naksha.lib.core.models.naksha.Space;
 import com.here.naksha.lib.core.models.naksha.SpaceProperties;
-import naksha.model.objects.CustomIndexMappings;
+import naksha.model.objects.CustomIndexMappingUtil;
 import com.here.naksha.lib.hub.EventPipelineFactory;
 import naksha.model.*;
 import naksha.base.NakshaError;
@@ -177,7 +177,7 @@ public class NHSpaceStorageWriter extends NHSpaceStorageReader implements IWrite
     Response upsertSpaceRes = null;
     // A collection with custom index mappings is created on the first feature write, and its mappings can't change on
     // update (see IntHandlerForSpaces), so the Space update doesn't touch the storage.
-    if (collection != null && !CustomIndexMappings.hasMappings(collection)) {
+    if (collection != null && !CustomIndexMappingUtil.hasMappings(collection)) {
       // submit Update Collection request to Custom Space based pipeline
       WriteRequest upsertCollectionReq = new WriteRequest().add(new Write().upsertCollection(collection));
       upsertSpaceRes = executeSingleCollectionWrite(upsertCollectionReq, space.getId());

@@ -384,7 +384,7 @@ open class NakshaCollection() : NakshaFeature() {
      * The result is cached until the members or the mappings are replaced.
      * @return the members list of this collection.
      * @since 3.0
-     * @throws NakshaException with [ILLEGAL_STATE]; or with [ILLEGAL_ARGUMENT], if the mappings are invalid, see [CustomIndexMappings.validate].
+     * @throws NakshaException with [ILLEGAL_STATE]; or with [ILLEGAL_ARGUMENT], if the mappings are invalid, see [CustomIndexMappingUtil.validate].
      */
     open fun useMembers(): MemberList {
         val current = this.members
@@ -393,8 +393,8 @@ open class NakshaCollection() : NakshaFeature() {
         if (cached != null && cached === current && mappings === validatedMappings
             && this.indices === validatedIndices) return cached
         // Validate before changing anything, so invalid mappings leave the collection unchanged.
-        val mapped = CustomIndexMappings.hasMappings(this)
-        if (mapped) CustomIndexMappings.validate(this)
+        val mapped = CustomIndexMappingUtil.hasMappings(this)
+        if (mapped) CustomIndexMappingUtil.validate(this)
         var write = false
         var list = this.members
         if (list == null) {
@@ -406,12 +406,12 @@ open class NakshaCollection() : NakshaFeature() {
         }
         if (mapped) {
             val indices = this.indices!!
-            for (member in CustomIndexMappings.generatedMembers(this)) {
+            for (member in CustomIndexMappingUtil.generatedMembers(this)) {
                 if (list.get(member.name) == null) {
                     list.add(member)
                     write = true
                 }
-                val indexName = CustomIndexMappings.indexName(member) ?: continue
+                val indexName = CustomIndexMappingUtil.indexName(member) ?: continue
                 if (indices.none { it?.name == indexName }) indices.add(Index(indexName, member.name))
             }
         }

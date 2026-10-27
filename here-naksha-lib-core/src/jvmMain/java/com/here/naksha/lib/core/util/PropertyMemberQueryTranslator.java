@@ -1,7 +1,7 @@
 package com.here.naksha.lib.core.util;
 
 
-import naksha.model.objects.CustomIndexMappings;
+import naksha.model.objects.CustomIndexMappingUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -116,7 +116,7 @@ public final class PropertyMemberQueryTranslator {
     PQuery array = (PQuery) or.get(1);
     if (!AnyOp.CONTAINS.equals(object.getOp()) || !AnyOp.CONTAINS.equals(array.getOp())) return null;
     if (!(object.getValue() instanceof String) || !("[" + object.getValue() + "]").equals(array.getValue())) return null;
-    if (!CustomIndexMappings.samePath(object.getProperty().getPath(), array.getProperty().getPath())) return null;
+    if (!CustomIndexMappingUtil.samePath(object.getProperty().getPath(), array.getProperty().getPath())) return null;
     return object;
   }
 
@@ -137,7 +137,7 @@ public final class PropertyMemberQueryTranslator {
   /** Returns the member of exactly the given path or, for a tag-map, of the parent of a direct key. */
   private static @Nullable Member memberFor(JsonPath path, List<Member> members) {
     for (Member member : members) {
-      if (CustomIndexMappings.samePath(member.getPath(), path)) return member;
+      if (CustomIndexMappingUtil.samePath(member.getPath(), path)) return member;
       if (MemberType.TAG_MAP.equals(member.getDataType()) && isDirectKey(member.getPath(), path)) return member;
     }
     return null;
@@ -154,7 +154,7 @@ public final class PropertyMemberQueryTranslator {
   private static @Nullable Member exactTagMap(JsonPath path, List<Member> members) {
     Member member = memberFor(path, members);
     return member != null && MemberType.TAG_MAP.equals(member.getDataType())
-        && CustomIndexMappings.samePath(member.getPath(), path) ? member : null;
+        && CustomIndexMappingUtil.samePath(member.getPath(), path) ? member : null;
   }
 
   private static @Nullable Op translateLeaf(PQuery query, List<Member> members) {

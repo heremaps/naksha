@@ -15,9 +15,9 @@ import kotlin.jvm.JvmStatic
  * @since 3.0
  */
 @JsExport
-class CustomIndexMappings private constructor() {
+class CustomIndexMappingUtil private constructor() {
 
-    companion object CustomIndexMappings_C {
+    companion object CustomIndexMappingUtil_C {
 
         /**
          * The member types that can be mapped, these are the types the property query translator fully supports.
