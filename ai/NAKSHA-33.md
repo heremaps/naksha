@@ -10,7 +10,7 @@ in [partman.md](partman.md), replacing the old table-object hierarchy with
 dedicated database functions.
 
 - Work in ticket order, one reviewable change at a time. Update the ticket `State`
-  in the table and record verification/results below the ticket after each change.
+  in the table and record verification/results in the ticket's `Details` section.
 - Ticket states, in order: `TODO` → `PLANNING` → `IN_PROGRESS` → `IN_REVIEW` →
   `DONE`.
   - `TODO`: not started.
@@ -32,9 +32,12 @@ dedicated database functions.
   ```text
   Signed-off-by: Alexander Lowey-Weber <alexander.weber@here.com>
   ```
-- Ticket identifiers are lowercase (`db-01`). Each ticket has an addressable letter
-  suffix (`db-01-a`, `db-01-b`, etc.) describing its work breakdown. A ticket is
-  `DONE` only when all of its sub-steps and acceptance checks are complete.
+- Tickets are flat leaves with no nested children. A `db-NN` parent groups
+  `db-NN-a`, `db-NN-b`, … children; each child links back to its parent through the
+  table's `Depends On` column. A child is `DONE` when its own acceptance checks
+  pass; a parent is `DONE` once all of its children are.
+- Completed tickets move to [NAKSHA-33-DONE.md](NAKSHA-33-DONE.md) and are struck
+  out (`~~db-00~~`) in the table so they stay linked but out of the way.
 - `PgWriter*` owns request validation, feature-to-tuple encoding, operation
   dispatch, response construction, and transaction bookkeeping.
 - `PgDatabase` owns schema/table/index DDL, partition management, row mutation SQL,
@@ -78,75 +81,83 @@ Some prerequisites are already partly implemented: collection retain/backward/
 forward properties, low-byte `Id` routing, the 256-partition limit, and extension
 installation entries. Verify and finish these rather than duplicating them.
 
-## Ordered Tickets
+## Tickets
 
 | Ticket # | Summary | Depends On | State | Commit |
 | --- | --- | --- | --- | --- |
-| [db-00](#db-00--restore-a-compilable-baseline) | Restore a compilable baseline | — | `DONE` | Restore compilable psql baseline and rebase import fixes |
+| ~~[db-00](NAKSHA-33-DONE.md#db-00--restore-a-compilable-baseline)~~ | ~~Restore a compilable baseline~~ | — | `DONE` | Restore compilable psql baseline and rebase import fixes |
 | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | Agree the database boundary and operation contracts | — | `IN_REVIEW` | — |
+| [db-01-a](#db-01-a--finalize-operation-signatures) | Finalize operation signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
+| [db-01-b](#db-01-b--pass-physical-creation-options) | Pass physical creation options | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
+| [db-01-c](#db-01-c--revise-the-tuple-persistence-contract) | Revise the tuple persistence contract | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `IN_REVIEW` | — |
+| [db-01-d](#db-01-d--document-identity-validation-and-preconditions) | Document identity validation and preconditions | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
+| [db-01-e](#db-01-e--write-the-behavior-matrix) | Write the behavior matrix | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
+| [db-01-f](#db-01-f--migrate-the-model-to-immutable-newtuple) | Migrate the model to immutable NewTuple | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
+| [db-01-g](#db-01-g--replace-the-row-buffer-signatures) | Replace the row-buffer signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | Verify pg_partman topology against the deployed version | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
+| [db-02-a](#db-02-a--run-the-pgpartman-integration-spike) | Run the pg_partman integration spike | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
+| [db-02-b](#db-02-b--verify-nv-ranges-and-default-child-partitioning) | Verify nv ranges and default-child partitioning | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
+| [db-02-c](#db-02-c--verify-finite-children-fn-leaves-and-indexes) | Verify finite-children fn leaves and indexes | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
+| [db-02-d](#db-02-d--verify-maintenance-and-cleanup) | Verify maintenance and cleanup | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
 | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | Finish the physical row and naming contract | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts), [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
+| [db-03-a](#db-03-a--validate-create-only-partition-options) | Validate create-only partition options | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| [db-03-b](#db-03-b--add-fn-conversion-helpers-and-init-sql) | Add fn conversion helpers and init SQL | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| [db-03-c](#db-03-c--keep-feature-numbers-logical) | Keep feature numbers logical | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| [db-03-d](#db-03-d--make-head-nv-non-null) | Make HEAD nv non-null | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| [db-03-e](#db-03-e--establish-the-root-naming-rule) | Establish the root naming rule | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
 | [db-04](#db-04--implement-schema-collection-and-index-operations) | Implement schema, collection, and index operations | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version), [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| [db-04-a](#db-04-a--implement-schema-operations) | Implement schema operations | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04-b](#db-04-b--implement-collection-creation) | Implement collection creation | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04-c](#db-04-c--move-storage-settings-out-of-table-classes) | Move storage settings out of table classes | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04-d](#db-04-d--move-index-execution-into-pgdatabase) | Move index execution into PgDatabase | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04-e](#db-04-e--implement-collection-and-schema-drop) | Implement collection and schema drop | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04-f](#db-04-f--route-bootstrap-and-create-upsert-preparation) | Route bootstrap and create-upsert preparation | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | Make write failures restore database and session state | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts), [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-05-a](#db-05-a--cover-ddl-and-writes-in-the-rollback-boundary) | Cover DDL and writes in the rollback boundary | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
+| [db-05-b](#db-05-b--complete-error-mapping-context) | Complete error-mapping context | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
+| [db-05-c](#db-05-c--publish-local-changes-after-commit) | Publish local changes after commit | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
+| [db-05-d](#db-05-d--fail-the-whole-batch-on-validation-error) | Fail the whole batch on validation error | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
+| [db-05-e](#db-05-e--enforce-one-mutation-per-feature-per-version) | Enforce one mutation per feature per version | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
+| [db-05-f](#db-05-f--verify-deterministic-input-sorting) | Verify deterministic input sorting | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
 | [db-06](#db-06--move-create-into-pgdatabase) | Move CREATE into PgDatabase | [db-04](#db-04--implement-schema-collection-and-index-operations), [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
+| [db-06-a](#db-06-a--implement-tuple-based-insert) | Implement tuple-based insert | [db-06](#db-06--move-create-into-pgdatabase) | `TODO` | — |
+| [db-06-b](#db-06-b--insert-through-the-root-at-head) | Insert through the root at HEAD | [db-06](#db-06--move-create-into-pgdatabase) | `TODO` | — |
+| [db-06-c](#db-06-c--preserve-conflicts-and-drop-the-undefined-sentinel) | Preserve conflicts and drop the undefined sentinel | [db-06](#db-06--move-create-into-pgdatabase) | `TODO` | — |
 | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | Move UPDATE and UPSERT into PgDatabase | [db-06](#db-06--move-create-into-pgdatabase) | `TODO` | — |
+| [db-07-a](#db-07-a--implement-tuple-based-update-and-upsert) | Implement tuple-based update and upsert | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
+| [db-07-b](#db-07-b--archive-by-nv-update-through-the-root) | Archive by nv update through the root | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
+| [db-07-c](#db-07-c--preserve-atomic-semantics-and-remove-merging) | Preserve atomic semantics and remove merging | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
+| [db-07-d](#db-07-d--close-plans-and-cursors-keep-logging) | Close plans and cursors, keep logging | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
 | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | Move DELETE/PURGE and metadata deletion into PgDatabase | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
+| [db-08-a](#db-08-a--implement-id-and-guid-delete-and-purge) | Implement ID and GUID delete, and purge | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
+| [db-08-b](#db-08-b--keep-tombstones-non-null-in-nv) | Keep tombstones non-null in nv | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
+| [db-08-c](#db-08-c--connect-physical-drop-to-metadata-writes) | Connect physical drop to metadata writes | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
+| [db-08-d](#db-08-d--replace-the-generic-delete-stubs) | Replace the generic delete stubs | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
 | [db-09](#db-09--consolidate-supporting-reads-and-remove-the-table-hierarchy) | Consolidate supporting reads and remove the table hierarchy | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
+| [db-09-a](#db-09-a--add-tuple-loading-and-query-functions) | Add tuple loading and query functions | [db-09](#db-09--consolidate-supporting-reads-and-remove-the-table-hierarchy) | `TODO` | — |
+| [db-09-b](#db-09-b--finish-root-query-sql-and-filtering) | Finish root query SQL and filtering | [db-09](#db-09--consolidate-supporting-reads-and-remove-the-table-hierarchy) | `TODO` | — |
+| [db-09-c](#db-09-c--use-partition-catalogs-for-topology) | Use partition catalogs for topology | [db-09](#db-09--consolidate-supporting-reads-and-remove-the-table-hierarchy) | `TODO` | — |
+| [db-09-d](#db-09-d--remove-the-old-table-hierarchy) | Remove the old table hierarchy | [db-09](#db-09--consolidate-supporting-reads-and-remove-the-table-hierarchy) | `TODO` | — |
+| [db-09-e](#db-09-e--remove-manual-partition-creation) | Remove manual partition creation | [db-09](#db-09--consolidate-supporting-reads-and-remove-the-table-hierarchy) | `TODO` | — |
 | [db-10](#db-10--complete-integrated-acceptance-checks) | Complete integrated acceptance checks | [db-09](#db-09--consolidate-supporting-reads-and-remove-the-table-hierarchy) | `TODO` | — |
+| [db-10-a](#db-10-a--compile-common-jvm-and-js-sources) | Compile common, JVM, and JS sources | [db-10](#db-10--complete-integrated-acceptance-checks) | `TODO` | — |
+| [db-10-b](#db-10-b--run-the-focused-existing-suites) | Run the focused existing suites | [db-10](#db-10--complete-integrated-acceptance-checks) | `TODO` | — |
+| [db-10-c](#db-10-c--add-missing-integration-coverage) | Add missing integration coverage | [db-10](#db-10--complete-integrated-acceptance-checks) | `TODO` | — |
+| [db-10-d](#db-10-d--verify-indexes-and-query-plans) | Verify indexes and query plans | [db-10](#db-10--complete-integrated-acceptance-checks) | `TODO` | — |
+| [db-10-e](#db-10-e--follow-the-test-running-guidance) | Follow the test-running guidance | [db-10](#db-10--complete-integrated-acceptance-checks) | `TODO` | — |
 
-### db-00 — Restore a compilable baseline
-
-- **db-00-a:** Adapted stale identifier/member/transaction APIs in psql writers, row helpers,
-  tests, and downstream Java callers. Added a test-only `adminConnection` helper
-  using `newConnection`; existing tests remain included.
-- **db-00-b:** Temporarily excluded superseded implementations through the psql Gradle source
-  sets, preserving the source files for reference:
-  - JVM: `PgAdminCatalogGc.jvm.kt`, `PsqlAdminCatalog.kt`, `PsqlCatalog.kt`,
-    `PsqlCollection.kt`, `PsqlStorageListener.kt`.
-  - JS: `PgAdminCatalogManager.js.kt`, `Plv8Cluster.kt`, `Plv8Cursor.kt`,
-    `Plv8Plan.kt`, `Plv8Storage.kt`.
-- **db-00-c:** Legacy writers temporarily construct HEAD/history descriptors locally rather
-  than restoring removed fields on `PgCollection`. Remove these adapters in
-  db-06..db-09 together with the legacy hierarchy and Gradle exclusions.
-- **db-00-d:** Legacy table DDL temporarily uses the existing 2048-byte TOAST default and no
-  explicit tablespace. Restore supported physical settings in db-04.
-- **db-00-e:** Added required database accessors to storage implementations/test doubles.
-  `NHAdminStorage` delegates to its physical storage; virtual/remote/generated
-  storages explicitly throw unsupported-operation until their database semantics
-  are implemented.
-- **db-00-f:** Corrected `MemberType` initialization validation: byte alignments are positive
-  powers of two shared by multiple types, not contiguous sort-order identifiers.
-  The old check prevented even the database-independent `PgRowsTest` from starting.
-
-**Verification:** all configured JVM main/test Kotlin compilation tasks and JS
-main compilation tasks pass (including Java compilation dependencies):
-
-```bash
-NAKSHA_SUPPRESS_PERF_TEST=true ./gradlew compileKotlinJvm compileTestKotlinJvm compileKotlinJs :here-naksha-lib-psql:jvmTest --tests 'naksha.psql.PgRowsTest' --tests 'naksha.psql.PsqlInstanceTest' --tests 'naksha.psql.PsqlQueryParsingTest' --tests 'naksha.psql.PgExceptionMapperTest' --console=plain
-```
-
-Result: **BUILD SUCCESSFUL**, all **21 selected tests passed**. Database-backed
-integration tests were not run: the schema/row methods in `PgDatabase` remain
-unfinished, and bootstrap/write functionality requires the tickets below.
+## Details
 
 ### db-01 — Agree the database boundary and operation contracts
 
-- **db-01-a:** Finalize `catalog_*`, `collection_*`, index, and `rows_*` signatures before switching callers. Correct `collection_create_table_if_not_exits` spelling.
-- **db-01-b:** Pass explicit columns/indices and physical options: history mode, partition count, shift, retain, backward, forward, and supported storage/tablespace settings. Use a small options value if preferable to many parameters; it must not become a replacement `PgTable` hierarchy.
-- **db-01-c:** Revise the plan for tuple-based persistence, immutable `NewTuple` input, thrown `NakshaException` errors, and UPDATE/UPSERT atomicity. Identify remaining decisions before implementation.
-- **db-01-d:** Implement/document the settled identity validation, expected/actual error versions and reconstruction helpers, and caller-owned savepoint, mutation-uniqueness, and sorting preconditions. Specify cursor/plan ownership and SQL logging/EXPLAIN hooks.
-- **db-01-e:** Write a compact behavior matrix for missing/live/deleted HEAD rows across
-  CREATE, UPDATE, UPSERT, DELETE, PURGE and both history modes.
-- **db-01-f:** Implement immutable `NewTuple(tuple, previousTupleNumber)` in the model and remove `previousTupleNumber` from `Tuple`. Change `Tuple.encodeFeature`, `Tuple.encodeObject`, and `Tuple.encodeRaw` to return `NewTuple` and populate its predecessor metadata. Migrate encoding/bootstrap/writer/copy call sites without mutating cached tuples; verify JVM/JS compatibility and cache isolation.
-- **db-01-g:** Replace the reviewed-but-superseded row-buffer mutation signatures/KDoc in `PgDatabase` with `Id` schema/catalog and table/collection arguments, `NewTuple` inputs/results, and thrown `NakshaException`. INSERT returns supplied tuple states; UPDATE/UPSERT return ordered `List<NewTuple>` carrying actual predecessor information. Keep `PgRows` private to persistence implementation and wire agreed DELETE/PURGE signatures.
+Parent ticket; the work is decomposed into `db-01-a` … `db-01-g`, each of which
+depends on this parent. **Done when:** the revised tuple contract, error details,
+rollback ownership, and behavior matrix are approved; immutable wrapper/model and
+API changes compile. Implementation starts only after review of this revised plan
+and resolution of the relevant decisions below. db-01-a/b remain historical
+completed steps; their mutation contract is superseded by db-01-c..db-01-g.
 
-**Done when:** the revised tuple contract, error details, rollback ownership, and
-behavior matrix are approved; immutable wrapper/model and API changes compile.
-Implementation starts only after review of this revised plan and resolution of
-the relevant decisions below. db-01-a/b remain historical completed steps; their
-mutation contract is superseded by db-01-c..db-01-g.
-
-#### db-01-a — API shape for review
+### db-01-a — Finalize operation signatures
 
 **Historical contract:** the row-mutation signatures/results below describe the
 completed db-01-a implementation, not the new target. The tuple-based contract
@@ -195,7 +206,7 @@ The function KDoc describes each operation, every argument, in-place result
 handling, and caller-owned transaction/error handling. Remaining delete-policy
 decisions are still tracked under db-01-e.
 
-Scope of this sub-step:
+Scope:
 
 - Corrected the creation-method typo at the declaration and all three callers.
 - Added the missing index entry points and made all unused row-operation stubs
@@ -213,7 +224,7 @@ also passes. No runtime tests were needed for these declarations and unused stub
 ./gradlew :here-naksha-lib-psql:compileKotlinJvm :here-naksha-lib-psql:compileKotlinJs :here-naksha-lib-psql:compileTestKotlinJvm --console=plain
 ```
 
-#### db-01-b — Physical collection creation inputs
+### db-01-b — Pass physical creation options
 
 `collection_create_table_if_not_exists` now takes explicit column/index arrays
 and an immutable, internal `PgCollectionCreateOptions` value containing:
@@ -243,12 +254,12 @@ Verification: **BUILD SUCCESSFUL** for JVM/JS main and JVM test-source compilati
 using the db-01-a command above; `git diff --check` passes. No runtime tests were
 run for this parameter-wiring change.
 
-#### db-01-c — Revised tuple persistence contract (plan in IN_REVIEW)
+### db-01-c — Revise the tuple persistence contract
 
 This section records the user's new direction. It changes the planned API, not
 production code in this documentation change.
 
-##### Confirmed direction
+#### Confirmed direction
 
 - Remove the mutable `previousTupleNumber` field from `Tuple`. Cached tuples
   represent immutable states and must not carry mutable operation expectations.
@@ -336,7 +347,7 @@ production code in this documentation change.
   naming/quoting inside `PgDatabase` using the agreed naming policy; accepting
   `Id` does not itself settle literal versus mapped relation names.
 
-##### Operation sequence
+#### Operation sequence
 
 | Operation             | Planned behavior                                                                                                                                                                                                                                                             |
 |-----------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -355,7 +366,7 @@ disabled. pg_partman owns partition provisioning. The UPSERT sequence is a
 behavioral contract, not yet a choice of one SQL statement versus several;
 locking and concurrent INSERT/UPDATE races must preserve it.
 
-##### Proposed interface shape for review
+#### Proposed interface shape for review
 
 ```kotlin
 // Schematic: connection and collection configuration are omitted, not removed.
@@ -388,7 +399,7 @@ when a live HEAD was updated.
 Proposed result ordering is input order, including mixed CREATE/UPDATE UPSERT
 batches; SQL result order must never be assumed.
 
-##### Settled decisions
+#### Settled decisions
 
 - **Complete new states:** callers provide fully encoded tuples, including all
    payload/member values. Mutations replace the entire state; no column is
@@ -554,7 +565,7 @@ batches; SQL result order must never be assumed.
      aggregated errors, batch-index fields, or new error-code taxonomy are
      required by this contract; preserve the existing applicable codes.
 
-##### Ordered implementation after plan approval
+#### Ordered implementation after plan approval
 
 1. Obtain user approval of the revised plan. Implement the settled contract
    details and operation matrix in db-01-d/e.
@@ -571,179 +582,332 @@ Plan verification: reviewed current `Tuple`, `TupleNumber`, `NakshaError`, and a
 production `previousTupleNumber` usages. Documentation-only change; no compilation
 or tests run. This task remains IN_REVIEW until the user approves the revised plan.
 
+### db-01-d — Document identity validation and preconditions
+
+Implement/document the settled identity validation, expected/actual error
+versions and reconstruction helpers, and caller-owned savepoint,
+mutation-uniqueness, and sorting preconditions. Specify cursor/plan ownership and
+SQL logging/EXPLAIN hooks.
+
+### db-01-e — Write the behavior matrix
+
+Write a compact behavior matrix for missing/live/deleted HEAD rows across
+CREATE, UPDATE, UPSERT, DELETE, PURGE and both history modes.
+
+### db-01-f — Migrate the model to immutable NewTuple
+
+Implement immutable `NewTuple(tuple, previousTupleNumber)` in the model and
+remove `previousTupleNumber` from `Tuple`. Change `Tuple.encodeFeature`,
+`Tuple.encodeObject`, and `Tuple.encodeRaw` to return `NewTuple` and populate its
+predecessor metadata. Migrate encoding/bootstrap/writer/copy call sites without
+mutating cached tuples; verify JVM/JS compatibility and cache isolation.
+
+### db-01-g — Replace the row-buffer signatures
+
+Replace the reviewed-but-superseded row-buffer mutation signatures/KDoc in
+`PgDatabase` with `Id` schema/catalog and table/collection arguments, `NewTuple`
+inputs/results, and thrown `NakshaException`. INSERT returns supplied tuple
+states; UPDATE/UPSERT return ordered `List<NewTuple>` carrying actual predecessor
+information. Keep `PgRows` private to persistence implementation and wire agreed
+DELETE/PURGE signatures.
+
 ### db-02 — Verify pg_partman topology against the deployed version
 
-- **db-02-a:** Run the small pg_partman v5.0.1 integration spike described in `partman.md`.
-- **db-02-b:** Verify native `nv` ranges, restricted default/HEAD, and a default child that
-  is itself range-partitioned by physical `fn`.
-- **db-02-c:** Verify how finite children acquire `fn` leaves and indexes: distinguish
-  template-table behavior from actual pg_partman subpartition configuration.
-  Record the supported function signatures and creation order.
-- **db-02-d:** Verify maintenance with HEAD populated, rejection of uncovered finite `nv`,
-  and configuration/template cleanup when dropping a parent or schema.
+Parent ticket; decomposed into `db-02-a` … `db-02-d`. **Done when:** a
+reproducible topology works with `partitions = 1` and `> 1`; the supported DDL
+sequence is recorded before library DDL is implemented.
 
-**Done when:** a reproducible topology works with `partitions = 1` and `> 1`;
-the supported DDL sequence is recorded here before library DDL is implemented.
+### db-02-a — Run the pg_partman integration spike
+
+Run the small pg_partman v5.0.1 integration spike described in `partman.md`.
+
+### db-02-b — Verify nv ranges and default-child partitioning
+
+Verify native `nv` ranges, restricted default/HEAD, and a default child that is
+itself range-partitioned by physical `fn`.
+
+### db-02-c — Verify finite-children fn leaves and indexes
+
+Verify how finite children acquire `fn` leaves and indexes: distinguish
+template-table behavior from actual pg_partman subpartition configuration. Record
+the supported function signatures and creation order.
+
+### db-02-d — Verify maintenance and cleanup
+
+Verify maintenance with HEAD populated, rejection of uncovered finite `nv`, and
+configuration/template cleanup when dropping a parent or schema.
 
 ### db-03 — Finish the physical row and naming contract
 
-- **db-03-a:** Complete validation of create-only partition options and checked interval,
-  retention, and feature-number encoding/routing configuration for pg_partman.
-- **db-03-b:** Add equivalent Kotlin/JVM/JS fn conversion helpers and the initialization SQL
-  functions specified in `partman.md`. Define conversion ownership once so
-  `PgRows`, raw-id deletes, query arguments, metadata loads, and returned helper
-  aliases cannot double-convert or omit conversion.
-- **db-03-c:** Keep API/tuple feature numbers logical. Follow `partman.md` for when physical
-  encoding applies; preserve the id/fn invariant using logical fn semantics.
-- **db-03-d:** Make HEAD `nv = Version.HEAD.number`, remove NULL translation in `PgRows`, and
-  make the physical column non-null.
-- **db-03-e:** Establish one schema-qualified, correctly quoted root naming rule across
-  creation, mutations, and reads; resolve text names versus `Id.*Name()` mapping.
+Parent ticket; decomposed into `db-03-a` … `db-03-e`. **Done when:** conversion
+round-trips and range coverage are verified, and all new low-level operations
+agree on names, physical fn, and non-null nv.
 
-**Done when:** conversion round-trips and range coverage are verified, and all
-new low-level operations agree on names, physical fn, and non-null nv.
+### db-03-a — Validate create-only partition options
+
+Complete validation of create-only partition options and checked interval,
+retention, and feature-number encoding/routing configuration for pg_partman.
+
+### db-03-b — Add fn conversion helpers and init SQL
+
+Add equivalent Kotlin/JVM/JS fn conversion helpers and the initialization SQL
+functions specified in `partman.md`. Define conversion ownership once so `PgRows`,
+raw-id deletes, query arguments, metadata loads, and returned helper aliases
+cannot double-convert or omit conversion.
+
+### db-03-c — Keep feature numbers logical
+
+Keep API/tuple feature numbers logical. Follow `partman.md` for when physical
+encoding applies; preserve the id/fn invariant using logical fn semantics.
+
+### db-03-d — Make HEAD nv non-null
+
+Make HEAD `nv = Version.HEAD.number`, remove NULL translation in `PgRows`, and
+make the physical column non-null.
+
+### db-03-e — Establish the root naming rule
+
+Establish one schema-qualified, correctly quoted root naming rule across
+creation, mutations, and reads; resolve text names versus `Id.*Name()` mapping.
 
 ### db-04 — Implement schema, collection, and index operations
 
-- **db-04-a:** Implement schema lookup/create/drop with explicit existence results and
-  unsigned OID handling. Keep logical identifier-collision checks in admin writes.
-- **db-04-b:** Implement collection creation from every supplied `PgColumn`, root constraints,
-  mandatory indexes, restricted HEAD/default, partman setup/retention, initial
-  maintenance, and optional fn range subpartitions. History-OFF gets HEAD only
-  and no partman history registration.
-- **db-04-c:** Move reusable storage settings, TOAST, constraints, and tablespace behavior
-  out of the old table classes; make intentional changes explicit.
-- **db-04-d:** Keep `PgIndex` as a descriptor. Move create/drop execution into `PgDatabase`,
-  honoring key order, method/opclass, predicates, includes, and future partitions.
-  Never infer HEAD status from a relation name to choose storage parameters.
-- **db-04-e:** Implement collection/schema drop with verified partman/template cleanup.
-- **db-04-f:** Route JVM admin bootstrap and writer CREATE/UPSERT preparation through this
-  same API, including creation of each catalog's internal collections table.
+Parent ticket; decomposed into `db-04-a` … `db-04-f`. **Done when:** clean
+bootstrap and user collection creation/drop work through `PgDatabase`; required
+constraints/indexes reach current and future leaves.
 
-**Done when:** clean bootstrap and user collection creation/drop work through
-`PgDatabase`; required constraints/indexes reach current and future leaves.
+### db-04-a — Implement schema operations
+
+Implement schema lookup/create/drop with explicit existence results and
+unsigned OID handling. Keep logical identifier-collision checks in admin writes.
+
+### db-04-b — Implement collection creation
+
+Implement collection creation from every supplied `PgColumn`, root constraints,
+mandatory indexes, restricted HEAD/default, partman setup/retention, initial
+maintenance, and optional fn range subpartitions. History-OFF gets HEAD only
+and no partman history registration.
+
+### db-04-c — Move storage settings out of table classes
+
+Move reusable storage settings, TOAST, constraints, and tablespace behavior out
+of the old table classes; make intentional changes explicit.
+
+### db-04-d — Move index execution into PgDatabase
+
+Keep `PgIndex` as a descriptor. Move create/drop execution into `PgDatabase`,
+honoring key order, method/opclass, predicates, includes, and future partitions.
+Never infer HEAD status from a relation name to choose storage parameters.
+
+### db-04-e — Implement collection and schema drop
+
+Implement collection/schema drop with verified partman/template cleanup.
+
+### db-04-f — Route bootstrap and create-upsert preparation
+
+Route JVM admin bootstrap and writer CREATE/UPSERT preparation through this same
+API, including creation of each catalog's internal collections table.
 
 ### db-05 — Make write failures restore database and session state
 
-- **db-05-a:** Put DDL preparation and all operation groups within the request's rollback
-  boundary. Handle failure before savepoint creation and the first write request.
-  Verify the existing `PgWriter` savepoint mechanism covers preparation and all
-  mutations, and rolls back on exception; `PgDatabase` assumes this caller guarantee.
-- **db-05-b:** Complete schema/table context in error mapping on JVM and PLV8, preserving
-  missing-schema/table information needed by session cache invalidation.
-- **db-05-c:** Publish local catalog/collection changes only after successful commit; discard
-  or restore local metadata and bookkeeping after request/full rollback.
-- **db-05-d:** Ensure post-mutation expected-version validation can fail an entire batch
-  without leaving successful rows or DDL behind, while preserving earlier
-  successful requests in the same session where appropriate.
-- **db-05-e:** Enforce one mutation per fully qualified feature identity per
-  transaction/version in the session and `PgWriter`, using transaction-object
-  modification tracking. Reject duplicates within/across requests before database
-  invocation; restore tracking on request rollback. Keep this caller-side invariant
-  out of `PgDatabase`.
-- **db-05-f:** Verify caller-side deterministic input sorting for every
-  mutation path, including ID/GUID DELETE and PURGE; document trusted ordering
-  preconditions and preserve input/result correlation without database-side sorting.
+Parent ticket; decomposed into `db-05-a` … `db-05-f`. **Done when:** a mixed
+batch failure restores both SQL and session-local state; successful DDL becomes
+visible to other sessions only after commit.
 
-**Done when:** a mixed batch failure restores both SQL and session-local state;
-successful DDL becomes visible to other sessions only after commit.
+### db-05-a — Cover DDL and writes in the rollback boundary
+
+Put DDL preparation and all operation groups within the request's rollback
+boundary. Handle failure before savepoint creation and the first write request.
+Verify the existing `PgWriter` savepoint mechanism covers preparation and all
+mutations, and rolls back on exception; `PgDatabase` assumes this caller guarantee.
+
+### db-05-b — Complete error-mapping context
+
+Complete schema/table context in error mapping on JVM and PLV8, preserving
+missing-schema/table information needed by session cache invalidation.
+
+### db-05-c — Publish local changes after commit
+
+Publish local catalog/collection changes only after successful commit; discard
+or restore local metadata and bookkeeping after request/full rollback.
+
+### db-05-d — Fail the whole batch on validation error
+
+Ensure post-mutation expected-version validation can fail an entire batch without
+leaving successful rows or DDL behind, while preserving earlier successful
+requests in the same session where appropriate.
+
+### db-05-e — Enforce one mutation per feature per version
+
+Enforce one mutation per fully qualified feature identity per transaction/version
+in the session and `PgWriter`, using transaction-object modification tracking.
+Reject duplicates within/across requests before database invocation; restore
+tracking on request rollback. Keep this caller-side invariant out of `PgDatabase`.
+
+### db-05-f — Verify deterministic input sorting
+
+Verify caller-side deterministic input sorting for every mutation path, including
+ID/GUID DELETE and PURGE; document trusted ordering preconditions and preserve
+input/result correlation without database-side sorting.
 
 ### db-06 — Move CREATE into PgDatabase
 
-- **db-06-a:** Implement tuple-based `rows_insert`; make `PgWriterInsert` supply new states
-  through the agreed wrapper and use returned tuples. Move row conversion, SQL,
-  and result reconstruction inside `PgDatabase`.
-- **db-06-b:** Insert through the root with nv=HEAD. Re-create over a tombstone archives by
-  changing nv when history is ON; history-OFF replaces current state in place.
-- **db-06-c:** Preserve duplicate-live conflicts, lifecycle reset,
-  batch correlation, and original-state return
-  guarantees. Fail with `NakshaException` carrying structured `NakshaError`.
-  Remove `undefined` sentinel handling: inputs are fully encoded replacement states.
+Parent ticket; decomposed into `db-06-a` … `db-06-c`. **Done when:**
+insert/re-create cases work in both history modes and CREATE has no dependency
+on old table descriptors or direct history INSERTs.
 
-**Done when:** insert/re-create cases work in both history modes and CREATE has
-no dependency on old table descriptors or direct history INSERTs.
+### db-06-a — Implement tuple-based insert
+
+Implement tuple-based `rows_insert`; make `PgWriterInsert` supply new states
+through the agreed wrapper and use returned tuples. Move row conversion, SQL,
+and result reconstruction inside `PgDatabase`.
+
+### db-06-b — Insert through the root at HEAD
+
+Insert through the root with nv=HEAD. Re-create over a tombstone archives by
+changing nv when history is ON; history-OFF replaces current state in place.
+
+### db-06-c — Preserve conflicts and drop the undefined sentinel
+
+Preserve duplicate-live conflicts, lifecycle reset, batch correlation, and
+original-state return guarantees. Fail with `NakshaException` carrying
+structured `NakshaError`. Remove `undefined` sentinel handling: inputs are fully
+encoded replacement states.
 
 ### db-07 — Move UPDATE and UPSERT into PgDatabase
 
-- **db-07-a:** Implement tuple-based `rows_update` / `rows_upsert` and switch their writers
-  to `NewTuple` inputs and returned final tuples. Keep internal `PgRows` and
-  reconstruction in `PgDatabase`; never update cached tuple metadata.
-- **db-07-b:** Archive by UPDATE of nv through the root, then write the successor; with
-  history OFF update HEAD in place. Prove SQL statement/CTE dependencies and
-  concurrent-writer locking rather than assuming textual CTE order.
-- **db-07-c:** Preserve missing/deleted state checks, atomic expected-version semantics,
-  CREATE/UPDATE action selection and change counts according to db-01 decisions.
-  Remove `undefined` sentinel/old-payload merging and its reconstruction paths;
-  callers supply complete encoded states. Read atomic expectations from
-  immutable `NewTuple.previousTupleNumber`, not from a mutable `Tuple` field;
-  throw structured conflict exceptions. UPSERT purges DELETE HEAD, attempts
-  INSERT, then applies conditional/unconditional UPDATE to the live branch.
-- **db-07-d:** Close all plans/cursors and keep query logging/EXPLAIN available.
+Parent ticket; decomposed into `db-07-a` … `db-07-d`. **Done when:**
+update/upsert behavior and concurrent conflicts are verified in both history
+modes; writers handle orchestration/responses and `PgDatabase` returns final
+immutable tuples.
 
-**Done when:** update/upsert behavior and concurrent conflicts are verified in
-both history modes; writers handle orchestration/responses and `PgDatabase`
-returns final immutable tuples.
+### db-07-a — Implement tuple-based update and upsert
+
+Implement tuple-based `rows_update` / `rows_upsert` and switch their writers to
+`NewTuple` inputs and returned final tuples. Keep internal `PgRows` and
+reconstruction in `PgDatabase`; never update cached tuple metadata.
+
+### db-07-b — Archive by nv update through the root
+
+Archive by UPDATE of nv through the root, then write the successor; with history
+OFF update HEAD in place. Prove SQL statement/CTE dependencies and
+concurrent-writer locking rather than assuming textual CTE order.
+
+### db-07-c — Preserve atomic semantics and remove merging
+
+Preserve missing/deleted state checks, atomic expected-version semantics,
+CREATE/UPDATE action selection and change counts according to db-01 decisions.
+Remove `undefined` sentinel/old-payload merging and its reconstruction paths;
+callers supply complete encoded states. Read atomic expectations from immutable
+`NewTuple.previousTupleNumber`, not from a mutable `Tuple` field; throw
+structured conflict exceptions. UPSERT purges DELETE HEAD, attempts INSERT, then
+applies conditional/unconditional UPDATE to the live branch.
+
+### db-07-d — Close plans and cursors, keep logging
+
+Close all plans/cursors and keep query logging/EXPLAIN available.
 
 ### db-08 — Move DELETE/PURGE and metadata deletion into PgDatabase
 
-- **db-08-a:** Implement the four ID/GUID DELETE methods with and without tuple
-  results, and the explicit `NewTuple` tombstone variant according to db-01-c.
-  Support key-only tombstones for `emptyTombstone = true`, defaulting to full
-  old-state tombstones; distinguish permissive GUID DELETE from strict explicit
-  tombstone creation. Implement
-  PURGE accepting db/catalog/collection `Id` values and ordered feature IDs.
-  PURGE removes DELETE HEAD only and returns one `Guid?` per input position,
-  leaving live HEAD unchanged without error and returning null for missing HEAD;
-  no atomic PURGE variant. Document the three positional outcomes explicitly.
-  Throw `NakshaException` for operation failures;
-  keep row transport and reconstruction internal.
-- **db-08-b:** Keep tombstones non-null in nv and preserve temporal lifetime semantics.
-- **db-08-c:** Connect catalog/collection physical drop to successful logical metadata writes
-  in the same transaction; do not drop physical data before state validation.
-- **db-08-d:** Replace obsolete generic delete stubs and update callers/tests
-  to the agreed ID/GUID and explicit-state APIs; verify empty-tombstone decoding,
-  column nullability, hashed identities, expected/actual errors, and old-state
-  archival. New-state and empty-state deletion are included in this migration.
+Parent ticket; decomposed into `db-08-a` … `db-08-d`. **Done when:**
+delete/purge, re-create, and catalog/collection deletion preserve agreed API
+outcomes, history, and rollback behavior.
 
-**Done when:** delete/purge, re-create, and catalog/collection deletion preserve
-agreed API outcomes, history, and rollback behavior.
+### db-08-a — Implement ID and GUID delete, and purge
+
+Implement the four ID/GUID DELETE methods with and without tuple results, and the
+explicit `NewTuple` tombstone variant according to db-01-c. Support key-only
+tombstones for `emptyTombstone = true`, defaulting to full old-state tombstones;
+distinguish permissive GUID DELETE from strict explicit tombstone creation.
+Implement PURGE accepting db/catalog/collection `Id` values and ordered feature
+IDs. PURGE removes DELETE HEAD only and returns one `Guid?` per input position,
+leaving live HEAD unchanged without error and returning null for missing HEAD;
+no atomic PURGE variant. Document the three positional outcomes explicitly. Throw
+`NakshaException` for operation failures; keep row transport and reconstruction
+internal.
+
+### db-08-b — Keep tombstones non-null in nv
+
+Keep tombstones non-null in nv and preserve temporal lifetime semantics.
+
+### db-08-c — Connect physical drop to metadata writes
+
+Connect catalog/collection physical drop to successful logical metadata writes in
+the same transaction; do not drop physical data before state validation.
+
+### db-08-d — Replace the generic delete stubs
+
+Replace obsolete generic delete stubs and update callers/tests to the agreed
+ID/GUID and explicit-state APIs; verify empty-tombstone decoding, column
+nullability, hashed identities, expected/actual errors, and old-state archival.
+New-state and empty-state deletion are included in this migration.
 
 ### db-09 — Consolidate supporting reads and remove the table hierarchy
 
-- **db-09-a:** Add database functions for tuple loading, physical metadata inspection, and
-  prepared query execution; route SQL currently in `PgCache`, `PgSession`, and
-  `PgReader` through them. Retain `PgRows` and focused predicate builders.
-- **db-09-b:** Finish root query SQL, current/temporal/latest-N/deleted filtering, history-OFF
-  behavior, and physical fn conversion. Preserve deterministic ordering semantics
-  explicitly when encoded fn order differs from logical fn order.
-- **db-09-c:** Use PostgreSQL inheritance/partition catalogs for default-child and topology
-  discovery. Replace or remove `PgRelation` name parsing and its SQL as needed.
-- **db-09-d:** Remove `PgTable`, `PgHeadTable`, `PgHistoryTable`, `PgHistoryPartition`, and
-  `PgDistributionPartition` after checking all callers, tests, and documentation.
-  Review `PgCollectionIndex` and `PgWriterPlan` for remaining value independently.
-- **db-09-e:** Remove manual partition creation/maps, recursive index fan-out, obsolete
-  `$hst` expectations, modulo routing, and stale writer properties/logging.
+Parent ticket; decomposed into `db-09-a` … `db-09-e`. **Done when:** retained
+descriptors have no dependency on the old hierarchy; writers never select/create
+physical partitions and normal reads need no cached list of partman-created
+children.
 
-**Done when:** retained descriptors have no dependency on the old hierarchy;
-writers never select/create physical partitions and normal reads need no cached
-list of partman-created children.
+### db-09-a — Add tuple loading and query functions
+
+Add database functions for tuple loading, physical metadata inspection, and
+prepared query execution; route SQL currently in `PgCache`, `PgSession`, and
+`PgReader` through them. Retain `PgRows` and focused predicate builders.
+
+### db-09-b — Finish root query SQL and filtering
+
+Finish root query SQL, current/temporal/latest-N/deleted filtering, history-OFF
+behavior, and physical fn conversion. Preserve deterministic ordering semantics
+explicitly when encoded fn order differs from logical fn order.
+
+### db-09-c — Use partition catalogs for topology
+
+Use PostgreSQL inheritance/partition catalogs for default-child and topology
+discovery. Replace or remove `PgRelation` name parsing and its SQL as needed.
+
+### db-09-d — Remove the old table hierarchy
+
+Remove `PgTable`, `PgHeadTable`, `PgHistoryTable`, `PgHistoryPartition`, and
+`PgDistributionPartition` after checking all callers, tests, and documentation.
+Review `PgCollectionIndex` and `PgWriterPlan` for remaining value independently.
+
+### db-09-e — Remove manual partition creation
+
+Remove manual partition creation/maps, recursive index fan-out, obsolete `$hst`
+expectations, modulo routing, and stale writer properties/logging.
 
 ### db-10 — Complete integrated acceptance checks
 
-- **db-10-a:** Compile common/JVM/JS sources, recording any pre-existing failures separately.
-- **db-10-b:** Run focused existing suites: bootstrap, collection/partitioning, PgRows,
-  insert/update/upsert/delete, re-create, duplicate successor, history, ordered
-  reads, tuple persistence/materialization, transactions, and error mapping.
-- **db-10-c:** Add missing integration coverage for batch rollback, concurrent writes,
-  history-OFF, non-divisor partition counts, maintenance/premake, retention,
-  cleanup, and historical imports requiring explicit older-range creation.
-- **db-10-d:** Verify root/child mandatory/custom indexes and relevant index-only query plans
-  after VACUUM; verify HEAD and bounded-history partition pruning.
-- **db-10-e:** Follow repository test-running guidance when executing checks; record commands
-  and results with each ticket rather than deferring all verification to the end.
+Parent ticket; decomposed into `db-10-a` … `db-10-e`. **Done when:** the
+applicable `partman.md` acceptance checks pass and no active writer SQL depends
+on separate HEAD/history tables.
 
-**Done when:** the applicable `partman.md` acceptance checks pass and no active
-writer SQL depends on separate HEAD/history tables.
+### db-10-a — Compile common, JVM, and JS sources
+
+Compile common/JVM/JS sources, recording any pre-existing failures separately.
+
+### db-10-b — Run the focused existing suites
+
+Run focused existing suites: bootstrap, collection/partitioning, PgRows,
+insert/update/upsert/delete, re-create, duplicate successor, history, ordered
+reads, tuple persistence/materialization, transactions, and error mapping.
+
+### db-10-c — Add missing integration coverage
+
+Add missing integration coverage for batch rollback, concurrent writes,
+history-OFF, non-divisor partition counts, maintenance/premake, retention,
+cleanup, and historical imports requiring explicit older-range creation.
+
+### db-10-d — Verify indexes and query plans
+
+Verify root/child mandatory/custom indexes and relevant index-only query plans
+after VACUUM; verify HEAD and bounded-history partition pruning.
+
+### db-10-e — Follow the test-running guidance
+
+Follow repository test-running guidance when executing checks; record commands
+and results with each ticket rather than deferring all verification to the end.
 
 ## Decisions needed before the affected implementation
 
@@ -767,7 +931,8 @@ writer SQL depends on separate HEAD/history tables.
   session/cache lifecycle, and relevant test locations. Implementation tickets
   had not started at planning time.
 - db-00: restored the compilation baseline and ran the focused test/compilation
-  command above successfully. The database migration tickets remain TODO.
+  command successfully; moved to `NAKSHA-33-DONE.md`. The database migration
+  tickets remain TODO.
 - db-01-a: defined the physical operation API shape, added index signatures,
   replaced unused row no-ops with explicit stubs, and corrected the collection
   creation method name. JVM/JS main and JVM test-source compilation pass; ready
