@@ -197,10 +197,10 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                 if (updated_fn != null && updated_version != null) {
                     // UPDATE was executed.
                     val pgWrite = writeByFn[updated_fn] ?: throw generalException("Received _updated_fn '$updated_fn', but found no matching PgWrite")
-                    val previousVersion = outRows.getLong(row, "_head_row_version")
-                        ?: throw generalException("Missing previous HEAD version for updated feature '${pgWrite.id}'")
+                    if (outRows.getLong(row, "_head_row_version") == null) {
+                        throw generalException("Missing previous HEAD version for updated feature '${pgWrite.id}'")
+                    }
                     val updatedTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, updated_version)
-                    val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, updated_fn, previousVersion)
                     // If an update was done, we need the following values to be available:
                     val change_count: Int = if (CC!=null) {
                         outRows.getInt(row, CC) ?: throw generalException("Missing '$CC' in update result for feature '${pgWrite.id}'")
@@ -218,8 +218,7 @@ ${if (head_to_history.isNotEmpty()) "LEFT JOIN head_to_history ON head_to_histor
                         updatedMembersBook.put(column.name, newValue)
                     }
                     val updatedTuple = insertTuple.copy(
-                        membersBook = updatedMembersBook,
-                        previousTupleNumber = previousTupleNumber
+                        membersBook = updatedMembersBook
                     )
                     pgWrite.tuple = updatedTuple
                     pgWrite.tupleNumber = updatedTupleNumber

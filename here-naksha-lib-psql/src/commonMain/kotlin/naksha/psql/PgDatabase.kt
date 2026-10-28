@@ -162,11 +162,11 @@ abstract class PgDatabase(
         // Bootstrap the infrastructure.
         val naksha_admin = NakshaAdmin(this.id)
         val collection = naksha_admin.collections
-        _pgAdmin = PgCatalog( Tuple.encodeObject(naksha_admin, collection, 1L))
-        _pgAdminCatalogs = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.catalogs, collection, 1L))
-        _pgAdminCollections = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.collections, collection, 1L))
-        _pgAdminTransactions = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.transactions, collection, 1L))
-        _pgAdminBooks = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.books, collection, 1L))
+        _pgAdmin = PgCatalog( Tuple.encodeObject(naksha_admin, collection, 1L).tuple)
+        _pgAdminCatalogs = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.catalogs, collection, 1L).tuple)
+        _pgAdminCollections = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.collections, collection, 1L).tuple)
+        _pgAdminTransactions = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.transactions, collection, 1L).tuple)
+        _pgAdminBooks = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.books, collection, 1L).tuple)
 
         // Switch to admin context.
         val conn = storage.newConnection(Naksha.useAdminOptions(), false)

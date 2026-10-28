@@ -172,7 +172,6 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
                 val existing_version = outRows.getLong(row, "_existing_version")
                     // We do not expect this to ever happen, when we have an existing_fn there must be as well an existing_version!
                     ?: throw generalException("Internal error, missing existing version for feature '${pgWrite.id}' in result-set")
-                val previousTupleNumber = TupleNumber(storageNumber, catalogNumber, collectionNumber, existing_fn, existing_version)
 
                 // We should have updated the feature
                 val inserted_fn = outRows.getLong(row, "_inserted_fn") ?: {
@@ -195,8 +194,7 @@ LEFT JOIN inserted ON inserted.$FnColumn = new_row.$FnColumn
                     updatedMembersBook.put(column.name, newValue)
                 }
                 val updatedTuple = tuple.copy(
-                    membersBook = updatedMembersBook,
-                    previousTupleNumber = previousTupleNumber
+                    membersBook = updatedMembersBook
                 )
                 pgWrite.tuple = updatedTuple
                 pgWrite.tupleNumber = newTn

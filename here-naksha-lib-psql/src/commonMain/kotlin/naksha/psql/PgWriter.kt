@@ -202,7 +202,7 @@ open class PgWriter internal constructor(
             when (val op = pgWrite.op) {
                 WriteOp.CREATE -> {
                     val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, dbCollection.naksha, session, action = Action.CREATE)
+                    val tuple = Tuple.encodeFeature(f, dbCollection.naksha, session, action = Action.CREATE).tuple
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                     if (f is NakshaCatalog) {
@@ -230,7 +230,7 @@ open class PgWriter internal constructor(
                 }
                 WriteOp.UPDATE -> {
                     val f: NakshaFeature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
-                    val tuple = Tuple.encodeFeature(f, dbCollection.naksha, session, action = Action.UPDATE, atomic = pgWrite.requireVersion != null)
+                    val tuple = Tuple.encodeFeature(f, dbCollection.naksha, session, action = Action.UPDATE, atomic = pgWrite.requireVersion != null).tuple
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                     // No special database operations needed upfront.
@@ -247,7 +247,7 @@ open class PgWriter internal constructor(
                     val feature = pgWrite.feature ?: throw illegalArg("The feature #${pgWrite.i} is null")
                     val f = Tuple.shallowCopy(feature, arrayOf(tnMember.path))
                     tnMember.delete(f)
-                    val tuple = Tuple.encodeFeature(f, dbCollection.naksha, session, action = Action.CREATE)
+                    val tuple = Tuple.encodeFeature(f, dbCollection.naksha, session, action = Action.CREATE).tuple
                     pgWrite.tuple = tuple
                     pgWrite.tupleNumber = tuple.tupleNumber
                     if (f is NakshaCatalog) {
