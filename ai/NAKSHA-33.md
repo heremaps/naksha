@@ -14,8 +14,9 @@ dedicated database functions.
 - Task lifecycle: `TODO` → `REVIEW` → `DONE`. Start with `TODO`; after implementing
   and verifying a change, switch it to `REVIEW`. Only explicit user approval
   permits switching it to `DONE`. Dependencies must be complete before a task
-  is marked done. A parent with work under review is `REVIEW` until all sub-steps
-  and acceptance checks are approved.
+  is marked done. Only one work item may be in `REVIEW` at a time; every other
+  work item stays `TODO` or `DONE`. A parent stays `TODO` until all of its
+  sub-steps are `DONE`.
 - Maintain one short **Commit summary** as a nested sub-point directly below each
   task, and include it in the response. Revise that same summary throughout review
   to describe the current changes; do not append separate review/follow-up commit
@@ -82,7 +83,7 @@ installation entries. Verify and finish these rather than duplicating them.
 - **db-00-a · DONE:** Adapted stale identifier/member/transaction APIs in psql writers, row helpers,
   tests, and downstream Java callers. Added a test-only `adminConnection` helper
   using `newConnection`; existing tests remain included.
-  - **Rebase follow-up commit summary:** Fix identifier-constant imports and tuple-copy helper imports after rebasing onto upstream.
+  - **Commit summary:** Adapt stale psql identifier/member/transaction APIs, add a test-only `adminConnection` helper, and fix identifier-constant and tuple-copy helper imports after rebasing.
 - **db-00-b · DONE:** Temporarily excluded superseded implementations through the psql Gradle source
   sets, preserving the source files for reference:
   - JVM: `PgAdminCatalogGc.jvm.kt`, `PsqlAdminCatalog.kt`, `PsqlCatalog.kt`,
@@ -114,19 +115,17 @@ integration tests were not run: the schema/row methods in `PgDatabase` remain
 unfinished, and bootstrap/write functionality requires the tickets below.
 
 ### db-01 — Agree the database boundary and operation contracts
-**Status:** REVIEW · **Depends on:** none
+**Status:** TODO · **Depends on:** none
 
 - **db-01-a · DONE:** Finalize `catalog_*`, `collection_*`, index, and `rows_*` signatures before switching callers. Correct `collection_create_table_if_not_exits` spelling.
-  - **Commit summary:** Define PgDatabase operation signatures, add index APIs, and fix collection creation naming.
-  - **Review follow-up commit summary:** Document physical database operations and return nullable mutation errors while updating PgRows in place.
+  - **Commit summary:** Define and document the PgDatabase operation signatures, add index APIs, and fix collection creation naming.
 - **db-01-b · DONE:** Pass explicit columns/indices and physical options: history mode, partition count, shift, retain, backward, forward, and supported storage/tablespace settings. Use a small options value if preferable to many parameters; it must not become a replacement `PgTable` hierarchy.
   - **Commit summary:** Pass physical collection creation settings to PgDatabase while leaving partition management to pg_partman.
 - **db-01-c · REVIEW:** Revise the plan for tuple-based persistence, immutable `NewTuple` input, thrown `NakshaException` errors, and UPDATE/UPSERT atomicity. Identify remaining decisions before implementation.
   - **Commit summary:** Plan immutable NewTuple mutation inputs, tuple results, and exception-based database errors.
 - **db-01-d · TODO:** Implement/document the settled identity validation, expected/actual error versions and reconstruction helpers, and caller-owned savepoint, mutation-uniqueness, and sorting preconditions. Specify cursor/plan ownership and SQL logging/EXPLAIN hooks.
 - **db-01-e · TODO:** Write a compact behavior matrix for missing/live/deleted HEAD rows across
-  CREATE, UPDATE, UPSERT, DELETE, PURGE and both history modes. Resolve the open
-  decisions below before implementing the affected operations.
+  CREATE, UPDATE, UPSERT, DELETE, PURGE and both history modes.
 - **db-01-f · TODO:** Implement immutable `NewTuple(tuple, previousTupleNumber)` in the model and remove `previousTupleNumber` from `Tuple`. Change `Tuple.encodeFeature`, `Tuple.encodeObject`, and `Tuple.encodeRaw` to return `NewTuple` and populate its predecessor metadata. Migrate encoding/bootstrap/writer/copy call sites without mutating cached tuples; verify JVM/JS compatibility and cache isolation.
 - **db-01-g · TODO:** Replace the reviewed-but-superseded row-buffer mutation signatures/KDoc in `PgDatabase` with `Id` schema/catalog and table/collection arguments, `NewTuple` inputs/results, and thrown `NakshaException`. INSERT returns supplied tuple states; UPDATE/UPSERT return ordered `List<NewTuple>` carrying actual predecessor information. Keep `PgRows` private to persistence implementation and wire agreed DELETE/PURGE signatures.
 
@@ -544,13 +543,6 @@ batches; SQL result order must never be assumed.
      aggregated errors, batch-index fields, or new error-code taxonomy are
      required by this contract; preserve the existing applicable codes.
 
-##### Remaining decisions before mutation implementation
-
-None of the behavioral questions raised in this review remain open. The revised
-plan is ready for user approval; implementation tasks remain TODO. Method KDoc,
-resource ownership, diagnostic hooks, and exact encoding-adapter wiring are
-implementation work under the settled contract, not additional behavioral policy.
-
 ##### Ordered implementation after plan approval
 
 1. Obtain user approval of the revised plan. Implement the settled contract
@@ -789,8 +781,7 @@ writer SQL depends on separate HEAD/history tables.
   streaming API, identifier helpers, HTTP logging, collection-index normalization,
   and PostgreSQL 18.6 test image. Tuple copying retains both the existing
   `copyOnWrite` API and the new multi-path `shallowCopy`, with cloned containers
-  attached to the copied root. Post-rebase constant/helper import fixes are left
-  uncommitted for review.
+  attached to the copied root.
 - Post-rebase verification: `./gradlew compileKotlinJvm compileTestKotlinJvm
   compileKotlinJs --console=plain` passes. The 21 focused psql tests listed in
   db-00, `IdTest`, and `StreamRequestBuilderTest` also pass. No database-backed
