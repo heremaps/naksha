@@ -89,10 +89,10 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | Agree the database boundary and operation contracts | — | `IN_REVIEW` | — |
 | [db-01-a](#db-01-a--finalize-operation-signatures) | Finalize operation signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
 | [db-01-b](#db-01-b--pass-physical-creation-options) | Pass physical creation options | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
-| [db-01-c](#db-01-c--revise-the-tuple-persistence-contract) | Revise the tuple persistence contract | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `IN_REVIEW` | — |
+| [db-01-c](#db-01-c--revise-the-tuple-persistence-contract) | Revise the tuple persistence contract | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
 | [db-01-d](#db-01-d--document-identity-validation-and-preconditions) | Document identity validation and preconditions | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-01-e](#db-01-e--write-the-behavior-matrix) | Write the behavior matrix | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
-| [db-01-f](#db-01-f--migrate-the-model-to-immutable-newtuple) | Migrate the model to immutable NewTuple | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
+| [db-01-f](#db-01-f--migrate-the-model-to-immutable-newtuple) | Migrate the model to immutable NewTuple | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Introduce an immutable NewTuple wrapper and remove the mutable previousTupleNumber field from Tuple. |
 | [db-01-g](#db-01-g--replace-the-row-buffer-signatures) | Replace the row-buffer signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | Verify pg_partman topology against the deployed version | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-02-a](#db-02-a--run-the-pgpartman-integration-spike) | Run the pg_partman integration spike | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
@@ -579,8 +579,17 @@ batches; SQL result order must never be assumed.
    UPDATE/UPSERT, and DELETE/PURGE SQL/reconstruction in db-06..db-08.
 
 Plan verification: reviewed current `Tuple`, `TupleNumber`, `NakshaError`, and all
-production `previousTupleNumber` usages. Documentation-only change; no compilation
-or tests run. This task remains IN_REVIEW until the user approves the revised plan.
+production `previousTupleNumber` usages. Approved by the user; the model migration
+(db-01-f) is implemented and compiles on JVM and JS (main and test).
+
+Implementation decisions folded in:
+1. All row methods take a uniform `(schema: Id, table: Id)` (= catalog/collection); the
+   database comes from `PgDatabase.id`. Final signatures land in db-01-g.
+2. `rows_purge` takes the caller's transaction version (elided), like the DELETE variants,
+   because history-ON purges archive the removed tombstone.
+3. `rows_insert` returns `List<Tuple>` (predecessor always null); only UPDATE/UPSERT return
+   `NewTuple` results.
+4. The explicit-state delete is named `rows_delete_with_new_state`.
 
 ### db-01-d — Document identity validation and preconditions
 
@@ -601,6 +610,16 @@ remove `previousTupleNumber` from `Tuple`. Change `Tuple.encodeFeature`,
 `Tuple.encodeObject`, and `Tuple.encodeRaw` to return `NewTuple` and populate its
 predecessor metadata. Migrate encoding/bootstrap/writer/copy call sites without
 mutating cached tuples; verify JVM/JS compatibility and cache isolation.
+
+Done: added `NewTuple` to the model; the three encoders return `NewTuple`
+and `Tuple.previousTupleNumber` is removed. Migrated call sites: `PgDatabase.init`
+admin bootstrap uses `.tuple`; `PgWriter` CREATE/UPDATE/UPSERT use `.tuple`;
+`PgWriterUpdate`/`PgWriterUpsert` no longer attach the predecessor via `Tuple.copy`
+(the actual predecessor is re-derived from the SQL result in db-06/07). Verified green:
+`compileKotlinJvm`, `compileKotlinJs`, and model/psql `jvmTestClasses`/`jsTestClasses`
+(compilation only; behavioral tests need a DB). `:here-naksha-lib-model:jvmTest` passes
+except 3 pre-existing `MemberTest` failures in `NakshaCollection.addMember` validation,
+unrelated to this change.
 
 ### db-01-g — Replace the row-buffer signatures
 

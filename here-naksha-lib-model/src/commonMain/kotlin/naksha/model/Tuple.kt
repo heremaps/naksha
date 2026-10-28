@@ -56,7 +56,6 @@ import naksha.model.objects.StandardMembers.StandardMembers_C.ORIGIN
 import naksha.model.objects.StandardMembers.StandardMembers_C.TN
 import kotlin.js.JsExport
 import kotlin.js.JsStatic
-import kotlin.jvm.JvmField
 import kotlin.jvm.JvmName
 import kotlin.jvm.JvmOverloads
 import kotlin.jvm.JvmStatic
@@ -80,15 +79,7 @@ data class Tuple @JvmOverloads constructor(
      * This can either be just a small instance that decodes the data from the [featureBytes] or it can be some special _HEAP_ decoded members book provided by storage at read time. Generally, this Contains the values of the [Member].
      * @since 3.0
      */
-    val membersBook: IBook,
-
-    /**
-     * After encoding an object into a [Tuple] using [encodeFeature] method, the [previousTupleNumber] will be set in the generated [Tuple]. It will only be set by the encoder, if the given object contains a [TupleNumber][naksha.base.TupleNumber] of the state it had before being modified. In the XYZ specification this information was historically located in the jsonpath `properties->@ns:com:here:xyz->uuid`, but with modern `lib-base` support, the position can be freely selected.
-     *
-     * This is metadata, it can as well be set manually, when a tuple is read from a storage. It is not significant for the storage itself.
-     * @since 3.0
-     */
-    @JvmField var previousTupleNumber: TupleNumber? = null
+    val membersBook: IBook
 ) {
 
     // TODO: We need to extend the `Tuple` class.
@@ -128,7 +119,7 @@ data class Tuple @JvmOverloads constructor(
             globalBook: IBook? = null,
             action: Action? = null,
             atomic: Boolean? = null,
-        ): Tuple {
+        ): NewTuple {
             return encode(
                 raw = feature,
                 databaseNumber = collection.databaseNumber,
@@ -169,7 +160,7 @@ data class Tuple @JvmOverloads constructor(
             globalBook: IBook? = null,
             action: Action? = null,
             atomic: Boolean? = null,
-        ): Tuple {
+        ): NewTuple {
             return encode(
                 raw = feature,
                 databaseNumber = collection.databaseNumber,
@@ -212,7 +203,7 @@ data class Tuple @JvmOverloads constructor(
             processors: MemberProcessorMap? = null,
             requestedAction: Action? = null,
             atomic: Boolean? = null,
-        ): Tuple = encode(
+        ): NewTuple = encode(
             raw = raw,
             databaseNumber = databaseNumber,
             catalogNumber = catalogNumber,
@@ -252,7 +243,7 @@ data class Tuple @JvmOverloads constructor(
             processors: MemberProcessorMap?,
             requestedAction: Action?,
             atomic: Boolean?,
-        ): Tuple {
+        ): NewTuple {
             // Find members.
             val idMember = memberList.useMember(StandardMembers.Id)
             val tnMember = memberList.useMember(StandardMembers.Tn) // uuid
@@ -398,10 +389,10 @@ data class Tuple @JvmOverloads constructor(
             if (featureBytes.size >= 1000) {
                 val compressed = gzipDeflate(featureBytes)
                 if (compressed.size < featureBytes.size) {
-                    return Tuple(compressed, membersBook, prevTn)
+                    return NewTuple(Tuple(compressed, membersBook), prevTn)
                 }
             }
-            return Tuple(featureBytes, membersBook, prevTn)
+            return NewTuple(Tuple(featureBytes, membersBook), prevTn)
         }
 
         /**
