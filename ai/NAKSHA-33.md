@@ -123,12 +123,12 @@ unfinished, and bootstrap/write functionality requires the tickets below.
   - **Commit summary:** Pass physical collection creation settings to PgDatabase while leaving partition management to pg_partman.
 - **db-01-c · REVIEW:** Revise the plan for tuple-based persistence, immutable `NewTuple` input, thrown `NakshaException` errors, and UPDATE/UPSERT atomicity. Identify remaining decisions before implementation.
   - **Commit summary:** Plan immutable NewTuple mutation inputs, tuple results, and exception-based database errors.
-- **db-01-d · TODO:** Agree previous-tuple validity/version matching, structured error details, DELETE/PURGE inputs/results, and batch behavior. Specify cursor/plan ownership and SQL logging/EXPLAIN hooks.
+- **db-01-d · TODO:** Implement/document the settled identity validation, expected/actual error versions and reconstruction helpers, and caller-owned savepoint, mutation-uniqueness, and sorting preconditions. Specify cursor/plan ownership and SQL logging/EXPLAIN hooks.
 - **db-01-e · TODO:** Write a compact behavior matrix for missing/live/deleted HEAD rows across
   CREATE, UPDATE, UPSERT, DELETE, PURGE and both history modes. Resolve the open
   decisions below before implementing the affected operations.
 - **db-01-f · TODO:** Implement immutable `NewTuple(tuple, previousTupleNumber)` in the model and remove `previousTupleNumber` from `Tuple`. Change `Tuple.encodeFeature`, `Tuple.encodeObject`, and `Tuple.encodeRaw` to return `NewTuple` and populate its predecessor metadata. Migrate encoding/bootstrap/writer/copy call sites without mutating cached tuples; verify JVM/JS compatibility and cache isolation.
-- **db-01-g · TODO:** Replace the reviewed-but-superseded row-buffer mutation signatures/KDoc in `PgDatabase` with `NewTuple` inputs/results and thrown `NakshaException`. INSERT returns supplied tuple states; UPDATE/UPSERT return ordered `List<NewTuple>` carrying actual predecessor information. Keep `PgRows` private to persistence implementation and wire agreed DELETE/PURGE signatures.
+- **db-01-g · TODO:** Replace the reviewed-but-superseded row-buffer mutation signatures/KDoc in `PgDatabase` with `Id` schema/catalog and table/collection arguments, `NewTuple` inputs/results, and thrown `NakshaException`. INSERT returns supplied tuple states; UPDATE/UPSERT return ordered `List<NewTuple>` carrying actual predecessor information. Keep `PgRows` private to persistence implementation and wire agreed DELETE/PURGE signatures.
 
 **Done when:** the revised tuple contract, error details, rollback ownership, and
 behavior matrix are approved; immutable wrapper/model and API changes compile.
@@ -268,10 +268,21 @@ production code in this documentation change.
   Resolve the existing `atomic` hint's effect on predecessor metadata in db-01-d:
   unconditional encoding must not accidentally become atomic merely because
   the source feature contains a valid old tuple number.
-- A present, valid `NewTuple.previousTupleNumber` requests an atomic UPDATE;
-  otherwise UPDATE is unconditional. No separate atomic flag is needed at this
+- A non-null `NewTuple.previousTupleNumber` requests an atomic UPDATE and must
+  be valid for the same database, catalog, collection, and feature number.
+  Reject an invalid supplied predecessor as an illegal argument; only null
+  selects unconditional UPDATE. No separate atomic flag is needed at this
   persistence boundary. Request adapters may still accept their existing flags
   and translate them into wrapper metadata.
+- Atomic version comparisons ignore the two action bits by default:
+  `(expected.version and -4L) == (actual.version and -4L)`. UPDATE/UPSERT accept
+  either CREATE or UPDATE HEAD states at that version; a client need not know
+  which live action was stored. This does not relax the requirement for a live
+  HEAD, nor alter action bits stored in tuples or reported in result/error data.
+  Check actions separately when operation semantics require it. In particular,
+  PURGE requires DELETE action and has no atomic/expected-version variant;
+  live states are left unchanged and reported to the caller. Any additional action-sensitive
+  exception must be explicitly specified for that operation.
 - Operation failures construct a `NakshaError`, wrap it in `NakshaException`,
   and throw. No nullable-error return and no success/failure union result.
   SQL causes/context must survive exception mapping. Extend `NakshaError` only
@@ -284,8 +295,7 @@ production code in this documentation change.
   Validate this before purging or inserting. INSERT returns the given tuple states.
 - UPDATE returns `NewTuple` with `previousTupleNumber` set to the actual live
   HEAD state replaced, including for unconditional UPDATE. The returned `tuple`
-  is intended to be the supplied new state; payload resolution remains an open
-  question below. Input predecessor metadata is an expectation; output metadata
+  is the supplied fully encoded new state. Input predecessor metadata is an expectation; output metadata
   describes the predecessor actually replaced.
 - UPSERT returns `NewTuple` with `previousTupleNumber` set when UPDATE was
   performed, and null when INSERT was performed. Re-creation after purging a
@@ -293,9 +303,28 @@ production code in this documentation change.
   The final tuple may differ from input due to branch-specific state changes.
   Returned tuples/wrappers may reuse input references only when all values match;
   inputs and cached tuples are never modified to populate result metadata.
+- UPSERT has two phases. First validate any supplied predecessor identifies the
+  same feature in the same target; an invalid/foreign predecessor is an illegal
+  argument even if insertion would succeed. Then attempt INSERT, replacing any
+  DELETE HEAD state, without using the predecessor as a condition. Only when
+  insertion cannot proceed because HEAD is live (CREATE/UPDATE) does the UPDATE
+  phase run. That phase is unconditional without a predecessor, or conditional
+  on its version when supplied, ignoring action bits as agreed. Other insertion
+  errors must propagate rather than triggering the UPDATE fallback.
 - Schema/index APIs continue receiving physical names/settings/descriptors.
   The tuple persistence boundary still needs target columns/configuration;
   tuples alone do not describe the collection's full physical schema.
+- Tuple persistence methods accept schema/catalog and table/collection as `Id`
+  objects instead of plain strings. Reuse these identifiers and `PgDatabase.id`
+  to verify any supplied predecessor belongs to the same database, catalog, and
+  collection using the existing infix comparisons. Compare the database's full
+  numeric identity and the catalog/collection identities at their tuple-number
+  widths. `Id` caches numeric derivation, so validation must not reconstruct
+  identifiers or repeatedly hash their text. The new tuple and its predecessor
+  must also address the same feature. A valid predecessor for a different target
+  is an illegal argument, not an unconditional update. Resolve physical relation
+  naming/quoting inside `PgDatabase` using the agreed naming policy; accepting
+  `Id` does not itself settle literal versus mapped relation names.
 
 ##### Operation sequence
 
@@ -304,8 +333,11 @@ production code in this documentation change.
 | INSERT | Require null input `previousTupleNumber`, otherwise throw illegal argument before mutation. Purge matching HEAD states only when DELETE, then insert. A live HEAD causes an error. Return the supplied tuple states. |
 | UPDATE, unconditional | Require an existing live HEAD and replace it. Return `NewTuple` with the new state and the actual replaced HEAD's tuple number as `previousTupleNumber`. |
 | UPDATE, atomic | Require a matching live HEAD according to the expected predecessor. On mismatch throw a structured error. Return `NewTuple` with the new state and the actual replaced HEAD's tuple number. |
-| UPSERT | Purge DELETE HEAD states, attempt INSERT, then UPDATE the existing-live branch atomically or unconditionally according to input metadata. Return `NewTuple` with predecessor set only for UPDATE, null for INSERT (including re-creation). |
-| DELETE / PURGE        | Inputs, atomicity, missing/deleted behavior, and returned-state meaning still require decisions below. Do not silently force these operations into a new-state wrapper when no new state exists.                                                                             |
+| UPSERT | Validate supplied predecessor identity first. Phase 1 inserts into absent HEAD or replaces DELETE HEAD without a predecessor condition. Phase 2 runs only for live CREATE/UPDATE HEAD and updates unconditionally or conditionally on the supplied predecessor's masked version. Return `NewTuple` with predecessor set only for UPDATE, null for INSERT (including re-creation). |
+| PURGE | Accept database/catalog/collection IDs and ordered feature IDs. Purge only DELETE HEAD states. Return one nullable GUID per input: DELETE means purged; live actions mean unchanged HEAD; null means no HEAD exists. No expected-version/atomic variant. |
+| DELETE by ID | Delete live HEAD without an expected-version condition; return GUIDs or deleted `NewTuple` states according to the variant. Optional empty tombstones for the without-result variant. |
+| DELETE by GUID | Conditional delete of live HEAD; mismatching expected state throws. An already-DELETE HEAD is accepted and returned even when its version differs from the expectation. |
+| DELETE explicit state | Accept `NewTuple` tombstones. Require a live HEAD when no predecessor is supplied; when supplied, require exactly that HEAD state. Missing/mismatching HEAD fails; return created tombstones as `NewTuple`. |
 
 Archival remains the agreed root-table behavior: change predecessor `nv` when
 history is enabled; replace/remove current state without retaining history when
@@ -316,10 +348,27 @@ locking and concurrent INSERT/UPDATE races must preserve it.
 ##### Proposed interface shape for review
 
 ```kotlin
-// Schematic: target/schema options are omitted here, not removed from the API.
-fun rows_insert(/* target/config */, tuples: List<NewTuple>): List<Tuple>
-fun rows_update(/* target/config */, tuples: List<NewTuple>): List<NewTuple>
-fun rows_upsert(/* target/config */, tuples: List<NewTuple>): List<NewTuple>
+// Schematic: connection and collection configuration are omitted, not removed.
+// Database identity is available as PgDatabase.id.
+internal fun rows_insert(schema: Id, table: Id, /* config */, tuples: List<NewTuple>): List<Tuple>
+internal fun rows_update(schema: Id, table: Id, /* config */, tuples: List<NewTuple>): List<NewTuple>
+internal fun rows_upsert(schema: Id, table: Id, /* config */, tuples: List<NewTuple>): List<NewTuple>
+internal fun rows_purge(db: Id, catalog: Id, collection: Id, featureIds: List<Id>): List<Guid?>
+internal fun rows_delete_by_id_without_result(
+    db: Id, catalog: Id, collection: Id, featureIds: List<Id>, emptyTombstone: Boolean = false
+): List<Guid>
+internal fun rows_delete_by_id_with_result(
+    db: Id, catalog: Id, collection: Id, featureIds: List<Id>
+): List<NewTuple>
+internal fun rows_delete_by_guid_without_result(
+    db: Id, catalog: Id, collection: Id, guids: List<Guid>, emptyTombstone: Boolean = false
+): List<Guid>
+internal fun rows_delete_by_guid_with_result(
+    db: Id, catalog: Id, collection: Id, guids: List<Guid>
+): List<NewTuple>
+internal fun delete_with_new_state(
+    db: Id, catalog: Id, collection: Id, tuples: List<NewTuple>
+): List<NewTuple>
 // Failure: throw NakshaException(error: NakshaError).
 ```
 
@@ -329,48 +378,183 @@ when a live HEAD was updated.
 Proposed result ordering is input order, including mixed CREATE/UPDATE UPSERT
 batches; SQL result order must never be assumed.
 
+##### Settled decisions
+
+- **Complete new states:** callers provide fully encoded tuples, including all
+   payload/member values. Mutations replace the entire state; no column is
+   implicitly retained from HEAD. Remove the `undefined` preservation use-case,
+   sentinel handling, byte-array merge SQL, and related reconstruction logic.
+   INSERT/UPDATE persist the supplied state rather than resolving partial inputs
+   against old data. UPSERT may still produce a different tuple for the agreed
+   CREATE/UPDATE branch-specific control values; it never merges old payload.
+   This supersedes `partman.md`'s requirement to preserve `undefined` behavior.
+
+1. **Expected predecessor validity:** target matching is settled: accept `Id`
+   schema/catalog and table/collection arguments and use the existing infix
+   comparisons with `PgDatabase.id` and the new tuple's feature identity. Reject
+    any supplied predecessor that is invalid or addresses another database,
+    catalog, collection, or feature number as an illegal argument. This applies
+    equally to UPDATE and UPSERT; never downgrade a non-null predecessor to an
+    unconditional operation. Do not rehash identifier strings. Only a null
+    predecessor selects unconditional UPDATE. No separate numeric version-validity
+    policy is required; version equality is checked against HEAD using the agreed
+    action-bit rules.
+2. **Version comparison:** mask the low two action bits for atomic
+   version equality by default. UPDATE/UPSERT accept CREATE or UPDATE at the
+   expected version and independently reject a DELETE HEAD. PURGE has no atomic
+   version comparison: only DELETE HEAD states are eligible, and live states
+   are returned unchanged rather than rejected. Preserve complete actual tuple numbers in results/errors;
+   masking is only for comparison. Document any other operation-specific
+   exception explicitly in db-01-e.
+3. **Atomic UPSERT insert branch:** a supplied predecessor must be
+   valid for the same feature/target, but it never conditions phase 1. Missing
+   or DELETE HEAD permits INSERT regardless of the predecessor's version/action.
+   Only a live CREATE/UPDATE HEAD selects phase 2, where the supplied predecessor
+   conditions UPDATE using masked version equality. Null selects unconditional
+   UPDATE. A supplied invalid predecessor is an illegal argument, not permission
+   to downgrade to an unconditional UPSERT. Unrelated SQL/constraint failures
+   are errors, not reasons to retry as UPDATE.
+4. **Error payload:** add `expectedVersion: Long?` and `actualVersion: Long?`
+   to `NakshaError`, rather than storing redundant complete tuple numbers.
+   Existing `database`, `catalog`, `collection`, and `id` fields identify the
+   feature; each new field supplies the respective state version. Null means
+   no expectation or no actual HEAD, rather than a fabricated version zero.
+   Keep full versions including action bits in error data; masking applies only
+   during operation-specific comparison.
+   Add `getExpectedTupleNumber(): TupleNumber?` and
+   `getActualTupleNumber(): TupleNumber?` helpers that reconstruct the address
+   using existing `Id` conversions and the corresponding version. Return null
+   when the version or any required identity field is absent. Use the existing
+   base-layer `TupleNumber`; no dependency on the model module is needed.
+   Operation/batch-index/reason fields and duplicate tuple-number fields are not
+   part of this error-payload change. Existing error code/message and identity
+   fields remain available for diagnosis.
+
+5. **PURGE contract:** provide one method accepting `db: Id`, `catalog: Id`,
+   `collection: Id`, and `featureIds: List<Id>`, returning `List<Guid?>` in exactly
+   the input feature-ID order. The connection remains caller-owned as for other
+   database operations; the schematic signature omits it. Validate the supplied
+   database ID against the database instance using cached numeric identities.
+   No `NewTuple`, expected version, or atomic PURGE variant is needed.
+   Only HEAD states explicitly in DELETE action are purged. A live CREATE/UPDATE
+   HEAD is left untouched; this is a successful per-feature outcome, not a
+   conflict or an operation failure. Return its current HEAD GUID instead.
+   A returned DELETE-action GUID identifies the tombstone that was purged, even
+   though it no longer exists in HEAD. Other returned action values identify
+   states that remain in HEAD. The caller interprets/checks these GUIDs rather
+   than expecting every requested feature to be purged. Associate results with
+   input positions explicitly, never by SQL result order. Genuine database
+   failures still throw `NakshaException`. This supersedes the earlier atomic
+   PURGE proposal and any requirement to purge live HEAD states.
+   This is an internal API with a positional result contract: the result list
+   has exactly the same size as `featureIds`, and `result[i]` always describes
+   `featureIds[i]`. Return null at that position when no HEAD state exists;
+   do not omit the entry, shift subsequent results, or synthesize a GUID.
+   Callers distinguish all three outcomes explicitly:
+   - null: no HEAD state was found, so nothing was purged;
+   - DELETE-action GUID: that tombstone was purged;
+   - CREATE/UPDATE-action GUID: that live HEAD was not purged and remains unchanged.
+   Document this correspondence and nullable element type in the method KDoc.
+6. **DELETE variants:** use separate internal methods rather than one method
+   with ambiguous input/result modes. All receive database/catalog/collection
+   `Id` values and use internal row transport. Their schematic signatures above
+   omit connection, transaction-version, and collection configuration parameters;
+   generated tombstones still need the caller's deletion transaction version.
+   - `rows_delete_by_id_without_result` accepts feature IDs and
+     `emptyTombstone: Boolean = false`. It returns `List<Guid>` identifying
+     successfully deleted features. "Without result" means no full tuple payload,
+     not a Unit return. By default retain the old payload in the new tombstone.
+     When `emptyTombstone` is true, every column except mandatory primary-key
+     columns (`fn`, `version`, `nv`) is SQL NULL. The new tombstone has DELETE
+     action and HEAD `nv`; history-enabled deletion archives the old state.
+     An already-deleted HEAD is returned as its existing GUID without rewriting
+     it. A feature with no HEAD is omitted from the result list without error.
+   - `rows_delete_by_id_with_result` accepts feature IDs and returns
+     `List<NewTuple>` containing deleted states and references to their actual
+     previous states. Retain the old payload in the generated tombstone.
+     Missing HEAD is omitted without error. An already-deleted HEAD is returned
+     unchanged with `previousTupleNumber = null`, because nothing was replaced.
+   - `rows_delete_by_guid_without_result` and
+     `rows_delete_by_guid_with_result` mirror the ID variants (including the
+     default-false `emptyTombstone` option for the without-result variant), but
+     use GUIDs as expected states. For live HEAD, require the expected version,
+     ignoring action bits under the general rule; mismatch/missing expected
+     state throws `NakshaException` with the agreed error details. Exception:
+     if HEAD is already DELETE, accept and return that deleted state even when
+     its tuple number differs from the expected one. Do not rewrite an existing
+     tombstone merely to make it match the expectation. The caller decides
+     whether this equivalent deleted outcome is acceptable.
+     When the with-result variant returns an existing tombstone, its wrapper
+     has `previousTupleNumber = null`; this is not the caller's expectation and
+     must not falsely imply that an UPDATE/DELETE replaced a state.
+   - `delete_with_new_state` is the agreed name for the explicit-state variant.
+     It accepts `List<NewTuple>` describing the exact
+     tombstones to create and returns the created states as `List<NewTuple>`
+     with predecessor references. Without a supplied predecessor, require an
+     existing live HEAD (CREATE/UPDATE); missing or already-deleted HEAD fails.
+     With a predecessor, require exactly that HEAD state; mismatch or absence
+     fails, with no permissive already-deleted shortcut. "Exactly" is an
+     action-sensitive exception to masked version comparison: compare the full
+     expected state including action. An exactly matching DELETE predecessor
+     may be replaced when explicitly supplied; the live-HEAD-only requirement
+     applies to the branch without a predecessor.
+     The supplied new state must encode DELETE action. Failure to create the
+     requested state throws; never report an unrelated existing tombstone as
+     successful creation of the explicit new state.
+   - Empty tombstones deliberately contain no retained payload or non-key
+     identity column. Update physical nullability/check constraints and tuple
+     decoding/encoding paths so key-only tombstones are valid, including hashed
+     feature IDs. Preserve full old states in history when history is enabled.
+     This supersedes any plan to enforce non-key payload constraints on tombstones.
+   - DELETE results preserve relative input order when missing features are
+     omitted: `[A, missing-B, C]` returns `[result-A, result-C]`. Do not insert
+     null placeholders for missing ID-based DELETE results; this differs from
+     PURGE's fixed-size positional `List<Guid?>` contract. Associate SQL results
+     with inputs explicitly rather than relying on database row order.
+
+7. **Caller-owned transaction and input preconditions:** all mutation methods
+   are `internal` trusted entry points. They assume the caller has established
+   a savepoint, validated transaction-wide feature uniqueness, and sorted inputs
+   into the common deterministic locking order. Do not duplicate those checks,
+   reorder inputs, or create/commit/roll back transactions inside `PgDatabase`.
+   Document these preconditions in every mutation method's KDoc.
+   - `PgWriter` establishes the savepoint before the operation and rolls back to
+     it when a `NakshaException` escapes. A method may have changed database rows
+     before throwing; no partial success list is returned. The exception reports
+     the encountered failure rather than an aggregated batch-error result.
+   - Duplicate feature identifiers are forbidden within a batch **and across
+     all writes in a single transaction/version**. A feature may have at most
+     one newly produced state in a version, regardless of which request or
+     operation would produce it. Use full database/catalog/collection/feature
+     identity, not feature text alone across unrelated collections.
+   - The session checks this invariant using transaction-object modification
+     tracking; `PgWriter` validates the incoming writes against each other and
+     the session's previously modified features before passing them to the
+     database. Caller-side checks cover catalog/collection feature mutations as
+     applicable, not only user-feature writes.
+   - Reserve/update modification tracking consistently with savepoint success:
+     failed writes must not leave phantom modified features in session state,
+     while earlier successful requests in the transaction remain tracked.
+   - Callers sort features before invocation to prevent row-lock deadlocks.
+     `PgDatabase` relies on this ordering. Internal result correlation preserves
+     the supplied order (and agreed DELETE omissions/PURGE null positions).
+     `PgWriter` may separately restore original request order in its response.
+   - SQL failures remain `NakshaException` carrying `NakshaError`, including
+     target identity and expected/actual versions where relevant. No additional
+     aggregated errors, batch-index fields, or new error-code taxonomy are
+     required by this contract; preserve the existing applicable codes.
+
 ##### Remaining decisions before mutation implementation
 
-1. **Valid expected predecessor:** `TupleNumber` currently has no universal
-   `isValid` predicate. Define permitted version/action values and whether its
-   database/catalog/collection/feature must match the new tuple's address.
-   Proposed: null/invalid means unconditional as requested; a structurally valid
-   predecessor for a different feature/target is an illegal argument rather than
-   silently downgrading atomicity. Confirm this distinction.
-2. **Version comparison:** compare the complete tuple number/version including
-   action bits, or mask the low two action bits as current writer SQL does?
-   Keep the live-HEAD condition regardless of the choice.
-3. **Atomic UPSERT insert branch:** when an expected predecessor is present but
-   HEAD is missing or DELETE, does insertion still succeed? The stated sequence
-   applies atomicity to UPDATE, suggesting yes. Confirm whether an expectation
-   only constrains the live-HEAD UPDATE branch or the entire UPSERT.
-4. **Exact UPDATE/INSERT return state:** existing SQL may preserve byte arrays
-   marked `undefined`, increment change count, and normalize action bits. Returning
-   the original immutable tuple is only correct if its values already describe
-   the stored state. Decide whether callers must provide fully resolved new
-   states, or whether persistence may return a replacement tuple for these cases.
-   Do not mutate the input to reconcile the difference.
-5. **Error payload:** proposed conflict fields are operation, batch input index,
-   target/feature identity, expected tuple number, actual tuple number (nullable
-   when missing), and a reason distinguishing missing/deleted/version mismatch.
-   `NakshaError` already has database/catalog/collection/id and a code/message;
-   avoid a base-to-model dependency when adding tuple-number details (the base
-   `TupleNumber` type or serialized form is available). Decide code compatibility
-   (`CONFLICT` versus existing not-found/exists codes) and first-error versus
-   aggregated batch errors.
-6. **DELETE/PURGE:** choose selection arguments when no new tuple exists; decide
-   whether DELETE uses `NewTuple` for supplied tombstone states, how old-state or
-   empty-state DELETE works, and whether PURGE returns removed states or no
-   tuples. Confirm already-deleted HEAD and atomic no-op behavior.
-7. **Batch/transaction guarantee:** proposal is all-or-error with no partial result
-   list. A thrown exception can follow SQL changes; request-level savepoint/full
-   rollback must restore them before the caller continues. Decide handling of
-   duplicate feature numbers in one batch (reject or process in a defined order),
-   error correlation, and results for no-ops before defining internal row columns.
+None of the behavioral questions raised in this review remain open. The revised
+plan is ready for user approval; implementation tasks remain TODO. Method KDoc,
+resource ownership, diagnostic hooks, and exact encoding-adapter wiring are
+implementation work under the settled contract, not additional behavioral policy.
 
 ##### Ordered implementation after plan approval
 
-1. Resolve the relevant decisions in db-01-d/e, including the return-state issue.
+1. Obtain user approval of the revised plan. Implement the settled contract
+   details and operation matrix in db-01-d/e.
 2. Implement the immutable model migration in db-01-f, including `NewTuple`
    return types and predecessor population across all three encoding entry
    points. Check encoder forwarding, bootstrap, writers, cache users, and JVM/JS
@@ -444,6 +628,8 @@ new low-level operations agree on names, physical fn, and non-null nv.
 
 - **db-05-a · TODO:** Put DDL preparation and all operation groups within the request's rollback
   boundary. Handle failure before savepoint creation and the first write request.
+  Verify the existing `PgWriter` savepoint mechanism covers preparation and all
+  mutations, and rolls back on exception; `PgDatabase` assumes this caller guarantee.
 - **db-05-b · TODO:** Complete schema/table context in error mapping on JVM and PLV8, preserving
   missing-schema/table information needed by session cache invalidation.
 - **db-05-c · TODO:** Publish local catalog/collection changes only after successful commit; discard
@@ -451,6 +637,14 @@ new low-level operations agree on names, physical fn, and non-null nv.
 - **db-05-d · TODO:** Ensure post-mutation expected-version validation can fail an entire batch
   without leaving successful rows or DDL behind, while preserving earlier
   successful requests in the same session where appropriate.
+- **db-05-e · TODO:** Enforce one mutation per fully qualified feature identity per
+  transaction/version in the session and `PgWriter`, using transaction-object
+  modification tracking. Reject duplicates within/across requests before database
+  invocation; restore tracking on request rollback. Keep this caller-side invariant
+  out of `PgDatabase`.
+- **db-05-f · TODO:** Verify caller-side deterministic input sorting for every
+  mutation path, including ID/GUID DELETE and PURGE; document trusted ordering
+  preconditions and preserve input/result correlation without database-side sorting.
 
 **Done when:** a mixed batch failure restores both SQL and session-local state;
 successful DDL becomes visible to other sessions only after commit.
@@ -463,9 +657,10 @@ successful DDL becomes visible to other sessions only after commit.
   and result reconstruction inside `PgDatabase`.
 - **db-06-b · TODO:** Insert through the root with nv=HEAD. Re-create over a tombstone archives by
   changing nv when history is ON; history-OFF replaces current state in place.
-- **db-06-c · TODO:** Preserve duplicate-live conflicts, lifecycle reset, undefined byte-array
-  handling as agreed in db-01-d/e, batch correlation, and original-state return
+- **db-06-c · TODO:** Preserve duplicate-live conflicts, lifecycle reset,
+  batch correlation, and original-state return
   guarantees. Fail with `NakshaException` carrying structured `NakshaError`.
+  Remove `undefined` sentinel handling: inputs are fully encoded replacement states.
 
 **Done when:** insert/re-create cases work in both history modes and CREATE has
 no dependency on old table descriptors or direct history INSERTs.
@@ -480,8 +675,9 @@ no dependency on old table descriptors or direct history INSERTs.
   history OFF update HEAD in place. Prove SQL statement/CTE dependencies and
   concurrent-writer locking rather than assuming textual CTE order.
 - **db-07-c · TODO:** Preserve missing/deleted state checks, atomic expected-version semantics,
-  CREATE/UPDATE action selection, change counts, and undefined-versus-null
-  byte-array behavior according to db-01 decisions. Read atomic expectations from
+  CREATE/UPDATE action selection and change counts according to db-01 decisions.
+  Remove `undefined` sentinel/old-payload merging and its reconstruction paths;
+  callers supply complete encoded states. Read atomic expectations from
   immutable `NewTuple.previousTupleNumber`, not from a mutable `Tuple` field;
   throw structured conflict exceptions. UPSERT purges DELETE HEAD, attempts
   INSERT, then applies conditional/unconditional UPDATE to the live branch.
@@ -494,16 +690,24 @@ returns final immutable tuples.
 ### db-08 — Move DELETE/PURGE and metadata deletion into PgDatabase
 **Status:** TODO · **Depends on:** db-07
 
-- **db-08-a · TODO:** Implement existing delete-with-old-state and purge behavior using root row
-  operations and the agreed behavior matrix; use the selection/result signatures
-  agreed in db-01-d/e and throw `NakshaException` on errors. Keep row transport
-  and tuple reconstruction internal; preserve atomic/no-op outcomes.
+- **db-08-a · TODO:** Implement the four ID/GUID DELETE methods with and without tuple
+  results, and the explicit `NewTuple` tombstone variant according to db-01-c.
+  Support key-only tombstones for `emptyTombstone = true`, defaulting to full
+  old-state tombstones; distinguish permissive GUID DELETE from strict explicit
+  tombstone creation. Implement
+  PURGE accepting db/catalog/collection `Id` values and ordered feature IDs.
+  PURGE removes DELETE HEAD only and returns one `Guid?` per input position,
+  leaving live HEAD unchanged without error and returning null for missing HEAD;
+  no atomic PURGE variant. Document the three positional outcomes explicitly.
+  Throw `NakshaException` for operation failures;
+  keep row transport and reconstruction internal.
 - **db-08-b · TODO:** Keep tombstones non-null in nv and preserve temporal lifetime semantics.
 - **db-08-c · TODO:** Connect catalog/collection physical drop to successful logical metadata writes
   in the same transaction; do not drop physical data before state validation.
-- **db-08-d · TODO:** Keep new-state/empty-state deletion APIs as explicit follow-up work unless
-  selected in db-01; replace silent empty stubs with implemented or clearly
-  unsupported behavior.
+- **db-08-d · TODO:** Replace obsolete generic delete stubs and update callers/tests
+  to the agreed ID/GUID and explicit-state APIs; verify empty-tombstone decoding,
+  column nullability, hashed identities, expected/actual errors, and old-state
+  archival. New-state and empty-state deletion are included in this migration.
 
 **Done when:** delete/purge, re-create, and catalog/collection deletion preserve
 agreed API outcomes, history, and rollback behavior.
@@ -556,12 +760,9 @@ writer SQL depends on separate HEAD/history tables.
 2. **Physical names:** `PgCollection.name` and creation use literal id text, while
    `PgQueryBuilder` uses `Id.catalogName()/collectionName()`. Should all operations
    use the mapped names, or should the literal-id rule in `partman.md` prevail?
-3. **Delete scope:** default proposal is to move the existing old-state API first.
-   Confirm PURGE behavior for an already-deleted HEAD (current SQL filters it out
-   despite comments describing tombstone removal), and whether new-state/empty-
-    state deletes belong in this migration.
-4. **Tuple persistence contract:** resolve the seven decisions under db-01-c
-   before implementing affected mutations. The new `NewTuple`/exception contract
+3. **Tuple persistence contract — ready for approval:** DELETE/PURGE behavior,
+   caller-owned savepoints, transaction-wide mutation uniqueness, and deterministic
+   sorting are settled in db-01-c. The new `NewTuple`/exception contract
    supersedes the earlier exposed row-buffer/nullable-error API and the original
    strict physical-rows-only boundary described in `partman.md`.
 
