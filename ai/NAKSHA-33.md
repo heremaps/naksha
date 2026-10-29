@@ -96,7 +96,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-01-g](#db-01-g--replace-the-row-buffer-signatures) | Replace the row-buffer signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Replace row-buffer mutation signatures with immutable tuple inputs and typed results. |
 | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | Verify pg_partman topology against the deployed version | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-02-a](#db-02-a--run-the-pgpartman-integration-spike) | Run the pg_partman integration spike | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `DONE` | Verify pg_partman HEAD topology with a rollback-only SQL spike. |
-| [db-02-b](#db-02-b--verify-nv-ranges-and-default-child-partitioning) | Verify nv ranges and default-child partitioning | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
+| [db-02-b](#db-02-b--verify-nv-ranges-and-default-child-partitioning) | Verify nv ranges and default-child partitioning | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `DONE` | Verify HEAD range boundaries, uniqueness and invalid next-version rejection. |
 | [db-02-c](#db-02-c--verify-finite-children-fn-leaves-and-indexes) | Verify finite-children fn leaves and indexes | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
 | [db-02-d](#db-02-d--verify-maintenance-and-cleanup) | Verify maintenance and cleanup | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
 | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | Finish the physical row and naming contract | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts), [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
@@ -832,11 +832,34 @@ and are required before db-02 as a whole can finish.
 Verify native `nv` ranges, restricted default/HEAD, and a default child that is
 itself range-partitioned by physical `fn`.
 
+Verified on PostgreSQL 16.2 / pg_partman 5.0.1 by extending the retained SQL
+spike. Both plain and two-leaf HEAD configurations route physical fn values
+`Long.MIN_VALUE`, -1, 0 and `Long.MAX_VALUE` correctly. `tableoid` checks verify
+the selected HEAD leaf and that changing nv moves the row out of HEAD.
+The mandatory unique index rejects a second HEAD state for the same fn even
+when its version differs. NULL nv, uncovered finite nv and nv above HEAD fail;
+the HEAD-only CHECK is catalog-verified as validated. Maintenance preserves
+the exact test rows. All DDL/data/configuration is rolled back.
+
+This verifies the two-way physical range boundary, not the logical fn encoding
+or every partition count (db-03). Finite nv children are still plain tables in
+this probe; full finite-child fn partitioning belongs to db-02-c.
+
 ### db-02-c — Verify finite-children fn leaves and indexes
 
 Verify how finite children acquire `fn` leaves and indexes: distinguish
 template-table behavior from actual pg_partman subpartition configuration. Record
 the supported function signatures and creation order.
+
+Source-inspection lead for the next runtime probe: v5.0.1
+`create_sub_parent` records the fn key in `part_config_sub`; templates do not
+copy partition keys/layouts. `create_partition_id` computes each upper bound
+as bigint `lower + interval`, so it cannot express the exclusive upper bound
+needed to include `Long.MAX_VALUE`, nor arbitrary unequal widths for counts
+such as 3. `create_sub_parent` also omits the top-level default from its child
+enumeration. These are source findings, not a verified production provisioning
+solution; do not silently substitute manual leaf creation for the agreed
+pg_partman ownership. Runtime testing and an explicit resolution remain pending.
 
 ### db-02-d — Verify maintenance and cleanup
 
