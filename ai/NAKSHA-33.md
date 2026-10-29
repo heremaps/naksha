@@ -91,7 +91,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-01-b](#db-01-b--pass-physical-creation-options) | Pass physical creation options | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
 | [db-01-c](#db-01-c--revise-the-tuple-persistence-contract) | Revise the tuple persistence contract | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
 | [db-01-d](#db-01-d--document-identity-validation-and-preconditions) | Document identity validation and preconditions | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Add expected and actual error versions with tuple-number reconstruction helpers. |
-| [db-01-e](#db-01-e--write-the-behavior-matrix) | Write the behavior matrix | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
+| [db-01-e](#db-01-e--write-the-behavior-matrix) | Write the behavior matrix | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Document mutation outcomes and history behavior for tuple persistence. |
 | [db-01-f](#db-01-f--migrate-the-model-to-immutable-newtuple) | Migrate the model to immutable NewTuple | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Introduce an immutable NewTuple wrapper and remove the mutable previousTupleNumber field from Tuple. |
 | [db-01-g](#db-01-g--replace-the-row-buffer-signatures) | Replace the row-buffer signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Replace row-buffer mutation signatures with immutable tuple inputs and typed results. |
 | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | Verify pg_partman topology against the deployed version | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
@@ -659,6 +659,97 @@ in the existing db-05..db-08 implementation tickets.
 
 Write a compact behavior matrix for missing/live/deleted HEAD rows across
 CREATE, UPDATE, UPSERT, DELETE, PURGE and both history modes.
+
+#### HEAD outcomes
+
+This matrix specifies the target behavior, not the current SQL implementation.
+`Live` means CREATE or UPDATE action; `deleted` means DELETE action. `Expected`
+means a supplied same-feature, same-target predecessor (or the expected state in
+a GUID). Masked equality is `(expected.version and -4L) == (actual.version and -4L)`.
+`Actual predecessor` always refers to the complete HEAD tuple number replaced,
+including its original action bits, never the caller's possibly masked expectation.
+
+| Operation / condition | Missing HEAD | Live HEAD | Deleted HEAD |
+| --- | --- | --- | --- |
+| CREATE / INSERT, null predecessor | Insert supplied CREATE state | Fail: feature exists | Purge tombstone, insert supplied CREATE state |
+| UPDATE, null predecessor | Fail: feature not found | Replace with supplied UPDATE state; return actual predecessor | Fail: no live HEAD |
+| UPDATE, expected predecessor | Fail: feature not found | Replace only on masked equality; otherwise conflict; return actual predecessor | Fail: no live HEAD, even on masked equality |
+| UPSERT, null predecessor | INSERT branch; predecessor null | UPDATE branch; return actual predecessor | Purge tombstone, INSERT branch; predecessor null |
+| UPSERT, expected predecessor | INSERT branch regardless of expected version/action; predecessor null | UPDATE branch only on masked equality; otherwise conflict; return actual predecessor | Purge tombstone, INSERT branch regardless of expected version/action; predecessor null |
+| DELETE by ID, without full result | Omit result, no error | Create tombstone; return its GUID | Return existing GUID unchanged |
+| DELETE by ID, with full result | Omit result, no error | Create tombstone; return `NewTuple` with actual predecessor | Return existing tombstone with predecessor null |
+| DELETE by GUID, without full result | Fail: expected state missing | Create tombstone only on masked equality; otherwise conflict; return its GUID | Return existing GUID unchanged, even if expected version differs |
+| DELETE by GUID, with full result | Fail: expected state missing | Create tombstone only on masked equality; otherwise conflict; return `NewTuple` with actual predecessor | Return existing tombstone with predecessor null, even if expected version differs |
+| Explicit-state DELETE, null predecessor | Fail: feature not found | Write supplied DELETE state; return actual predecessor | Fail: live HEAD required |
+| Explicit-state DELETE, expected predecessor | Fail: expected state missing | Write supplied DELETE state only on full tuple-number equality; otherwise conflict | Write supplied DELETE state only on full tuple-number equality; otherwise conflict; no already-deleted shortcut |
+| PURGE by ID, no expected version | Return null at this position | Leave unchanged; return current GUID at this position | Purge; return removed tombstone's GUID at this position |
+
+All INSERT predecessor metadata must be null; reject non-null metadata as
+`ILLEGAL_ARGUMENT` before any purge or insert. Supplied UPDATE/UPSERT/explicit
+DELETE predecessors must identify the same database/catalog/collection/feature;
+foreign metadata is `ILLEGAL_ARGUMENT`, even on UPSERT's INSERT branch. GUID
+expectations likewise address the selected feature/target, not another feature.
+Explicit-state DELETE inputs must encode DELETE action. These argument failures
+are not version conflicts and must never select an unconditional fallback.
+
+An expected action difference alone does not reject a live UPDATE/UPSERT or
+GUID-based DELETE when masked versions match. The full-equality explicit-state
+DELETE row is the action-sensitive exception. PURGE has no atomic variant.
+UPSERT falls back to UPDATE only for a live HEAD, not for unrelated SQL or
+constraint failures; concurrent races must preserve these same outcomes.
+
+#### History And Payload
+
+Apply the following physical effects to every successful outcome above. `v` is
+the successor state's operation version, or the caller's purge transaction version
+when no successor is created. New HEAD rows always use `nv = Version.HEAD.number`.
+
+| Successful transition | History ON | History OFF | New-state payload |
+| --- | --- | --- | --- |
+| Absent to CREATE | Insert HEAD; no predecessor to archive | Same | Complete supplied state |
+| DELETE to CREATE (INSERT / UPSERT) | Set old tombstone `nv = v` to archive it, then insert CREATE HEAD | Remove old tombstone, then insert CREATE HEAD | Complete supplied state; no old payload merged |
+| Live to UPDATE (UPDATE / UPSERT) | Set old live HEAD `nv = v` to archive it, then insert UPDATE HEAD | Replace current state without retaining its old state | Complete supplied payload; UPSERT may adjust branch-specific control values |
+| Live to generated DELETE | Archive full old live state with `nv = v`, then create DELETE HEAD | Replace current state with DELETE HEAD, without archiving it | Retain old payload by default; optional key-only tombstone below |
+| Matching HEAD to explicit DELETE | Archive full old HEAD, including an explicitly matched DELETE, with `nv = v`; insert supplied DELETE HEAD | Replace matching HEAD without archiving it | Exact supplied tombstone; no payload merge |
+| DELETE to absent (PURGE) | Set removed tombstone `nv = v` to archive it; leave no HEAD | Remove tombstone without an archive; leave no HEAD | No new state |
+| Existing deleted outcome returned unchanged / live PURGE / missing no-op | No archive or rewrite | No archive or rewrite | No new state |
+
+`emptyTombstone = true` is available only on the two without-full-result DELETE
+variants, defaults to false, and affects newly generated tombstones only. Every
+non-key column is SQL NULL; only `fn`, `version`, and `nv` are mandatory. Existing
+tombstones returned unchanged are not emptied. History ON still retains the full
+old state. The full-result ID/GUID variants retain payload; explicit-state DELETE
+uses the complete supplied tombstone. No operation preserves `undefined` payload
+members or merges byte-array sentinel values with the old HEAD.
+
+#### Results And Failures
+
+INSERT returns `List<Tuple>` in input order. UPDATE/UPSERT and explicit-state
+DELETE return ordered `List<NewTuple>` with actual predecessor metadata; UPSERT
+INSERT branches have null predecessors. Generated DELETE returns either GUIDs
+or `NewTuple` states as selected by the method, with null predecessor when an
+existing tombstone is returned without replacement.
+
+Only ID-based DELETE omits missing inputs: `[A, missing-B, C]` returns
+`[result-A, result-C]`. GUID-based DELETE fails for missing HEAD, so it never
+silently omits an expected state. PURGE always returns exactly one nullable item
+per input, preserving `[result-A, null, result-C]`. All correlation is explicit;
+SQL result ordering is not a contract.
+
+Failures throw `NakshaException` carrying `NakshaError`, preserving target identity,
+SQL cause, and available full expected/actual versions. Missing HEAD gives null
+`actualVersion`; an unconditional request gives null `expectedVersion`, not zero.
+Use existing applicable error codes (`ILLEGAL_ARGUMENT`, `FEATURE_EXISTS`,
+`FEATURE_NOT_FOUND`, `CONFLICT`), not a new taxonomy. No partial success list is
+returned. The caller rolls back to its savepoint and restores modification tracking;
+earlier successful requests in the transaction remain intact. Caller-side uniqueness
+and deterministic locking-order preconditions apply in both history modes.
+
+Done: completed the HEAD outcome and history/payload matrices,
+including result ordering, predecessor metadata and failure/rollback semantics.
+Cross-checked against db-01-c/d and the db-01-g declarations/KDoc; a separate
+consistency review found no contradictions in the new matrix. Documentation-only
+change; no compilation or runtime tests were needed or run for db-01-e.
 
 ### db-01-f — Migrate the model to immutable NewTuple
 
