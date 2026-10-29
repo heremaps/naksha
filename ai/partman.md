@@ -1,5 +1,17 @@
 # pg_partman Collection Partitioning Plan
 
+## Superseding Decision
+
+The user approved replacing pg_partman provisioning with a Naksha-owned SQL
+maintainer after runtime tests on PostgreSQL 18.6 / pg_partman 5.5.0 could not
+provision the independent full-range fn layout. The successful standalone
+prototype and limits are documented in [NAKSHA-33-custom-partman.md](NAKSHA-33-custom-partman.md).
+The current workboard [NAKSHA-33.md](NAKSHA-33.md) tracks productionization,
+custom columns/index management, registry scanning and hourly pg_cron scheduling.
+Create the current history range plus three future ranges and a HEAD-only default;
+maintain full-range fn leaves beneath each. The sections below preserve the original
+design investigation, not a requirement to keep pg_partman as the provisioning owner.
+
 ## Goal
 
 Replace the current two-root-table design (`<collection>` for HEAD and
@@ -733,7 +745,6 @@ Queries
 - ReadFeatures query
 - Tuple Loading
 - Writes
-
 
 
 
