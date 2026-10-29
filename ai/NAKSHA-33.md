@@ -90,7 +90,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-01-a](#db-01-a--finalize-operation-signatures) | Finalize operation signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
 | [db-01-b](#db-01-b--pass-physical-creation-options) | Pass physical creation options | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
 | [db-01-c](#db-01-c--revise-the-tuple-persistence-contract) | Revise the tuple persistence contract | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | — |
-| [db-01-d](#db-01-d--document-identity-validation-and-preconditions) | Document identity validation and preconditions | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
+| [db-01-d](#db-01-d--document-identity-validation-and-preconditions) | Document identity validation and preconditions | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Add expected and actual error versions with tuple-number reconstruction helpers. |
 | [db-01-e](#db-01-e--write-the-behavior-matrix) | Write the behavior matrix | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-01-f](#db-01-f--migrate-the-model-to-immutable-newtuple) | Migrate the model to immutable NewTuple | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Introduce an immutable NewTuple wrapper and remove the mutable previousTupleNumber field from Tuple. |
 | [db-01-g](#db-01-g--replace-the-row-buffer-signatures) | Replace the row-buffer signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Replace row-buffer mutation signatures with immutable tuple inputs and typed results. |
@@ -597,6 +597,63 @@ Implement/document the settled identity validation, expected/actual error
 versions and reconstruction helpers, and caller-owned savepoint,
 mutation-uniqueness, and sorting preconditions. Specify cursor/plan ownership and
 SQL logging/EXPLAIN hooks.
+
+Identity validation uses the cached numeric values of the supplied `Id` objects:
+compare `PgDatabase.id.number` to `TupleNumber.databaseNumber`, `schema.intValue`
+to `catalogNumber`, `table.intValue` to `collectionNumber`, and the new state's
+`featureNumber` to its supplied predecessor's `featureNumber`. Do not hash strings
+again or use `Id.equals` for catalog/collection-width comparisons. No dedicated
+infix identity comparisons exist in this checkout; use these explicit comparisons
+rather than assuming an unavailable helper. Foreign predecessors are illegal
+arguments before UPSERT branch selection, not unconditional operations. Atomic
+UPDATE/UPSERT compare versions with `and -4L` and separately require a live HEAD;
+explicit-state DELETE compares the full predecessor, including action.
+
+Encoding/adapters must distinguish a source UUID from an atomic expectation:
+`atomic = false` selects null predecessor metadata; `atomic = true` requires a
+usable same-target predecessor for atomic UPDATE; `atomic = null` retains automatic
+selection from a usable source predecessor. Fork handling still clears the foreign
+source predecessor and records origin. Request-level explicit expected versions
+remain authoritative in adapters. The encoder currently forwards source metadata
+even with `atomic = false`; enforce this translation when wiring the new persistence
+boundary in db-07-c, before replacing the current `requireVersion` path.
+
+`NakshaError.expectedVersion` and `actualVersion` are nullable payload properties.
+Both retain action bits; zero is a value, not absence. The reconstruction helpers
+return null if their version or any of database/catalog/collection/id is absent,
+otherwise use the existing `TupleNumber(Id, Id, Id, Id, version)` constructor.
+They reconstruct on demand from the error's current fields, with no stale cache.
+SQL mapping must preserve the original cause in `NakshaException` and populate
+target identity plus available expected/actual versions using existing error codes.
+
+Every mutation requires a caller-owned savepoint, transaction-wide uniqueness of
+the full database/catalog/collection/feature identity, and a common deterministic
+feature locking order independent of operation/action. `PgDatabase` must neither
+duplicate these checks nor sort or manage transactions. On failure, `PgWriter`
+rolls back database changes and restores modification tracking to the savepoint,
+retaining earlier successful requests. Current tracking only records counts and
+current preparation precedes the savepoint; implementing these guarantees remains
+db-05, not a claim about the existing writer.
+
+Mutation methods own and close all internally prepared plans and result cursors,
+including exception paths. Closing a cursor from a prepared plan does not close
+the plan. They never close the caller's connection. `rows_query` instead returns
+a caller-owned plan; its caller closes the plan and all cursors before releasing
+the connection. Keep existing `PgSession.logQueries`/`logExplain` controls and
+`logAtInfo` reporting as writers migrate. Diagnostic EXPLAIN uses planning only
+(`explain(..., false, ...)`); do not use ANALYZE for mutation diagnostics because
+it executes the mutation. Close the diagnostic plan as well as its cursor.
+
+Done: added nullable version payload fields, both reconstruction
+helpers, and version fields in error diagnostics. Added three common tests covering
+numeric/hashed/internal IDs, action-bit preservation, missing identity/version,
+zero versions, payload storage and diagnostics. Verified:
+`:here-naksha-lib-base:jvmTest` (full suite),
+`:here-naksha-lib-base:compileTestKotlinJs`, and
+`:here-naksha-lib-psql:compileKotlinJvm` / `compileKotlinJs` all pass.
+JS test sources were compiled, not executed; no database tests were run.
+Runtime SQL identity validation/error mapping and caller rollback/tracking remain
+in the existing db-05..db-08 implementation tickets.
 
 ### db-01-e — Write the behavior matrix
 
