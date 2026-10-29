@@ -39,6 +39,8 @@ DECLARE
     children_before integer;
     children_after integer;
     accepted boolean;
+    actual_leaf regclass;
+    boundary_fn bigint;
     groups integer;
 BEGIN
     SELECT n.nspname INTO STRICT extension_schema
@@ -106,6 +108,53 @@ BEGIN
         ) THEN
             RAISE EXCEPTION 'Pre-created default is not partitioned: %', head_id;
         END IF;
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conrelid = head_id AND contype = 'c' AND convalidated
+            AND pg_get_constraintdef(oid) LIKE '%nv =%9007199254740991%'
+        ) THEN
+            RAISE EXCEPTION 'HEAD-only check is absent or not validated for %', root_id;
+        END IF;
+
+        -- Physical fn bounds must include both bigint extremes, not just ordinary IDs.
+        FOREACH boundary_fn IN ARRAY ARRAY[
+            '-9223372036854775808'::bigint, -1::bigint, 0::bigint,
+            '9223372036854775807'::bigint
+        ] LOOP
+            EXECUTE format('INSERT INTO %s VALUES ($1, 80, 9007199254740991)
+                RETURNING tableoid::regclass', root_id)
+                INTO actual_leaf USING boundary_fn;
+            IF groups = 1 AND actual_leaf <> head_id THEN
+                RAISE EXCEPTION 'HEAD row routed outside default for %', root_id;
+            ELSIF groups = 2 AND actual_leaf <> (CASE WHEN boundary_fn < 0
+                THEN to_regclass('naksha_partman_spike.head_negative')
+                ELSE to_regclass('naksha_partman_spike.head_positive') END) THEN
+                RAISE EXCEPTION 'Incorrect fn routing for %: %', boundary_fn, actual_leaf;
+            END IF;
+            BEGIN
+                EXECUTE format('INSERT INTO %s VALUES ($1, 84, 9007199254740991)', root_id)
+                    USING boundary_fn;
+                RAISE EXCEPTION 'Duplicate HEAD feature was accepted';
+            EXCEPTION WHEN unique_violation THEN
+                NULL;
+            END;
+            EXECUTE format('UPDATE %s SET nv = 100 WHERE fn = $1
+                RETURNING tableoid::regclass', root_id)
+                INTO actual_leaf USING boundary_fn;
+            IF actual_leaf = head_id OR EXISTS (
+                SELECT 1 FROM pg_inherits WHERE inhparent = head_id AND inhrelid = actual_leaf
+            ) THEN
+                RAISE EXCEPTION 'Archived boundary fn stayed in HEAD: %', boundary_fn;
+            END IF;
+            EXECUTE format('DELETE FROM %s WHERE fn = $1', root_id) USING boundary_fn;
+        END LOOP;
+        BEGIN
+            EXECUTE format('INSERT INTO %s VALUES (3, 80, NULL)', root_id);
+            RAISE EXCEPTION 'NULL nv was accepted';
+        EXCEPTION WHEN not_null_violation THEN
+            RAISE NOTICE 'PASS: NULL nv rejected for %', root_id;
+        END;
+        RAISE NOTICE 'PASS: bigint boundary routing and HEAD uniqueness for %', root_id;
 
         EXECUTE format('INSERT INTO %s VALUES
             (-1, 100, 9007199254740991), (1, 100, 9007199254740991),
