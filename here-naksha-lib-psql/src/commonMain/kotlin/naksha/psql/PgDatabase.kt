@@ -621,6 +621,10 @@ SELECT basics.*, procs.* FROM basics, procs;
     //   SQL row order is never assumed.
     // - Failures construct a [NakshaError], wrap it in [NakshaException], and throw; there is no
     //   nullable-error return. An exception may follow partial mutation: the caller rolls back.
+    // - Validate target identity with id.number, schema.intValue, table.intValue and featureNumber;
+    //   never reconstruct Ids from text for validation. Conflicts preserve full versions in errors.
+    // - Mutations close internal plans/cursors, never the connection. Preserve caller-controlled
+    //   SQL logging and planning-only EXPLAIN; EXPLAIN ANALYZE would execute the mutation.
 
     /**
      * Insert new HEAD states. Every input [NewTuple] must carry a `null` predecessor; a non-null

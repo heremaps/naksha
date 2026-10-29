@@ -287,6 +287,7 @@ open class NakshaError() : AnyObject() {
         private val CODE_FIELD = NotNullProperty<NakshaError, String>(String::class) { _, _ -> EXCEPTION }
         private val MSG_FIELD = NotNullProperty<NakshaError, String>(String::class) { self, _ -> self.code }
         private val STRING_FIELD = NullableProperty<NakshaError, String>(String::class)
+        private val VERSION_FIELD = NullableProperty<NakshaError, Long>(Long::class)
         @Deprecated(message = "To be removed")
         private val THROWABLE_FIELD = NullableProperty<NakshaError, Throwable>(Throwable::class)
 
@@ -344,6 +345,44 @@ open class NakshaError() : AnyObject() {
     var database: String? by STRING_FIELD
 
     /**
+     * The expected state version, including action bits; `null` when no expectation was supplied.
+     * @since 3.0
+     */
+    var expectedVersion: Long? by VERSION_FIELD
+
+    /**
+     * The actual HEAD version, including action bits; `null` when no HEAD exists or is known.
+     * @since 3.0
+     */
+    var actualVersion: Long? by VERSION_FIELD
+
+    /**
+     * Reconstruct the expected state address, or return `null` when its version or identity is absent.
+     * Catalog and collection identities use their tuple-number widths; action bits are preserved.
+     * @since 3.0
+     */
+    fun getExpectedTupleNumber(): TupleNumber? {
+        val version = expectedVersion ?: return null
+        return TupleNumber(
+            Id(database ?: return null), Id(catalog ?: return null),
+            Id(collection ?: return null), Id(id ?: return null), version
+        )
+    }
+
+    /**
+     * Reconstruct the actual HEAD address, or return `null` when its version or identity is absent.
+     * Catalog and collection identities use their tuple-number widths; action bits are preserved.
+     * @since 3.0
+     */
+    fun getActualTupleNumber(): TupleNumber? {
+        val version = actualVersion ?: return null
+        return TupleNumber(
+            Id(database ?: return null), Id(catalog ?: return null),
+            Id(collection ?: return null), Id(id ?: return null), version
+        )
+    }
+
+    /**
      * The origin exception that caused this error; if any.
      */
     @Deprecated(message = "The cause is being removed from the error, it should be added to the carrier exception, being NakshaException!")
@@ -386,7 +425,9 @@ open class NakshaError() : AnyObject() {
   \"database\":${database.toJson()},
   \"catalog\":${catalog.toJson()},
   \"collection\":${collection.toJson()},
-  \"id\":${id.toJson()}
+  \"id\":${id.toJson()},
+  \"expectedVersion\":${expectedVersion},
+  \"actualVersion\":${actualVersion}
 }"""
     }
 
@@ -399,4 +440,3 @@ open class NakshaError() : AnyObject() {
         printer.get()?.call(this, logger)
     }
 }
-
