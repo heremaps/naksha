@@ -13,6 +13,7 @@ import naksha.base.fn.Fn0
 import naksha.base.fn.Fx0
 import naksha.model.Naksha
 import naksha.model.NakshaVersion
+import naksha.model.NewTuple
 import naksha.model.Tuple
 import naksha.model.objects.NakshaAdmin
 import naksha.model.objects.NakshaDatabase
@@ -609,175 +610,235 @@ SELECT basics.*, procs.* FROM basics, procs;
     internal fun collection_drop_index(conn: PgConnection, schema: String, table: String, index: PgIndex): Unit =
         TODO("db-04: drop root index and update future partitions")
 
-    // Row-operation boundary (ai/NAKSHA-33.md, db-01-a):
-    // - schema/table are unquoted physical root names; conn belongs to the caller.
-    // - PgRows carries input columns/values and is updated in place with results.
-    // - storeHistory selects archival versus current-only mutation.
-    // - version is the operation's transaction version; delete/purge need it even without a new row.
-    // - Mutation return: null on success, NakshaError on failure; the caller chooses whether to throw.
-    // - Results identify the input and previous/final state. Exact columns follow in db-01-c.
-    // - The caller interprets outcomes and owns transaction rollback; these functions never commit.
-    // - An error can follow partial mutation: rows are not a successful result and the caller must
-    //   roll back the operation before continuing. Returning an error does not repair an aborted SQL transaction.
+    // Row-operation boundary (ai/NAKSHA-33.md, db-01-c/db-01-g):
+    // - schema/table are the catalog/collection [Id] of the target; the database identity is this
+    //   instance's [id]. conn belongs to the caller; these functions never commit or roll back.
+    // - Inputs are immutable: new-state operations take [NewTuple] wrappers, selection operations
+    //   take feature [Id]s or [Guid]s. Cached tuples and inputs are never mutated.
+    // - storeHistory selects archival (change the predecessor `nv`) versus current-only mutation.
+    // - version is the caller's transaction version; delete/purge need it to archive or create states.
+    // - Result order is the input order (with the agreed DELETE omissions and PURGE null positions);
+    //   SQL row order is never assumed.
+    // - Failures construct a [NakshaError], wrap it in [NakshaException], and throw; there is no
+    //   nullable-error return. An exception may follow partial mutation: the caller rolls back.
 
     /**
-     * Insert new HEAD states, first purging existing HEAD states only when their action is DELETE.
+     * Insert new HEAD states. Every input [NewTuple] must carry a `null` predecessor; a non-null
+     * predecessor is an illegal argument, rejected before any mutation.
      *
-     * For each input feature number, an existing DELETE state is removed from HEAD before insertion.
-     * With history enabled, purging archives that state by changing its `nv`, allowing PostgreSQL to
-     * route it into history; without history it is removed without an archive. An existing CREATE or
-     * UPDATE state must not be purged: inserting over a live state reports an error. New states are
-     * inserted through the root with `nv = Version.HEAD.number` and CREATE action.
+     * For each feature, an existing DELETE HEAD is purged first (archived by changing its `nv` when
+     * [storeHistory] is enabled, otherwise removed) before insertion. A live CREATE/UPDATE HEAD is an
+     * error. New states are inserted through the root with `nv = Version.HEAD.number` and CREATE
+     * action. Returns the supplied tuple states in input order.
      *
-     * Database results update [rows] in place. No transaction is committed or rolled back here.
+     * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+     * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
      * @param conn the caller-owned mutable connection; it is not closed by this method.
-     * @param schema the unquoted physical schema containing the root.
-     * @param table the unquoted physical collection root name.
-     * @param rows the mutable batch containing feature numbers, new versions, and payload columns;
-     * updated in place with the final inserted state and operation results.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param tuples the fully encoded new states; each predecessor must be `null`.
      * @param storeHistory whether purged DELETE states are archived instead of discarded.
-     * @return `null` when the whole batch succeeds; otherwise the [NakshaError] for the caller to
-     * inspect or throw. On error the caller must roll back the operation; [rows] may be partially updated.
+     * @return the supplied tuple states, in input order.
+     * @throws NakshaException wrapping a [NakshaError] on any failure.
      * @since 3.0
      */
     internal fun rows_insert(
-        conn: PgConnection, schema: String, table: String, rows: PgRows, storeHistory: Boolean
-    ): NakshaError? = TODO("db-06: insert rows through the root")
+        conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean
+    ): List<Tuple> = TODO("db-06: insert rows through the root")
 
     /**
-     * Replace current HEAD states or insert missing states through the collection root.
+     * Replace current HEAD states or insert missing ones. A supplied predecessor is validated for
+     * target identity first and never conditions phase 1. Phase 1 inserts into an absent HEAD or
+     * replaces a DELETE HEAD. Only a live CREATE/UPDATE HEAD selects phase 2, which updates
+     * unconditionally or, when a predecessor is supplied, conditionally on its masked version.
      *
-     * Existing HEAD states are removed from HEAD (archived by changing `nv` when history is enabled)
-     * before the successor is inserted. A live predecessor produces UPDATE action; an absent or DELETE
-     * predecessor starts a new lifecycle with CREATE action. With history disabled, an existing HEAD
-     * row is replaced in place and retains `nv = Version.HEAD.number`.
+     * Returns, per input, a [NewTuple] whose `previousTupleNumber` is set when UPDATE was performed
+     * and `null` when INSERT was performed (including re-creation after a DELETE HEAD), in input order.
      *
-     * Final versions, previous states, change counts, and retained payload values are written back to
-     * [rows] for the caller to interpret. No transaction is committed or rolled back here.
+     * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+     * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
      * @param conn the caller-owned mutable connection; it is not closed by this method.
-     * @param schema the unquoted physical schema containing the root.
-     * @param table the unquoted physical collection root name.
-     * @param rows the mutable batch of new states and any expected-version data; receives results in
-     * place, including values retained when an input byte-array uses the undefined sentinel.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param tuples the fully encoded new states with their expected predecessors.
      * @param storeHistory whether replaced HEAD states are archived rather than discarded.
-     * @return `null` on batch success, or a [NakshaError] for caller-controlled error handling.
-     * On error the caller must roll back the operation and must not treat [rows] as successful results.
+     * @return the final states with predecessor set only for the UPDATE branch, in input order.
+     * @throws NakshaException wrapping a [NakshaError] on any failure.
      * @since 3.0
      */
     internal fun rows_upsert(
-        conn: PgConnection, schema: String, table: String, rows: PgRows, storeHistory: Boolean
-    ): NakshaError? = TODO("db-07: upsert rows through the root")
+        conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean
+    ): List<NewTuple> = TODO("db-07: upsert rows through the root")
 
     /**
-     * Replace existing live HEAD states, reporting missing/deleted states or expected-version conflicts.
+     * Replace existing live HEAD states. An input [NewTuple] with a non-null predecessor requests an
+     * atomic UPDATE conditioned on the predecessor's version (low two action bits masked); `null`
+     * selects an unconditional UPDATE. A missing HEAD, or a mismatching/DELETE predecessor, is a
+     * structured error.
      *
-     * With history enabled, changes to the old HEAD's `nv` archive it before inserting its successor
-     * with UPDATE action and `nv = Version.HEAD.number`. With history disabled, the HEAD row is updated
-     * in place without changing `nv` away from HEAD. The operation preserves undefined byte-array
-     * values and writes final payload/control values and previous-state information back to [rows].
+     * With [storeHistory] enabled the old HEAD is archived by changing its `nv`; otherwise the HEAD
+     * row is updated in place. Returns, per input, a [NewTuple] whose `previousTupleNumber` is the
+     * actual replaced live HEAD and whose [NewTuple.tuple] is the supplied new state, in input order.
+     *
+     * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+     * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
      * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
-     * @param schema the unquoted physical schema containing the root.
-     * @param table the unquoted physical collection root name.
-     * @param rows the mutable batch of successor states and optional expected versions; updated in
-     * place with final states and operation results.
-     * @param storeHistory whether previous HEAD states are archived rather than overwritten.
-     * @return `null` on batch success, or a [NakshaError] that the caller may inspect or throw.
-     * The caller must roll back the operation on error; [rows] may be partially updated.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param tuples the fully encoded new states with their expected predecessors.
+     * @param storeHistory whether replaced HEAD states are archived rather than overwritten.
+     * @return the new states with the actual replaced predecessor, in input order.
+     * @throws NakshaException wrapping a [NakshaError] on any failure.
      * @since 3.0
      */
     internal fun rows_update(
-        conn: PgConnection, schema: String, table: String, rows: PgRows, storeHistory: Boolean
-    ): NakshaError? = TODO("db-07: update rows through the root")
+        conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean
+    ): List<NewTuple> = TODO("db-07: update rows through the root")
 
     /**
-     * Remove selected current rows. [rows] carries explicit row selection and optional expected versions.
-     * No nullable selection or implicit whole-table operation is supported.
+     * Purge DELETE HEAD states for the given features, returning one nullable [Guid] per input in
+     * exactly the input order. Only HEAD states in DELETE action are purged: with [storeHistory]
+     * enabled the tombstone is archived by changing its `nv` to [version], otherwise it is removed.
+     * A live CREATE/UPDATE HEAD is left untouched and its current HEAD GUID is returned; a feature
+     * with no HEAD yields `null`. This is a positional contract: `result[i]` describes
+     * `featureIds[i]` and the list size equals `featureIds.size`.
      *
-     * Successful purges leave no HEAD row. With history enabled, prior states are archived and the
-     * feature's closed lifetime is recorded; without history, current state is removed directly.
-     * Handling of already-deleted states is finalized by the delete behavior matrix (db-01-e).
+     * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+     * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
      * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
-     * @param schema the unquoted physical schema containing the root.
-     * @param table the unquoted physical collection root name.
-     * @param rows the mutable selection batch containing feature numbers and optional expected versions;
-     * updated in place with previous states and purge outcomes, not new HEAD states.
-     * @param version the transaction version used to close lifetimes; operation action bits are derived from it.
-     * @param storeHistory whether removed states/lifetime markers are retained in finite history ranges.
-     * @return `null` on batch success, or a [NakshaError] for caller-controlled error handling.
-     * On error the caller must roll back the operation; [rows] may be partially updated.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param version the caller's transaction version used to archive purged tombstones.
+     * @param storeHistory whether purged tombstones are archived instead of removed.
+     * @param featureIds the features to purge, in the order results must be returned.
+     * @return one GUID (the purged tombstone or the unchanged live HEAD) or `null` (no HEAD), per input.
+     * @throws NakshaException wrapping a [NakshaError] on a genuine database failure.
      * @since 3.0
      */
     internal fun rows_purge(
-        conn: PgConnection, schema: String, table: String, rows: PgRows, version: Long, storeHistory: Boolean
-    ): NakshaError? = TODO("db-08: purge selected rows through the root")
+        conn: PgConnection, schema: Id, table: Id, version: Long, storeHistory: Boolean, featureIds: List<Id>
+    ): List<Guid?> = TODO("db-08: purge selected rows through the root")
 
     /**
-     * Write a deleted state preserving the old payload.
-     * [rows] carries row selection; [columns] describes the payload to preserve and return.
+     * Delete live HEAD states by feature [Id] without returning their payload. A missing HEAD is
+     * omitted from the result; an already-deleted HEAD is returned as its existing GUID without being
+     * rewritten. The generated tombstone has DELETE action and `nv = Version.HEAD.number`; with
+     * [storeHistory] enabled the prior live state is archived. By default the old payload is retained
+     * in the tombstone; [emptyTombstone] makes every non-key column SQL NULL.
      *
-     * Archives the prior live HEAD by changing `nv` when history is enabled, then creates a HEAD
-     * tombstone with DELETE action while retaining the old payload. Without history, the existing
-     * HEAD is changed in place. Tombstones use `nv = Version.HEAD.number`, never SQL NULL.
-     * Missing/already-deleted and atomic outcomes follow the behavior matrix agreed in db-01-e.
-     * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
-     * @param schema the unquoted physical schema containing the root.
-     * @param table the unquoted physical collection root name.
-     * @param rows the mutable selection/expected-version batch; receives final deleted states,
-     * preserved payload values, previous-state information, and outcomes in place.
-     * @param columns the physical columns to preserve from the predecessor and include in the result.
-     * @param version the transaction version from which to derive the tombstone's DELETE version.
-     * @param storeHistory whether prior live states are archived before creating tombstones.
-     * @return `null` on batch success, or a [NakshaError] that the caller may inspect or throw.
-     * The caller must roll back the operation on error; [rows] may be partially updated.
+     * Results preserve input order with missing features omitted. Preconditions: the caller has opened
+     * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
+     * deterministic locking order. No commit/rollback here.
+     * @param conn the caller-owned mutable connection; it is not closed by this method.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param version the caller's transaction version for the tombstone and any archival.
+     * @param storeHistory whether prior live states are archived before creating the tombstone.
+     * @param featureIds the features to delete.
+     * @param emptyTombstone whether to null all non-key payload columns in the new tombstone.
+     * @return the GUIDs of the deleted (or already-deleted) features, in input order, omitting missing.
+     * @throws NakshaException wrapping a [NakshaError] on any failure.
      * @since 3.0
      */
-    internal fun rows_delete_keep_old_state(
-        conn: PgConnection, schema: String, table: String, rows: PgRows,
-        columns: Array<PgColumn>, version: Long, storeHistory: Boolean
-    ): NakshaError? = TODO("db-08: delete selected rows preserving their payload")
+    internal fun rows_delete_by_id_without_result(
+        conn: PgConnection, schema: Id, table: Id, version: Long, storeHistory: Boolean,
+        featureIds: List<Id>, emptyTombstone: Boolean = false
+    ): List<Guid> = TODO("db-08: delete selected rows by id, returning GUIDs")
 
     /**
-     * Write HEAD tombstones using the supplied replacement payload instead of the old live payload.
+     * Delete live HEAD states by feature [Id], returning the deleted states. A missing HEAD is omitted;
+     * an already-deleted HEAD is returned unchanged with `previousTupleNumber = null`. The generated
+     * tombstone retains the old payload; with [storeHistory] enabled the prior live state is archived.
      *
-     * If supported by the agreed delete scope (db-01-e), archives prior HEAD states when history is
-     * enabled and writes the supplied states with DELETE action and `nv = Version.HEAD.number`.
-     * With history disabled, existing HEAD rows are changed in place. This declaration does not yet
-     * define missing/already-deleted-state behavior; that belongs to the delete behavior matrix.
-     * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
-     * @param schema the unquoted physical schema containing the root.
-     * @param table the unquoted physical collection root name.
-     * @param rows the mutable batch of new tombstone versions/payloads and optional expected versions;
-     * updated in place with final states and operation outcomes.
-     * @param storeHistory whether replaced HEAD states are archived rather than discarded.
-     * @return `null` on batch success, or a [NakshaError] for caller-controlled error handling.
-     * The caller must roll back the operation on error; [rows] may be partially updated.
+     * Results preserve input order with missing features omitted. Preconditions: the caller has opened
+     * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
+     * deterministic locking order. No commit/rollback here.
+     * @param conn the caller-owned mutable connection; it is not closed by this method.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param version the caller's transaction version for the tombstone and any archival.
+     * @param storeHistory whether prior live states are archived before creating the tombstone.
+     * @param featureIds the features to delete.
+     * @return the created tombstones (or existing deleted states) with predecessor references, in input order.
+     * @throws NakshaException wrapping a [NakshaError] on any failure.
+     * @since 3.0
+     */
+    internal fun rows_delete_by_id_with_result(
+        conn: PgConnection, schema: Id, table: Id, version: Long, storeHistory: Boolean, featureIds: List<Id>
+    ): List<NewTuple> = TODO("db-08: delete selected rows by id, returning states")
+
+    /**
+     * Conditionally delete live HEAD states by expected [Guid], returning GUIDs without payload. For a
+     * live HEAD the expected version must match (low two action bits masked); a mismatch or missing
+     * state is an error. An already-DELETE HEAD is accepted and returned even when its tuple number
+     * differs from the expectation, without being rewritten. Mirrors
+     * [rows_delete_by_id_without_result], including [emptyTombstone], but keys selection on GUIDs.
+     *
+     * Results preserve input order with missing features omitted. Preconditions: the caller has opened
+     * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
+     * deterministic locking order. No commit/rollback here.
+     * @param conn the caller-owned mutable connection; it is not closed by this method.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param version the caller's transaction version for the tombstone and any archival.
+     * @param storeHistory whether prior live states are archived before creating the tombstone.
+     * @param guids the expected states to delete.
+     * @param emptyTombstone whether to null all non-key payload columns in the new tombstone.
+     * @return the GUIDs of the deleted (or already-deleted) features, in input order, omitting missing.
+     * @throws NakshaException wrapping a [NakshaError] on a mismatch or database failure.
+     * @since 3.0
+     */
+    internal fun rows_delete_by_guid_without_result(
+        conn: PgConnection, schema: Id, table: Id, version: Long, storeHistory: Boolean,
+        guids: List<Guid>, emptyTombstone: Boolean = false
+    ): List<Guid> = TODO("db-08: delete selected rows by guid, returning GUIDs")
+
+    /**
+     * Conditionally delete live HEAD states by expected [Guid], returning the deleted states. For a
+     * live HEAD the expected version must match (low two action bits masked); a mismatch or missing
+     * state is an error. An already-DELETE HEAD is returned with `previousTupleNumber = null` even
+     * when its tuple number differs from the expectation. Mirrors [rows_delete_by_id_with_result],
+     * but keys selection on GUIDs.
+     *
+     * Results preserve input order with missing features omitted. Preconditions: the caller has opened
+     * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
+     * deterministic locking order. No commit/rollback here.
+     * @param conn the caller-owned mutable connection; it is not closed by this method.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param version the caller's transaction version for the tombstone and any archival.
+     * @param storeHistory whether prior live states are archived before creating the tombstone.
+     * @param guids the expected states to delete.
+     * @return the created tombstones (or existing deleted states) with predecessor references, in input order.
+     * @throws NakshaException wrapping a [NakshaError] on a mismatch or database failure.
+     * @since 3.0
+     */
+    internal fun rows_delete_by_guid_with_result(
+        conn: PgConnection, schema: Id, table: Id, version: Long, storeHistory: Boolean, guids: List<Guid>
+    ): List<NewTuple> = TODO("db-08: delete selected rows by guid, returning states")
+
+    /**
+     * Write explicit HEAD tombstones. Each input [NewTuple] must encode DELETE action. Without a
+     * supplied predecessor the existing HEAD must be live (CREATE/UPDATE); with a predecessor it must
+     * be exactly that HEAD state (action-sensitive comparison). A missing or mismatching HEAD is an
+     * error; an existing unrelated tombstone is never reported as a successful creation. With
+     * [storeHistory] enabled the replaced live state is archived.
+     *
+     * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
+     * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
+     * @param conn the caller-owned mutable connection; it is not closed by this method.
+     * @param schema the catalog [Id] of the target collection.
+     * @param table the collection [Id] of the target.
+     * @param version the caller's transaction version for the tombstone and any archival.
+     * @param storeHistory whether the replaced live state is archived.
+     * @param tuples the explicit tombstone states to create, with their expected predecessors.
+     * @return the created tombstones with predecessor references, in input order.
+     * @throws NakshaException wrapping a [NakshaError] on any failure.
      * @since 3.0
      */
     internal fun rows_delete_with_new_state(
-        conn: PgConnection, schema: String, table: String, rows: PgRows, storeHistory: Boolean
-    ): NakshaError? = TODO("db-08: decide support for client-supplied deleted states")
-
-    /**
-     * Write minimal HEAD tombstones for selected features, without retaining their old payload.
-     *
-     * If supported by the agreed delete scope (db-01-e), archives prior states when history is enabled
-     * and writes DELETE states containing the required control/identity values and no old user payload.
-     * Required physical columns must still satisfy table constraints. With history disabled, current
-     * state is replaced in place. Selection is explicit; this is never a whole-table operation.
-     * @param conn the caller-owned mutable connection; no commit, rollback, or close is performed here.
-     * @param schema the unquoted physical schema containing the root.
-     * @param table the unquoted physical collection root name.
-     * @param rows the mutable feature-number/expected-version selection batch; receives final minimal
-     * deleted states, previous-state information, and outcomes in place.
-     * @param version the transaction version from which to derive the tombstone's DELETE version.
-     * @param storeHistory whether prior HEAD states are archived rather than discarded.
-     * @return `null` on batch success, or a [NakshaError] that the caller may inspect or throw.
-     * The caller must roll back the operation on error; [rows] may be partially updated.
-     * @since 3.0
-     */
-    internal fun rows_delete_without_state(
-        conn: PgConnection, schema: String, table: String, rows: PgRows, version: Long, storeHistory: Boolean
-    ): NakshaError? = TODO("db-08: decide support for minimal deleted states")
+        conn: PgConnection, schema: Id, table: Id, version: Long, storeHistory: Boolean, tuples: List<NewTuple>
+    ): List<NewTuple> = TODO("db-08: write explicit tombstone states")
 
     /**
      * Prepare a physical SQL query without depending on the logical [PgQuery] wrapper.

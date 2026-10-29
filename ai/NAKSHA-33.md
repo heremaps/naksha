@@ -93,7 +93,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-01-d](#db-01-d--document-identity-validation-and-preconditions) | Document identity validation and preconditions | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-01-e](#db-01-e--write-the-behavior-matrix) | Write the behavior matrix | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-01-f](#db-01-f--migrate-the-model-to-immutable-newtuple) | Migrate the model to immutable NewTuple | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Introduce an immutable NewTuple wrapper and remove the mutable previousTupleNumber field from Tuple. |
-| [db-01-g](#db-01-g--replace-the-row-buffer-signatures) | Replace the row-buffer signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
+| [db-01-g](#db-01-g--replace-the-row-buffer-signatures) | Replace the row-buffer signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Replace row-buffer mutation signatures with immutable tuple inputs and typed results. |
 | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | Verify pg_partman topology against the deployed version | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-02-a](#db-02-a--run-the-pgpartman-integration-spike) | Run the pg_partman integration spike | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
 | [db-02-b](#db-02-b--verify-nv-ranges-and-default-child-partitioning) | Verify nv ranges and default-child partitioning | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
@@ -629,6 +629,16 @@ inputs/results, and thrown `NakshaException`. INSERT returns supplied tuple
 states; UPDATE/UPSERT return ordered `List<NewTuple>` carrying actual predecessor
 information. Keep `PgRows` private to persistence implementation and wire agreed
 DELETE/PURGE signatures.
+
+Done: the `rows_*` declarations in `PgDatabase` now take a uniform
+`(schema: Id, table: Id)` target plus caller `conn`, `storeHistory`, and the caller's
+transaction `version` where a state is created/archived; inputs are `List<NewTuple>`,
+`List<Id>` (feature), or `List<Guid>`. Signatures: `rows_insert: List<Tuple>`;
+`rows_update`/`rows_upsert`: `List<NewTuple>`; `rows_purge: List<Guid?>` (fixed-size
+positional); the four `rows_delete_by_{id,guid}_{with,without}_result` variants; and
+`rows_delete_with_new_state: List<NewTuple>`. Bodies remain `TODO` (SQL lands in
+db-06/07/08). No callers exist yet, so this is a declaration-only change. Verified green:
+`compileKotlinJvm`.
 
 ### db-02 — Verify pg_partman topology against the deployed version
 
