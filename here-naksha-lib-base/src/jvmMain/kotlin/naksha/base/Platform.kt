@@ -411,6 +411,15 @@ actual class Platform {
         actual fun toInt64RawBits(d: Double): Long = java.lang.Double.doubleToRawLongBits(d)
 
         @JvmStatic
+        actual fun swapLong(value: Long): Long = java.lang.Long.reverseBytes(value)
+
+        @JvmStatic
+        actual fun swapInt(value: Int): Int = java.lang.Integer.reverseBytes(value)
+
+        @JvmStatic
+        actual fun swapShort(value: Short): Short = java.lang.Short.reverseBytes(value)
+
+        @JvmStatic
         actual fun intToInt64(value: Int): Long = value.toLong()
 
         @JvmStatic

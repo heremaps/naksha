@@ -140,14 +140,14 @@ primitive; direct SQL users and Naksha SQL should use `fn_to_int8` and
 ```sql
 CREATE OR REPLACE FUNCTION "naksha~admin".bswap8(v int8) RETURNS int8
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
-  SELECT (get_byte(b,7)::int8
-        | get_byte(b,6)::int8 << 8
-        | get_byte(b,5)::int8 << 16
-        | get_byte(b,4)::int8 << 24
-        | get_byte(b,3)::int8 << 32
-        | get_byte(b,2)::int8 << 40
-        | get_byte(b,1)::int8 << 48
-        | get_byte(b,0)::int8 << 56)
+  SELECT (get_byte(b,0)::int8
+        | (get_byte(b,1)::int8 << 8)
+        | (get_byte(b,2)::int8 << 16)
+        | (get_byte(b,3)::int8 << 24)
+        | (get_byte(b,4)::int8 << 32)
+        | (get_byte(b,5)::int8 << 40)
+        | (get_byte(b,6)::int8 << 48)
+        | (get_byte(b,7)::int8 << 56))
   FROM (SELECT int8send(v) AS b) s
 $$;
 
@@ -745,7 +745,6 @@ Queries
 - ReadFeatures query
 - Tuple Loading
 - Writes
-
 
 
 

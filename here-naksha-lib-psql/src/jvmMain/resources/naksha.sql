@@ -31,6 +31,30 @@
 -- PARALLEL SAFE indicates that the function is safe to run in parallel mode without restriction.
 SET SESSION search_path TO "naksha~admin", topology, hint_plan, public;
 
+-- Physical range-sort feature numbers. These functions never change logical API identifiers.
+CREATE OR REPLACE FUNCTION "naksha~admin".bswap8(v bigint) RETURNS bigint
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+    SELECT get_byte(b, 0)::bigint
+        | (get_byte(b, 1)::bigint << 8)
+        | (get_byte(b, 2)::bigint << 16)
+        | (get_byte(b, 3)::bigint << 24)
+        | (get_byte(b, 4)::bigint << 32)
+        | (get_byte(b, 5)::bigint << 40)
+        | (get_byte(b, 6)::bigint << 48)
+        | (get_byte(b, 7)::bigint << 56)
+    FROM (SELECT pg_catalog.int8send(v) AS b) bytes
+$$;
+
+CREATE OR REPLACE FUNCTION "naksha~admin".fn_to_int8(fn bigint) RETURNS bigint
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+    SELECT "naksha~admin".bswap8(fn) # '-9223372036854775808'::bigint
+$$;
+
+CREATE OR REPLACE FUNCTION "naksha~admin".int8_to_fn(value bigint) RETURNS bigint
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+    SELECT "naksha~admin".bswap8(value # '-9223372036854775808'::bigint)
+$$;
+
 CREATE OR REPLACE FUNCTION buf2bytes(in buffers int4, in decimals int4 default 2, out bytes text)
 LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE
 SET search_path FROM CURRENT

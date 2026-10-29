@@ -110,9 +110,9 @@ installation entries. Verify and finish these rather than duplicating them.
 | ~~[db-02-b](NAKSHA-33-DONE.md#db-02-b--verify-nv-ranges-and-default-child-partitioning)~~ | ~~Verify nv ranges and default-child partitioning~~ | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `DONE` | Verify HEAD range boundaries, uniqueness and invalid next-version rejection. |
 | ~~[db-02-c](NAKSHA-33-DONE.md#db-02-c--verify-finite-children-fn-leaves-and-indexes)~~ | ~~Verify finite-children fn leaves and indexes~~ | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `DONE` | Verify partition provisioning limits and prototype a Naksha-owned maintainer. |
 | ~~[db-02-d](NAKSHA-33-DONE.md#db-02-d--verify-maintenance-and-cleanup)~~ | ~~Verify maintenance and cleanup~~ | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `DONE` | Archive completed database contract and partition-maintenance verification tickets. |
-| [db-03](#db-03--finish-the-physical-row-and-naming-contract) | Finish the physical row and naming contract | [db-01](NAKSHA-33-DONE.md#db-01--agree-the-database-boundary-and-operation-contracts), [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `TODO` | — |
-| [db-03-a](#db-03-a--validate-create-only-partition-options) | Validate create-only partition options | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
-| [db-03-b](#db-03-b--add-fn-conversion-helpers-and-init-sql) | Add fn conversion helpers and init SQL | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| [db-03](#db-03--finish-the-physical-row-and-naming-contract) | Finish the physical row and naming contract | [db-01](NAKSHA-33-DONE.md#db-01--agree-the-database-boundary-and-operation-contracts), [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `IN_PROGRESS` | — |
+| ~~[db-03-a](NAKSHA-33-DONE.md#db-03-a--validate-create-only-partition-options)~~ | ~~Validate create-only partition options~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Validate collection creation options and add physical feature-number conversion helpers. |
+| ~~[db-03-b](NAKSHA-33-DONE.md#db-03-b--add-fn-conversion-helpers-and-init-sql)~~ | ~~Add fn conversion helpers and init SQL~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Validate collection creation options and add physical feature-number conversion helpers. |
 | [db-03-c](#db-03-c--keep-feature-numbers-logical) | Keep feature numbers logical | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
 | [db-03-d](#db-03-d--make-head-nv-non-null) | Make HEAD nv non-null | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
 | [db-03-e](#db-03-e--establish-the-root-naming-rule) | Establish the root naming rule | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
@@ -167,18 +167,6 @@ Parent ticket; decomposed into `db-03-a` … `db-03-e`. **Done when:** conversio
 round-trips and range coverage are verified, and all new low-level operations
 agree on names, physical fn, and non-null nv.
 
-### db-03-a — Validate create-only partition options
-
-Complete validation of create-only partition options and checked interval,
-retention, and feature-number encoding/routing configuration for pg_partman.
-
-### db-03-b — Add fn conversion helpers and init SQL
-
-Add equivalent Kotlin/JVM/JS fn conversion helpers and the initialization SQL
-functions specified in `partman.md`. Define conversion ownership once so `PgRows`,
-raw-id deletes, query arguments, metadata loads, and returned helper aliases
-cannot double-convert or omit conversion.
-
 ### db-03-c — Keep feature numbers logical
 
 Keep API/tuple feature numbers logical. Follow `partman.md` for when physical
@@ -193,6 +181,11 @@ make the physical column non-null.
 
 Establish one schema-qualified, correctly quoted root naming rule across
 creation, mutations, and reads; resolve text names versus `Id.*Name()` mapping.
+Approved child naming: use compact history range numbers (`nv >> shift`) and
+performance-slot numbers, not full numeric bounds. Partition directly on physical
+nv/fn columns, preserving root primary/unique constraints. Keep logical low-byte
+routing and the byte-swap/sign-bit normalization of stored fn; manual partition
+creation does not make low-byte groups contiguous in unmodified bigint order.
 
 ### db-04 — Implement schema, collection, and index operations
 

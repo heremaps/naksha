@@ -272,6 +272,25 @@ actual class Platform {
         private val convertView: dynamic = js("new DataView(new ArrayBuffer(16))")
 
         @JsStatic
+        actual fun swapLong(value: Long): Long {
+            val view = convertView
+            view.setBigInt64(0, value, false)
+            return view.getBigInt64(0, true).unsafeCast<Long>()
+        }
+
+        @JsStatic
+        actual fun swapInt(value: Int): Int {
+            convertView.setInt32(0, value, false)
+            return convertView.getInt32(0, true).unsafeCast<Int>()
+        }
+
+        @JsStatic
+        actual fun swapShort(value: Short): Short {
+            convertView.setInt16(0, value.toInt(), false)
+            return convertView.getInt16(0, true).unsafeCast<Int>().toShort()
+        }
+
+        @JsStatic
         actual fun toInt64RawBits(d: Double): Long = d.toRawBits()
 
         @JsStatic

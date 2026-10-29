@@ -5,6 +5,28 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### db-03-a — Validate create-only partition options
+
+**Commit:** Validate collection creation options and add physical feature-number conversion helpers.
+
+`PgCollectionCreateOptions` validates partition count 1..256, the existing model shift contract 12..41, retain/backward/forward relationships, checked retention multiplication, TOAST bounds, tablespace strings and storage class before DDL. Validation also runs on data-class copies and history-OFF settings. Aligned finite range start/end helpers exclude HEAD from finite inputs and clip the final exclusive upper bound at HEAD.
+
+Retain/backward/forward remain model settings, not an automatic deletion policy; production maintainer coverage/version anchoring remains db-04-g.
+
+**Verification:** all three `PgCollectionCreateOptionsTest` tests pass on JVM and `:here-naksha-lib-psql:compileKotlinJs` passes. No database changes were needed.
+
+### db-03-b — Add fn conversion helpers and init SQL
+
+**Commit:** Validate collection creation options and add physical feature-number conversion helpers.
+
+Implemented `PgUtil.fnToInt8` and `int8ToFn` using `Platform.swapLong` and `PlatformUtil.swapSign`, plus schema-qualified immutable/strict/parallel-safe equivalents in `naksha.sql`, installed by the existing bootstrap step. No separate SQL resource or bootstrap call is needed. Corrected the original SQL sketch in `partman.md`, which reconstructed int8send bytes instead of reversing them.
+
+Conversion ownership: apply once when binding logical fn to a performance-partitioned physical column (writes, ID/GUID selections, predicates, cache loads); invert once when decoding that column or physical result aliases. PgRows and the persistence boundary own transport conversion, not the model/tuple/cache identity. Do not also wrap already-converted bindings in SQL conversion functions. SQL helpers serve direct SQL callers. Unpartitioned fn storage remains logical. Wiring writers/readers is db-03-c/db-06..09; these helpers alone do not change storage or cached tuples.
+
+`Platform.swapLong/swapInt/swapShort` use JVM reverseBytes intrinsics and the existing shared JS DataView buffer with reversed endianness. JS `swapLong` uses native `setBigInt64`/`getBigInt64`. `PlatformUtil.swapSign` overloads cover Long/Int/Short/Byte, with distinct JS names `swapSignLong/Int/Short/Byte`. No per-call JS buffers are allocated.
+
+**Verification:** three fn tests, three option tests and the primitive swap tests pass on JVM; JS main and test compilation pass. Fn tests cover known vectors, signed extremes, 10,000 seeded round trips, all routing bytes and partition counts 1..256. The rollback-only `NAKSHA-33-fn-test.sql` passed against PostgreSQL 18.6 before SQL resource consolidation; it now checks installed functions and requires bootstrap first. No retained database objects or sample data were changed. The configured Gradle Node test task is skipped; direct production-export checks passed 10,000 independent vectors and exhaustive short/byte sign flips. After the native JS Long refactor, the production JS build and 10,000 reference/round-trip vectors passed again.
+
 ## db-00 — Restore a compilable baseline
 
 **Commit:** Restore compilable psql baseline and rebase import fixes.
