@@ -5,6 +5,7 @@ import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get
 import naksha.base.PlatformListApi.PlatformListApiCompanion.array_get_length
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
 import kotlin.js.JsExport
+import kotlin.js.JsName
 import kotlin.js.JsStatic
 import kotlin.jvm.JvmField
 import kotlin.jvm.JvmOverloads
@@ -17,6 +18,30 @@ import kotlin.jvm.JvmStatic
 @JsExport
 class PlatformUtil {
     companion object PlatformUtilCompanion {
+        /** Toggle only the sign bit of a 64-bit integer. */
+        @JsName("swapSignLong")
+        @JsStatic
+        @JvmStatic
+        fun swapSign(value: Long): Long = value xor Long.MIN_VALUE
+
+        /** Toggle only the sign bit of a 32-bit integer. */
+        @JsName("swapSignInt")
+        @JsStatic
+        @JvmStatic
+        fun swapSign(value: Int): Int = value xor Int.MIN_VALUE
+
+        /** Toggle only the sign bit of a 16-bit integer. */
+        @JsName("swapSignShort")
+        @JsStatic
+        @JvmStatic
+        fun swapSign(value: Short): Short = (value.toInt() xor 0x8000).toShort()
+
+        /** Toggle only the sign bit of an 8-bit integer. */
+        @JsName("swapSignByte")
+        @JsStatic
+        @JvmStatic
+        fun swapSign(value: Byte): Byte = (value.toInt() xor 0x80).toByte()
+
         /**
          * A switch to toggle debug logs (disabled by default).
          *

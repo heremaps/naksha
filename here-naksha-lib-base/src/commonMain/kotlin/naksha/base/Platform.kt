@@ -352,6 +352,15 @@ expect class Platform {
          */
         fun toInt64RawBits(d: Double): Long
 
+        /** Reverse the byte order of a 64-bit integer, preserving every bit. */
+        fun swapLong(value: Long): Long
+
+        /** Reverse the byte order of a 32-bit integer, preserving every bit. */
+        fun swapInt(value: Int): Int
+
+        /** Reverse the byte order of a 16-bit integer, preserving every bit. */
+        fun swapShort(value: Short): Short
+
         /**
          * Widen a 32-bit integer into a platform specific 64-bit integer.
          * @param value the 32-bit integer.
