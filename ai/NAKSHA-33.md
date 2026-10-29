@@ -95,7 +95,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-01-f](#db-01-f--migrate-the-model-to-immutable-newtuple) | Migrate the model to immutable NewTuple | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Introduce an immutable NewTuple wrapper and remove the mutable previousTupleNumber field from Tuple. |
 | [db-01-g](#db-01-g--replace-the-row-buffer-signatures) | Replace the row-buffer signatures | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `DONE` | Replace row-buffer mutation signatures with immutable tuple inputs and typed results. |
 | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | Verify pg_partman topology against the deployed version | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
-| [db-02-a](#db-02-a--run-the-pgpartman-integration-spike) | Run the pg_partman integration spike | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
+| [db-02-a](#db-02-a--run-the-pgpartman-integration-spike) | Run the pg_partman integration spike | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `DONE` | Verify pg_partman HEAD topology with a rollback-only SQL spike. |
 | [db-02-b](#db-02-b--verify-nv-ranges-and-default-child-partitioning) | Verify nv ranges and default-child partitioning | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
 | [db-02-c](#db-02-c--verify-finite-children-fn-leaves-and-indexes) | Verify finite-children fn leaves and indexes | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
 | [db-02-d](#db-02-d--verify-maintenance-and-cleanup) | Verify maintenance and cleanup | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
@@ -797,6 +797,35 @@ sequence is recorded before library DDL is implemented.
 ### db-02-a — Run the pg_partman integration spike
 
 Run the small pg_partman v5.0.1 integration spike described in `partman.md`.
+
+Prepared [NAKSHA-33-partman-spike.sql](NAKSHA-33-partman-spike.sql), invoked with
+`psql -X -f ai/NAKSHA-33-partman-spike.sql` against a disposable database with
+pg_partman available. If absent, the extension is installed transactionally in a
+dedicated schema and rolled back too. The script prints version/API signatures,
+creates a dedicated schema (refusing to overwrite an existing one), probes plain
+and pre-created fn-partitioned HEAD defaults, checks row archival and invalid nv
+rejection, and runs maintenance with HEAD populated. All spike DDL/configuration
+is inside a transaction ending in ROLLBACK. Finite fn subpartition provisioning,
+retention, index propagation and DROP cleanup still need db-02-c/d coverage.
+
+Verified on the running PostgreSQL 16.2 / pg_partman 5.0.1 instance. Both plain
+and fn-partitioned HEAD cases passed archival routing, rejection of uncovered
+finite nv / nv above HEAD, and finite partition premaking while HEAD was populated.
+Assertions verify the exact HEAD/history rows survive maintenance. ROLLBACK
+completed; a follow-up query confirmed zero spike schemas and no installed
+pg_partman extension, matching the original state. No application schemas were
+cleared or modified.
+
+Version-specific finding: 5.0.1 `create_parent(p_default_table := true)` rejects
+a pre-created default relation (duplicate relation error). The alternate probe
+passes with `p_default_table := false` followed by explicit ATTACH DEFAULT of
+the partitioned HEAD child. This is an experimental topology, not a production
+fallback decision. The spike retains both paths to expose version differences.
+The checked-in image targets PostgreSQL 18.6 / pg_partman 5.5.0; upstream 5.5.0
+source uses CREATE TABLE IF NOT EXISTS for its default, but that version has not
+been runtime-tested. Re-run the spike after upgrading. Full finite fn
+subpartitioning, index propagation, retention and DROP cleanup remain unverified
+and are required before db-02 as a whole can finish.
 
 ### db-02-b — Verify nv ranges and default-child partitioning
 
