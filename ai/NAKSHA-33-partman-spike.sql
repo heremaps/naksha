@@ -1,7 +1,12 @@
 \set ON_ERROR_STOP on
 -- Run against a disposable test database with pg_partman available:
 -- psql -X -f ai/NAKSHA-33-partman-spike.sql
--- All objects and partman configuration created below are rolled back.
+-- Default: roll back all objects/configuration. To retain them for inspection:
+-- psql -X -v keep_spike=true -f ai/NAKSHA-33-partman-spike.sql
+\if :{?keep_spike}
+\else
+\set keep_spike false
+\endif
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '60s';
@@ -212,6 +217,111 @@ SELECT t.relid::regclass, t.parentrelid::regclass, t.isleaf,
 FROM pg_partition_tree('naksha_partman_spike.rows_2') t
 JOIN pg_class c ON c.oid = t.relid;
 
--- Finite fn subpartition provisioning, retention and DROP cleanup are separate
--- db-02-c/d checks; a passing HEAD experiment does not establish those contracts.
+-- Empty, independent root: create_sub_parent may drop/recreate existing children.
+CREATE TABLE naksha_partman_spike.sub_root (
+    fn bigint NOT NULL, version bigint NOT NULL, nv bigint NOT NULL,
+    PRIMARY KEY (nv, fn, version)
+) PARTITION BY RANGE (nv);
+CREATE UNIQUE INDEX ON naksha_partman_spike.sub_root (fn, nv) INCLUDE (version);
+CREATE INDEX sub_custom ON naksha_partman_spike.sub_root (version) INCLUDE (fn, nv);
+
+DO $subpart$
+DECLARE
+    ext text;
+    ok boolean;
+    child record;
+    before_count integer;
+    after_count integer;
+    leaf regclass;
+BEGIN
+    SELECT n.nspname INTO STRICT ext FROM pg_extension e
+    JOIN pg_namespace n ON n.oid = e.extnamespace WHERE e.extname = 'pg_partman';
+    EXECUTE format('SELECT %I.create_parent(
+        p_parent_table := ''naksha_partman_spike.sub_root'', p_control := ''nv'',
+        p_interval := ''100'', p_start_partition := ''0'', p_premake := 1,
+        p_jobmon := false)', ext) INTO ok;
+    IF ok IS DISTINCT FROM true THEN RAISE EXCEPTION 'Sub-root setup failed'; END IF;
+    BEGIN
+        EXECUTE format('SELECT %I.create_sub_parent(
+            p_top_parent := ''naksha_partman_spike.sub_root'', p_control := ''fn'',
+            p_interval := ''100'', p_declarative_check := ''yes'', p_jobmon := false)', ext);
+        RAISE EXCEPTION 'Expected equal parent/subpartition interval to be rejected';
+    EXCEPTION WHEN OTHERS THEN
+        IF SQLERRM NOT LIKE '%%Sub-partition interval cannot be greater than or equal%%' THEN RAISE; END IF;
+        RAISE NOTICE 'LIMITATION: fn interval must be smaller than nv interval';
+    END;
+    EXECUTE format('SELECT %I.create_sub_parent(
+        p_top_parent := ''naksha_partman_spike.sub_root'', p_control := ''fn'',
+        p_interval := ''10'', p_start_partition := ''0'', p_premake := 1,
+        p_declarative_check := ''yes'', p_default_table := true, p_jobmon := false)', ext)
+        INTO ok;
+    IF ok IS DISTINCT FROM true THEN RAISE EXCEPTION 'Subpartition setup failed'; END IF;
+
+    INSERT INTO naksha_partman_spike.sub_root VALUES (1, 80, 100);
+    SELECT count(*) INTO before_count FROM pg_inherits
+    WHERE inhparent = 'naksha_partman_spike.sub_root'::regclass;
+    EXECUTE format('UPDATE %I.part_config SET premake = 3
+        WHERE parent_table = ''naksha_partman_spike.sub_root''', ext);
+    EXECUTE format('SELECT %I.run_maintenance(
+        p_parent_table := ''naksha_partman_spike.sub_root'', p_jobmon := false)', ext);
+    SELECT count(*) INTO after_count FROM pg_inherits
+    WHERE inhparent = 'naksha_partman_spike.sub_root'::regclass;
+    IF after_count <= before_count THEN RAISE EXCEPTION 'No future finite children created'; END IF;
+
+    FOR child IN
+        SELECT c.oid, c.relkind, pg_get_expr(c.relpartbound, c.oid) AS bounds
+        FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid
+        WHERE i.inhparent = 'naksha_partman_spike.sub_root'::regclass
+    LOOP
+        IF child.bounds = 'DEFAULT' THEN
+            IF child.relkind <> 'r' THEN RAISE EXCEPTION 'Unexpected default conversion'; END IF;
+        ELSIF child.relkind <> 'p' OR pg_get_partkeydef(child.oid) <> 'RANGE (fn)' THEN
+            RAISE EXCEPTION 'Finite child is not fn-partitioned: %', child.oid::regclass;
+        END IF;
+    END LOOP;
+
+    -- Check inherited mandatory and custom indexes on every existing/future leaf.
+    FOR child IN SELECT relid FROM pg_partition_tree('naksha_partman_spike.sub_root') WHERE isleaf LOOP
+        IF NOT EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = child.relid
+            AND i.indisvalid AND i.indisunique
+            AND pg_get_indexdef(i.indexrelid) LIKE '%(fn, nv) INCLUDE (version)%')
+        OR NOT EXISTS (SELECT 1 FROM pg_index i WHERE i.indrelid = child.relid
+            AND i.indisvalid
+            AND pg_get_indexdef(i.indexrelid) LIKE '%(version) INCLUDE (fn, nv)%') THEN
+            RAISE EXCEPTION 'Missing mandatory/custom leaf index: %', child.relid;
+        END IF;
+    END LOOP;
+
+    INSERT INTO naksha_partman_spike.sub_root VALUES (2, 80, 100)
+        RETURNING tableoid::regclass INTO leaf;
+    IF pg_get_expr((SELECT relpartbound FROM pg_class WHERE oid = leaf), leaf) = 'DEFAULT' THEN
+        RAISE NOTICE 'LIMITATION: fn=2 at nv=100 routes to sub-default (%)', leaf;
+    END IF;
+    INSERT INTO naksha_partman_spike.sub_root VALUES (9223372036854775807, 80, 100)
+        RETURNING tableoid::regclass INTO leaf;
+    IF pg_get_expr((SELECT relpartbound FROM pg_class WHERE oid = leaf), leaf) <> 'DEFAULT' THEN
+        RAISE EXCEPTION 'Expected bigint maximum to require sub-default';
+    END IF;
+    RAISE NOTICE 'PASS: existing/future finite fn subparents and indexes; LIMITATION: bigint max uses DEFAULT';
+
+    -- Nested integer bounds may skip an out-of-range request before arithmetic.
+    EXECUTE format('SELECT %I.create_partition_id(
+            p_parent_table := ''naksha_partman_spike.sub_root_p100'',
+            p_partition_ids := ARRAY[9223372036854775800::bigint])', ext) INTO ok;
+    IF ok IS DISTINCT FROM false THEN
+        RAISE EXCEPTION 'Expected out-of-range nested partition request to be skipped';
+    END IF;
+    RAISE NOTICE 'LIMITATION: nested bigint-end partition request skipped, not provisioned';
+END
+$subpart$;
+
+SELECT t.relid::regclass, t.isleaf, pg_get_expr(c.relpartbound, c.oid) AS bounds
+FROM pg_partition_tree('naksha_partman_spike.sub_root') t
+JOIN pg_class c ON c.oid = t.relid;
+
+-- Retention and DROP cleanup still need db-02-d checks.
+\if :keep_spike
+COMMIT;
+\else
 ROLLBACK;
+\endif

@@ -6,7 +6,8 @@
 
 Make `PgDatabase` the entry point for physical PostgreSQL operations used by
 `PgWriter` and its operation writers. Implement the single-root/pg_partman design
-in [partman.md](partman.md), replacing the old table-object hierarchy with
+in [partman.md](partman.md), with the custom-maintainer decision below superseding
+pg_partman provisioning, replacing the old table-object hierarchy with
 dedicated database functions.
 
 - Work in ticket order, one reviewable change at a time. Update the ticket `State`
@@ -54,10 +55,13 @@ dedicated database functions.
   read SQL through the database boundary after writers work; avoid making this a
   prerequisite for every writer change.
 - Support clean/new databases, as agreed in `partman.md`.
-- Reviewed partition ownership: pg_partman manages history **and performance**
-  partitions. Naksha supplies configuration, not an initial transaction version
-  or manually provisioned partition set. This supersedes the caller-calculated
-  initial-version/start-boundary approach in the original `partman.md` plan.
+- Current partition ownership: Naksha's SQL maintainer manages history **and
+  performance** partitions using `"naksha~admin".naksha_partman`. The user approved
+  this change after the pg_partman 5.5.0 blocker and successful custom prototype.
+  Maintain the current finite range plus three future ranges and HEAD. Earlier
+  pg_partman/template references below are historical unless explicitly retained;
+  production implementation, custom columns/indexes and hourly cron are tracked
+  in db-04-b/d/g/h. Retention remains separate and is not implemented by the prototype.
 
 ## Current-code findings
 
@@ -97,7 +101,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | Verify pg_partman topology against the deployed version | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts) | `TODO` | — |
 | [db-02-a](#db-02-a--run-the-pgpartman-integration-spike) | Run the pg_partman integration spike | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `DONE` | Verify pg_partman HEAD topology with a rollback-only SQL spike. |
 | [db-02-b](#db-02-b--verify-nv-ranges-and-default-child-partitioning) | Verify nv ranges and default-child partitioning | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `DONE` | Verify HEAD range boundaries, uniqueness and invalid next-version rejection. |
-| [db-02-c](#db-02-c--verify-finite-children-fn-leaves-and-indexes) | Verify finite-children fn leaves and indexes | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
+| [db-02-c](#db-02-c--verify-finite-children-fn-leaves-and-indexes) | Verify finite-children fn leaves and indexes | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `DONE` | Verify partition provisioning limits and prototype a Naksha-owned maintainer. |
 | [db-02-d](#db-02-d--verify-maintenance-and-cleanup) | Verify maintenance and cleanup | [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
 | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | Finish the physical row and naming contract | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts), [db-02](#db-02--verify-pgpartman-topology-against-the-deployed-version) | `TODO` | — |
 | [db-03-a](#db-03-a--validate-create-only-partition-options) | Validate create-only partition options | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
@@ -112,6 +116,8 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-04-d](#db-04-d--move-index-execution-into-pgdatabase) | Move index execution into PgDatabase | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-04-e](#db-04-e--implement-collection-and-schema-drop) | Implement collection and schema drop | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-04-f](#db-04-f--route-bootstrap-and-create-upsert-preparation) | Route bootstrap and create-upsert preparation | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04-g](#db-04-g--productionize-the-custom-partition-maintainer) | Productionize the custom partition maintainer | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04-h](#db-04-h--schedule-registry-wide-maintenance) | Schedule registry-wide maintenance | [db-04-g](#db-04-g--productionize-the-custom-partition-maintainer) | `TODO` | — |
 | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | Make write failures restore database and session state | [db-01](#db-01--agree-the-database-boundary-and-operation-contracts), [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-05-a](#db-05-a--cover-ddl-and-writes-in-the-rollback-boundary) | Cover DDL and writes in the rollback boundary | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
 | [db-05-b](#db-05-b--complete-error-mapping-context) | Complete error-mapping context | [db-05](#db-05--make-write-failures-restore-database-and-session-state) | `TODO` | — |
@@ -861,10 +867,61 @@ enumeration. These are source findings, not a verified production provisioning
 solution; do not silently substitute manual leaf creation for the agreed
 pg_partman ownership. Runtime testing and an explicit resolution remain pending.
 
+Runtime probe added to the retained SQL spike and executed on PostgreSQL 16.2 /
+pg_partman 5.0.1. Verified creation order: create empty nv root and root indexes;
+`create_parent(nv, interval=100, start=0, premake=1)`;
+`create_sub_parent(fn, interval=10, start=0, premake=1,
+p_declarative_check='yes', p_default_table=true)`; populate finite history;
+increase root premake and run root-scoped maintenance. The supported arguments
+are printed by the script. `create_partition_id` has no `p_jobmon` argument in
+this version.
+
+Existing and newly premade finite children become `PARTITION BY RANGE (fn)`.
+All leaves, including defaults, receive valid mandatory
+`UNIQUE (fn, nv) INCLUDE (version)` and custom `(version) INCLUDE (fn, nv)`
+indexes inherited from the root. The top-level default remains an ordinary
+table; `create_sub_parent` does not convert it. Existing finite tables are
+dropped/recreated during setup, so this call must precede application writes.
+
+**Blocker, reproduced:** equal fn/nv intervals are rejected, even though they
+control different columns. More importantly, subpartition bounds are restricted
+to the enclosing nv numeric interval: under nv `[100,200)`, the generated fn
+leaf is `[100,110)`, not the requested full signed-bigint range. Both fn=2 and
+`Long.MAX_VALUE` route to that subparent's DEFAULT leaf. An explicit bigint-end
+`create_partition_id` request returns false (skipped), not a full-range leaf.
+Thus successful API calls/index inheritance do not establish the required
+performance topology. Arbitrary N full-range fn leaves remain unresolved; db-02-c
+stays IN_PROGRESS pending a provisioning decision or verified newer-version API.
+No manual production fallback was added. The full script completed ROLLBACK;
+follow-up queries confirmed no spike schemas or installed extension remained.
+
+Upgrade retest: the complete retained spike also ran successfully on PostgreSQL
+18.6 / pg_partman 5.5.0. The independent-key subpartition blocker is unchanged:
+equal fn/nv intervals are rejected, nv `[100,200)` produces fn `[100,110)`,
+fn=2 and bigint maximum route to the sub-default, and the bigint-end explicit
+partition request is skipped. Existing/future leaf index checks still pass.
+Unlike 5.0.1, 5.5.0 successfully reuses the pre-created partitioned HEAD default
+with `p_default_table=true`; the explicit attachment alternate path is not used.
+ROLLBACK completed and separate queries confirmed zero leftover spike schemas
+and no installed extension. Upgrading alone therefore does not resolve db-02-c.
+
+Resolution approved: replace pg_partman provisioning with Naksha-owned SQL
+maintenance. The retained [custom prototype](NAKSHA-33-custom-partman.md) implements
+the four-argument per-root function and registry. Tested on PostgreSQL 18.6:
+HEAD/current/three future nv ranges, full-domain 16-way fn leaves, 34 retained
+sample rows, idempotent calls, repair of missing empty ranges/leaves, rejection
+of changed settings, and a quoted-schema 3-way layout. This completes the
+topology investigation, not production implementation. Keep the SQL test files
+for review. Production custom columns, index propagation/reconciliation, storage
+settings, robust version coverage, registry scanning and cron remain TODO under
+db-04-b/d/g/h. No production Kotlin/SQL path or cron schedule was changed.
+
 ### db-02-d — Verify maintenance and cleanup
 
 Verify maintenance with HEAD populated, rejection of uncovered finite `nv`, and
-configuration/template cleanup when dropping a parent or schema.
+registry cleanup when dropping a parent or schema. Verify this against the
+approved custom maintainer; pg_partman/template cleanup is superseded. Preserve
+the committed inspection examples; use isolated rollback-only lifecycle checks.
 
 ### db-03 — Finish the physical row and naming contract
 
@@ -901,7 +958,7 @@ creation, mutations, and reads; resolve text names versus `Id.*Name()` mapping.
 
 ### db-04 — Implement schema, collection, and index operations
 
-Parent ticket; decomposed into `db-04-a` … `db-04-f`. **Done when:** clean
+Parent ticket; decomposed into `db-04-a` … `db-04-h`. **Done when:** clean
 bootstrap and user collection creation/drop work through `PgDatabase`; required
 constraints/indexes reach current and future leaves.
 
@@ -913,9 +970,11 @@ unsigned OID handling. Keep logical identifier-collision checks in admin writes.
 ### db-04-b — Implement collection creation
 
 Implement collection creation from every supplied `PgColumn`, root constraints,
-mandatory indexes, restricted HEAD/default, partman setup/retention, initial
-maintenance, and optional fn range subpartitions. History-OFF gets HEAD only
-and no partman history registration.
+mandatory indexes, restricted HEAD/default, custom maintainer registration,
+initial maintenance, and optional fn range subpartitions. Support custom columns
+on the root and inherited existing/future/repaired leaves. History-OFF gets HEAD
+only and no history maintenance registration. Retention needs its own explicit
+policy; the current prototype never deletes old history.
 
 ### db-04-c — Move storage settings out of table classes
 
@@ -927,15 +986,37 @@ of the old table classes; make intentional changes explicit.
 Keep `PgIndex` as a descriptor. Move create/drop execution into `PgDatabase`,
 honoring key order, method/opclass, predicates, includes, and future partitions.
 Never infer HEAD status from a relation name to choose storage parameters.
+Integrate with the custom maintainer: existing, future and repaired leaves must
+inherit the same mandatory/custom index contract; test add/drop after registration.
 
 ### db-04-e — Implement collection and schema drop
 
-Implement collection/schema drop with verified partman/template cleanup.
+Implement collection/schema drop with verified custom-maintainer registry cleanup.
 
 ### db-04-f — Route bootstrap and create-upsert preparation
 
 Route JVM admin bootstrap and writer CREATE/UPSERT preparation through this same
 API, including creation of each catalog's internal collections table.
+
+### db-04-g — Productionize the custom partition maintainer
+
+Move the reviewed prototype into one-time admin SQL installation and invoke it
+through PgDatabase creation/maintenance. Keep schema, table, shift and partitions
+in `"naksha~admin".naksha_partman`. Create/check the exact HEAD/history/fn layout,
+with current plus three future history ranges. Integrate custom columns and index
+management via db-04-b/d rather than hard-coding the prototype's three columns.
+Harden version-source/manual-version/import coverage, identifier naming, locks,
+configuration validation, failure atomicity and dropped-table handling. Verify
+all supported partition counts and production shift policies; prototype limits
+are not automatically the production contract. No pg_partman dependency.
+
+### db-04-h — Schedule registry-wide maintenance
+
+Add the first SQL function that scans the registry and invokes the per-root
+maintainer. Install an idempotent hourly pg_cron job with explicit database/role,
+permissions, timeout/concurrency policy and observable failures. Define whether
+one failing root blocks others, and test that behavior. Do not silently drop old
+history: implement retention only once its configuration and policy are settled.
 
 ### db-05 — Make write failures restore database and session state
 
