@@ -39,10 +39,11 @@ import kotlin.math.max
  * Helper class to convert rows into arrays of column-data and vice versa.
  *
  * The main purpose is to read and write [Tuple], but it supports basically as well virtual columns. This class translates the correct member [book][naksha.jbon.IBook] _HEAD_ values into what the storage expects. For example, the encoder will place into the member [book][naksha.jbon.IBook] the reference to [TagList] or [TagMap], and this class will know the physical representation. For example a [TagList] need to be encoded as `text[]`, while a [TagMap] need to be encoded as `JSONB`, which effectively is a `JSON` string. This class will do the serialization and deserialization.
+ *
+ * Feature-number columns ([PgColumn.FnColumn] and its aliases) keep raw feature-ordinals internally. Normal get/set access converts to/from logical feature-numbers; database binding and cursor ingestion transfer raw ordinals without conversion, regardless of performance partitioning.
  * @since 3.0
  */
-internal class PgRows(
-) {
+internal class PgRows() {
     /**
      * All columns being added already.
      * @since 3.0
@@ -429,11 +430,12 @@ internal class PgRows(
     operator fun set(row: Int, cursor: PgCursor) {
         if (!cursor.isRow()) return
         withMinCapacity(row + 1)
+        if (row >= size) size = row + 1
         val columnNames = cursor.columnNames()
         for (columnName in columnNames) {
             val column = getColumn(columnName) ?: continue
             val value = cursor.column(columnName)
-            column[row] = value
+            column.values[row] = value
         }
     }
 

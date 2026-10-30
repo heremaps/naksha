@@ -22,12 +22,6 @@ import kotlin.jvm.JvmStatic
 @JsExport
 class PgUtil private constructor() {
     companion object PgUtilCompanion {
-        /** Logical fn to range-sort storage fn. Apply exactly once at the SQL boundary. */
-        internal fun fnToInt8(logicalFn: Long): Long = PlatformUtil.swapSign(Platform.swapLong(logicalFn))
-
-        /** Range-sort storage fn to logical fn. Never expose the physical value in tuple numbers. */
-        internal fun int8ToFn(storedFn: Long): Long = Platform.swapLong(PlatformUtil.swapSign(storedFn))
-
         /**
          * The quoted identifier of the administration map to be used in queries.
          * @since 3.0.0

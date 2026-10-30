@@ -162,7 +162,7 @@ data class PgColumn(
         /**
          * The feature-number.
          *
-         * Together with [VersionColumn], forms the primary identification of a tuple within a collection. The lower 16 bits of this value are used as the partition key for distribution partitioning (see [naksha.model.Naksha.featureNumber]).
+         * Together with [VersionColumn], forms the logical identification of a tuple within a collection. The low 8 logical bits determine performance routing. All physical fn columns store the feature-ordinal (byte-swapped, sign-bit flipped), regardless of performance partitioning; normal row access and tuple identities use logical feature-numbers.
          * @since 3.0
          */
         @JvmField
