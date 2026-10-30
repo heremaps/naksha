@@ -114,7 +114,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | ~~[db-03-a](NAKSHA-33-DONE.md#db-03-a--validate-create-only-partition-options)~~ | ~~Validate create-only partition options~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Validate collection creation options and add physical feature-number conversion helpers. |
 | ~~[db-03-b](NAKSHA-33-DONE.md#db-03-b--add-fn-conversion-helpers-and-init-sql)~~ | ~~Add fn conversion helpers and init SQL~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Validate collection creation options and add physical feature-number conversion helpers. |
 | ~~[db-03-c](NAKSHA-33-DONE.md#db-03-c--keep-feature-numbers-logical)~~ | ~~Keep feature numbers logical~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Keep feature identities logical and store feature-ordinals with aligned partition ranges. |
-| [db-03-d](#db-03-d--make-head-nv-non-null) | Make HEAD nv non-null | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| ~~[db-03-d](NAKSHA-33-DONE.md#db-03-d--make-head-nv-non-null)~~ | ~~Make HEAD nv non-null~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Preserve non-null HEAD next-version values at the row boundary. |
 | [db-03-e](#db-03-e--establish-the-root-naming-rule) | Establish the root naming rule | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
 | [db-04](#db-04--implement-schema-collection-and-index-operations) | Implement schema, collection, and index operations | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version), [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
 | [db-04-a](#db-04-a--implement-schema-operations) | Implement schema operations | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
@@ -199,11 +199,6 @@ The PostgreSQL upper bound is the next index's `partitionIndexMin` (or `MAXVALUE
 Verification: `IdTest` (11 tests) passes — ordinal blocks tile the space monotonically (2^56 wide, spanning `Long.MIN_VALUE`..`Long.MAX_VALUE`), partition-number ranges tile 0..255, `partitionIndex` matches `partitionNumberMin/Max` for every value and count, `partitionIndexMin/Max` are contiguous across indexes, the N=7 example matches the table, and the instance methods equal the companion methods.
 
 Completed transport details and verification are archived in [db-03-c](NAKSHA-33-DONE.md#db-03-c--keep-feature-numbers-logical). `Long.toOrdinalFeatureNumber()` and `Long.fromOrdinalFeatureNumber()` in `LibBase` are the shared conversions; the redundant `PgUtil` helpers have been removed. Query-builder and standalone cache fn search arguments must also use ordinals during db-09; legacy sign/modulo DDL and writer SQL remain scheduled for replacement.
-
-### db-03-d — Make HEAD nv non-null
-
-Make HEAD `nv = Version.HEAD.number`, remove NULL translation in `PgRows`, and
-make the physical column non-null.
 
 ### db-03-e — Establish the root naming rule
 

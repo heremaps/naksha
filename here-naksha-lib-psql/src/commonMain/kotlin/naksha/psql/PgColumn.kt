@@ -180,14 +180,12 @@ data class PgColumn(
         val VersionColumn = PgColumn(1, Member(VERSION, INT64), "STORAGE $PLAIN NOT NULL")
 
         /**
-         * The next-version (with action in the lower 2 bits) of this tuple, only available in the history.
+         * The non-null next-version (with action in the lower 2 bits) of this tuple. HEAD rows carry [naksha.base.Version.HEAD]; historical rows carry their finite successor version.
          * @since 3.0
          */
         @JvmField
         @JsStatic
-        // Nullable on purpose: HEAD rows carry NULL, history rows a real value; each table enforces the
-        // right nullability via its own `$c_nv` CHECK (HEAD: IS NULL, history: IS NOT NULL).
-        val NextVersionColumn = PgColumn(2, Member(NEXT_VERSION, INT64), "STORAGE $PLAIN")
+        val NextVersionColumn = PgColumn(2, Member(NEXT_VERSION, INT64), "STORAGE $PLAIN NOT NULL")
     }
 
     /**

@@ -11,7 +11,6 @@ import naksha.base.Platform.PlatformCompanion.fromJSON
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.TupleNumber
 import naksha.model.objects.MemberType
-import naksha.base.Version
 import naksha.base.internalError
 import naksha.base.proxy
 import naksha.geo.GeoUtil
@@ -333,7 +332,7 @@ internal class PgRows() {
                     membersBook.put(name, tn)
                 }
                 NextVersion.name -> {
-                    membersBook.put(name, getLong(row, name) ?: Version.HEAD.number)
+                    membersBook.put(name, getLong(row, name))
                 }
                 else -> {
                     val pg_value = getAny(row, name)
@@ -412,8 +411,7 @@ internal class PgRows() {
         val tn = tuple.tupleNumber
         getColumn(PgColumn.FnColumn.name)?.let { it[row] = tn.featureNumber }
         getColumn(PgColumn.VersionColumn.name)?.let { it[row] = tn.version }
-        // HEAD rows store next_version as NULL; translate the encoder's HEAD sentinel into NULL.
-        getColumn(PgColumn.NextVersionColumn.name)?.let { if (it[row] == Version.HEAD.number) it[row] = null }
+        getColumn(PgColumn.NextVersionColumn.name)?.let { it[row] = tuple.nextVersion }
         // `_id` is materialized only when it is not derivable from the feature-number: fn < 0 => hashed
         // id, fn >= 0 => id equals fn so `_id` stays NULL (a CHECK enforces both cases).
         getColumn(Id.name)?.let { it[row] = if (tn.featureNumber < 0L) membersBook[Id.name] else null }
