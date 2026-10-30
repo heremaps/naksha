@@ -72,3 +72,14 @@ TLS connectivity and read-only access were verified. The first 100 rows ordered 
 ## Remaining Limitations
 
 Historical query selection, version ranges, pagination/handles, result-filter callbacks, partial fetch modes, arbitrary JSON-property filters, tag-map operations, spatial transformations, extended layers, writes, and streaming remain explicitly unsupported. Exact tuple loading can still retrieve a selected revision after it becomes historical. Metadata is refreshed only by recreating storage. Connections are serialized per storage; no connection pool is implemented. The row-level `i` compromise does not provide stable same-feature identity or successor GUIDs across revisions. The module README documents usage and supported behavior.
+
+## Follow-Up Plan
+
+The next iteration remains strictly read-only against remote IML. Implement and verify each step, then commit it separately with the agreed author and sign-off.
+
+1. Add a standalone collection-listing test and inspect retained source history.
+2. Expand typed member comparisons, virtual XYZ tag-map predicates, and standard PostGIS buffer transformations.
+3. Implement historical snapshots, version ranges, and latest-N revisions per logical source ID, with local fixtures and remote history checks.
+4. Add result-filter processing and bounded continuation handles where compatible with the model, document unsupported capabilities, and assess separate opt-in local-only writes without enabling remote mutation.
+
+Remote discovery found 1,153 public layer mappings. Retained history was confirmed in `m499-source-01:data-02` (physical table `f84ff9888bc5b30fdd69ddbc0c460797`), including successive `I`/`U` rows around source versions 441-451. History also exists in `org644368758:catalog01:layer01`. Catalog estimates identify other much larger history tables; avoid scanning them during routine tests.
