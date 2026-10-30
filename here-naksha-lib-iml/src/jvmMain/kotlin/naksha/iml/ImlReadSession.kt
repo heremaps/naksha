@@ -20,14 +20,24 @@ import naksha.model.request.Response
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadMaps
 import naksha.model.request.ReadCollections
+import naksha.model.request.ReadHandle
+import naksha.model.request.PropertyFilter
 import naksha.model.request.SuccessResponse
 import naksha.model.objects.NakshaFeature
 import java.sql.Connection
+import java.util.Collections
+import java.util.IdentityHashMap
+import naksha.model.request.query.IPropertyQuery
+import naksha.model.request.query.PAnd
+import naksha.model.request.query.POr
+import naksha.model.request.query.PNot
+import naksha.model.request.query.PQuery
 
 /**
  * An IML read session. Connections are opened per read and always rolled back and closed afterward.
  * @since 3.0
  */
+@Suppress("DEPRECATION")
 class ImlReadSession internal constructor(
   override val storage: ImlStorage,
   options: SessionOptions
@@ -80,9 +90,12 @@ class ImlReadSession internal constructor(
   @Synchronized
   override fun executeRead(request: ReadRequest): Response {
     checkOpen()
-    if (request.returnHandle == true) throw unsupportedOp("IML query handles are not supported")
-    if (request.resultFilters.isNotEmpty()) throw unsupportedOp("IML result filters are not supported")
     if ((request.fetchMode and NO_CACHE_BIT.inv()) != FETCH_ALL) throw unsupportedOp("IML supports only fetching complete tuples")
+    if (request is ReadHandle) return storage.handles.read(request, options, storage.hardCap)
+    if (request is ReadFeatures) {
+      validateProperties(request.query.properties)
+      if (request.query.properties != null && request.resultFilters.none { it is PropertyFilter }) request.refreshPropertyFilter()
+    }
     val metadata = storage.metadata
     return when (request) {
       is ReadMaps -> metadataResponse(listOf(metadata.catalogTuple), request.mapIds, request)
@@ -106,7 +119,7 @@ class ImlReadSession internal constructor(
             throw unsupportedOp("IML metadata has no revision history")
           }
           // Metadata has no physical layer table. Support the standard list/ID read surface only.
-          if (request.queryMembers != null || !request.query.hasNoConditions() || request.guids.isNotEmpty() || request.orderBy != null) {
+          if (request.queryMembers != null || request.query.tags != null || request.query.spatial != null || request.query.refTiles.isNotEmpty() || request.guids.isNotEmpty() || request.orderBy != null) {
             throw unsupportedOp("IML metadata supports only listing and legacy ID selection")
           }
           val tuples = ArrayList<Tuple>()
@@ -118,11 +131,12 @@ class ImlReadSession internal constructor(
           val layer = metadata.layersById[collectionId]
           if (layer == null || catalogId != metadata.catalog.id) throw NakshaException(NakshaError.COLLECTION_NOT_FOUND, "IML layer not found")
           val tuples = ArrayList<FeatureTuple>()
+          val candidateLimit = if (request.returnHandle == true || request.resultFilters.isNotEmpty()) storage.hardCap else query.limit
           withConnection { connection ->
             connection.prepareStatement(query.history.select(layer.sqlTable, query.predicate, query.orderBy) + " LIMIT ?").use { statement ->
               val next = query.bind(statement)
-              statement.setInt(next, query.limit)
-              statement.fetchSize = minOf(query.limit, 1000)
+              statement.setInt(next, candidateLimit)
+              statement.fetchSize = minOf(candidateLimit, 1000)
               statement.executeQuery().use { rows ->
                 while (rows.next()) {
                   val tn = TupleNumber(storage.number, catalog.catalogNumber, layer.number, rows.getLong("i"), ImlTuple.version(rows.getLong("version"), rows.getString("operation")))
@@ -131,12 +145,7 @@ class ImlReadSession internal constructor(
               }
             }
           }
-          if ((request.fetchMode and NO_CACHE_BIT) != 0) {
-            loadExact(tuples, 0, tuples.size, true)
-            // A source miss must not be retried through the global cache when response.features is accessed.
-            tuples.removeAll { it.tuple == null }
-          }
-          SuccessResponse().withFeatureTupleList(tuples)
+          resultResponse(tuples, request, query.limit)
         }
       }
       else -> throw unsupportedOp("Unsupported IML read request: ${request::class.simpleName}")
@@ -149,10 +158,79 @@ class ImlReadSession internal constructor(
     val result = ArrayList<FeatureTuple>()
     for (tuple in tuples.sortedBy { it.id }) {
       if (ids.isNotEmpty() && !ids.contains(tuple.id)) continue
-      if (result.size >= minOf(limit, storage.hardCap)) break
+      if (result.size >= storage.hardCap) break
       result.add(ImlFeatureTuple(tuple.tupleNumber).apply { ImlTuple.attach(this, tuple) })
     }
-    return SuccessResponse().withFeatureTupleList(result)
+    return resultResponse(result, request, minOf(limit, storage.hardCap))
+  }
+
+  /** Filters scan at most hardCap candidates, materialized in batches of 128 after selection closes JDBC. @since 3.0 */
+  private fun resultResponse(candidates: List<FeatureTuple>, request: ReadRequest, limit: Int): SuccessResponse {
+    val paged = request.returnHandle == true
+    val filters = request.resultFilters.toList()
+    val bypassCache = (request.fetchMode and NO_CACHE_BIT) != 0
+    if (!paged && filters.isEmpty() && !bypassCache) {
+      return SuccessResponse().withFeatureTupleList(candidates.take(limit))
+    }
+    val result = ArrayList<FeatureTuple>()
+    val snapshot = ArrayList<Tuple>()
+    var snapshotBytes = 0L
+    var start = 0
+    while (start < candidates.size && (paged || result.size < limit)) {
+      val end = minOf(start + 128, candidates.size)
+      loadExact(candidates, start, end, bypassCache)
+      for (index in start until end) {
+        var entry: FeatureTuple? = candidates[index]
+        // Never retry a missing exact state via response.features and the lazy cache loader.
+        if (entry?.tuple == null) continue
+        for (filterIndex in filters.indices.reversed()) {
+          val filter = filters[filterIndex] ?: continue
+          entry = filter.filter(entry ?: break)
+        }
+        val accepted = entry ?: continue
+        if (paged) {
+          val feature = accepted.feature ?: continue
+          val tuple = ImlTuple.encode(feature, accepted.tupleNumber, accepted.tuple?.nextVersion ?: naksha.base.Version.HEAD.number)
+          snapshotBytes = storage.handles.addBytes(snapshotBytes, tuple)
+          snapshot.add(tuple)
+        } else {
+          result.add(accepted)
+          if (result.size >= limit) break
+        }
+      }
+      start = end
+    }
+    return if (paged) storage.handles.create(snapshot, limit, options) else SuccessResponse().withFeatureTupleList(result)
+  }
+
+  companion object {
+    /** Bound recursion before the built-in PropertyFilter visits a legacy property query. @since 3.0 */
+    internal fun validateProperties(query: IPropertyQuery?) {
+      val path = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+      var nodes = 0
+      fun visit(query: IPropertyQuery?, depth: Int) {
+        if (query == null) throw illegalArg("IML property query contains a null child")
+        val identity = when (query) {
+          is PAnd -> query.platformObject()
+          is POr -> query.platformObject()
+          is PNot -> query.platformObject()
+          is PQuery -> query.platformObject()
+          else -> throw illegalArg("Unknown IML property query")
+        }
+        if (depth > 64 || ++nodes > 1024 || !path.add(identity)) throw illegalArg("IML property query is cyclic, too deep, or too large")
+        try {
+          when (query) {
+            is PAnd -> for (child in query) visit(child, depth + 1)
+            is POr -> for (child in query) visit(child, depth + 1)
+            is PNot -> visit(query.query, depth + 1)
+            is PQuery -> Unit
+          }
+        } finally {
+          path.remove(identity)
+        }
+      }
+      if (query != null) visit(query, 0)
+    }
   }
 
   override fun getCatalogById(catalogId: String, allowTombstone: Boolean): NakshaCatalog? {

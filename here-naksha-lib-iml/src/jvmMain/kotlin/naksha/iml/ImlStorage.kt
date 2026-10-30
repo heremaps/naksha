@@ -23,6 +23,7 @@ class ImlStorage : AbstractStorage<ImlConfig>() {
   private var running = false
   private val sessions = ConcurrentHashMap.newKeySet<ImlReadSession>()
   private val connectionPermit = Semaphore(1, true)
+  internal val handles = ImlHandles()
   internal lateinit var metadata: ImlMetadata
     private set
 
@@ -103,6 +104,7 @@ class ImlStorage : AbstractStorage<ImlConfig>() {
   override fun shutdownStorage(dropCache: Boolean) {
     running = false
     for (session in sessions) session.close()
+    handles.clear()
     Naksha.cache.clear(this)
   }
 }

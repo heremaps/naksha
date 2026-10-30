@@ -14,6 +14,20 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
 class ImlHistoryTest {
+  @Test
+  fun `equal source sequence bounds ignore action bit order`() {
+    for (minimumAction in listOf(Action.CREATE, Action.UPDATE, Action.DELETE, Action.VERSION)) {
+      for (maximumAction in listOf(Action.CREATE, Action.UPDATE, Action.DELETE, Action.VERSION)) {
+        val history = ImlHistory(ReadFeatures().apply {
+          queryHistory = true
+          version = Version.manual(20, maximumAction).number
+          minVersion = Version.manual(20, minimumAction).number
+        })
+        assertEquals(listOf(20L, 20L, 20L), history.parameters)
+      }
+    }
+  }
+
   @BeforeEach
   fun context() {
     NakshaContext.currentContext().appId = "iml-history-test"

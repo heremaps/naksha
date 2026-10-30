@@ -262,8 +262,7 @@ class ImlReadIntegrationTest {
           override fun filter(featureTuple: FeatureTuple): FeatureTuple = featureTuple
         })
       }
-      val filterError = assertThrows(NakshaException::class.java) { session.executeRead(filtered) }
-      assertEquals(NakshaError.UNSUPPORTED_OPERATION, filterError.error.code)
+      assertEquals(5, session.executeRead(filtered).length)
       assertEquals(5, read(session, fixture) { queryHistory = true }.length)
       val writeError = assertThrows(NakshaException::class.java) { session.execute(WriteRequest()) }
       assertEquals(NakshaError.UNSUPPORTED_OPERATION, writeError.error.code)

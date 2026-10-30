@@ -33,7 +33,9 @@ internal class ImlHistory(request: ReadFeatures) {
         throw illegalArg("IML version bounds must be manual versions or HEAD")
       }
     }
-    if (minimum != null && minimum > maximum) throw illegalArg("IML minimum version exceeds maximum version")
+    val minimumSequence = minimum?.let { if (it == Version.HEAD.number) Long.MAX_VALUE else it ushr 2 }
+    val maximumSequence = if (maximum == Version.HEAD.number) Long.MAX_VALUE else maximum ushr 2
+    if (minimumSequence != null && minimumSequence > maximumSequence) throw illegalArg("IML minimum version exceeds maximum version")
 
     val terms = ArrayList<String>()
     val values = ArrayList<Any?>()

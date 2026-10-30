@@ -49,8 +49,6 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
     val requestedLimit = request.limit
     if (requestedLimit != null && requestedLimit <= 0) throw illegalArg("IML limit must be positive")
     limit = minOf(requestedLimit ?: hardCap, hardCap)
-    if (request.returnHandle == true) throw unsupportedOp("IML query handles are not supported")
-    if (request.resultFilters.isNotEmpty()) throw unsupportedOp("IML result filters are not supported")
     if ((request.fetchMode and NO_CACHE_BIT.inv()) != FETCH_ALL) {
       throw unsupportedOp("IML supports only fetching complete tuples")
     }
@@ -63,8 +61,8 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
       throw illegalArg("IML queryMembers must not be combined with legacy query options")
     }
     if (guids.isNotEmpty()) throw unsupportedOp("IML legacy GUID queries are not supported; use loadTuples")
-    if (legacy.properties != null || legacy.refTiles.isNotEmpty()) {
-      throw unsupportedOp("IML property and reference-tile queries are not supported")
+    if (legacy.refTiles.isNotEmpty()) {
+      throw unsupportedOp("IML reference-tile queries are not supported")
     }
 
     val terms = ArrayList<String>()

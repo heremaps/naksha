@@ -1,11 +1,16 @@
 package naksha.iml
 
+import java.net.URI
+import java.net.URLDecoder
 import java.sql.Connection
 import java.sql.DriverManager
+import java.util.Properties
 import java.util.UUID
 import naksha.model.Naksha
 import naksha.model.NakshaContext
 import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.postgresql.Driver
+import org.postgresql.PGProperty
 
 /** Local, opt-in fixture owning only two randomly named schemas. Never installs extensions. @since 3.0 */
 internal class ImlTestFixture private constructor(val connection: Connection, url: String, quotedNames: Boolean) : AutoCloseable {
@@ -100,12 +105,43 @@ internal class ImlTestFixture private constructor(val connection: Connection, ur
     fun withFixture(quotedNames: Boolean = false, block: (ImlTestFixture) -> Unit) {
       val url = System.getenv("NAKSHA_TEST_IML_DB_URL")
       assumeTrue(!url.isNullOrBlank(), "Set NAKSHA_TEST_IML_DB_URL to a local fixture-capable PostgreSQL database with PostGIS")
+      validateLocalUrl(url.orEmpty())
       NakshaContext.currentContext().withAppId("iml-test")
       val fixture = ImlTestFixture(DriverManager.getConnection(url), url.orEmpty(), quotedNames)
       fixture.use {
         it.initialize()
         block(it)
       }
+    }
+
+    /** Reject implicit hosts and all connection-routing properties before opening a mutating fixture connection. @since 3.0 */
+    internal fun validateLocalUrl(url: String) {
+      val message = "IML fixtures require an explicit single loopback PostgreSQL URL with only approved local connection properties"
+      require(url.startsWith("jdbc:postgresql://")) { message }
+      val uri = try {
+        URI(url.removePrefix("jdbc:"))
+      } catch (_: Exception) {
+        throw IllegalArgumentException(message)
+      }
+      val hosts = setOf("localhost", "127.0.0.1", "[::1]")
+      require(uri.host in hosts && uri.rawUserInfo == null && uri.rawFragment == null) { message }
+      require(uri.port == -1 || uri.port in 1..65535) { message }
+      val allowed = setOf("ssl", "sslmode", "user", "password", "ApplicationName", "connectTimeout", "socketTimeout")
+      val seen = mutableSetOf<String>()
+      val query = uri.rawQuery
+      if (query != null) {
+        for (parameter in query.split('&')) {
+          val parts = parameter.split('=', limit = 2)
+          require(parts.size == 2) { message }
+          val key = URLDecoder.decode(parts[0], "UTF-8")
+          val value = URLDecoder.decode(parts[1], "UTF-8")
+          require(key in allowed && seen.add(key)) { message }
+          require(key != "ssl" || value == "false") { message }
+          require(key != "sslmode" || value == "disable") { message }
+        }
+      }
+      val properties = Driver.parseURL(url, Properties())
+      require(properties != null && PGProperty.PG_HOST.getOrDefault(properties) == uri.host) { message }
     }
 
     private fun quote(identifier: String) = "\"${identifier.replace("\"", "\"\"")}\""

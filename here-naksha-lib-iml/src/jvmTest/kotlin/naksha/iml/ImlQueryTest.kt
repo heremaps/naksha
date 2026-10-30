@@ -320,7 +320,7 @@ class ImlQueryTest {
   }
 
   @Test
-  fun `history bounds are supported while handles unsupported fetch modes and invalid limits are rejected`() {
+  fun `history bounds and handles are supported while unsupported fetch modes and invalid limits are rejected`() {
     val history = ImlQuery(ReadFeatures().apply { queryHistory = true }, 100)
     assertEquals("next_version = ? AND operation != 'D'", history.predicate)
     assertEquals(listOf(Long.MAX_VALUE), history.parameters)
@@ -351,11 +351,11 @@ class ImlQueryTest {
       version = 4L
     }, NakshaError.ILLEGAL_ARGUMENT)
     val requests = listOf(
-      ReadFeatures().apply { returnHandle = true },
       ReadFeatures().apply { fetchMode = 0 },
       ReadFeatures().apply { fetchMode = FETCH_ALL or 32 }
     )
     for (request in requests) rejects(request, NakshaError.UNSUPPORTED_OPERATION)
+    assertEquals(100, ImlQuery(ReadFeatures().apply { returnHandle = true }, 100).limit)
     for (limit in listOf(0, -1)) {
       rejects(ReadFeatures().apply { this.limit = limit }, NakshaError.ILLEGAL_ARGUMENT)
       assertThrows(NakshaException::class.java) { ImlQuery(ReadFeatures(), limit) }
