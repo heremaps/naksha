@@ -20,6 +20,7 @@ private val Descriptions = mapOf(
     "here-naksha-lib-handlers" to "TBD",
     //"here-naksha-lib-heapcache" to "TBD",
     "here-naksha-lib-hub" to "TBD",
+    "here-naksha-lib-iml" to "Naksha library, read-only PostgreSQL storage for Interactive Map Layers.",
     "here-naksha-lib-jbon" to "Naksha library, adding support to encode and decode JBON (Java Binary Object Notation).",
     "here-naksha-lib-mm-util" to "Naksha library offering support for breaking change on Map Model related to meta, delta namespaces",
     "here-naksha-lib-model" to "Naksha library, adding the Storage-Abstraction-Layer of Naksha, this is the base of all Naksha storage operations. It defines interfaces, helper classes, abstract base classes, and more, needed to use storage implementations or assisting in making new storage implementations.",

@@ -117,6 +117,7 @@ val allModules = mapOf(
     Pair("here-naksha-lib-geo", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-handlers", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-hub", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
+    Pair("here-naksha-lib-iml", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-jbon", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-model", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
     Pair("here-naksha-lib-psql", Pair(CleanAndTest.KOTLIN, PublishModule.YES)),
