@@ -5,6 +5,16 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### db-03-d — Make HEAD nv non-null
+
+**Commit:** Preserve non-null HEAD next-version values at the row boundary.
+
+`PgRows.setRow` writes `tuple.nextVersion` explicitly, so unset model next-version becomes the numeric HEAD sentinel and finite successors remain unchanged. `getTuple` no longer replaces a stored NULL with HEAD. `PgColumn.NextVersionColumn` declares `STORAGE PLAIN NOT NULL` and documents HEAD/finite successor semantics. The existing root DDL sketch already declares non-null nv with a HEAD default.
+
+**Verification:** all four `PgRowsTest` JVM tests pass; JS main/production compilation passes. The database-free test covers unset and explicit HEAD, finite successor binding, NULL access without translation, and the NOT NULL declaration. Full tuple reconstruction testing encountered the existing `MemberList.verify` duplicate-mandatory-member failure while constructing `PgCollection`; that unrelated model issue was not changed, so reconstruction is not runtime-covered here. No database changes were made.
+
+Legacy `PgHeadTable` still checks `nv IS NULL`, and UPDATE/UPSERT/DELETE SQL still manufactures NULL HEAD values. These conflict with the new shared column contract and must be replaced in db-04/db-06..09; this ticket does not claim that legacy physical creation/writes are ready. No compatibility mode or schema migration was added.
+
 ### db-03-c — Keep feature numbers logical
 
 **Commit:** Keep feature identities logical and store feature-ordinals with aligned partition ranges.

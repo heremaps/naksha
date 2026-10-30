@@ -1,6 +1,12 @@
 package naksha.psql
 
 import naksha.base.toOrdinalFeatureNumber
+import naksha.base.TupleNumber
+import naksha.base.Version
+import naksha.jbon.BookType
+import naksha.jbon.HeapBook
+import naksha.model.Tuple
+import naksha.model.objects.StandardMembers
 import naksha.model.objects.MemberType
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,6 +14,27 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PgRowsTest {
+    @Test
+    fun shouldStoreHeadAndFiniteNextVersionsWithoutNullTranslation() {
+        val rows = PgRows()
+            .addColumn(PgColumn.FnColumn)
+            .addColumn(PgColumn.VersionColumn)
+            .addColumn(PgColumn.NextVersionColumn)
+        for (nextVersion in listOf(null, Version.HEAD.number, 100L)) {
+            val members = HeapBook(BookType.MEMBER_BOOK)
+            members.put(StandardMembers.TN, TupleNumber(1L, 1, 1, 42L, 4L))
+            members.put(StandardMembers.NEXT_VERSION, nextVersion)
+            val tuple = Tuple(featureBytes = ByteArray(16), membersBook = members)
+            rows.setRow(0, tuple)
+            val expected = nextVersion ?: Version.HEAD.number
+            assertEquals(expected, rows.getLong(0, PgColumn.NextVersionColumn))
+            assertEquals(expected, rows.getColumn(PgColumn.NextVersionColumn.name)!!.toArray()[0])
+        }
+        rows.getColumn(PgColumn.NextVersionColumn.name)!!.values[0] = null
+        assertNull(rows.getLong(0, PgColumn.NextVersionColumn))
+        assertTrue(PgColumn.NextVersionColumn.extra!!.contains("NOT NULL"))
+    }
+
     @Test
     fun shouldAlwaysConvertSqlFeatureNumbersToOrdinal() {
         val rows = PgRows()
