@@ -64,6 +64,7 @@ actual class Platform {
             addAbstractTypeMapping(MutableList::class.java, JvmList::class.java)
             // TODO: Fix me!
             //addSerializer(CustomSerializer)
+            addSerializer(Id::class.java, IdSerializer)
             setDeserializerModifier(object : BeanDeserializerModifier() {
                 override fun modifyDeserializer(
                     config: DeserializationConfig,
