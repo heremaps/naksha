@@ -7,6 +7,10 @@
   "active": true,
   "extensionId": null,
   "properties": {
+    "@ns:com:here:xyz": {
+      "tags": ["handler_tag_beta", "handler_tag_shared"]
+    },
+    "selectionMarker": "handler-two",
     "storageId": "event_handler_api_test_storage",
     "collection": {
       "maxAge": 2

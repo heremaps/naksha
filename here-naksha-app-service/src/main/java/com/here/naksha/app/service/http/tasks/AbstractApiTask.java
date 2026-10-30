@@ -21,6 +21,7 @@ package com.here.naksha.app.service.http.tasks;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.FAIL_ON_NO_ELEMENTS;
 import static com.here.naksha.app.service.http.tasks.NoElementsStrategy.NOT_FOUND_ON_NO_ELEMENTS;
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
+import static com.here.naksha.common.http.apis.ApiParamsConst.LIMIT;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeatureFromResult;
 import static com.here.naksha.lib.core.util.storage.ResultHelper.readFeaturesFromResult;
 import static java.util.Collections.emptyList;
@@ -28,7 +29,12 @@ import static java.util.Collections.emptyList;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
+import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
+import com.here.naksha.app.service.http.ops.TagsUtil;
 import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.PropertySelectionPostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.SequentialPostProcessor;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
@@ -38,6 +44,7 @@ import com.here.naksha.lib.core.models.XyzError;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeatureCollection;
 import com.here.naksha.lib.core.models.payload.XyzResponse;
+import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import com.here.naksha.lib.core.models.storage.ContextXyzFeatureResult;
 import com.here.naksha.lib.core.models.storage.EExecutedOp;
 import com.here.naksha.lib.core.models.storage.ErrorResult;
@@ -166,6 +173,18 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       } catch (NoCursor | NoSuchElementException emptyException) {
         return handleNoElements(noElementsStrategy);
       }
+    }
+  }
+
+  protected @NotNull XyzResponse executeAdminListRequest(@NotNull String collection, @Nullable FeaturePostProcessor<XyzFeature> masking) {
+    final QueryParameterList queryParams = ApiParams.queryParamsFromRequest(routingContext);
+    long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_ADMIN_FEATURE_LIMIT);
+    limit = (limit < 0 || limit > DEF_ADMIN_FEATURE_LIMIT) ? DEF_ADMIN_FEATURE_LIMIT : limit;
+    final var propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
+    final FeaturePostProcessor<XyzFeature> postProcessor = SequentialPostProcessor.combine(masking, propPaths == null ? null : new PropertySelectionPostProcessor(propPaths));
+    final ReadFeatures request = new ReadFeatures(collection).withLimit(limit).withPropertyOp(TagsUtil.buildOperationForTagsQueryParam(queryParams));
+    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
+      return transformReadResultToXyzCollectionResponse(rdResult, XyzFeature.class, 0, limit, null, postProcessor);
     }
   }
 
