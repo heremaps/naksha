@@ -83,3 +83,7 @@ The next iteration remains strictly read-only against remote IML. Implement and 
 4. Add result-filter processing and bounded continuation handles where compatible with the model, document unsupported capabilities, and assess separate opt-in local-only writes without enabling remote mutation.
 
 Remote discovery found 1,153 public layer mappings. Retained history was confirmed in `m499-source-01:data-02` (physical table `f84ff9888bc5b30fdd69ddbc0c460797`), including successive `I`/`U` rows around source versions 441-451. History also exists in `org644368758:catalog01:layer01`. Catalog estimates identify other much larger history tables; avoid scanning them during routine tests.
+
+Step 1 completed: `ImlListCollectionsTest` passed remotely and listed 1,154 collections, including the virtual collections collection.
+
+Step 2 completed: typed scalar comparisons and null/boolean type tests resolve fixed standard/XYZ member paths; all modern virtual tag-map operations support parsed keys, typed values, last-write-wins duplicates, legacy conversion, and PostgreSQL regex predicates. Spatial intersections support ordered buffer transformations with geometry/geography units and validated style options. Local integration tests cover numeric tag parsing, duplicate/invalid tags, malformed JSON, deserialized operations and spatial buffers. The full local suite passed; remote-only tests skip when remote credentials are not supplied.

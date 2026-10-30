@@ -200,7 +200,6 @@ class ImlQueryTest {
   fun `unsupported tag members map operations and nonstring elements fail closed`() {
     for (op in listOf(
       TagListContains("properties.tags", "a"), TagListContainsAllOf("id"), TagListContainsAnyOf("author"),
-      TagEquals(XyzMembers.XyzTags, "foo", "bar"), TagMapHasKey(XyzMembers.XyzTags, "foo"),
       Equals(XyzMembers.XyzTags, "foo=bar"), IsNull("tags"), IsAnyOf("tags", "a"), StartsWith("tags", "a")
     )) rejects(ReadFeatures().apply { queryMembers = op }, NakshaError.UNSUPPORTED_OPERATION)
     for (value in listOf(123, true, listOf("a"))) {
@@ -214,7 +213,6 @@ class ImlQueryTest {
       TagListContainsAnyOf("tags").apply { items.add(null) }
     )) rejects(ReadFeatures().apply { queryMembers = op }, NakshaError.ILLEGAL_ARGUMENT)
     rejects(ReadFeatures().apply { query.tags = TagSetContains(null) }, NakshaError.ILLEGAL_ARGUMENT)
-    rejects(ReadFeatures().apply { query.tags = TagValueIsString("foo", "bar") }, NakshaError.UNSUPPORTED_OPERATION)
   }
 
   @Test
@@ -295,8 +293,7 @@ class ImlQueryTest {
   fun `unsupported operations members values and transformations are rejected`() {
     val point = SpPoint(PointCoord(1.0, 2.0))
     val unsupported = listOf(
-      Gt("id", "a"), Equals("tags", "a"), Equals("id; SELECT 1", "a"),
-      Intersects("id", point), Intersects("geo", point, SpBuffer(1.0))
+      Equals("tags", "a"), Equals("id; SELECT 1", "a"), Intersects("id", point)
     )
     for (op in unsupported) rejects(ReadFeatures().apply { queryMembers = op }, NakshaError.UNSUPPORTED_OPERATION)
     for (value in listOf(123L, true, listOf("a"))) {
@@ -304,9 +301,6 @@ class ImlQueryTest {
     }
     rejects(ReadFeatures().apply { queryMembers = IsAnyOf("author", "a", 12) }, NakshaError.ILLEGAL_ARGUMENT)
     rejects(ReadFeatures().apply { query.refTiles.add(123) }, NakshaError.UNSUPPORTED_OPERATION)
-    rejects(ReadFeatures().apply {
-      query.spatial = SpIntersects(point, naksha.model.request.query.SpBuffer(1.0))
-    }, NakshaError.UNSUPPORTED_OPERATION)
   }
 
   @Test

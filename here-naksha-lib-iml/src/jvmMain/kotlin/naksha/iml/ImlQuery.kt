@@ -7,23 +7,12 @@ import naksha.base.Platform
 import naksha.base.Version
 import naksha.base.illegalArg
 import naksha.base.unsupportedOp
+import naksha.base.proxy
 import naksha.model.FETCH_ALL
 import naksha.model.NO_CACHE_BIT
 import naksha.model.objects.XyzMembers
 import naksha.model.request.ReadFeatures
-import naksha.model.request.ops.And
-import naksha.model.request.ops.Equals
-import naksha.model.request.ops.Intersects
-import naksha.model.request.ops.IsAnyOf
-import naksha.model.request.ops.IsNull
-import naksha.model.request.ops.Not
-import naksha.model.request.ops.Op
-import naksha.model.request.ops.Or
-import naksha.model.request.ops.QueryConverter
-import naksha.model.request.ops.StartsWith
-import naksha.model.request.ops.TagListContains
-import naksha.model.request.ops.TagListContainsAllOf
-import naksha.model.request.ops.TagListContainsAnyOf
+import naksha.model.request.ops.*
 import naksha.model.request.query.ISpatialQuery
 import naksha.model.request.query.ITagQuery
 import naksha.model.request.query.SortOrder
@@ -51,6 +40,8 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
   private val values = ArrayList<Any?>()
   private val path = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
   private var nodes = 0
+  private val scalars = ImlPredicates(::parameter)
+  private val tagMap = ImlTags(::parameter)
 
   init {
     if (hardCap <= 0) throw illegalArg("IML hardCap must be positive")
@@ -216,24 +207,77 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
           "(NOT ${compile(op.child, depth + 1)})"
         }
         is Equals -> {
-          val column = textColumn(op.at)
           val value = op.value
-          if (value == null) "$column IS NULL" else "($column = ${parameter(text(value))} AND $column IS NOT NULL)"
+          scalars.compare(op.at, value, "=")
         }
-        is IsNull -> "${textColumn(op.at)} IS NULL"
-        is IsAnyOf -> anyOf(textColumn(op.at), op.items)
+        is Gt -> scalars.compare(op.at, op.value, ">")
+        is Gte -> scalars.compare(op.at, op.value, ">=")
+        is Lt -> scalars.compare(op.at, op.value, "<")
+        is Lte -> scalars.compare(op.at, op.value, "<=")
+        is IsTrue -> "${scalars.column(op.at, "boolean")} IS TRUE"
+        is IsFalse -> "${scalars.column(op.at, "boolean")} IS FALSE"
+        is IsNull -> "${scalars.column(op.at)} IS NULL"
+        is IsAnyOf -> if (op.at == "id" || op.at == "author") anyOf(textColumn(op.at), op.items) else scalars.anyOf(op.at, op.items)
+        is TagMapHasKey, is TagMapHasAnyOf, is TagMapHasAllOf,
+        is TagEquals, is TagIsNull, is TagGt, is TagGte, is TagLt, is TagLte,
+        is TagStartsWith, is TagMatches -> tagMap.compile(op)
         is TagListContains -> tags(op.at, listOf(op.item), true)
         is TagListContainsAllOf -> tags(op.at, op.items, true)
         is TagListContainsAnyOf -> tags(op.at, op.items, false)
         is StartsWith -> {
-          val column = textColumn(op.at)
-          val prefix = op.value.replace("!", "!!").replace("%", "!%").replace("_", "!_")
-          "($column LIKE ${parameter("$prefix%")} ESCAPE '!' AND $column IS NOT NULL)"
+          scalars.startsWith(op.at, op.value)
         }
         is Intersects -> {
           if (op.at != "geo") throw unsupportedOp("IML intersections require the geo member")
-          if (op.transformers.isNotEmpty()) throw unsupportedOp("IML spatial transformations are not supported")
-          "(ST_Intersects(geo, ST_SetSRID(ST_GeomFromGeoJSON(${parameter(Platform.toJSON(op.value))}),4326)) AND geo IS NOT NULL)"
+          var geometry = "ST_SetSRID(ST_GeomFromGeoJSON(${parameter(Platform.toJSON(op.value))}),4326)"
+          if (op.transformers.size > 64) throw illegalArg("Too many IML spatial transformations")
+          for (rawTransformer in op.transformers) {
+            val raw = rawTransformer ?: throw illegalArg("Null IML spatial transformation")
+            val buffer = if (raw is SpBuffer) raw else {
+              // The serialized model has no discriminator. Only the complete buffer field shape is recognized.
+              val fields = setOf("distance", "geography", "quadSegments", "joinStyle", "joinLimit", "endCap", "side")
+              if (!raw.hasRaw("distance")) throw unsupportedOp("Unknown IML spatial transformation")
+              for (key in raw.keys) if (key !in fields) throw unsupportedOp("Unknown IML spatial transformation field '$key'")
+              raw.proxy(SpBuffer::class)
+            }
+            for (field in listOf("distance", "joinLimit", "quadSegments")) {
+              val value = buffer.getRaw(field) ?: continue
+              if (value !is Number) throw illegalArg("Invalid IML buffer $field")
+              if (field == "quadSegments" && value.toDouble() != value.toInt().toDouble()) throw illegalArg("Invalid IML buffer quadSegments")
+            }
+            val rawGeography = buffer.getRaw("geography")
+            if (rawGeography != null && rawGeography !is Boolean) throw illegalArg("Invalid IML buffer geography")
+            val distance = buffer.distance
+            if (!distance.isFinite()) throw illegalArg("IML buffer distance must be finite")
+            val styles = ArrayList<String>()
+            val segments = buffer.quadSegments
+            if (segments != null) {
+              if (segments !in 1..10000) throw illegalArg("Invalid IML buffer quadSegments")
+              styles.add("quad_segs=$segments")
+            }
+            val joinLimit = buffer.joinLimit
+            if (joinLimit != null) {
+              if (!joinLimit.isFinite() || joinLimit <= 0) throw illegalArg("Invalid IML buffer joinLimit")
+              styles.add("mitre_limit=$joinLimit")
+            }
+            for ((field, sqlName) in listOf("joinStyle" to "join", "endCap" to "endcap", "side" to "side")) {
+              val value = buffer.getRaw(field) ?: continue
+              val name = if (value is naksha.base.JsEnum) value.value else value as? String
+                ?: throw illegalArg("Invalid IML buffer $field")
+              val allowed = when (field) {
+                "joinStyle" -> setOf("round", "mitre", "bevel")
+                "endCap" -> setOf("round", "flat", "butt")
+                else -> setOf("both", "left", "right")
+              }
+              if (name !in allowed) throw illegalArg("Invalid IML buffer $field")
+              styles.add("$sqlName=${if (name == "butt") "flat" else name}")
+            }
+            val geography = buffer.geography
+            val source = if (geography) "($geometry)::geography" else geometry
+            geometry = "ST_Buffer($source, ${parameter(distance)}, ${parameter(styles.joinToString(" "))})"
+            if (geography) geometry = "($geometry)::geometry"
+          }
+          "(ST_Intersects(geo, $geometry) AND geo IS NOT NULL)"
         }
         else -> throw unsupportedOp("Unsupported IML query operation '${op.op}'")
       }
@@ -255,7 +299,9 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
           }
         }
         is TagNot -> validateTags(query.query, depth + 1)
-        is TagExists -> Unit
+        is TagExists, is naksha.model.request.query.TagValueIsNull,
+        is naksha.model.request.query.TagValueIsBool, is naksha.model.request.query.TagValueIsDouble,
+        is naksha.model.request.query.TagValueIsString, is naksha.model.request.query.TagValueMatches -> Unit
         is TagSetContains -> if (query.element !is String) throw illegalArg("IML tag values must be strings")
         else -> throw unsupportedOp("Unsupported IML legacy tag query")
       }
@@ -269,7 +315,32 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
     if (depth > 64 || ++nodes > 1024 || !path.add(query)) throw illegalArg("IML legacy spatial query is cyclic, too deep, or too large")
     try {
       when (query) {
-        is SpIntersects -> if (query.transformation != null) throw unsupportedOp("IML spatial transformations are not supported")
+        is SpIntersects -> {
+          val seen = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
+          var transformation = query.transformation
+          var count = 0
+          while (transformation != null) {
+            if (++count > 64 || !seen.add(transformation.platformObject())) throw illegalArg("IML transformation chain is cyclic or too long")
+            if (transformation !is naksha.model.request.query.SpBuffer) throw unsupportedOp("Unknown IML spatial transformation")
+            for (field in listOf("distance", "joinLimit", "quadSegments")) {
+              val raw = transformation.getRaw(field) ?: continue
+              if (raw !is Number) throw illegalArg("Invalid IML buffer $field")
+              if (field == "quadSegments" && raw.toDouble() != raw.toInt().toDouble()) throw illegalArg("Invalid IML buffer quadSegments")
+            }
+            val geography = transformation.getRaw("geography")
+            if (geography != null && geography !is Boolean) throw illegalArg("Invalid IML buffer geography")
+            // Validate raw style names before QueryConverter can silently drop an unknown enum.
+            for ((field, allowed) in listOf(
+              "joinStyle" to setOf("round", "mitre", "bevel"),
+              "endCap" to setOf("round", "flat", "butt"), "side" to setOf("both", "left", "right")
+            )) {
+              val raw = transformation.getRaw(field) ?: continue
+              val name = if (raw is naksha.base.JsEnum) raw.value else raw as? String
+              if (name !in allowed) throw illegalArg("Invalid IML buffer $field")
+            }
+            transformation = transformation.childTransformation
+          }
+        }
         is SpAnd, is SpOr -> {
           val children: Iterable<ISpatialQuery?> = if (query is SpAnd) query else query as SpOr
           for (child in children) {
