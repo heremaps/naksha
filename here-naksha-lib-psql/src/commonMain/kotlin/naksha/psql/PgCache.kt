@@ -221,7 +221,7 @@ abstract class PgCache protected constructor() {
         if (conn == null) return null
         conn.execute(pgAdmin.SET_searchPath).close()
         val rows = PgRows().withCollection(pgAdminCatalogs)
-        val SQL = "SELECT * FROM ${pgAdminCatalogs.quotedName} WHERE fn = $1"
+        val SQL = "SELECT * FROM ${pgAdminCatalogs.qualifiedName} WHERE fn = $1"
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }
         if (rows.size == 0) return null
@@ -280,7 +280,7 @@ abstract class PgCache protected constructor() {
         // We are root (parent==null), query the database.
         if (conn == null) return null
         conn.execute(catalog.SET_searchPath).close()
-        val SQL = "SELECT * FROM $COLLECTIONS_COL_QUOTED WHERE $FnColumn = $1"
+        val SQL = "SELECT * FROM ${catalog.quotedName}.$COLLECTIONS_COL_QUOTED WHERE $FnColumn = $1"
         val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
         val rows = PgRows().withCollection(pgAdminCollections)
         plan.execute(arrayOf(collectionNumber.toLong())).fetch().use { rows.readAll(it) }

@@ -15,7 +15,7 @@ This skill encodes the conventions for writing typed wrappers over `PlatformObje
 - Proxies are **not thread-safe**; only one thread accesses a given instance at a time.
 - An **enumeration** extends `naksha.base.JsEnum`. Values are registered statically through `def(...)` or `defIgnoreCase(...)`. They serialize as plain strings/ints in JSON.
 - Both flavors are `@JsExport`-ed because the same code runs on JVM and JS.
-- For every property, the canonical surface a caller can rely on is four methods: `has<Name>()`, `get<Name>()`, `set<Name>(value)`, `remove<Name>()`. Kotlin's `var name by DELEGATE` compiles to `getName`/`setName` automatically; `hasName`/`withoutName` must be written explicitly. Generate all four for every property unless the user explicitly asks for a slimmer surface.
+- Map-backed properties expose getters/setters through Kotlin delegated properties. Add `has<Name>()` / `remove<Name>()` for genuinely optional wire properties. Derived read-only virtual properties expose only a `val` getter; do not generate setters, fluent setters, presence checks or removal methods for them.
 
 ## When NOT to use
 
@@ -133,6 +133,46 @@ private val INDEXED = NotNullProperty<Foo, Boolean>(Boolean::class, name = "inde
 ```
 
 If you do override the wire key, use the same string for both the `name =` argument *and* every `hasRaw("...")` / `removeRaw("...")` call — those bypass the delegate and need the raw map key.
+
+### Derived Read-Only Virtual Properties
+
+A derived read-only virtual property computes a value from an existing source property without adding an entry to the underlying map. Its cache belongs to the proxy instance, not the serialized data. Do not use a map-backed property delegate for the derived value or its cache.
+
+For `val VNAME: T`, use these two private nullable cache fields:
+
+- `_{VNAME}_org: O? = null` tracks the original source value of type `O`.
+- `_{VNAME}_val: T? = null` holds the derived value of type `T`.
+
+For example, `val id: Id` derived from `name: String` uses `_id_org: String?` and `_id_val: Id?`.
+
+Read the source once in the getter. Reuse the cached result only when it is initialized and the current source matches the cached original. Use reference identity (`===`) when a new source instance must invalidate the cache, even if its contents are equal. For primitive/value dependencies, use the appropriate value comparison instead. Recompute and validate first, then update both cache fields; a failed computation must not publish a new cache state.
+
+```kotlin
+private var _id_org: String? = null
+private var _id_val: Id? = null
+
+/**
+ * Hidden virtual identifier derived from [name], excluded from serialized data. Reuses the cached identifier while the source string has the same identity.
+ * @since 3.0
+ */
+val id: Id
+    get() {
+        val original = name
+        val cached = _id_val
+        @Suppress("StringReferentialEquality")
+        if (cached != null && original === _id_org) return cached
+        val value = Id(original)
+        _id_org = original
+        _id_val = value
+        return value
+    }
+```
+
+Getter-side dependency checks are required because source properties can change through another proxy or raw-map access, bypassing a setter on this instance. Do not initialize the derived value in the constructor, and do not use `lazy` when the source can change. Identity comparison alone cannot detect in-place mutation of a mutable source; such a dependency needs a revision, snapshot or another explicit invalidation mechanism.
+
+The two-field template assumes a non-null derived result. If `T` is nullable and `null` is a valid cached result, track initialization separately rather than treating `null` as both uninitialized and cached. For multiple dependencies, track every dependency or use a combined source snapshot. These caches follow the normal single-threaded proxy contract; they do not add thread safety.
+
+Verify cache instance reuse, invalidation after source replacement (including raw-map changes), and exclusion of the derived value and cache fields from serialization. For identity-based caches, also test equal-content but distinct source instances on platforms where that distinction exists.
 
 ## List proxy template
 

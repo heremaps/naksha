@@ -217,8 +217,8 @@ internal class PgRows() {
         clearCache()
         val existing = getColumn(alias)
         if (existing == null) {
-            val pgColumn = PgColumn(-1, Member(alias, type), alias)
-            columns.add(PgRowsColumn(this, this.columns.size, pgColumn))
+            val pgColumn = PgColumn(-1, Member(alias, type))
+            columns.add(PgRowsColumn(this, this.columns.size, pgColumn, alias))
         }
         return this
     }
@@ -431,7 +431,7 @@ internal class PgRows() {
         if (row >= size) size = row + 1
         val columnNames = cursor.columnNames()
         for (columnName in columnNames) {
-            val column = getColumn(columnName) ?: continue
+            val column = columns.firstOrNull { it.sqlAlias == columnName } ?: continue
             val value = cursor.column(columnName)
             column.values[row] = value
         }
@@ -473,7 +473,7 @@ internal class PgRows() {
     fun aliases(): String {
         var aliases = this.aliases
         if (aliases != null) return aliases
-        aliases = columns.joinToString(", ") { PgUtil.quoteIdent(it.alias) }
+        aliases = columns.joinToString(", ") { PgUtil.quoteIdent(it.sqlAlias) }
         this.aliases = aliases
         return aliases
     }
@@ -548,7 +548,7 @@ internal class PgRows() {
      * @see values
      */
     fun decodedColumns(): String = columns.joinToString(", ") {
-        val ident = PgUtil.quoteIdent(it.alias)
+        val ident = PgUtil.quoteIdent(it.sqlAlias)
         when (it.pgColumn.memberType) {
             // We have serialized the text[] as JSON to workaround UNNEST limits.
             // When selecting from the UNNEST we need to restore the text[] fron the JSON.

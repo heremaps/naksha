@@ -37,12 +37,12 @@ internal class PgWriterDelete(
     val purge: Boolean = false
 ) : PgWriterBase(pgWriter, pgCollection, pgWrites, start, end) {
     init {
-        inRows.addColumn(FnColumn.ident, MemberType.INT64)
+        inRows.addColumn(FnColumn)
         inRows.addColumn("expected_version", MemberType.INT64)
         var row = 0
         for (i in start until end) {
             val pgWrite = pgWrites[i]
-            inRows.setColumn(FnColumn.ident, row, pgWrite.id.number)
+            inRows.setColumn(FnColumn.name, row, pgWrite.id.number)
             inRows.setColumn("expected_version", row, pgWrite.requireVersion)
             row++
         }

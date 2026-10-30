@@ -70,11 +70,11 @@ internal abstract class PgWriterBase protected constructor(
     // Temporary legacy descriptors until DB-06..DB-08 move mutation SQL to PgDatabase.
     val headTable = PgHeadTable(pgCollection)
     /** The quoted name of the _HEAD_ table. */
-    val headIdent = headTable.quotedName
+    val headIdent = "${PgUtil.quoteIdent(pgCollection.catalogId.catalogName())}.${headTable.quotedName}"
     /** The _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
     val historyTable = if (pgCollection.storeHistory) PgHistoryTable(pgCollection) else null
     /** The quoted name of the _HISTORY_ table or `null`, if _HISTORY_ is disabled. */
-    val historyIdent = historyTable?.quotedName
+    val historyIdent = historyTable?.let { "${PgUtil.quoteIdent(pgCollection.catalogId.catalogName())}.${it.quotedName}" }
     /** The `id` column */
     val ID: PgColumn = pgCollection.column(StandardMembers.Id) ?: throw illegalState("The collection does not have an 'id' column.")
     /** The change-count column, if there is any defined. */

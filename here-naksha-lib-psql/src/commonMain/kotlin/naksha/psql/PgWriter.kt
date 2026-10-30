@@ -217,7 +217,7 @@ open class PgWriter internal constructor(
                         storage.database.collection_create_table_if_not_exists(
                             conn = conn,
                             schema = pgWrite.dbCatalog.name,
-                            table = id.text,
+                            table = pgCollection.name,
                             columns = pgCollection.columns,
                             indices = pgCollection.indices,
                             options = pgCollection.creationOptions(
@@ -260,7 +260,7 @@ open class PgWriter internal constructor(
                         storage.database.collection_create_table_if_not_exists(
                             conn = conn,
                             schema = pgWrite.dbCatalog.name,
-                            table = id.text,
+                            table = pgCollection.name,
                             columns = pgCollection.columns,
                             indices = pgCollection.indices,
                             options = pgCollection.creationOptions(

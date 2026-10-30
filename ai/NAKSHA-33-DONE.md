@@ -5,6 +5,22 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### db-03 — Finish the physical row and naming contract
+
+**Commit:** Unify identifier aliases and physical naming across storage boundaries.
+
+All children db-03-a through db-03-e are approved and complete. Physical creation options, ordinal conversion/range routing, non-null HEAD next-version and logical/physical naming contracts are established. Production DDL, mutation and read migration remain tracked in db-04..09. Authoritative routing and naming examples remain in the active workboard for implementation reference.
+
+### db-03-e — Establish the root naming rule
+
+**Commit:** Unify identifier aliases and physical naming across storage boundaries.
+
+Added implementation-neutral `IdTextType` and `Id.textAlias`: cumulative classifications, lowercase ALPHABET_ONLY/SAFE, URL-safe tilde, internal dollar naming, strict RESERVED pattern, illegal-name rejection, UTF-8 preservation budgets, and deliberately unchecked fallback prefixes/budgets. Storage mappings use URL_SAFE/25 bytes for schemas/roots with `s$`/`t$` aliases and directly preserve RESERVED names; database names use UNSAFE/42 bytes with `d$`, columns SAFE/42 bytes with `m$`.
+
+`Member.id` is a hidden virtual cache keyed by source name identity, reusing `_id_org` / `_id_val`; Member setters/constructors and collection insertion accept ordinary legal names through UNSAFE. Raw names remain book keys and paths. `PgColumn.id` delegates to the member; `columnName`, quoted identifiers and row SQL labels preserve physical/logical separation. Creation/bootstrap, wrappers, query predicates/projections/order and qualified read/mutation references now share physical mapping. Fixed quoting for case, keywords, embedded quotes and backslashes, DELETE descriptor registration, and cursor descriptor lookup. Documented the general virtual read-only cache pattern in the naksha-proxy skill.
+
+**Verification:** focused Id classification/routing, Member cache/name, physical naming/row/cursor and query-placeholder tests pass; JVM/JS production and model/base JS test compilation pass. Direct Node Id classification/alias checks passed with supplied numeric inputs (environment lacks a text-ID MD5 provider). No database objects were changed. Known legacy member-list validation and end-to-end migration gaps remain explicit. Logical entity comments, transactional alias ownership and final suffix-byte checks are acceptance requirements of db-04 creation/provisioning, not implemented DDL in this naming ticket.
+
 ### db-03-d — Make HEAD nv non-null
 
 **Commit:** Preserve non-null HEAD next-version values at the row boundary.

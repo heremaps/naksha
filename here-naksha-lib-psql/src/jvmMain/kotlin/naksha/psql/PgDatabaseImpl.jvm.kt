@@ -167,7 +167,7 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
             collection_create_table_if_not_exists(
                 conn = conn,
                 schema = ADMIN_CATALOG_TEXT,
-                table = c.id.text,
+                table = c.name,
                 columns = c.columns,
                 indices = c.indices,
                 options = c.creationOptions(storage.config, maxTupleSize)

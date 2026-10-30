@@ -2,6 +2,7 @@
 
 package naksha.psql
 
+import naksha.base.Id
 import naksha.model.objects.JsonPath
 import naksha.model.objects.Member
 import naksha.model.objects.MemberType
@@ -58,6 +59,19 @@ data class PgColumn(
         get() = member.name
 
     /**
+     * The logical identifier of the member represented by this column.
+     * @since 3.0
+     */
+    val id: Id
+        get() = member.id
+
+    /**
+     * Physical alias derived from [id]; [name] remains the logical member/book key.
+     * @since 3.0
+     */
+    val columnName: String = id.columnName()
+
+    /**
      * The type of the column provided as [MemberType], actually just `member.dataType`.
      * @since 3.0
      */
@@ -76,8 +90,8 @@ data class PgColumn(
     private var _pgType: PgType? = null
 
     /**
-     * The SQL quoted identifier, actually a cached version of `PgUtil.quoteIdent(col.name)`.
-     * @return the SQL quoted identifier (with optional double quotes).
+     * The quoted physical [columnName], cached for SQL generation.
+     * @return the SQL quoted identifier.
      * @see PgUtil.quoteIdent
      * @since 3.0
      */
@@ -85,7 +99,7 @@ data class PgColumn(
         get() {
             var ident = _ident
             if (ident == null) {
-                ident = PgUtil.quoteIdent(name)
+                ident = PgUtil.quoteIdent(columnName)
                 _ident = ident
             }
             return ident

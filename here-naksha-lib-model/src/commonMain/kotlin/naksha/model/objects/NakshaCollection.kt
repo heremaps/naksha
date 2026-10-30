@@ -360,7 +360,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @throws NakshaException with [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT] if the maximum number of members has been reached or another member with the same name exists already.
      */
     open fun addMember(value: Member): NakshaCollection {
-        NakshaIdType.INTERNAL_MEMBER.verify(value.name)
+        value.id // Validate the logical name, including descriptors loaded through the underlying map.
         var list = this.members
         if (list == null) {
             list = MemberList()

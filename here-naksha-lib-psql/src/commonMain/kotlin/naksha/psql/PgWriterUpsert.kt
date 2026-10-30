@@ -88,7 +88,7 @@ internal class PgWriterUpsert(
         val head_updated = """, head_updated AS (
   INSERT INTO $headIdent (${inRows.aliases()})
   SELECT ${inRows.columns.joinToString(", ") { colWithValue ->
-    val ident = PgUtil.quoteIdent(colWithValue.alias)
+    val ident = PgUtil.quoteIdent(colWithValue.sqlAlias)
     val pgColumn = colWithValue.pgColumn
     if (pgColumn eq CC) {
         "(head_row.$CC + 1) AS $CC" // Increment Change-Count
@@ -111,7 +111,7 @@ internal class PgWriterUpsert(
         val head_inserted = """, head_inserted AS (
   INSERT INTO $headIdent (${inRows.aliases()})
   SELECT ${inRows.columns.joinToString(", ") { colWithValue ->
-    val ident = PgUtil.quoteIdent(colWithValue.alias)
+    val ident = PgUtil.quoteIdent(colWithValue.sqlAlias)
     val pgColumn = colWithValue.pgColumn
     if (pgColumn eq CC) {
         "1 AS $CC" // Change-Count = 1

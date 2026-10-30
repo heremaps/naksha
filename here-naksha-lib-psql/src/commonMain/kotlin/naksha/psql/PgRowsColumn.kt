@@ -42,6 +42,12 @@ internal data class PgRowsColumn(
      */
     internal var values: Array<Any?> = arrayOfNulls(pgRows.size),
 ) {
+    /**
+     * Physical cursor/SQL label, preserving explicit result aliases.
+     * @since 3.0
+     */
+    val sqlAlias: String
+        get() = if (alias == pgColumn.name) pgColumn.columnName else alias
 
     /**
      * The size of the [values], so amount of row values for this column.

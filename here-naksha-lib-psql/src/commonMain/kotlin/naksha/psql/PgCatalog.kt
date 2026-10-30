@@ -66,12 +66,12 @@ open class PgCatalog @JvmOverloads constructor(
     val id: Id = tuple.id
 
     /**
-     * The name of the schema.
+     * The unquoted physical schema name, derived from [id] through the shared alias policy. The original logical name remains [Id.text].
      * @since 3.0
      * @see quotedName
      */
     @JvmField
-    val name: String = id.text
+    val name: String = id.catalogName()
 
     /**
      * The quoted name of the schema, in double quotes _(if necessary)_.

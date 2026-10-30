@@ -550,7 +550,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         execute_sql(schema = schema, table = table) {
             val quotedSchema = quoteIdent(schema)
             val quotedTable = quoteIdent(table)
-            val CREATE_DDL = """CREATE TABLE IF NOT EXISTS $quotedTable (
+            val CREATE_DDL = """CREATE TABLE IF NOT EXISTS $quotedSchema.$quotedTable (
   fn bigint NOT NULL,
   version bigint NOT NULL,
   nv bigint NOT NULL DEFAULT 9007199254740991,
@@ -865,96 +865,50 @@ SELECT basics.*, procs.* FROM basics, procs;
 }
 
 /**
- * An array that contains `0` for characters being valid as first character of a name, `1` for characters valid anywhere and `2` for invalid characters.
- * @since 3.0
- */
-private val validChars = IntArray(128) {
-    when (it) {
-        in 'a'.code..'z'.code -> 0
-        in '0'.code..'9'.code -> 1
-        '_'.code -> 1
-        else -> 2
-    }
-}
-
-/**
- * Tests if the given character is a valid first character as database name.
- * @since 3.0
- */
-private fun isValidFirstChar(c: Char): Boolean = c.code < validChars.size && validChars[c.code] == 0
-/**
- * Tests if the given character is a valid character as database name.
- * @since 3.0
- */
-private fun isValidChar(c: Char): Boolean = c.code < 256 && validChars[c.code] < 2
-
-/**
- * Tests if the given string only contains valid character as database name, and does not start with the internal prefix `naksha_`.
- * @since 3.0
- */
-private fun isValidName(name: String, maxLength: Int): Boolean {
-    if (name.isEmpty()) return false
-    if (name.length > maxLength) return false
-    if (!isValidFirstChar(name[0])) return false
-    for (i in 1 until name.length) if (!isValidChar(name[i])) return false
-    return !name.startsWith("naksha_")
-}
-
-private fun int_to_string_with_dollar(prefix: String, value: Int): String {
-    val sb = StringBuilder()
-    sb.append(prefix)
-    sb.append(value)
-    if (sb[prefix.length] == '-') sb[prefix.length] = '$'
-    return sb.toString()
-}
-
-/**
  * Extract the `lib-psql` name of the database from the given identifier.
  *
- * Technically, we match the identifier against `[a-z][a-z0-9_]{41}`, when it matches, we use this name; otherwise this method throws an exception.
+ * Preserve ordinary legal text up to 42 UTF-8 bytes, including UNSAFE text requiring SQL quoting. Otherwise generate an internal `d$` alias. INTERNAL and RESERVED text follows the normal alias acceptance policy.
  * @return the identifier to be used in the database.
  * @since 3.0
- * @throws NakshaException with error [ILLEGAL_ARGUMENT][NakshaError.ILLEGAL_ARGUMENT], if the given database name is invalid.
+ * @throws NakshaException with error [ILLEGAL_ID][NakshaError.ILLEGAL_ID], if the identifier text is illegal.
  */
 internal fun Id.databaseName(): String {
-    if (isValidName(this.text, 42)) return this.text
-    throw illegalId(this.text)
+    return textAlias(IdTextType.UNSAFE, 42, "d")
 }
 
 /**
  * Extract the `lib-psql` name of the catalog from the given identifier.
  *
- * Technically, we match the identifier against `[a-z][a-z0-9_]{24}`, when it matches, we use this name, otherwise we use `s_{id.intValue}`, but replace the minus with a dollar, e.g. `s_-12345` becomes `s_$12345`.
+ * Preserve URL-safe names up to 25 UTF-8 bytes and reserved built-ins up to 32 bytes. Other legal names use an internal `s$` alias, with underscore for a negative integer.
  * @return the identifier to be used in the database.
  * @since 3.0
  */
 internal fun Id.catalogName(): String {
-    if (isValidName(this.text, 25)) return this.text
-    return int_to_string_with_dollar("s_", this.intValue)
+    return if (textType === IdTextType.RESERVED) text
+    else textAlias(IdTextType.URL_SAFE, 25, "s")
 }
 
 /**
  * Extract the `lib-psql` name of the collection from the given identifier.
  *
- * Technically, we match the identifier against `[a-z][a-z0-9_]{24}`, when it matches, we use this name, otherwise we use `t_{id.intValue}`, but replace the minus with a dollar, e.g. `t_-12345` becomes `t_$12345`.
+ * Preserve URL-safe names up to 25 UTF-8 bytes and reserved built-ins up to 32 bytes. Other legal names use an internal `t$` alias, with underscore for a negative integer. The budget reserves space for generated children and indexes.
  * @return the identifier to be used in the database.
  * @since 3.0
  */
 internal fun Id.collectionName(): String {
-    if (isValidName(this.text, 25)) return this.text
-    return int_to_string_with_dollar("t_", this.intValue)
+    return if (textType === IdTextType.RESERVED) text
+    else textAlias(IdTextType.URL_SAFE, 25, "t")
 }
 
 /**
  * Extract the `lib-psql` name of the database from the given identifier.
  *
- * Technically, we match the identifier against `[a-z][a-z0-9_]{41}`, when it matches, we use this name, otherwise we use `c_{id.intValue}`, but replace the minus with a dollar, e.g. `c_-12345` becomes `c_$12345`.
+ * Preserve SAFE names up to 42 UTF-8 bytes; otherwise generate an internal `m$` alias. Logical member names are not modified.
  * @return the identifier to be used in the database.
  * @since 3.0
  */
 internal fun Id.columnName(): String {
-    if (isValidName(this.text, 42)) return this.text
-    return int_to_string_with_dollar("c_", this.intValue)
+    return textAlias(IdTextType.SAFE, 42, "m")
 }
 
 /**

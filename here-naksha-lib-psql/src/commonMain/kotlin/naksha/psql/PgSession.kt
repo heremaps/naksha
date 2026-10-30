@@ -551,7 +551,7 @@ WITH lookup AS (
         FROM generate_series(0, octet_length($1::bytea) / 16 - 1) AS g
     ) AS t
 )
-SELECT t.* FROM ${collection.quotedName} t
+SELECT t.* FROM ${collection.qualifiedName} t
 JOIN lookup ON (lookup.$FN, lookup.$VERSION) = (t.$FN, t.$VERSION)"""
         // We expect that seach-path was set by caller!
         val rows = PgRows().withCollection(collection)
