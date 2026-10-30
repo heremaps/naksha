@@ -102,6 +102,9 @@ class ImlReadSession internal constructor(
         val catalog = getCatalogById(catalogId)
           ?: throw NakshaException(NakshaError.MAP_NOT_FOUND, "IML catalog not found")
         if ((catalogId == Id.ADMIN_CATALOG_TEXT && collectionId == Id.CATALOGS_COL_TEXT) || collectionId == Id.COLLECTIONS_COL_TEXT) {
+          if (request.queryHistory || request.minVersion != null || request.version != null || request.versions != 1) {
+            throw unsupportedOp("IML metadata has no revision history")
+          }
           // Metadata has no physical layer table. Support the standard list/ID read surface only.
           if (request.queryMembers != null || !request.query.hasNoConditions() || request.guids.isNotEmpty() || request.orderBy != null) {
             throw unsupportedOp("IML metadata supports only listing and legacy ID selection")
@@ -116,7 +119,7 @@ class ImlReadSession internal constructor(
           if (layer == null || catalogId != metadata.catalog.id) throw NakshaException(NakshaError.COLLECTION_NOT_FOUND, "IML layer not found")
           val tuples = ArrayList<FeatureTuple>()
           withConnection { connection ->
-            connection.prepareStatement("SELECT i, version, operation FROM ${layer.sqlTable} WHERE ${query.predicate} ORDER BY ${query.orderBy} LIMIT ?").use { statement ->
+            connection.prepareStatement(query.history.select(layer.sqlTable, query.predicate, query.orderBy) + " LIMIT ?").use { statement ->
               val next = query.bind(statement)
               statement.setInt(next, query.limit)
               statement.fetchSize = minOf(query.limit, 1000)

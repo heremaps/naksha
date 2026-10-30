@@ -36,6 +36,7 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
   val parameters: List<Any?>
   val orderBy: String
   val limit: Int
+  val history = ImlHistory(request)
 
   private val values = ArrayList<Any?>()
   private val path = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
@@ -48,10 +49,6 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
     val requestedLimit = request.limit
     if (requestedLimit != null && requestedLimit <= 0) throw illegalArg("IML limit must be positive")
     limit = minOf(requestedLimit ?: hardCap, hardCap)
-    if (request.queryHistory || request.minVersion != null || request.versions != 1 ||
-      (request.version != null && request.version != Version.HEAD.number)) {
-      throw unsupportedOp("IML supports only one HEAD state without a minimum version or history")
-    }
     if (request.returnHandle == true) throw unsupportedOp("IML query handles are not supported")
     if (request.resultFilters.isNotEmpty()) throw unsupportedOp("IML result filters are not supported")
     if ((request.fetchMode and NO_CACHE_BIT.inv()) != FETCH_ALL) {
@@ -71,8 +68,8 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
     }
 
     val terms = ArrayList<String>()
-    terms.add("next_version = ${parameter(Long.MAX_VALUE)}")
-    if (!request.queryDeleted) terms.add("operation != 'D'")
+    terms.add(history.predicate)
+    values.addAll(history.parameters)
     if (modern != null) {
       terms.add(compile(modern, 0))
     } else {

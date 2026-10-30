@@ -255,7 +255,7 @@ class ImlReadIntegrationTest {
   }
 
   @Test
-  fun `result filters historical queries and write requests are rejected`() = ImlTestFixture.withFixture { fixture ->
+  fun `result filters and write requests are rejected while history queries are supported`() = ImlTestFixture.withFixture { fixture ->
     fixture.storage.newReadSession().use { session ->
       val filtered = request(fixture).apply {
         resultFilters.add(object : ResultFilter {
@@ -264,10 +264,7 @@ class ImlReadIntegrationTest {
       }
       val filterError = assertThrows(NakshaException::class.java) { session.executeRead(filtered) }
       assertEquals(NakshaError.UNSUPPORTED_OPERATION, filterError.error.code)
-      val historyError = assertThrows(NakshaException::class.java) {
-        read(session, fixture) { queryHistory = true }
-      }
-      assertEquals(NakshaError.UNSUPPORTED_OPERATION, historyError.error.code)
+      assertEquals(5, read(session, fixture) { queryHistory = true }.length)
       val writeError = assertThrows(NakshaException::class.java) { session.execute(WriteRequest()) }
       assertEquals(NakshaError.UNSUPPORTED_OPERATION, writeError.error.code)
     }

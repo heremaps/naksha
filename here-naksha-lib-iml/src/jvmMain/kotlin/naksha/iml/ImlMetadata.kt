@@ -64,7 +64,7 @@ internal class ImlMetadata(connection: Connection, config: ImlConfig, databaseNu
           val number = Id.textToInt(id)
           if (id.isBlank() || table.isBlank() || number == Id.COLLECTIONS_COL_INT) throw illegalArg("Invalid or reserved IML layer identity")
           if (layersById.containsKey(id) || layersByNumber.containsKey(number)) throw illegalArg("Duplicate or colliding IML layer identities")
-          val collection = NakshaCollection(id, schema, storeHistory = StoreMode.OFF, storeDeleted = StoreMode.OFF, storeMeta = StoreMode.OFF)
+          val collection = NakshaCollection(id, schema, storeHistory = StoreMode.ON, storeDeleted = StoreMode.ON, storeMeta = StoreMode.OFF)
           collection.featureType = NakshaCollection.FEATURE_TYPE
           collection.databaseId = config.id
           collection.members = MemberList().apply { addAll(XyzMembers.ALL) }

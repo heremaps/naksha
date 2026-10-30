@@ -320,12 +320,37 @@ class ImlQueryTest {
   }
 
   @Test
-  fun `history handles unsupported fetch modes and invalid limits are rejected`() {
+  fun `history bounds are supported while handles unsupported fetch modes and invalid limits are rejected`() {
+    val history = ImlQuery(ReadFeatures().apply { queryHistory = true }, 100)
+    assertEquals("next_version = ? AND operation != 'D'", history.predicate)
+    assertEquals(listOf(Long.MAX_VALUE), history.parameters)
+    val minimum = ImlQuery(ReadFeatures().apply { minVersion = Version.MIN.number }, 100)
+    assertEquals("next_version = ? AND version >= ? AND operation != 'D'", minimum.predicate)
+    assertEquals(listOf(Long.MAX_VALUE, Version.MIN.number ushr 2), minimum.parameters)
+    val maximum = ImlQuery(ReadFeatures().apply { version = 4L }, 100)
+    assertEquals("next_version = ? AND version <= ? AND operation != 'D'", maximum.predicate)
+    assertEquals(listOf(Long.MAX_VALUE, 1L), maximum.parameters)
+    val snapshot = ImlQuery(ReadFeatures().apply {
+      queryHistory = true
+      version = 4L
+    }, 100)
+    assertEquals("version <= ? AND next_version > ? AND operation != 'D'", snapshot.predicate)
+    assertEquals(listOf(1L, 1L), snapshot.parameters)
+    val multiple = ImlQuery(ReadFeatures().apply {
+      queryHistory = true
+      versions = 2
+    }, 100)
+    assertEquals("TRUE", multiple.predicate)
+    assertEquals(emptyList<Any?>(), multiple.parameters)
+    rejects(ReadFeatures().apply { versions = 2 }, NakshaError.ILLEGAL_ARGUMENT)
+    rejects(ReadFeatures().apply { version = -1L }, NakshaError.ILLEGAL_ARGUMENT)
+    rejects(ReadFeatures().apply { version = Version.MIN_DATED.number }, NakshaError.ILLEGAL_ARGUMENT)
+    rejects(ReadFeatures().apply { minVersion = Version.MIN_DATED.number }, NakshaError.ILLEGAL_ARGUMENT)
+    rejects(ReadFeatures().apply {
+      minVersion = 8L
+      version = 4L
+    }, NakshaError.ILLEGAL_ARGUMENT)
     val requests = listOf(
-      ReadFeatures().apply { queryHistory = true },
-      ReadFeatures().apply { minVersion = Version.MIN.number },
-      ReadFeatures().apply { version = 4L },
-      ReadFeatures().apply { versions = 2 },
       ReadFeatures().apply { returnHandle = true },
       ReadFeatures().apply { fetchMode = 0 },
       ReadFeatures().apply { fetchMode = FETCH_ALL or 32 }
