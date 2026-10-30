@@ -2,6 +2,8 @@ package naksha.psql
 
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.illegalArg
+import naksha.base.fromOrdinalFeatureNumber
+import naksha.base.toOrdinalFeatureNumber
 import naksha.model.objects.MemberType
 
 /**
@@ -35,7 +37,7 @@ internal data class PgRowsColumn(
     val alias: String = pgColumn.name,
 
     /**
-     * The values of the column for each row.
+     * The raw SQL values for each row. Feature-number columns contain feature-ordinals; use the get/set operators for logical feature-numbers.
      * @since 3.0
      */
     internal var values: Array<Any?> = arrayOfNulls(pgRows.size),
@@ -52,15 +54,18 @@ internal data class PgRowsColumn(
         }
 
     /**
-     * Returns the value from the given index or `null`.
+     * Returns the logical value from the given index or `null`. Feature-ordinals are converted back to feature-numbers.
      * @param i the index to query.
      * @return the value at the given index or `null`.
      * @since 3.0
      */
-    operator fun get(i: Int) = if (i in 0 until size) values[i] else null
+    operator fun get(i: Int): Any? {
+        val value = if (i in 0 until size) values[i] else null
+        return if ((pgColumn eq PgColumn.FnColumn) && value != null) (value as Long).fromOrdinalFeatureNumber() else value
+    }
 
     /**
-     * Sets the value at the given index. If the current [size] is less than `i`, increases the size, potentially adding `null` values.
+     * Sets the logical value at the given index, storing feature-numbers as feature-ordinals. If the current [size] is less than `i`, increases the size, potentially adding `null` values.
      * @param i the index to set.
      * @param value the value to set.
      * @throws naksha.base.NakshaException with error [ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] if the given index `i` is less than zero.
@@ -69,11 +74,11 @@ internal data class PgRowsColumn(
     operator fun set(i: Int, value: Any?) {
         if (i < 0) throw illegalArg("The given index $i is less than zero")
         if (i >= size) size = i + 1
-        values[i] = value
+        values[i] = if ((pgColumn eq PgColumn.FnColumn) && value != null) (value as Long).toOrdinalFeatureNumber() else value
     }
 
     /**
-     * Returns all values of this column as array that can be feed into PostgresQL [UNNEST](https://www.postgresql.org/docs/18/functions-array.html) function. Requires a minor hack for [naksha.model.TagList].
+     * Returns all values of this column as array that can be feed into PostgresQL [UNNEST](https://www.postgresql.org/docs/18/functions-array.html) function. Feature-number columns are emitted as the feature-ordinal; other types are passed through (with a minor [naksha.model.TagList] hack).
      * @see PgRows.setRow
      * @see PgRows.values
      */

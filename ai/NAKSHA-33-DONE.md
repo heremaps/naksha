@@ -5,6 +5,18 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### db-03-c — Keep feature numbers logical
+
+**Commit:** Keep feature identities logical and store feature-ordinals with aligned partition ranges.
+
+All physical fn storage uses feature-ordinals, regardless of partition count. `PgRowsColumn` keeps raw ordinals internally; normal set/get operators encode/decode logical feature-numbers using `Long.toOrdinalFeatureNumber()` / `Long.fromOrdinalFeatureNumber()` in `LibBase`. Removed redundant `PgUtil.fnToInt8` / `int8ToFn`. `PgRows.values()` and cursor ingestion transfer raw ordinals without conversion. Descriptor-backed fn aliases participate, while other INT64/version values remain unchanged. Tuple reconstruction and `_id` materialization use logical access.
+
+`Id` defines feature-ordinals, inclusive ordinal bounds per partition-number, and inclusive partition-number/ordinal bounds per partition-index, with companion and instance accessors. `Id.partitionIndex` and `TupleNumber.partitionIndex` use contiguous groups, not modulo, validating counts 1..256 and returning 0 for one partition. The agreed seven-partition example remains in [the active routing contract](NAKSHA-33.md#agreed-routing-contract), including `{name}_h{nv >> shift}_p{partitionIndex}` leaf naming.
+
+This supersedes conditional storage statements in db-03-b. Legacy raw-fn sign/modulo DDL, writer SQL, and standalone query/cache bindings still require the db-04/db-06..09 migrations; no end-to-end storage rollout is claimed. Query builders must encode fn search arguments and avoid double conversion of raw bindings.
+
+**Verification:** all 11 `IdTest` tests and the full base JVM suite passed; all three `PgRowsTest` and three `PgFeatureNumberTest` tests passed after switching to the LibBase extensions. Tests cover all partition-number/count combinations, contiguous bounds, signed extremes, ordinal round trips, raw bindings and logical access, aliases and nulls. JS main/production compilation passed. Psql JS test compilation was blocked by JVM-only references in untouched `TupleCacheReadPathTest.kt`. No database objects were changed.
+
 ### db-03-a — Validate create-only partition options
 
 **Commit:** Validate collection creation options and add physical feature-number conversion helpers.

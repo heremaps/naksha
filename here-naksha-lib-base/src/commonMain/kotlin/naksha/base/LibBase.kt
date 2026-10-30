@@ -173,6 +173,20 @@ inline fun <T : Any> AtomicNonNullRef(referee: T): AtomicNonNullRef<T> = Platfor
 inline fun <T : Any> WeakRef(referee: T): WeakRef<T> = Platform.newWeakRef(referee)
 
 /**
+ * Treat this 64-bit integer as feature-number and convert it into the [ordinal feature-number][Id.featureOrdinal] of an [Id].
+ * @return the [ordinal feature-number][Id.featureOrdinal] of an [Id].
+ * @since 3.0
+ */
+inline fun Long.toOrdinalFeatureNumber(): Long = Platform.swapLong(this) xor Long.MIN_VALUE
+
+/**
+ * Treat this 64-bit integer as [ordinal feature-number][Id.featureOrdinal] of an [Id] and convert it into a normal feature-number.
+ * @return the normal feature-number of an [Id].
+ * @since 3.0
+ */
+inline fun Long.fromOrdinalFeatureNumber(): Long = Platform.swapLong(this xor Long.MIN_VALUE)
+
+/**
  * Cast this, if possible, into the given proxy.
  * @param klass the proxy class to return.
  * @return this as the requested proxy or `null`.

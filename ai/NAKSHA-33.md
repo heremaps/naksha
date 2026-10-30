@@ -113,7 +113,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | Finish the physical row and naming contract | [db-01](NAKSHA-33-DONE.md#db-01--agree-the-database-boundary-and-operation-contracts), [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `IN_PROGRESS` | — |
 | ~~[db-03-a](NAKSHA-33-DONE.md#db-03-a--validate-create-only-partition-options)~~ | ~~Validate create-only partition options~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Validate collection creation options and add physical feature-number conversion helpers. |
 | ~~[db-03-b](NAKSHA-33-DONE.md#db-03-b--add-fn-conversion-helpers-and-init-sql)~~ | ~~Add fn conversion helpers and init SQL~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Validate collection creation options and add physical feature-number conversion helpers. |
-| [db-03-c](#db-03-c--keep-feature-numbers-logical) | Keep feature numbers logical | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| ~~[db-03-c](NAKSHA-33-DONE.md#db-03-c--keep-feature-numbers-logical)~~ | ~~Keep feature numbers logical~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Keep feature identities logical and store feature-ordinals with aligned partition ranges. |
 | [db-03-d](#db-03-d--make-head-nv-non-null) | Make HEAD nv non-null | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
 | [db-03-e](#db-03-e--establish-the-root-naming-rule) | Establish the root naming rule | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
 | [db-04](#db-04--implement-schema-collection-and-index-operations) | Implement schema, collection, and index operations | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version), [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
@@ -167,10 +167,38 @@ Parent ticket; decomposed into `db-03-a` … `db-03-e`. **Done when:** conversio
 round-trips and range coverage are verified, and all new low-level operations
 agree on names, physical fn, and non-null nv.
 
-### db-03-c — Keep feature numbers logical
+### Agreed Routing Contract
 
-Keep API/tuple feature numbers logical. Follow `partman.md` for when physical
-encoding applies; preserve the id/fn invariant using logical fn semantics.
+Use case: a collection `foo` has seven performance partitions. Its finite history range begins at `nv`, and `shifted = nv >> shift`. Performance leaves are named `foo_h{shifted}_p0` through `foo_h{shifted}_p6`; the `_p{suffix}` is the partition-index.
+
+All of the following live in `Id` (companion functions keyed by value/index, plus instance members keyed by this id). `featureOrdinal` is the physical storage encoding and is stored for every feature regardless of partition count:
+
+- `featureOrdinal = byteSwap(featureNumber) XOR Long.MIN_VALUE` — the byte swap moves the logical low byte to the high byte; the sign flip makes PostgreSQL signed bigint ordering follow logical bytes 0..255.
+- `partitionNumber = featureNumber & 0xff` — 0..255, the routing key (the low byte of the feature-number; equivalently the signed block-index of the ordinal).
+- `partitionMinOrd = (partitionNumber XOR 0x80) * 2^56`, `partitionMaxOrd = partitionMinOrd + (2^56 - 1)` — the inclusive ordinal block owned by one partition-number.
+- `partitionIndex = ((partitionNumber + 1) * partitions - 1) / 256` — the contiguous (not modulo) group; the exact inverse of the byte boundary `floor(i * 256 / partitions)`.
+- `partitionNumberMin(index, partitions) = index * 256 / partitions`; `partitionNumberMax(index, partitions) = 255` for the last index, else `(index + 1) * 256 / partitions - 1` — the inclusive partition-number range of an index.
+- `partitionIndexMin(index, partitions) = partitionMinOrd(partitionNumberMin(index, partitions))`; `partitionIndexMax(index, partitions) = partitionMaxOrd(partitionNumberMax(index, partitions))` — the inclusive ordinal range of an index, i.e. the PostgreSQL range bounds.
+
+All counts validate 1..256; one partition returns index 0 and spans the whole ordinal space. API, tuple and cache identities remain logical.
+
+N=7 worked example (inclusive ordinal bounds):
+
+| Index | partNumMin | partNumMax | partitionIndexMin | partitionIndexMax | PostgreSQL Range |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 0 | 35 | -9223372036854775808 | -6629298651489370113 | `[MINVALUE, -6629298651489370112)` |
+| 1 | 36 | 72 | -6629298651489370112 | -3963167672086036481 | `[-6629298651489370112, -3963167672086036480)` |
+| 2 | 73 | 108 | -3963167672086036480 | -1369094286720630785 | `[-3963167672086036480, -1369094286720630784)` |
+| 3 | 109 | 145 | -1369094286720630784 | 1297036692682702847 | `[-1369094286720630784, 1297036692682702848)` |
+| 4 | 146 | 181 | 1297036692682702848 | 3891110078048108543 | `[1297036692682702848, 3891110078048108544)` |
+| 5 | 182 | 218 | 3891110078048108544 | 6557241057451442175 | `[3891110078048108544, 6557241057451442176)` |
+| 6 | 219 | 255 | 6557241057451442176 | 9223372036854775807 | `[6557241057451442176, MAXVALUE)` |
+
+The PostgreSQL upper bound is the next index's `partitionIndexMin` (or `MAXVALUE` for the last), because ranges are half-open. `Id` and `TupleNumber` share `partitionIndex`. This contract supersedes conditional fn encoding and modulo routing from earlier notes. Unconditional ordinal transport is implemented; production leaf provisioning remains db-04-g.
+
+Verification: `IdTest` (11 tests) passes — ordinal blocks tile the space monotonically (2^56 wide, spanning `Long.MIN_VALUE`..`Long.MAX_VALUE`), partition-number ranges tile 0..255, `partitionIndex` matches `partitionNumberMin/Max` for every value and count, `partitionIndexMin/Max` are contiguous across indexes, the N=7 example matches the table, and the instance methods equal the companion methods.
+
+Completed transport details and verification are archived in [db-03-c](NAKSHA-33-DONE.md#db-03-c--keep-feature-numbers-logical). `Long.toOrdinalFeatureNumber()` and `Long.fromOrdinalFeatureNumber()` in `LibBase` are the shared conversions; the redundant `PgUtil` helpers have been removed. Query-builder and standalone cache fn search arguments must also use ordinals during db-09; legacy sign/modulo DDL and writer SQL remain scheduled for replacement.
 
 ### db-03-d — Make HEAD nv non-null
 

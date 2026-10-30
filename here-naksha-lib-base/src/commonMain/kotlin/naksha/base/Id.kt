@@ -178,21 +178,83 @@ class Id private constructor(
         get() = textToNumberMap[text] == number
 
     /**
-     * The number of the partition in which this identifier will be located.
+     * The unsigned low byte of the logical feature-number, between 0 and 255.
      *
      * Beware that the final partition index is dependent on the number of total partitions.
      * @see partitionIndex
+     * @since 3.0
      */
     @JvmField
     val partitionNumber: Int = partitionNumber(number)
 
     /**
-     * Returns the real partition index of this identifier.
-     * @param partitions the total number of partitions as specified in `NakshaCollection`.
-     * @return the real partition index of this identifier for the given amount of partitions.
+     * Returns the contiguous range partition index of this identifier, not a modulo bucket. Partition i owns logical low bytes from `floor(i * 256 / partitions)` inclusive to `floor((i + 1) * 256 / partitions)` exclusive. This matches PostgreSQL ranges over byte-swapped, sign-normalized feature-numbers.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the partition index between 0 and `partitions - 1`; 0 for one partition.
      * @see partitionNumber
+     * @since 3.0
      */
-    fun partitionIndex(partitions: Int): Int = partitionNumber % partitions
+    fun partitionIndex(partitions: Int): Int = partitionIndex(number, partitions)
+
+    /**
+     * The feature-ordinal of this identifier: the byte-swapped feature-number with the sign-bit flipped. This is the physical storage encoding in which contiguous [partitionNumber]s form contiguous ordinal ranges.
+     * @since 3.0
+     * @see featureOrdinal
+     */
+    val featureOrdinal: Long
+        get() = featureOrdinal(number)
+
+    /**
+     * The lowest ordinal (inclusive) of the 2^56-wide ordinal block owned by this identifier's [partitionNumber].
+     * @since 3.0
+     * @see partitionMinOrd
+     */
+    val partitionMinOrd: Long
+        get() = partitionMinOrd(partitionNumber)
+
+    /**
+     * The highest ordinal (inclusive) of the 2^56-wide ordinal block owned by this identifier's [partitionNumber].
+     * @since 3.0
+     * @see partitionMaxOrd
+     */
+    val partitionMaxOrd: Long
+        get() = partitionMaxOrd(partitionNumber)
+
+    /**
+     * Returns the lowest partition-number (inclusive) of the partition this identifier belongs to, for the given number of partitions.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the lowest partition-number of this identifier's partition.
+     * @since 3.0
+     * @see partitionIndex
+     */
+    fun partitionNumberMin(partitions: Int): Int = partitionNumberMin(partitionIndex(partitions), partitions)
+
+    /**
+     * Returns the highest partition-number (inclusive) of the partition this identifier belongs to, for the given number of partitions.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the highest partition-number of this identifier's partition.
+     * @since 3.0
+     * @see partitionIndex
+     */
+    fun partitionNumberMax(partitions: Int): Int = partitionNumberMax(partitionIndex(partitions), partitions)
+
+    /**
+     * Returns the lowest ordinal (inclusive) of the partition this identifier belongs to, for the given number of partitions. This is the PostgreSQL range lower bound for that partition.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the lowest ordinal of this identifier's partition.
+     * @since 3.0
+     * @see partitionIndexMin
+     */
+    fun partitionIndexMin(partitions: Int): Long = partitionIndexMin(partitionIndex(partitions), partitions)
+
+    /**
+     * Returns the highest ordinal (inclusive) of the partition this identifier belongs to, for the given number of partitions. This is one less than the PostgreSQL range upper bound for that partition.
+     * @param partitions the total number of partitions, between 1 and 256.
+     * @return the highest ordinal of this identifier's partition.
+     * @since 3.0
+     * @see partitionIndexMax
+     */
+    fun partitionIndexMax(partitions: Int): Long = partitionIndexMax(partitionIndex(partitions), partitions)
 
     override fun equals(other: Any?): Boolean {
         if (other === this) return true
@@ -554,7 +616,7 @@ class Id private constructor(
         /**
          * Returns the partition-number from the given feature-id.
          *
-         * This is basically just an unsigned 8-bit integer, extracted from the lowest 8-bit of the feature-number. When there are less than 256 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
+         * The unsigned lowest byte of the logical feature-number. Use [partitionIndex] to map it to a contiguous range for a specific partition count, rather than taking a remainder.
          * @param id the feature-id.
          * @return the partition-number.
          * @since 3.0
@@ -569,7 +631,7 @@ class Id private constructor(
         /**
          * Returns the partition-number from the given feature-number.
          *
-         * This is basically just an unsigned 8-bit integer, extracted from the lowest 8-bit of the feature-number. When there are less than 256 partitions, the value must be divided by the number of real partitions, and the rest indexes the partition, for example for 4 partitions do `partitionNumber(featureNumber) % 4`, what will be a value between 0 and 3.
+         * The unsigned lowest byte of the logical feature-number. Use [partitionIndex] to map it to a contiguous range for a specific partition count, rather than taking a remainder.
          * @param number the feature-number.
          * @return the partition-number.
          * @since 3.0
@@ -579,6 +641,108 @@ class Id private constructor(
         @JsStatic
         @JvmStatic
         fun partitionNumber(number: Long): Int = number.toInt() and 0xff
+
+        /**
+         * Maps a logical feature-number to the contiguous range whose byte bounds are `floor(i * 256 / partitions)` and `floor((i + 1) * 256 / partitions)`. The inverse below handles uneven groups without gaps or overlaps; all intermediate values fit in Int.
+         * @param number the logical feature-number, never its physical storage encoding.
+         * @param partitions the partition count, between 1 and 256.
+         * @return the partition index, between 0 and `partitions - 1`.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionIndex(number: Long, partitions: Int): Int {
+            if (partitions !in 1..256) throw illegalArg("partitions must be in 1..256, got $partitions")
+            return ((partitionNumber(number) + 1) * partitions - 1) / 256
+        }
+
+        /**
+         * Returns the feature-ordinal of the given feature-number: the byte-swapped value with the sign-bit flipped. In this encoding contiguous partition-numbers form contiguous ordinal ranges, so PostgreSQL can range-partition directly on the stored value.
+         * @param number the logical feature-number, never its physical storage encoding.
+         * @return the byte-swapped, sign-normalized ordinal.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun featureOrdinal(number: Long): Long = Platform.swapLong(number) xor Long.MIN_VALUE
+
+        /**
+         * Returns the lowest ordinal (inclusive) that has the given partition-number, i.e. the start of the 2^56-wide ordinal block that partition-number owns.
+         * @param partitionNumber the partition-number, between 0 and 255.
+         * @return the lowest ordinal of that block.
+         * @since 3.0
+         * @see featureOrdinal
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionMinOrd(partitionNumber: Int): Long = (partitionNumber xor 0x80).toLong() shl 56
+
+        /**
+         * Returns the highest ordinal (inclusive) that has the given partition-number.
+         * @param partitionNumber the partition-number, between 0 and 255.
+         * @return the highest ordinal of that block.
+         * @since 3.0
+         * @see partitionMinOrd
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionMaxOrd(partitionNumber: Int): Long = partitionMinOrd(partitionNumber) or 0x00ffffffffffffffL
+
+        /**
+         * Returns the lowest partition-number (inclusive) that belongs to the given partition-index, for a contiguous, non-modulo distribution across [partitions].
+         * @param index the partition-index, between 0 and `partitions - 1`.
+         * @param partitions the total number of partitions, between 1 and 256.
+         * @return the lowest partition-number of that partition.
+         * @since 3.0
+         * @see partitionIndex
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionNumberMin(index: Int, partitions: Int): Int {
+            if (partitions !in 1..256) throw illegalArg("partitions must be in 1..256, got $partitions")
+            if (index !in 0 until partitions) throw illegalArg("index must be in 0 until partitions, got $index")
+            return index * 256 / partitions
+        }
+
+        /**
+         * Returns the highest partition-number (inclusive) that belongs to the given partition-index, for a contiguous, non-modulo distribution across [partitions].
+         * @param index the partition-index, between 0 and `partitions - 1`.
+         * @param partitions the total number of partitions, between 1 and 256.
+         * @return the highest partition-number of that partition.
+         * @since 3.0
+         * @see partitionIndex
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionNumberMax(index: Int, partitions: Int): Int {
+            if (partitions !in 1..256) throw illegalArg("partitions must be in 1..256, got $partitions")
+            if (index !in 0 until partitions) throw illegalArg("index must be in 0 until partitions, got $index")
+            return if (index == partitions - 1) 255 else (index + 1) * 256 / partitions - 1
+        }
+
+        /**
+         * Returns the lowest ordinal (inclusive) that belongs to the given partition-index, for a contiguous distribution across [partitions]. This is the PostgreSQL range lower bound for that partition.
+         * @param index the partition-index, between 0 and `partitions - 1`.
+         * @param partitions the total number of partitions, between 1 and 256.
+         * @return the lowest ordinal of that partition.
+         * @since 3.0
+         * @see partitionMinOrd
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionIndexMin(index: Int, partitions: Int): Long = partitionMinOrd(partitionNumberMin(index, partitions))
+
+        /**
+         * Returns the highest ordinal (inclusive) that belongs to the given partition-index, for a contiguous distribution across [partitions]. This is one less than the PostgreSQL range upper bound for that partition.
+         * @param index the partition-index, between 0 and `partitions - 1`.
+         * @param partitions the total number of partitions, between 1 and 256.
+         * @return the highest ordinal of that partition.
+         * @since 3.0
+         * @see partitionMaxOrd
+         */
+        @JsStatic
+        @JvmStatic
+        fun partitionIndexMax(index: Int, partitions: Int): Long = partitionMaxOrd(partitionNumberMax(index, partitions))
 
         /**
          * Compares two given feature-numbers against each other.

@@ -108,12 +108,12 @@ data class TupleNumber(
     /**
      * Calculates the distribution partition-index where this `Tuple` will be located.
      *
-     * If the given partitions are less than `2`, the method always returns `-1`.
-     * @param partitions the number of partitions
-     * @return the partition-index, a value between `0` and `partitions - 1` _(maximal 255)_; or `-1` if there are no distribution partitions.
+     * Uses the same contiguous low-byte ranges as [Id.partitionIndex], not modulo routing.
+     * @param partitions the number of partitions, between 1 and 256.
+     * @return the partition-index between `0` and `partitions - 1` (maximal 255); 0 for one partition.
      * @since 3.0
      */
-    fun partitionIndex(partitions: Int): Int = if (partitions < 2) -1 else partitionNumber % partitions
+    fun partitionIndex(partitions: Int): Int = Id.partitionIndex(featureNumber, partitions)
 
     override fun hashCode(): Int = version.hashCode()
 
