@@ -31,7 +31,7 @@ parts && parts.length>0 ? (parts.length===1 ? plv8.quote_literal(parts[0]) : plv
          */
         internal actual fun quote_ident(vararg parts: String): String?
                 = if (isPlv8()) js("""
-parts && parts.length>0 ? (parts.length===1 ? plv8.quote_ident(parts[0]) : plv8.quote_literal(parts.join(''))) : ''
+parts && parts.length>0 ? plv8.quote_ident(parts.join('')) : ''
 """).unsafeCast<String>() else null
 
         /**

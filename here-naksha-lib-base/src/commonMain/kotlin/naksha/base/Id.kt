@@ -147,6 +147,34 @@ class Id private constructor(
         }
 
     /**
+     * The implementation-neutral classification of [text]. This does not authorize access or modification and does not limit length, except for the reserved-name pattern. See [IdTextType].
+     * @since 3.0
+     */
+    val textType: IdTextType
+        get() = IdTextType.classify(text)
+
+    /**
+     * Returns [text] unchanged when [expectedTextType] accepts its classification and its UTF-8 encoding occupies at most [maxBytes] bytes. Otherwise returns an internal alias: [prefix], a dollar sign, and [intValue] in decimal, replacing a leading minus with underscore (for example `m$_12345`).
+     *
+     * The alias is the documented alternative to the requested type and size: neither [prefix] nor the generated alias's type or length is validated. The caller owns prefix selection, length/suffix budgets and collision detection. Internal and reserved names follow the same acceptance and length checks as ordinary names; neither bypasses them. Illegal text is rejected rather than aliased. No case folding or Unicode normalization is performed.
+     * @param expectedTextType the most permissive accepted classification; see [IdTextType.accepts].
+     * @param maxBytes the maximum UTF-8 size for preserving the original text, not a limit on the generated alias.
+     * @param prefix the caller-selected prefix for a generated internal alias.
+     * @throws NakshaException with [NakshaError.ILLEGAL_ID] if the text is illegal.
+     * @since 3.0
+     */
+    fun textAlias(expectedTextType: IdTextType, maxBytes: Int, prefix: String): String {
+        val text = this.text
+        val type = IdTextType.classify(text)
+        if (type === IdTextType.ILLEGAL) throw illegalId("Illegal identifier text")
+        if (expectedTextType.accepts(type) && text.encodeToByteArray().size <= maxBytes) return text
+        val alias = StringBuilder().append(prefix).append('$').append(intValue)
+        val numberStart = prefix.length + 1
+        if (alias[numberStart] == '-') alias[numberStart] = '_'
+        return alias.toString()
+    }
+
+    /**
      * Returns the [number] as 32-bit integer, used for catalogs and collections.
      *
      * The method will keep the lower 31-bit of the [number] intact and copy the sign-bit to them, so that the resulting 32-bit value will match the lower 31-bit of the [number], plus the sign of the [number]. This guarantees that negative numbers stay negative, and positive numbers stay positive.

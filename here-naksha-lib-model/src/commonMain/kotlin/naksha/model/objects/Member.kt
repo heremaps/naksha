@@ -4,6 +4,8 @@ package naksha.model.objects
 
 import naksha.base.AnyObject
 import naksha.base.Id
+import naksha.base.IdTextType
+import naksha.base.illegalId
 import naksha.base.JsEnum
 import naksha.base.ListProxy
 import naksha.base.MapProxy
@@ -23,7 +25,6 @@ import naksha.base.PlatformMapApi
 import naksha.base.PlatformMapApi.PlatformMapApiCompanion.map_iterator
 import naksha.base.PlatformUtil
 import naksha.base.PlatformUtil.PlatformUtilCompanion.hashCodeOf
-import naksha.model.NakshaIdType.INTERNAL_MEMBER
 import naksha.model.TagList
 import naksha.model.TagMap
 import naksha.model.Tuple
@@ -66,7 +67,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     @JvmOverloads
     @JsName("MemberNew")
     constructor(name: String, dataType: MemberType = MemberType.STRING, path: JsonPath? = null) : this() {
-        this.name = INTERNAL_MEMBER.verify(name)
+        this.name = name
         this.dataType = dataType
         this.path = path ?: JsonPath("properties", name)
         this.path.validate()
@@ -90,11 +91,37 @@ open class Member() : AnyObject(), Comparator<Member> {
     }
 
     /**
-     * The column name. Must be a valid Naksha identifier and must not conflict with a reserved built-in
-     * column unless it is declared with exactly the same [dataType].
+     * The logical member/book name, preserved without normalization or storage-specific aliasing. Accepts classifications through [IdTextType.UNSAFE]; internal, reserved and illegal names are rejected. Must not conflict with a built-in member unless declared with exactly the same [dataType].
      * @since 3.0
      */
-    var name: String by NAME
+    var name: String
+        get() = declaredName
+        set(value) {
+            if (!IdTextType.UNSAFE.accepts(IdTextType.classify(value))) throw illegalId("Invalid custom member name")
+            declaredName = value
+        }
+
+    private var declaredName: String by NAME
+    private var _id_org: String? = null
+    private var _id_val: Id? = null
+
+    /**
+     * Hidden virtual identifier derived on demand from [name], never added to the serialized member map. Reuses the same [Id] instance while the name has the same string identity; a different name instance refreshes the cache, even when its text is equal.
+     * @throws NakshaException with [naksha.base.NakshaError.ILLEGAL_ID] for an invalid custom member name, including names loaded directly into the underlying map.
+     * @since 3.0
+     */
+    val id: Id
+        get() {
+            val name = this.name
+            val cached = _id_val
+            @Suppress("StringReferentialEquality")
+            if (cached != null && name === _id_org) return cached
+            val id = Id(name)
+            if (!IdTextType.UNSAFE.accepts(id.textType)) throw illegalId("Invalid custom member name")
+            _id_org = name
+            _id_val = id
+            return id
+        }
 
     /** True iff the underlying map has an entry for [name]. */
     fun hasName(): Boolean = hasRaw("name")
@@ -560,7 +587,7 @@ open class Member() : AnyObject(), Comparator<Member> {
     override fun compare(a: Member, b: Member): Int = a.dataType.byteAlignment - b.dataType.byteAlignment
 
     companion object Member_C {
-        private val NAME = NotNullProperty<Member, String>(String::class) { _, _ -> "" }
+        private val NAME = NotNullProperty<Member, String>(String::class, name = "name") { _, _ -> "" }
         private val DATA_TYPE = NotNullEnum<Member, MemberType>(MemberType::class) { _, _ -> MemberType.STRING }
         private val INDEX = NullableProperty<Member, Int>(Int::class)
         private val PATH = NotNullProperty<Member, JsonPath>(JsonPath::class) { self, _ -> JsonPath("properties", self.name) }

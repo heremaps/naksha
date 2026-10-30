@@ -94,12 +94,12 @@ open class PgCollection @JvmOverloads constructor(
     val id: Id = tuple.id
 
     /**
-     * The name of the table of the collection.
+     * The unquoted physical root name, derived from [id] through the shared alias policy. The original logical name remains [Id.text].
      * @since 3.0
      * @see quotedName
      */
     @JvmField
-    val name: String = id.text
+    val name: String = id.collectionName()
 
     /**
      * The name of the table of the collection, optionally quoted in double quotes.
@@ -108,6 +108,12 @@ open class PgCollection @JvmOverloads constructor(
      */
     @JvmField
     val quotedName: String = quoteIdent(name)
+
+    /**
+     * The root relation with schema and table quoted separately, independent of search_path.
+     * @since 3.0
+     */
+    val qualifiedName: String = "${quoteIdent(catalogId.catalogName())}.$quotedName"
 
     /**
      * The columns to expect in the table.

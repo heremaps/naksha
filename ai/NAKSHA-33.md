@@ -110,12 +110,12 @@ installation entries. Verify and finish these rather than duplicating them.
 | ~~[db-02-b](NAKSHA-33-DONE.md#db-02-b--verify-nv-ranges-and-default-child-partitioning)~~ | ~~Verify nv ranges and default-child partitioning~~ | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `DONE` | Verify HEAD range boundaries, uniqueness and invalid next-version rejection. |
 | ~~[db-02-c](NAKSHA-33-DONE.md#db-02-c--verify-finite-children-fn-leaves-and-indexes)~~ | ~~Verify finite-children fn leaves and indexes~~ | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `DONE` | Verify partition provisioning limits and prototype a Naksha-owned maintainer. |
 | ~~[db-02-d](NAKSHA-33-DONE.md#db-02-d--verify-maintenance-and-cleanup)~~ | ~~Verify maintenance and cleanup~~ | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `DONE` | Archive completed database contract and partition-maintenance verification tickets. |
-| [db-03](#db-03--finish-the-physical-row-and-naming-contract) | Finish the physical row and naming contract | [db-01](NAKSHA-33-DONE.md#db-01--agree-the-database-boundary-and-operation-contracts), [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `IN_PROGRESS` | — |
+| ~~[db-03](NAKSHA-33-DONE.md#db-03--finish-the-physical-row-and-naming-contract)~~ | ~~Finish the physical row and naming contract~~ | [db-01](NAKSHA-33-DONE.md#db-01--agree-the-database-boundary-and-operation-contracts), [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version) | `DONE` | Unify identifier aliases and physical naming across storage boundaries. |
 | ~~[db-03-a](NAKSHA-33-DONE.md#db-03-a--validate-create-only-partition-options)~~ | ~~Validate create-only partition options~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Validate collection creation options and add physical feature-number conversion helpers. |
 | ~~[db-03-b](NAKSHA-33-DONE.md#db-03-b--add-fn-conversion-helpers-and-init-sql)~~ | ~~Add fn conversion helpers and init SQL~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Validate collection creation options and add physical feature-number conversion helpers. |
 | ~~[db-03-c](NAKSHA-33-DONE.md#db-03-c--keep-feature-numbers-logical)~~ | ~~Keep feature numbers logical~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Keep feature identities logical and store feature-ordinals with aligned partition ranges. |
 | ~~[db-03-d](NAKSHA-33-DONE.md#db-03-d--make-head-nv-non-null)~~ | ~~Make HEAD nv non-null~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Preserve non-null HEAD next-version values at the row boundary. |
-| [db-03-e](#db-03-e--establish-the-root-naming-rule) | Establish the root naming rule | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
+| ~~[db-03-e](NAKSHA-33-DONE.md#db-03-e--establish-the-root-naming-rule)~~ | ~~Establish the root naming rule~~ | [db-03](NAKSHA-33-DONE.md#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Unify identifier aliases and physical naming across storage boundaries. |
 | [db-04](#db-04--implement-schema-collection-and-index-operations) | Implement schema, collection, and index operations | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version), [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
 | [db-04-a](#db-04-a--implement-schema-operations) | Implement schema operations | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-04-b](#db-04-b--implement-collection-creation) | Implement collection creation | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
@@ -161,11 +161,8 @@ installation entries. Verify and finish these rather than duplicating them.
 
 ## Details
 
-### db-03 — Finish the physical row and naming contract
-
-Parent ticket; decomposed into `db-03-a` … `db-03-e`. **Done when:** conversion
-round-trips and range coverage are verified, and all new low-level operations
-agree on names, physical fn, and non-null nv.
+<a id="db-03--finish-the-physical-row-and-naming-contract"></a>
+Completed db-03 parent and children are archived in [NAKSHA-33-DONE.md](NAKSHA-33-DONE.md#db-03--finish-the-physical-row-and-naming-contract).
 
 ### Agreed Routing Contract
 
@@ -200,10 +197,27 @@ Verification: `IdTest` (11 tests) passes — ordinal blocks tile the space monot
 
 Completed transport details and verification are archived in [db-03-c](NAKSHA-33-DONE.md#db-03-c--keep-feature-numbers-logical). `Long.toOrdinalFeatureNumber()` and `Long.fromOrdinalFeatureNumber()` in `LibBase` are the shared conversions; the redundant `PgUtil` helpers have been removed. Query-builder and standalone cache fn search arguments must also use ordinals during db-09; legacy sign/modulo DDL and writer SQL remain scheduled for replacement.
 
-### db-03-e — Establish the root naming rule
+### Agreed Naming Contract
 
 Establish one schema-qualified, correctly quoted root naming rule across
 creation, mutations, and reads; resolve text names versus `Id.*Name()` mapping.
+Agreed naming groundwork: `Id.textType` classifies text as ALPHABET_ONLY (0), SAFE (1), URL_SAFE (2), UNSAFE (3), INTERNAL (4), RESERVED (5), or ILLEGAL (127). Acceptance is cumulative across legal types. INTERNAL requires at least one dollar sign and `[a-z][a-z0-9_$]*`. RESERVED matches `naksha~[a-z0-9_]{1,25}`; all other names starting with `naksha~` are illegal. Quotes, controls, empty names and malformed Unicode are illegal. Tilde otherwise remains URL_SAFE. Classification and alias KDoc describe an abstract agreement, without storage-specific terminology.
+
+ALPHABET_ONLY and SAFE accept lowercase `a..z` only; uppercase ASCII letters raise classification to URL_SAFE. Mixed-case text is preserved only when the expected type accepts URL_SAFE (or a more permissive type), otherwise it is aliased without case folding. Updated tests pass on JVM and JS test compilation passes.
+
+Implemented `IdTextType` as an exported JsEnum, `Id.textType`, and `Id.textAlias(expectedTextType, maxBytes, prefix)`. The alias preserves text only if its type is accepted and its UTF-8 size fits. Otherwise legal text becomes `{prefix}${intValue}` with a negative sign replaced by underscore; prefix and fallback size are deliberately not validated. INTERNAL/RESERVED follow the same checks, without bypasses. Illegal alias requests throw ILLEGAL_ID. Authorization and collision checking remain separate responsibilities.
+
+Verification: all five `IdTextTypeTest` and 11 `IdTest` JVM tests pass; JS main/production and test compilation pass. Direct Node production-export checks pass classification, UTF-8 boundary handling and positive/negative alias generation. Node text-only Id construction requires an MD5 provider unavailable in this environment, so direct checks use verified numeric inputs. Tests include all C0/C1 controls, invalid internal/reserved patterns, supplementary Unicode, malformed surrogate sequences, cumulative acceptance and intentionally unchecked fallback prefixes/budgets.
+
+Storage integration implemented: catalog/root naming uses URL_SAFE text within the existing 25-byte budget, with `s$`/`t$` fallback aliases; RESERVED built-ins are preserved within their defined 32-byte maximum. Member columns use SAFE/42 bytes with `m$` fallback. Logical member names remain book/index/lookup keys; `PgColumn.id` reuses `member.id`, `PgColumn.columnName = id.columnName()` provides its physical alias, and `PgRowsColumn.sqlAlias` resolves physical SQL labels. Cursor descriptor access and row ingestion resolve physical names, preserving explicit result aliases. Identifier quoting always preserves case and keywords, doubles only double quotes, and does not change backslashes. Multipart quoting still concatenates one identifier, not schema qualification.
+
+Member-name integration: `Member.id` is an on-demand hidden virtual property, cached in private `_id_org` / `_id_val` fields outside the serialized map, following the documented virtual-property skill pattern. The cached Id is reused only while the name has the same string identity (`===`); setter and raw-map name changes refresh it. Member construction/setters and collection insertion now accept ordinary legal names through UNSAFE, retaining the raw name and implicit path while rejecting INTERNAL, RESERVED and ILLEGAL names. Directly loaded raw descriptors are validated on id access. Three new `MemberIdTest` tests pass, covering wide names, cache reuse/invalidation, serialization exclusion and invalid setter/raw-map inputs; model JS test compilation and the nine focused psql naming/cursor/row tests pass.
+
+Naming review adjustment: catalog/collection RESERVED branches return the original text directly, because classification already guarantees validity and the 32-byte limit. `Id.databaseName()` uses `textAlias(UNSAFE, 42, "d")`, preserving ordinary legal names including Unicode/spaces within the UTF-8 budget and otherwise generating `d$` aliases. Removed the obsolete character/name validation helpers. All four `PgNamingTest` tests and JS main/production compilation pass after this adjustment.
+
+Collection/catalog wrappers, writer creation callers and JVM bootstrap now use the same physical names. Collection roots have a separately quoted schema-qualified reference used by query building, tuple loading and metadata reads; legacy mutation table targets are schema-qualified without changing their algorithms. Predicate and ordering/projection SQL resolve physical member identifiers. Fixed DELETE's use of a quoted identifier as a logical member name, and query projection list rendering/unmatched trailing parenthesis exposed by integration. This is naming alignment, not completion of the remaining query/mutation/DDL migrations or fn binding conversion.
+
+Verification: four `PgNamingTest`, one JDBC-backed in-memory `PgNamingCursorTest`, four `PgRowsTest` and three `PsqlQueryParsingTest` tests pass. JVM and JS main/production compilation pass; diff checks pass. Coverage includes URL-safe/root aliases, reserved names, UTF-8/member budget boundaries, logical/physical separation, explicit aliases, quoting and cursor round-trip without a database. Normal Member construction now accepts the wider names used by these tests. End-to-end bootstrap/query verification remains dependent on existing member-list validation and db-04..09 migration work. No database objects changed. Completed ticket details are in [db-03-e](NAKSHA-33-DONE.md#db-03-e--establish-the-root-naming-rule).
 Approved child naming: use compact history range numbers (`nv >> shift`) and
 performance-slot numbers, not full numeric bounds. Partition directly on physical
 nv/fn columns, preserving root primary/unique constraints. Keep logical low-byte
@@ -220,6 +234,7 @@ constraints/indexes reach current and future leaves.
 
 Implement schema lookup/create/drop with explicit existence results and
 unsigned OID handling. Keep logical identifier-collision checks in admin writes.
+Carry the original logical catalog name through creation and store it with COMMENT ON SCHEMA; do not reconstruct it from a physical alias.
 
 ### db-04-b — Implement collection creation
 
@@ -229,6 +244,7 @@ initial maintenance, and optional fn range subpartitions. Support custom columns
 on the root and inherited existing/future/repaired leaves. History-OFF gets HEAD
 only and no history maintenance registration. Retention needs its own explicit
 policy; the current prototype never deletes old history.
+Creation must retain the fully qualified logical collection name and logical member names in table/column comments. Pass logical identity alongside physical names, check alias ownership transactionally, and reject physical member-name collisions before DDL. Final generated names must fit the byte limit including suffixes; do not rely on truncation or cache-only existence checks.
 
 ### db-04-c — Move storage settings out of table classes
 

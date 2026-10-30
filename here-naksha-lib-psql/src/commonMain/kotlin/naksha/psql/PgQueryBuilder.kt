@@ -95,7 +95,9 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
                 }
             }
         } while (false)
-        val selectCols = baseCols + customCols
+        val selectCols = (baseCols + customCols).map { name ->
+            pgCollection.column(name)?.ident ?: throw illegalArg("Missing member '$name' in collection")
+        }
         // `order_by` may be empty, if no custom ordering was requested.
         // .first = member-name
         // .second = sort-order (ASC | DESC)
@@ -197,10 +199,10 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
         // The final SQL query.
         // We only need `fn` and `version`; the additional columns are only used for sorting.
         val SQL = """WITH 
-query AS (SELECT $selectCols FROM ${pgCatalog.id.catalogName()}.${pgCollection.id.collectionName()}${if (WHERE.isEmpty()) "" else " WHERE $WHERE"})
+query AS (SELECT ${selectCols.joinToString()} FROM ${pgCollection.qualifiedName}${if (WHERE.isEmpty()) "" else " WHERE $WHERE"})
 $q_ranked$q_deleted$q_versions
 SELECT $FN, $VERSION FROM ${if (q_versions.isNotEmpty()) "q_versions" else "query"}
-${if (order_by_string.isNotEmpty()) " ORDER BY $order_by_string" else ""})
+${if (order_by_string.isNotEmpty()) " ORDER BY $order_by_string" else ""}
 ${if (REQ_LIMIT < Int.MAX_VALUE) " LIMIT $REQ_LIMIT" else ""}"""
         return PgQuery(
             sql = SQL,

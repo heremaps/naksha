@@ -100,9 +100,9 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
      **/
     private fun memberColumn(memberName: String): String = when (memberName) {
         Tn.name -> throw illegalArg("Query at tuple-number (Tn) member is not supported by lib-psql")
-        Action.name -> "((${VersionColumn.name} & 3)::int4)"
-        XyzCreatedAt.name, XyzAuthorTimestamp.name -> "COALESCE($memberName, ${XyzUpdatedAt.name})"
-        else -> memberName
+        Action.name -> "(($VersionColumn & 3)::int4)"
+        XyzCreatedAt.name, XyzAuthorTimestamp.name -> "COALESCE(${collection.column(memberName)?.ident ?: throw illegalArg("Unknown member '$memberName'")}, ${memberColumn(XyzUpdatedAt.name)})"
+        else -> collection.column(memberName)?.ident ?: throw illegalArg("Unknown member '$memberName'")
     }
 
     /**
@@ -124,7 +124,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
             val numeric = textToPositiveNumber(value as String)
             // If `id` is a string, but a positive integer, the `id` column will be NULL.
             // Therefore, in that case we need to search for the intger in the feature-number (fn) column!
-            if (numeric >= 0) Pair(FeatureNumber.name, numeric) else Pair(Id.name, value)
+            if (numeric >= 0) Pair(memberColumn(FeatureNumber.name), numeric) else Pair(memberColumn(Id.name), value)
         } else Pair(memberColumn(memberName), value)
     }
 
@@ -323,13 +323,13 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         if (fn_end > 0) {
             val placeholder = if (fn_array.size == fn_end) placeholderForArg(fn_array, PgType.INT64_ARRAY)
             else placeholderForArg(fn_array.copyOf(fn_end), PgType.INT64_ARRAY)
-            where.append(FeatureNumber.name).append("=ANY(").append(placeholder).append(")")
+            where.append(memberColumn(FeatureNumber.name)).append("=ANY(").append(placeholder).append(")")
         }
         if (hasBoth) where.append(" OR ")
         if (id_end > 0) {
             val placeholder = if (id_array.size == id_end) placeholderForArg(id_array, PgType.STRING_ARRAY)
             else placeholderForArg(id_array.copyOf(id_end), PgType.STRING_ARRAY)
-            where.append(Id.name).append("=ANY(").append(placeholder).append(")")
+            where.append(memberColumn(Id.name)).append("=ANY(").append(placeholder).append(")")
         }
         if (hasBoth) where.append(") ") else where.append(' ')
     }
@@ -366,7 +366,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         //   '{"a":1, "b":2}'::jsonb ? 'b' → t
         //   '["a", "b", "c"]'::jsonb ? 'b' → t
         if (negate) where.append("NOT ")
-        where.append(memberName).append(" ?? ").append(_key_).append(" ")
+        where.append(memberColumn(memberName)).append(" ?? ").append(_key_).append(" ")
     }
 
     private fun _TagMapHasAnyOf(negate: Boolean, memberName: String, keys: StringList) {
@@ -377,7 +377,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         //   Do any of the strings in the text array exist as top-level keys or array elements?
         //   '{"a":1, "b":2, "c":3}'::jsonb ?| array['b', 'd'] → t
         if (negate) where.append("NOT ")
-        where.append(memberName).append(" ??| ").append(_keys_array_).append("::text[] ")
+        where.append(memberColumn(memberName)).append(" ??| ").append(_keys_array_).append("::text[] ")
     }
 
     private fun _TagMapHasAllOf(negate: Boolean, memberName: String, keys: StringList) {
@@ -388,7 +388,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         //   Do all of the strings in the text array exist as top-level keys or array elements?
         //   '["a", "b", "c"]'::jsonb ?& array['a', 'b'] → t
         if (negate) where.append("NOT ")
-        where.append(memberName).append(" ??& ").append(_keys_array_).append("::text[] ")
+        where.append(memberColumn(memberName)).append(" ??& ").append(_keys_array_).append("::text[] ")
     }
 
     private fun _TagIsNull(negate: Boolean, memberName: String, key: String) {
@@ -397,7 +397,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         //   Does the first JSON value contain the second?
         //   SELECT '{"a":1, "b":null}'::jsonb @> jsonb_build_object('b', null);
         if (negate) where.append("NOT ")
-        where.append(memberName).append(" @> jsonb_build_object(").append(_key_).append(",null) ")
+        where.append(memberColumn(memberName)).append(" @> jsonb_build_object(").append(_key_).append(",null) ")
     }
 
     private fun _TagEquals(negate: Boolean, memberName: String, key: String, value: Any?) {
@@ -414,7 +414,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         //   Does the first JSON value contain the second?
         //   SELECT '{"a":1, "b":null}'::jsonb @> jsonb_build_object('a', 1);
         if (negate) where.append("NOT ")
-        where.append(memberName).append(" @> jsonb_build_object(").append(_key_).append(',').append(_value_).append(") ")
+        where.append(memberColumn(memberName)).append(" @> jsonb_build_object(").append(_key_).append(',').append(_value_).append(") ")
     }
 
     private fun _TagGt(negate: Boolean, memberName: String, key: String, value: Any?) {
@@ -475,7 +475,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         // @> —— Contains all specified elements
         // When we only provide a single one, it effectively means `contains` a single one.
         if (negate) where.append("NOT ")
-        where.append("(").append(memberName).append(" @> ").append(_value_).append("::text[]) ")
+        where.append("(").append(memberColumn(memberName)).append(" @> ").append(_value_).append("::text[]) ")
     }
 
     private fun _TagListContainsAllOf(negate: Boolean, memberName: String, items: Any?) {
@@ -488,7 +488,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         val _value_ = placeholderForArg(data, PgType.STRING_ARRAY)
         // @> —— Contains all specified elements
         if (negate) where.append("NOT ")
-        where.append("(").append(memberName).append(" @> ").append(_value_).append("::text[]) ")
+        where.append("(").append(memberColumn(memberName)).append(" @> ").append(_value_).append("::text[]) ")
     }
 
     private fun _TagListContainsAnyOf(negate: Boolean, memberName: String, items: Any?) {
@@ -501,7 +501,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         val _value_ = placeholderForArg(data, PgType.STRING_ARRAY)
         // && —— Contains any specified elements
         if (negate) where.append("NOT ")
-        where.append("(").append(memberName).append(" && ").append(_value_).append("::text[]) ")
+        where.append("(").append(memberColumn(memberName)).append(" && ").append(_value_).append("::text[]) ")
     }
 
     private fun _Intersects(negate: Boolean, memberName: String, geometry: SpGeometry, transformers: SpTransformationList) {
@@ -511,7 +511,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         val geometryToCompare = if (transformers.isEmpty()) basicGeometry
                                 else resolveTransformation(transformers, basicGeometry)
         if (negate) where.append("NOT ")
-        where.append("ST_Intersects(naksha_2d($memberName), $geometryToCompare) ")
+        where.append("ST_Intersects(naksha_2d(${memberColumn(memberName)}), $geometryToCompare) ")
     }
 
     /**
@@ -541,7 +541,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
         //   Does JSON path return any item for the specified JSON value?
         //   '{"a":5}'::jsonb @? '$.a ? (@ > 2)' → t
         //   '{"a":[1,2,3,4,5]}'::jsonb @? '$.a[*] ? (@ > 2)' → t
-        where.append(memberName).append(" @?? ").append(_jsonpath_).append("::jsonpath ")
+        where.append(memberColumn(memberName)).append(" @?? ").append(_jsonpath_).append("::jsonpath ")
     }
 
     /**

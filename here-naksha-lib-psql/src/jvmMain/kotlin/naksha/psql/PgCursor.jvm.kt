@@ -144,7 +144,7 @@ actual class PgCursor private actual constructor(): AutoCloseable {
         return columnIndices()[name] != null
     }
 
-    actual operator fun contains(column: PgColumn): Boolean = contains(column.name)
+    actual operator fun contains(column: PgColumn): Boolean = contains(column.columnName)
 
     @Suppress("NOTHING_TO_INLINE")
     private inline fun valueOrNull(rs: ResultSet, value: Any?): Any?
@@ -214,7 +214,7 @@ actual class PgCursor private actual constructor(): AutoCloseable {
         return columnValue(i + 1, type, rs)
     }
 
-    actual fun column(column: PgColumn): Any? = column(column.name)
+    actual fun column(column: PgColumn): Any? = column(column.columnName)
 
     @Suppress("UNCHECKED_CAST")
     actual fun <T : Any> columnOr(name: String, alternative: T): T {
@@ -226,7 +226,7 @@ actual class PgCursor private actual constructor(): AutoCloseable {
     @Suppress("UNCHECKED_CAST")
     actual operator fun <T : Any> get(name: String): T = column(name) as T
 
-    actual operator fun <T : Any> get(column: PgColumn): T = get(column.name)
+    actual operator fun <T : Any> get(column: PgColumn): T = get(column.columnName)
 
     actual fun <T : AnyObject> map(klass: KClass<T>): T {
         val rs = rsAtRow()

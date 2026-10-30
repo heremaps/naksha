@@ -37,9 +37,9 @@ class MemberTest {
     @Test
     fun addMemberRejectsInvalidName() {
         val c = NakshaCollection("my_coll")
-        assertFailsWith<NakshaException> { c.addMember(Member("BadName")) }
-        assertFailsWith<NakshaException> { c.addMember(Member("123start")) }
-        assertFailsWith<NakshaException> { c.addMember(Member("with space")) }
+        for (name in listOf("", "bad'name", "bad\"name", "bad\nname", "m\$1", "naksha~admin")) {
+            assertFailsWith<NakshaException> { c.addMember(Member(name)) }
+        }
     }
 
     @Test

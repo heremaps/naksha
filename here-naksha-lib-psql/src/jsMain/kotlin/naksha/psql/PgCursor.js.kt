@@ -83,7 +83,7 @@ actual class PgCursor private actual constructor() : AutoCloseable {
     }
 
     @JsName("containsColumn")
-    actual operator fun contains(column: PgColumn): Boolean = contains(column.name)
+    actual operator fun contains(column: PgColumn): Boolean = contains(column.columnName)
 
     actual fun column(name: String): Any? {
         val value = this.value ?: return null
@@ -91,7 +91,7 @@ actual class PgCursor private actual constructor() : AutoCloseable {
     }
 
     @JsName("columnValue")
-    actual fun column(column: PgColumn): Any? = column(column.name)
+    actual fun column(column: PgColumn): Any? = column(column.columnName)
 
     actual fun <T : Any> columnOr(name: String, alternative: T): T {
         val value = this.value ?: return alternative
@@ -103,7 +103,7 @@ actual class PgCursor private actual constructor() : AutoCloseable {
 
     @Suppress("UNCHECKED_CAST")
     @JsName("getByColumn")
-    actual operator fun <T : Any> get(column: PgColumn): T = column(column.name) as T
+    actual operator fun <T : Any> get(column: PgColumn): T = column(column.columnName) as T
 
     actual fun <T : AnyObject> map(@Suppress(names = ["NON_EXPORTABLE_TYPE"]) klass: KClass<T>): T {
         TODO("Not yet implemented")
