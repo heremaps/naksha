@@ -191,6 +191,41 @@ class StorageApiTest extends ApiTest {
           }
         }
       }
+
+      // OR tag matching returns resources with either tag.
+      final HttpResponse<String> orResponse =
+          getNakshaClient().get("hub/storages?tags=storage_tag_alpha,storage_tag_beta", streamId);
+      assertThat(orResponse).hasStatus(200);
+      final List<String> orStorageIds = parseJson(orResponse.body(), XyzFeatureCollection.class).getFeatures().stream()
+          .map(XyzFeature::getId).toList();
+      assertEquals(2, orStorageIds.size());
+      Assertions.assertTrue(orStorageIds.containsAll(expectedStorageIds));
+
+      // AND tag matching returns only the resource carrying both tags.
+      final HttpResponse<String> andResponse =
+          getNakshaClient().get("hub/storages?tags=storage_tag_alpha+storage_tag_shared", streamId);
+      assertThat(andResponse).hasStatus(200);
+      assertEquals(
+          List.of("tc_040_storage_1"),
+          parseJson(andResponse.body(), XyzFeatureCollection.class).getFeatures().stream()
+              .map(XyzFeature::getId).toList());
+
+      // A non-matching tag returns an empty collection.
+      final HttpResponse<String> noMatchResponse =
+          getNakshaClient().get("hub/storages?tags=storage_tag_missing", streamId);
+      assertThat(noMatchResponse).hasStatus(200);
+      assertEquals(0, parseJson(noMatchResponse.body(), XyzFeatureCollection.class).getFeatures().size());
+
+      // Tags, selection, and limit can be combined.
+      final HttpResponse<String> selectedResponse = getNakshaClient().get(
+          "hub/storages?tags=storage_tag_alpha,storage_tag_beta&selection=p.appName&limit=1",
+          streamId);
+      assertThat(selectedResponse).hasStatus(200);
+      final JsonNode selectedFeatures = new ObjectMapper().readTree(selectedResponse.body()).get("features");
+      assertEquals(1, selectedFeatures.size());
+      final JsonNode selectedProperties = selectedFeatures.get(0).get("properties");
+      Assertions.assertTrue(selectedProperties.has("appName"));
+      assertFalse(selectedProperties.has("dbConfig"));
     }
   }
 

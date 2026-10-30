@@ -1,3 +1,6 @@
+## Naksha_2.2.27
+- Added tag filtering, property selection, and limit support to the storage, handler, and space LIST APIs.
+
 ## Naksha_2.2.26
 - Added HTTP storage circuit-breaker support to isolate slow or failing requests by `storageId`.
 

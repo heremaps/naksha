@@ -104,13 +104,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   private @NotNull XyzResponse executeGetHandlers() {
-    // Create ReadFeatures Request to read all handlers from Admin DB
-    final ReadFeatures request = new ReadFeatures(EVENT_HANDLERS);
-    // Submit request to NH Space Storage
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      // transform ReadResult to Http FeatureCollection response
-      return transformReadResultToXyzCollectionResponse(rdResult, EventHandler.class, HANDLER_MASKING);
-    }
+    return executeAdminListRequest(EVENT_HANDLERS, new MaskingPostProcessor<>());
   }
 
   private @NotNull XyzResponse executeGetHandlerById() {

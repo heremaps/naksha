@@ -104,10 +104,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   private @NotNull XyzResponse executeGetStorages() {
-    final ReadFeatures request = new ReadFeatures(STORAGES);
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(rdResult, Storage.class, STORAGE_MASKING);
-    }
+    return executeAdminListRequest(STORAGES, new MaskingPostProcessor<>());
   }
 
   private @NotNull XyzResponse executeGetStorageById() {

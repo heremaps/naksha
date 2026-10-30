@@ -12,7 +12,7 @@ servers:
 info:
   title: "Naksha Hub-API"
   description: "Naksha Hub-API is a REST API to provide simple access to geo data."
-  version: "2.2.26"
+  version: "2.2.27"
 
 security:
   - AccessToken: [ ]
@@ -50,6 +50,10 @@ paths:
       description: >-
         Lists the storages, which the current authenticated user has access to.
       operationId: getStorages
+      parameters:
+        - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/PropertiesSelection'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           $ref: '#/components/responses/StoragesResponse'
@@ -193,6 +197,10 @@ paths:
       summary: List event handlers
       description: Lists the event handlers, which the current authenticated user has access to.
       operationId: getHandlers
+      parameters:
+        - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/PropertiesSelection'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           $ref: '#/components/responses/HandlersResponse'
@@ -329,6 +337,10 @@ paths:
       summary: List spaces
       description: Lists the spaces, which the current authenticated user has access to.
       operationId: getSpaces
+      parameters:
+        - $ref: '#/components/parameters/TagList'
+        - $ref: '#/components/parameters/PropertiesSelection'
+        - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           $ref: '#/components/responses/SpacesResponse'
@@ -1070,7 +1082,7 @@ components:
       name: limit
       in: query
       description: >-
-        The maximum number of features in the response.
+        The maximum number of resources in the response.
         Default is _30000_. Hard limit is _100000_.
       schema:
         type: integer

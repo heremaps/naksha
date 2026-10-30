@@ -135,10 +135,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   }
 
   private @NotNull XyzResponse executeGetSpaces() {
-    final ReadFeatures request = new ReadFeatures(SPACES);
-    try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(rdResult, Space.class);
-    }
+    return executeAdminListRequest(SPACES, null);
   }
 
   private @NotNull XyzResponse executeGetSpaceById() {
