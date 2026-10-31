@@ -337,7 +337,8 @@ class ImlAllocationPerformanceTest {
           while (rows.next()) names.add(rows.getString(1))
           assertTrue("${layer.table}_xyz_external" in names)
           assertTrue("${layer.table}_xyz_${StandardIndices.Geometry.name}" in names)
-          for (index in XyzIndices.ALL) if (index.name != StandardIndices.Geometry.name) assertFalse("${layer.table}_xyz_${index.name}" in names)
+          assertTrue("${layer.table}_xyz_${XyzIndices.XyzTags.name}" in names)
+          for (index in XyzIndices.ALL) if (index.name != StandardIndices.Geometry.name && index.name != XyzIndices.XyzTags.name) assertFalse("${layer.table}_xyz_${index.name}" in names)
         }
       }
     }

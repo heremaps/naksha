@@ -302,10 +302,11 @@ internal class ImlMutation(private val session: ImlWriteSession, private val con
   private fun createIndices(collection: NakshaCollection, sqlTable: String, table: String) {
     val members = collection.useMembers()
     val predicates = ImlPredicates({ throw illegalArg("IML index expressions cannot have parameters") }, members)
+    val required = setOf(XyzIndices.XyzTags.name, XyzMembers.XyzGeometry.name)
     // Only exact obsolete adapter-owned names on adapter-created tables may be removed.
     if (table == hashedTable(checkNotNull(collection.catalogId), collection.id)) {
       val owned = HashSet<String>()
-      for (index in XyzIndices.ALL) owned.add("${table}_xyz_${index.name}")
+      for (index in XyzIndices.ALL) if (index.name !in required) owned.add("${table}_xyz_${index.name}")
       val requested = collection.indices
       if (requested != null) for (index in requested) owned.remove("${table}_xyz_${checkNotNull(index).name}")
       connection.prepareStatement("SELECT indexname FROM pg_indexes WHERE schemaname = ? AND tablename = ?").use {
@@ -321,12 +322,24 @@ internal class ImlMutation(private val session: ImlWriteSession, private val con
       }
     }
     connection.createStatement().use { statement ->
+      // Reuse valid, unconditional leading-column B-tree indexes, including PK/unique indexes.
+      for (column in arrayOf("id", "i")) {
+        val indexed = connection.prepareStatement("SELECT EXISTS (SELECT 1 FROM pg_index ix JOIN pg_class ic ON ic.oid = ix.indexrelid JOIN pg_am am ON am.oid = ic.relam JOIN pg_attribute a ON a.attrelid = ix.indrelid AND a.attnum = ix.indkey[0] WHERE ix.indrelid = ?::regclass AND ix.indisvalid AND ix.indisready AND ix.indpred IS NULL AND am.amname = 'btree' AND a.attname = ?)").use {
+          it.setString(1, sqlTable)
+          it.setString(2, column)
+          it.executeQuery().use { rows -> rows.next(); rows.getBoolean(1) }
+        }
+        if (!indexed) statement.execute("CREATE INDEX IF NOT EXISTS ${ImlMetadata.quote("${table}_required_$column")} ON $sqlTable (${ImlMetadata.quote(column)})")
+      }
+      statement.execute("CREATE INDEX IF NOT EXISTS ${ImlMetadata.quote("${table}_xyz_geo")} ON $sqlTable USING gist (geo)")
+      statement.execute("CREATE INDEX IF NOT EXISTS ${ImlMetadata.quote("${table}_xyz_tags")} ON $sqlTable USING gin ((jsondata->'properties'->'@ns:com:here:xyz'->'tags'))")
       for ((suffix, columns) in arrayOf("version" to "version, id", "head" to "next_version, operation", "author" to "author, i, version")) {
         statement.execute("CREATE INDEX IF NOT EXISTS ${ImlMetadata.quote("${table}_$suffix")} ON $sqlTable ($columns)")
       }
       val indices = collection.indices ?: return
       for (index in indices) {
         val definition = checkNotNull(index)
+        if (definition.name in required) continue
         val expressions = ArrayList<String>()
         var method = "btree"
         for (name in definition.on) {
