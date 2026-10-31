@@ -70,7 +70,7 @@ class LocalImlWriterTest {
     assertEquals(Version.manual(20, Action.CREATE).number, first.tupleNumber.version)
     assertEquals("creator", first.feature?.properties?.xyz?.getRaw("author"))
     assertEquals("first", first.feature?.properties?.getRaw("custom"))
-    assertEquals(3.0, (first.feature?.geometry as SpPoint).z)
+    assertEquals(3.0, checkNotNull(first.feature?.geometry).asPoint().z)
     Naksha.cache.store(checkNotNull(first.tuple))
     assertNotNull(Naksha.cache[first.tupleNumber])
 
@@ -81,7 +81,7 @@ class LocalImlWriterTest {
     assertEquals(Version.manual(30, Action.UPDATE).number, updated.tupleNumber.version)
     assertEquals("updater", updated.feature?.properties?.xyz?.getRaw("author"))
     assertEquals("second", updated.feature?.properties?.getRaw("custom"))
-    assertEquals(6.0, (updated.feature?.geometry as SpPoint).z)
+    assertEquals(6.0, checkNotNull(updated.feature?.geometry).asPoint().z)
     val historical = checkNotNull(read(fixture, id) { version = bound(29) }.featureTupleList.single())
     assertEquals(first.tupleNumber, historical.tupleNumber)
     assertEquals(bound(30), historical.tuple?.nextVersion)

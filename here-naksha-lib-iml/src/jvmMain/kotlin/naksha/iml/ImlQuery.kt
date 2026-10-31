@@ -11,6 +11,7 @@ import naksha.base.proxy
 import naksha.model.FETCH_ALL
 import naksha.model.NO_CACHE_BIT
 import naksha.model.objects.XyzMembers
+import naksha.model.objects.MemberList
 import naksha.model.request.ReadFeatures
 import naksha.model.request.ops.*
 import naksha.model.request.query.ISpatialQuery
@@ -31,7 +32,7 @@ import naksha.model.request.query.TagSetContains
  * @since 3.0
  */
 @Suppress("DEPRECATION")
-internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
+internal class ImlQuery(request: ReadFeatures, hardCap: Int, members: MemberList? = null) {
   val predicate: String
   val parameters: List<Any?>
   val orderBy: String
@@ -41,7 +42,7 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
   private val values = ArrayList<Any?>()
   private val path = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
   private var nodes = 0
-  private val scalars = ImlPredicates(::parameter)
+  private val scalars = ImlPredicates(::parameter, members)
   private val tagMap = ImlTags(::parameter)
 
   init {
@@ -106,7 +107,7 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
         "author" -> "author"
         "fn", "tn" -> "i"
         "v", "version" -> "version"
-        else -> throw unsupportedOp("Unsupported IML order member '$member'")
+        else -> scalars.column(member)
       }
       ordering.add("$column $direction")
       if (column == "version") {
@@ -223,7 +224,7 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
           scalars.startsWith(op.at, op.value)
         }
         is Intersects -> {
-          if (op.at != "geo") throw unsupportedOp("IML intersections require the geo member")
+          val sourceGeometry = scalars.geometry(op.at)
           var geometry = "ST_SetSRID(ST_GeomFromGeoJSON(${parameter(Platform.toJSON(op.value))}),4326)"
           if (op.transformers.size > 64) throw illegalArg("Too many IML spatial transformations")
           for (rawTransformer in op.transformers) {
@@ -272,7 +273,7 @@ internal class ImlQuery(request: ReadFeatures, hardCap: Int) {
             geometry = "ST_Buffer($source, ${parameter(distance)}, ${parameter(styles.joinToString(" "))})"
             if (geography) geometry = "($geometry)::geometry"
           }
-          "(ST_Intersects(geo, $geometry) AND geo IS NOT NULL)"
+          "(ST_Intersects($sourceGeometry, $geometry) AND $sourceGeometry IS NOT NULL)"
         }
         else -> throw unsupportedOp("Unsupported IML query operation '${op.op}'")
       }

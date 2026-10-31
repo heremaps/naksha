@@ -142,7 +142,7 @@ class ImlReadIntegrationTest {
       assertEquals("alice", tuple.getString(XyzMembers.XyzAuthor))
       val feature = checkNotNull(selected.feature)
       assertPreserved(feature)
-      val point = feature.geometry as SpPoint
+      val point = checkNotNull(feature.geometry).asPoint()
       assertEquals(1.0, point.longitude)
       assertEquals(2.0, point.latitude)
       assertEquals(3.0, point.z)

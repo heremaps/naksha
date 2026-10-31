@@ -21,6 +21,7 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.ReadMaps
 import naksha.model.request.ReadCollections
 import naksha.model.request.ReadHandle
+import naksha.model.request.ReadTransactions
 import naksha.model.request.PropertyFilter
 import naksha.model.request.SuccessResponse
 import naksha.model.objects.NakshaFeature
@@ -38,14 +39,17 @@ import naksha.model.request.query.PQuery
  * @since 3.0
  */
 @Suppress("DEPRECATION")
-class ImlReadSession internal constructor(
+open class ImlReadSession internal constructor(
   override val storage: ImlStorage,
   options: SessionOptions
 ) : IReadSession {
-  override var options: SessionOptions = options
+  final override var options: SessionOptions = options
     private set
   @Volatile
   private var closed = false
+  internal open val sessionMetadata: ImlMetadata get() = storage.metadata
+  protected open val useSharedCache: Boolean get() = true
+  protected open val transactional: Boolean get() = false
 
   init {
     require(options.connectTimeout >= 0 && options.socketTimeout >= 0 && options.stmtTimeout >= 0 && options.lockTimeout >= 0) {
@@ -77,12 +81,12 @@ class ImlReadSession internal constructor(
       options = options.copyWithTimeouts(lockTimeout = value)
     }
 
-  private fun checkOpen() {
+  protected fun checkOpen() {
     check(!closed) { "IML read session is closed" }
   }
 
   @Synchronized
-  internal fun <T> withConnection(block: (Connection) -> T): T {
+  internal open fun <T> withConnection(block: (Connection) -> T): T {
     checkOpen()
     return storage.withConnection(options, block)
   }
@@ -90,15 +94,21 @@ class ImlReadSession internal constructor(
   @Synchronized
   override fun executeRead(request: ReadRequest): Response {
     checkOpen()
+    if (!transactional && storage.config.writeEnabled) storage.refreshMetadata(options)
     if ((request.fetchMode and NO_CACHE_BIT.inv()) != FETCH_ALL) throw unsupportedOp("IML supports only fetching complete tuples")
-    if (request is ReadHandle) return storage.handles.read(request, options, storage.hardCap)
+    if (request is ReadHandle) {
+      if (transactional) throw unsupportedOp("IML transaction-local reads cannot use shared continuation handles")
+      return storage.handles.read(request, options, storage.hardCap)
+    }
+    if (transactional && request.returnHandle == true) throw unsupportedOp("IML uncommitted reads cannot publish continuation handles")
     if (request is ReadFeatures) {
       validateProperties(request.query.properties)
       if (request.query.properties != null && request.resultFilters.none { it is PropertyFilter }) request.refreshPropertyFilter()
     }
-    val metadata = storage.metadata
+    val metadata = sessionMetadata
     return when (request) {
-      is ReadMaps -> metadataResponse(listOf(metadata.catalogTuple), request.mapIds, request)
+      is ReadTransactions -> ImlTransactions.read(this, request)
+      is ReadMaps -> metadataResponse(metadata.catalogsById.values.filter { it.id != Id.ADMIN_CATALOG_TEXT }.map { metadata.synthetic.getValue(it.tupleNumber!!) }, request.mapIds, request)
       is ReadCollections -> {
         val catalog = getCatalogById(request.mapId ?: throw illegalArg("Missing catalog ID"))
           ?: throw NakshaException(NakshaError.MAP_NOT_FOUND, "IML catalog not found")
@@ -109,9 +119,9 @@ class ImlReadSession internal constructor(
         metadataResponse(tuples, request.collectionIds, request)
       }
       is ReadFeatures -> {
-        val query = ImlQuery(request, storage.hardCap)
         val catalogId = request.catalogId ?: throw illegalArg("Missing catalog ID")
         val collectionId = request.collectionId ?: throw illegalArg("Missing collection ID")
+        val query = ImlQuery(request, storage.hardCap, metadata.collectionById(catalogId, collectionId)?.useMembers())
         val catalog = getCatalogById(catalogId)
           ?: throw NakshaException(NakshaError.MAP_NOT_FOUND, "IML catalog not found")
         if ((catalogId == Id.ADMIN_CATALOG_TEXT && collectionId == Id.CATALOGS_COL_TEXT) || collectionId == Id.COLLECTIONS_COL_TEXT) {
@@ -128,8 +138,8 @@ class ImlReadSession internal constructor(
           }
           metadataResponse(tuples, request.featureIds, request)
         } else {
-          val layer = metadata.layersById[collectionId]
-          if (layer == null || catalogId != metadata.catalog.id) throw NakshaException(NakshaError.COLLECTION_NOT_FOUND, "IML layer not found")
+          val layer = metadata.getLayer(catalogId, collectionId)
+            ?: throw NakshaException(NakshaError.COLLECTION_NOT_FOUND, "IML layer not found")
           val tuples = ArrayList<FeatureTuple>()
           val candidateLimit = if (request.returnHandle == true || request.resultFilters.isNotEmpty()) storage.hardCap else query.limit
           withConnection { connection ->
@@ -168,7 +178,7 @@ class ImlReadSession internal constructor(
   private fun resultResponse(candidates: List<FeatureTuple>, request: ReadRequest, limit: Int): SuccessResponse {
     val paged = request.returnHandle == true
     val filters = request.resultFilters.toList()
-    val bypassCache = (request.fetchMode and NO_CACHE_BIT) != 0
+    val bypassCache = (request.fetchMode and NO_CACHE_BIT) != 0 || !useSharedCache
     if (!paged && filters.isEmpty() && !bypassCache) {
       return SuccessResponse().withFeatureTupleList(candidates.take(limit))
     }
@@ -235,47 +245,34 @@ class ImlReadSession internal constructor(
 
   override fun getCatalogById(catalogId: String, allowTombstone: Boolean): NakshaCatalog? {
     checkOpen()
-    val metadata = storage.metadata
-    val catalog = when (catalogId) {
-      metadata.catalog.id -> metadata.catalog
-      Id.ADMIN_CATALOG_TEXT -> metadata.adminCatalog
-      else -> return null
-    }
+    val metadata = sessionMetadata
+    val catalog = metadata.getCatalogById(catalogId) ?: return null
     val tuple = metadata.synthetic[catalog.tupleNumber] ?: return null
     return tuple.decodeFeature(null).proxy(NakshaCatalog::class)
   }
 
   override fun getCatalogByNumber(catalogNumber: Int, allowTombstone: Boolean): NakshaCatalog? {
     checkOpen()
-    val metadata = storage.metadata
-    return when (catalogNumber) {
-      metadata.catalog.catalogNumber -> getCatalogById(metadata.catalog.id)
-      Id.ADMIN_CATALOG_INT -> getCatalogById(Id.ADMIN_CATALOG_TEXT)
-      else -> null
-    }
+    val metadata = sessionMetadata
+    return metadata.getCatalogByNumber(catalogNumber)?.let { getCatalogById(it.id) }
   }
 
   override fun getCollectionById(catalog: NakshaCatalog, collectionId: String, allowTombstone: Boolean): NakshaCollection? {
     checkOpen()
     if (catalog.databaseNumber != storage.number) return null
-    val metadata = storage.metadata
-    val collection = when {
-      catalog.id == Id.ADMIN_CATALOG_TEXT && collectionId == Id.CATALOGS_COL_TEXT -> metadata.catalogsCollection
-      catalog.id != metadata.catalog.id -> return null
-      collectionId == Id.COLLECTIONS_COL_TEXT -> metadata.collectionsCollection
-      else -> metadata.layersById[collectionId]?.collection ?: return null
-    }
+    val metadata = sessionMetadata
+    val collection = metadata.collectionById(catalog.id, collectionId) ?: return null
     val tuple = metadata.synthetic[collection.tupleNumber] ?: return null
     return tuple.decodeFeature(null).proxy(NakshaCollection::class)
   }
 
   override fun getCollectionByNumber(catalog: NakshaCatalog, collectionNumber: Int, allowTombstone: Boolean): NakshaCollection? {
     checkOpen()
-    val metadata = storage.metadata
+    val metadata = sessionMetadata
     val id = when (collectionNumber) {
       Id.CATALOGS_COL_INT -> Id.CATALOGS_COL_TEXT
       Id.COLLECTIONS_COL_INT -> Id.COLLECTIONS_COL_TEXT
-      else -> metadata.layersByNumber[collectionNumber]?.id ?: return null
+      else -> metadata.getLayerByNumber(catalog.catalogNumber, collectionNumber)?.id ?: return null
     }
     return getCollectionById(catalog, id)
   }
@@ -288,24 +285,26 @@ class ImlReadSession internal constructor(
   private fun loadExact(featureTuples: List<FeatureTuple?>, from: Int, to: Int, bypassCache: Boolean) {
     checkOpen()
     require(from >= 0 && to >= from && to <= featureTuples.size) { "Invalid tuple loading range" }
-    val metadata = storage.metadata
-    val missing = LinkedHashMap<Int, LinkedHashMap<TupleNumber, MutableList<FeatureTuple>>>()
+    val snapshot = if (useSharedCache) storage.discoverySnapshot() else sessionMetadata to storage.generation
+    val metadata = snapshot.first
+    val missing = LinkedHashMap<Pair<Int, Int>, LinkedHashMap<TupleNumber, MutableList<FeatureTuple>>>()
+    val cacheGeneration = snapshot.second
     for (index in from until to) {
       val target = featureTuples[index] ?: continue
       val tn = target.tupleNumber
       if (tn.databaseNumber != storage.number) continue
-      val cached = if (bypassCache) metadata.synthetic[tn] else target.tuple ?: metadata.synthetic[tn] ?: Naksha.cache[tn]
+      val cached = if (bypassCache || !useSharedCache) metadata.synthetic[tn] else target.tuple ?: metadata.synthetic[tn] ?: storage.cachedTuple(tn)
       if (cached != null) {
         ImlTuple.attach(target, cached)
         continue
       }
-      if (tn.catalogNumber != metadata.catalog.catalogNumber || !metadata.layersByNumber.containsKey(tn.collectionNumber)) continue
-      missing.getOrPut(tn.collectionNumber) { LinkedHashMap() }.getOrPut(tn) { ArrayList() }.add(target)
+      if (metadata.getLayerByNumber(tn.catalogNumber, tn.collectionNumber) == null) continue
+      missing.getOrPut(tn.catalogNumber to tn.collectionNumber) { LinkedHashMap() }.getOrPut(tn) { ArrayList() }.add(target)
     }
     if (missing.isEmpty()) return
     withConnection { connection ->
-      for ((collectionNumber, targets) in missing) {
-        val layer = metadata.layersByNumber.getValue(collectionNumber)
+      for ((location, targets) in missing) {
+        val layer = checkNotNull(metadata.getLayerByNumber(location.first, location.second))
         val numbers = targets.keys.toList()
         var start = 0
         while (start < numbers.size) {
@@ -322,13 +321,13 @@ class ImlReadSession internal constructor(
             statement.fetchSize = 500
             statement.executeQuery().use { rows ->
               while (rows.next()) {
-                val tuple = ImlTuple.read(rows, storage.number, metadata.catalog.catalogNumber, collectionNumber)
+                val tuple = ImlTuple.read(rows, storage.number, location.first, location.second, layer.collection.useMembers())
                 val matches = targets[tuple.tupleNumber] ?: continue
                 for (target in matches) {
                   ImlTuple.attach(target, tuple)
                   target.source = storage
                 }
-                Naksha.cache.store(tuple)
+                if (useSharedCache) storage.cacheTuple(tuple, cacheGeneration)
               }
             }
           }

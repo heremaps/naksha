@@ -3,18 +3,24 @@ package naksha.iml
 import java.sql.ResultSet
 import naksha.base.Action
 import naksha.base.Guid
+import naksha.base.MapProxy
 import naksha.base.Platform
 import naksha.base.PlatformMap
 import naksha.base.proxy
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.base.illegalArg
+import naksha.geo.SpGeometry
+import naksha.geo.SpType
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
 import naksha.jbon.JbEncoder2
 import naksha.model.Tuple
 import naksha.model.XyzNs
 import naksha.model.objects.NakshaFeature
+import naksha.model.objects.Member
+import naksha.model.objects.MemberList
+import naksha.model.objects.MemberType
 import naksha.model.objects.StandardMembers
 import naksha.model.objects.XyzMembers
 import naksha.model.request.FeatureTuple
@@ -43,7 +49,7 @@ internal object ImlTuple {
    * Reads the current JDBC row, using relational ID, author and geometry even when author or geometry is null. The geometry_json column must contain ST_AsGeoJSON(geo, 15, 0) text.
    * @since 3.0
    */
-  fun read(row: ResultSet, databaseNumber: Long, catalogNumber: Int, collectionNumber: Int): Tuple {
+  fun read(row: ResultSet, databaseNumber: Long, catalogNumber: Int, collectionNumber: Int, members: MemberList? = null): Tuple {
     val json = row.getString("jsondata")
     val feature = if (json != null) NakshaFeature.fromJson(json) else {
       if (row.getString("operation") != "D") throw illegalArg("IML live row has no JSON feature body")
@@ -57,14 +63,15 @@ internal object ImlTuple {
       databaseNumber, catalogNumber, collectionNumber, row.getLong("i"),
       version(row.getLong("version"), row.getString("operation"))
     )
-    return encode(feature, tn, version(row.getLong("next_version"), ""))
+    return encode(feature, tn, version(row.getLong("next_version"), ""), members)
   }
 
   /**
    * Encodes a feature inline, preserving its properties and feature type without mutating the input. Both tuple and next versions are already packed Naksha versions.
    * @since 3.0
    */
-  fun encode(feature: NakshaFeature, tn: TupleNumber, nextVersion: Long = Version.HEAD.number): Tuple {
+  fun encode(feature: NakshaFeature, tn: TupleNumber, nextVersion: Long = Version.HEAD.number, members: MemberList? = null): Tuple {
+    val effective = effectiveMembers(members)
     val id = XyzMembers.XyzId.readString(feature) ?: throw illegalArg("Missing 'id' in IML feature")
     // Geometry normalization in typed member readers mutates coordinates, so a shallow XYZ-only copy is insufficient.
     val copy = (Platform.copy(feature.platformObject(), true) as PlatformMap).proxy(NakshaFeature::class)
@@ -78,22 +85,78 @@ internal object ImlTuple {
     xyz.setRaw("version", tn.version)
     xyz.setRaw("nextVersion", nextVersion)
 
-    val members = HeapBook(BookType.MEMBER_BOOK)
-    for (member in XyzMembers.ALL) {
+    val book = HeapBook(BookType.MEMBER_BOOK)
+    for (member in effective.values) {
       if (member.isVirtual()) continue
       val value = when (member.name) {
         StandardMembers.TN -> tn
         StandardMembers.ID -> id
         StandardMembers.NEXT_VERSION -> nextVersion
         StandardMembers.GLOBAL_BOOK_FN -> null
-        XyzMembers.XyzGeometry.name -> copy.geometry
-        XyzMembers.XyzReferencePoint.name -> copy.referencePoint
-        else -> member.read(copy)
+        else -> {
+          // Read the path before conversion; getPath wraps JSON objects in generic map proxies.
+          val raw = copy.getPath(member.path)
+          when (member.dataType) {
+            MemberType.BOOLEAN -> raw as? Boolean
+            MemberType.SPATIAL -> {
+              val map = when (raw) {
+                is MapProxy<*, *> -> raw.platformObject()
+                is PlatformMap -> raw
+                else -> null
+              }
+              if (map == null) null else {
+                // Encode spatial paths as typed geometry in the private feature copy, never the source.
+                val geometry = (Platform.copy(map, true) as PlatformMap).proxy(SpGeometry::class)
+                val type = SpType.ofDefined(geometry.getRaw("type") as? String)
+                if (type == null) null else geometry.proxy(type.klass).apply {
+                  if (type != SpType.GeometryCollection) getCoordinates()
+                  member.write(copy, this)
+                }
+              }
+            }
+            else -> if (raw == null) null else member.dataType.convert(raw, false)
+          }
+        }
       }
-      members.put(member.name, value)
+      book.put(member.name, value)
     }
     // IML's i identifies a row, not a feature across revisions, so never synthesize a successor UUID.
-    return Tuple(JbEncoder2().buildTupleFromMap(copy), members)
+    return Tuple(JbEncoder2().buildTupleFromMap(copy), book)
+  }
+
+  /** Validates collection metadata and supplies canonical XYZ members, including mandatory tuple fields. @since 3.0 */
+  fun effectiveMembers(members: MemberList?): Map<String, Member> {
+    val effective = LinkedHashMap<String, Member>()
+    if (members != null) {
+      members.validate()
+      for (entry in members) {
+        val member = entry ?: throw illegalArg("Null IML member")
+        val path = member.path.validate()
+        if (!member.isVirtual() && member.name != StandardMembers.FEATURE_BYTES && path.isEmpty()) throw illegalArg("Empty IML member path")
+        if (path.size > 64) throw illegalArg("IML member path is too long")
+        for (segment in path) {
+          if (segment is String && (segment.length >= 128 || segment.indexOf('\u0000') >= 0)) {
+            throw illegalArg("Invalid IML member path key")
+          }
+        }
+        effective[member.name] = member
+      }
+    }
+    for (member in XyzMembers.ALL) {
+      val declared = effective[member.name]
+      if (declared != null && declared.dataType != member.dataType) {
+        throw illegalArg("IML member '${member.name}' requires ${member.dataType}")
+      }
+      effective[member.name] = member
+    }
+    for (member in listOf(StandardMembers.FeatureNumber, StandardMembers.FeatureVersion, StandardMembers.Action)) {
+      val declared = effective[member.name]
+      if (declared != null && declared.dataType != member.dataType) {
+        throw illegalArg("IML member '${member.name}' requires ${member.dataType}")
+      }
+      effective[member.name] = member
+    }
+    return effective
   }
 
   /**

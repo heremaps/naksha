@@ -1,6 +1,6 @@
 # lib-iml
 
-`here-naksha-lib-iml` is a JVM-only Kotlin implementation of the Naksha storage interface for read-only access to Interactive Map Layers in PostgreSQL. It uses the PostgreSQL JDBC driver directly and does not install JavaScript, SQL functions, extensions, or database structures.
+`here-naksha-lib-iml` is a JVM-only Kotlin implementation of the Naksha storage interface for Interactive Map Layers in PostgreSQL, read-only by default with opt-in production writes. It uses the PostgreSQL JDBC driver directly and does not install JavaScript, SQL/server functions, extensions, or upgrade scripts. Explicitly enabled bootstrap and writes may create the documented database structures.
 
 ## Usage
 
@@ -30,18 +30,115 @@ try {
 }
 ```
 
-Configure the current `NakshaContext` with an application ID before opening sessions, as with other Naksha storages. Use `Naksha.useStorage`, not `Naksha.setupStorage`: create and upgrade requests are rejected. JDBC URLs may contain credentials; supply them externally, percent-encode reserved characters in URL parameter values, and do not log the configuration.
+Configure the current `NakshaContext` with an application ID before opening sessions, as with other Naksha storages. Use `Naksha.useStorage`, not `Naksha.setupStorage`: creation requires explicit write opt-in and super-user authorization, and there are no upgrade scripts or metadata migrations. Leave `upgrade = false`. JDBC URLs may contain credentials; supply them externally, percent-encode reserved characters in URL parameter values, and do not log the configuration.
 
-Initialization reads `xyz_config.space_meta` and caches layer mappings for the lifetime of the storage. The default exposed catalog is `public`; collection IDs are logical layer IDs, not physical hashed table names. `ReadMaps`, `ReadCollections`, and catalog/collection lookup by ID or number expose virtual metadata. `ImlConfig.schema` and `metadataSchema` can override these schemas, primarily for isolated tests. Recreate the storage to refresh discovery. Numeric identity collisions fail initialization rather than aliasing layers.
+Initialization reads `xyz_config.space_meta` by default and caches layer mappings. The default exposed catalog is `public`; collection IDs are logical layer IDs, not physical hashed table names. `ReadMaps`, `ReadCollections`, and catalog/collection lookup by ID or number expose virtual metadata. `ImlConfig.schema` and `metadataSchema` can override these schemas. Writer commits publish refreshed metadata; write-enabled nontransactional reads check committed IML log revisions. Recreate storage for external discovery changes without those revisions. Numeric identity collisions fail initialization rather than aliasing layers.
 
-Connections are opened per read, configured with read-only transactions and session timeouts, then rolled back and closed. Each storage uses at most one connection at a time; there is no connection pool. Closing a session is idempotent; removing or replacing a storage closes its sessions and clears its tuple cache entries and pagination handles. Production database users should also have SELECT-only permissions. PostGIS must already be available; the storage installs nothing. Production `IWriteSession` and streaming are unsupported.
+Ordinary read connections are opened per read, configured with read-only transactions and session timeouts, then rolled back and closed, serialized per storage. Sticky writer and session-lock connections are additional connections; there is no connection pool. Closing a session is idempotent; removing or replacing a storage closes sessions and clears tuple cache entries and pagination handles. Shutdown attempts all session closures and cache/handle cleanup, aggregating failures rather than stopping at the first one. Read-only database users should also have SELECT-only permissions; writers need the documented DDL and mutation privileges. PostGIS must already be available. Production `IWriteSession` is supported with explicit opt-in; streaming is unsupported.
+
+## Interactive Map Layers Library
+
+`here-naksha-lib-iml` is a JVM-only Kotlin implementation of Naksha's `IStorage` for PostgreSQL-backed Interactive Map Layers (IML). It is read-only by default. Production `ImlWriteSession` support is opt-in through `ImlConfig.writeEnabled = true`; this is not just the `LocalImlWriter` test helper. Use the library through `Naksha.useStorage(config)`. It does not require service or CLI integration, and supporting storage-interface methods does not imply support for every Naksha capability.
+
+### Configuration And Bootstrap
+
+Supply a PostgreSQL JDBC URL externally, for example through `IML_DB_URL`. Do not log or persist URL credentials unprotected. PostgreSQL and PostGIS must already be available; IML installs no extensions, SQL/server functions, JavaScript, or upgrade scripts.
+
+- `config.schema` defaults to `public` and identifies the default catalog's physical layer schema. Without bootstrap, this schema must already exist.
+- `config.metadataSchema` defaults to `xyz_config` and must contain a compatible `space_meta` table, unless explicitly bootstrapped.
+- `config.writeEnabled` defaults to `false`. Reads do not create missing schemas, metadata, or transaction logs.
+- With `writeEnabled = true` and `create = true`, initialization creates the configured layer schema, metadata schema, and `space_meta` with `IF NOT EXISTS`, requiring `NakshaContext.su = true`. This is bootstrap, not migration of an incompatible existing layout. Leave `upgrade = false`; do not use `Naksha.setupStorage`, which forces an upgrade too.
+- The first `writer.useTransaction()` (also invoked by writes and transaction-lock acquisition) durably creates `metadataSchema.iml_catalogs`, `iml_transactions`, and `iml_version_seq` if absent. Control-table/sequence creation survives user rollback; allocated manual sequence values are not reused after rollback. The JDBC role needs the corresponding DDL and mutation privileges even for a feature-only writer's first transaction.
+
+### Local Write Example
+
+Run this Kotlin entry point in a JVM application with `here-naksha-lib-iml` and its dependencies on the classpath. Point `IML_DB_URL` only at an intended local PostgreSQL database with PostGIS already enabled, using a database role permitted to create schemas, tables, sequences, and indexes:
+
+```bash
+export IML_DB_URL='jdbc:postgresql://localhost:5432/postgres?user=postgres&password=password'
+```
+
+The example bootstraps randomly named local schemas, then creates a separate map/catalog, collection, and feature in one ordinary `WriteRequest`. Names are short ASCII identifiers, avoiding collisions and identifier limits. Naksha super-user authorization is separate from PostgreSQL permissions; it is enabled before initialization and writer creation, then restored.
+
+```kotlin
+@file:OptIn(naksha.model.v30_experimental::class)
+
+import java.util.UUID
+import naksha.geo.SpPoint
+import naksha.iml.ImlConfig
+import naksha.model.Naksha
+import naksha.model.NakshaContext
+import naksha.model.objects.NakshaCatalog
+import naksha.model.objects.NakshaCollection
+import naksha.model.objects.NakshaFeature
+import naksha.model.request.SuccessResponse
+import naksha.model.request.Write
+import naksha.model.request.WriteRequest
+
+fun main() {
+  val suffix = UUID.randomUUID().toString().replace("-", "").take(12)
+  val config = ImlConfig("iml_demo_$suffix", requireNotNull(System.getenv("IML_DB_URL"))).apply {
+    schema = "imld_$suffix"
+    metadataSchema = "imlc_$suffix"
+    writeEnabled = true
+    create = true
+    upgrade = false
+  }
+  val context = NakshaContext.currentContext().withAppId("iml-local-example")
+  val previousSu = context.su
+  context.su = true
+  try {
+    val storage = Naksha.useStorage(config)
+    val map = NakshaCatalog("imlm_$suffix")
+    val collection = NakshaCollection("places", map.id)
+    val feature = NakshaFeature("place_$suffix").withGeometry(SpPoint(1.0, 2.0, 3.0))
+    feature.properties.setRaw("name", "Local IML example")
+    storage.newWriteSession().use { writer ->
+      val response = writer.executeWrite(WriteRequest().apply {
+        returnResults = true
+        add(Write().createMap(map))
+        add(Write().createCollection(collection))
+        add(Write().createFeature(collection, feature))
+      }) as SuccessResponse
+      writer.commit()
+      println("Committed ${response.length} results in ${map.id}/${collection.id}")
+    }
+  } finally {
+    try {
+      Naksha.removeStorage(config)
+    } finally {
+      context.su = previousSu
+    }
+  }
+}
+```
+
+`use` closes the writer and rolls back any uncommitted work on failure. `Naksha.removeStorage` closes library resources and clears caches/handles; it does not drop the committed local schemas or data. Keep this example away from remote inspection databases. For an existing IML database, use its physical `schema` and `metadataSchema`, leave `create = false`, and target registered logical collection IDs rather than hashed table names.
+
+### Supported Contracts
+
+- Read sessions support catalog/collection discovery, HEAD reads, historical snapshots and bounded per-ID revision history, exact tuple loading, supported typed member predicates, ID/author/tag queries, PostGIS intersections/buffers, ordering, result filters, and bounded detached continuation handles. Declared effective custom members are materialized and queryable; arbitrary modern JSON-property paths are not implied.
+- Write sessions support `executeWrite` with CREATE, UPDATE, UPSERT, DELETE, and PURGE for features and catalog/collection metadata, subject to ownership and capability checks. They expose `useTransaction`, `getTransaction`, `commit`, `rollback`, member processors, and transaction-local reads. Feature revisions use manual versions and IML validity intervals; `i` remains a physical revision identity, not a stable logical feature number.
+- Administrative catalog/collection mutations require the super-user flag captured when the write session is created. Changing the context afterward does not elevate an existing writer. Feature writes do not require that flag, but still require database permissions and explicit write opt-in.
+- Catalog creation uses a new physical schema. Names must satisfy the Naksha model's 42-character limit and PostgreSQL's 63-byte identifier limit. Descriptor updates to an externally managed catalog are allowed only for the registered default `config.schema`; `public`, reserved schemas, and externally managed/default catalog schemas cannot be dropped. Collection mutations update `space_meta`; they are not limited to newly created catalogs.
+- Writes use a sticky transaction connection with private metadata/tuple state until commit. Successful commits publish metadata and invalidate caches/handles; external discovery changes without an IML transaction-log revision still require recreating storage. Normal read connections are serialized per storage, but sticky writer and session-lock connections are additional connections; there is no connection pool.
+- Each write request has a savepoint: a failed batch rolls back that request while preserving earlier pending writes when recovery succeeds. Transaction version and time are frozen at allocation; tampering with either or savepoint recovery failure makes the transaction rollback-only, and commit cannot publish partial work.
+- Named native PostgreSQL advisory locks are available through `acquireSessionLock` and `acquireTransactionLock`, with explicit close. Acquire session locks before starting a transaction. The same named key cannot be held across both lifetimes by one writer. Named transaction-lock contention fails fast with `CONFLICT` rather than blocking on a held lock. Transaction locks end at commit/rollback; session locks survive those boundaries until released or the writer closes.
+- `SessionOptions.idleTxTimeout` applies to active database transactions, including sticky write transactions. Dedicated session-lock connections use auto-commit and `idle_in_transaction_session_timeout = 0`, so holding a session lock does not leave an idle transaction subject to that timeout. Statement, lock, and socket timeout setters update live connections.
+- Storage shutdown attempts all session closures and cache/handle cleanup, aggregating errors with suppressed failures instead of abandoning remaining cleanup after the first error.
+- Standard, unmodified XYZ index definitions have supported index DDL. Custom index definitions, unique-index options, and custom index mappings are explicitly rejected, not silently ignored.
+- `ReadTransactions` reads the optional `metadataSchema.iml_transactions` log through the normal read dispatch. Commits record transactions atomically with mutations. Reads never create the log and reject transaction reads when it is absent; this is not reconstruction of external IML transaction history.
+
+### Unsupported Capabilities
+
+Partial fetch/projection, dictionary writes, storage classes, collection partitions other than one, custom/unique index definitions and custom index mappings, extended/composed layers, streaming, and catalog/collection metadata revision history remain unsupported. Transaction-local reads reject both publishing continuation handles and consuming `ReadHandle`; detached continuations are only for nontransactional reads. Reference-tile queries, deprecated GUID selection, arbitrary modern property-path operands, general metadata predicates/order, unsupported spatial transformations, and write hash exclusions are also rejected. No full Naksha storage-capability parity is claimed.
 
 ## Supported Reads
 
 `limit` must be positive and is capped by `ImlConfig.hardCap`; when omitted it defaults to that cap.
 
 - HEAD, historical snapshots, and bounded per-ID revision histories, optionally including deleted states.
-- All 28 modern `Op` types are handled by the compiler, but only on supported target members, not arbitrary fields. Scalar equality, ranges, membership, null/type tests and string prefixes resolve fixed members: `id`, `author`, `fn`, `version`, `nv`, `action`, `gbfn` (always null), `updated_at`, `created_at`, `author_ts`, `hash`, `here_tile`, `cc`, `app_id`, `origin`, `target`, `cv0`-`cv3`, `cs0`-`cs3`, `ft`, `pn`, `pt`, and `gv`. Values must match the declared text/numeric type; no scalar member is declared boolean. Numeric-looking IDs remain strings. Compose predicates with `And`, `Or`, and `Not`.
+- All 28 modern `Op` types are handled by the compiler, but only on supported target members, not arbitrary fields. Scalar equality, ranges, membership, null/type tests and string prefixes resolve fixed members: `id`, `author`, `fn`, `version`, `nv`, `action`, `gbfn` (always null), `updated_at`, `created_at`, `author_ts`, `hash`, `here_tile`, `cc`, `app_id`, `origin`, `target`, `cv0`-`cv3`, `cs0`-`cs3`, `ft`, `pn`, `pt`, and `gv`, plus supported declared effective custom members. Values must match the declared member type; no fixed standard scalar member is declared boolean. Numeric-looking IDs remain strings. Compose predicates with `And`, `Or`, and `Not`.
 - Geometry intersection on `geo`, including bounding-box polygons, through PostGIS `ST_Intersects`. Chained `SpBuffer` transformations support geography (meters) or geometry units and validated buffer styles; other transformations are unsupported.
 - Case-sensitive tag-list containment (`TagListContains`, `TagListContainsAllOf`, `TagListContainsAnyOf`) on `XyzMembers.XyzTags`, plus virtual tag-map operations on `tags` (below). Legacy IDs, spatial/buffer queries, and tag queries are converted too; mixing `queryMembers` with legacy conditions is rejected.
 - Whitelisted ordering by ID, author, row/tuple number, or manual version, with deterministic row-number tie breaking.
@@ -77,19 +174,21 @@ val features = response.features
 
 ## Tags And Filters
 
-Tag-list predicates use JSONB containment on `jsondata->'properties'->'@ns:com:here:xyz'->'tags'`, compatible with a GIN expression index on that exact expression. No index is created or assumed; the inspected remote test table has no such index.
+Tag-list predicates use JSONB containment on `jsondata->'properties'->'@ns:com:here:xyz'->'tags'`, compatible with a GIN expression index on that exact expression. Reads create or assume no index; opt-in collection writes support standard index DDL. The inspected remote test table has no such tag index.
 
 The virtual tag map parses the existing array without rewriting it, following `TagNormalizer.splitTag`: bare tags have null values; `key=value` gives trimmed strings; `key:=true` and `key:=1.5` give typed booleans/numbers. Splitting uses the last `=`. `ref_`, `sourceID_`, and `xyz_source_id_` prefixes remain unsplit null-valued keys; invalid typed values retain the entire tag as the key with a string value. Duplicate parsed keys are last-write-wins. Nonstring array entries are ignored; missing/nonarray tags act as an empty map.
 
 Use `TagMapHasKey`, `TagMapHasAnyOf`, `TagMapHasAllOf`, `TagEquals`, `TagIsNull`, `TagGt/Gte/Lt/Lte`, `TagStartsWith`, and `TagMatches` on `tags`. Comparisons are typed and case-sensitive; missing keys do not match, including null tests. `TagMatches` uses PostgreSQL ARE regex syntax, not Java regex. Virtual-map predicates parse array entries per candidate and do not get the same direct containment-index benefit as tag-list predicates; narrow candidates with ID/spatial/other selective predicates where possible.
 
-`resultFilters` receive materialized exact states after JDBC selection has closed, in reverse registration order (LIFO). They may reject or replace entries. Nonpaged reads refill toward `limit` in batches of 128, scanning at most `ImlConfig.hardCap` candidates; selective filters can therefore return fewer results despite later matches in the table.
+`resultFilters` receive materialized exact states after JDBC selection has completed, in reverse registration order (LIFO). Ordinary read connections have closed at this point; a writer retains its sticky transaction connection. Filters may reject or replace entries. Nonpaged reads refill toward `limit` in batches of 128, scanning at most `ImlConfig.hardCap` candidates; selective filters can therefore return fewer results despite later matches in the table.
 
 Legacy `query.properties` (or `withPropertyQuery(...)`) runs client-side through the model's `PropertyFilter`, not SQL. It supports `PAnd/POr/PNot` and property paths, including array indices, with the model's subset of operations: existence, null/boolean tests, membership, containment, string equality/prefix, and numeric comparisons. Other property operations are not implied. These filters run after history ranking and share the candidate hard cap; they cannot be combined with `queryMembers`.
 
 ## Pagination
 
 Set `returnHandle = true` on the initial read. It materializes and filters up to `hardCap` candidates once, freezes accepted feature bodies, and returns a page of at most `limit` entries. Paging does not scan beyond that initial candidate set.
+
+This detached pagination is nontransactional only. An active write transaction rejects both `returnHandle = true` and `ReadHandle` consumption. Successful writer commits invalidate retained handles.
 
 ```kotlin
 import naksha.model.request.ReadHandle
@@ -136,3 +235,5 @@ List discovered collections read-only using just `NAKSHA_TEST_IML_REMOTE_DB_URL`
 ```
 
 The listing includes the virtual collections collection and prints IDs and a total. Tests lacking their required environment variables are skipped.
+
+Local tests cover production write sessions and `writeEnabled = true` / `create = true` bootstrap, in addition to read fixtures and the test-only helper. Final suite totals, remote-only skip counts, and build/coverage outcomes will be recorded by the main verification pass; no new final totals are claimed here.

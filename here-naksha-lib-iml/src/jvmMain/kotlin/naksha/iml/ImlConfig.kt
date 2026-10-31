@@ -25,6 +25,7 @@ open class ImlConfig() : NakshaStorage() {
     private val JDBC_URL = NotNullProperty<ImlConfig, String>(String::class) { _, _ -> "" }
     private val SCHEMA = NotNullProperty<ImlConfig, String>(String::class) { _, _ -> "public" }
     private val METADATA_SCHEMA = NotNullProperty<ImlConfig, String>(String::class) { _, _ -> "xyz_config" }
+    private val WRITE_ENABLED = NotNullProperty<ImlConfig, Boolean>(Boolean::class) { _, _ -> false }
   }
 
   /**
@@ -46,6 +47,12 @@ open class ImlConfig() : NakshaStorage() {
   var metadataSchema by METADATA_SCHEMA
 
   /**
+   * Explicitly permits write sessions and their catalog/collection/control-table mutations. Defaults to false; extensions and server functions are never installed.
+   * @since 3.0
+   */
+  var writeEnabled by WRITE_ENABLED
+
+  /**
    * Sets the JDBC URL and returns this configuration.
    * @since 3.0
    */
@@ -59,7 +66,7 @@ open class ImlConfig() : NakshaStorage() {
   override fun configEquals(other: NakshaStorage): Boolean {
     if (className != other.className || id != other.id) return false
     val config = other.proxy(ImlConfig::class)
-    return jdbcUrl == config.jdbcUrl && schema == config.schema && metadataSchema == config.metadataSchema && hardCap == config.hardCap &&
+    return jdbcUrl == config.jdbcUrl && schema == config.schema && metadataSchema == config.metadataSchema && writeEnabled == config.writeEnabled && hardCap == config.hardCap &&
       create == config.create && upgrade == config.upgrade
   }
 }
