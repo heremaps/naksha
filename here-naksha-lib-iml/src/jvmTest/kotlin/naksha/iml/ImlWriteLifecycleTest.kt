@@ -48,6 +48,7 @@ class ImlWriteLifecycleTest {
     assertSame(old, storage.metadata)
     storage.publishMetadata(newer, 12)
     storage.publishMetadata(old, 11)
+    storage.publishMetadata(old, 12)
     assertEquals(12L, storage.generation)
     assertSame(newer, storage.metadata)
     assertNotNull(storage.metadata.getLayer(fixture.schema, "late-layer"))
@@ -57,6 +58,15 @@ class ImlWriteLifecycleTest {
     assertEquals(13L, storage.generation)
     assertSame(newer, storage.metadata)
     assertNull(old.getLayer(fixture.schema, "late-layer"))
+  }
+
+  @Test
+  fun `read discovery uses one repeatable read snapshot`() = withWriter { fixture, _, _ ->
+    fixture.storage.newReadSession().use { reader ->
+      reader.withConnection { connection ->
+        assertEquals(java.sql.Connection.TRANSACTION_REPEATABLE_READ, connection.transactionIsolation)
+      }
+    }
   }
 
   @Test

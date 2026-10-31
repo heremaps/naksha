@@ -209,7 +209,8 @@ internal class ImlMutation(private val session: ImlWriteSession, private val con
       }
       if (body.id != write.id) throw illegalArg("IML processors cannot change feature identity")
     }
-    val json = if (deleting) null else Platform.toJSON(body)
+    // Retain creation/update metadata on tombstones so history and recreation do not lose timestamps.
+    val json = Platform.toJSON(body)
     val rawGeometry = body.getRaw(NakshaFeature.GEOMETRY)
     val geometry = if (deleting || rawGeometry == null || rawGeometry === Platform.UNDEFINED) null else Platform.toJSON(rawGeometry)
     if (!coalesce && current != null) {
@@ -225,19 +226,14 @@ internal class ImlMutation(private val session: ImlWriteSession, private val con
       if (coalesce) connection.prepareStatement("DELETE FROM $table WHERE id = ? AND next_version = ?").use { it.setString(1, write.id); it.setLong(2, Long.MAX_VALUE); it.executeUpdate() }
       return ImlTuple.encode(body, TupleNumber(storage.number, Id.textToInt(catalogId), layer.number, checkNotNull(current).tupleNumber.featureNumber, ImlTuple.version(version, "D")), members = members)
     }
+    val number = if (coalesce) null else session.allocations.next(connection, layer)
     val sql = if (coalesce) "UPDATE $table SET operation = ?, author = ?, jsondata = ?::jsonb, geo = ST_Force3D(ST_SetSRID(ST_GeomFromGeoJSON(?),4326)) WHERE id = ? AND version = ? RETURNING $columns"
-      else "INSERT INTO $table (operation, author, jsondata, geo, id, version, next_version, i) SELECT ?, ?, ?::jsonb, ST_Force3D(ST_SetSRID(ST_GeomFromGeoJSON(?),4326)), ?, ?, 9223372036854775807, COALESCE(max(i),0)+1 FROM $table RETURNING $columns"
-    // Existing IML tables need not have an identity/default on i. Allocation is protected by the writer advisory lock.
-    val insertSql = if (!coalesce && hasIdentity(layer)) "INSERT INTO $table (operation, author, jsondata, geo, id, version) VALUES (?, ?, ?::jsonb, ST_Force3D(ST_SetSRID(ST_GeomFromGeoJSON(?),4326)), ?, ?) RETURNING $columns" else sql
-    return connection.prepareStatement(insertSql).use {
+      else "INSERT INTO $table (operation, author, jsondata, geo, id, version, next_version${if (number != null) ", i" else ""}) VALUES (?, ?, ?::jsonb, ST_Force3D(ST_SetSRID(ST_GeomFromGeoJSON(?),4326)), ?, ?, 9223372036854775807${if (number != null) ", ?" else ""}) RETURNING $columns"
+    return connection.prepareStatement(sql).use {
       it.setString(1, operation); it.setString(2, XyzMembers.XyzAuthor.readString(body)); it.setString(3, json); it.setString(4, geometry); it.setString(5, write.id); it.setLong(6, version)
+      if (number != null) it.setLong(7, number)
       it.executeQuery().use { rows -> check(rows.next()); ImlTuple.read(rows, storage.number, Id.textToInt(catalogId), layer.number, members) }
     }
-  }
-
-  private fun hasIdentity(layer: ImlMetadata.Layer): Boolean = connection.prepareStatement("SELECT is_identity FROM information_schema.columns WHERE table_schema = ? AND table_name = ? AND column_name = 'i'").use {
-    it.setString(1, layer.schema); it.setString(2, layer.table)
-    it.executeQuery().use { rows -> rows.next() && rows.getString(1) == "YES" }
   }
 
   private fun copy(write: Write): NakshaFeature {
@@ -305,6 +301,25 @@ internal class ImlMutation(private val session: ImlWriteSession, private val con
 
   private fun createIndices(collection: NakshaCollection, sqlTable: String, table: String) {
     val members = collection.useMembers()
+    val predicates = ImlPredicates({ throw illegalArg("IML index expressions cannot have parameters") }, members)
+    // Only exact obsolete adapter-owned names on adapter-created tables may be removed.
+    if (table == hashedTable(checkNotNull(collection.catalogId), collection.id)) {
+      val owned = HashSet<String>()
+      for (index in XyzIndices.ALL) owned.add("${table}_xyz_${index.name}")
+      val requested = collection.indices
+      if (requested != null) for (index in requested) owned.remove("${table}_xyz_${checkNotNull(index).name}")
+      connection.prepareStatement("SELECT indexname FROM pg_indexes WHERE schemaname = ? AND tablename = ?").use {
+        it.setString(1, collection.catalogId); it.setString(2, table)
+        it.executeQuery().use { rows ->
+          while (rows.next()) {
+            val name = rows.getString(1)
+            if (name in owned) connection.createStatement().use { statement ->
+              statement.execute("DROP INDEX ${ImlMetadata.quote(checkNotNull(collection.catalogId))}.${ImlMetadata.quote(name)}")
+            }
+          }
+        }
+      }
+    }
     connection.createStatement().use { statement ->
       for ((suffix, columns) in arrayOf("version" to "version, id", "head" to "next_version, operation", "author" to "author, i, version")) {
         statement.execute("CREATE INDEX IF NOT EXISTS ${ImlMetadata.quote("${table}_$suffix")} ON $sqlTable ($columns)")
@@ -319,15 +334,17 @@ internal class ImlMutation(private val session: ImlWriteSession, private val con
           if (name == StandardMembers.VERSION) { expressions.add("version"); continue }
           val member = members.get(checkNotNull(name)) ?: throw illegalArg("Undeclared IML index member")
           if (name == XyzMembers.XyzGeometry.name) { method = "gist"; expressions.add("geo"); continue }
-          val path = ArrayList<String>()
-          for (part in member.path) path.add("'${part.toString().replace("'", "''")}'")
-          val accessor = "jsondata #${if (member.dataType == MemberType.TAG_LIST || member.dataType == MemberType.SPATIAL) ">" else ">>"} ARRAY[${path.joinToString(",")}]::text[]"
           val expression = when (member.dataType) {
-            MemberType.SPATIAL -> { method = "gist"; "ST_SetSRID(ST_GeomFromGeoJSON(NULLIF($accessor, 'null'::jsonb)::text),4326)" }
-            MemberType.TAG_LIST -> { method = "gin"; accessor }
-            MemberType.INT8, MemberType.INT16, MemberType.INT32, MemberType.INT64 -> "($accessor)::bigint"
-            MemberType.FLOAT32, MemberType.FLOAT64 -> "($accessor)::double precision"
-            MemberType.STRING -> if (name == XyzMembers.XyzAuthor.name) "author" else accessor
+            MemberType.SPATIAL -> {
+              method = "gist"
+              val path = ArrayList<String>()
+              for (part in member.path) path.add("E'${part.toString().replace("\\", "\\\\").replace("'", "''")}'")
+              val accessor = "(jsondata #> ARRAY[${path.joinToString(", ")}]::text[])"
+              "(CASE WHEN jsonb_typeof($accessor) = 'object' THEN ST_SetSRID(ST_GeomFromGeoJSON(($accessor)::text),4326) END)"
+            }
+            MemberType.TAG_LIST -> { method = "gin"; "jsondata->'properties'->'@ns:com:here:xyz'->'tags'" }
+            MemberType.INT8, MemberType.INT16, MemberType.INT32, MemberType.INT64,
+            MemberType.FLOAT32, MemberType.FLOAT64, MemberType.STRING -> predicates.column(name)
             else -> throw unsupportedOp("Unsupported IML index member type")
           }
           expressions.add("($expression)")

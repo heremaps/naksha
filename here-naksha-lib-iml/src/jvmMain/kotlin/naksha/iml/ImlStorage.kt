@@ -100,7 +100,7 @@ class ImlStorage : AbstractStorage<ImlConfig>() {
   }
 
   internal fun publishMetadata(value: ImlMetadata, revision: Long) = synchronized(publicationLock) {
-    if (revision < generation) return@synchronized
+    if (revision <= generation) return@synchronized
     metadata = value
     generation = revision
     handles.clear()
@@ -167,6 +167,8 @@ class ImlStorage : AbstractStorage<ImlConfig>() {
     val connection = DriverManager.getConnection(jdbcUrl, properties)
     try {
       connection.isReadOnly = readOnly
+      // Discovery revision and descriptor queries must agree even if a peer writer commits between them.
+      if (readOnly) connection.transactionIsolation = Connection.TRANSACTION_REPEATABLE_READ
       connection.autoCommit = false
       connection.createStatement().use { it.execute(if (readOnly) "SET TRANSACTION READ ONLY" else "SET TRANSACTION READ WRITE") }
       connection.prepareStatement("SELECT set_config('statement_timeout', ?, true), set_config('lock_timeout', ?, true), set_config('idle_in_transaction_session_timeout', ?, true)").use {

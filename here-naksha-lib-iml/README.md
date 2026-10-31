@@ -236,4 +236,16 @@ List discovered collections read-only using just `NAKSHA_TEST_IML_REMOTE_DB_URL`
 
 The listing includes the virtual collections collection and prints IDs and a total. Tests lacking their required environment variables are skipped.
 
-Local tests cover production write sessions and `writeEnabled = true` / `create = true` bootstrap, in addition to read fixtures and the test-only helper. Final suite totals, remote-only skip counts, and build/coverage outcomes will be recorded by the main verification pass; no new final totals are claimed here.
+Local tests cover production write sessions and `writeEnabled = true` / `create = true` bootstrap, in addition to read fixtures and the test-only helper. The latest combined local and read-only remote verification passed 213 tests with none skipped; JVM JAR and JaCoCo report generation passed.
+
+## Performance And Edge Cases
+
+Writer bootstrap and initial source-version reconciliation run once per storage instance, not once per transaction. Subsequent transactions use the durable allocator; independent external version allocation after preparation can cause an explicit conflict. Recreate storage to reconcile imported versions, or ensure writers cooperate with the adapter's allocator and advisory gate.
+
+Row allocation strategies are cached per physical layer and transaction. Identity and sequence-default columns use their server allocator after one maximum/sequence-state check, advancing a stale sequence without rewinding it. Legacy tables read `max(i)` once and increment locally under the writer gate. All consumers of those allocators must cooperate with the gate; independent external sequence draws are not synchronized by the adapter. Legacy tables without sequences retain their cross-transaction `max(i)` behavior, so purging the highest row can allow its number to be reused later.
+
+For a tested batch of 110 legacy inserts, allocation overhead is one metadata probe and one initial maximum query, rather than one of each per insert. Index-plan tests verify generated timestamp and tag expressions match query predicates and can be used as index conditions. These are query-count and index-eligibility checks, not wall-clock benchmark claims. Collection updates remove obsolete adapter-owned standard indexes only on adapter-created tables; external indexes are untouched.
+
+Transaction callbacks cannot commit, roll back, close the session, or initiate nested writes while a write request is executing. Tombstones retain minimal JSON metadata so timestamps survive history and recreation. Extreme finite floating values expanded by JSONB and empty/mixed geometry collections have dedicated round-trip coverage. Transaction lock leases are explicitly unlocked at transaction boundaries. Discovery refresh uses repeatable-read isolation, and duplicate/older generations cannot overwrite a published snapshot.
+
+Remaining performance opportunities include fewer throwaway read connections, compact/incremental transaction statistics, immutable pre-resolved member metadata, bounded in-flight paging allocations, and measured alternatives to batched OR predicates. These have not been changed without dedicated verification.

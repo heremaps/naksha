@@ -51,19 +51,52 @@ internal object ImlTuple {
    */
   fun read(row: ResultSet, databaseNumber: Long, catalogNumber: Int, collectionNumber: Int, members: MemberList? = null): Tuple {
     val json = row.getString("jsondata")
-    val feature = if (json != null) NakshaFeature.fromJson(json) else {
+    val feature = if (json != null) NakshaFeature.fromJson(jsonNumbers(json)) else {
       if (row.getString("operation") != "D") throw illegalArg("IML live row has no JSON feature body")
       NakshaFeature(row.getString("id"))
     }
     feature.id = row.getString("id")
     feature.properties.xyz.setRaw(XyzNs.AUTHOR, row.getString("author"))
     val geometry = row.getString("geometry_json")
-    feature.setRaw(NakshaFeature.GEOMETRY, if (geometry == null) null else Platform.fromJSON(geometry))
+    feature.setRaw(NakshaFeature.GEOMETRY, if (geometry == null) null else Platform.fromJSON(jsonNumbers(geometry)))
     val tn = TupleNumber(
       databaseNumber, catalogNumber, collectionNumber, row.getLong("i"),
       version(row.getLong("version"), row.getString("operation"))
     )
     return encode(feature, tn, version(row.getLong("next_version"), ""), members)
+  }
+
+  /** Keeps JSONB-expanded floating values numeric without changing strings or representable integers. @since 3.0 */
+  internal fun jsonNumbers(json: String): String {
+    var output: StringBuilder? = null
+    var copied = 0
+    var i = 0
+    while (i < json.length) {
+      val char = json[i]
+      if (char == '"') {
+        i++
+        while (i < json.length) {
+          val quoted = json[i++]
+          if (quoted == '\\') i++
+          else if (quoted == '"') break
+        }
+      } else if (char == '-' || char in '0'..'9') {
+        val start = i
+        if (char == '-') i++
+        val digits = i
+        while (i < json.length && json[i] in '0'..'9') i++
+        if (i < json.length && (json[i] == '.' || json[i] == 'e' || json[i] == 'E')) {
+          while (i < json.length && (json[i] in '0'..'9' || json[i] in ".eE+-")) i++
+        } else if (i - digits >= 19 && (i - digits > 19 || json.substring(start, i).toLongOrNull() == null)) {
+          // Jackson's Naksha deserializer drops BigIntegerNode; a decimal token takes its supported double path.
+          if (!json.substring(start, i).toDouble().isFinite()) throw illegalArg("IML JSON number exceeds the finite double range")
+          val builder = output ?: StringBuilder(json.length + 16).also { output = it }
+          builder.append(json, copied, i).append(".0")
+          copied = i
+        }
+      } else i++
+    }
+    return output?.append(json, copied, json.length)?.toString() ?: json
   }
 
   /**
@@ -109,8 +142,13 @@ internal object ImlTuple {
                 val geometry = (Platform.copy(map, true) as PlatformMap).proxy(SpGeometry::class)
                 val type = SpType.ofDefined(geometry.getRaw("type") as? String)
                 if (type == null) null else geometry.proxy(type.klass).apply {
-                  if (type != SpType.GeometryCollection) getCoordinates()
-                  member.write(copy, this)
+                  if (type != SpType.GeometryCollection) {
+                    getCoordinates()
+                    member.write(copy, this)
+                  } else {
+                    // Collections have geometries, not coordinates; keep their inline tree out of the TWKB encoder.
+                    member.write(copy, Platform.copy(map, true))
+                  }
                 }
               }
             }
