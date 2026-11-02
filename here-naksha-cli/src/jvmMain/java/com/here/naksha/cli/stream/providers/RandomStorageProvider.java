@@ -2,6 +2,8 @@ package com.here.naksha.cli.stream.providers;
 
 import com.here.naksha.cli.storages.GeneratingStorageConfigProperties;
 import com.here.naksha.cli.storages.GeneratingStorageService;
+import com.here.naksha.cli.stream.AbstractStreamSession;
+import com.here.naksha.cli.stream.QueueStream;
 import com.here.naksha.cli.utils.JsonParser;
 import com.here.naksha.cli.utils.JsonParserException;
 import naksha.base.Id;
@@ -17,8 +19,6 @@ import naksha.model.IStreamSession;
 import naksha.model.SessionOptions;
 import naksha.model.objects.NakshaFeature;
 import naksha.model.objects.NakshaStorage;
-import naksha.model.streaming.AbstractStreamSession;
-import naksha.model.streaming.QueueStream;
 import naksha.model.streaming.Stream;
 import naksha.model.streaming.StreamChunk;
 import naksha.model.streaming.StreamRequest;

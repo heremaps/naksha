@@ -1,11 +1,11 @@
 package com.here.naksha.cli.stream.providers;
 
+import com.here.naksha.cli.stream.AbstractStreamSession;
 import naksha.model.IStorage;
 import naksha.model.IStorageConfigBuilder;
 import naksha.model.IStorageProvider;
 import naksha.model.IStreamSession;
 import naksha.model.SessionOptions;
-import naksha.model.streaming.AbstractStreamSession;
 import naksha.model.streaming.StreamChunk;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;

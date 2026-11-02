@@ -2,8 +2,6 @@ package com.here.naksha.cli.stream;
 
 import naksha.model.IStorage;
 import naksha.model.SessionOptions;
-import naksha.model.streaming.AbstractStreamSession;
-import naksha.model.streaming.QueueStream;
 import naksha.model.streaming.Stream;
 import naksha.model.streaming.StreamChunk;
 import naksha.model.streaming.StreamRequest;

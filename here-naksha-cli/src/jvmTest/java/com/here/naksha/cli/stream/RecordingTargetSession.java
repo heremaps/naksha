@@ -3,7 +3,6 @@ package com.here.naksha.cli.stream;
 import naksha.base.NakshaError;
 import naksha.model.IStorage;
 import naksha.model.SessionOptions;
-import naksha.model.streaming.AbstractStreamSession;
 import naksha.model.streaming.StreamChunk;
 import naksha.model.streaming.StreamTuple;
 import org.jetbrains.annotations.NotNull;

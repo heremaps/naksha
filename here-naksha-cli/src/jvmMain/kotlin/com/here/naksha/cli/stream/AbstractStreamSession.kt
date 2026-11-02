@@ -1,10 +1,14 @@
-package naksha.model.streaming
+package com.here.naksha.cli.stream
 
 import naksha.base.unsupportedOp
 import naksha.model.IStorage
 import naksha.model.IStreamSession
 import naksha.model.SessionOptions
+import naksha.model.streaming.Stream
+import naksha.model.streaming.StreamChunk
+import naksha.model.streaming.StreamRequest
 
+@Deprecated("To be discussed")
 abstract class AbstractStreamSession(
     override val storage: IStorage,
     override val options: SessionOptions,
