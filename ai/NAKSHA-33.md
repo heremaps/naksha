@@ -116,9 +116,9 @@ installation entries. Verify and finish these rather than duplicating them.
 | ~~[db-03-c](NAKSHA-33-DONE.md#db-03-c--keep-feature-numbers-logical)~~ | ~~Keep feature numbers logical~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Keep feature identities logical and store feature-ordinals with aligned partition ranges. |
 | ~~[db-03-d](NAKSHA-33-DONE.md#db-03-d--make-head-nv-non-null)~~ | ~~Make HEAD nv non-null~~ | [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Preserve non-null HEAD next-version values at the row boundary. |
 | ~~[db-03-e](NAKSHA-33-DONE.md#db-03-e--establish-the-root-naming-rule)~~ | ~~Establish the root naming rule~~ | [db-03](NAKSHA-33-DONE.md#db-03--finish-the-physical-row-and-naming-contract) | `DONE` | Unify identifier aliases and physical naming across storage boundaries. |
-| [db-04](#db-04--implement-schema-collection-and-index-operations) | Implement schema, collection, and index operations | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version), [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `TODO` | — |
-| [db-04-a](#db-04-a--implement-schema-operations) | Implement schema operations | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
-| [db-04-b](#db-04-b--implement-collection-creation) | Implement collection creation | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04](#db-04--implement-schema-collection-and-index-operations) | Implement schema, collection, and index operations | [db-02](NAKSHA-33-DONE.md#db-02--verify-pg_partman-topology-against-the-deployed-version), [db-03](#db-03--finish-the-physical-row-and-naming-contract) | `IN_PROGRESS` | — |
+| ~~[db-04-a](NAKSHA-33-DONE.md#db-04-a--implement-schema-operations)~~ | ~~Implement schema operations~~ | [db-04](#db-04--implement-schema-collection-and-index-operations) | `DONE` | Implement transactional schema lookup and creation with logical-name comments. |
+| [db-04-b](#db-04-b--implement-collection-creation) | Implement collection creation | [db-04](#db-04--implement-schema-collection-and-index-operations) | `PLANNING` | — |
 | [db-04-c](#db-04-c--move-storage-settings-out-of-table-classes) | Move storage settings out of table classes | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-04-d](#db-04-d--move-index-execution-into-pgdatabase) | Move index execution into PgDatabase | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-04-e](#db-04-e--implement-collection-and-schema-drop) | Implement collection and schema drop | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
@@ -230,13 +230,9 @@ Parent ticket; decomposed into `db-04-a` … `db-04-h`. **Done when:** clean
 bootstrap and user collection creation/drop work through `PgDatabase`; required
 constraints/indexes reach current and future leaves.
 
-### db-04-a — Implement schema operations
-
-Implement schema lookup/create/drop with explicit existence results and
-unsigned OID handling. Keep logical identifier-collision checks in admin writes.
-Carry the original logical catalog name through creation and store it with COMMENT ON SCHEMA; do not reconstruct it from a physical alias.
-
 ### db-04-b — Implement collection creation
+
+Dependency inspection: production creation requires the db-04-g maintainer core, db-04-c storage policy and db-04-d index generation; the current prototype cannot be installed unchanged. It hard-codes three columns, accepts a different shift domain, always subpartitions fn, and cannot reconstruct payload schema/storage settings from its four-field registry. Prefer bringing the shared maintainer core forward rather than duplicating initial topology creation in Kotlin. Before index integration, resolve the existing blanket INCLUDE requirement: GIN does not support INCLUDE, so tag indexes cannot provide the proposed covering tuple columns. Awaiting agreement on that per-method exception before implementing full collection creation. No partial production DDL has been introduced.
 
 Implement collection creation from every supplied `PgColumn`, root constraints,
 mandatory indexes, restricted HEAD/default, custom maintainer registration,

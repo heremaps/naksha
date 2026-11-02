@@ -207,7 +207,7 @@ open class PgWriter internal constructor(
                     pgWrite.tupleNumber = tuple.tupleNumber
                     if (f is NakshaCatalog) {
                         val pgCatalog = PgCatalog(tuple)
-                        if (storage.database.catalog_get_or_create_schema(conn, name = pgCatalog.name) < 0) {
+                        if (storage.database.catalog_get_or_create_schema(conn, name = pgCatalog.name, originalName = pgCatalog.id.text) < 0) {
                             throw catalogExists("Creation of catalog '$id' failed, it exists already")
                         }
                         pgWrite.pgCatalog = pgCatalog
@@ -252,7 +252,7 @@ open class PgWriter internal constructor(
                     pgWrite.tupleNumber = tuple.tupleNumber
                     if (f is NakshaCatalog) {
                         val pgCatalog = PgCatalog(tuple)
-                        storage.database.catalog_get_or_create_schema(conn, name = pgCatalog.name)
+                        storage.database.catalog_get_or_create_schema(conn, name = pgCatalog.name, originalName = pgCatalog.id.text)
                         pgWrite.pgCatalog = pgCatalog
                         session.cachePgCatalog(pgCatalog) // This allows following write instructions to succeed.
                     } else if (f is NakshaCollection) {

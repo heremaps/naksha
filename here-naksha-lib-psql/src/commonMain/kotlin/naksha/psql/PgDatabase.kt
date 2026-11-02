@@ -474,9 +474,9 @@ SELECT basics.*, procs.* FROM basics, procs;
      */
     internal fun catalog_get_schema_oid(conn: PgConnection, name: String): Long {
         return execute_sql_notnull(schema = name) {
-            TODO("SELECT '\"naksha~admin\"'::regnamespace::oid;")
-            // Note: long oid = resultSet.getLong("oid");
-            0L
+            conn.execute("SELECT oid::text AS oid FROM pg_catalog.pg_namespace WHERE nspname = $1", arrayOf(name)).use { cursor ->
+                if (cursor.next()) cursor.get<String>("oid").toLong() else -1L
+            }
         }
     }
 
@@ -487,16 +487,29 @@ SELECT basics.*, procs.* FROM basics, procs;
      * Identifier collisions are checked by the caller's administrative writes.
      * An existing schema is reused without modifying its contents. Creation participates in the
      * caller's transaction; the signed return value distinguishes creation from reuse.
+     * Cooperating creators serialize by physical schema name using a transaction-scoped advisory lock. Requires an open caller transaction; READ COMMITTED permits reuse after a concurrent commit. External creators or stale higher-isolation snapshots can still cause a database error, which is propagated without recovery here.
      * @param conn the caller-owned connection; this method does not commit or close it.
      * @param name the unquoted name of the schema.
+     * @param originalName the original logical catalog name to retain as a schema comment when created. Existing schema comments are not modified.
      * @return the 32-bit unsigned `OID` of the created schema, returns a negative `OID` if the schema existed already.
      * @since 3.0
      */
-    internal fun catalog_get_or_create_schema(conn: PgConnection, name: String): Long {
+    internal fun catalog_get_or_create_schema(conn: PgConnection, name: String, originalName: String): Long {
         return execute_sql_notnull(schema = name) {
-            TODO("Create the schema, catalog-number collisions must be caught in naksha~catalogs")
-            // conn.execute("CREATE SCHEMA IF NOT EXISTS ${quoteIdent(name)}").close()
-            0L
+            if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > 63) {
+                throw illegalId("Physical schema name must contain 1..63 UTF-8 bytes without NUL")
+            }
+            conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended($1, 0))",
+                arrayOf("naksha:schema:$name")).close()
+            val existing = catalog_get_schema_oid(conn, name)
+            if (existing > 0) -existing else {
+                val ident = quoteIdent(name)
+                conn.execute("CREATE SCHEMA $ident").close()
+                conn.execute("COMMENT ON SCHEMA $ident IS ${PgUtil.quoteLiteral(originalName)}").close()
+                val oid = catalog_get_schema_oid(conn, name)
+                if (oid <= 0) throw internalError("Created schema has no OID")
+                oid
+            }
         }
     }
 
