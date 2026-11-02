@@ -7,6 +7,10 @@
     "space-api-test-handler"
   ],
   "properties": {
+    "@ns:com:here:xyz": {
+      "tags": ["space_tag_beta", "space_tag_shared"]
+    },
+    "selectionMarker": "space-two",
     "collection": {
       "id": "um-mod-dev:test",
       "type": "NakshaCollection"

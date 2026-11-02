@@ -24,7 +24,7 @@ import com.here.naksha.lib.core.util.json.JsonSerializable;
 import java.util.Map;
 import java.util.Set;
 
-public final class PropertySelectionPostProcessor implements FeaturePostProcessor<XyzFeature> {
+public final class PropertySelectionPostProcessor<T extends XyzFeature> implements FeaturePostProcessor<T> {
 
   private final Set<String> propPaths;
 
@@ -33,8 +33,10 @@ public final class PropertySelectionPostProcessor implements FeaturePostProcesso
   }
 
   @Override
-  public XyzFeature postProcess(XyzFeature feature) {
+  public T postProcess(T feature) {
     final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(feature, propPaths);
-    return JsonSerializable.fromMap(tgtMap, XyzFeature.class);
+    @SuppressWarnings("unchecked")
+    final Class<T> type = (Class<T>) feature.getClass();
+    return JsonSerializable.fromMap(tgtMap, type);
   }
 }

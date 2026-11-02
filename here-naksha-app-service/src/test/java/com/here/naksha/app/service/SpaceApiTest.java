@@ -29,6 +29,8 @@ import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
 import com.here.naksha.lib.core.models.geojson.implementation.XyzFeature;
@@ -169,6 +171,41 @@ class SpaceApiTest extends ApiTest {
     List<String> spaceIds =
         returnedXyzFeatures.stream().map(XyzFeature::getId).toList();
     Assertions.assertTrue(spaceIds.containsAll(expectedSpaceIds));
+
+    // OR tag matching returns spaces with either tag.
+    final HttpResponse<String> orResponse =
+        getNakshaClient().get("hub/spaces?tags=space_tag_alpha,space_tag_beta", streamId);
+    assertThat(orResponse).hasStatus(200);
+    final List<String> orSpaceIds = parseJson(orResponse.body(), XyzFeatureCollection.class).getFeatures().stream()
+        .map(XyzFeature::getId).toList();
+    assertEquals(2, orSpaceIds.size());
+    Assertions.assertTrue(orSpaceIds.containsAll(expectedSpaceIds));
+
+    // AND tag matching returns only the space carrying both tags.
+    final HttpResponse<String> andResponse =
+        getNakshaClient().get("hub/spaces?tags=space_tag_alpha+space_tag_shared", streamId);
+    assertThat(andResponse).hasStatus(200);
+    assertEquals(
+        List.of("tc_240_space_1"),
+        parseJson(andResponse.body(), XyzFeatureCollection.class).getFeatures().stream()
+            .map(XyzFeature::getId).toList());
+
+    // A non-matching tag returns an empty collection.
+    final HttpResponse<String> noMatchResponse =
+        getNakshaClient().get("hub/spaces?tags=space_tag_missing", streamId);
+    assertThat(noMatchResponse).hasStatus(200);
+    assertEquals(0, parseJson(noMatchResponse.body(), XyzFeatureCollection.class).getFeatures().size());
+
+    // Tags, selection, and limit can be combined without returning unselected properties.
+    final HttpResponse<String> selectedResponse = getNakshaClient().get(
+        "hub/spaces?tags=space_tag_alpha,space_tag_beta&selection=p.selectionMarker&limit=1",
+        streamId);
+    assertThat(selectedResponse).hasStatus(200);
+    final JsonNode selectedFeatures = new ObjectMapper().readTree(selectedResponse.body()).get("features");
+    assertEquals(1, selectedFeatures.size());
+    final JsonNode selectedProperties = selectedFeatures.get(0).get("properties");
+    Assertions.assertTrue(selectedProperties.has("selectionMarker"));
+    Assertions.assertFalse(selectedProperties.has("collection"));
   }
 
   @Test

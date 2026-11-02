@@ -5,6 +5,10 @@
   "description": "UniMap Moderation storage for Dev environment, holding collections managed by Naksha service",
   "className": "com.here.naksha.lib.psql.PsqlStorage",
   "properties": {
+    "@ns:com:here:xyz": {
+      "tags": ["storage_tag_beta", "storage_tag_shared"]
+    },
+    "appName": "storage-two",
     "dbConfig": {
       "host": "${dataDb.host}",
       "db": "${dataDb.db}",
