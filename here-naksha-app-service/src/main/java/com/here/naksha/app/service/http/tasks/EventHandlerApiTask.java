@@ -104,7 +104,7 @@ public class EventHandlerApiTask<T extends XyzResponse> extends AbstractApiTask<
   }
 
   private @NotNull XyzResponse executeGetHandlers() {
-    return executeAdminListRequest(EVENT_HANDLERS, new MaskingPostProcessor<>());
+    return executeAdminListRequest(EVENT_HANDLERS, EventHandler.class, HANDLER_MASKING);
   }
 
   private @NotNull XyzResponse executeGetHandlerById() {

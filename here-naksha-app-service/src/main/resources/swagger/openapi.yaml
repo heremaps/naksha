@@ -1083,7 +1083,8 @@ components:
       in: query
       description: >-
         The maximum number of resources in the response.
-        Default is _30000_. Hard limit is _100000_.
+        For Map Features - default and max limit is 30000.
+        For all Admin Features (like Storages, EventHandlers, Spaces) - default and max limit is 1000.
       schema:
         type: integer
     Longitude:

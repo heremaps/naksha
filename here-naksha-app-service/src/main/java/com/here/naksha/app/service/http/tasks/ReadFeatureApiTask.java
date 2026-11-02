@@ -491,13 +491,13 @@ public class ReadFeatureApiTask<T extends XyzResponse> extends AbstractApiTask<X
     if (propPaths == null || propPaths.isEmpty()) {
       return MOM_10_POST_PROCESSOR;
     }
-    return combine(MOM_10_POST_PROCESSOR, new PropertySelectionPostProcessor(propPaths));
+    return combine(MOM_10_POST_PROCESSOR, new PropertySelectionPostProcessor<>(propPaths, XyzFeature.class));
   }
 
   private @NotNull FeaturePostProcessor<XyzFeature> postProcessor(
       Set<String> propPaths, boolean clip, Geometry clipGeo) {
     if (propPaths != null && !propPaths.isEmpty()) {
-      PropertySelectionPostProcessor propSelectionPostProcessor = new PropertySelectionPostProcessor(propPaths);
+      PropertySelectionPostProcessor<XyzFeature> propSelectionPostProcessor = new PropertySelectionPostProcessor<>(propPaths, XyzFeature.class);
       if (clip) {
         return combine(MOM_10_POST_PROCESSOR, propSelectionPostProcessor, new GeoClipPostProcessor(clipGeo));
       } else {

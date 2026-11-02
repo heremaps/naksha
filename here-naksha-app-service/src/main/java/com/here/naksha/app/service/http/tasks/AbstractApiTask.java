@@ -176,15 +176,16 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     }
   }
 
-  protected @NotNull XyzResponse executeAdminListRequest(@NotNull String collection, @Nullable FeaturePostProcessor<XyzFeature> masking) {
+  protected <R extends XyzFeature> @NotNull XyzResponse executeAdminListRequest(
+      @NotNull String collection, @NotNull Class<R> type, @Nullable FeaturePostProcessor<R> masking) {
     final QueryParameterList queryParams = ApiParams.queryParamsFromRequest(routingContext);
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_ADMIN_FEATURE_LIMIT);
     limit = (limit < 0 || limit > DEF_ADMIN_FEATURE_LIMIT) ? DEF_ADMIN_FEATURE_LIMIT : limit;
     final var propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
-    final FeaturePostProcessor<XyzFeature> postProcessor = SequentialPostProcessor.combine(masking, propPaths == null ? null : new PropertySelectionPostProcessor(propPaths));
+    final FeaturePostProcessor<R> postProcessor = SequentialPostProcessor.combine(masking, propPaths == null ? null : new PropertySelectionPostProcessor<>(propPaths, type));
     final ReadFeatures request = new ReadFeatures(collection).withLimit(limit).withPropertyOp(TagsUtil.buildOperationForTagsQueryParam(queryParams));
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
-      return transformReadResultToXyzCollectionResponse(rdResult, XyzFeature.class, 0, limit, null, postProcessor);
+      return transformReadResultToXyzCollectionResponse(rdResult, type, 0, limit, null, postProcessor);
     }
   }
 

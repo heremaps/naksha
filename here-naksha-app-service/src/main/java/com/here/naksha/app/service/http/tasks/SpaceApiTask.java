@@ -135,7 +135,7 @@ public class SpaceApiTask<T extends XyzResponse> extends AbstractApiTask<XyzResp
   }
 
   private @NotNull XyzResponse executeGetSpaces() {
-    return executeAdminListRequest(SPACES, null);
+    return executeAdminListRequest(SPACES, Space.class, null);
   }
 
   private @NotNull XyzResponse executeGetSpaceById() {

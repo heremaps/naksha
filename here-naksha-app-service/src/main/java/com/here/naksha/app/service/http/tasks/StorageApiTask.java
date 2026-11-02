@@ -104,7 +104,7 @@ public class StorageApiTask extends AbstractApiTask<XyzResponse> {
   }
 
   private @NotNull XyzResponse executeGetStorages() {
-    return executeAdminListRequest(STORAGES, new MaskingPostProcessor<>());
+    return executeAdminListRequest(STORAGES, Storage.class, STORAGE_MASKING);
   }
 
   private @NotNull XyzResponse executeGetStorageById() {
