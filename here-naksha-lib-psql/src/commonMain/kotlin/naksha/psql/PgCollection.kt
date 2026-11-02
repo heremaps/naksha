@@ -378,7 +378,7 @@ open class PgCollection @JvmOverloads constructor(
                     on.toTypedArray(),
                     include?.toTypedArray() ?: emptyArray(),
                     index.isConditional()
-                )
+                ).also { it.validate() }
             }
         }
     }

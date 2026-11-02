@@ -232,7 +232,11 @@ constraints/indexes reach current and future leaves.
 
 ### db-04-b — Implement collection creation
 
-Dependency inspection: production creation requires the db-04-g maintainer core, db-04-c storage policy and db-04-d index generation; the current prototype cannot be installed unchanged. It hard-codes three columns, accepts a different shift domain, always subpartitions fn, and cannot reconstruct payload schema/storage settings from its four-field registry. Prefer bringing the shared maintainer core forward rather than duplicating initial topology creation in Kotlin. Before index integration, resolve the existing blanket INCLUDE requirement: GIN does not support INCLUDE, so tag indexes cannot provide the proposed covering tuple columns. Awaiting agreement on that per-method exception before implementing full collection creation. No partial production DDL has been introduced.
+Dependency inspection: production creation requires the db-04-g maintainer core, db-04-c storage policy and db-04-d index generation; the current prototype cannot be installed unchanged. It hard-codes three columns, accepts a different shift domain, always subpartitions fn, and cannot reconstruct payload schema/storage settings from its four-field registry. Prefer bringing the shared maintainer core forward rather than duplicating initial topology creation in Kotlin. No partial production DDL has been introduced.
+
+Approved index policy: reject index definitions that cannot be created; do not silently omit INCLUDE columns or change methods/operator classes. Added `PgIndex.validate()` at descriptor generation, collection creation preflight and legacy CREATE execution. GIN with INCLUDE is rejected, as are mixed string/spatial keys in either order and other unsupported secondary method combinations. String payload INCLUDE in GiST remains distinct from a string key and is supported. Three `PgIndexTest` JVM tests pass for rejection, supported primitive combinations/payloads, unchanged requested includes and mutation revalidation; JS main/production compilation passes. Full collection creation remains in planning; these are preflight foundations, not completed DDL.
+
+Approved preflight increment commit: `Reject unsupported index definitions before issuing DDL.` This does not close db-04-b or db-04-d; production creation, index execution and partition propagation remain outstanding.
 
 Implement collection creation from every supplied `PgColumn`, root constraints,
 mandatory indexes, restricted HEAD/default, custom maintainer registration,

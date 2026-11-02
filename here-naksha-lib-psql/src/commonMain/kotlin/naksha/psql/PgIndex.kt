@@ -69,22 +69,42 @@ data class PgIndex(
         }
     }
 
-    internal fun create(conn: PgConnection, table: PgTable) {
+    /**
+     * Rejects index definitions unsupported by the available method/operator-class mapping before DDL. Requested includes are never silently removed. The leading key selects the method; secondary keys must be primitive, and the string pattern opclass is supported only by btree. GIN does not support INCLUDE.
+     * @since 3.0
+     */
+    internal fun validate() {
         if (on.isEmpty()) throw illegalArg("Index without target columns: $name")
+        val (primaryIndex, _) = indexAndOpsOf(on.first().first, name)
+        for (i in on.indices) {
+            val column = on[i].first
+            val (method, _) = indexAndOpsOf(column, name)
+            if (i > 0 && method != "btree") {
+                throw illegalArg("Index '$name' using $primaryIndex cannot use '${column.name}' as secondary key; only primitives are supported")
+            }
+            if (primaryIndex != "btree" && column.memberType == MemberType.STRING) {
+                throw illegalArg("Index '$name' using $primaryIndex cannot use string key '${column.name}' with text_pattern_ops")
+            }
+        }
+        if (primaryIndex == "gin" && includes.isNotEmpty()) {
+            throw illegalArg("Index '$name' using gin cannot have INCLUDE columns")
+        }
+        for (column in includes) {
+            if (indexAndOpsOf(column, name).first != "btree") {
+                throw illegalArg("Index '$name' cannot include '${column.name}'; only primitive payload columns are supported")
+            }
+        }
+    }
+
+    internal fun create(conn: PgConnection, table: PgTable) {
+        validate()
         val (primaryIndex, _) = indexAndOpsOf(on.first().first, name)
         val elements = ArrayList<String>(on.size)
         for (i in 0 ..< on.size) {
-            val (method, element) = indexAndOpsOf(on[i].first, name)
-            // The first column selects the index method (btree/gin/gist); any further columns must be
-            // plain btree-type columns (valid as extra btree columns, or via btree_gist inside a gist).
-            if (i > 0 && method != "btree") {
-                throw illegalArg("The member #$i (${on[i]}) can not be used as secondary index element, only primitives are allowed")
-            }
+            val (_, element) = indexAndOpsOf(on[i].first, name)
             elements.add(if (primaryIndex == "btree") "$element ${on[i].second}" else element)
         }
         val includeClause = if (includes.isEmpty()) "" else " INCLUDE (${includes.joinToString(", ") { column -> 
-            val (index, _) = indexAndOpsOf(column, "include")
-            if (index != "btree") throw illegalArg("The include of column $column is not possible, because it is no primitive")
             column.ident
         }})"
         val indexIdent = quoteIdent(table.name, "\$ci_", name)
