@@ -5,6 +5,14 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### db-04-a — Implement schema operations
+
+**Commit:** Implement transactional schema lookup and creation with logical-name comments.
+
+`PgDatabase` namespace lookup binds the physical name, reads unsigned OID text into Long, and returns -1 for absence. Creation validates final physical identifier size/NUL, obtains a transaction-scoped advisory lock by physical schema name, then returns negative existing OID without modifications or creates/comments the schema and returns positive OID. Writer CREATE/UPSERT callers supply the original logical name. Cursors close; connection and transaction ownership remain with the caller. Schema drop remains db-04-e, including registry cleanup.
+
+**Verification:** three database-free `PgDatabaseSchemaTest` JVM tests pass, covering missing/high OIDs through 4294967295, bindings, create/reuse SQL sequencing, comments, cursor closure, caller transaction preservation and invalid physical identifiers. JVM/JS production compilation and diff checks pass. No database/concurrency integration was run. Serialization covers cooperating creators in open READ COMMITTED transactions; external creators and higher-isolation stale snapshots may raise propagated errors. Logical ownership/collision checks remain with administrative metadata writes.
+
 ### db-03 — Finish the physical row and naming contract
 
 **Commit:** Unify identifier aliases and physical naming across storage boundaries.
