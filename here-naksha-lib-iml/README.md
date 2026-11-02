@@ -242,6 +242,43 @@ Local tests cover production write sessions and `writeEnabled = true` / `create 
 
 ## Performance And Edge Cases
 
+### Bounding-Box Experiment
+
+`ImlBoundingBoxPerformanceTest.kt` is a dedicated opt-in, read-only timing test. It is skipped unless `NAKSHA_RUN_IML_PERFORMANCE_TEST=true`, even if remote credentials are present. Set `NAKSHA_TEST_IML_REMOTE_DB_URL` to the inspection JDBC URL; `NAKSHA_TEST_IML_REMOTE_LAYER` optionally overrides the calibrated default layer. The fixed Hyderabad boxes are specific to that dataset and may need recalibration for another layer.
+
+```sh
+NAKSHA_RUN_IML_PERFORMANCE_TEST=true ./gradlew :here-naksha-lib-iml:jvmTest \
+  --tests naksha.iml.ImlBoundingBoxPerformanceTest --rerun --info
+```
+
+Run from the repository root with the remote URL already exported, or set both variables in an IntelliJ Gradle test configuration. Allow several minutes. Console output is also available in `build/reports/tests/jvmTest/classes/naksha.iml.ImlBoundingBoxPerformanceTest.html` under this module.
+
+The test runs ten overlapping boxes in each of two scenarios: clearing only this storage's application tuple cache before every query, then clearing once and retaining cached tuples across the ten queries. Each scenario returns approximately 100000 cumulative features, including duplicates. It verifies at least 70% common feature overlap, complete materialization, and that results were not truncated. Setup and a 100-feature warm-up are excluded from timing. No database or OS cache is flushed; GC, network, JIT, and JaCoCo instrumentation affect the results.
+
+Per-query CSV and scenario summaries report tuple-number selection, normal `loadTuples` materialization, a separate fresh decode pass, cache hits observed immediately before loading, repeated/new identities, encoded tuple-body bytes, totals and medians. Materialization already includes attachment decoding, JSON parsing and JBON construction for misses; fresh decoding is an additional re-decode cost and is not added to the reported two-phase total. Cache hits are observations, not instrumented database-fetch counts, because the default cache uses soft references. Encoded bytes count all result tuples, including cache hits, not network traffic.
+
+One verified run returned 102261 results per scenario, 11898 distinct identities and 8509 identities common to every box (79.94% of the largest result set):
+
+| Scenario | Selection Total | Materialization Total | Fresh Re-Decode Total | Two-Phase Total | Cache Hits |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Cache cleared before each query | 19.529 s | 137.378 s | 8.313 s | 156.907 s | 0.00% |
+| Overlap reuse | 19.866 s | 37.358 s | 12.095 s | 57.224 s | 88.37% |
+
+Observed aggregate materialization ratio was 3.677x. The second scenario runs after the first, so database cache warmth and JVM effects also differ. There are no timing-based assertions or claims of repeatable speedup; rerun to obtain numbers for the current environment.
+
+Output also reports features/second for each application phase and scenario totals. A subsequent database-only pass uses `EXPLAIN (ANALYZE, FORMAT JSON, TIMING OFF)` for the production bbox identity selection, a direct full-projection bbox query, and production-style exact loading in 500-pair batches. It measures all exact rows and an ideal overlap-miss workload retaining every previously seen identity. The diagnostic pass runs after the application scenarios, so its server caches are warm and it cannot warm pages between their measurements.
+
+The verified database pass produced these aggregate rates across ten boxes:
+
+| Database Query | Rows | Execution Time | Execution Rows/s | Planning + Execution Rows/s |
+| --- | ---: | ---: | ---: | ---: |
+| Bbox tuple identities | 102261 | 301.188 ms | 339526 | 255291 |
+| Bbox full projection | 102261 | 589.620 ms | 173435 | 172642 |
+| Exact loading, all rows | 102261 | 1213.498 ms | 84270 | 61260 |
+| Exact loading, ideal overlap misses | 11898 | 147.656 ms | 80579 | 59138 |
+
+In that same run, application two-phase throughput was 666 features/s with cache cleared per query and 2330 features/s with overlap reuse. Database rates are executor rows/second from PostgreSQL, not delivered feature throughput. EXPLAIN discards result rows, so normal wire serialization, JDBC/network transfer and JVM decoding are excluded; toasted JSON may not be fully read when it is only projected. Execution includes EXPLAIN overhead, planning is reported separately, and the full-projection diagnostic is not an implemented one-phase API. Ideal overlap misses are computed from previously seen identities, not actual soft-cache survival.
+
 Writer bootstrap and initial source-version reconciliation run once per storage instance, not once per transaction. Subsequent transactions use the durable allocator; independent external version allocation after preparation can cause an explicit conflict. Recreate storage to reconcile imported versions, or ensure writers cooperate with the adapter's allocator and advisory gate.
 
 Row allocation strategies are cached per physical layer and transaction. Identity and sequence-default columns use their server allocator after one maximum/sequence-state check, advancing a stale sequence without rewinding it. Legacy tables read `max(i)` once and increment locally under the writer gate. All consumers of those allocators must cooperate with the gate; independent external sequence draws are not synchronized by the adapter. Legacy tables without sequences retain their cross-transaction `max(i)` behavior, so purging the highest row can allow its number to be reused later.
