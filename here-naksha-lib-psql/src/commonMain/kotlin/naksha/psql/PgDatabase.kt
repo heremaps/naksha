@@ -561,6 +561,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         options: PgCollectionCreateOptions
     ) {
         execute_sql(schema = schema, table = table) {
+            for (index in indices) index.validate()
             val quotedSchema = quoteIdent(schema)
             val quotedTable = quoteIdent(table)
             val CREATE_DDL = """CREATE TABLE IF NOT EXISTS $quotedSchema.$quotedTable (
