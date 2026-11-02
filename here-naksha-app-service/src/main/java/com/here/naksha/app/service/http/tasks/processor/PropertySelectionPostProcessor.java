@@ -27,16 +27,16 @@ import java.util.Set;
 public final class PropertySelectionPostProcessor<T extends XyzFeature> implements FeaturePostProcessor<T> {
 
   private final Set<String> propPaths;
-  private final Class<T> type;
 
-  public PropertySelectionPostProcessor(Set<String> propPaths, Class<T> type) {
+  public PropertySelectionPostProcessor(Set<String> propPaths) {
     this.propPaths = propPaths;
-    this.type = type;
   }
 
   @Override
   public T postProcess(T feature) {
     final Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(feature, propPaths);
+    @SuppressWarnings("unchecked")
+    final Class<T> type = (Class<T>) feature.getClass();
     return JsonSerializable.fromMap(tgtMap, type);
   }
 }

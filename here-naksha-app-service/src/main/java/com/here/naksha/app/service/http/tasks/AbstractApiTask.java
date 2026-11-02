@@ -182,8 +182,11 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_ADMIN_FEATURE_LIMIT);
     limit = (limit < 0 || limit > DEF_ADMIN_FEATURE_LIMIT) ? DEF_ADMIN_FEATURE_LIMIT : limit;
     final var propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
-    final FeaturePostProcessor<R> postProcessor = SequentialPostProcessor.combine(masking, propPaths == null ? null : new PropertySelectionPostProcessor<>(propPaths, type));
-    final ReadFeatures request = new ReadFeatures(collection).withLimit(limit).withPropertyOp(TagsUtil.buildOperationForTagsQueryParam(queryParams));
+    final FeaturePostProcessor<R> postProcessor = SequentialPostProcessor.combine(
+        masking, propPaths == null ? null : new PropertySelectionPostProcessor<>(propPaths));
+    final ReadFeatures request = new ReadFeatures(collection)
+        .withLimit(limit)
+        .withPropertyOp(TagsUtil.buildOperationForTagsQueryParam(queryParams));
     try (Result rdResult = executeReadRequestFromSpaceStorage(request)) {
       return transformReadResultToXyzCollectionResponse(rdResult, type, 0, limit, null, postProcessor);
     }
