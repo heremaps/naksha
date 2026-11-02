@@ -201,9 +201,9 @@ abstract class PgTable(
      * @param conn the connection to use to execute the creation.
      * @param index the index to add.
      */
-    open fun createIndex(conn: PgConnection, index: PgIndex) {
+    open fun createIndex(database: PgDatabase, conn: PgConnection, index: PgIndex) {
         if (!indices.contains(index)) {
-            index.create(conn, this)
+            database.collection_create_index(conn, collection.catalogId.catalogName(), name, index)
             indices = indices + index
         }
     }
@@ -233,9 +233,9 @@ abstract class PgTable(
      * @param conn the connection to use to execute the removal.
      * @param index the index to remove.
      */
-    open fun dropIndex(conn: PgConnection, index: PgIndex) {
+    open fun dropIndex(database: PgDatabase, conn: PgConnection, index: PgIndex) {
         if (indices.contains(index)) {
-            index.drop(conn, name)
+            database.collection_drop_index(conn, collection.catalogId.catalogName(), name, index)
             indices = indices - index
         }
     }

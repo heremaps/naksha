@@ -16,6 +16,14 @@ class PgIndexTest {
     private val number = PgColumn(7, Member("number", MemberType.INT64))
 
     @Test
+    fun rendersValidatedMethodKeysIncludesAndPredicate() {
+        val btree = PgIndex("names", arrayOf(name to PgOrder.DESC, number to PgOrder.ASC), arrayOf(PgColumn.FnColumn), true)
+        assertEquals("USING btree (\"name\" COLLATE \"C\" text_pattern_ops DESC, \"number\" ASC) INCLUDE (\"fn\") WHERE \"name\" IS NOT NULL", btree.definition())
+        assertEquals("USING gist (naksha_2d(\"geo\")) INCLUDE (\"fn\")", PgIndex("spatial", arrayOf(geo to PgOrder.ASC), arrayOf(PgColumn.FnColumn)).definition())
+        assertEquals("USING gin (\"tags\" array_ops)", PgIndex("tags", arrayOf(tags to PgOrder.ASC)).definition())
+    }
+
+    @Test
     fun rejectsUnsupportedKeyCombinationsInEitherOrder() {
         for (keys in listOf(listOf(name, geo), listOf(geo, name), listOf(tags, name),
             listOf(name, tags), listOf(number, geo), listOf(geo, tags))) {

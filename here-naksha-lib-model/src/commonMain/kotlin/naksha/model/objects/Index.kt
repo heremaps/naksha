@@ -3,6 +3,10 @@
 package naksha.model.objects
 
 import naksha.base.AnyObject
+import naksha.base.Id
+import naksha.base.IdTextType
+import naksha.base.NakshaException
+import naksha.base.illegalId
 import naksha.base.NotNullProperty
 import naksha.base.NullableProperty
 import naksha.base.StringList
@@ -50,10 +54,37 @@ open class Index() : AnyObject() {
     }
 
     /**
-     * The index name. Must be unique within the collection.
+     * The logical index name, unique within the collection and preserved without normalization or storage-specific aliasing. Accepts classifications through [IdTextType.UNSAFE]; internal, reserved and illegal names are rejected.
      * @since 3.0
      */
-    var name: String by NAME
+    var name: String
+        get() = declaredName
+        set(value) {
+            if (!IdTextType.UNSAFE.accepts(IdTextType.classify(value))) throw illegalId("Invalid custom index name")
+            declaredName = value
+        }
+
+    private var declaredName: String by NAME
+    private var _id_org: String? = null
+    private var _id_val: Id? = null
+
+    /**
+     * Hidden virtual identifier derived on demand from [name], excluded from serialized data. Reuses the same [Id] while the source name has the same string identity; source replacement, including raw-map changes, refreshes the cache.
+     * @throws NakshaException with [naksha.base.NakshaError.ILLEGAL_ID] for an invalid custom index name.
+     * @since 3.0
+     */
+    val id: Id
+        get() {
+            val name = this.name
+            val cached = _id_val
+            @Suppress("StringReferentialEquality")
+            if (cached != null && name === _id_org) return cached
+            val id = Id(name)
+            if (!IdTextType.UNSAFE.accepts(id.textType)) throw illegalId("Invalid custom index name")
+            _id_org = name
+            _id_val = id
+            return id
+        }
 
     /** True iff the underlying map has an entry for [name]. */
     fun hasName(): Boolean = hasRaw("name")
@@ -219,7 +250,7 @@ open class Index() : AnyObject() {
     }
 
     companion object Index_C {
-        private val NAME             = NotNullProperty<Index, String>(String::class) { _, _ -> "" }
+        private val NAME             = NotNullProperty<Index, String>(String::class, name = "name") { _, _ -> "" }
         private val ON               = NotNullProperty<Index, StringList>(StringList::class)
         private val STRINGS_NULLABLE = NullableProperty<Index, StringList>(StringList::class, autoRemove = true)
         private val INCLUDE          = NullableProperty<Index, StringList>(StringList::class)

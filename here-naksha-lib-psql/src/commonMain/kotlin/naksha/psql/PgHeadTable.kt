@@ -81,11 +81,11 @@ PARTITION BY RANGE ((($FnColumn & 65535)::int4 % ${collection.partitions}))$TABL
         for (partition in partitions) partition.create(conn)
     }
 
-    override fun createIndex(conn: PgConnection, index: PgIndex) {
+    override fun createIndex(database: PgDatabase, conn: PgConnection, index: PgIndex) {
         if (!partitions.isEmpty()) {
-            for (partition in partitions) partition.createIndex(conn, index)
+            for (partition in partitions) partition.createIndex(database, conn, index)
         } else {
-            super.createIndex(conn, index)
+            super.createIndex(database, conn, index)
         }
         if (index !in indices) indices += index
     }
@@ -108,11 +108,11 @@ PARTITION BY RANGE ((($FnColumn & 65535)::int4 % ${collection.partitions}))$TABL
         if (index in indices) indices -= index
     }
 
-    override fun dropIndex(conn: PgConnection, index: PgIndex) {
+    override fun dropIndex(database: PgDatabase, conn: PgConnection, index: PgIndex) {
         if (!partitions.isEmpty()) {
-            for (partition in partitions) partition.dropIndex(conn, index)
+            for (partition in partitions) partition.dropIndex(database, conn, index)
         } else {
-            super.dropIndex(conn, index)
+            super.dropIndex(database, conn, index)
         }
         if (index in indices) indices -= index
     }

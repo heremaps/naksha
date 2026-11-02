@@ -298,6 +298,7 @@ open class NakshaCollection() : NakshaFeature() {
 
     /**
      * The materialized parts of the features stored in the collection.
+     * Members are create-only for now: an existing collection's member definitions cannot be modified, including nested settings. A dedicated schema-modification operation may be introduced later.
      *
      * Each [Member] declares a name, a [MemberType], an optional [JsonPath] to extract the value from, and a [retain strategy][MemberRetain]. At write time, the storage walks the feature using the path, coerces the value to the declared type, and stores it as a dedicated member alongside the encoded feature blob. The value also remains in the encoded feature blob.
      *
@@ -435,6 +436,7 @@ open class NakshaCollection() : NakshaFeature() {
 
     /**
      * The indices to maintain on this collection.
+     * Index definitions are create-only for now and are built synchronously during collection/partition creation. Updating an existing collection cannot add, remove or change indices; dedicated index-modification support is deferred.
      *
      * Each [Index] declares a `name`, the column(s) to index, an optional included columns.
      *
@@ -503,7 +505,7 @@ open class NakshaCollection() : NakshaFeature() {
      * @since 3.0
      */
     open fun addIndex(value: Index): NakshaCollection {
-        NakshaIdType.INDEX.verify(value.name)
+        value.id // Validate logical names, including descriptors loaded through the underlying map.
         var list = this.indices
         if (list == null) {
             list = IndexList()

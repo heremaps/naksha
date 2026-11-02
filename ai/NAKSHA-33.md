@@ -41,19 +41,30 @@ dedicated database functions.
   out (`~~db-00~~`) in the table so they stay linked but out of the way.
 - `PgWriter*` owns request validation, feature-to-tuple encoding, operation
   dispatch, response construction, and transaction bookkeeping.
-- `PgDatabase` owns schema/table/index DDL, partition management, row mutation SQL,
-  preparation/execution, physical metadata queries, and tuple persistence/result
-  reconstruction. Mutation callers supply immutable `NewTuple` wrappers and
-  receive final `Tuple` states. `PgRows` is an internal transport detail.
+- `PgDatabase` owns generation and execution of all write operations: schema/table/index
+  DDL, partition management, and INSERT/UPDATE/UPSERT/DELETE/PURGE SQL, including
+  preparation, binding and tuple persistence/result reconstruction. Mutation callers
+  supply immutable `NewTuple` wrappers and receive final `Tuple` states.
   Request processing, member processors, feature encoding, and admin-feature
   business logic remain outside `PgDatabase`.
 - Keep `PgRows` and its columnar binding/reading helpers, `PgRowsColumn`,
   `PgColumn` (the current singular class), and `PgIndex`. Keep logical
   `PgCatalog`/`PgCollection` wrappers. Small SQL-fragment helpers in these types
-  are appropriate; executing DDL/DML belongs in `PgDatabase`.
-- Keep `PgQueryWhereBuilder` as a focused predicate builder. Consolidate physical
-  read SQL through the database boundary after writers work; avoid making this a
-  prerequisite for every writer change.
+  are appropriate; descriptors must not execute writes. `PgIndex` may retain
+  capability validation and index-definition fragments; `PgColumn` may retain
+  identifier/column-definition fragments.
+- `PgRows`/`PgRowsColumn` remain internal transport helpers: column arrays,
+  ordinal conversion, aliases, placeholders, type names, binding values, UNNEST
+  projections and cursor ingestion. They do not open connections or execute DDL/DML.
+- Read planning, predicate/order generation and read execution may remain in
+  query builders, readers, caches and sessions where appropriate. Keep
+  `PgQueryWhereBuilder` focused. Fix naming/ordinal consistency as needed, but do
+  not require consolidation of all read SQL or move every SQL fragment into
+  `PgDatabase` as part of this migration.
+- Write methods use the caller's connection and transaction, close their own
+  plans/cursors, and never commit internally. Initial root/child index builds
+  remain synchronous; members and index definitions are immutable after collection
+  creation until a dedicated schema/index modification operation is introduced.
 - Support clean/new databases, as agreed in `partman.md`.
 - Current authoritative tuple contract: approved
   [db-01-c](NAKSHA-33-DONE.md#db-01-c--revise-the-tuple-persistence-contract),
@@ -120,7 +131,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | ~~[db-04-a](NAKSHA-33-DONE.md#db-04-a--implement-schema-operations)~~ | ~~Implement schema operations~~ | [db-04](#db-04--implement-schema-collection-and-index-operations) | `DONE` | Implement transactional schema lookup and creation with logical-name comments. |
 | [db-04-b](#db-04-b--implement-collection-creation) | Implement collection creation | [db-04](#db-04--implement-schema-collection-and-index-operations) | `PLANNING` | — |
 | [db-04-c](#db-04-c--move-storage-settings-out-of-table-classes) | Move storage settings out of table classes | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
-| [db-04-d](#db-04-d--move-index-execution-into-pgdatabase) | Move index execution into PgDatabase | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
+| [db-04-d](#db-04-d--move-index-execution-into-pgdatabase) | Move index execution into PgDatabase | [db-04](#db-04--implement-schema-collection-and-index-operations) | `IN_PROGRESS` | — |
 | [db-04-e](#db-04-e--implement-collection-and-schema-drop) | Implement collection and schema drop | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-04-f](#db-04-f--route-bootstrap-and-create-upsert-preparation) | Route bootstrap and create-upsert preparation | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
 | [db-04-g](#db-04-g--productionize-the-custom-partition-maintainer) | Productionize the custom partition maintainer | [db-04](#db-04--implement-schema-collection-and-index-operations) | `TODO` | — |
@@ -232,6 +243,8 @@ constraints/indexes reach current and future leaves.
 
 ### db-04-b — Implement collection creation
 
+Current schema policy: members and indices are immutable after collection creation. Index builds remain synchronous during initial root/child creation; user index modification/concurrent builds are deferred to a dedicated future operation. UPDATE/UPSERT preparation compares existing and incoming declared member/index definitions before encoding or replacing caches and rejects changes. Validation lives in PgWriter, compares definitions in their original order with direct loops and early failure, and neither serializes metadata nor expands/defaults/sorts/copies declarations. Its list comparison is a private companion method. Missing declarations differ from explicitly empty declarations; storage-maintained member positions are ignored. Unrelated metadata updates and UPSERT creation remain allowed. Four focused schema-comparison tests pass, including nested field changes and member/index reordering rejection; JVM and JS main/production compilation pass. End-to-end/concurrent metadata enforcement remains dependent on the write transaction/cache migration. Removed the unused Write force property and fluent setter; no callers or test references remained.
+
 Dependency inspection: production creation requires the db-04-g maintainer core, db-04-c storage policy and db-04-d index generation; the current prototype cannot be installed unchanged. It hard-codes three columns, accepts a different shift domain, always subpartitions fn, and cannot reconstruct payload schema/storage settings from its four-field registry. Prefer bringing the shared maintainer core forward rather than duplicating initial topology creation in Kotlin. No partial production DDL has been introduced.
 
 Approved index policy: reject index definitions that cannot be created; do not silently omit INCLUDE columns or change methods/operator classes. Added `PgIndex.validate()` at descriptor generation, collection creation preflight and legacy CREATE execution. GIN with INCLUDE is rejected, as are mixed string/spatial keys in either order and other unsupported secondary method combinations. String payload INCLUDE in GiST remains distinct from a string key and is supported. Three `PgIndexTest` JVM tests pass for rejection, supported primitive combinations/payloads, unchanged requested includes and mutation revalidation; JS main/production compilation passes. Full collection creation remains in planning; these are preflight foundations, not completed DDL.
@@ -253,8 +266,25 @@ of the old table classes; make intentional changes explicit.
 
 ### db-04-d — Move index execution into PgDatabase
 
+Approved implementation increment commit: `Centralize index writes and enforce immutable collection schemas.` Includes synchronous database-owned index CREATE/DROP, removal of PgIndex execution adapters, cached virtual Index.id and physical aliases, fixed partition/index name budgets, Write.force removal and ordered writer-side schema validation. PgWriter.kt and PgDatabase.kt now use two-space indentation throughout; embedded SQL text was preserved. Project indentation defaults are recorded in .editorconfig. Completion is recorded in [the approved increment archive](NAKSHA-33-DONE.md#db-04-bd--index-execution-and-schema-immutability-increment); parent tickets remain open for collection/maintainer integration and live partition-index propagation checks. Stop after this commit; do not start the next job without a new instruction.
+
+Naming helper organization: removed the separate `PgNames.kt` file. Identifier budgets and naming helpers now live beside the existing Id naming extensions in `PgDatabase.kt`. `Id.indexName()` returns the fixed-budget physical index alias; `Id.indexName(table)` appends it to a physical table name and validates the complete identifier. CREATE/DROP and naming tests use these extensions. The PgNames reference in the budget history below describes the earlier file organization, not an additional class. Eight focused naming/database-index JVM tests and JS production compilation pass after relocation.
+
+Current identifier budget supersedes the earlier `_h..._p...` / `$ci_` examples: finite leaves use `{root}${nv >> shift}${partitionIndex}` (dollar separators), and indexes use `{table}${indexAlias}`. The standard identifier maximum is 63 UTF-8 bytes. Reserve 16 bytes for the history suffix including `$`, four for `$255`, and 14 for `$` plus a 13-byte index alias. This leaves 29 bytes for collection roots: `29 + 16 + 4 + 1 + 13 = 63`. The worst-case signed Int is -2147483648, producing `i$_2147483648` (13 bytes), not -2000000000. Index aliases use a fixed SAFE/13-byte budget and prefix `i` across roots/leaves. Collection aliases use URL_SAFE/29 bytes and prefix `t`; RESERVED collection names exceeding 29 bytes must also alias, while reserved schema names may remain unchanged. PgDatabase.kt defines these budgets and finite-history/index naming helpers; CREATE/DROP use the same index helper and reject oversized final names rather than truncating. Tests cover the exact 63-byte boundary, one-byte overflow, minimum Int, all supported shifts 12..41 and performance index 255. Eight naming/database-index JVM tests pass and JS production compilation passes. The prototype maintainer/legacy hierarchy still has historical suffixes; production maintainer integration must use this current naming contract.
+
+Index-name alignment: `Index.id` is a hidden virtual read-only property cached by source-name identity in `_id_org` / `_id_val`, excluded from serialized metadata. Name setters and collection insertion accept ordinary legal text through UNSAFE, rejecting INTERNAL, RESERVED and ILLEGAL custom names; raw-map descriptors are validated on id access. `PgIndex.id` retains the logical identity for physical naming. CREATE and DROP use the same SAFE alias policy with prefix `i` and a UTF-8 budget accounting for the table name and `$ci_` separator, then quote and validate the full identifier. Long/custom index names now alias rather than causing truncation; the final length guard still rejects roots that leave insufficient space even for a generated alias. Existing SQL quoting remains the injection protection. Two IndexIdTest, four PgIndexTest and three PgDatabaseIndexTest JVM tests pass; model JS test compilation and JS production compilation pass. Tests cover cache invalidation/serialization, illegal names and identical long/unsafe aliases for CREATE/DROP.
+
+Approved prerequisite increment: `PgIndex.definition()` renders validated method/key/order/INCLUDE/predicate fragments. `PgDatabase.collection_create_index` and `collection_drop_index` execute schema-qualified root DDL, validate generated identifier byte limits, close cursors and preserve caller transaction ownership. Parent indexes are intended to propagate through native PARTITION OF inheritance; existing/future/repaired partition behavior still needs database integration verification with db-04-g. CREATE deliberately does not use IF NOT EXISTS to silently accept an unrelated existing index. DROP uses the same physical alias as CREATE and does not use CASCADE.
+
+Removed relation-name-based fillfactor inference and `PgIndex.create/drop` execution methods. The legacy table hierarchy now takes an explicit PgDatabase for index creation/removal and delegates actual DDL to `collection_create_index/drop_index`, preserving its existing traversal/bookkeeping until the hierarchy is removed. `PgIndex` has no connection/table execution dependency; validation and definition fragments remain. Four PgIndexTest and two PgDatabaseIndexTest JVM tests pass, covering rendered SQL, unsupported definitions, qualified DDL, byte-limit rejection and caller/cursor ownership. JVM test-source and JS main/production compilation pass with the updated caller signatures. No live database index propagation tests were run. Collection creation remains blocked on the shared maintainer/storage integration, not duplicated here.
+
 Keep `PgIndex` as a descriptor. Move create/drop execution into `PgDatabase`,
 honoring key order, method/opclass, predicates, includes, and future partitions.
+Completed execution relocation: removed `PgIndex.create/drop` and redirected
+legacy callers to the database boundary. Keep `PgIndex.validate()` /
+`definition()` and `PgColumn` SQL fragments; a properties-only descriptor rewrite
+is not required. Root/child index creation stays synchronous and transactional;
+these internal operations do not enable user index-definition updates.
 Never infer HEAD status from a relation name to choose storage parameters.
 Integrate with the custom maintainer: existing, future and repaired leaves must
 inherit the same mandatory/custom index contract; test add/drop after registration.
@@ -341,6 +371,8 @@ on old table descriptors or direct history INSERTs.
 Implement tuple-based `rows_insert`; make `PgWriterInsert` supply new states
 through the agreed wrapper and use returned tuples. Move row conversion, SQL,
 and result reconstruction inside `PgDatabase`.
+Keep transport-fragment generation in `PgRows`; the database uses it to prepare,
+bind and execute mutations. Remove direct mutation execution from the writer.
 
 ### db-06-b — Insert through the root at HEAD
 
@@ -366,6 +398,9 @@ immutable tuples.
 Implement tuple-based `rows_update` / `rows_upsert` and switch their writers to
 `NewTuple` inputs and returned final tuples. Keep internal `PgRows` and
 reconstruction in `PgDatabase`; never update cached tuple metadata.
+Writers retain request orchestration only. Adapt the old HEAD/history algorithms
+to root mutations rather than mechanically relocating their SQL; keep transport
+fragments in `PgRows` and execute all mutations through `PgDatabase`.
 
 ### db-07-b — Archive by nv update through the root
 
@@ -431,9 +466,11 @@ children.
 
 ### db-09-a — Add tuple loading and query functions
 
-Add database functions for tuple loading, physical metadata inspection, and
-prepared query execution; route SQL currently in `PgCache`, `PgSession`, and
-`PgReader` through them. Retain `PgRows` and focused predicate builders.
+Finish tuple loading, physical metadata inspection and prepared-read support where
+needed by the migration. Read SQL generation/execution may remain in `PgCache`,
+`PgSession`, `PgReader` and query builders; routing all reads through `PgDatabase`
+is not an acceptance requirement. Retain `PgRows` and focused predicate builders,
+and verify that every read uses consistent physical naming and ordinal fn values.
 
 ### db-09-b — Finish root query SQL and filtering
 
@@ -451,6 +488,8 @@ discovery. Replace or remove `PgRelation` name parsing and its SQL as needed.
 Remove `PgTable`, `PgHeadTable`, `PgHistoryTable`, `PgHistoryPartition`, and
 `PgDistributionPartition` after checking all callers, tests, and documentation.
 Review `PgCollectionIndex` and `PgWriterPlan` for remaining value independently.
+Move their remaining DDL/DML execution to `PgDatabase` before deletion; preserve
+useful descriptor and transport fragments without requiring a broad read rewrite.
 
 ### db-09-e — Remove manual partition creation
 
