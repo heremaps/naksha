@@ -1,4 +1,4 @@
-package naksha.model.streaming
+package com.here.naksha.cli.stream
 
 import naksha.base.NakshaError
 import naksha.base.NakshaError.NakshaErrorCompanion.CLOSED
@@ -9,11 +9,16 @@ import naksha.base.Version
 import naksha.base.unsupportedOp
 import naksha.model.IStreamSession
 import naksha.model.SessionOptions
+import naksha.model.streaming.Stream
+import naksha.model.streaming.StreamChunk
+import naksha.model.streaming.StreamException
+import naksha.model.streaming.StreamRequest
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /** Shared JVM base for stream readers; the position of a chunk must be a restart point, so reading again from it delivers the chunk again. */
+@Deprecated("To be discussed")
 abstract class QueueStream(
     session: IStreamSession,
     request: StreamRequest,
