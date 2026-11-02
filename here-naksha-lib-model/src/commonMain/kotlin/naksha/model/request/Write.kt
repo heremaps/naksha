@@ -301,24 +301,6 @@ open class Write : AnyObject() {
         return this
     }
 
-    /**
-     * If `true`, destructive collection-schema changes (currently: dropping a [naksha.model.objects.Member]) are allowed during UPSERT/UPDATE.
-     *
-     * Without `force`, removing a [Member][naksha.model.objects.Member] from [NakshaCollection.members][naksha.model.objects.NakshaCollection.members] throws [NakshaError.ILLEGAL_ARGUMENT].
-     *
-     * Default `false`.
-     * @since 3.0
-     */
-    var force by BOOLEAN_FALSE
-
-    /**
-     * @see [force]
-     */
-    fun withForce(value: Boolean): Write {
-        force = value
-        return this
-    }
-
     @Deprecated("Renamed", ReplaceWith("createCatalog(catalog)"))
     fun createMap(catalog: NakshaCatalog): Write = createCatalog(catalog)
 

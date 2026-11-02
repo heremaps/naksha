@@ -5,6 +5,18 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### db-04-b/d — Index execution and schema immutability increment
+
+**Commit:** Centralize index writes and enforce immutable collection schemas.
+
+**Completion:** approved increment only; db-04-b and db-04-d remain open for collection/maintainer integration and live partition-index verification.
+
+Moved index CREATE/DROP execution into PgDatabase and removed PgIndex execution methods. Legacy table traversal passes an explicit database and delegates writes, retaining bookkeeping until hierarchy removal. PgIndex keeps validation and definition fragments; root-index builds stay synchronous and caller-transaction-owned. Added hidden virtual Index.id with source-identity cache invalidation and serialization exclusion; model and physical descriptors reject invalid custom names. Physical index aliases use a fixed 13-byte budget and prefix i; complete names use dollar separators. Shared naming extensions and constants live in PgDatabase.kt, not PgNames.kt. The 63-byte budget reserves 29 root bytes, 16 history suffix bytes, four performance suffix bytes and 14 index suffix bytes; oversized complete names fail rather than truncate.
+
+Existing collection members and indices are create-only. PgWriter compares corresponding definitions in their declared order using loops and early failure, without serialization/default expansion/sorting/list copies. Nested path/key/order/include changes and reordering are rejected. Removed Write.force and its fluent setter. Normalized PgWriter.kt and PgDatabase.kt indentation to two spaces, preserving embedded SQL strings; added project-wide EditorConfig indentation defaults.
+
+**Verification:** final combined run of IndexIdTest, PgIndexTest, PgDatabaseIndexTest, PgNamingTest and PgCollectionSchemaTest passed, together with JS production compilation. Model JS test-source compilation also passed during implementation. No live database index propagation or concurrent metadata-write tests were run. Full collection creation, shared maintainer integration and transaction/cache migration remain separate outstanding work. No database objects were modified.
+
 ### db-04-a — Implement schema operations
 
 **Commit:** Implement transactional schema lookup and creation with logical-name comments.

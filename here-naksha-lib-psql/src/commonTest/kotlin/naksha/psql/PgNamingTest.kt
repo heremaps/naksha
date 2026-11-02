@@ -32,14 +32,34 @@ class PgNamingTest {
         for (text in listOf("a".repeat(26), "road west", "caf\u00e9")) {
             val id = Id(text)
             assertEquals(id.textAlias(IdTextType.URL_SAFE, 25, "s"), id.catalogName())
-            assertEquals(id.textAlias(IdTextType.URL_SAFE, 25, "t"), id.collectionName())
+            assertEquals(id.textAlias(IdTextType.URL_SAFE, PG_ROOT_NAME_BYTES, "t"), id.collectionName())
         }
         assertEquals("a".repeat(25), Id("a".repeat(25)).collectionName())
         for (text in listOf("naksha~admin", "naksha~collections", "naksha~${"a".repeat(25)}")) {
             assertEquals(text, Id(text).catalogName())
-            assertEquals(text, Id(text).collectionName())
+            assertEquals(Id(text).textAlias(IdTextType.RESERVED, PG_ROOT_NAME_BYTES, "t"), Id(text).collectionName())
         }
         assertFailsWith<NakshaException> { Id("a'b").collectionName() }
+    }
+
+    @Test
+    fun budgetsFullPartitionAndIndexNamesWithoutOverflow() {
+        assertEquals(29, PG_ROOT_NAME_BYTES)
+        val root = "a".repeat(PG_ROOT_NAME_BYTES)
+        assertEquals(root, Id(root).collectionName())
+        assertTrue(Id("a".repeat(PG_ROOT_NAME_BYTES + 1)).collectionName().startsWith("t\$"))
+        val id = Id("long index name", Int.MIN_VALUE.toLong(), skipVerification = true)
+        val alias = id.indexName()
+        assertEquals("i\$_2147483648", alias)
+        assertEquals(PG_INDEX_ALIAS_BYTES, alias.encodeToByteArray().size)
+        val maximumLeaf = "$root\$${"9".repeat(PG_HISTORY_SUFFIX_BYTES - 1)}\$255"
+        assertEquals(PG_IDENTIFIER_BYTES, id.indexName(maximumLeaf).encodeToByteArray().size)
+        assertFailsWith<NakshaException> { id.indexName(maximumLeaf + "0") }
+        for (shift in 12..41) {
+            val leaf = historyTableName(root, naksha.base.Version.HEAD.number - 1, shift, 255)
+            assertTrue(id.indexName(leaf).encodeToByteArray().size <= PG_IDENTIFIER_BYTES)
+        }
+        assertEquals("foo\$2026\$15", historyTableName("foo", 2026L shl 41, 41, 15))
     }
 
     @Test

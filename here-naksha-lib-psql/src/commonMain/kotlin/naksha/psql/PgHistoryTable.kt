@@ -89,12 +89,12 @@ $TABLESPACE"""
      * @return the [PgHistoryPartition] created or already existing.
      * @see [PgCollection.historyPartitionNumberOf]
      */
-    fun createPartition(conn: PgConnection, partitionNumber: Int): PgHistoryPartition {
+    fun createPartition(database: PgDatabase, conn: PgConnection, partitionNumber: Int): PgHistoryPartition {
         val partition = partitions[partitionNumber] ?: PgHistoryPartition(this, partitionNumber)
         partitions[partitionNumber] = partition
         partition.create(conn)
         for (index in indices) {
-            partition.createIndex(conn, index)
+            partition.createIndex(database, conn, index)
         }
         return partition
     }
@@ -117,13 +117,13 @@ $TABLESPACE"""
         indices = indices - index
     }
 
-    override fun createIndex(conn: PgConnection, index: PgIndex) {
-        for (entry in partitions) entry.value.createIndex(conn, index)
+    override fun createIndex(database: PgDatabase, conn: PgConnection, index: PgIndex) {
+        for (entry in partitions) entry.value.createIndex(database, conn, index)
         if (index !in indices) indices += index
     }
 
-    override fun dropIndex(conn: PgConnection, index: PgIndex) {
-        for (entry in partitions) entry.value.dropIndex(conn, index)
+    override fun dropIndex(database: PgDatabase, conn: PgConnection, index: PgIndex) {
+        for (entry in partitions) entry.value.dropIndex(database, conn, index)
         indices = indices - index
     }
 }

@@ -1,11 +1,11 @@
 package naksha.psql
 
 import naksha.base.illegalArg
+import naksha.base.Id
+import naksha.base.IdTextType
+import naksha.base.illegalId
 import naksha.model.objects.Index
 import naksha.model.objects.MemberType
-import naksha.model.request.OrderBy
-import naksha.model.request.query.SortOrder
-import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
 
@@ -46,6 +46,13 @@ data class PgIndex(
     @JvmField
     var conditional: Boolean = false
 ) {
+    /**
+     * The logical index identifier, used to derive implementation-specific physical aliases.
+     * @since 3.0
+     */
+    val id: Id = Id(name).also {
+        if (!IdTextType.UNSAFE.accepts(it.textType)) throw illegalId("Invalid custom index name")
+    }
 
     companion object PgIndex_C {
         // Returns (index-method, index-element) for a column. The element includes the column reference
@@ -96,7 +103,11 @@ data class PgIndex(
         }
     }
 
-    internal fun create(conn: PgConnection, table: PgTable) {
+    /**
+     * Validated method, keys, payload and predicate for a root index. Storage parameters are not inferred from relation names.
+     * @since 3.0
+     */
+    internal fun definition(): String {
         validate()
         val (primaryIndex, _) = indexAndOpsOf(on.first().first, name)
         val elements = ArrayList<String>(on.size)
@@ -107,19 +118,8 @@ data class PgIndex(
         val includeClause = if (includes.isEmpty()) "" else " INCLUDE (${includes.joinToString(", ") { column -> 
             column.ident
         }})"
-        val indexIdent = quoteIdent(table.name, "\$ci_", name)
-        val withClause = if (primaryIndex == "gin") "" else " WITH (fillfactor=${if (PgTable.isAnyHead(table.name)) 50 else 100})"
-        // The partial `WHERE` must come after any `WITH (...)` clause.
         val whereClause = if (conditional) " WHERE ${on.first().first.ident} IS NOT NULL" else ""
-        val sql = """CREATE INDEX IF NOT EXISTS $indexIdent
-ON ${table.quotedName}
-USING $primaryIndex (${elements.joinToString(", ")})$includeClause$withClause$whereClause"""
-        conn.execute(sql).close()
-    }
-
-    internal fun drop(conn: PgConnection, tableName: String) {
-        val indexName = quoteIdent(tableName, "\$ci_", name)
-        conn.execute("DROP INDEX IF EXISTS $indexName CASCADE").close()
+        return "USING $primaryIndex (${elements.joinToString(", ")})$includeClause$whereClause"
     }
 
     override fun equals(other: Any?): Boolean {
