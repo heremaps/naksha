@@ -25,6 +25,8 @@ import static com.here.naksha.app.common.TestUtil.parseJson;
 import static com.here.naksha.app.common.assertions.ResponseAssertions.assertThat;
 import static org.junit.jupiter.api.Named.named;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.CommonApiTestSetup;
 import com.here.naksha.app.common.NakshaTestWebClient;
@@ -386,6 +388,35 @@ class EventHandlerApiTest extends ApiTest {
     List<String> eventHandlerIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(eventHandlerIds.containsAll(expectedHandlerIds));
+
+    final HttpResponse<String> orResponse =
+        getNakshaClient().get("hub/handlers?tags=handler_tag_alpha,handler_tag_beta", streamId);
+    assertThat(orResponse).hasStatus(200);
+    final List<String> orHandlerIds = parseJson(orResponse.body(), XyzFeatureCollection.class).getFeatures().stream()
+        .map(NakshaFeature::getId).toList();
+    Assertions.assertEquals(2, orHandlerIds.size());
+    Assertions.assertTrue(orHandlerIds.containsAll(expectedHandlerIds));
+
+    final HttpResponse<String> andResponse =
+        getNakshaClient().get("hub/handlers?tags=handler_tag_alpha+handler_tag_shared", streamId);
+    assertThat(andResponse).hasStatus(200);
+    Assertions.assertEquals(List.of("tc_140_event_handler_1"),
+        parseJson(andResponse.body(), XyzFeatureCollection.class).getFeatures().stream()
+            .map(NakshaFeature::getId).toList());
+
+    final HttpResponse<String> noMatchResponse =
+        getNakshaClient().get("hub/handlers?tags=handler_tag_missing", streamId);
+    assertThat(noMatchResponse).hasStatus(200);
+    Assertions.assertEquals(0, parseJson(noMatchResponse.body(), XyzFeatureCollection.class).getFeatures().size());
+
+    final HttpResponse<String> selectedResponse = getNakshaClient().get(
+        "hub/handlers?tags=handler_tag_alpha,handler_tag_beta&selection=p.selectionMarker&limit=1", streamId);
+    assertThat(selectedResponse).hasStatus(200);
+    final JsonNode selectedFeatures = new ObjectMapper().readTree(selectedResponse.body()).get("features");
+    Assertions.assertEquals(1, selectedFeatures.size());
+    final JsonNode selectedProperties = selectedFeatures.get(0).get("properties");
+    Assertions.assertTrue(selectedProperties.has("selectionMarker"));
+    Assertions.assertFalse(selectedProperties.has("storageId"));
   }
 
   /*

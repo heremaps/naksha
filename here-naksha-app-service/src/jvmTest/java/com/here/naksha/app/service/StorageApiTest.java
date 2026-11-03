@@ -187,6 +187,34 @@ class StorageApiTest extends ApiTest {
         }
       }
     }
+
+    final HttpResponse<String> orResponse =
+        getNakshaClient().get("hub/storages?tags=storage_tag_alpha,storage_tag_beta", streamId);
+    assertEquals(200, orResponse.statusCode());
+    final List<String> orStorageIds = parseJson(orResponse.body(), XyzFeatureCollection.class).getFeatures().stream()
+        .map(NakshaFeature::getId).toList();
+    assertEquals(2, orStorageIds.size());
+    Assertions.assertTrue(orStorageIds.containsAll(expectedStorageIds));
+
+    final HttpResponse<String> andResponse =
+        getNakshaClient().get("hub/storages?tags=storage_tag_alpha+storage_tag_shared", streamId);
+    assertEquals(200, andResponse.statusCode());
+    assertEquals(List.of("tc_040_storage_1"), parseJson(andResponse.body(), XyzFeatureCollection.class)
+        .getFeatures().stream().map(NakshaFeature::getId).toList());
+
+    final HttpResponse<String> noMatchResponse =
+        getNakshaClient().get("hub/storages?tags=storage_tag_missing", streamId);
+    assertEquals(200, noMatchResponse.statusCode());
+    assertEquals(0, parseJson(noMatchResponse.body(), XyzFeatureCollection.class).getFeatures().size());
+
+    final HttpResponse<String> selectedResponse = getNakshaClient().get(
+        "hub/storages?tags=storage_tag_alpha,storage_tag_beta&selection=p.appName&limit=1", streamId);
+    assertEquals(200, selectedResponse.statusCode());
+    final JsonNode selectedFeatures = new ObjectMapper().readTree(selectedResponse.body()).get("features");
+    assertEquals(1, selectedFeatures.size());
+    final JsonNode selectedProperties = selectedFeatures.get(0).get("properties");
+    Assertions.assertTrue(selectedProperties.has("appName"));
+    Assertions.assertFalse(selectedProperties.has("dbConfig"));
   }
 
   @Test

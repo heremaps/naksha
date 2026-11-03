@@ -14,6 +14,9 @@ import java.util.List;
 import java.util.Set;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.ops.Op;
+import naksha.model.request.ops.QueryConverter;
 import naksha.model.request.query.ITagQuery;
 import naksha.model.request.query.TagAnd;
 import naksha.model.request.query.TagExists;
@@ -50,6 +53,16 @@ public class TagQueryUtil {
       return rootTagOrQuery.get(0);
     }
     return rootTagOrQuery;
+  }
+
+  public static @Nullable Op tagOpFromParams(final @Nullable QueryParameterList queryParams) {
+    final ITagQuery tagQuery = tagQueryFromParams(queryParams);
+    if (tagQuery == null) {
+      return null;
+    }
+    final RequestQuery requestQuery = new RequestQuery();
+    requestQuery.setTags(tagQuery);
+    return QueryConverter.PgQueryConverter_C.convert(requestQuery);
   }
 
   private static void processParams(
