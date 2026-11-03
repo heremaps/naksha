@@ -532,42 +532,44 @@ if (typeof k==='function') instance=Object.create(k.prototype);""")
 
         @JsStatic
         actual fun <T> copy(obj: T?, recursive: Boolean): T? = js("""
-if (typeof obj !== 'object' || obj === null) return obj;
-if (Array.isArray(obj)) {
-  if (recursive) {
+return (function copyValue(value, deep) {
+if (typeof value !== 'object' || value === null) return value;
+if (Array.isArray(value)) {
+  if (deep) {
     var copy = [];
-    for (v in obj) copy.push(arguments.callee(item, true));
+    for (var item of value) copy.push(copyValue(item, true));
     return copy;
   }
-  return obj.slice();
+  return value.slice();
 }
-if (obj instanceof Map) {
-  if (recursive) {
+if (value instanceof Map) {
+  if (deep) {
     var map = new Map();
-    var it = obj[Symbol.iterator]();
+    var it = value[Symbol.iterator]();
     var e = it.next();
     while (!e.done) {
-      map.set(e.value[0], arguments.callee(e.value[1], true));
+      map.set(e.value[0], copyValue(e.value[1], true));
       e = it.next();
     }
     return map;
   }
-  return new Map(obj);
+  return new Map(value);
 }
-if (obj instanceof DataView) {
-  return new DataView(obj.buffer.slice(0));
+if (value instanceof DataView) {
+  return new DataView(value.buffer.slice(0));
 }
-if (obj instanceof Object) {
-  if (recursive) {
+if (value instanceof Object) {
+  if (deep) {
     var map = new Map();
-    for (key in obj) {
-        if (obj.hasOwnProperty(key)) map.set(key, arguments.callee(obj[key], true));
+    for (var key in value) {
+        if (Object.prototype.hasOwnProperty.call(value, key)) map.set(key, copyValue(value[key], true));
     }
     return map;
   }
-  return new Map(Object.entries(v));
+  return new Map(Object.entries(value));
 }
-return obj;
+return value;
+})(obj, recursive);
 """).unsafeCast<T?>()
 
         @JsName("toJson")
@@ -814,9 +816,9 @@ return obj;
          */
         @JsStatic
         actual fun gzipDeflate(raw: ByteArray): ByteArray {
-            if (isPlv8()) js("""plv8.execute('SELECT gzip($1::bytea)::bytea as c',[raw])[0].c""").unsafeCast<ByteArray>()
+            if (isPlv8()) return js("new Int8Array(require('pako').gzip(new Uint8Array(raw)))").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
+            throw UnsupportedOperationException("gzipDeflate is not implemented in the current environment")
         }
 
         /**
@@ -826,9 +828,9 @@ return obj;
          */
         @JsStatic
         actual fun gzipInflate(compressed: ByteArray): ByteArray {
-            if (isPlv8()) js("""plv8.execute('SELECT gunzip($1::bytea)::bytea as c',[compressed])[0].c""").unsafeCast<ByteArray>()
+            if (isPlv8()) return js("new Int8Array(require('pako').ungzip(new Uint8Array(compressed)))").unsafeCast<ByteArray>()
             // TODO: Use Stream-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/Streams_API
-            throw UnsupportedOperationException("lz4Inflate is not implemented in the current environment")
+            throw UnsupportedOperationException("gzipInflate is not implemented in the current environment")
         }
 
         @JsStatic

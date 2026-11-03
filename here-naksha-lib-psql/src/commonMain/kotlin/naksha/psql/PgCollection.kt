@@ -17,6 +17,7 @@ import naksha.model.objects.MemberType.MemberType_C.TUPLE_NUMBER
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.StandardMembers
 import naksha.model.objects.XyzIndices
+import naksha.model.objects.XyzMembers
 import naksha.model.objects.StandardMembers.StandardMembers_C.FeatureBytes
 import naksha.model.objects.StandardMembers.StandardMembers_C.GlobalBookFeatureNumber
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
@@ -256,12 +257,27 @@ open class PgCollection @JvmOverloads constructor(
 
   companion object PgCollectionCompanion {
     /**
-     * Whether the collection is in backward-compatibility mode: the client declared no [members][NakshaCollection.members] (the raw property is `null`, before [NakshaCollection.validatedMembers] backfills the defaults). In that mode a `null` [indices][NakshaCollection.indices] list falls back to the standard [XyzIndices.ALL]. Captured up-front, because building [columns] materializes the default members and thereby clears the `null` state.
-     * @param nakshaCollection the collection to test.
-     * @return _true_ if the collection is in backward-compatibility mode; _false_ otherwise.
+     * Resolves storage-owned defaults as independent copies and normalizes mandatory members and physical member order before encoding the collection.
+     * @param naksha the collection whose layout must be resolved.
      * @since 3.0
      */
-    private fun backwardCompatibilityRequested(nakshaCollection: NakshaCollection): Boolean = nakshaCollection.members == null
+    internal fun resolveLayout(naksha: NakshaCollection) {
+      naksha.validateLayoutDeclarations()
+      if (naksha.members == null && naksha.indices == null) {
+        val members = MemberList()
+        for (member in XyzMembers.ALL) members.add(member.copy<Member>(recursive = true))
+        val indices = IndexList()
+        for (index in XyzIndices.ALL) indices.add(index.copy<Index>(recursive = true))
+        naksha.members = members
+        naksha.indices = indices
+      } else {
+        // Member positions belong to this collection, not shared declaration instances.
+        val members = MemberList()
+        for (member in naksha.members!!) members.add((member ?: throw illegalArg("Collection member must not be null")).copy<Member>(recursive = true))
+        naksha.members = members
+      }
+      naksha.validatedMembers.verify()
+    }
 
     /**
      * Convert the given member into a [PgColumn], only fails for the standard member [Tn].
@@ -295,7 +311,7 @@ open class PgCollection @JvmOverloads constructor(
     }
 
     /**
-     * Read the [members][NakshaCollection.members] from the given [NakshaCollection] and turn them into a [PgColumn] list. If the members of the given [NakshaCollection] and not yet [ordered by index][MemberList.isSortedByIndex], then the method will invoke a [sort by type][MemberList.verify].
+     * Read the resolved [members][NakshaCollection.members] from the given [NakshaCollection] and turn them into a [PgColumn] list without reordering declarations.
      * @param naksha the collection from which to extract the [PgColumn]'s.
      * @return an array with all extracted [PgColumn]'s.
      * @since 3.0
@@ -303,7 +319,7 @@ open class PgCollection @JvmOverloads constructor(
     private fun generateColumns(naksha: NakshaCollection): Array<PgColumn> {
       val members: MemberList = naksha.validatedMembers
       if (!members.isSortedByIndex()) {
-        members.verify()
+        throw illegalState("Collection layout must be resolved before generating columns")
       }
       var i = 0
       // We split tuple-number into `fn` and `version`, therefore we need size + 1.
@@ -333,7 +349,7 @@ open class PgCollection @JvmOverloads constructor(
 
     private fun generateIndices(naksha: NakshaCollection, columns: Array<PgColumn>): Array<PgIndex> {
       val indices = IndexList()
-      val declared: List<Index?> = naksha.indices?.toList() ?: XyzIndices.ALL
+      val declared = naksha.indices ?: throw illegalState("Collection layout must be resolved before generating indices")
       indices.setCapacity(declared.size + 1)
       for (declaredIndex in declared) {
         if (declaredIndex != null && !indices.contains(declaredIndex)) indices.add(declaredIndex)

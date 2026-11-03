@@ -35,24 +35,31 @@ class PgDatabaseSchemaTest {
             val cursors = mutableListOf<PgCursor>()
             var lookups = 0
             val conn = Mockito.mock(PgConnection::class.java)
+            Mockito.`when`(conn.autoCommit).thenReturn(false)
             Mockito.doAnswer { invocation ->
                 val sql = invocation.getArgument<String>(0)
                 statements.add(sql)
                 val cursor = Mockito.mock(PgCursor::class.java)
+                Mockito.`when`(cursor.fetch()).thenReturn(cursor)
+                Mockito.`when`(cursor.get<Boolean>("upgrading")).thenReturn(false)
                 cursors.add(cursor)
                 if (sql.startsWith("SELECT oid")) {
-                    Mockito.`when`(cursor.next()).thenReturn(exists || lookups++ > 0)
+                    Mockito.`when`(cursor.next()).thenReturn(exists || lookups++ >= 2)
                     Mockito.`when`(cursor.get<String>("oid")).thenReturn("4294967295")
                 }
                 cursor
             }.`when`(conn).execute(Mockito.anyString(), Mockito.nullable(Array<Any?>::class.java))
             val oid = database.catalog_get_or_create_schema(conn, "Mixed Name", "logical catalog")
             assertEquals(if (exists) -4294967295L else 4294967295L, oid)
-            assertTrue(statements[0].contains("pg_advisory_xact_lock"))
-            if (exists) assertEquals(2, statements.size) else {
-                assertEquals("CREATE SCHEMA \"Mixed Name\"", statements[2])
-                assertEquals("COMMENT ON SCHEMA \"Mixed Name\" IS E'logical catalog'", statements[3])
-                assertEquals(5, statements.size)
+            assertEquals("SELECT oid::text AS oid FROM pg_catalog.pg_namespace WHERE nspname = $1", statements[0])
+            val lockPosition = if (exists) 1 else 2
+            if (!exists) assertTrue(statements[1].contains("pg_locks"))
+            assertEquals("SELECT pg_catalog.pg_advisory_xact_lock${if (exists) "_shared" else ""}(pg_catalog.hashtextextended($1, 0)) AS locked", statements[lockPosition])
+            assertEquals(statements[0], statements[lockPosition + 1])
+            if (exists) assertEquals(3, statements.size) else {
+                assertEquals("CREATE SCHEMA \"Mixed Name\"", statements[4])
+                assertEquals("COMMENT ON SCHEMA \"Mixed Name\" IS E'logical catalog'", statements[5])
+                assertEquals(7, statements.size)
             }
             for (cursor in cursors) Mockito.verify(cursor).close()
             Mockito.verify(conn, Mockito.never()).commit()

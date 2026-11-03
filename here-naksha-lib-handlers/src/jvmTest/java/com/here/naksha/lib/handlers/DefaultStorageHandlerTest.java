@@ -326,7 +326,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     when(storageWriteSession.execute(argThat(DefaultStorageHandlerTest::isOnlyWriteCollectionsRequest)))
         .thenReturn(new SuccessResponse());
     DefaultStorageHandlerProperties handlerProperties = handlerProperties();
-    handlerProperties.getCollection().setIndices(new IndexList());
+    handlerProperties.getCollection().withXyzMembers().setIndices(new IndexList());
     IndexList configuredIndices = handlerProperties.getCollection().getIndices();
     DefaultStorageHandler handler = storageHandler(handlerProperties);
 
@@ -353,7 +353,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     DefaultStorageHandlerProperties handlerProperties = handlerProperties();
     Index customIndex = new Index("custom", "id");
     IndexList configuredIndices = IndexList.of(customIndex);
-    handlerProperties.getCollection().setIndices(configuredIndices);
+    handlerProperties.getCollection().withXyzMembers().setIndices(configuredIndices);
     DefaultStorageHandler handler = storageHandler(handlerProperties);
 
     ignoreExceptionsFrom(
@@ -662,6 +662,7 @@ class DefaultStorageHandlerTest extends AbstractTest {
     final NakshaCollection configuredCollection =
         new NakshaCollection("space_collection", "original_catalog")
             .withXyzMembers()
+            .withIndices(CollectionIndexPolicy.hubSlimIndices())
             .addMember(new Member("score", MemberType.STRING, null));
     final SpaceProperties spaceProperties = new SpaceProperties();
     spaceProperties.setCollection(configuredCollection);

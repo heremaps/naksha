@@ -5,6 +5,14 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### Storage layouts, physical drops and scoped locking increment
+
+**Commit:** Resolve storage layouts and scope catalog and collection locking.
+
+**Completion:** user-approved combined increment, `DONE`. Collection members/indices are both null or both explicit; lib-psql selects independent XYZ defaults before metadata encoding, while the model only validates the pair and mandatory members. Includes Hub caller alignment, metadata round-trip/copy tests and required JS recursive-copy/compression corrections. Physical root/schema drops unregister transactionally and preserve rollback. Exclusive catalog locks protect catalog creation/drop; compatible shared catalog guards and exclusive collection locks protect collection operations. Maintenance has no global mutex and skips advisory/physical NOWAIT conflicts through isolated savepoint/subtransaction attempts.
+
+**Verification:** focused model/PSQL/core layout suites, clean JVM bootstrap, live installed PLV8 maintenance/permission tests, scoped concurrency scenarios and drop lifecycle tests pass on isolated PostgreSQL 18.6 / PLV8 3.2.5 databases. Coverage includes same-catalog parallel creation during 20,000 uncommitted inserts, busy collection/catalog skipping, ordinary physical-lock conflicts, rollback/retry and nonblocking contested catalog upgrades. Production JS compilation and diff checks pass. Existing handler-test Java compilation failures are recorded in the active workboard; no broader mutation-migration completion is claimed. Temporary databases/roles were removed. Cron remains deferred.
+
 ### Maintenance permissions and concurrency verification increment
 
 **Commit:** Verify maintenance permissions and concurrent JVM/PLV8 sweeps.

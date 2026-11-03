@@ -166,6 +166,9 @@ abstract class PgDatabase(
     // Bootstrap the infrastructure.
     val naksha_admin = NakshaAdmin(this.id)
     val collection = naksha_admin.collections
+    for (adminCollection in arrayOf(collection, naksha_admin.catalogs, naksha_admin.transactions, naksha_admin.books)) {
+      PgCollection.resolveLayout(adminCollection)
+    }
     _pgAdmin = PgCatalog( Tuple.encodeObject(naksha_admin, collection, 1L).tuple)
     _pgAdminCatalogs = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.catalogs, collection, 1L).tuple)
     _pgAdminCollections = PgCollection(pgAdmin.id, Tuple.encodeObject(naksha_admin.collections, collection, 1L).tuple)
@@ -491,7 +494,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * Identifier collisions are checked by the caller's administrative writes.
    * An existing schema is reused without modifying its contents. Creation participates in the
    * caller's transaction; the signed return value distinguishes creation from reuse.
-   * Cooperating creators serialize by physical schema name using a transaction-scoped advisory lock. Requires an open caller transaction; READ COMMITTED permits reuse after a concurrent commit. External creators or stale higher-isolation snapshots can still cause a database error, which is propagated without recovery here.
+   * Existing schemas retain only a shared catalog guard, compatible with concurrent collection operations. Missing schemas take an exclusive catalog lock and are rechecked before creation. If a schema disappears between the initial lookup and shared guard, the caller must retry the transaction; no shared-to-exclusive upgrade is attempted. Requires an open caller transaction; READ COMMITTED permits reuse after a concurrent commit. External creators or stale higher-isolation snapshots can still cause a database error, which is propagated without recovery here.
    * @param conn the caller-owned connection; this method does not commit or close it.
    * @param name the unquoted name of the schema.
    * @param originalName the original logical catalog name to retain as a schema comment when created. Existing schema comments are not modified.
@@ -503,8 +506,14 @@ SELECT basics.*, procs.* FROM basics, procs;
       if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > 63) {
         throw illegalId("Physical schema name must contain 1..63 UTF-8 bytes without NUL")
       }
-      conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended($1, 0))",
-        arrayOf("naksha:schema:$name")).close()
+      if (conn.autoCommit) throw illegalState("Schema creation requires a caller-owned transaction")
+      if (catalog_get_schema_oid(conn, name) > 0) {
+        PgPartitions.lockCatalog(conn, name, shared = true)
+        val existing = catalog_get_schema_oid(conn, name)
+        if (existing <= 0) throw illegalState("Schema disappeared while acquiring catalog guard; retry transaction")
+        return@execute_sql_notnull -existing
+      }
+      PgPartitions.lockCatalog(conn, name)
       val existing = catalog_get_schema_oid(conn, name)
       if (existing > 0) -existing else {
         val ident = quoteIdent(name)
@@ -520,15 +529,25 @@ SELECT basics.*, procs.* FROM basics, procs;
   /**
    * Drops the catalog schema cascading _(recursive, so including all tables, indices, ...)_.
    *
-   * An absent schema is a successful no-op. Physical partition-management configuration associated
-   * with the schema must also be removed. The caller separately updates logical catalog metadata.
-   * @param conn the caller-owned connection; this method does not commit or close it.
-   * @param name the unquoted name of the schema.
+   * An absent schema is a successful no-op, including cleanup of orphaned partition registry rows. A missing registry is not installed. Logical catalog metadata is the caller's concern; dropping the admin schema is allowed and leaves the storage unusable.
+   * An exclusive catalog guard excludes collection operations in this schema without locking unrelated catalogs. Maintenance skips the busy catalog; PostgreSQL's cascading drop locks suffice without iterating roots.
+   * @param conn the caller-owned connection; requires autoCommit false and does not commit, roll back or close it.
+   * @param name the unquoted name of the schema; must contain 1..63 UTF-8 bytes without NUL.
    * @since 3.0
    */
   internal fun catalog_drop_schema(conn: PgConnection, name: String) {
     execute_sql(schema = name) {
-      TODO("Drop the schema cascading, if it exists")
+      if (conn.autoCommit) throw illegalState("Schema drop requires a caller-owned transaction")
+      if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > PG_IDENTIFIER_BYTES) {
+        throw illegalId("Physical schema name must contain 1..63 UTF-8 bytes without NUL")
+      }
+      PgPartitions.lockCatalog(conn, name)
+      val registry = "$ADMIN_CATALOG_QUOTED.\"naksha_partman\""
+      val installed = conn.execute("SELECT pg_catalog.to_regclass($1)::text AS name", arrayOf(registry)).fetch().use { cursor ->
+        cursor.column("name") != null
+      }
+      if (installed) conn.execute("DELETE FROM $registry WHERE \"schema_name\" = $1", arrayOf(name)).close()
+      conn.execute("DROP SCHEMA IF EXISTS ${quoteIdent(name)} CASCADE").close()
     }
   }
 
@@ -537,6 +556,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    *
    * Shared Kotlin creates a RANGE (nv) root, restricted HEAD and optional fn leaves. Permanent storage is currently supported, with HEAD/history fillfactors 50/100. History-OFF has no registry entry. Initial history coverage uses the greater of the server UTC date and installed allocator watermark, without allocating a version. Explicit manual/import coverage is prepared separately through [collection_maintain_partitions].
    * An existing root with the same logical owner is left unchanged; unrelated or unowned relations are rejected. The caller must roll back on failure, including failures after partial DDL.
+   * A shared catalog guard and exclusive collection lock allow unrelated collections to proceed concurrently; maintenance skips this busy collection.
    *
    * @param conn the caller-owned connection; DDL is part of its transaction and is not committed here.
    * @param schema the unquoted name of the schema in which to create the table; must exist already.
@@ -584,7 +604,7 @@ SELECT basics.*, procs.* FROM basics, procs;
       }
       val target = "${quoteIdent(schema)}.${quoteIdent(table)}"
       val owner = "${quoteIdent(logicalCatalog)}.${quoteIdent(logicalCollection)}"
-      conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(pg_catalog.format('naksha:partman:%I.%I', $1::text, $2::text), 0))", arrayOf(schema, table)).close()
+      PgPartitions.lockCollection(conn, schema, table)
       conn.execute("SELECT pg_catalog.obj_description(c.oid, 'pg_class') AS owner FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND c.relname = $2", arrayOf(schema, table)).use { cursor ->
         if (cursor.next()) {
           if (cursor.column("owner") != owner) throw illegalId("Physical collection $target belongs to another logical identity")
@@ -638,7 +658,7 @@ SELECT basics.*, procs.* FROM basics, procs;
   }
 
   /**
-   * Maintain all registered roots in deterministic order at the server-date/allocator watermark. Returns the root count. Requires one caller-owned READ COMMITTED transaction; failures propagate and require whole-sweep rollback. Sweep and root locks remain held until transaction completion. Never allocates a logical version or commits.
+   * Maintain registered roots in deterministic order at the server-date/allocator watermark. Returns the count of completed roots, skipping busy catalogs/collections, nonblocking SQL lock conflicts (SQLSTATE 55P03), and registrations removed by cooperative drops. Each skipped attempt rolls back its guards; successful root locks remain held until transaction completion. Requires one caller-owned READ COMMITTED transaction; all other errors fail fast and require whole-sweep rollback. Never allocates a logical version or commits.
    * @since 3.0
    */
   internal fun maintain_partitions(conn: PgConnection): Int = execute_sql_notnull {
@@ -648,16 +668,26 @@ SELECT basics.*, procs.* FROM basics, procs;
   /**
    * Drops the table cascading, if it exists. Does not fail, if the table does not exist.
    *
-   * Removes the collection root and dependent HEAD/history leaves and indexes, together with its
-   * pg_partman registration and owned templates. Logical collection metadata is the caller's concern.
-   * @param conn the caller-owned connection; the drop is not committed here.
-   * @param schema the unquoted name of the schema in which to drop the table; must exist already.
-   * @param table the unquoted name of the root table to drop; may be absent.
+   * Removes the physical root and dependent HEAD/history leaves and indexes, together with its exact partition registry entry, including an orphaned entry. A missing registry is not installed. Logical collection metadata and owner comments are not consulted or modified.
+   * A shared catalog guard and exclusive collection lock allow unrelated collections to proceed concurrently; maintenance skips this busy collection.
+   * @param conn the caller-owned connection; requires autoCommit false and does not commit, roll back or close it.
+   * @param schema the unquoted schema name; may be absent and must contain 1..63 UTF-8 bytes without NUL.
+   * @param table the unquoted root table name; may be absent and must contain 1..29 UTF-8 bytes without NUL.
    * @since 3.0
    */
   internal fun collection_drop_if_exists(conn: PgConnection, schema: String, table: String) {
     execute_sql(schema = schema, table = table) {
-
+      if (conn.autoCommit) throw illegalState("Collection drop requires a caller-owned transaction")
+      for ((name, budget) in arrayOf(schema to PG_IDENTIFIER_BYTES, table to PG_ROOT_NAME_BYTES)) {
+        if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > budget) throw illegalId("Physical collection name exceeds its identifier budget")
+      }
+      PgPartitions.lockCollection(conn, schema, table)
+      val registry = "$ADMIN_CATALOG_QUOTED.\"naksha_partman\""
+      val installed = conn.execute("SELECT pg_catalog.to_regclass($1)::text AS name", arrayOf(registry)).fetch().use { cursor ->
+        cursor.column("name") != null
+      }
+      if (installed) conn.execute("DELETE FROM $registry WHERE \"schema_name\" = $1 AND \"table_name\" = $2", arrayOf(schema, table)).close()
+      conn.execute("DROP TABLE IF EXISTS ${quoteIdent(schema)}.${quoteIdent(table)} CASCADE").close()
     }
   }
 
@@ -665,6 +695,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * Create a custom root index, including the configuration needed by future partitions.
    * [schema] and [table] are unquoted physical names; [index] is a descriptor, not a table object.
    * Mandatory indexes are intrinsic to collection creation.
+   * A shared catalog guard and exclusive collection lock serialize DDL for this collection; maintenance skips it while busy.
    *
    * Creates/attaches the index for existing children and updates the supported partition-management
    * configuration so future children receive it. Index method and INCLUDE rules must be validated
@@ -685,6 +716,7 @@ SELECT basics.*, procs.* FROM basics, procs;
           throw illegalId("Physical index/schema/table names must contain 1..63 UTF-8 bytes without NUL")
         }
       }
+      PgPartitions.lockCollection(conn, schema, table)
       // A parent index covers existing partitions and is inherited by future PARTITION OF children.
       conn.execute("CREATE INDEX ${quoteIdent(indexName)} ON ${quoteIdent(schema)}.${quoteIdent(table)} $definition").close()
     }
@@ -693,6 +725,7 @@ SELECT basics.*, procs.* FROM basics, procs;
   /**
    * Drop a custom root index, its attached child indexes, and its future-partition configuration.
    * An absent index is a successful no-op. This operation does not remove mandatory collection keys.
+   * A shared catalog guard and exclusive collection lock serialize DDL for this collection; maintenance skips it while busy.
    * @param conn the caller-owned connection; this method does not commit or close it.
    * @param schema the unquoted physical schema containing the root.
    * @param table the unquoted physical collection root name.
@@ -708,6 +741,7 @@ SELECT basics.*, procs.* FROM basics, procs;
           throw illegalId("Physical index/schema/table names must contain 1..63 UTF-8 bytes without NUL")
         }
       }
+      PgPartitions.lockCollection(conn, schema, table)
       conn.execute("DROP INDEX IF EXISTS ${quoteIdent(schema)}.${quoteIdent(indexName)}").close()
     }
   }

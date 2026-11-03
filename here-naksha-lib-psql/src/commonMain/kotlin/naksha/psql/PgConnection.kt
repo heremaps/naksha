@@ -73,6 +73,12 @@ expect class PgConnection private constructor(id: Long, instance: PgInstance, op
      */
     fun prepare(sql: String, typeNames: Array<String>? = null): PgPlan
 
+  /**
+   * Runs nonblocking maintenance in a savepoint within the caller's transaction; auto-commit must be disabled. Success retains the changes and locks until the caller completes the transaction. A false result or SQLSTATE 55P03 rolls back the attempt, releasing any partially acquired locks. Other failures propagate after rollback. Never commits the caller's transaction.
+   * @since 3.0
+   */
+  internal fun tryMaintenance(action: () -> Boolean): Boolean
+
     /**
      * Commit the underlying database connection.
      * @since 3.0

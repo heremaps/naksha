@@ -302,9 +302,9 @@ open class NakshaCollection() : NakshaFeature() {
      *
      * Each [Member] declares a name, a [MemberType], an optional [JsonPath] to extract the value from, and a [retain strategy][MemberRetain]. At write time, the storage walks the feature using the path, coerces the value to the declared type, and stores it as a dedicated member alongside the encoded feature blob. The value also remains in the encoded feature blob.
      *
-     * When `null` _(key absent)_, the storage uses the [Xyz members definition][XyzMembers] — this is a backward-compatible mode. When explicitly set _(even to an empty list)_, the storage uses only the mandatory members plus the declared members.
+     * [members] and [indices] must either both be `null` or both be explicitly set. When both are `null` _(keys absent)_, the layout is unresolved and the storage owns choosing and persisting its defaults. The model does not inject XYZ defaults. When explicitly set _(even to empty lists)_, the storage uses only the mandatory members plus the declared members and indices.
      *
-     * The mandatory members [feature-number][StandardMembers.FeatureNumber], [id][StandardMembers.Id], [version][StandardMembers.FeatureVersion], and [next-version][StandardMembers.NextVersion] are injected by the storage, if not explicitly declared as copy with relocation. It is not allowed to change the type of mandatory members, and they can't be removed _(as the storage will always inject them, when they are missing)_. They can only be relocated to another [JsonPath].
+     * The mandatory members [tuple-number][StandardMembers.Tn], [id][StandardMembers.Id], [version][StandardMembers.FeatureVersion], [next-version][StandardMembers.NextVersion], and [global book feature-number][StandardMembers.GlobalBookFeatureNumber] are injected by the storage, if not explicitly declared as copy with relocation. It is not allowed to change the type of mandatory members, and they can't be removed _(as the storage will always inject them, when they are missing)_. They can only be relocated to another [JsonPath].
      *
      * @since 3.0
      * @see Member
@@ -397,25 +397,29 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
+     * Validates that [members] and [indices] are either both `null` (unresolved storage defaults) or both explicitly declared, without modifying either list. The storage must resolve and persist both defaults before accessing [validatedMembers].
+     * @since 3.0
+     * @throws NakshaException with [ILLEGAL_ARGUMENT] if exactly one layout declaration is `null`.
+     */
+    fun validateLayoutDeclarations(): Unit {
+        if ((members == null) != (indices == null)) {
+            throw illegalArg("Collection members and indices must either both be null or both be explicitly declared")
+        }
+    }
+
+    /**
      * The validated members list.
      *
-     * If the member list is currently `null`, the collection is in backward-compatible default mode: the members are created from [XyzMembers.ALL], and — so the persisted collection stays consistent across reloads — a still-`null` [indices] list is defaulted to [XyzIndices.ALL] as well. If the list does not contain the mandatory members, they will be added.
+     * Both [members] and [indices] must be explicitly declared; when both are `null`, the storage owns resolving and persisting its defaults before this property can be accessed. Missing mandatory members are added as independent copies of [StandardMembers.MANDATORY]. This property does not inject XYZ defaults or modify [indices]. Declarations and member definitions are validated on every access, including in-place changes.
      * @return the members list of this collection.
      * @since 3.0
-     * @throws NakshaException with [ILLEGAL_STATE]
+     * @throws NakshaException with [ILLEGAL_ARGUMENT] if exactly one layout declaration is `null`.
+     * @throws NakshaException with [ILLEGAL_STATE] if storage defaults are unresolved or the members are invalid.
      */
     open val validatedMembers: MemberList
         get() {
-            val current = this.members
-            val cached = _validatedMembers
-            if (cached != null && cached === current) return cached
-            var write = false
-            var list = this.members
-            if (list == null) {
-                list = MemberList(XyzMembers.ALL)
-                write = true
-                if (this.indices == null) this.indices = IndexList(XyzIndices.ALL)
-            }
+            validateLayoutDeclarations()
+            val list = this.members ?: throw illegalState("Storage must resolve collection layout defaults before accessing members")
             // Ensure that the list does not contain null or duplicates.
             list.validateAndSort()
             // Ensure that the mandatory members are in.
@@ -424,12 +428,9 @@ open class NakshaCollection() : NakshaFeature() {
                 if (found != null) {
                     mandatory.asOther(found, comparePath = false)
                 } else {
-                    // Collection Tn lives at xyz.uuid (the tupleNumber accessor), so backfill XyzTn not the generic Tn.
-                    list.add(if (mandatory === StandardMembers.Tn) XyzMembers.XyzTn else mandatory)
-                    write = true
+                    list.add(mandatory.copy<Member>(recursive = true))
                 }
             }
-            if (write) this.members = list
             _validatedMembers = list
             return list
         }
@@ -439,6 +440,8 @@ open class NakshaCollection() : NakshaFeature() {
      * Index definitions are create-only for now and are built synchronously during collection/partition creation. Updating an existing collection cannot add, remove or change indices; dedicated index-modification support is deferred.
      *
      * Each [Index] declares a `name`, the column(s) to index, an optional included columns.
+     *
+     * [indices] and [members] must either both be `null` or both be explicitly set. Both `null` means unresolved defaults owned and persisted by the storage, not XYZ defaults injected by the model. Explicit lists, including empty lists, request only the mandatory members plus the declared members and indices.
      *
      * ### Warning
      * Do not create an index above [id][StandardMembers.Id], the [feature-number][StandardMembers.FeatureNumber] can be derived from the [id][StandardMembers.Id] and the storage will know this. Therefore, searching for [id][StandardMembers.Id] will automatically be redirected into the primary key _(which includes the [feature-number][StandardMembers.FeatureNumber])_.

@@ -3,6 +3,9 @@ package com.here.naksha.lib.core.util;
 import naksha.model.objects.Index;
 import naksha.model.objects.IndexList;
 import naksha.model.objects.NakshaCollection;
+import naksha.model.objects.Member;
+import naksha.model.objects.MemberList;
+import naksha.model.objects.XyzMembers;
 import naksha.model.objects.StandardIndices;
 import naksha.model.objects.StandardMembers;
 import naksha.model.objects.XyzIndices;
@@ -14,8 +17,8 @@ public final class CollectionIndexPolicy {
 
   public static @NotNull IndexList hubSlimIndices() {
     return IndexList.of(
-        XyzIndices.XyzTags,
-        StandardIndices.Geometry,
+        XyzIndices.XyzTags.copy(true),
+        StandardIndices.Geometry.copy(true),
         new Index("fn_nv", StandardMembers.FeatureNumber.getName(), StandardMembers.NextVersion.getName()));
   }
 
@@ -30,7 +33,11 @@ public final class CollectionIndexPolicy {
 
   public static @NotNull NakshaCollection normalizeForHubCreation(
       final @NotNull NakshaCollection collection) {
+    collection.validateLayoutDeclarations();
     if (collection.getIndices() == null) {
+      final MemberList members = new MemberList();
+      for (Member member : XyzMembers.ALL) members.add(member.copy(true));
+      collection.setMembers(members);
       collection.setIndices(hubSlimIndices());
     }
     return collection;

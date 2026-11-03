@@ -5,7 +5,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import naksha.base.NakshaException;
 import naksha.model.objects.Index;
 import naksha.model.objects.IndexList;
 import naksha.model.objects.Member;
@@ -41,8 +43,8 @@ class CollectionIndexPolicyTest {
     assertNull(fnNv.getInclude());
     assertFalse(fnNv.isUnique());
     assertFalse(fnNv.isConditional());
-    assertSame(XyzIndices.XyzTags, first.get(0));
-    assertSame(StandardIndices.Geometry, first.get(1));
+    assertNotSame(XyzIndices.XyzTags, first.get(0));
+    assertNotSame(StandardIndices.Geometry, first.get(1));
     assertNotSame(first.get(2), second.get(2));
   }
 
@@ -56,20 +58,40 @@ class CollectionIndexPolicyTest {
     assertEquals("source_collection", source.getId());
     assertEquals("source_catalog", source.getCatalogId());
     assertNull(source.getDatabaseId());
-    assertNull(source.getMembers());
+    assertEquals(new NakshaCollection().withXyzMembers().getMembers(), source.getMembers());
     assertIndexNames(source, "tags", "geo", "fn_nv");
   }
 
   @Test
   void normalizeForHubCreationPreservesExplicitEmptyIndicesInPlace() {
     final NakshaCollection source = new NakshaCollection("source_collection", "source_catalog")
+        .withXyzMembers()
         .withIndices(new IndexList());
+    final MemberList members = source.getMembers();
     final IndexList indices = source.getIndices();
 
     final NakshaCollection normalized = CollectionIndexPolicy.normalizeForHubCreation(source);
 
     assertSame(source, normalized);
+    assertSame(members, normalized.getMembers());
     assertSame(indices, normalized.getIndices());
+    assertEquals(0, normalized.getIndices().size());
+  }
+
+  @Test
+  void normalizeForHubCreationPreservesExplicitEmptyLayoutInPlace() {
+    final NakshaCollection source = new NakshaCollection("source_collection", "source_catalog")
+        .withMembers()
+        .withIndices(new IndexList());
+    final MemberList members = source.getMembers();
+    final IndexList indices = source.getIndices();
+
+    final NakshaCollection normalized = CollectionIndexPolicy.normalizeForHubCreation(source);
+
+    assertSame(source, normalized);
+    assertSame(members, normalized.getMembers());
+    assertSame(indices, normalized.getIndices());
+    assertEquals(0, normalized.getMembers().size());
     assertEquals(0, normalized.getIndices().size());
   }
 
@@ -79,16 +101,36 @@ class CollectionIndexPolicyTest {
     final NakshaCollection source = new NakshaCollection("source_collection", "source_catalog")
         .withMembers(new Member("score", MemberType.INT64, null))
         .withIndices(customIndex);
+    final MemberList members = source.getMembers();
     final IndexList indices = source.getIndices();
     final Index storedCustomIndex = source.getIndices().get(0);
 
     final NakshaCollection normalized = CollectionIndexPolicy.normalizeForHubCreation(source);
 
     assertSame(source, normalized);
+    assertSame(members, normalized.getMembers());
     assertSame(indices, normalized.getIndices());
     assertSame(storedCustomIndex, normalized.getIndices().get(0));
     assertIndexNames(normalized, "custom");
     assertEquals("score", normalized.getIndices().get(0).getOn().get(0));
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = {true, false})
+  void normalizeForHubCreationRejectsMixedNullLayoutWithoutMutation(boolean membersDeclared) {
+    final NakshaCollection source = new NakshaCollection("source_collection", "source_catalog");
+    if (membersDeclared) {
+      source.withXyzMembers();
+    } else {
+      source.withIndices(new IndexList());
+    }
+    final MemberList members = source.getMembers();
+    final IndexList indices = source.getIndices();
+
+    assertThrows(NakshaException.class, () -> CollectionIndexPolicy.normalizeForHubCreation(source));
+
+    assertSame(members, source.getMembers());
+    assertSame(indices, source.getIndices());
   }
 
   @Test
@@ -101,9 +143,10 @@ class CollectionIndexPolicyTest {
     assertEquals("target_collection", first.getId());
     assertEquals("target_catalog", first.getCatalogId());
     assertNull(first.getDatabaseId());
-    assertNull(first.getMembers());
+    assertEquals(new NakshaCollection().withXyzMembers().getMembers(), first.getMembers());
     assertIndexNames(first, "tags", "geo", "fn_nv");
     assertNotSame(first, second);
+    assertNotSame(first.getMembers(), second.getMembers());
     assertNotSame(first.getIndices(), second.getIndices());
   }
 
@@ -111,11 +154,13 @@ class CollectionIndexPolicyTest {
   void normalizeForHubCreationPreservesDefaultsOnRepeatedCalls() {
     final NakshaCollection collection = CollectionIndexPolicy.normalizeForHubCreation(
         "target_collection", "target_catalog");
+    final MemberList members = collection.getMembers();
     final IndexList indices = collection.getIndices();
 
     final NakshaCollection normalized = CollectionIndexPolicy.normalizeForHubCreation(collection);
 
     assertSame(collection, normalized);
+    assertSame(members, normalized.getMembers());
     assertSame(indices, normalized.getIndices());
     assertIndexNames(normalized, "tags", "geo", "fn_nv");
   }

@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.illegalState
 import naksha.base.unsupportedOp
 import naksha.model.SessionOptions
 
@@ -28,6 +29,29 @@ actual class PgConnection internal actual constructor(id: Long, instance: PgInst
     actual fun prepare(sql: String, typeNames: Array<String>?): PgPlan
         = PgPlan(if (typeNames != null) plv8.prepare(sql, typeNames) else plv8.prepare(sql))
 
+  internal actual fun tryMaintenance(action: () -> Boolean): Boolean {
+    if (autoCommit) throw illegalState("Maintenance requires a caller-owned transaction")
+    var completed = false
+    var skipped = false
+    var original: Throwable? = null
+    try {
+      plv8.subtransaction {
+        try {
+          skipped = !action()
+        } catch (failure: Throwable) {
+          // PLV8 strips native SPI fields when an error crosses the subtransaction boundary.
+          if (failure.asDynamic().sqlerrcode == "55P03") skipped = true else original = failure
+        }
+        if (skipped || original != null) throw MaintenanceSkipped()
+        completed = true
+      }
+    } catch (failure: Throwable) {
+      if (skipped) return false
+       throw original ?: failure
+    }
+    return completed
+  }
+
     actual fun commit() {
     }
 
@@ -46,3 +70,5 @@ actual class PgConnection internal actual constructor(id: Long, instance: PgInst
         this.closed = true
     }
 }
+
+private class MaintenanceSkipped : RuntimeException()
