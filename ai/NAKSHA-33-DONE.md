@@ -5,6 +5,14 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### Installed PLV8 maintenance entrypoint increment
+
+**Commit:** Install restricted PLV8 maintenance entry point.
+
+**Completion:** user-approved increment, `DONE`. Production installation provides `"naksha~admin".naksha_maintain()` as a thin caller-transaction Kotlin/JS wrapper: VOLATILE, PARALLEL UNSAFE, SECURITY INVOKER, fixed admin/pg_catalog search path, PUBLIC execution revoked. Explicit grants do not replace underlying object/DDL permissions. JS hashing now qualifies public.digest, matching current pgcrypto installation. No cron scheduling is installed.
+
+**Verification:** live PostgreSQL 18.6 integration passes cold-backend bootstrap, function attributes/ACL, shared JVM/PLV8 maintenance idempotency, exact bigint transport, successful/partial-failure rollback and retry, invalid configuration rejection, and session/data/allocator preservation. JS rebuild, JVM test compilation and diff checks pass. The isolated database was removed. Non-owner execution and overlapping sweeps are the following verification increment.
+
 ### PLV8 storage attachment and shared maintenance increment
 
 **Commit:** Attach PLV8 storage from schema comments and share Kotlin maintenance.

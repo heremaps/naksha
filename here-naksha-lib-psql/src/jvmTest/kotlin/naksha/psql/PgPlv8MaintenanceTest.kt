@@ -88,19 +88,49 @@ class PgPlv8MaintenanceTest {
         conn.commit()
         println("PLV8 verification: committed JVM bootstrap, credential-free config, modules, and history fixture")
 
+        // A direct JDBC backend must initialize PLV8 through the installed wrapper, before the alias fixture does.
+        DriverManager.getConnection(url).use { cold ->
+          cold.autoCommit = false
+          try {
+            assertFalse(scalar(conn, "SELECT pg_backend_pid()") == scalar(cold, "SELECT pg_backend_pid()"))
+            cold.createStatement().use { statement ->
+              statement.executeQuery("""
+                SELECT p.provolatile, p.proparallel, p.prosecdef, p.proconfig,
+                  NOT EXISTS (
+                    SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) acl
+                    WHERE acl.grantee = 0 AND acl.privilege_type = 'EXECUTE'
+                  ) AS public_cannot_execute
+                FROM pg_proc p WHERE p.oid = '"naksha~admin".naksha_maintain()'::regprocedure
+              """).use { rows ->
+                assertTrue(rows.next(), "Bootstrap must install the maintenance wrapper")
+                assertEquals("v", rows.getString("provolatile"))
+                assertEquals("u", rows.getString("proparallel"))
+                assertFalse(rows.getBoolean("prosecdef"), "Maintenance must run as the caller")
+                assertEquals(listOf("search_path=\"naksha~admin\", pg_catalog"),
+                  (rows.getArray("proconfig").array as Array<*>).toList())
+                assertTrue(rows.getBoolean("public_cannot_execute"), "PUBLIC must not have EXECUTE privilege")
+                assertFalse(rows.next())
+              }
+            }
+            val coldSettings = sessionSettings(cold)
+            val coldExpected = assertNotNull(scalar(cold, "SELECT count(*) FROM $registry")).toInt()
+            assertTrue(coldExpected > 0)
+            assertEquals(coldExpected.toString(), scalar(cold, "SELECT \"naksha~admin\".naksha_maintain()"),
+              "The first installed-wrapper call must initialize a cold PLV8 runtime without session settings")
+            assertEquals(coldSettings, sessionSettings(cold))
+            val coldAfter = snapshot(cold)
+            assertEquals(coldExpected.toString(), scalar(cold, "SELECT \"naksha~admin\".naksha_maintain()"))
+            assertEquals(coldAfter, snapshot(cold), "Repeated installed-wrapper calls must be idempotent")
+            assertEquals(coldSettings, sessionSettings(cold))
+            println("PLV8 verification: installed wrapper metadata, trusted search_path, PUBLIC ACL, cold initialization and idempotency")
+          } finally {
+            cold.rollback()
+          }
+        }
+
         conn.execute("SET LOCAL lock_timeout = '5s'; SET LOCAL statement_timeout = '120s'").close()
         conn.execute("SET LOCAL search_path TO pg_catalog, public").close()
         val settings = sessionSettings(conn)
-        conn.execute("""
-          CREATE FUNCTION pg_temp.naksha_maintain() RETURNS integer
-          LANGUAGE plv8 VOLATILE PARALLEL UNSAFE
-          SET search_path = 'naksha~admin', pg_catalog, public, topology AS ${'$'}${'$'}
-            if (typeof require !== "function") plv8.find_function('"naksha~admin".es_modules_init')();
-            const module = require('naksha_psql');
-            if (typeof module.naksha_maintain !== "function") throw new Error("Missing naksha_psql.naksha_maintain export");
-            return module.naksha_maintain();
-          ${'$'}${'$'}
-        """).close()
         conn.execute("""
           INSERT INTO "naksha~admin".es_modules (name, source, autoload) VALUES
           ('plv8_alias_probe_a', ${literal("""
@@ -165,7 +195,7 @@ class PgPlv8MaintenanceTest {
         assertTrue(expected > 0)
         val savepoint = conn.jdbc.setSavepoint()
         try {
-          assertEquals(expected.toString(), scalar(conn, "SELECT pg_temp.naksha_maintain()"))
+          assertEquals(expected.toString(), scalar(conn, "SELECT \"naksha~admin\".naksha_maintain()"))
           assertEquals(settings, sessionSettings(conn), "Attached PLV8 storage must not change caller session settings")
           assertNotNull(scalar(conn, "SELECT to_regclass(${literal(future)})"))
           assertEquals("3", scalar(conn, """
@@ -175,7 +205,7 @@ class PgPlv8MaintenanceTest {
           assertFalse(before == after, "SQL maintenance must create previously absent ranges")
           assertEquals(expected, database.maintain_partitions(conn))
           assertEquals(after, snapshot(conn), "JVM sweep after PLV8 must be idempotent")
-          assertEquals(expected.toString(), scalar(conn, "SELECT pg_temp.naksha_maintain()"))
+          assertEquals(expected.toString(), scalar(conn, "SELECT \"naksha~admin\".naksha_maintain()"))
           assertEquals(after, snapshot(conn), "Repeated PLV8 invocation must attach afresh without DDL changes")
           assertEquals(sequenceBefore, scalar(conn, "SELECT ROW(last_value, is_called)::text FROM $sequence"))
           assertEquals(rowsBefore, scalar(conn, "SELECT jsonb_agg(to_jsonb(r) ORDER BY fn)::text FROM $root r"))
@@ -213,7 +243,7 @@ class PgPlv8MaintenanceTest {
           val failedBefore = snapshot(conn)
           val failurePoint = conn.jdbc.setSavepoint()
           try {
-            val failure = assertFailsWith<PSQLException> { scalar(conn, "SELECT pg_temp.naksha_maintain()") }
+            val failure = assertFailsWith<PSQLException> { scalar(conn, "SELECT \"naksha~admin\".naksha_maintain()") }
             assertTrue(failure.message.orEmpty().contains(failureTable), failure.message)
           } finally {
             conn.jdbc.rollback(failurePoint)
@@ -226,7 +256,7 @@ class PgPlv8MaintenanceTest {
           assertEquals(settings, sessionSettings(conn))
 
           conn.execute("DROP TABLE $conflict").close()
-          assertEquals((expected + 1).toString(), scalar(conn, "SELECT pg_temp.naksha_maintain()"))
+          assertEquals((expected + 1).toString(), scalar(conn, "SELECT \"naksha~admin\".naksha_maintain()"))
           assertNotNull(scalar(conn, "SELECT to_regclass(${literal(future)})"))
           assertEquals("3", scalar(conn, """
             SELECT count(*) FROM pg_partition_tree(${literal(conflict)}::regclass) WHERE isleaf
@@ -247,7 +277,7 @@ class PgPlv8MaintenanceTest {
           val failurePoint = conn.jdbc.setSavepoint()
           try {
             conn.execute("COMMENT ON SCHEMA \"naksha~admin\" IS " + (invalid?.let { literal(it) } ?: "NULL")).close()
-            val failure = assertFailsWith<PSQLException> { scalar(conn, "SELECT pg_temp.naksha_maintain()") }
+            val failure = assertFailsWith<PSQLException> { scalar(conn, "SELECT \"naksha~admin\".naksha_maintain()") }
             assertTrue(failure.message.orEmpty().contains("local config", ignoreCase = true), failure.message)
           } finally {
             conn.jdbc.rollback(failurePoint)
@@ -266,21 +296,27 @@ class PgPlv8MaintenanceTest {
     }
   }
 
-  private fun sessionSettings(conn: PgConnection): String? = scalar(conn, """
+  private fun sessionSettings(conn: PgConnection): String? = sessionSettings(conn.jdbc)
+
+  private fun sessionSettings(conn: java.sql.Connection): String? = scalar(conn, """
     SELECT string_agg(name || '=' || setting, '|' ORDER BY name) FROM pg_settings
     WHERE name IN ('search_path', 'application_name', 'default_transaction_read_only',
       'transaction_read_only', 'lock_timeout', 'statement_timeout', 'TimeZone')
   """)
 
-  private fun snapshot(conn: PgConnection): String? = scalar(conn, """
+  private fun snapshot(conn: PgConnection): String? = snapshot(conn.jdbc)
+
+  private fun snapshot(conn: java.sql.Connection): String? = scalar(conn, """
     SELECT coalesce(string_agg(ROW(c.oid, n.nspname, c.relname, c.relkind, c.reloptions,
       obj_description(c.oid, 'pg_class'), pg_get_expr(c.relpartbound, c.oid))::text, '|' ORDER BY c.oid), '')
     FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname IN ('naksha~admin', 'PLV8 Maintenance')
   """)
 
-  private fun scalar(conn: PgConnection, sql: String): String? {
-    conn.jdbc.createStatement().use { statement ->
+  private fun scalar(conn: PgConnection, sql: String): String? = scalar(conn.jdbc, sql)
+
+  private fun scalar(conn: java.sql.Connection, sql: String): String? {
+    conn.createStatement().use { statement ->
       statement.executeQuery(sql).use { rows ->
         assertTrue(rows.next(), "Expected one result row")
         val value = rows.getString(1)

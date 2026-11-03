@@ -764,7 +764,7 @@ return obj;
          */
         @JsStatic
         actual fun md5(text: String): ByteArray {
-            if (isPlv8()) return js("plv8.execute(\"SELECT digest(\$1,'md5') as i\",[text])[0].i").unsafeCast<ByteArray>()
+            if (isPlv8()) return js("plv8.execute(\"SELECT public.digest(\$1,'md5') as i\",[text])[0].i").unsafeCast<ByteArray>()
             // TODO: Use SubtleCrypto-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
             throw UnsupportedOperationException("md5 is not implemented in the current environment")
         }
@@ -778,7 +778,7 @@ return obj;
         @JsName("md5Bytes")
         @JsStatic
         actual fun md5(bytes: ByteArray): ByteArray {
-            if (isPlv8()) return js("plv8.execute(\"SELECT digest(\$1,'md5') as i\",[bytes])[0].i").unsafeCast<ByteArray>()
+            if (isPlv8()) return js("plv8.execute(\"SELECT public.digest(\$1,'md5') as i\",[bytes])[0].i").unsafeCast<ByteArray>()
             // TODO: Use SubtleCrypto-API in the browser: https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto
             throw UnsupportedOperationException("md5 is not implemented in the current environment")
         }
