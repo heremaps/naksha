@@ -3,6 +3,7 @@ package naksha.psql
 import naksha.base.NakshaException
 import naksha.base.illegalState
 import naksha.model.SessionOptions
+import org.postgresql.util.PSQLException
 import java.lang.ref.WeakReference
 
 actual class PgConnection private actual constructor(id: Long, instance: PgInstance, options: SessionOptions): AutoCloseable {
@@ -62,6 +63,48 @@ actual class PgConnection private actual constructor(id: Long, instance: PgInsta
     } catch (throwable: Throwable) {
       throw PgExceptionMapper.map(throwable, sql)
     }
+  }
+
+  internal actual fun tryMaintenance(action: () -> Boolean): Boolean {
+    val conn = jdbc
+    if (conn.autoCommit) throw illegalState("Maintenance requires a caller-owned transaction")
+    val savepoint = conn.setSavepoint()
+    var failure: Throwable? = null
+    val completed = try {
+      action()
+    } catch (throwable: Throwable) {
+      failure = throwable
+      false
+    }
+    var cleanupFailed = false
+    if (!completed) {
+      try {
+        conn.rollback(savepoint)
+      } catch (throwable: Throwable) {
+        cleanupFailed = true
+        val original = failure
+        if (original == null) failure = throwable else original.addSuppressed(throwable)
+      }
+    }
+    try {
+      conn.releaseSavepoint(savepoint)
+    } catch (throwable: Throwable) {
+      cleanupFailed = true
+      val original = failure
+      if (original == null) failure = throwable else original.addSuppressed(throwable)
+    }
+    val original = failure
+    if (original != null) {
+      if (!cleanupFailed) {
+        var cause: Throwable? = original
+        while (cause != null) {
+          if (cause is PSQLException && cause.sqlState == "55P03") return false
+          cause = cause.cause
+        }
+      }
+      throw original
+    }
+    return completed
   }
 
   actual var autoCommit: Boolean

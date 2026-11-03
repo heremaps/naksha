@@ -7,7 +7,7 @@ import naksha.base.illegalState
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 
 /**
- * Per-root partition provisioning in the caller's transaction. No root creation, version allocation, retention, scheduling, index repair, commit or rollback occurs here. Internal cursors are closed; the caller's connection and cursors are never closed.
+ * Per-root partition provisioning in the caller's transaction. No root creation, version allocation, retention, scheduling, index repair, commit or outer transaction rollback occurs here. Sweeps isolate each root attempt in a subtransaction. Internal cursors are closed; the caller's connection and cursors are never closed.
  *
  * Requires a permanent standalone RANGE (nv) root and a clean registry installation. Cooperating callers serialize with transaction advisory locks; recursive ACCESS EXCLUSIVE locks protect catalog inspection and provisioning. Callers must roll back on failure, including failures after partial DDL, and should use READ COMMITTED to observe concurrent committed provisioning.
  * @since 3.0
@@ -73,6 +73,14 @@ VALUES ($1, $2, $3, $4, $5::text::oid, $6, $7, $8, $9)
     val root = lockRoot(conn, schema, table)
     val config = registered(conn, schema, table)
       ?: throw illegalArg("Unregistered partition root $schema.$table")
+    maintainLocked(conn, schema, table, version, root, config)
+  }
+
+  /**
+   * Validates the locked root against its registration and provisions its coverage.
+   * @since 3.0
+   */
+  private fun maintainLocked(conn: PgConnection, schema: String, table: String, version: Long, root: Long, config: Config) {
     if (root != config.root) throw illegalState("Registered root $schema.$table has been replaced")
     settings(conn, config.partitions, config.toast, config.headFill, config.historyFill, config.space)
     provision(conn, schema, table, config, version)
@@ -101,15 +109,14 @@ VALUES ($1, $2, $3, $4, $5::text::oid, $6, $7, $8, $9)
   }
 
   /**
-   * Maintains a deterministic registry snapshot at one shared [version], returning the number of maintained roots. The snapshot cursor is closed before root locking or DDL; registrations committed after the snapshot are deferred to the next sweep. Each root's registered OID is validated by [maintain].
+   * Maintains a deterministic registry snapshot at one shared [version], returning only the number of successfully maintained roots. The snapshot cursor is closed before root locking or DDL; registrations committed after the snapshot are deferred to the next sweep.
    *
-   * Use READ COMMITTED and a single caller-owned transaction. A global transaction advisory lock serializes overlapping sweeps and permits repeated calls by the same transaction; all root locks remain held until transaction completion. Failures propagate immediately without savepoints or recovery, and the caller must roll back the entire transaction. Concurrent DROP or unregister is not skipped: a missing root or registration fails the sweep when encountered. No DROP/unregister protocol or scheduler is implemented here.
+   * Use READ COMMITTED and a single caller-owned transaction. Each root attempt uses an isolated subtransaction with nonblocking advisory and recursive physical locks. Advisory conflicts, physical lock conflicts (SQLSTATE 55P03), and registrations removed by a committed cooperative drop are skipped, rolling back the attempt and releasing its locks. Successful root locks remain held until transaction completion. Missing roots with retained registrations, changed OIDs, invalid topology and all other failures propagate; the caller must roll back the entire transaction. No sweep-wide mutex or scheduler is used.
    * @since 3.0
    */
   fun maintainAll(conn: PgConnection, version: Long = currentVersion(conn)): Int {
     transaction(conn)
     if (version < 0 || version >= HEAD) throw illegalArg("Maintenance requires a finite version in 0..HEAD-1")
-    conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended('naksha:partman:sweep', 0))").close()
     val roots = ArrayList<Pair<String, String>>()
     conn.execute("""
 SELECT "schema_name", "table_name" FROM $registry
@@ -117,8 +124,17 @@ ORDER BY "schema_name" COLLATE "C", "table_name" COLLATE "C"
 """).use { cursor ->
       while (cursor.next()) roots.add(Pair(cursor["schema_name"], cursor["table_name"]))
     }
-    for ((schema, table) in roots) maintain(conn, schema, table, version)
-    return roots.size
+    var maintained = 0
+    for ((schema, table) in roots) {
+      if (conn.tryMaintenance {
+        if (!lockCollection(conn, schema, table, tryOnly = true)) return@tryMaintenance false
+        val config = registered(conn, schema, table) ?: return@tryMaintenance false
+        val root = lockRoot(conn, schema, table, nowait = true)
+        maintainLocked(conn, schema, table, version, root, config)
+        true
+      }) maintained++
+    }
+    return maintained
   }
 
   /**
@@ -163,6 +179,53 @@ ORDER BY "schema_name" COLLATE "C", "table_name" COLLATE "C"
   }
 
   /**
+   * Locks a catalog for the caller's transaction, exclusively for catalog creation/drop or shared for collection operations. Returns false only when a nonblocking attempt conflicts.
+   * @since 3.0
+   */
+  internal fun lockCatalog(conn: PgConnection, schema: String, shared: Boolean = false, tryOnly: Boolean = false): Boolean {
+    transaction(conn)
+    name(schema, 63)
+    if (!shared && !tryOnly) {
+      val upgrading = conn.execute("""
+SELECT EXISTS (
+  SELECT 1 FROM pg_catalog.pg_locks
+  WHERE pid = pg_catalog.pg_backend_pid() AND locktype = 'advisory' AND mode = 'ShareLock' AND granted
+    AND objsubid = 1
+    AND classid::bigint = ((pg_catalog.hashtextextended($1, 0) >> 32) & 4294967295)
+    AND objid::bigint = (pg_catalog.hashtextextended($1, 0) & 4294967295)
+) AS upgrading
+""", arrayOf("naksha:schema:$schema")).fetch().use { cursor -> cursor.get<Boolean>("upgrading") }
+      if (upgrading) {
+        if (!lockCatalog(conn, schema, tryOnly = true)) throw illegalState("Catalog lock upgrade is busy; retry the transaction with catalog-exclusive work first")
+        return true
+      }
+    }
+    val function = "pg_${if (tryOnly) "try_" else ""}advisory_xact_lock${if (shared) "_shared" else ""}"
+    val sql = "SELECT pg_catalog.$function(pg_catalog.hashtextextended($1, 0)) AS locked"
+    val args = arrayOf<Any?>("naksha:schema:$schema")
+    if (tryOnly) return conn.execute(sql, args).fetch().use { cursor -> cursor.get<Boolean>("locked") }
+    conn.execute(sql, args).close()
+    return true
+  }
+
+  /**
+   * Takes a shared catalog guard followed by an exclusive collection advisory lock. Returns false on a nonblocking conflict; roll back the attempt's subtransaction to release any catalog guard already acquired.
+   * @since 3.0
+   */
+  fun lockCollection(conn: PgConnection, schema: String, table: String, tryOnly: Boolean = false): Boolean {
+    transaction(conn)
+    name(schema, 63)
+    name(table, 29)
+    if (!lockCatalog(conn, schema, shared = true, tryOnly = tryOnly)) return false
+    val function = if (tryOnly) "pg_try_advisory_xact_lock" else "pg_advisory_xact_lock"
+    val sql = "SELECT pg_catalog.$function(pg_catalog.hashtextextended(pg_catalog.format('naksha:partman:%I.%I', $1::text, $2::text), 0)) AS locked"
+    val args = arrayOf<Any?>(schema, table)
+    if (tryOnly) return conn.execute(sql, args).fetch().use { cursor -> cursor.get<Boolean>("locked") }
+    conn.execute(sql, args).close()
+    return true
+  }
+
+  /**
    * Validates block-size-dependent TOAST and explicit partition/storage settings.
    * @since 3.0
    */
@@ -191,18 +254,14 @@ ORDER BY "schema_name" COLLATE "C", "table_name" COLLATE "C"
   }
 
   /**
-   * Serializes a root, recursively locks descendants and checks the mandatory root contract.
+   * Serializes a collection, recursively locks descendants (optionally NOWAIT) and checks the mandatory root contract.
    * @since 3.0
    */
-  private fun lockRoot(conn: PgConnection, schema: String, table: String): Long {
-    transaction(conn)
-    name(schema, 63)
-    name(table, 29)
-    conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(pg_catalog.format('naksha:partman:%I.%I', $1::text, $2::text), 0))",
-      arrayOf(schema, table)).close()
+  private fun lockRoot(conn: PgConnection, schema: String, table: String, nowait: Boolean = false): Long {
+    lockCollection(conn, schema, table)
     val root = oid(conn, schema, table) ?: throw illegalState("Partition root $schema.$table is missing")
     // Without ONLY, PostgreSQL locks all existing descendants as well.
-    conn.execute("LOCK TABLE ${quoteIdent(schema)}.${quoteIdent(table)} IN ACCESS EXCLUSIVE MODE").close()
+    conn.execute("LOCK TABLE ${quoteIdent(schema)}.${quoteIdent(table)} IN ACCESS EXCLUSIVE MODE${if (nowait) " NOWAIT" else ""}").close()
     if (oid(conn, schema, table) != root) throw illegalState("Partition root $schema.$table changed while acquiring its lock")
     if (!check(conn, """
 WITH keys AS (

@@ -44,6 +44,17 @@ open class PgWriter internal constructor(
   val useSavepoint: Boolean
 ) : PgReaderWriterBase(session) {
   companion object PgWriterCompanion {
+    /**
+     * Resolve storage defaults before encoding, preserving ordered immutability for explicitly supplied layouts.
+     * @since 3.0
+     */
+    internal fun prepareCollectionLayout(collection: NakshaCollection, existing: NakshaCollection? = null) {
+      collection.validateLayoutDeclarations()
+      if (existing != null && collection.members != null) validateCollectionSchemaUnchanged(existing, collection)
+      PgCollection.resolveLayout(collection)
+      if (existing != null) validateCollectionSchemaUnchanged(existing, collection)
+    }
+
     private fun requireSameValues(left: List<*>?, right: List<*>?) {
       if (left == null || right == null) {
         if (left !== right) throw illegalArg("Collection members and indices are immutable after creation")
@@ -256,9 +267,9 @@ open class PgWriter internal constructor(
           pgWrite.feature = catalog
         } else if (pgWrite.isCollectionModification) {
           val collection = feature as? NakshaCollection ?: feature.proxy(NakshaCollection::class)
-          if (op == WriteOp.UPDATE || op == WriteOp.UPSERT) {
-            val existing = session.getPgCollection(catalogNumber, id.intValue, conn)
-            if (existing != null) validateCollectionSchemaUnchanged(existing.naksha, collection)
+          if (op == WriteOp.CREATE || op == WriteOp.UPDATE || op == WriteOp.UPSERT) {
+            val existing = if (op == WriteOp.UPDATE || op == WriteOp.UPSERT) session.getPgCollection(catalogNumber, id.intValue, conn) else null
+            prepareCollectionLayout(collection, existing?.naksha)
           }
           collection.databaseId = databaseId
           val partitions = collection.partitions

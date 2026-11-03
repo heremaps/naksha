@@ -302,9 +302,9 @@ open class NakshaCollection() : NakshaFeature() {
      *
      * Each [Member] declares a name, a [MemberType], an optional [JsonPath] to extract the value from, and a [retain strategy][MemberRetain]. At write time, the storage walks the feature using the path, coerces the value to the declared type, and stores it as a dedicated member alongside the encoded feature blob. The value also remains in the encoded feature blob.
      *
-     * When `null` _(key absent)_, the storage uses the [Xyz members definition][XyzMembers] — this is a backward-compatible mode. When explicitly set _(even to an empty list)_, the storage uses only the mandatory members plus the declared members.
+     * [members] and [indices] must either both be `null` or both be explicitly set. When both are `null` _(keys absent)_, the layout is unresolved and the storage owns choosing and persisting its defaults. The model does not inject XYZ defaults. When explicitly set _(even to empty lists)_, the storage uses only the mandatory members plus the declared members and indices.
      *
-     * The mandatory members [feature-number][StandardMembers.FeatureNumber], [id][StandardMembers.Id], [version][StandardMembers.FeatureVersion], and [next-version][StandardMembers.NextVersion] are injected by the storage, if not explicitly declared as copy with relocation. It is not allowed to change the type of mandatory members, and they can't be removed _(as the storage will always inject them, when they are missing)_. They can only be relocated to another [JsonPath].
+     * The mandatory members [tuple-number][StandardMembers.Tn], [id][StandardMembers.Id], [version][StandardMembers.FeatureVersion], [next-version][StandardMembers.NextVersion], and [global book feature-number][StandardMembers.GlobalBookFeatureNumber] are injected by the storage, if not explicitly declared as copy with relocation. It is not allowed to change the type of mandatory members, and they can't be removed _(as the storage will always inject them, when they are missing)_. They can only be relocated to another [JsonPath].
      *
      * These are the declared members, as configured. Use [useMembers] for the effective members of the collection,
      * including the default, mandatory and [custom index mapping][customIndexMapping] members.
@@ -399,35 +399,71 @@ open class NakshaCollection() : NakshaFeature() {
     }
 
     /**
+     * Validates that [members] and [indices] are either both `null` (unresolved storage defaults) or both explicitly declared, without modifying either list. The storage must resolve and persist both defaults before accessing [validatedMembers].
+     * @since 3.0
+     * @throws NakshaException with [ILLEGAL_ARGUMENT] if exactly one layout declaration is `null`.
+     */
+    fun validateLayoutDeclarations(): Unit {
+        if ((members == null) != (indices == null)) {
+            throw illegalArg("Collection members and indices must either both be null or both be explicitly declared")
+        }
+    }
+
+    /**
      * The validated members list.
      *
-     * If the member list is currently `null`, the collection is in backward-compatible default mode: the members are created from [XyzMembers.ALL], and — so the persisted collection stays consistent across reloads — a still-`null` [indices] list is defaulted to [XyzIndices.ALL] as well. If the list does not contain the mandatory members, they will be added.
-     *
-     * For a collection with [customIndexMapping], the members and indices generated for the mappings (`cmNN`, `ciNN`) are
-     * added as well, and a still-`null` [indices] list is defaulted to the [slim indices][XyzIndices.HUB_SLIM_INDICES].
-     * The result is cached until the members or the mappings are replaced.
+     * Both [members] and [indices] must be explicitly declared; when both are `null`, the storage owns resolving and persisting its defaults before this property can be accessed. Missing mandatory members are added as independent copies of [StandardMembers.MANDATORY]. This property does not inject XYZ defaults or modify [indices]. Declarations and member definitions are validated on every access, including in-place changes.
      * @return the members list of this collection.
      * @since 3.0
-     * @throws NakshaException with [ILLEGAL_STATE]; or with [ILLEGAL_ARGUMENT], if the mappings are invalid, see [CustomIndexMappingUtil.validate].
+     * @throws NakshaException with [ILLEGAL_ARGUMENT] if exactly one layout declaration is `null`.
+     * @throws NakshaException with [ILLEGAL_STATE] if storage defaults are unresolved or the members are invalid.
      */
     open val validatedMembers: MemberList
         get() {
+            validateLayoutDeclarations()
+            val list = this.members ?: throw illegalState("Storage must resolve collection layout defaults before accessing members")
+            if (CustomIndexMappingUtil.hasMappings(this)) useMembers()
+            // Ensure that the list does not contain null or duplicates.
+            list.validateAndSort()
+            // Ensure that the mandatory members are in.
+            for (mandatory in StandardMembers.MANDATORY) {
+                val found: Member? = list.get(mandatory.name)
+                if (found != null) {
+                    mandatory.asOther(found, comparePath = false)
+                } else {
+                    list.add(mandatory.copy<Member>(recursive = true))
+                }
+            }
+            _validatedMembers = list
+            return list
+        }
+
+    /**
+     * Resolves the Hub's XYZ layout and custom index mappings. Storage code uses [validatedMembers] after resolving its own defaults.
+     * @return the effective members, including mandatory members and generated mappings.
+     * @since 3.0
+     */
+    open fun useMembers(): MemberList {
         val current = this.members
         val mappings = this.customIndexMapping
-        val cached = _validatedMembers
+        val cached = mappedMembers
         if (cached != null && cached === current && mappings === validatedMappings
             && this.indices === validatedIndices) return cached
-        // Validate before changing anything, so invalid mappings leave the collection unchanged.
         val mapped = CustomIndexMappingUtil.hasMappings(this)
         if (mapped) CustomIndexMappingUtil.validate(this)
         var write = false
-        var list = this.members
+        var list = current
         if (list == null) {
-            list = MemberList(XyzMembers.ALL)
+            list = MemberList()
+            for (member in XyzMembers.ALL) list.add(member.copy<Member>(recursive = true))
             write = true
         }
         if (this.indices == null && (current == null || mapped)) {
-            this.indices = IndexList(if (mapped) XyzIndices.HUB_SLIM_INDICES else XyzIndices.ALL)
+            val indices = IndexList()
+            for (index in if (mapped) XyzIndices.HUB_SLIM_INDICES else XyzIndices.ALL) {
+                indices.add(index.copy<Index>(recursive = true))
+            }
+            this.indices = indices
         }
         if (mapped) {
             val indices = this.indices!!
@@ -448,22 +484,23 @@ open class NakshaCollection() : NakshaFeature() {
             if (found != null) {
                 mandatory.asOther(found, comparePath = false)
             } else {
-                // Collection Tn lives at xyz.uuid (the tupleNumber accessor), so backfill XyzTn not the generic Tn.
-                list.add(if (mandatory === StandardMembers.Tn) XyzMembers.XyzTn else mandatory)
+                list.add(mandatory.copy<Member>(recursive = true))
                 write = true
             }
         }
         if (write) this.members = list
-        _validatedMembers = list
+        mappedMembers = list
         validatedMappings = mappings
         validatedIndices = this.indices
         return list
     }
 
-    /** The mapping list, the [validatedMembers] were completed with; not serialized. */
+    private var mappedMembers: MemberList? = null
+
+    /** The mapping list, the [useMembers] were completed with; not serialized. */
     private var validatedMappings: CustomIndexMappingList? = null
 
-    /** The index list, the [validatedMembers] were completed with; not serialized. */
+    /** The index list, the [useMembers] were completed with; not serialized. */
     private var validatedIndices: IndexList? = null
 
     /**
@@ -504,10 +541,8 @@ open class NakshaCollection() : NakshaFeature() {
      *
      * Each [Index] declares a `name`, the column(s) to index, an optional included columns.
      *
-     * Indices are applied to every variant of the collection (head, history, deleted, meta) by the storage. The storage indexes the mandatory members implicitly. Following [members], when this list is `null` and no members are declared either, the storage falls back to the default [XyzIndices.ALL] (backward-compatible mode); once members are declared, an index list must be provided here (an empty list is allowed).
+     * [indices] and [members] must either both be `null` or both be explicitly set. Both `null` means unresolved defaults owned and persisted by the storage, not XYZ defaults injected by the model. Explicit lists, including empty lists, request only the mandatory members plus the declared members and indices.
      *
-     * These are the declared indices, as configured. [useMembers] completes them with the default indices and those
-     * generated for the [customIndexMapping], call it before reading the effective indices.
      * ### Warning
      * Do not create an index above [id][StandardMembers.Id], the [feature-number][StandardMembers.FeatureNumber] can be derived from the [id][StandardMembers.Id] and the storage will know this. Therefore, searching for [id][StandardMembers.Id] will automatically be redirected into the primary key _(which includes the [feature-number][StandardMembers.FeatureNumber])_.
      *
