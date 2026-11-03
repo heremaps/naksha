@@ -102,16 +102,15 @@
         let moduleName = toName[path] || path
         let moduleExports = exportsByModuleName[moduleName] || {}
         // noinspection JSUnusedLocalSymbols
-        let renaming = {}
         let importMap = imports.split(',')
         .map(part => part.trim().split(/\s+as\s+/))
         .map(([name, alias]) => {
           if (name) {
             let exportName = moduleExports[name]
             if (exportName == null) error(`Failed to import missing symbol '${name}' from module '${moduleName}'`)
-            if (exportName !== alias) renaming[alias] = exportName
+            return JSON.stringify(exportName) + ': ' + (alias || name)
           }
-          return alias
+          return null
         })
         .filter(Boolean) // Remove empty entries
         .join(', ');
@@ -125,14 +124,8 @@
           importMap += ", copyOf"
           patchedImport = true
         }
-        let EXP_SYM = `__${moduleName}__`
-        let r = `let ${EXP_SYM} = require('${path}');`
-        for (let key in renaming) {
-          let alias = renaming[key]
-          r += `${EXP_SYM}["${key}"] = ${EXP_SYM}["${alias}"];`
-        }
-        r += `const { ${importMap} } = ${EXP_SYM};`
-        return r
+        // Import aliases are local bindings, never mutations of cached exports.
+        return `const { ${importMap} } = require(${JSON.stringify(path)});`
       }
 
       // Transform export statements

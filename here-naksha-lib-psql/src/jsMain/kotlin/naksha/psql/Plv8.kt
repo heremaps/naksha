@@ -1,7 +1,5 @@
 package naksha.psql
 
-external interface
-
 /**
  * Expose the native PLV8 api.
  *
@@ -77,6 +75,7 @@ external interface Plv8 {
      * @since 3.0
      * @see subtransaction
      */
+    @JsName("execute")
     fun execute(sql: String): dynamic
 
     /**
@@ -87,6 +86,7 @@ external interface Plv8 {
      * @since 3.0
      * @see subtransaction
      */
+    @JsName("execute")
     fun execute(sql: String, args: Array<dynamic?>): dynamic
 
     /**
@@ -96,6 +96,7 @@ external interface Plv8 {
      * @return the prepared plan.
      * @since 3.0
      */
+    @JsName("prepare")
     fun prepare(sql: String): PreparedPlan
 
     /**
@@ -107,6 +108,7 @@ external interface Plv8 {
      * @return the prepared plan.
      * @since 3.0
      */
+    @JsName("prepare")
     fun prepare(sql: String, typeNames: Array<String>): PreparedPlan
 
     /**

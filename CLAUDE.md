@@ -17,3 +17,8 @@ Please work with three distinct settings:
   - If there are multiple skill that cover the same topic, prioritize the project skill.
   - Anything unclear in that skill should follow the personal skills.
   - Anything still unclear may utilize other skills.
+
+# Secrets
+Please search for secrets and credentials like database users/passwords aso in `vault/`.
+First try a file name `{project}.credentials.md`, then for a `{user}.credentials.md`, and finally try `credentials.md`.
+If needed credentials are not found, ask the user.

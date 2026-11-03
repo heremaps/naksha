@@ -57,13 +57,14 @@ actual class TupleHeapCache : ITupleCache {
     }
 
     actual companion object TupleHeapCache_C {
+        private val instance = TupleHeapCache()
         /**
          * Returns the head-cache implementation.
          * @return the head-cache implementation.
          * @since 3.0
          */
         actual fun getInstance(): TupleHeapCache {
-            TODO("Not yet implemented")
+            return instance
         }
     }
 }
