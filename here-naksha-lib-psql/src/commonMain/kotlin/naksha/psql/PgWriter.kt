@@ -295,8 +295,10 @@ open class PgWriter internal constructor(
             if (database.catalog_get_or_create_schema(conn, name = pgCatalog.name, originalName = pgCatalog.id.text) < 0) {
               throw catalogExists("Creation of catalog '$id' failed, it exists already")
             }
+            val collections = prepareCatalogCollections(conn, pgCatalog)
             pgWrite.pgCatalog = pgCatalog
             session.cachePgCatalog(pgCatalog) // This allows following write instructions to succeed.
+            session.cachePgCollection(collections)
           } else if (f is NakshaCollection) {
             val pgCollection = PgCollection(catalogId, tuple)
             database.collection_create_table_if_not_exists(
@@ -333,8 +335,10 @@ open class PgWriter internal constructor(
           if (f is NakshaCatalog) {
             val pgCatalog = PgCatalog(tuple)
             database.catalog_get_or_create_schema(conn, name = pgCatalog.name, originalName = pgCatalog.id.text)
+            val collections = prepareCatalogCollections(conn, pgCatalog)
             pgWrite.pgCatalog = pgCatalog
             session.cachePgCatalog(pgCatalog) // This allows following write instructions to succeed.
+            session.cachePgCollection(collections)
           } else if (f is NakshaCollection) {
             val pgCollection = PgCollection(catalogId, tuple)
             database.collection_create_table_if_not_exists(
@@ -360,6 +364,27 @@ open class PgWriter internal constructor(
         else -> throw illegalArg("Unknown write operation: $op")
       }
     }
+  }
+
+  /**
+   * Ensures an ordinary catalog's internal collections table exists before publishing its descriptor to the session cache.
+   * @since 3.0
+   */
+  private fun prepareCatalogCollections(conn: PgConnection, catalog: PgCatalog): PgCollection {
+    val database = storage.database
+    if (catalog.id == Id.ADMIN_CATALOG_ID) return database.pgAdminCollections
+    val collection = catalog.collectionsDescriptor(database.pgAdminCollections.naksha)
+    database.collection_create_table_if_not_exists(
+      conn = conn,
+      schema = catalog.name,
+      table = collection.name,
+      columns = collection.columns,
+      indices = collection.indices,
+      options = collection.creationOptions(storage.config, database.maxTupleSize),
+      logicalCatalog = catalog.id.text,
+      logicalCollection = collection.id.text,
+    )
+    return collection
   }
 
   /**

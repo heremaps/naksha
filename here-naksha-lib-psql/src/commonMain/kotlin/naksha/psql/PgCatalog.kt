@@ -7,6 +7,8 @@ import naksha.base.Id.IdCompanion.ADMIN_CATALOG_TEXT
 import naksha.base.*
 import naksha.model.Tuple
 import naksha.model.objects.NakshaCatalog
+import naksha.model.objects.NakshaCatalogCollection
+import naksha.model.objects.NakshaCollection
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 import kotlin.js.JsExport
 import kotlin.jvm.JvmField
@@ -56,6 +58,17 @@ open class PgCatalog @JvmOverloads constructor(
     fun readNow(): PgCatalog {
         cacheReadMillis = Platform.currentMillis()
         return this
+    }
+
+    /**
+     * Builds the internal collections descriptor using resolved admin metadata without persisting a self-row.
+     * @since 3.0
+     */
+    internal fun collectionsDescriptor(metadata: NakshaCollection): PgCollection {
+        val definition = NakshaCatalogCollection(naksha)
+        PgCollection.resolveLayout(definition)
+        return PgCollection(id, Tuple.encodeRaw(definition, definition.databaseNumber, id.intValue,
+            Id.COLLECTIONS_COL_ID.intValue, metadata.validatedMembers, 1L).tuple)
     }
 
     /**

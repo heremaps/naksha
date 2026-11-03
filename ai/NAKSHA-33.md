@@ -163,6 +163,7 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-10-c](#db-10-c--add-missing-integration-coverage) | Add missing integration coverage | [db-10](#db-10--complete-integrated-acceptance-checks) | `TODO` | — |
 | [db-10-d](#db-10-d--verify-indexes-and-query-plans) | Verify indexes and query plans | [db-10](#db-10--complete-integrated-acceptance-checks) | `TODO` | — |
 | [db-10-e](#db-10-e--follow-the-test-running-guidance) | Follow the test-running guidance | [db-10](#db-10--complete-integrated-acceptance-checks) | `TODO` | — |
+| [db-11](#db-11--restore-transactional-metadata-cache-isolation) | Restore transactional metadata cache isolation after functional recovery | [db-06](#db-06--move-create-into-pgdatabase), [db-07](#db-07--move-update-and-upsert-into-pgdatabase), [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase), [db-09](#db-09--consolidate-supporting-reads-and-remove-the-table-hierarchy) | `TODO` | — |
 
 ## Details
 
@@ -338,6 +339,14 @@ Implement collection/schema drop with verified custom-maintainer registry cleanu
 
 ### db-04-f — Route bootstrap and create-upsert preparation
 
+Catalog-internal collection increment approved `DONE`; commit message `Prepare internal collections for catalog creation and cold lookup.` The user approved the implementation and requested continuing functional catalog/feature recovery before redesigning metadata caching. Completed preparation scope is archived in [NAKSHA-33-DONE.md](NAKSHA-33-DONE.md#catalog-internal-collection-preparation-increment). The new db-11 TODO records the cache review; cache isolation must not be inferred from preparation-level tests or block this functional recovery sequence.
+
+Catalog-internal collection increment `IN_REVIEW`, uncommitted after approved combined commit `e54fac8e2`: ordinary catalog CREATE/UPSERT now builds a resolved NakshaCatalogCollection descriptor, provisions its physical table through the existing PgDatabase creation API, and publishes catalog/collection caches only after preparation DDL succeeds. CREATE retains existing-schema rejection; UPSERT ensures the table on reuse. Reserved internal descriptors are synthesized from a known catalog during cold-cache lookup without needing a self-registration row. Admin reserved-descriptor behavior remains separate. Logical orchestration stays outside PgDatabase; no new feature mutation algorithm or cache transaction boundary is introduced.
+
+Identity correctness: the internal descriptor uses the owning catalog number in both its legacy metadata tuple-number and encoded Tuple, while reusing only the admin collection's member schema for encoding. Child collection metadata therefore encodes into the ordinary catalog, not the admin catalog. Fixed the existing missing return in NakshaCatalog.databaseNumber when falling back to databaseId. Layout resolution occurs before metadata encoding, including generic mandatory members and the explicit Tags index.
+
+Verification: PgCatalogCollectionsTest and isolated real-JDBC PgCatalogCreationTest pass (2 tests, no failures/skips), including descriptor/child tuple addressing, resolved generic layout, physical root/HEAD/history/indexes, idempotency, logical-owner conflict, rollback cleanup and committed cold-session lookup with zero self-rows. JVM test compilation and JS main/production compilation pass; the temporary database was removed. Command uses NAKSHA_TEST_CATALOG_DB_URL and NAKSHA_TEST_PSQL_DB_URL pointing to the same fresh isolated database and `NAKSHA_SUPPRESS_PERF_TEST=true ./gradlew :here-naksha-lib-psql:jvmTest --tests 'naksha.psql.PgCatalogCollectionsTest' --tests 'naksha.psql.PgCatalogCreationTest' --console=plain --quiet`. Existing writer preparation still precedes its request savepoint; fixing that remains db-05. End-to-end legacy logical catalog CREATE/UPSERT mutation was not claimed by these preparation-level tests. No commit was made; cron remains deferred.
+
 JVM bootstrap follow-up implemented, uncommitted: a fresh-database integration test now creates storage through `Naksha.useStorage`, verifies committed storage identity/admin version/sequence and all four physical admin collection roots, then invokes registry-wide maintenance using a real mutable session without creating a logical transaction. Reproduced prerequisite fixes make configuration visible during initialization (restoring previous base fields on failure and preserving `afterInit`'s initialized contract), recognize typed master configuration in `PgConfig`, and correct `MemberList.verify`'s zero-index sentinel/missing-member insertion. Corrected escaped schema quoting in the final bootstrap search-path statement. `common.sql` no longer installs superseded pg_jobmon/pg_partman dependencies or pg_cron; cron extension/job installation belongs to db-04-h and must respect the cluster's designated cron database. No existing server configuration or application database was modified.
 
 Verification: both `PgBootstrapTest`/`PgBootstrapConfigTest` passed against a fresh PostgreSQL 18.6 database with both `NAKSHA_TEST_BOOTSTRAP_DB_URL` and `NAKSHA_TEST_PSQL_DB_URL` pointing to that database. Command: `./gradlew :here-naksha-lib-psql:jvmTest --tests 'naksha.psql.PgBootstrap*Test' --console=plain --quiet`. The dedicated database was removed afterward. Five new model initialization/member-list regression tests pass. A broader `MemberTest` run still has the same three previously recorded collection-builder failures (`addMemberStoresInOrder`, `addMemberRejectsDuplicates`, `addMemberCapsAt64`); these were not changed or hidden. Catalog-internal collection orchestration and full logical write flows remain outstanding.
@@ -421,8 +430,7 @@ missing-schema/table information needed by session cache invalidation.
 
 ### db-05-c — Publish local changes after commit
 
-Publish local catalog/collection changes only after successful commit; discard
-or restore local metadata and bookkeeping after request/full rollback.
+Metadata cache lifecycle is explicitly deferred to db-11 while functional catalog/feature recovery continues. Its approved policy supersedes publishing descriptors upward: invalidate affected parent keys and discard local overrides on both commit and rollback; never copy session descriptors into the master. Request/full rollback bookkeeping still needs coverage under db-05-a/d/e. Do not mark this ticket DONE or claim cross-session metadata consistency before db-11 is complete.
 
 ### db-05-d — Fail the whole batch on validation error
 
@@ -610,6 +618,16 @@ after VACUUM; verify HEAD and bounded-history partition pruning.
 
 Follow repository test-running guidance when executing checks; record commands
 and results with each ticket rather than deferring all verification to the end.
+
+### db-11 — Restore transactional metadata cache isolation
+
+Explicitly deferred by the user until catalog creation/management and feature reading/writing are restored. Coordinate with db-05-a/b/c/d; this is one flat follow-up ticket, not permission to hide cache failures or mark integrated transaction acceptance complete.
+
+Approved contract: the master cache approximates committed database metadata. A session cache stores only created/modified/removed or transaction-observed overrides, including explicit tombstone/absence states. Local overrides must take precedence; otherwise consult the parent baseline. A parent miss read through an active session transaction must remain local, never populate the master from uncommitted SQL. A nontransactional missing/existing mismatch updates/invalidates the master immediately; a transactional mismatch affects only the session and records affected keys. Both commit and rollback (including close/failed commit) invalidate affected parent catalogs/collections and clear local state rather than copying descriptors upward. Catalog invalidation also invalidates its collections. Request-savepoint rollback restores previous local overrides while preserving earlier successful requests; final transaction cleanup still invalidates all affected parent keys.
+
+Recorded implementation gaps: PgCache.flush copies descriptors upward and is unused; PgSession transaction cleanup does not clear local metadata/invalidate parent; invalidation recurses globally regardless of active transaction; parent misses use the caller's connection and can publish transaction-local rows; UPDATE/DELETE/PURGE lack final overrides and UPSERT may retain provisional CREATE descriptors; no absence sentinel prevents stale-parent fallback; reserved internal descriptors are synthesized into otherwise unmodified child caches; preparation precedes request savepoints and failed requests do not restore metadata state; missing/existing error identity/context is incomplete; public getters return mutable cached descriptors. Address the last item through immutable state or safe returned copies, not rollback of shared mutable objects.
+
+Acceptance/tests: warm-parent/local override precedence for all metadata operations; parent-miss isolation with and without a transaction; current-session absence versus another session's committed entity; commit, rollback, close, failed commit and session reuse; stale missing/existing mismatch scope; request preparation/execution failure and restoration of earlier overrides; final-result UPSERT descriptors; no mutation/publication of shared cached objects; reserved descriptor parent reuse. Use independent sessions and committed database checks, not only direct PgDatabase/preparation tests. During preceding functional work, keep these limitations explicit, use fresh-session/database assertions where needed, and record cache-only failures against this ticket rather than silently weakening tests.
 
 ## Decisions needed before the affected implementation
 

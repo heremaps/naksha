@@ -1,6 +1,5 @@
 package naksha.model.objects
 
-import naksha.base.Id.IdCompanion.ADMIN_CATALOG_ID
 import naksha.base.Id.IdCompanion.COLLECTIONS_COL_ID
 import naksha.base.TupleNumber
 import kotlin.js.JsName
@@ -21,7 +20,7 @@ class NakshaCatalogCollection @Deprecated("This constructor is for reflection on
         databaseId = catalog.databaseId
         catalogId = catalog.id
         id = COLLECTIONS_COL_ID.text
-        tupleNumber = TupleNumber(catalog.databaseNumber, ADMIN_CATALOG_ID.intValue, COLLECTIONS_COL_ID.intValue, COLLECTIONS_COL_ID.number, 1L)
+        tupleNumber = TupleNumber(catalog.databaseNumber, catalog.catalogNumber, COLLECTIONS_COL_ID.intValue, COLLECTIONS_COL_ID.number, 1L)
 
         storeDeleted = StoreMode.ON
         storeHistory = StoreMode.ON
