@@ -32,6 +32,8 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import naksha.model.XyzNs;
+import naksha.model.objects.NakshaProperties;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -138,8 +140,8 @@ public class RequestSender {
         return ioe.getMessage() != null && ioe.getMessage().contains("GOAWAY");
     }
 
-    public boolean hasKeyProps(KeyProperties thatKeyProps) {
-        return this.keyProps.equals(thatKeyProps);
+    public boolean hasPropsChanged(KeyProperties thatKeyProps) {
+        return thatKeyProps.getStorageUpdatedAt() > this.keyProps.getStorageUpdatedAt();
     }
 
     public static final class KeyProperties {
@@ -149,6 +151,7 @@ public class RequestSender {
         private final int connectionTimeoutSec;
         private final int socketTimeoutSec;
         private final int maxRetries;
+        private final long storageUpdatedAt;
 
         public KeyProperties(
                 @NotNull String name,
@@ -156,13 +159,15 @@ public class RequestSender {
                 @NotNull Map<String, String> defaultHeaders,
                 int connectionTimeoutSec,
                 int socketTimeoutSec,
-                int maxRetries) {
+                int maxRetries,
+                long storageUpdatedAt) {
             this.name = name;
             this.hostUrl = hostUrl;
             this.defaultHeaders = defaultHeaders;
             this.connectionTimeoutSec = connectionTimeoutSec;
             this.socketTimeoutSec = socketTimeoutSec;
             this.maxRetries = maxRetries;
+            this.storageUpdatedAt = storageUpdatedAt;
         }
 
         public static @NotNull KeyProperties fromHttpStorageProperties(
@@ -174,8 +179,18 @@ public class RequestSender {
                     properties.getHeaders(),
                     properties.getConnectTimeout(),
                     properties.getSocketTimeout(),
-                    properties.getMaxRetries()
+                    properties.getMaxRetries(),
+                    getStorageUpdatedAt(properties)
             );
+        }
+
+        /**
+         * Reads {@code updatedAt} of the storage from the XYZ namespace of the properties (in v2: {@code getXyzNamespace().getUpdatedAt()}),
+         * without creating the namespace when it is missing.
+         */
+        private static long getStorageUpdatedAt(@NotNull HttpStorageProperties properties) {
+            final Object updatedAt = properties.getPath(NakshaProperties.XYZ_KEY, XyzNs.UPDATED_AT);
+            return updatedAt instanceof Number ? ((Number) updatedAt).longValue() : 0L;
         }
 
         public @NotNull String getName() {
@@ -202,6 +217,10 @@ public class RequestSender {
             return maxRetries;
         }
 
+        public long getStorageUpdatedAt() {
+            return storageUpdatedAt;
+        }
+
         @Override
         public boolean equals(Object o) {
             if (this == o) {
@@ -214,6 +233,7 @@ public class RequestSender {
             return connectionTimeoutSec == that.connectionTimeoutSec
                     && socketTimeoutSec == that.socketTimeoutSec
                     && maxRetries == that.maxRetries
+                    && storageUpdatedAt == that.storageUpdatedAt
                     && name.equals(that.name)
                     && hostUrl.equals(that.hostUrl)
                     && defaultHeaders.equals(that.defaultHeaders);
@@ -221,7 +241,7 @@ public class RequestSender {
 
         @Override
         public int hashCode() {
-            return Objects.hash(name, hostUrl, defaultHeaders, connectionTimeoutSec, socketTimeoutSec, maxRetries);
+            return Objects.hash(name, hostUrl, defaultHeaders, connectionTimeoutSec, socketTimeoutSec, maxRetries, storageUpdatedAt);
         }
 
         @Override
@@ -233,6 +253,7 @@ public class RequestSender {
                     + ", connectionTimeoutSec=" + connectionTimeoutSec
                     + ", socketTimeoutSec=" + socketTimeoutSec
                     + ", maxRetries=" + maxRetries
+                    + ", storageUpdatedAt=" + storageUpdatedAt
                     + ']';
         }
     }

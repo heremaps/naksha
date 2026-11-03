@@ -19,7 +19,10 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.storage.http.RequestSender.KeyProperties;
+import com.here.naksha.storage.http.cache.CircuitBreakerCache;
 import com.here.naksha.storage.http.cache.RequestSenderCache;
+import com.here.naksha.lib.circuitbreaker.CircuitBreakerProvider;
+import com.here.naksha.lib.circuitbreaker.ICircuitBreaker;
 import kotlin.reflect.KClass;
 import naksha.base.Action;
 import naksha.base.JvmBoxingUtil;
@@ -42,6 +45,7 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
 
   private  NakshaStorage storageConfig;
   private  HttpStorageProperties httpStorageProperties;
+  private @Nullable ICircuitBreaker circuitBreaker = null;
 
   public HttpStorage() {
 
@@ -63,6 +67,11 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
       throw new IllegalArgumentException("A HTTP storage must have properties containing a 'url'");
     }
     this.defaultKeyProperties = KeyProperties.fromHttpStorageProperties(config.getId(), httpStorageProperties);
+    if (httpStorageProperties.getCircuitBreakerConfig() != null) {
+      circuitBreaker = CircuitBreakerProvider.getInstance();
+      CircuitBreakerCache.checkOrInvalidateCircuitBreakerCache(
+          circuitBreaker, config.getId(), defaultKeyProperties.getStorageUpdatedAt());
+    }
   }
 
   @NotNull
@@ -80,10 +89,12 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
                     defaultKeyProperties.getDefaultHeaders(),
                     defaultKeyProperties.getConnectionTimeoutSec(),
                     defaultKeyProperties.getSocketTimeoutSec(),
-                    httpStorageProperties.getMaxRetries()
+                    httpStorageProperties.getMaxRetries(),
+                    defaultKeyProperties.getStorageUpdatedAt()
             ));
     return new HttpStorageReadSession(
-            NakshaContext.currentContext(), this, requestSender, httpStorageProperties.getProtocol());
+            NakshaContext.currentContext(), this, requestSender, httpStorageProperties.getProtocol(),
+            circuitBreaker, getId(), httpStorageProperties.getCircuitBreakerConfig());
   }
 
   @NotNull
@@ -101,10 +112,12 @@ public class HttpStorage extends AbstractStorage<NakshaStorage> {
                     defaultKeyProperties.getDefaultHeaders(),
                     defaultKeyProperties.getConnectionTimeoutSec(),
                     defaultKeyProperties.getSocketTimeoutSec(),
-                    httpStorageProperties.getMaxRetries()
+                    httpStorageProperties.getMaxRetries(),
+                    defaultKeyProperties.getStorageUpdatedAt()
             ));
     return new HttpStorageWriteSession(
-            NakshaContext.currentContext(), this, requestSender, httpStorageProperties.getProtocol());
+            NakshaContext.currentContext(), this, requestSender, httpStorageProperties.getProtocol(),
+            circuitBreaker, getId(), httpStorageProperties.getCircuitBreakerConfig());
   }
 
   @NotNull

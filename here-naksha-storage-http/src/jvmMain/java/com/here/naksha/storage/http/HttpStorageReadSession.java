@@ -19,6 +19,9 @@
 package com.here.naksha.storage.http;
 
 import com.here.naksha.lib.core.models.storage.ReadFeaturesProxyWrapper;
+import com.here.naksha.lib.circuitbreaker.CircuitBreakerOpenException;
+import com.here.naksha.lib.circuitbreaker.ICircuitBreaker;
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import com.here.naksha.storage.http.connector.ConnectorInterfaceReadExecute;
 import com.here.naksha.storage.http.ffw.FfwInterfaceReadExecute;
 import naksha.base.*;
@@ -38,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.concurrent.Callable;
 
 import static java.util.Objects.requireNonNull;
 import static naksha.base.Platform.javaProxy;
@@ -59,15 +63,30 @@ public class HttpStorageReadSession implements IReadSession {
   @NotNull
   private final HttpInterface httpInterface;
 
+  @Nullable
+  private final ICircuitBreaker circuitBreaker;
+
+  @NotNull
+  protected final String storageId;
+
+  @Nullable
+  private final CircuitBreakerProps circuitBreakerConfig;
+
   HttpStorageReadSession(
       @Nullable NakshaContext context,
       @NotNull HttpStorage storage,
       @NotNull RequestSender requestSender,
-      @NotNull HttpInterface httpInterface) {
+      @NotNull HttpInterface httpInterface,
+      @Nullable ICircuitBreaker circuitBreaker,
+      @NotNull String storageId,
+      @Nullable CircuitBreakerProps circuitBreakerConfig) {
     this.context = context == null ? NakshaContext.currentContext() : context;
     this.storage = storage;
     this.requestSender = requestSender;
     this.httpInterface = httpInterface;
+    this.circuitBreaker = circuitBreaker;
+    this.circuitBreakerConfig = circuitBreakerConfig;
+    this.storageId = storageId;
   }
 
   public @NotNull NakshaContext getNakshaContext() {
@@ -79,24 +98,40 @@ public class HttpStorageReadSession implements IReadSession {
     try {
       final ReadFeaturesProxyWrapper requestWrapper = request instanceof ReadFeaturesProxyWrapper
             ? (ReadFeaturesProxyWrapper) request : requireNonNull(javaProxy(request, ReadFeaturesProxyWrapper.class));
-      final Response response;
-      switch (httpInterface) {
-        case ffwAdapter:
-          response = FfwInterfaceReadExecute.execute(context, requestWrapper, requestSender);
-          break;
-        case dataHubConnector:
-          response = ConnectorInterfaceReadExecute.execute(context, requestWrapper, requestSender);
-          break;
-        default:
-          throw new IllegalStateException("Unsupported HTTP interface: " + httpInterface);
-      }
+      final Response response = executeWithOptionalCircuitBreaker(() -> executeReadRequest(requestWrapper));
       return attachVirtualTupleNumbers(response, requestWrapper);
+    } catch (CircuitBreakerOpenException e) {
+      log.warn(
+          "Circuit breaker is OPEN or HALF_OPEN (no permits) for storageId: {}. Request rejected.",
+          storageId,
+          e);
+      return new ErrorResponse(NakshaError.EXCEPTION, "Service temporarily unavailable", e);
     } catch (NakshaException exception) {
       log.info("Unexpected error while executing read", exception);
       return new ErrorResponse(exception.getError());
     } catch (Exception exception) {
       log.warn("We got exception while executing Read request.", exception);
       return new ErrorResponse(NakshaError.EXCEPTION, exception.getMessage(), exception);
+    }
+  }
+
+  protected @NotNull Response executeWithOptionalCircuitBreaker(@NotNull Callable<Response> operation) throws Exception {
+    if (circuitBreaker != null && circuitBreakerConfig != null) {
+      return circuitBreaker
+          .getOrCreateCircuitBreaker(storageId, circuitBreakerConfig)
+          .execute(storageId, operation);
+    }
+    return operation.call();
+  }
+
+  private @NotNull Response executeReadRequest(@NotNull ReadFeaturesProxyWrapper readRequest) {
+    switch (httpInterface) {
+      case ffwAdapter:
+        return FfwInterfaceReadExecute.execute(context, readRequest, requestSender);
+      case dataHubConnector:
+        return ConnectorInterfaceReadExecute.execute(context, readRequest, requestSender);
+      default:
+        throw new IllegalStateException("Unsupported HTTP interface: " + httpInterface);
     }
   }
 

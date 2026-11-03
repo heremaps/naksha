@@ -18,6 +18,8 @@
  */
 package com.here.naksha.storage.http;
 
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
+import naksha.base.JvmBoxingUtil;
 import naksha.base.JvmMapProxy;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
@@ -31,7 +33,7 @@ import java.util.Arrays;
 import java.util.Map;
 
 /**
- * A Http storage configuration as used by the {@link HttpStorage}.
+ * Configuration properties for HTTP storage backends.
  */
 @AvailableSince(NakshaVersion.v2_0_12)
 public class HttpStorageProperties extends NakshaProperties {
@@ -60,12 +62,17 @@ public class HttpStorageProperties extends NakshaProperties {
   private static final String HEADERS = "headers";
 
   private static final String HTTP_INTERFACE = "httpInterface";
+  private static final String CIRCUIT_BREAKER = "circuitBreaker";
   private static final HttpInterface DEFAULT_XYZ_PROTOCOL = HttpInterface.ffwAdapter;
 
   public HttpStorageProperties() {}
 
   /**
-   * Points to the instance, not to an endpoint.
+   * The base URL of the remote HTTP storage backend.
+   *
+   * <p>Required: Yes
+   *
+   * <p>Points to the instance, not to an endpoint.
    */
   public @NotNull String getUrl() {
     return (String) getRaw(URL);
@@ -76,8 +83,12 @@ public class HttpStorageProperties extends NakshaProperties {
   }
 
   /**
-   * The connection timeout in seconds.
-   * By default: 20
+   * Timeout for establishing an HTTP connection to the remote storage, in seconds.
+   *
+   * <p>Required: Yes
+   * <p>Unit: Seconds
+   *
+   * <p>By default: 20
    */
   public @NotNull Integer getConnectTimeout() {
     return getOrSet(CONNECTION_TIMEOUT, DEF_CONNECTION_TIMEOUT_SEC);
@@ -88,8 +99,12 @@ public class HttpStorageProperties extends NakshaProperties {
   }
 
   /**
-   * The socket timeout in seconds.
-   * By default: 90
+   * Timeout for waiting on a response from the remote storage, in seconds.
+   *
+   * <p>Required: Yes
+   * <p>Unit: Seconds
+   *
+   * <p>By default: 90
    */
   public @NotNull Integer getSocketTimeout() {
     return getOrSet(SOCKET_TIMEOUT, DEF_SOCKET_TIMEOUT_SEC);
@@ -100,8 +115,13 @@ public class HttpStorageProperties extends NakshaProperties {
   }
 
   /**
-   * The max number of retries.
-   * By default: 1
+   * Number of retry attempts for retryable transport failures.
+   *
+   * <p>When a request fails due to a retryable error (e.g., connection reset, timeout), Naksha
+   * will automatically retry up to this many times before giving up. Non-retryable errors are
+   * not retried.
+   *
+   * <p>By default: 1
    */
   public @NotNull Integer getMaxRetries() {
     return getOrSet(MAX_RETRIES, DEF_MAX_RETRIES);
@@ -112,8 +132,12 @@ public class HttpStorageProperties extends NakshaProperties {
   }
 
   /**
-   * The HTTP headers to be sent with each request.
-   * By default: 'Content-Type: application/json' and 'Accept-Encoding: gzip'
+   * Default HTTP headers added to every request sent to this storage.
+   *
+   * <p>These headers are merged with request-specific headers. Common use cases include
+   * Authorization tokens, API keys, or custom identifiers.
+   *
+   * <p>By default: 'Content-Type: application/json' and 'Accept-Encoding: gzip'
    */
   public @NotNull Map<String, String> getHeaders() {
     final Object raw = getPath(HEADERS);
@@ -141,6 +165,13 @@ public class HttpStorageProperties extends NakshaProperties {
     setRaw(HEADERS, headerMap);
   }
 
+  /**
+   * HTTP protocol interface mode for communication with the remote storage.
+   *
+   * <p>Determines how Naksha formats requests and parses responses from the storage backend.
+   *
+   * <p>See: HttpInterface enum for available modes
+   */
   public @NotNull HttpInterface getProtocol() {
     final Object raw = getRaw(HTTP_INTERFACE);
     if (raw instanceof HttpInterface) {
@@ -162,6 +193,36 @@ public class HttpStorageProperties extends NakshaProperties {
   }
 
   public void setProtocol(final HttpInterface protocol) {setRaw(HTTP_INTERFACE, protocol);}
+
+  /**
+   * Optional circuit breaker configuration for this storage.
+   *
+   * <p>If configured, the circuit breaker monitors requests triggered via this storage.
+   * When the slow request rate exceeds the configured threshold, the circuit breaker
+   * opens to throttle traffic.
+   *
+   * <p>This enables per-storage isolation: if one storage times out, only its traffic is
+   * throttled. Requests to other storages continue unaffected.
+   *
+   * <p>Default: null (no circuit breaking)
+   *
+   * <p>See: CircuitBreakerProps for configuration options
+   */
+  public @Nullable CircuitBreakerProps getCircuitBreakerConfig() {
+    final Object raw = getRaw(CIRCUIT_BREAKER);
+    if (raw == null) {
+      return null;
+    }
+    // v2 (Jackson) rejected a non-object circuitBreaker value (e.g. a string or boolean)
+    if (!(raw instanceof naksha.base.PlatformMap)) {
+      throw new IllegalArgumentException("circuitBreaker must be an object");
+    }
+    return JvmBoxingUtil.box(raw, CircuitBreakerProps.class);
+  }
+
+  public void setCircuitBreakerConfig(@Nullable CircuitBreakerProps config) {
+    setRaw(CIRCUIT_BREAKER, config);
+  }
 
   private @NotNull HeaderMap toHeaderMap(@NotNull Map<?, ?> rawHeaders) {
     HeaderMap headers = new HeaderMap();
