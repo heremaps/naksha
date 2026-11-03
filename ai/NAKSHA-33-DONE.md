@@ -5,6 +5,14 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### Catalog internal collection preparation increment
+
+**Commit:** Prepare internal collections for catalog creation and cold lookup.
+
+**Completion:** user-approved preparation increment, `DONE`. Ordinary catalog CREATE/UPSERT prepares its reserved collections root through shared Kotlin DDL before publishing provisional session descriptors. Cold lookup synthesizes the reserved descriptor without a self-registration row. Descriptor and child-metadata tuple addresses use the owning catalog; fixes the existing database-number fallback return. Admin schema remains separate.
+
+**Verification:** common descriptor/child-address regression and isolated JDBC creation/rollback/idempotency/owner-conflict/cold-session tests pass (2 tests, no failures or skips); JVM/JS production compilation and diff checks pass. No end-to-end logical mutation or metadata-cache transaction isolation claim. The user explicitly deferred the cache redesign to active TODO db-11 while functional reads/writes are restored. Temporary database removed; cron remains deferred.
+
 ### Storage layouts, physical drops and scoped locking increment
 
 **Commit:** Resolve storage layouts and scope catalog and collection locking.

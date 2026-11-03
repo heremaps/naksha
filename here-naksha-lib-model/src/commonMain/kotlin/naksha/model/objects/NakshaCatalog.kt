@@ -93,7 +93,7 @@ open class NakshaCatalog() : NakshaFeature() {
             val tn = tupleNumber
             if (tn != null) return tn.databaseNumber
             val id = this.databaseId
-            if (id != null) Id.textToNumber(id)
+            if (id != null) return Id.textToNumber(id)
             throw illegalState("The catalog has no database-id and no tuple-number")
         }
 

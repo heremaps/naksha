@@ -7,6 +7,7 @@ import naksha.base.Id
 import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.TupleNumber
+import naksha.base.illegalState
 import naksha.model.Naksha
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import kotlin.js.JsExport
@@ -253,7 +254,12 @@ abstract class PgCache protected constructor() {
 
         // Find catalog.
         val catalog = getPgCatalog(catalogNumber, conn) ?: return null
-        require(catalog.id.intValue == catalogNumber)
+        if (catalog.id.intValue != catalogNumber) throw illegalState("Cached catalog '${catalog.id}' does not match catalog-number $catalogNumber")
+        if (collectionNumber == Id.COLLECTIONS_COL_ID.intValue) {
+            val collection = catalog.collectionsDescriptor(pgAdminCollections.naksha)
+            cachePgCollection(collection)
+            return collection
+        }
         val collectionCache = this.collectionCache
         var collections = collectionCache[catalogNumber]
         val parent = this.parent
