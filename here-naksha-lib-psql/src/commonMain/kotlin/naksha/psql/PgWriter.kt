@@ -295,6 +295,8 @@ open class PgWriter internal constructor(
               columns = pgCollection.columns,
               indices = pgCollection.indices,
               options = pgCollection.creationOptions(storage.config, database.maxTupleSize),
+              logicalCatalog = catalogId.text,
+              logicalCollection = pgCollection.id.text,
             )
             pgWrite.pgCollection = pgCollection
             session.cachePgCollection(pgCollection) // This allows following write instructions to succeed.
@@ -331,6 +333,8 @@ open class PgWriter internal constructor(
               columns = pgCollection.columns,
               indices = pgCollection.indices,
               options = pgCollection.creationOptions(storage.config, database.maxTupleSize),
+              logicalCatalog = catalogId.text,
+              logicalCollection = pgCollection.id.text,
             )
             pgWrite.pgCollection = pgCollection
             session.cachePgCollection(pgCollection) // This allows following write instructions to succeed.

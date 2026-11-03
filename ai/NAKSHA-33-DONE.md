@@ -5,6 +5,18 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### JVM creation, bootstrap and registry sweep increment
+
+**Commit:** Implement shared Kotlin collection creation and partition maintenance.
+
+**Completion:** user-approved implementation increment across db-04-b/c/d/f/g/h. Parent tickets remain open for remaining storage policies, logical preparation/drop integration, concurrency coverage, PLV8 attachment/parity and scheduling. Do not mark the entire migration DONE.
+
+Shared Kotlin now implements permanent collection creation, mandatory/custom indexes, owner/member comments, HEAD/history/fn topology, immutable registration, retained-leaf repair and deterministic registry-wide sweeps. JVM calls execute directly through JDBC without installed maintenance functions. Storage policy is HEAD fillfactor 50/history 100; unsupported storage classes fail explicitly. Fixed JDBC constructor initialization and prerequisite configuration/member validation defects; clean public-factory bootstrap creates the committed admin roots, identity and sequence. A real write session can run maintenance without a logical feature transaction. Historical PL/pgSQL remains under ai/ only.
+
+**Verification:** eight JDBC maintenance tests, five model regression tests, focused naming/schema/index/config tests, separate clean-bootstrap integration and JS production compilation pass. PostgreSQL 18.6 disposable databases were removed. Three previously documented MemberTest collection-builder failures remain unchanged. No PLV8 runtime parity or concurrency stress is claimed.
+
+**Scheduling decision:** defer pg_cron until its implementation step. Plan one job per Naksha database; respect the cluster-designated cron metadata database while keeping each database's admin/runtime schema local. The current increment does not install cron or require cross-database administrative access.
+
 ### db-04-b/d — Index execution and schema immutability increment
 
 **Commit:** Centralize index writes and enforce immutable collection schemas.
