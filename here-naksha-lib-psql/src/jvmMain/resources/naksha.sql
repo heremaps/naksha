@@ -31,6 +31,18 @@
 -- PARALLEL SAFE indicates that the function is safe to run in parallel mode without restriction.
 SET SESSION search_path TO "naksha~admin", topology, hint_plan, public;
 
+-- Invoke the shared Kotlin implementation in the caller's transaction and role.
+CREATE OR REPLACE FUNCTION "naksha~admin".naksha_maintain() RETURNS integer
+LANGUAGE plv8 VOLATILE PARALLEL UNSAFE SECURITY INVOKER
+SET search_path = "naksha~admin", pg_catalog
+AS $$
+  if (typeof require !== "function") {
+    plv8.find_function('"naksha~admin".es_modules_init')();
+  }
+  return require("naksha_psql").naksha_maintain();
+$$;
+REVOKE ALL ON FUNCTION "naksha~admin".naksha_maintain() FROM PUBLIC;
+
 -- Physical range-sort feature numbers. These functions never change logical API identifiers.
 CREATE OR REPLACE FUNCTION "naksha~admin".bswap8(v bigint) RETURNS bigint
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
