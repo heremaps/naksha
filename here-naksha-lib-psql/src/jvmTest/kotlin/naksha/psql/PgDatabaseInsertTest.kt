@@ -7,7 +7,6 @@ import naksha.base.NakshaError
 import naksha.base.NakshaException
 import naksha.base.Platform
 import naksha.base.Version
-import naksha.base.toOrdinalFeatureNumber
 import naksha.jbon.HeapBook
 import naksha.model.Naksha
 import naksha.model.NewTuple
@@ -142,7 +141,7 @@ class PgDatabaseInsertTest {
       val expected = inputs[i].tuple
       assertSame(expected, result[i], "Returned tuple reference and order must match input")
       assertTuple(expected, read(conn, collection, expected.id).single())
-      val ordinal = expected.tupleNumber.featureNumber.toOrdinalFeatureNumber()
+      val ordinal = Id.featureNumberToOrdinal(expected.tupleNumber.featureNumber)
       assertEquals(ordinal.toString(), scalar(conn,
         "SELECT fn::text FROM ${collection.qualifiedName} WHERE nv = ${Version.HEAD.number} AND fn = $ordinal"))
       val idColumn = assertNotNull(collection.column(StandardMembers.Id)).ident
@@ -250,7 +249,7 @@ class PgDatabaseInsertTest {
 
   private fun read(conn: PgConnection, collection: PgCollection, id: Id): List<Tuple> {
     val rows = PgRows().withCollection(collection)
-    conn.execute("SELECT * FROM ${collection.qualifiedName} WHERE fn = ${id.number.toOrdinalFeatureNumber()}")
+    conn.execute("SELECT * FROM ${collection.qualifiedName} WHERE fn = ${Id.featureNumberToOrdinal(id.number)}")
       .fetch().use { cursor -> rows.readAll(cursor) }
     return List(rows.size) { assertNotNull(rows.getTuple(it)) }
   }

@@ -1,5 +1,6 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.PlatformUtil
 import naksha.base.TupleNumber
 import naksha.base.Version
@@ -55,7 +56,7 @@ class PgReader(
                     val collectionNumber = query.pgCollection.id.intValue
                     while (cursor.next()) {
                         val col_num: Int = collectionNumber ?: cursor["col_num"]
-                        val fn: Long = cursor["fn"]
+                        val fn = Id.ordinalToFeatureNumber(cursor.get<Long>("fn"))
                         val version: Long = cursor["version"]
                         featureTuples.add(FeatureTuple(TupleNumber(storageNumber, mapNumber, col_num, fn, version)))
                     }

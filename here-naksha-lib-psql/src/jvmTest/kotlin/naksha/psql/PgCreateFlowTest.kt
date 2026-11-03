@@ -5,7 +5,6 @@ import naksha.base.Action
 import naksha.base.Id
 import naksha.base.NakshaError
 import naksha.base.Version
-import naksha.base.toOrdinalFeatureNumber
 import naksha.model.Naksha
 import naksha.model.Tuple
 import naksha.model.objects.IndexList
@@ -100,7 +99,7 @@ class PgCreateFlowTest {
               assertFalse(rows.next(), "Request rollback must remove the prepared temporary schema and its internal tables")
             }
             val root = storage.database.pgAdminCatalogs.qualifiedName
-            val ordinal = Id(temporaryCatalog.id).number.toOrdinalFeatureNumber()
+            val ordinal = Id.featureNumberToOrdinal(Id(temporaryCatalog.id).number)
             statement.executeQuery("SELECT 1 FROM $root WHERE fn = $ordinal").use { rows ->
               assertFalse(rows.next(), "Failed batch must not persist temporary catalog metadata")
             }
@@ -137,7 +136,7 @@ class PgCreateFlowTest {
           assertFalse(rows.next(), "Rollback must remove the catalog schema and its collection roots")
         }
         val root = storage.database.pgAdminCatalogs.qualifiedName
-        statement.executeQuery("SELECT 1 FROM $root WHERE fn = ${Id(catalog.id).number.toOrdinalFeatureNumber()}").use { rows ->
+        statement.executeQuery("SELECT 1 FROM $root WHERE fn = ${Id.featureNumberToOrdinal(Id(catalog.id).number)}").use { rows ->
           assertFalse(rows.next(), "Rollback must remove the catalog metadata row")
         }
       }
@@ -151,7 +150,7 @@ class PgCreateFlowTest {
   }
 
   private fun read(conn: PgConnection, collection: PgCollection, expected: Tuple): Tuple {
-    val ordinal = expected.tupleNumber.featureNumber.toOrdinalFeatureNumber()
+    val ordinal = Id.featureNumberToOrdinal(expected.tupleNumber.featureNumber)
     conn.jdbc.createStatement().use { statement ->
       statement.executeQuery("SELECT fn FROM ${collection.qualifiedName} WHERE fn = $ordinal").use { rows ->
         assertTrue(rows.next())

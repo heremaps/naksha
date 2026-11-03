@@ -5,6 +5,14 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### Root reads and ordinal conversion increment
+
+**Commit:** Restore root reads and centralize feature ordinal conversions.
+
+**Completion:** tested increment committed under explicit autonomous authorization. Includes cold HEAD metadata reads, safe numeric-ID materialization, ordinal-aware point predicates/reader identities, native-built-in logical range/order expressions, shared Id conversion methods and consistently named SQL fallback functions. Independent code/security reviews completed; identified point-query/cast findings were fixed and re-reviewed. No confirmed security finding remains.
+
+**Verification:** 28 focused JVM/live tests plus a narrower-integral regression pass; SQL vectors, 10,000 production JavaScript BigInt conversions, production JS compilation and diff checks pass. Cold read fixture deliberately bypasses public commit-log/cache lifecycle; db-11, mutation migration and temporal semantic coverage remain open. Disposable databases removed.
+
 ### Root CREATE persistence increment
 
 **Commit:** Persist CREATE tuples through collection roots.
@@ -115,7 +123,7 @@ Legacy `PgHeadTable` still checks `nv IS NULL`, and UPDATE/UPSERT/DELETE SQL sti
 
 **Commit:** Keep feature identities logical and store feature-ordinals with aligned partition ranges.
 
-All physical fn storage uses feature-ordinals, regardless of partition count. `PgRowsColumn` keeps raw ordinals internally; normal set/get operators encode/decode logical feature-numbers using `Long.toOrdinalFeatureNumber()` / `Long.fromOrdinalFeatureNumber()` in `LibBase`. Removed redundant `PgUtil.fnToInt8` / `int8ToFn`. `PgRows.values()` and cursor ingestion transfer raw ordinals without conversion. Descriptor-backed fn aliases participate, while other INT64/version values remain unchanged. Tuple reconstruction and `_id` materialization use logical access.
+All physical fn storage uses feature-ordinals, regardless of partition count. `PgRowsColumn` keeps raw ordinals internally; normal set/get operators encode/decode logical feature-numbers. Current shared names are `Id.featureNumberToOrdinal` / `Id.ordinalToFeatureNumber`; the former duplicate Long extensions and PgUtil helpers have been removed. `PgRows.values()` and cursor ingestion transfer raw ordinals without conversion. Descriptor-backed fn aliases participate, while other INT64/version values remain unchanged. Tuple reconstruction and `_id` materialization use logical access.
 
 `Id` defines feature-ordinals, inclusive ordinal bounds per partition-number, and inclusive partition-number/ordinal bounds per partition-index, with companion and instance accessors. `Id.partitionIndex` and `TupleNumber.partitionIndex` use contiguous groups, not modulo, validating counts 1..256 and returning 0 for one partition. The agreed seven-partition example remains in [the active routing contract](NAKSHA-33.md#agreed-routing-contract), including `{name}_h{nv >> shift}_p{partitionIndex}` leaf naming.
 
