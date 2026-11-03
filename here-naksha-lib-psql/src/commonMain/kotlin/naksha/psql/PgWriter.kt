@@ -160,17 +160,31 @@ open class PgWriter internal constructor(
     }
     val savepointId = PlatformUtil.randomString()
     session.useConn(false) { conn ->
+      var savepointCreated = false
       try {
+        // Allocate the logical version before the savepoint: the allocator completes its own transaction.
+        session.useTransaction()
+        if (useSavepoint) {
+          conn.execute("SAVEPOINT \"$savepointId\"").close()
+          savepointCreated = true
+        }
         prepareWrite(conn, pgWrites)
+
+        // Provision successor ranges before any row locks; small shifts/imports can exceed premade coverage.
+        val preparedRanges = HashSet<String>()
+        for (write in pgWrites) {
+          if (write.op != WriteOp.CREATE || !write.dbCollection.storeHistory) continue
+          val collection = write.dbCollection
+          val tuple = write.tuple ?: throw illegalState("CREATE requires an encoded tuple")
+          val range = "${collection.catalogId.intValue}:${collection.id.intValue}:${tuple.version shr collection.shift}"
+          if (preparedRanges.add(range)) storage.database.collection_maintain_partitions(conn, collection.catalogId.catalogName(), collection.name, tuple.version)
+        }
 
         // The ordering is very important, because otherwise there can be deadlocks in the database at row-level locking!
         pgWrites.sortWith { a, b -> a.id.compareTo(b.id) }
 
         // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
         // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
-        if (useSavepoint) {
-          conn.execute("SAVEPOINT \"$savepointId\"").close()
-        }
         var start = 0
         for (i in 1..size) {
           if (i == size ||
@@ -182,9 +196,9 @@ open class PgWriter internal constructor(
           }
         }
         // We can drop the savepoint, if there is any.
-        if (useSavepoint) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
+        if (savepointCreated) conn.execute("RELEASE SAVEPOINT \"$savepointId\"").close()
       } catch (t: Throwable) {
-        if (useSavepoint) {
+        if (savepointCreated) {
           conn.execute("ROLLBACK TO SAVEPOINT \"$savepointId\"").close()
         }
         throw PgExceptionMapper.map(t)

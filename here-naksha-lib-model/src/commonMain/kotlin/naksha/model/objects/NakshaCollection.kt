@@ -69,10 +69,16 @@ open class NakshaCollection() : NakshaFeature() {
     /**
      * The database-number of the collection; the collection-feature itself is stored in the same database as the collection it describes.
      * @since 3.0
-     * @throws NakshaException with error [ILLEGAL_STATE], when the collection does not have a valid [tupleNumber].
+     * @throws NakshaException with error [ILLEGAL_STATE], when neither [tupleNumber] nor [databaseId] supplies the identity.
      */
     val databaseNumber: Long
-        get() = tupleNumber?.databaseNumber ?: throw NakshaException(ILLEGAL_STATE, "The collection has no tuple-number")
+        get() {
+            val number = tupleNumber?.databaseNumber
+            if (number != null) return number
+            val database = databaseId
+            if (database != null) return Id.textToNumber(database)
+            throw illegalState("The collection has no database-id and no tuple-number")
+        }
 
     /**
      * The database-id of the collection; the collection-feature itself is stored in the same database as the collection it describes.

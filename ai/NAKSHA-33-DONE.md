@@ -5,6 +5,14 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### Root CREATE persistence increment
+
+**Commit:** Persist CREATE tuples through collection roots.
+
+**Completion:** user-approved implementation increment, `DONE`. PgDatabase owns immutable tuple INSERT transport, HEAD classification, structured duplicate errors, history-ON archival and history-OFF tombstone replacement. PgWriterInsert delegates without legacy table descriptors or mutation SQL. Includes JDBC plan construction/resource regression, collection database-identity fallback, finite-range preparation and SQL savepoints established before request DDL preparation after logical version allocation.
+
+**Verification:** isolated PostgreSQL 18.6 root insert/readback/recreation/rollback scenarios, public catalog/collection/feature CREATE and failed-preparation rollback tests, and JDBC prepared-plan ownership tests pass. JVM/JS production compilation and diff checks pass; temporary databases removed. Cache isolation remains TODO db-11. Public query recovery, commit-log UPSERT, other mutation migration, mixed-operation invariants and query diagnostics remain open and are not implied by this approval.
+
 ### Catalog internal collection preparation increment
 
 **Commit:** Prepare internal collections for catalog creation and cold lookup.
