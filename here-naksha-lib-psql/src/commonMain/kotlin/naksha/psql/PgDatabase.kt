@@ -287,7 +287,7 @@ SELECT basics.*, procs.* FROM basics, procs;
           logger.info("The admin-map of '$id' is up-to-date: $psql_version")
         }
       }
-      conn.execute("SET search_path = \\\"naksha~admin\\\", topology, hint_plan, public").close()
+      conn.execute("SET search_path = $ADMIN_CATALOG_QUOTED, topology, hint_plan, public").close()
       logger.info("Load OID of '$NAKSHA_VERSION_SEQ' from admin schema (schema-oid=$schemaOid)")
       val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_VERSION_SEQ'"
       conn.execute(SQL).fetch().use { cursor -> _versionSequenceOid = cursor["oid"] }
@@ -531,13 +531,8 @@ SELECT basics.*, procs.* FROM basics, procs;
   /**
    * Create a collection's physical root table, partitions, and indexes if the root does not exist.
    *
-   * The root routes rows by `nv`; current rows use [Version.HEAD] and history rows use finite
-   * successor versions. The default partition is restricted to HEAD. When performance partitioning
-   * is enabled, children route physical `fn` values into range leaves. pg_partman owns both history
-   * and performance partition provisioning and maintenance. Naksha configures it rather than
-   * selecting or manually creating individual partitions. Creation must finish pg_partman's
-   * initial setup before accepting writes.
-   * An existing root is left unchanged; this method does not reconcile or upgrade its schema.
+   * Shared Kotlin creates a RANGE (nv) root, restricted HEAD and optional fn leaves. Permanent storage is currently supported, with HEAD/history fillfactors 50/100. History-OFF has no registry entry. Initial history coverage uses the greater of the server UTC date and installed allocator watermark, without allocating a version. Explicit manual/import coverage is prepared separately through [collection_maintain_partitions].
+   * An existing root with the same logical owner is left unchanged; unrelated or unowned relations are rejected. The caller must roll back on failure, including failures after partial DDL.
    *
    * @param conn the caller-owned connection; DDL is part of its transaction and is not committed here.
    * @param schema the unquoted name of the schema in which to create the table; must exist already.
@@ -545,10 +540,8 @@ SELECT basics.*, procs.* FROM basics, procs;
    * @param columns the physical column definitions, including mandatory `fn`, `version`, and `nv`.
    * @param indices custom index descriptors; mandatory keys are created intrinsically.
    * @param options create-only history, range coverage, durability, tablespace, and TOAST settings.
-   * History-OFF creates only HEAD and does not register history with pg_partman. With history ON,
-   * configure pg_partman's interval, backward/forward coverage, retention, and fn subpartitioning.
-   * Do not derive a starting partition from a caller-supplied transaction version. Validate the
-   * configuration before issuing DDL; do not infer options from cached logical objects.
+   * @param logicalCatalog original catalog identity, retained with [logicalCollection] as the table owner comment.
+   * @param logicalCollection original collection identity. Member comments retain original member names.
    * @throws NakshaException if the creation failed.
    * @since 3.0
    */
@@ -558,23 +551,94 @@ SELECT basics.*, procs.* FROM basics, procs;
     table: String,
     columns: Array<PgColumn>,
     indices: Array<PgIndex>,
-    options: PgCollectionCreateOptions
+    options: PgCollectionCreateOptions,
+    logicalCatalog: String,
+    logicalCollection: String
   ) {
     execute_sql(schema = schema, table = table) {
-      for (index in indices) index.validate()
-      val quotedSchema = quoteIdent(schema)
-      val quotedTable = quoteIdent(table)
-      val CREATE_DDL = """CREATE TABLE IF NOT EXISTS $quotedSchema.$quotedTable (
-  fn bigint NOT NULL,
-  version bigint NOT NULL,
-  nv bigint NOT NULL DEFAULT 9007199254740991,
-  PRIMARY KEY (nv DESC, fn DESC, version DESC)
-) PARTITION BY RANGE (nv);"""
-      // TODO: Create the database table, use pg_partman.
-      //       Default contains head, so needs an additional check for `nv` being 9007199254740991
-      //       Now, each partition should be partitioned again by `fn`
-      //       As always only need `fn`, `version`, and `nv`, we need them to be in any index for index-only scans!
+      if (conn.autoCommit) throw illegalState("Collection creation requires a caller-owned transaction")
+      if (options.storageClass != PgStorageClass.Consistent) throw unsupportedOp("Only permanent collection creation is implemented")
+      for ((name, budget) in arrayOf(schema to PG_IDENTIFIER_BYTES, table to PG_ROOT_NAME_BYTES)) {
+        if (name.isEmpty() || '\u0000' in name || name.encodeToByteArray().size > budget) throw illegalId("Physical collection name exceeds its identifier budget")
+      }
+      val names = HashSet<String>()
+      val definitions = StringBuilder()
+      for (column in columns) {
+        val name = column.columnName
+        if (!names.add(name)) throw illegalId("Duplicate physical column name: $name")
+        if (definitions.isNotEmpty()) definitions.append(",\n")
+        definitions.append(column.sql)
+      }
+      for (name in arrayOf("fn", "version", "nv")) {
+        if (name !in names) throw illegalArg("Missing mandatory column: $name")
+      }
+      val indexNames = HashSet<String>()
+      for (index in indices) {
+        index.validate()
+        val name = index.id.indexName(table)
+        if (name in arrayOf("$table\$pkey", "$table\$unique", "$table\$version", "$table\$id") || !indexNames.add(name)) throw illegalId("Duplicate physical index name: $name")
+      }
+      val target = "${quoteIdent(schema)}.${quoteIdent(table)}"
+      val owner = "${quoteIdent(logicalCatalog)}.${quoteIdent(logicalCollection)}"
+      conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(pg_catalog.format('naksha:partman:%I.%I', $1::text, $2::text), 0))", arrayOf(schema, table)).close()
+      conn.execute("SELECT pg_catalog.obj_description(c.oid, 'pg_class') AS owner FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = $1 AND c.relname = $2", arrayOf(schema, table)).use { cursor ->
+        if (cursor.next()) {
+          if (cursor.column("owner") != owner) throw illegalId("Physical collection $target belongs to another logical identity")
+          return@execute_sql
+        }
+      }
+      conn.execute("CREATE TABLE $target ($definitions, CONSTRAINT ${quoteIdent("$table\$pkey")} PRIMARY KEY (nv, fn, version), CHECK (nv >= 0 AND nv <= ${Version.HEAD.number})) PARTITION BY RANGE (nv)").close()
+      conn.execute("ALTER TABLE $target ALTER COLUMN nv SET DEFAULT ${Version.HEAD.number}").close()
+      conn.execute("CREATE UNIQUE INDEX ${quoteIdent("$table\$unique")} ON $target (fn, nv) INCLUDE (version)").close()
+      conn.execute("CREATE INDEX ${quoteIdent("$table\$version")} ON $target (version, nv) INCLUDE (fn)").close()
+      for (column in columns) {
+        if (column.name == "id") conn.execute("CREATE INDEX ${quoteIdent("$table\$id")} ON $target (${column.ident}) INCLUDE (fn, version, nv)").close()
+      }
+      conn.execute("COMMENT ON TABLE $target IS ${PgUtil.quoteLiteral(owner)}").close()
+      for (column in columns) conn.execute("COMMENT ON COLUMN $target.${column.ident} IS ${PgUtil.quoteLiteral(column.name)}").close()
+      for (index in indices) collection_create_index(conn, schema, table, index)
+      if (!options.storeHistory) {
+        PgPartitions.head(conn, schema, table, options.partitions, options.toastTupleTarget, 50, options.tablespace)
+        return@execute_sql
+      }
+      collection_register_partitions(conn, schema, table, options.shift, options.partitions, options.toastTupleTarget, 50, 100, options.tablespace)
+      collection_maintain_partitions(conn, schema, table, PgPartitions.currentVersion(conn))
     }
+  }
+
+  /**
+   * Register an existing permanent collection root with explicit, immutable partition/storage settings. Does not create the root or select durability/fillfactor policy. A null [tablespace] resolves the root/database tablespace once at registration.
+   *
+   * Requires a caller-owned transaction. Shared Kotlin validates names, keys, settings and root identity before registration. History-OFF collections must not be registered. No commit or connection closure occurs here.
+   * @since 3.0
+   */
+  internal fun collection_register_partitions(
+    conn: PgConnection, schema: String, table: String, shift: Int, partitions: Int,
+    toastTupleTarget: Int, headFillfactor: Int, historyFillfactor: Int, tablespace: String?
+  ) {
+    execute_sql(schema = schema, table = table) {
+      PgPartitions.register(conn, schema, table, shift, partitions, toastTupleTarget, headFillfactor, historyFillfactor, tablespace)
+    }
+  }
+
+  /**
+   * Provision HEAD, the range containing [version], and up to three future finite ranges; repair missing leaves on retained ranges. Requires a registered root and a finite version, including explicit manual/imported versions. Never allocates versions or recreates missing roots.
+   *
+   * Requires a caller-owned transaction; advisory and DDL locks last until its completion. The caller must provision coverage before writing finite next-versions outside existing ranges. Automatic allocator/scheduler selection is separate from this core. No commit, rollback, retention or connection closure occurs here.
+   * @since 3.0
+   */
+  internal fun collection_maintain_partitions(conn: PgConnection, schema: String, table: String, version: Long) {
+    execute_sql(schema = schema, table = table) {
+      PgPartitions.maintain(conn, schema, table, version)
+    }
+  }
+
+  /**
+   * Maintain all registered roots in deterministic order at the server-date/allocator watermark. Returns the root count. Requires one caller-owned READ COMMITTED transaction; failures propagate and require whole-sweep rollback. Sweep and root locks remain held until transaction completion. Never allocates a logical version or commits.
+   * @since 3.0
+   */
+  internal fun maintain_partitions(conn: PgConnection): Int = execute_sql_notnull {
+    PgPartitions.maintainAll(conn)
   }
 
   /**

@@ -2,8 +2,7 @@
 
 ## Superseding Decision
 
-The user approved replacing pg_partman provisioning with a Naksha-owned SQL
-maintainer after runtime tests on PostgreSQL 18.6 / pg_partman 5.5.0 could not
+The user approved replacing pg_partman provisioning with a Naksha-owned maintainer after runtime tests on PostgreSQL 18.6 / pg_partman 5.5.0 could not
 provision the independent full-range fn layout. The successful standalone
 prototype and limits are documented in [NAKSHA-33-custom-partman.md](NAKSHA-33-custom-partman.md).
 The current workboard [NAKSHA-33.md](NAKSHA-33.md) tracks productionization,
@@ -11,6 +10,8 @@ custom columns/index management, registry scanning and hourly pg_cron scheduling
 Create the current history range plus three future ranges and a HEAD-only default;
 maintain full-range fn leaves beneath each. The sections below preserve the original
 design investigation, not a requirement to keep pg_partman as the provisioning owner.
+
+Implementation direction now supersedes PL/pgSQL algorithm ownership too: implement creation and maintenance once in shared Kotlin, verify it directly on JVM first, then execute its compiled JavaScript inside PLV8 through the existing module pipeline. PLV8 attaches a `PgStorage` using credential-free database-local configuration in the admin-schema comment and opens a write session. One cron job per database invokes registry-wide shared Kotlin through a thin SQL wrapper. The ordered scope and verification plan are authoritative in [Agreed JVM-First Implementation](NAKSHA-33.md#agreed-jvm-first-implementation); prototype SQL remains a behavioral reference, not a second production algorithm. Retention and automatic version coverage still require explicit policies.
 
 ## Goal
 
@@ -745,7 +746,6 @@ Queries
 - ReadFeatures query
 - Tuple Loading
 - Writes
-
 
 
 

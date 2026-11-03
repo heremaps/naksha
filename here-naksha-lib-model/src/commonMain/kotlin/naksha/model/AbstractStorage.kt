@@ -28,176 +28,191 @@ import kotlin.time.Clock
  */
 abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
 
-    /**
-     * A lock for the storage to synchronize access to some properties, and to prevent that multiple threads in parallel initialize the storage, can be used by applications too, but should be avoided.
-     *
-     * @since 3.0
-     */
-    override val lock = Platform.newLock()
+  /**
+   * A lock for the storage to synchronize access to some properties, and to prevent that multiple threads in parallel initialize the storage, can be used by applications too, but should be avoided.
+   *
+   * @since 3.0
+   */
+  override val lock = Platform.newLock()
 
-    /**
-     * The _KClass_ of the configuration needed.
-     * @since 3.0
-     */
-    abstract val configKlass: KClass<CONFIG>
+  /**
+   * The _KClass_ of the configuration needed.
+   * @since 3.0
+   */
+  abstract val configKlass: KClass<CONFIG>
 
-    /**
-     * The atomic reference to the configuration for internal use within [initStorage].
-     * @since 3.0
-     */
-    protected var configRef: AtomicRef<CONFIG> = AtomicRef(null)
-    private var _id: Id? = null
+  /**
+   * The atomic reference to the configuration for internal use within [initStorage].
+   * @since 3.0
+   */
+  protected var configRef: AtomicRef<CONFIG> = AtomicRef(null)
+  private var _id: Id? = null
+  private val initializationComplete = AtomicRef(false)
 
-    override val config: CONFIG
-        get() = configRef.get() ?: throwUninitialized()
+  override val config: CONFIG
+    get() = configRef.get() ?: throwUninitialized()
 
-    override val id: Id
-        get() = _id ?: throwUninitialized()
+  override val id: Id
+    get() = _id ?: throwUninitialized()
 
-    override var hardCap: Int = Int.MAX_VALUE
-        set(value) {
-            field = if (value <= 0) Int.MAX_VALUE else value
+  override var hardCap: Int = Int.MAX_VALUE
+    set(value) {
+      field = if (value <= 0) Int.MAX_VALUE else value
+    }
+
+  /**
+   * Initializes the storage.
+   *
+   * If necessary, this method will create the storage internal structures to store transactions, install needed scripts, extensions, and do all other initialization works. If the storage is already initialized, the given storage-identifier, and storage-number, must match the existing ones, otherwise an [STORAGE_ID_MISMATCH][naksha.base.NakshaError.STORAGE_ID_MISMATCH] exception is raised.
+   *
+   * - Throws [INITIALIZATION_FAILED][naksha.base.NakshaError.INITIALIZATION_FAILED], if the initialization failed.
+   * - Throws [STORAGE_ID_MISMATCH][naksha.base.NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given ones in the configuration.
+   * - Throws [ILLEGAL_STATE][naksha.base.NakshaError.ILLEGAL_STATE], if the storage is already initialized.
+   * - Throws [ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT], if any configuration entry is invalid.
+   * @param config the storage configuration as required.
+   * @param create if not `null`, overrides [NakshaStorage.create].
+   * @param upgrade if not `null`, overrides [NakshaStorage.upgrade].
+   * @since 3.0
+   */
+  abstract fun initStorage(config: CONFIG, create: Boolean?, upgrade: Boolean?)
+
+  /**
+   * Called by caching sub-system, which is the only one actually invoking initStorage!
+   * @param storage the storage configuration as required.
+   * @param create if not _null_, overrides [NakshaStorage.create].
+   * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].
+   * @since 3.0
+   */
+  internal fun invokeInitStorage(storage: NakshaStorage, create: Boolean?, upgrade: Boolean?) {
+    lock.acquire().use {
+      if (configRef.get() == null || create==true || upgrade==true) {
+        val _config = storage.proxy(configKlass)
+        val previousConfig = configRef.get()
+        val previousId = _id
+        val previousHardCap = hardCap
+        val wasInitialized = initialized
+        initializationComplete.set(false)
+        try {
+          this._id = Id(storage.id)
+          this.hardCap = storage.hardCap
+          this.configRef.set(_config)
+          initStorage(_config, create, upgrade)
+          initializationComplete.set(true)
+          afterInit()
+        } catch (failure: Throwable) {
+          this.configRef.set(previousConfig)
+          this._id = previousId
+          this.hardCap = previousHardCap
+          initializationComplete.set(wasInitialized)
+          throw failure
         }
-
-    /**
-     * Initializes the storage.
-     *
-     * If necessary, this method will create the storage internal structures to store transactions, install needed scripts, extensions, and do all other initialization works. If the storage is already initialized, the given storage-identifier, and storage-number, must match the existing ones, otherwise an [STORAGE_ID_MISMATCH][naksha.base.NakshaError.STORAGE_ID_MISMATCH] exception is raised.
-     *
-     * - Throws [INITIALIZATION_FAILED][naksha.base.NakshaError.INITIALIZATION_FAILED], if the initialization failed.
-     * - Throws [STORAGE_ID_MISMATCH][naksha.base.NakshaError.STORAGE_ID_MISMATCH], if the existing _storage-id_ and/or _storage-number_ of the data does not match the given ones in the configuration.
-     * - Throws [ILLEGAL_STATE][naksha.base.NakshaError.ILLEGAL_STATE], if the storage is already initialized.
-     * - Throws [ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT], if any configuration entry is invalid.
-     * @param config the storage configuration as required.
-     * @param create if not `null`, overrides [NakshaStorage.create].
-     * @param upgrade if not `null`, overrides [NakshaStorage.upgrade].
-     * @since 3.0
-     */
-    abstract fun initStorage(config: CONFIG, create: Boolean?, upgrade: Boolean?)
-
-    /**
-     * Called by caching sub-system, which is the only one actually invoking initStorage!
-     * @param storage the storage configuration as required.
-     * @param create if not _null_, overrides [NakshaStorage.create].
-     * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].
-     * @since 3.0
-     */
-    internal fun invokeInitStorage(storage: NakshaStorage, create: Boolean?, upgrade: Boolean?) {
-        lock.acquire().use {
-            if (configRef.get() == null || create==true || upgrade==true) {
-                val _config = storage.proxy(configKlass)
-                this._id = Id(storage.id)
-                this.hardCap = storage.hardCap
-                initStorage(_config, create, upgrade)
-                this.configRef.set(_config)
-                afterInit()
-            }
-        }
+      }
     }
+  }
 
-    /**
-     * Creates a new [TupleNumber] for a feature in this storage, in the given catalog and collection.
-     *
-     * You need a version for features belonging together to the same transaction. You may use [newVirtualVersion] for this purpose, but beware that this is only a helper for mocks or storages that do not really support tuple-number, and where the tuple-number is only used internally within the storage.
-     * @param catalogId the `id` of the catalog where the feature is contained.
-     * @param collectionId the `id` of the collection where the feature is contained.
-     * @param featureId the `id` of the feature being stored.
-     * @param version the version, see [Version.virtualVersion].
-     * @param action the action to encode in the [TupleNumber].
-     * @return the new [TupleNumber] for the given feature.
-     * @since 3.0
-     * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
-     */
-    protected open fun newVirtualTupleNumber(catalogId: String, collectionId: String, featureId: String, version: Long, action: Action): TupleNumber {
-        val v = (version and -4L) or action.longValue
-        return TupleNumber(id.number, Id(catalogId).intValue, Id(collectionId).intValue, Id.textToNumber(featureId), v)
+  /**
+   * Creates a new [TupleNumber] for a feature in this storage, in the given catalog and collection.
+   *
+   * You need a version for features belonging together to the same transaction. You may use [newVirtualVersion] for this purpose, but beware that this is only a helper for mocks or storages that do not really support tuple-number, and where the tuple-number is only used internally within the storage.
+   * @param catalogId the `id` of the catalog where the feature is contained.
+   * @param collectionId the `id` of the collection where the feature is contained.
+   * @param featureId the `id` of the feature being stored.
+   * @param version the version, see [Version.virtualVersion].
+   * @param action the action to encode in the [TupleNumber].
+   * @return the new [TupleNumber] for the given feature.
+   * @since 3.0
+   * @throws naksha.base.NakshaException with error [UNINITIALIZED][naksha.base.NakshaError.UNINITIALIZED], if the storage failed to initialize.
+   */
+  protected open fun newVirtualTupleNumber(catalogId: String, collectionId: String, featureId: String, version: Long, action: Action): TupleNumber {
+    val v = (version and -4L) or action.longValue
+    return TupleNumber(id.number, Id(catalogId).intValue, Id(collectionId).intValue, Id.textToNumber(featureId), v)
+  }
+
+  /**
+   * The atomic that tracks the current version JVM local.
+   *
+   * **This only works on a single JVM and resets when the JVM is restarted. Synchronization and range split must be done by the extending class, if wished.**
+   * @since 3.0
+   * @see newVirtualVersion
+   */
+  protected open val nextVirtualVersion = Platform.newAtomicInt64(Version.now(0L, VERSION).number)
+
+  /**
+   * Creates a new JVM local unique transaction number, aka virtual version.
+   *
+   * **Warning: This is a helper for virtual storages or mock-ups.**
+   * @return a new JVM local unique transaction version.
+   * @since 3.0
+   * @see nextVirtualVersion
+   */
+  protected open fun newVirtualVersion(): Version {
+    // More reliable tailrec.
+    while (true) {
+      val version = Version(nextVirtualVersion.getAndAdd(4L))
+      // getAndAdd uses a memory-fence, therefore `now` is guaranteed to be read after the version!
+      val now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+      if (version.isBehind(now.year, now.month.number, now.day)) {
+        val newVersion = Version.auto(now.year, now.month.number, now.day, 0L, VERSION)
+        if (nextVirtualVersion.compareAndSet(version.number + 4, newVersion.number + 4)) return newVersion
+        // Fail, concurrent increment, repeat.
+        continue
+      }
+      return version
     }
+  }
 
-    /**
-     * The atomic that tracks the current version JVM local.
-     *
-     * **This only works on a single JVM and resets when the JVM is restarted. Synchronization and range split must be done by the extending class, if wished.**
-     * @since 3.0
-     * @see newVirtualVersion
-     */
-    protected open val nextVirtualVersion = Platform.newAtomicInt64(Version.now(0L, VERSION).number)
+  /**
+   * Helper method invoked by [initStorage] after the initialization has been done successfully, so just after [id], and [number] were set, but before the [lock] is released.
+   * @since 3.0
+   */
+  protected abstract fun afterInit()
 
-    /**
-     * Creates a new JVM local unique transaction number, aka virtual version.
-     *
-     * **Warning: This is a helper for virtual storages or mock-ups.**
-     * @return a new JVM local unique transaction version.
-     * @since 3.0
-     * @see nextVirtualVersion
-     */
-    protected open fun newVirtualVersion(): Version {
-        // More reliable tailrec.
-        while (true) {
-            val version = Version(nextVirtualVersion.getAndAdd(4L))
-            // getAndAdd uses a memory-fence, therefore `now` is guaranteed to be read after the version!
-            val now: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC)
-            if (version.isBehind(now.year, now.month.number, now.day)) {
-                val newVersion = Version.auto(now.year, now.month.number, now.day, 0L, VERSION)
-                if (nextVirtualVersion.compareAndSet(version.number + 4, newVersion.number + 4)) return newVersion
-                // Fail, concurrent increment, repeat.
-                continue
-            }
-            return version
-        }
-    }
+  /**
+   * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).
+   *
+   * This method will remove the instance from the [Naksha] singleton.
+   *
+   * @param dropCache if the cache should be dropped (new mandatory argument with v3.0.0).
+   * @since 3.0
+   */
+  protected abstract fun shutdownStorage(dropCache: Boolean)
 
-    /**
-     * Helper method invoked by [initStorage] after the initialization has been done successfully, so just after [id], and [number] were set, but before the [lock] is released.
-     * @since 3.0
-     */
-    protected abstract fun afterInit()
+  // Needed by caching sub-system only!
+  internal fun invokeShutdownStorage(dropCache: Boolean) {
+    shutdownStorage(dropCache)
+  }
 
-    /**
-     * Shutdown the storage instance, blocks until the storage is down (all sessions are closed).
-     *
-     * This method will remove the instance from the [Naksha] singleton.
-     *
-     * @param dropCache if the cache should be dropped (new mandatory argument with v3.0.0).
-     * @since 3.0
-     */
-    protected abstract fun shutdownStorage(dropCache: Boolean)
+  /**
+   * Helper method to always throw the same exception, when the storage is not initialized, but initialization is required.
+   */
+  fun throwUninitialized(): Nothing {
+    throw NakshaException(UNINITIALIZED, "initStorage not called")
+  }
 
-    // Needed by caching sub-system only!
-    internal fun invokeShutdownStorage(dropCache: Boolean) {
-        shutdownStorage(dropCache)
-    }
+  /**
+   * Ensures that the storage is initialized, otherwise throws an [naksha.base.NakshaError.UNINITIALIZED], to be used like `storage.useInitialized().id`.
+   * @return this.
+   * @since 3.0
+   */
+  fun useInitialized(): IStorage {
+    if (!initialized) throwUninitialized()
+    return this
+  }
 
-    /**
-     * Helper method to always throw the same exception, when the storage is not initialized, but initialization is required.
-     */
-    fun throwUninitialized(): Nothing {
-        throw NakshaException(UNINITIALIZED, "initStorage not called")
-    }
+  /**
+   * Mainly for internal purpose, tests if the storage is already initialized.
+   *
+   * @since 3.0
+   * @return _true_ if the storage is initialized; _false_ otherwise.
+   */
+  val initialized: Boolean
+    get() = initializationComplete.get() == true
 
-    /**
-     * Ensures that the storage is initialized, otherwise throws an [naksha.base.NakshaError.UNINITIALIZED], to be used like `storage.useInitialized().id`.
-     * @return this.
-     * @since 3.0
-     */
-    fun useInitialized(): IStorage {
-        if (!initialized) throwUninitialized()
-        return this
-    }
-
-    /**
-     * Mainly for internal purpose, tests if the storage is already initialized.
-     *
-     * @since 3.0
-     * @return _true_ if the storage is initialized; _false_ otherwise.
-     */
-    val initialized: Boolean
-        get() = configRef.get() != null
-
-    /**
-     * Helper method to be called by the storage, ones a [shutdownStorage] is done, to finally remove the cache.
-     * @since 3.0
-     */
-    protected open fun dropCache() {
-        // Naksha.cache.removedStorage(this)
-    }
+  /**
+   * Helper method to be called by the storage, ones a [shutdownStorage] is done, to finally remove the cache.
+   * @since 3.0
+   */
+  protected open fun dropCache() {
+    // Naksha.cache.removedStorage(this)
+  }
 }
