@@ -766,25 +766,134 @@ SELECT basics.*, procs.* FROM basics, procs;
    * Insert new HEAD states. Every input [NewTuple] must carry a `null` predecessor; a non-null
    * predecessor is an illegal argument, rejected before any mutation.
    *
-   * For each feature, an existing DELETE HEAD is purged first (archived by changing its `nv` when
-   * [storeHistory] is enabled, otherwise removed) before insertion. A live CREATE/UPDATE HEAD is an
+   * For each feature, an existing DELETE HEAD is archived by changing its `nv` when [storeHistory] is enabled, otherwise replaced in place. A live CREATE/UPDATE HEAD is an
    * error. New states are inserted through the root with `nv = Version.HEAD.number` and CREATE
    * action. Returns the supplied tuple states in input order.
    *
    * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
-   * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
+   * uniqueness, and sorted inputs into the deterministic locking order. The entire batch is validated before SQL. The caller must provision finite history partition coverage for incoming versions before archiving tombstones; no maintenance locks are acquired here. No commit/rollback here.
    * @param conn the caller-owned mutable connection; it is not closed by this method.
    * @param schema the catalog [Id] of the target collection.
    * @param table the collection [Id] of the target.
    * @param tuples the fully encoded new states; each predecessor must be `null`.
-   * @param storeHistory whether purged DELETE states are archived instead of discarded.
+   * @param storeHistory whether replaced DELETE states are archived instead of overwritten.
+   * @param columns the complete physical column definitions for the target collection.
    * @return the supplied tuple states, in input order.
    * @throws NakshaException wrapping a [NakshaError] on any failure.
    * @since 3.0
    */
   internal fun rows_insert(
-    conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean
-  ): List<Tuple> = TODO("db-06: insert rows through the root")
+    conn: PgConnection, schema: Id, table: Id, tuples: List<NewTuple>, storeHistory: Boolean, columns: Array<PgColumn>
+  ): List<Tuple> = execute_sql_notnull(schema.catalogName(), table.collectionName()) {
+    try {
+      if (conn.autoCommit) throw illegalState("Row insertion requires a caller-owned transaction")
+      val head = Version.HEAD.number
+      val databaseNumber = id.number
+      val catalogNumber = schema.intValue
+      val collectionNumber = table.intValue
+      for (incoming in tuples) {
+        val tuple = incoming.tuple
+        val tn = tuple.tupleNumber
+        val reason = when {
+          incoming.previousTupleNumber != null -> "Row insertion requires a null predecessor"
+          tn.databaseNumber != databaseNumber || tn.catalogNumber != catalogNumber || tn.collectionNumber != collectionNumber -> "Inserted tuple does not belong to the target collection"
+          tn.action != Action.CREATE -> "Row insertion requires CREATE action"
+          tuple.nextVersion != head -> "Row insertion requires a HEAD state"
+          tuple.featureBytes.isEmpty() -> "Row insertion requires a fully encoded tuple"
+          tn.version < 0L || tn.version >= head -> "Row insertion requires a finite version"
+          else -> null
+        }
+        if (reason != null) {
+          throw NakshaException(NakshaError(
+            code = NakshaError.ILLEGAL_ARGUMENT,
+            msg = reason,
+            id = tuple.id.text,
+            collection = table.text,
+            catalog = schema.text,
+            database = id.text
+          ))
+        }
+      }
+      val result = ArrayList<Tuple>(tuples.size)
+      if (tuples.isEmpty()) return@execute_sql_notnull result
+      val rows = PgRows().addColumns(columns)
+        .withDatabaseNumber(databaseNumber).withCatalogNumber(catalogNumber).withCollectionNumber(collectionNumber)
+      rows.size = 1
+      val target = "${quoteIdent(schema.catalogName())}.${quoteIdent(table.collectionName())}"
+      val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
+      val select = "SELECT version::text AS version FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
+      val insert = "INSERT INTO $target (${rows.aliases()}) $source ON CONFLICT (fn, nv) DO NOTHING RETURNING version::text AS version"
+      conn.prepare(insert, rows.typeNames()).use { insertPlan ->
+        val updatePlan = if (storeHistory) null else conn.prepare(
+          "WITH new_row AS ($source) UPDATE $target AS current_row SET (${rows.aliases()}) = (SELECT ${rows.aliases()} FROM new_row) FROM new_row WHERE current_row.fn = new_row.fn AND current_row.nv = $head RETURNING current_row.version::text AS version",
+          rows.typeNames()
+        )
+        try {
+          for (incoming in tuples) {
+            val tuple = incoming.tuple
+            var actualVersion: Long? = null
+            try {
+              val fn = tuple.tupleNumber.featureNumber.toOrdinalFeatureNumber().toString()
+              while (true) {
+                actualVersion = null
+                actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
+                  if (cursor.next()) cursor.get<String>("version").toLong() else null
+                }
+                if (actualVersion != null && Action.fromVersion(actualVersion) == Action.DELETE) {
+                  if (!storeHistory) {
+                    for (column in rows.columns) column.values[0] = null
+                    rows.setRow(0, tuple)
+                    updatePlan!!.execute(rows.values()).use { cursor ->
+                      if (!cursor.next()) throw illegalState("Locked DELETE HEAD disappeared during replacement")
+                    }
+                    result.add(tuple)
+                    break
+                  }
+                  conn.execute("UPDATE $target SET nv = $2::text::bigint WHERE fn = $1::text::bigint AND nv = $head", arrayOf(fn, tuple.version.toString())).close()
+                  actualVersion = null
+                }
+                if (actualVersion == null) {
+                  for (column in rows.columns) column.values[0] = null
+                  rows.setRow(0, tuple)
+                  val inserted = insertPlan.execute(rows.values()).use { cursor -> cursor.next() }
+                  if (inserted) {
+                    result.add(tuple)
+                    break
+                  }
+                  continue
+                }
+                throw NakshaException(NakshaError(
+                  code = NakshaError.FEATURE_EXISTS,
+                  msg = "Feature already has a HEAD state",
+                  id = tuple.id.text,
+                  collection = table.text,
+                  catalog = schema.text,
+                  database = id.text
+                ).apply { this.actualVersion = actualVersion })
+              }
+            } catch (e: NakshaException) {
+              val error = e.error
+              if (error.database == null) error.database = id.text
+              if (error.catalog == null) error.catalog = schema.text
+              if (error.collection == null) error.collection = table.text
+              if (error.id == null) error.id = tuple.id.text
+              if (error.actualVersion == null && actualVersion != null) error.actualVersion = actualVersion
+              throw e
+            }
+          }
+        } finally {
+          updatePlan?.close()
+        }
+      }
+      result
+    } catch (e: NakshaException) {
+      val error = e.error
+      if (error.database == null) error.database = id.text
+      if (error.catalog == null) error.catalog = schema.text
+      if (error.collection == null) error.collection = table.text
+      throw e
+    }
+  }
 
   /**
    * Replace current HEAD states or insert missing ones. A supplied predecessor is validated for
