@@ -11,27 +11,27 @@ DECLARE
     routing_byte integer;
 BEGIN
     IF "naksha~admin".bswap8(72623859790382856) <> 578437695752307201
-        OR "naksha~admin".fn_to_int8(0) <> '-9223372036854775808'::bigint
-        OR "naksha~admin".fn_to_int8(128) <> 0 THEN
+        OR "naksha~admin".fn_to_ordinal(0) <> '-9223372036854775808'::bigint
+        OR "naksha~admin".fn_to_ordinal(128) <> 0 THEN
         RAISE EXCEPTION 'Known conversion vector failed';
     END IF;
     FOREACH upper_bits IN ARRAY ARRAY[0::bigint, '-9223372036854775808'::bigint, -256::bigint] LOOP
         previous := NULL;
         FOR routing_byte IN 0..255 LOOP
             fn := upper_bits | routing_byte::bigint;
-            stored := "naksha~admin".fn_to_int8(fn);
-            IF "naksha~admin".int8_to_fn(stored) <> fn OR (previous IS NOT NULL AND previous >= stored) THEN
+            stored := "naksha~admin".fn_to_ordinal(fn);
+            IF "naksha~admin".ordinal_to_fn(stored) <> fn OR (previous IS NOT NULL AND previous >= stored) THEN
                 RAISE EXCEPTION 'Round trip or routing order failed for %', fn;
             END IF;
             previous := stored;
         END LOOP;
     END LOOP;
     FOREACH fn IN ARRAY ARRAY['-9223372036854775808'::bigint, 9223372036854775807::bigint, -1::bigint] LOOP
-        IF "naksha~admin".int8_to_fn("naksha~admin".fn_to_int8(fn)) <> fn THEN
+        IF "naksha~admin".ordinal_to_fn("naksha~admin".fn_to_ordinal(fn)) <> fn THEN
             RAISE EXCEPTION 'Extreme round trip failed';
         END IF;
     END LOOP;
-    IF "naksha~admin".fn_to_int8(NULL) IS NOT NULL THEN
+    IF "naksha~admin".fn_to_ordinal(NULL) IS NOT NULL THEN
         RAISE EXCEPTION 'STRICT null handling failed';
     END IF;
     RAISE NOTICE 'PASS: SQL known vectors, signed extremes, all routing bytes and null handling';

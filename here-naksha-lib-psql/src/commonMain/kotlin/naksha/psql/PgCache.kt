@@ -2,12 +2,12 @@ package naksha.psql
 
 import naksha.base.Action.Action_C.DELETE
 import naksha.base.AtomicMap
-import naksha.base.Id.IdCompanion.COLLECTIONS_COL_QUOTED
 import naksha.base.Id
-import naksha.base.Platform.PlatformCompanion.currentMillis
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.TupleNumber
+import naksha.base.Version
 import naksha.base.illegalState
+import naksha.base.Platform
 import naksha.model.Naksha
 import naksha.psql.PgColumn.PgColumn_C.FnColumn
 import kotlin.js.JsExport
@@ -222,10 +222,15 @@ abstract class PgCache protected constructor() {
         if (conn == null) return null
         conn.execute(pgAdmin.SET_searchPath).close()
         val rows = PgRows().withCollection(pgAdminCatalogs)
-        val SQL = "SELECT * FROM ${pgAdminCatalogs.qualifiedName} WHERE fn = $1"
-        val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
-        plan.execute(arrayOf(number)).fetch().use { rows.readAll(it) }
+        // The cache number retains only the logical sign and low 31 bits; compare those encoded bits.
+        val mask = Platform.swapLong(Long.MIN_VALUE or Int.MAX_VALUE.toLong())
+        val ordinal = Id.featureNumberToOrdinal(number.toLong()) and mask
+        val SQL = "SELECT * FROM ${pgAdminCatalogs.qualifiedName} WHERE nv = ${Version.HEAD.number} AND ($FnColumn & $2::bigint) = $1::bigint"
+        conn.prepare(SQL, arrayOf(PgType.INT64.text, PgType.INT64.text)).use { plan ->
+            plan.execute(arrayOf(ordinal, mask)).fetch().use { rows.readAll(it) }
+        }
         if (rows.size == 0) return null
+        if (rows.size > 1) throw illegalState("Ambiguous catalog-number $number matches multiple current catalog identities")
         val tuple = rows[0] ?: return null
         Naksha.cache.store(tuple)
         val pgCatalog = PgCatalog(tuple)
@@ -286,11 +291,16 @@ abstract class PgCache protected constructor() {
         // We are root (parent==null), query the database.
         if (conn == null) return null
         conn.execute(catalog.SET_searchPath).close()
-        val SQL = "SELECT * FROM ${catalog.quotedName}.$COLLECTIONS_COL_QUOTED WHERE $FnColumn = $1"
-        val plan = conn.prepare(SQL, arrayOf(PgType.INT64.text))
-        val rows = PgRows().withCollection(pgAdminCollections)
-        plan.execute(arrayOf(collectionNumber.toLong())).fetch().use { rows.readAll(it) }
+        val metadata = catalog.collectionsDescriptor(pgAdminCollections.naksha)
+        val mask = Platform.swapLong(Long.MIN_VALUE or Int.MAX_VALUE.toLong())
+        val ordinal = Id.featureNumberToOrdinal(collectionNumber.toLong()) and mask
+        val SQL = "SELECT * FROM ${metadata.qualifiedName} WHERE nv = ${Version.HEAD.number} AND ($FnColumn & $2::bigint) = $1::bigint"
+        val rows = PgRows().withCollection(metadata)
+        conn.prepare(SQL, arrayOf(PgType.INT64.text, PgType.INT64.text)).use { plan ->
+            plan.execute(arrayOf(ordinal, mask)).fetch().use { rows.readAll(it) }
+        }
         if (rows.size == 0) return null
+        if (rows.size > 1) throw illegalState("Ambiguous collection-number $collectionNumber matches multiple current collection identities")
         val tuple = rows[0] ?: return null
         Naksha.cache.store(tuple)
         val pgCollection = PgCollection(catalog.id, tuple)

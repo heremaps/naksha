@@ -57,12 +57,12 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
     FROM (SELECT pg_catalog.int8send(v) AS b) bytes
 $$;
 
-CREATE OR REPLACE FUNCTION "naksha~admin".fn_to_int8(fn bigint) RETURNS bigint
+CREATE OR REPLACE FUNCTION "naksha~admin".fn_to_ordinal(fn bigint) RETURNS bigint
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
     SELECT "naksha~admin".bswap8(fn) # '-9223372036854775808'::bigint
 $$;
 
-CREATE OR REPLACE FUNCTION "naksha~admin".int8_to_fn(value bigint) RETURNS bigint
+CREATE OR REPLACE FUNCTION "naksha~admin".ordinal_to_fn(value bigint) RETURNS bigint
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
     SELECT "naksha~admin".bswap8(value # '-9223372036854775808'::bigint)
 $$;

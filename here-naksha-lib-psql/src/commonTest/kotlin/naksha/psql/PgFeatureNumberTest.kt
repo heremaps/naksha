@@ -1,8 +1,7 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.Platform.PlatformCompanion.swapLong
-import naksha.base.toOrdinalFeatureNumber
-import naksha.base.fromOrdinalFeatureNumber
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -12,16 +11,16 @@ class PgFeatureNumberTest {
     @Test
     fun knownBytesAndExtremesRoundTrip() {
         assertEquals(0x0807060504030201L, swapLong(0x0102030405060708L))
-        assertEquals(Long.MIN_VALUE, 0L.toOrdinalFeatureNumber())
-        assertEquals(0L, 128L.toOrdinalFeatureNumber())
+        assertEquals(Long.MIN_VALUE, Id.featureNumberToOrdinal(0L))
+        assertEquals(0L, Id.featureNumberToOrdinal(128L))
         for (fn in listOf(Long.MIN_VALUE, Long.MAX_VALUE, -1L, 0L, 1L, 255L, 256L)) {
-            assertEquals(fn, fn.toOrdinalFeatureNumber().fromOrdinalFeatureNumber())
-            assertEquals(fn, fn.fromOrdinalFeatureNumber().toOrdinalFeatureNumber())
+            assertEquals(fn, Id.ordinalToFeatureNumber(Id.featureNumberToOrdinal(fn)))
+            assertEquals(fn, Id.featureNumberToOrdinal(Id.ordinalToFeatureNumber(fn)))
         }
         val random = Random(33)
         repeat(10000) {
             val fn = random.nextLong()
-            assertEquals(fn, fn.toOrdinalFeatureNumber().fromOrdinalFeatureNumber())
+            assertEquals(fn, Id.ordinalToFeatureNumber(Id.featureNumberToOrdinal(fn)))
         }
     }
 
@@ -31,9 +30,9 @@ class PgFeatureNumberTest {
             var previous: Long? = null
             for (byte in 0..255) {
                 val logical = upperBits or byte.toLong()
-                val stored = logical.toOrdinalFeatureNumber()
+                val stored = Id.featureNumberToOrdinal(logical)
                 assertEquals(byte, ((stored xor Long.MIN_VALUE) ushr 56).toInt())
-                assertEquals(logical, stored.fromOrdinalFeatureNumber())
+                assertEquals(logical, Id.ordinalToFeatureNumber(stored))
                 previous?.let { assertTrue(it < stored) }
                 previous = stored
             }
@@ -55,7 +54,7 @@ class PgFeatureNumberTest {
                     val stored = ((byte.toLong() shl 56) or tail) xor Long.MIN_VALUE
                     assertTrue(stored >= ((lower.toLong() shl 56) xor Long.MIN_VALUE))
                     if (upper < 256) assertTrue(stored < ((upper.toLong() shl 56) xor Long.MIN_VALUE))
-                    assertEquals(stored, stored.fromOrdinalFeatureNumber().toOrdinalFeatureNumber())
+                    assertEquals(stored, Id.featureNumberToOrdinal(Id.ordinalToFeatureNumber(stored)))
                 }
             }
         }

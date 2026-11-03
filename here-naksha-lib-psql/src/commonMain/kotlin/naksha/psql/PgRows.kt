@@ -334,6 +334,11 @@ internal class PgRows() {
                 NextVersion.name -> {
                     membersBook.put(name, getLong(row, name))
                 }
+                Id.name -> {
+                    val stored = getAny(row, name)
+                    val fn = getLong(row, PgColumn.FnColumn)
+                    membersBook.put(name, stored ?: if (fn != null && fn >= 0L) fn.toString() else null)
+                }
                 else -> {
                     val pg_value = getAny(row, name)
                     val value = member.dataType.convert(pg_value)

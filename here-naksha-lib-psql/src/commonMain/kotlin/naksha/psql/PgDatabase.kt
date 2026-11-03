@@ -833,7 +833,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             val tuple = incoming.tuple
             var actualVersion: Long? = null
             try {
-              val fn = tuple.tupleNumber.featureNumber.toOrdinalFeatureNumber().toString()
+              val fn = Id.featureNumberToOrdinal(tuple.tupleNumber.featureNumber).toString()
               while (true) {
                 actualVersion = null
                 actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->

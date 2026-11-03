@@ -1,9 +1,8 @@
 package naksha.psql
 
+import naksha.base.Id
 import naksha.base.Platform.PlatformCompanion.toJSON
 import naksha.base.illegalArg
-import naksha.base.fromOrdinalFeatureNumber
-import naksha.base.toOrdinalFeatureNumber
 import naksha.model.objects.MemberType
 
 /**
@@ -67,7 +66,7 @@ internal data class PgRowsColumn(
      */
     operator fun get(i: Int): Any? {
         val value = if (i in 0 until size) values[i] else null
-        return if ((pgColumn eq PgColumn.FnColumn) && value != null) (value as Long).fromOrdinalFeatureNumber() else value
+        return if ((pgColumn eq PgColumn.FnColumn) && value != null) Id.ordinalToFeatureNumber(value as Long) else value
     }
 
     /**
@@ -80,7 +79,7 @@ internal data class PgRowsColumn(
     operator fun set(i: Int, value: Any?) {
         if (i < 0) throw illegalArg("The given index $i is less than zero")
         if (i >= size) size = i + 1
-        values[i] = if ((pgColumn eq PgColumn.FnColumn) && value != null) (value as Long).toOrdinalFeatureNumber() else value
+        values[i] = if ((pgColumn eq PgColumn.FnColumn) && value != null) Id.featureNumberToOrdinal(value as Long) else value
     }
 
     /**

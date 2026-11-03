@@ -1,6 +1,6 @@
 package naksha.psql
 
-import naksha.base.toOrdinalFeatureNumber
+import naksha.base.Id
 import naksha.base.TupleNumber
 import naksha.base.Version
 import naksha.jbon.BookType
@@ -55,7 +55,7 @@ class PgRowsTest {
             val bindings = rows.values()
             for (i in features.indices) {
                 val logical = features[i]
-                val ordinal = logical.toOrdinalFeatureNumber()
+                val ordinal = Id.featureNumberToOrdinal(logical)
                 for (column in 0..3) {
                     assertEquals(if (column < 2) ordinal else logical, (bindings[column] as Array<*>)[i])
                 }
@@ -76,7 +76,7 @@ class PgRowsTest {
             .addColumn("other_int64", MemberType.INT64)
         rows.size = 1
         for (logical in listOf(0L, 1L, 128L, -1L, Long.MIN_VALUE, Long.MAX_VALUE)) {
-            val ordinal = logical.toOrdinalFeatureNumber()
+            val ordinal = Id.featureNumberToOrdinal(logical)
             for (column in rows.columns) column.values[0] = ordinal
             assertEquals(logical, rows.getLong(0, PgColumn.FnColumn))
             assertEquals(logical, rows.getLong(0, "existing_fn"))

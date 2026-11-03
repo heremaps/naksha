@@ -227,10 +227,10 @@ class Id private constructor(
     /**
      * The feature-ordinal of this identifier: the byte-swapped feature-number with the sign-bit flipped. This is the physical storage encoding in which contiguous [partitionNumber]s form contiguous ordinal ranges.
      * @since 3.0
-     * @see featureOrdinal
+     * @see featureNumberToOrdinal
      */
-    val featureOrdinal: Long
-        get() = featureOrdinal(number)
+    val featureNumberToOrdinal: Long
+        get() = featureNumberToOrdinal(number)
 
     /**
      * The lowest ordinal (inclusive) of the 2^56-wide ordinal block owned by this identifier's [partitionNumber].
@@ -692,14 +692,24 @@ class Id private constructor(
          */
         @JsStatic
         @JvmStatic
-        fun featureOrdinal(number: Long): Long = Platform.swapLong(number) xor Long.MIN_VALUE
+        fun featureNumberToOrdinal(number: Long): Long = Platform.swapLong(number) xor Long.MIN_VALUE
+
+        /**
+         * Returns the logical feature-number from its byte-swapped, sign-normalized storage ordinal.
+         * @param ordinal the physical feature-ordinal.
+         * @return the original logical feature-number.
+         * @since 3.0
+         */
+        @JsStatic
+        @JvmStatic
+        fun ordinalToFeatureNumber(ordinal: Long): Long = Platform.swapLong(ordinal xor Long.MIN_VALUE)
 
         /**
          * Returns the lowest ordinal (inclusive) that has the given partition-number, i.e. the start of the 2^56-wide ordinal block that partition-number owns.
          * @param partitionNumber the partition-number, between 0 and 255.
          * @return the lowest ordinal of that block.
          * @since 3.0
-         * @see featureOrdinal
+         * @see featureNumberToOrdinal
          */
         @JsStatic
         @JvmStatic
