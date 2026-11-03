@@ -89,6 +89,37 @@ class MaskingUtilTest {
     ));
   }
 
+  @Test
+  void shouldMaskTopLevelSiblingFieldsOfProperties() {
+    // Given: a storage-like feature with "master" (containing credentials) as a sibling of "properties",
+    // mirroring unit_test_data/Auth/WriteAuthorizationNegative/create_storage.json
+    NakshaFeature feature = new NakshaFeature();
+    feature.put("master", mutableMapOf(
+        "host", "localhost",
+        "db", "naksha",
+        "user", "naksha_admin",
+        "password", "super-secret",
+        "port", 5432
+    ));
+    feature.getProperties().putAll(mutableMapOf("schema", "public"));
+
+    // And:
+    Set<String> lowercasedSensitiveProperties = Set.of("password", "authorization");
+
+    // When:
+    MaskingUtil.maskProperties(feature, lowercasedSensitiveProperties);
+
+    // Then:
+    assertPropertiesMatch((Map) feature.get("master"), Map.of(
+        "host", "localhost",
+        "db", "naksha",
+        "user", "naksha_admin",
+        "password", MaskingUtil.MASK,
+        "port", 5432
+    ));
+    assertPropertiesMatch(feature.getProperties(), Map.of("schema", "public"));
+  }
+
   private static void assertPropertiesMatch(Map actual, Map<String, Object> expected) {
     assertEquals(actual.size(), expected.size(), "Size mismatch when comparing properties");
     expected.forEach((key, expectedValue) -> {
