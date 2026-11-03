@@ -5,6 +5,14 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### PLV8 storage attachment and shared maintenance increment
+
+**Commit:** Attach PLV8 storage from schema comments and share Kotlin maintenance.
+
+**Completion:** user-approved increment, `DONE`. Includes credential-free, versioned schema-comment configuration (`readFromSchemaComment`/`writeToSchemaComment`), fresh attach-existing storage/write sessions, the exported Kotlin/JS maintenance entry point, runtime version requirements, native PLV8 API naming, import-alias isolation and member-sort initialization fixes. The user explicitly included staged instruction-file changes in this commit. No pg_cron scheduling or permanent SQL maintenance wrapper is part of this increment.
+
+**Verification:** 13 focused tests passed without skips, including live PostgreSQL 18.6 PLV8 maintenance parity, bigint precision, rollback after success and partial failure, retry, invalid-comment rejection, session-setting preservation and crossed module aliases. Production JS compilation and diff checks passed; temporary databases were removed. General JS tuple-cache operations remain unfinished, and concurrent-session/module-hot-reload policies remain outside this acceptance.
+
 ### JVM creation, bootstrap and registry sweep increment
 
 **Commit:** Implement shared Kotlin collection creation and partition maintenance.

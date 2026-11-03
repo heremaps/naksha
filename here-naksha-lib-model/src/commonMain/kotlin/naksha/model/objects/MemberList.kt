@@ -258,7 +258,10 @@ class MemberList() : ListProxy<Member>(Member::class) {
     }
 
     // Sort.
-    sortByDescending(this::sortByDescFunction)
+    // Reorder without invoking duplicate-checking setters on transient positions.
+    val sorted = toTypedArray()
+    sorted.sortByDescending(this::sortByDescFunction)
+    for (i in sorted.indices) super.set(i, sorted[i])
 
     // Clear index cache (the sort invalidated it, by intention).
     memberIndexByName.clear()

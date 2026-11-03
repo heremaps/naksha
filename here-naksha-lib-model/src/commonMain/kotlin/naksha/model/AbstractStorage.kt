@@ -77,7 +77,15 @@ abstract class AbstractStorage<CONFIG : NakshaStorage> : IStorage {
   abstract fun initStorage(config: CONFIG, create: Boolean?, upgrade: Boolean?)
 
   /**
-   * Called by caching sub-system, which is the only one actually invoking initStorage!
+   * Initializes a directly constructed storage through the same lifecycle as cached storages.
+   * @since 3.0
+   */
+  protected fun initializeStorage(config: CONFIG, create: Boolean?, upgrade: Boolean?) {
+    invokeInitStorage(config, create, upgrade)
+  }
+
+  /**
+   * Called by the caching sub-system and [initializeStorage] to invoke [initStorage] with initialized identity and configuration.
    * @param storage the storage configuration as required.
    * @param create if not _null_, overrides [NakshaStorage.create].
    * @param upgrade if not _null_, overrides [NakshaStorage.upgrade].

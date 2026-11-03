@@ -32,4 +32,18 @@ class BootstrapMemberListTest {
     members.verify()
     assertTrue(members.isSortedByIndex())
   }
+
+  @Test
+  fun reordersMembersWithoutTransientDuplicateFailures() {
+    val members = MemberList()
+    for (i in StandardMembers.MANDATORY.indices.reversed()) members.add(StandardMembers.MANDATORY[i].copy<Member>())
+    members.add(Member("small", naksha.model.objects.MemberType.INT8))
+    members.add(Member("wide", naksha.model.objects.MemberType.INT64))
+    members.verify()
+    for (i in StandardMembers.MANDATORY.indices) assertTrue(StandardMembers.MANDATORY[i].isSameAs(members[i]))
+    assertEquals("wide", members[StandardMembers.MANDATORY.size]?.name)
+    assertEquals("small", members[StandardMembers.MANDATORY.size + 1]?.name)
+    for (i in members.indices) assertEquals(i, members[members[i]!!.name]?.index)
+    assertSame(members, members.verify())
+  }
 }

@@ -26,7 +26,7 @@ import kotlin.use
 actual open class PgStorage() : AbstractStorage<PgConfig>() {
 
     actual constructor(config: PgConfig, create: Boolean?, upgrade: Boolean?) : this() {
-        initStorage(config, create, upgrade)
+        initializeStorage(config, create, upgrade)
     }
 
     private var _database: PgDatabase? = null

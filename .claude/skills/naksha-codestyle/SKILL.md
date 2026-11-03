@@ -3,9 +3,13 @@ name: naksha-codestyle
 description: Instructions how to write code.
 ---
 
+# Format
+- Use two spaces instead of tabs.
+- If a file uses a mixed or other amount of spaces per tab, or even tabs, modify the file to that it uses 2 spaces per tab.
+  - Do not modify files that you do not touch.
+  - Do the modification in two phases, first do the changes intended, ones approved, make the reformat on yourself in a second commit that states in the commit message that this is only a formatting. This simplifies reviews.
+
 # General
-Use two spaces instead of tabs.
-If a file uses a mixed or other amount of spaces per tab, or even tabs, modify the file to that it uses 2 spaces per tab. Do not modify files that you do not touch, we do not want unnecessary changes.
 Avoid using streaming APIs, prefer classic loops like:
 ```kotlin
 for (v in array) ...
@@ -52,10 +56,9 @@ fun ensureSameMeaning(a: String?, b: String?) {
   // Some more code that is more complex
 }
 ```
-This avoids an `else`, which makes it easier to read and follow the code for a human. Clearly, this is not always possible, but when code can be written in that way, prefer it.
 
 # Comments and Markdown
-Do not add line breaks within paragraphs. For example:
+Do not add line breaks within paragraphs of comments. For example:
 ```kotlin
 /**
  * This is comment with a first paragraph. We will not do any line-break to adjust for certain columns. This practise is from the last century, all modern IDEs are able to automatically add line breaks.
@@ -72,3 +75,17 @@ Always add the current version as `@since {major}.{minor}` to methods documentat
  * @since 3.0
  */ 
 ```
+
+# Missing information
+If you miss database credentials or other credentials: Ask the user for the missing credentials. Do not guess to make assumptions.
+
+# Error handling
+Do not use Kotlin's build in `require`, because in Naksha we explicitly want all exceptions to be `NakshaException` wrapping a JSON serializable `NakshaError`. Therefore, rather use if. Example:
+```kotlin
+// Do not:
+require( foo == null ) { "Some message" }
+
+// Do instead:
+if (foo != null) throw illegalState("Some message")
+```
+Beware that `NakshaException` has a bunch of helper methods to auto-wrap all kind of errors. If some function is missing, just add it and use it. If you find existing `require` statements in code you anyway modify, treat them like spaces, fix them togehter with the space adjustment in a dedicated commit, so that it is clear that this is only syntactic sugar.

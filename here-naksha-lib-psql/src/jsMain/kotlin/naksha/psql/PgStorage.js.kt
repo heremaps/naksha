@@ -11,7 +11,7 @@ import kotlin.reflect.KClass
 actual open class PgStorage() : AbstractStorage<PgConfig>() {
     @JsName("newPgStorage")
     actual constructor(config: PgConfig, create: Boolean?, upgrade: Boolean?) : this() {
-        initStorage(config, create, upgrade)
+        initializeStorage(config, create, upgrade)
     }
 
     private var _database: PgDatabase? = null
@@ -37,7 +37,13 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
     }
 
     actual open fun newSession(options: SessionOptions, readOnly: Boolean): PgSession {
-        return PgSession(this, options, readOnly)
+        useInitialized()
+        val storage = this
+        return object : PgSession(storage, options, readOnly) {
+            override fun initConnection(conn: PgConnection, query: String) {
+                // Borrow the invoking backend without applying JVM-style session settings.
+            }
+        }
     }
 
     actual open fun newConnection(
@@ -45,7 +51,8 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
         readOnly: Boolean,
         init: Fx2<PgConnection, String>?
     ): PgConnection {
-        return instance.openConnection(options, readOnly, init)
+        // PLV8 wrappers share the caller's backend; initialization must not change its session settings.
+        return instance.openConnection(options, readOnly, init ?: SKIP_INIT)
     }
 
     actual override fun initStorage(config: PgConfig, create: Boolean?, upgrade: Boolean?) {
@@ -55,7 +62,8 @@ actual open class PgStorage() : AbstractStorage<PgConfig>() {
             db.init(
                 doOverride = config.override ?: false,
                 doCreate = create ?: config.create,
-                doUpgrade = upgrade ?: config.upgrade
+                doUpgrade = upgrade ?: config.upgrade,
+                attachExisting = true
             )
             _database = db
         }

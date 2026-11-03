@@ -177,6 +177,7 @@ actual open class PgDatabaseImpl internal actual constructor(storage: PgStorage,
       )
     }
     logger.info("Done creating internal collections")
+    PgLocalConfig.writeToSchemaComment(conn, storage.config, id, psql_version)
     return adminMapOid
   }
 

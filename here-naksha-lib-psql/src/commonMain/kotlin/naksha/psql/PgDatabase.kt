@@ -147,13 +147,16 @@ abstract class PgDatabase(
    * @param doOverride Can be set to _true_ to force the storage to reinstall the admin-map, even when the existing installed version of Naksha code is up-to-date (matches the code coming together with the library).
    * @param doCreate If the storage will create missing structures when opening a database. If explicitly _false_ and the database is not initialized, the storage will throw an [INITIALIZATION_FAILED][naksha.base.NakshaError.INITIALIZATION_FAILED].
    * @param doUpgrade If the storage should automatically upgrade the admin-structures (e.g. stored procedures) of a database, when necessary; otherwise the initialization does not modify the admin-structure of the database. However, it will throw an [INITIALIZATION_FAILED][naksha.base.NakshaError.INITIALIZATION_FAILED] if there are incompatibilities that prevent the usage of the found database without upgrade of admin-structures.
+   * @param attachExisting validate an installed runtime without installation, session settings or commit; requires creation, upgrade and override disabled.
    * @since 3.0
    */
   internal fun init(
     doOverride: Boolean = storage.config.override ?: false,
     doCreate: Boolean = storage.config.create,
-    doUpgrade: Boolean = storage.config.upgrade
+    doUpgrade: Boolean = storage.config.upgrade,
+    attachExisting: Boolean = false
   ) {
+    if (attachExisting && (doOverride || doCreate || doUpgrade)) throw illegalArg("Existing database attachment cannot install or upgrade objects")
     val id = this.id.text
     val number = this.id.number
     val config = storage.config
@@ -262,6 +265,7 @@ SELECT basics.*, procs.* FROM basics, procs;
           )
         }
         if (installed_version != psql_version) {
+          if (attachExisting) throw illegalState("Installed admin version does not match the attached runtime")
           logger.info("The admin-map of '$id' is in version $installed_version, this library uses version $psql_version")
           if (doOverride) {
             logger.warn("Forcefully upgrade storage '$id' admin-map (current=$installed_version, new=$psql_version)")
@@ -287,12 +291,12 @@ SELECT basics.*, procs.* FROM basics, procs;
           logger.info("The admin-map of '$id' is up-to-date: $psql_version")
         }
       }
-      conn.execute("SET search_path = $ADMIN_CATALOG_QUOTED, topology, hint_plan, public").close()
+      if (!attachExisting) conn.execute("SET search_path = $ADMIN_CATALOG_QUOTED, topology, hint_plan, public").close()
       logger.info("Load OID of '$NAKSHA_VERSION_SEQ' from admin schema (schema-oid=$schemaOid)")
       val SQL = "SELECT oid FROM pg_class WHERE relnamespace = $schemaOid AND relname = '$NAKSHA_VERSION_SEQ'"
       conn.execute(SQL).fetch().use { cursor -> _versionSequenceOid = cursor["oid"] }
       logger.info("Storage ${config.id} / ${config.databaseNumber} initialized, version-seq-oid=$versionSequenceOid, commit")
-      conn.commit()
+      if (!attachExisting) conn.commit()
     }
   }
 
