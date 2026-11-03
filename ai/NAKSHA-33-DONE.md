@@ -5,6 +5,14 @@ These are moved out of [NAKSHA-33.md](NAKSHA-33.md) so the active workboard stay
 flat; they remain listed (struck out) in its overview table. Every ticket here is
 `DONE`.
 
+### Maintenance permissions and concurrency verification increment
+
+**Commit:** Verify maintenance permissions and concurrent JVM/PLV8 sweeps.
+
+**Completion:** user-approved verification increment, `DONE`; production scheduling remains deferred. Added isolated live tests for cold-backend non-superuser permission enforcement and successful owner/grant-based maintenance without escalation, plus overlapping JVM-first/PLV8-second sweeps across commit and rollback.
+
+**Verification:** both integration tests passed on PostgreSQL 18.6 / PLV8 3.2.5. Checks cover six permission denials, positive invocation/rollback/idempotency, exact advisory-lock waits, preservation of allocator/data/keys and single provisioning after commit or rollback. Temporary roles and databases were removed. Reverse runtime ordering and broader direct-creation/drop races are not claimed.
+
 ### Installed PLV8 maintenance entrypoint increment
 
 **Commit:** Install restricted PLV8 maintenance entry point.
