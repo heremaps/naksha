@@ -89,3 +89,8 @@ require( foo == null ) { "Some message" }
 if (foo != null) throw illegalState("Some message")
 ```
 Beware that `NakshaException` has a bunch of helper methods to auto-wrap all kind of errors. If some function is missing, just add it and use it. If you find existing `require` statements in code you anyway modify, treat them like spaces, fix them togehter with the space adjustment in a dedicated commit, so that it is clear that this is only syntactic sugar.
+
+# PostgresQL database
+Avoid at all cost to use SQL functions, except for build-in functions. This is especially true for all SQL functions that are using any other language than pure pl/SQL _(the native integrated language)_. Functions using PLv8 are purely intended for special purpose, for example to be used as background job from `pg_cron`. The reason is that starting the `PLv8` engine _(or most other custom language engines)_ is so expensive, compared to what they should archive, we **MUST** avoid this.
+
+For example, we store feature-numbers in the database as feature-ordinals _(which are the feature-numbers byte-swapped, with the sign-bit flipped)_. When querying these numbers, turn the feature-number into a feature-ordinal in Java, then use the ordinal. We know that all `fn` columns store the ordinals, so we can perfectly fine do the convert in Java/JVM. DO NOT USE the SQL function that can do the same, it will cost microseconds, but they can be very valuable.
