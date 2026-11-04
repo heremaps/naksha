@@ -1063,14 +1063,17 @@ data class Tuple @JvmOverloads constructor(
     fun decodeFeature(globalBook: IBook?): NakshaFeature {
         val feature = decodeObject(globalBook).proxy(NakshaFeature::class)
         // The blob stores the tuple-number (the `uuid` slot) as a [TupleNumber], but the legacy
-        // `xyz.uuid` is a string (the stringified [Guid]). Materialize it so `xyz.guid` resolves.
+        // `xyz.uuid`/`xyz.nuuid` are stringified [Guid]s and `xyz.action` is derived from the
+        // tuple-number's action bits, none of which are stored in the blob. Materialize them so
+        // `xyz.guid`/`xyz.nguid`/`xyz.action` resolve, mirroring [XyzNs.fromTuple].
         val xyz = feature.properties?.xyz
         if (xyz != null) {
-            if (xyz.uuid == null) {
-                xyz.setRaw(XyzNs.UUID, Guid(id.text, tupleNumber).toString())
-            }
-            // `action` is derived from the tuple-number's action bits, not stored in the blob.
-            xyz.setRaw(XyzNs.ACTION, tupleNumber.action.toString())
+            val tn = tupleNumber
+            if (xyz.uuid == null) xyz.setRaw(XyzNs.UUID, Guid(id.text, tn).toString())
+            val nextTn = nextTupleNumber
+            if (nextTn != null) xyz.setRaw(XyzNs.NUUID, Guid(id.text, nextTn).toString())
+            else if (tn.action == Action.DELETE) xyz.setRaw(XyzNs.NUUID, Guid(id.text, tn).toString())
+            xyz.setRaw(XyzNs.ACTION, tn.action.toString())
         }
         return feature
     }

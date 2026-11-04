@@ -794,6 +794,13 @@ SELECT basics.*, procs.* FROM basics, procs;
       val databaseNumber = id.number
       val catalogNumber = schema.intValue
       val collectionNumber = table.intValue
+      // A duplicate HEAD on a metadata insert must surface as the specific "exists" error, not a
+      // generic feature conflict: catalogs live in `admin.catalogs`, collections in `<catalog>.collections`.
+      val conflictCode = when {
+        catalogNumber == Id.ADMIN_CATALOG_ID.intValue && collectionNumber == Id.CATALOGS_COL_ID.intValue -> NakshaError.CATALOG_EXISTS
+        collectionNumber == Id.COLLECTIONS_COL_ID.intValue -> NakshaError.COLLECTION_EXISTS
+        else -> NakshaError.CONFLICT
+      }
       for (incoming in tuples) {
         val tuple = incoming.tuple
         val tn = tuple.tupleNumber
@@ -866,7 +873,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                   continue
                 }
                 throw NakshaException(NakshaError(
-                  code = NakshaError.CONFLICT,
+                  code = conflictCode,
                   msg = "Feature already has a HEAD state",
                   id = tuple.id.text,
                   collection = table.text,
@@ -1723,7 +1730,6 @@ internal const val PG_IDENTIFIER_BYTES = 63
 internal const val PG_HISTORY_SUFFIX_BYTES = 16
 internal const val PG_PERFORMANCE_SUFFIX_BYTES = 4
 internal const val PG_INDEX_ALIAS_BYTES = 13
-internal const val PG_INDEX_NAME_PREFIX = "ci_"
 internal const val PG_ROOT_NAME_BYTES = PG_IDENTIFIER_BYTES - PG_HISTORY_SUFFIX_BYTES - PG_PERFORMANCE_SUFFIX_BYTES - 1 - PG_INDEX_ALIAS_BYTES
 
 /**
@@ -1737,7 +1743,7 @@ internal fun Id.indexName(): String = textAlias(IdTextType.SAFE, PG_INDEX_ALIAS_
  * @since 3.0
  */
 internal fun Id.indexName(table: String): String {
-  val name = "$table\$${PG_INDEX_NAME_PREFIX}${indexName()}"
+  val name = "$table\$${indexName()}"
   if (table.isEmpty() || '\u0000' in table || name.encodeToByteArray().size > PG_IDENTIFIER_BYTES) throw illegalId("Physical index name exceeds its identifier budget")
   return name
 }

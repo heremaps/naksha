@@ -602,6 +602,38 @@ descriptors have no dependency on the old hierarchy; writers never select/create
 physical partitions and normal reads need no cached list of partman-created
 children.
 
+Read-path increment (uncommitted): metadata reads now reconstruct the current HEAD
+tuple-number and materialize the derived XYZ fields. `PgSession.getCatalogByNumber`
+/`getCollectionByNumber` attach the row tuple's reconstructed `tupleNumber` to the
+decoded metadata object (the blob does not carry it) and use it for the tombstone
+check, so deleted catalogs/collections are correctly hidden by default and returned
+with `allowTombstone = true` (AllowTombstoneTest 4 pass). `Tuple.decodeFeature`
+materializes `xyz.uuid`/`xyz.nuuid`/`xyz.action` from the tuple-number and
+next-version, mirroring `XyzNs.fromTuple` (ReadHistoryTest passes). `PgWriter`
+invalidates the `PgCache` catalog/collection entries on any metadata
+CREATE/UPDATE/DELETE so re-creation after deletion is visible. `PgDatabase.rows_insert`
+maps a duplicate metadata HEAD to `CATALOG_EXISTS`/`COLLECTION_EXISTS` instead of a
+generic `CONFLICT` (PsqlErrorMappingTest passes). Also reverted a prior regression:
+`Id.indexName(table)` must NOT prepend a `ci_` prefix (restores PgDatabaseIndexTest
+2 and PgNamingTest 1). The `naksha.psql` suite is now 17 failures (from 22 at this
+increment's start).
+
+Remaining `naksha.psql` failures are test-contract contradictions and deferred
+design, not safe unilateral fixes: (a) index physical-name contradiction — the
+`CollectionTests` index tests expect `${table}$ci_${name}` while the dedicated
+`PgDatabaseIndexTest`/`PgNamingTest` assert `collection_create_index` emits
+`${table}$${alias}` with no `ci_`; one contract must win (author decision).
+(b) partition-count bounds — `PartitioningTest` expects `0` allowed and `2..1000`,
+but the registry CHECK and validator enforce `1..256` (author decision whether `0`
+means "default"). (c) `queryHistory = true` with the default `versions = 1` —
+`ReadFeatures` doc says "all states in range" but also "defaults to 1"; the query
+builder trims to HEAD, so `HistoryUuidTest`/`UpsertFeatureTest` (which omit
+`versions`) see 1 not N (author decision). (d) deferred design: history-partition
+leaf index/column contract (`membersCustom`/`collectionShouldHaveIndices`), physical
+drop-on-collection-delete (db-08-c, `shouldDropCollection`), atomic delete-by-id with
+`requireVersion` (fabricates a fn from the id — `DeleteFeatureByVersionTest`), and
+update-history/atomic-update-nonexistent semantics (`UpdateFeatureTest`).
+
 ### db-09-a — Add tuple loading and query functions
 
 Finish tuple loading, physical metadata inspection and prepared-read support where

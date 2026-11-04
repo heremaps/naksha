@@ -205,9 +205,10 @@ open class PgWriter internal constructor(
       }
     }
 
-    // Invalidate cached catalogs/collections that were deleted, so subsequent reads re-fetch their tombstone state from the database instead of returning the stale (pre-deletion) cached entry.
+    // Invalidate cached catalogs/collections that were modified, so subsequent reads re-fetch their
+    // current state from the database instead of returning a stale cached entry (e.g. a pre-deletion
+    // entry after a DELETE, or a lingering tombstone after a re-creating CREATE).
     for (pgWrite in pgWrites) {
-      if (pgWrite.op != WriteOp.DELETE) continue
       if (pgWrite.isCatalogModification) {
         session.invalidatePgCatalog(pgWrite.id.intValue)
       } else if (pgWrite.isCollectionModification) {
