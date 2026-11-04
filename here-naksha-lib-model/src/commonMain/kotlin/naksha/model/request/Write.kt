@@ -275,6 +275,19 @@ open class Write : AnyObject() {
             if (value == null) removeRaw("version") else setRaw("version", value)
         }
 
+    /**
+     * Whether the client requested an atomic operation. When _true_, the operation must be checked
+     * against a [version]; if no version is available the storage responds with an
+     * [ILLEGAL_ARGUMENT][naksha.base.NakshaError.ILLEGAL_ARGUMENT] error instead of silently degrading
+     * to a non-atomic operation. Defaults to `false`.
+     * @since 3.0
+     */
+    var atomic: Boolean
+        get() = getRaw("atomic") == true
+        set(value) {
+            if (value) setRaw("atomic", true) else removeRaw("atomic")
+        }
+
     /** Fluent setter for [version]. */
     @JsName("withVersionInt64")
     fun withVersion(value: Long?): Write {
@@ -334,7 +347,7 @@ open class Write : AnyObject() {
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.UPDATE
         this.feature = catalog
-        this.version = if (atomic) (catalog.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = catalog.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -353,7 +366,7 @@ open class Write : AnyObject() {
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = catalog
-        this.version = if (atomic) (catalog.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = catalog.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -374,7 +387,7 @@ open class Write : AnyObject() {
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = catalog
-        this.version = if (atomic) (catalog.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = catalog.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -425,7 +438,7 @@ open class Write : AnyObject() {
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPDATE
         this.feature = collection
-        this.version = if (atomic) (collection.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = collection.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -440,7 +453,7 @@ open class Write : AnyObject() {
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = collection
-        this.version = if (atomic) (collection.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = collection.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -455,7 +468,7 @@ open class Write : AnyObject() {
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = collection
-        this.version = if (atomic) (collection.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = collection.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -528,7 +541,7 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.UPDATE
         this.feature = feature
-        this.version = if (atomic) (feature.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -550,7 +563,7 @@ open class Write : AnyObject() {
         this.collectionId = Id(collectionId)
         this.op = WriteOp.UPDATE
         this.feature = feature
-        this.version = if (atomic) (feature.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -566,7 +579,7 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.UPSERT
         this.feature = feature
-        this.version = if (atomic) (feature.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -603,7 +616,7 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.DELETE
         this.feature = feature
-        this.version = if (atomic) (feature.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
         return this
     }
 
@@ -660,7 +673,7 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.PURGE
         this.feature = feature
-        this.version = if (atomic) (feature.tupleNumber?.version ?: throw illegalState("Missing version")) else null
+        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
         return this
     }
 

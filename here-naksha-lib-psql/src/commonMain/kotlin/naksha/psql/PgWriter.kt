@@ -283,6 +283,12 @@ open class PgWriter internal constructor(
       // Ensure the feature is of the correct type.
       val id = pgWrite.id
       val op = pgWrite.op
+      // An atomic feature update/upsert must carry a version to check against; without one the
+      // caller's intent cannot be honored, so reject it instead of silently degrading to non-atomic.
+      if (pgWrite.isFeatureModification && pgWrite.atomic && pgWrite.requireVersion == null &&
+        (op == WriteOp.UPDATE || op == WriteOp.UPSERT)) {
+        throw illegalArg("Atomic $op of feature '${id.text}' requires a version (uuid) to check against")
+      }
       val feature = pgWrite.feature ?: original.feature
       pgWrite.feature = feature
       if (feature != null) {
