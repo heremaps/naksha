@@ -968,7 +968,8 @@ SELECT basics.*, procs.* FROM basics, procs;
       rows.size = 1
       val target = "${quoteIdent(schema.catalogName())}.${quoteIdent(table.collectionName())}"
       val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
-      val select = "SELECT version::text AS version FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
+      val hasCc = rows.getColumn(ChangeCount.name) != null
+      val select = "SELECT version::text AS version${if (hasCc) ", ${quoteIdent(ChangeCount.name)}::text AS cc" else ""} FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
       val insert = "INSERT INTO $target (${rows.aliases()}) $source RETURNING version::text AS version"
       val update = "WITH new_row AS ($source) UPDATE $target AS current_row SET (${rows.aliases()}) = (SELECT ${rows.aliases()} FROM new_row) FROM new_row WHERE current_row.fn = new_row.fn AND current_row.nv = $head RETURNING current_row.version::text AS version"
       val archive = "UPDATE $target SET nv = $2::text::bigint WHERE fn = $1::text::bigint AND nv = $head"
@@ -979,10 +980,14 @@ SELECT basics.*, procs.* FROM basics, procs;
           val tuple = incoming.tuple
           val prev = incoming.previousTupleNumber
           var actualVersion: Long? = null
+          var oldCc: Long? = null
           try {
             val fn = Id.featureNumberToOrdinal(tuple.tupleNumber.featureNumber).toString()
             actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
-              if (cursor.next()) cursor.get<String>("version").toLong() else null
+              if (cursor.next()) {
+                if (hasCc) oldCc = (cursor.column("cc") as? String)?.toLongOrNull()
+                cursor.get<String>("version").toLong()
+              } else null
             }
             val live = actualVersion != null && Action.fromVersion(actualVersion) != Action.DELETE
             if (!live) {
@@ -1018,9 +1023,11 @@ SELECT basics.*, procs.* FROM basics, procs;
               ).apply { this.expectedVersion = prev.version; this.actualVersion = actualVersion })
             }
             val updateVersion = (tuple.version and -4L) or 1L
+            val newCc = if (hasCc) ((oldCc ?: 0L) + 1L).toInt() else null
             for (column in rows.columns) column.values[0] = null
             rows.setRow(0, tuple)
             rows.setColumn(PgColumn.PgColumn_C.VersionColumn.name, 0, updateVersion)
+            if (newCc != null) rows.setColumn(ChangeCount.name, 0, newCc)
             if (storeHistory) {
               conn.execute(archive, arrayOf(fn, updateVersion.toString())).close()
               insertPlan.execute(rows.values()).use { cursor ->
@@ -1033,6 +1040,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             }
             val updatedBook = HeapBook.copyOf(tuple.membersBook)
             updatedBook.put(TN, TupleNumber.copy(tuple.tupleNumber, version = updateVersion))
+            if (newCc != null) updatedBook.put(ChangeCount.name, newCc)
             result.add(NewTuple(Tuple(tuple.featureBytes, updatedBook), TupleNumber.copy(tuple.tupleNumber, version = actualVersion)))
           } catch (e: NakshaException) {
             val error = e.error

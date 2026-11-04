@@ -151,7 +151,7 @@ class PartitioningTest : PgTestBase() {
         newWriteSession().use { session ->
             // expect
             val response = session.execute(writeRequest) as ErrorResponse
-            assertEquals("Invalid partition-count, expect 2 .. 1000, found : 65536", response.error.msg)
+            assertEquals("Invalid partition-count, expect 2 .. 256, found : 65536", response.error.msg)
         }
     }
 

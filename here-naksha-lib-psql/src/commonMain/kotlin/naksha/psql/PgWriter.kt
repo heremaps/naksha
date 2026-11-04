@@ -298,8 +298,8 @@ open class PgWriter internal constructor(
           }
           collection.databaseId = databaseId
           val partitions = collection.partitions
-          if (partitions !in 1..256) {
-            throw illegalArg("Invalid partition-count for collection '$id', expect 1 .. 256, found: $partitions")
+          if (partitions !in 0..256) {
+            throw illegalArg("Invalid partition-count, expect 2 .. 256, found : $partitions")
           }
           pgWrite.feature = collection
         } else if (pgWrite.isTransactionModification) {
