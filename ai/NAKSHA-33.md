@@ -141,13 +141,13 @@ installation entries. Verify and finish these rather than duplicating them.
 | [db-06-a](#db-06-a--implement-tuple-based-insert) | Implement tuple-based insert | [db-06](#db-06--move-create-into-pgdatabase) | `TODO` | — |
 | [db-06-b](#db-06-b--insert-through-the-root-at-head) | Insert through the root at HEAD | [db-06](#db-06--move-create-into-pgdatabase) | `TODO` | — |
 | [db-06-c](#db-06-c--preserve-conflicts-and-drop-the-undefined-sentinel) | Preserve conflicts and drop the undefined sentinel | [db-06](#db-06--move-create-into-pgdatabase) | `TODO` | — |
-| [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | Move UPDATE and UPSERT into PgDatabase | [db-06](#db-06--move-create-into-pgdatabase) | `TODO` | — |
-| [db-07-a](#db-07-a--implement-tuple-based-update-and-upsert) | Implement tuple-based update and upsert | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
-| [db-07-b](#db-07-b--archive-by-nv-update-through-the-root) | Archive by nv update through the root | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
-| [db-07-c](#db-07-c--preserve-atomic-semantics-and-remove-merging) | Preserve atomic semantics and remove merging | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
-| [db-07-d](#db-07-d--close-plans-and-cursors-keep-logging) | Close plans and cursors, keep logging | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
-| [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | Move DELETE/PURGE and metadata deletion into PgDatabase | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `TODO` | — |
-| [db-08-a](#db-08-a--implement-id-and-guid-delete-and-purge) | Implement ID and GUID delete, and purge | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
+| [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | Move UPDATE and UPSERT into PgDatabase | [db-06](#db-06--move-create-into-pgdatabase) | `IN_PROGRESS` | — |
+| [db-07-a](#db-07-a--implement-tuple-based-update-and-upsert) | Implement tuple-based update and upsert | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `IN_REVIEW` | — |
+| [db-07-b](#db-07-b--archive-by-nv-update-through-the-root) | Archive by nv update through the root | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `IN_REVIEW` | — |
+| [db-07-c](#db-07-c--preserve-atomic-semantics-and-remove-merging) | Preserve atomic semantics and remove merging | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `IN_REVIEW` | — |
+| [db-07-d](#db-07-d--close-plans-and-cursors-keep-logging) | Close plans and cursors, keep logging | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `IN_PROGRESS` | — |
+| [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | Move DELETE/PURGE and metadata deletion into PgDatabase | [db-07](#db-07--move-update-and-upsert-into-pgdatabase) | `IN_PROGRESS` | — |
+| [db-08-a](#db-08-a--implement-id-and-guid-delete-and-purge) | Implement ID and GUID delete, and purge | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `IN_PROGRESS` | — |
 | [db-08-b](#db-08-b--keep-tombstones-non-null-in-nv) | Keep tombstones non-null in nv | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
 | [db-08-c](#db-08-c--connect-physical-drop-to-metadata-writes) | Connect physical drop to metadata writes | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
 | [db-08-d](#db-08-d--replace-the-generic-delete-stubs) | Replace the generic delete stubs | [db-08](#db-08--move-deletepurge-and-metadata-deletion-into-pgdatabase) | `TODO` | — |
@@ -496,6 +496,39 @@ update/upsert behavior and concurrent conflicts are verified in both history
 modes; writers handle orchestration/responses and `PgDatabase` returns final
 immutable tuples.
 
+UPDATE/UPSERT increment `IN_REVIEW`, uncommitted: `PgDatabase.rows_update` and
+`rows_upsert` now own the full root mutation — per-input HEAD locking via
+`FOR UPDATE`, live/DELETE/absent classification, atomic masked-version
+conditioning, archive-by-`nv` (history ON) or in-place replacement (history OFF),
+and structured `FEATURE_NOT_FOUND`/`CONFLICT`/`ILLEGAL_ARGUMENT` errors with
+database/catalog/collection/id and expected/actual version context.
+`rows_update` takes UPDATE-encoded states and returns each with the actual
+replaced predecessor; `rows_upsert` takes CREATE-encoded states, inserts an
+absent or DELETE HEAD (predecessor `null`), and flips the UPDATE action bit for
+the live-HEAD branch, returning the reconstructed state. Both take the physical
+`columns` descriptor array (consistent with `rows_insert`), close their own
+plans/cursors, and never commit. `PgWriterUpdate`/`PgWriterUpsert` no longer
+extend `PgWriterBase` or emit multi-CTE SQL; they assemble `NewTuple` inputs
+(predecessor from `requireVersion`), delegate to `PgDatabase`, and assign the
+returned states and final `Action`, mirroring `PgWriterInsert`. The legacy
+`undefined` sentinel / byte-array merging is removed — callers supply fully
+encoded states. Query/EXPLAIN logging is deferred (writer-side TODO), and
+concurrent-writer locking proof remains open for db-07-b.
+
+Verification: fresh PostgreSQL 18.6 `PgDatabaseUpdateUpsertTest` passes
+(update history ON/OFF ordinary + archival, missing/DELETE `FEATURE_NOT_FOUND`,
+atomic mismatch `CONFLICT` with expected/actual, atomic success, upsert
+insert/update/re-create branches, upsert atomic `CONFLICT`), with caller
+rollback leaving no committed schema. `PgDatabaseInsertTest` and
+`PgCreateFlowTest` still pass; JVM and JS production compilation and the new
+test's JVM test compilation pass. Command: `NAKSHA_TEST_UPDATE_DB_URL=<fresh
+local database URL> NAKSHA_TEST_PSQL_DB_URL=<same URL> NAKSHA_SUPPRESS_PERF_TEST=true
+./gradlew :here-naksha-lib-psql:jvmTest --tests 'naksha.psql.PgDatabaseUpdateUpsertTest'
+--console=plain`. Note: `UpdateFeatureTest`/`UpsertFeatureTest` fail in their
+`PgTestBase` setup (`dropMap` → old `naksha~catalogs$hst` relation); reproduced
+identically on the base commit, so pre-existing (db-09-e), not caused by this
+increment. Temporary databases were removed; no commit was made.
+
 ### db-07-a — Implement tuple-based update and upsert
 
 Implement tuple-based `rows_update` / `rows_upsert` and switch their writers to
@@ -530,6 +563,8 @@ Close all plans/cursors and keep query logging/EXPLAIN available.
 Parent ticket; decomposed into `db-08-a` … `db-08-d`. **Done when:**
 delete/purge, re-create, and catalog/collection deletion preserve agreed API
 outcomes, history, and rollback behavior.
+
+Increment (uncommitted): `PgDatabase` now implements `rows_delete_by_id_with_result`, `rows_delete_by_id_without_result`, `rows_delete_by_guid_with_result`, `rows_delete_by_guid_without_result`, `rows_delete_with_new_state` and `rows_purge`; `PgWriterDelete` delegates to them. In-place DELETE archives the prior HEAD into history and writes a `nv=HEAD` tombstone (`version = (requireVersion and -4) | DELETE`) carrying the full old-state blob; GUID DELETE is permissive (missing → null, live HEAD → null, DELETE HEAD → idempotent null); `rows_purge` hard-deletes only DELETE HEAD rows and returns one positional `Guid?` per input. `PgWriter` invalidates the `PgCache` catalog/collection entries on successful metadata DELETE. Verified on real PostgreSQL 18.6: InsertFeatureTest (4), DeleteFeatureTest (4), RecreateAfterDeleteTest (1) pass; the full `naksha.psql` suite improved from 46 to 22 failures. Root-cause fixes landed alongside: `Write.id` setter stores the id text, `DeletePlans.inPlacePlan` uses a qualified `RETURNING current_row.version` (avoids the `id` column-ambiguity that forced whole-operation rollback), `Tuple.encode` writes processed member values back to the raw feature and `decodeFeature` materializes the derived `xyz.uuid`/`xyz.action`, `PgQueryBuilder` excludes DELETE HEAD from current reads and skips the implicit `nv=HEAD` trim when filtering on `NextVersion`, `NakshaCollection.addMember` mutates the member list, and `Id.indexName` prefixes the physical index name with `ci_`. Remaining failures are pre-existing db-09 gaps (cache-read tombstone detection needs the database-number on metadata reads, history-partition index inheritance, partition-registry persistence across tests, update history) and are not regressions. No commit was made.
 
 ### db-08-a — Implement ID and GUID delete, and purge
 
@@ -697,3 +732,18 @@ Acceptance/tests: warm-parent/local override precedence for all metadata operati
   compileKotlinJs --console=plain` passes. The 21 focused psql tests listed in
   db-00, `IdTest`, and `StreamRequestBuilderTest` also pass. No database-backed
   integration tests were run.
+- db-07: implemented `PgDatabase.rows_update`/`rows_upsert` (HEAD lock,
+  live/DELETE/absent classification, atomic masked-version check, archive vs
+  in-place, structured errors); rewrote `PgWriterUpdate`/`PgWriterUpsert` as
+  standalone delegates; added `PgDatabaseUpdateUpsertTest` (passes on fresh
+  PostgreSQL 18.6); JVM + JS compile pass; `UpdateFeatureTest`/`UpsertFeatureTest`
+  failures confirmed pre-existing (reproduced on base, db-09-e).
+- db-08: implemented `PgDatabase` ID/GUID DELETE (with/without result),
+  `rows_delete_with_new_state` and `rows_purge`; rewrote `PgWriterDelete` as a
+  delegate; `PgWriter` invalidates `PgCache` on metadata DELETE. Root-cause fixes:
+  `Write.id` setter stores id text, qualified `RETURNING current_row.version`,
+  `Tuple.encode`/`decodeFeature` member round-trip, `PgQueryBuilder` tombstone
+  filter + read-by-tns `nv=HEAD` skip, `NakshaCollection.addMember` mutation,
+  `Id.indexName` `ci_` prefix. Insert/Delete/RecreateAfterDelete tests pass; the
+  `naksha.psql` suite improved 46 → 22 failures (remaining are pre-existing
+  db-09 gaps). JVM + JS compile pass.

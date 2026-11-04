@@ -148,47 +148,49 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
       q_versions = ""
     } else if (req.versions == 1) {
       // We should query HISTORY, but only need the latest single state close to version.
-      if (WHERE.isNotEmpty()) WHERE.append("AND ")
+      // If the caller already filters on the next-version member (a "read-by-next-tns" query), the
+      // implicit `nv = HEAD` trim would contradict it, so we leave `nv` unconstrained.
+      val filtersNextVersion = customClause?.columns?.containsKey(NextVersion.name) == true
+      if (!filtersNextVersion) {
+        if (WHERE.isNotEmpty()) WHERE.append("AND ")
 
-      // If the user wants to limit values to a specific version.
-      if (version < HEAD.number) {
-        // We know that above we have already added `WHERE version <= $version`.
-        // When combined with this, it will only return the closest version.
-        WHERE.append("$NEXT_VERSION > ").append(version).append(" ")
-      } else
-      // otherwise the user wants HEAD, then actually this trims the request to HEAD table.
-      // Technically, this query misses purged rows, but that is intentional. So, if
-      // HEAD does not contain a tombstone, this request will not return the row.
-      {
-        // We know, that there are no other version checks
-        WHERE.append("$NEXT_VERSION = ").append(HEAD).append(" ") // nv=HEAD
+        // If the user wants to limit values to a specific version.
+        if (version < HEAD.number) {
+          // We know that above we have already added `WHERE version <= $version`.
+          // When combined with this, it will only return the closest version.
+          WHERE.append("$NEXT_VERSION > ").append(version).append(" ")
+        } else
+        // otherwise the user wants HEAD, then actually this trims the request to HEAD table.
+        // Technically, this query misses purged rows, but that is intentional. So, if
+        // HEAD does not contain a tombstone, this request will not return the row.
+        {
+          // We know, that there are no other version checks
+          WHERE.append("$NEXT_VERSION = ").append(HEAD).append(" ") // nv=HEAD
+        }
       }
 
       // If no deleted rows are wanted, filter them out.
-      if (!req.queryDeleted) WHERE.append("AND (($VERSION & 3) < 2) ")
+      if (!req.queryDeleted) {
+        if (WHERE.isNotEmpty()) WHERE.append("AND ")
+        WHERE.append("(($VERSION & 3) < 2) ")
+      }
 
       // No window function needed.
       q_ranked = ""
       q_deleted = ""
       q_versions = ""
     } else { // req.versions > 1 && query-history
-      // We want multiple versions from history in the given range.
-      // To be fast enough and to be able to filter out deleted, we need to use a window function.
-      q_ranked = ",q_ranked AS (SELECT ${selectCols.joinToString()}, ROW_NUMBER() OVER (PARTITION BY $FN ORDER BY $VERSION DESC) AS row FROM query)\n"
-      if (req.queryDeleted) {
-        // The user is okay with tombstones, so we do not unselect deleted.
-        q_deleted = ""
-        q_versions = ",q_versions AS (SELECT ${selectCols.joinToString()} FROM q_ranked WHERE row <= ${req.versions})\n"
-      } else {
-        // The user does not want those tuples where the latest state is DELETED.
-        // We assume there are not that many deleted features, so we select those that are deleted and should not be part of the result.
-        // Other option would be to select all that are NOT deleted, but very likely this list would be much larger.
-        // Eventually we select all from ranked without those where the latest state is deleted.
-        q_deleted = ",q_deleted AS (SELECT $FN FROM q_ranked WHERE row = 1 AND (version & 3) = 2)\n"
-        q_versions = ",q_versions AS (SELECT ${selectCols.joinToString { "q_ranked.$it" }} FROM q_ranked WHERE q_ranked.row <= ${req.versions} AND NOT EXISTS (SELECT 1 FROM q_deleted WHERE q_deleted.$FN = q_ranked.$FN))\n"
+      // We want multiple versions from history in the given range; a window function ranks them per
+      // feature. Tombstones are filtered out of the base query when not requested, so a deleted
+      // feature's past (non-deleted) states are still returned while its tombstone is not.
+      if (!req.queryDeleted) {
+        // Exclude only the live HEAD tombstone; archived (historical) DELETE rows are still returned.
+        if (WHERE.isNotEmpty()) WHERE.append("AND ")
+        WHERE.append("(($NEXT_VERSION != ").append(HEAD.number).append(") OR (($VERSION & 3) < 2)) ")
       }
-      // At this point we have two or three CTEs defined, with the last one always being `q_versions`.
-      // `q_versions` contains all tuple, not ordered.
+      q_ranked = ",q_ranked AS (SELECT ${selectCols.joinToString()}, ROW_NUMBER() OVER (PARTITION BY $FN ORDER BY $VERSION DESC) AS row FROM query)\n"
+      q_deleted = ""
+      q_versions = ",q_versions AS (SELECT ${selectCols.joinToString()} FROM q_ranked WHERE row <= ${req.versions})\n"
       // If there is no custom ordering, we should order by fn, version:
       if (order_by_string.isEmpty()) order_by_string = "$FN DESC, $VERSION DESC"
     }
@@ -210,13 +212,13 @@ $q_ranked$q_deleted$q_versions
 SELECT $FN, $VERSION FROM ${if (q_versions.isNotEmpty()) "q_versions" else "query"}
 ${if (order_by_string.isNotEmpty()) " ORDER BY $order_by_string" else ""}
 ${if (REQ_LIMIT < Int.MAX_VALUE) " LIMIT $REQ_LIMIT" else ""}"""
-    return PgQuery(
-      sql = SQL,
-      argValues = customClause?.argValues?.toTypedArray() ?: emptyArray(),
-      argTypes = customClause?.argTypeNames ?: emptyArray(),
-      pgStorage,
-      pgCatalog,
-      pgCollection
-    )
-  }
+     return PgQuery(
+       sql = SQL,
+       argValues = customClause?.argValues?.toTypedArray() ?: emptyArray(),
+       argTypes = customClause?.argTypeNames ?: emptyArray(),
+       pgStorage,
+       pgCatalog,
+       pgCollection
+     )
+   }
 }

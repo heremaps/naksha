@@ -374,7 +374,7 @@ open class NakshaCollection() : NakshaFeature() {
             list.add(value)
             this.members = list
         } else {
-            list.plus(value)
+            list.add(value)
         }
         this._validatedMembers = null
         return this
