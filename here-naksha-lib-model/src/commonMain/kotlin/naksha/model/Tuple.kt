@@ -358,6 +358,12 @@ data class Tuple @JvmOverloads constructor(
                     }
                 }
                 memberValue = coerce(memberValue, member.dataType, id, memberName)
+                // Write the (possibly processor-derived) value back so the encoder emits a reference
+                // into the members-book for it; server-stamped members (app_id, author, ...) are absent
+                // from the client feature otherwise and would be missing from the encoded blob.
+                if (memberName != TN && memberName != NEXT_VERSION && memberName != ORIGIN && memberName != GLOBAL_BOOK_FN) {
+                    member.write(f, memberValue)
+                }
                 membersBook.put(memberName, memberValue)
             }
 
@@ -1054,7 +1060,20 @@ data class Tuple @JvmOverloads constructor(
      * @since 3.0
      * @throws NakshaException if any error occurs.
      */
-    fun decodeFeature(globalBook: IBook?): NakshaFeature = decodeObject(globalBook).proxy(NakshaFeature::class)
+    fun decodeFeature(globalBook: IBook?): NakshaFeature {
+        val feature = decodeObject(globalBook).proxy(NakshaFeature::class)
+        // The blob stores the tuple-number (the `uuid` slot) as a [TupleNumber], but the legacy
+        // `xyz.uuid` is a string (the stringified [Guid]). Materialize it so `xyz.guid` resolves.
+        val xyz = feature.properties?.xyz
+        if (xyz != null) {
+            if (xyz.uuid == null) {
+                xyz.setRaw(XyzNs.UUID, Guid(id.text, tupleNumber).toString())
+            }
+            // `action` is derived from the tuple-number's action bits, not stored in the blob.
+            xyz.setRaw(XyzNs.ACTION, tupleNumber.action.toString())
+        }
+        return feature
+    }
 
     /**
      * Decode this [Tuple] into a given proxy.

@@ -225,7 +225,8 @@ open class Write : AnyObject() {
             return id
         }
         set(value) {
-            setRaw("id", value)
+            _id = value
+            setRaw("id", value.text)
         }
 
     /** Fluent setter for [id]. */

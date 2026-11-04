@@ -12,11 +12,9 @@ import kotlin.collections.mutableMapOf
 import kotlin.jvm.JvmStatic
 
 /**
- * Base class for all operations, so for:
- * - [PgWriterInsert]
- * - [PgWriterUpsert]
- * - [PgWriterUpdate]
- * - [PgWriterDelete]
+ * Base class for the operations that still build their own SQL. [PgWriterInsert], [PgWriterUpdate],
+ * and [PgWriterUpsert] are standalone delegates to [PgDatabase]; only [PgWriterDelete] still
+ * extends this class until the DELETE/PURGE migration (db-08) moves its SQL to [PgDatabase].
  * @since 3.0
  * @see [PgWriter]
  */

@@ -205,6 +205,16 @@ open class PgWriter internal constructor(
       }
     }
 
+    // Invalidate cached catalogs/collections that were deleted, so subsequent reads re-fetch their tombstone state from the database instead of returning the stale (pre-deletion) cached entry.
+    for (pgWrite in pgWrites) {
+      if (pgWrite.op != WriteOp.DELETE) continue
+      if (pgWrite.isCatalogModification) {
+        session.invalidatePgCatalog(pgWrite.id.intValue)
+      } else if (pgWrite.isCollectionModification) {
+        session.invalidatePgCollection(pgWrite.dbCatalog.id.intValue, pgWrite.id.intValue)
+      }
+    }
+
     // Reorder results to match input.
     val tupleList = ArrayList<Tuple>(size)
     val transaction = this.transaction
