@@ -588,11 +588,18 @@ JOIN lookup ON (lookup.$FN, lookup.$VERSION) = (t.$FN, t.$VERSION)"""
         return useConn(readOnly = true) { conn ->
             val sessionCatalog = getPgCatalog(catalogNumber, conn)
             if (sessionCatalog == null) null
-            else if (!allowTombstone && (sessionCatalog.naksha.tupleNumber?.isTombstone ?: false)) null
-            // TODO: WARNING, this method returns a cached mutable instance of NakshaCatalog!
-            //       We need to change our classes in `lib-base` so that we can have read-only objects!
-            //       We MUST change this, but always returning a copy is expensive too.
-            else sessionCatalog.naksha // .tuple.decodeCatalog()
+            else {
+                // The tuple-number is reconstructed from the split `_fn`/`_version` columns on the
+                // row tuple, but the decoded blob does not carry it; attach the current HEAD's
+                // tuple-number so callers (and the tombstone check) observe the real stored action.
+                val naksha = sessionCatalog.naksha
+                naksha.tupleNumber = sessionCatalog.tuple.tupleNumber
+                if (!allowTombstone && naksha.tupleNumber?.isTombstone == true) null
+                // TODO: WARNING, this method returns a cached mutable instance of NakshaCatalog!
+                //       We need to change our classes in `lib-base` so that we can have read-only objects!
+                //       We MUST change this, but always returning a copy is expensive too.
+                else naksha // .tuple.decodeCatalog()
+            }
         }
     }
 
@@ -604,11 +611,17 @@ JOIN lookup ON (lookup.$FN, lookup.$VERSION) = (t.$FN, t.$VERSION)"""
             val catalogNumber = Id.numberToInt(Id.textToNumber(catalog.id))
             val collection = getPgCollection(catalogNumber, collectionNumber, conn)
             if (collection == null) null
-            else if (!allowTombstone && collection.tuple.action == DELETE) null
-            // TODO: WARNING, this method returns a cached mutable instance of NakshaCollection!
-            //       We need to change our classes in `lib-base` so that we can have read-only objects!
-            //       We MUST change this, but always returning a copy is expensive too.
-            else collection.naksha // .tuple.decodeCollection()
+            else {
+                // Attach the current HEAD's tuple-number (reconstructed on the row tuple) to the
+                // decoded blob, which does not carry it, so callers observe the real stored action.
+                val naksha = collection.naksha
+                naksha.tupleNumber = collection.tuple.tupleNumber
+                if (!allowTombstone && collection.tuple.action == DELETE) null
+                // TODO: WARNING, this method returns a cached mutable instance of NakshaCollection!
+                //       We need to change our classes in `lib-base` so that we can have read-only objects!
+                //       We MUST change this, but always returning a copy is expensive too.
+                else naksha // .tuple.decodeCollection()
+            }
         }
     }
 
