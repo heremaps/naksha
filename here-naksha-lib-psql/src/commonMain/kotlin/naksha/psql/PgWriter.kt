@@ -181,7 +181,10 @@ open class PgWriter internal constructor(
         }
 
         // The ordering is very important, because otherwise there can be deadlocks in the database at row-level locking!
-        pgWrites.sortWith { a, b -> a.id.compareTo(b.id) }
+        // Group by catalog and collection, then by operation (DELETE, PURGE, CREATE, UPSERT, UPDATE — see
+        // [WriteOp.order], the same order [executeWrite] consumes), and finally by id so that ids are locked
+        // in a consistent ascending order within each operation.
+        pgWrites.sortWith(compareBy({ it.dbCatalog.id }, { it.dbCollection.id }, { it.op }, { it.id }))
 
         // Perform the writes, if any error happens, we will roll back the session to where it was before we started.
         // Note: We must not close the connection, therefore no `session.useConnection().use {}`!
