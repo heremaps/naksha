@@ -1145,7 +1145,7 @@ SELECT basics.*, procs.* FROM basics, procs;
             if (actualVersion == null || Action.fromVersion(actualVersion) == Action.DELETE) {
               throw NakshaException(NakshaError(
                 code = NakshaError.FEATURE_NOT_FOUND,
-                msg = "Feature has no live HEAD state to update",
+                msg = "Feature '${tuple.id.text}' has no live HEAD state to update",
                 id = tuple.id.text,
                 collection = table.text,
                 catalog = schema.text,

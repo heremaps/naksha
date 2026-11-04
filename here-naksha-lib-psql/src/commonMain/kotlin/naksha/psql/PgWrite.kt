@@ -86,6 +86,14 @@ internal data class PgWrite(val original: Write, val i: Int) {
         get() = original.version
 
     /**
+     * Whether the client requested an atomic operation.
+     * Simply returns [original.atomic][Write.atomic].
+     * @since 3.0
+     */
+    val atomic: Boolean
+        get() = original.atomic
+
+    /**
      * The [Tuple] representation of the modified feature.
      *
      * For [DELETE][naksha.model.request.WriteOp.DELETE] and [PURGE][naksha.model.request.WriteOp.PURGE] we do not have a [tuple][Tuple], or a [feature].

@@ -1,9 +1,13 @@
 package naksha.psql
 
 import naksha.base.Action
+import naksha.base.NakshaError
+import naksha.base.NakshaException
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.TupleNumber
+import naksha.base.catalogNotFound
+import naksha.base.collectionNotFound
 import naksha.base.illegalArg
 import naksha.model.NewTuple
 
@@ -40,9 +44,21 @@ internal class PgWriterUpdate(
     pgWrites[start].dbCatalog.applySearchPath(conn)
     // TODO(db-07 logging): wire session.logQueries/logExplain through PgDatabase diagnostics.
     val started = Platform.currentNanos()
-    val result = session.storage.database.rows_update(
-      conn, pgCollection.catalogId, pgCollection.id, tuples, pgCollection.storeHistory, pgCollection.columns
-    )
+    val result = try {
+      session.storage.database.rows_update(
+        conn, pgCollection.catalogId, pgCollection.id, tuples, pgCollection.storeHistory, pgCollection.columns
+      )
+    } catch (e: NakshaException) {
+      // A missing HEAD for a metadata modification is a missing catalog/collection, not a missing feature.
+      val first = pgWrites[start]
+      if (e.error.code == NakshaError.FEATURE_NOT_FOUND && first.isCollectionModification) {
+        throw collectionNotFound("Collection '${first.id.text}' does not exist in catalog '${first.dbCatalog.id.text}'")
+      }
+      if (e.error.code == NakshaError.FEATURE_NOT_FOUND && first.isCatalogModification) {
+        throw catalogNotFound("Catalog '${first.id.text}' does not exist")
+      }
+      throw e
+    }
     val elapsed = Platform.currentNanos() - started
     for (i in result.indices) {
       val pgWrite = pgWrites[start + i]
