@@ -96,4 +96,8 @@ internal class JsLogger : PlatformLogger {
         val m = msgFn.invoke()
         if (plv8 != null) plv8.log(_ERROR, m) else console.info(m)
     }
+
+    override fun stats(msg: String, vararg args: Any?) {
+        // Statistics are only collected on the JVM.
+    }
 }

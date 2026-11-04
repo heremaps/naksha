@@ -260,6 +260,8 @@ open class PgSession(
     override fun executeWrite(request: WriteRequest): Response = execute(request)
     @Deprecated("Please use executeRead or executeWrite", level = DeprecationLevel.WARNING)
     override fun execute(request: Request): Response {
+        val startMillis = Platform.currentMillis()
+        var status = "NOK"
         try {
             val response = when (request) {
                 is WriteRequest -> {
@@ -281,13 +283,45 @@ open class PgSession(
             }
             if (response is SuccessResponse) {
                 response.filterResults(*request.resultFilters.filterNotNull().toTypedArray())
+                status = "OK"
             }
             return response
         } catch (t: Throwable) {
             logger.info("PgSession: execute failed", t)
             val nakshaException = PgExceptionMapper.map(t)
             return ErrorResponse(nakshaException.error)
+        } finally {
+            if (request is WriteRequest) logStorageReqStats(request, status, Platform.currentMillis() - startMillis)
         }
+    }
+
+    /**
+     * Logs the write request stats.
+     */
+    private fun logStorageReqStats(request: WriteRequest, status: String, timeTakenMs: Long) {
+        val writes = request.writes.filterNotNull()
+        val ops = writes.map { it.op.toString() }.distinct()
+        val ftypes = writes.map { if (it.isCollectionModification()) "Collection" else "Feature" }.distinct()
+        val collectionIds = writes.filter { !it.isCollectionModification() }.map { it.collectionId ?: "-" }.distinct()
+        val host = storage.config.master.host
+        logger.stats(
+            "[Storage Request stats => type,storageId,host,method,ftype,fCnt,collectionId,status,timeTakenMs] - StorageReqStats {} {} {} {} {} {} {} {} {}",
+            "PsqlStorage",
+            storage.id,
+            host,
+            mixedOrSingle(ops),
+            mixedOrSingle(ftypes),
+            writes.size,
+            mixedOrSingle(collectionIds),
+            status,
+            timeTakenMs
+        )
+    }
+
+    private fun mixedOrSingle(values: List<String>): String = when (values.size) {
+        0 -> "-"
+        1 -> values[0]
+        else -> "MIXED"
     }
 
     /**
