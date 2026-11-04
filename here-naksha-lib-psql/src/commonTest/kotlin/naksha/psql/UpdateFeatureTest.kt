@@ -110,6 +110,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
             collectionId = collection.id
             featureIds += initialFeature.id
             queryHistory = true
+            versions = 10
         })
         assertEquals(2, readResp.length)
         val retrievedTuples = Naksha.cache.load(readResp.featureTupleList).toTupleList()

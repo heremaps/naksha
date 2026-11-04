@@ -39,6 +39,7 @@ class UpsertFeatureTest : PgTestBase() {
             collectionId = collection.id
             featureIds += initialFeature.id
             queryHistory = true
+            versions = 10
         }).features.sortedBy { it!!.properties.xyz.version!!.number.toLong() }
 
         // Then
