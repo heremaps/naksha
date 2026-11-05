@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import com.here.naksha.app.common.ApiTest;
 import com.here.naksha.app.common.NakshaTestWebClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.UUID;
@@ -165,6 +167,34 @@ class SpaceApiTest extends ApiTest {
     List<String> spaceIds =
         returnedXyzFeatures.stream().map(NakshaFeature::getId).toList();
     Assertions.assertTrue(spaceIds.containsAll(expectedSpaceIds));
+
+    final HttpResponse<String> orResponse =
+        getNakshaClient().get("hub/spaces?tags=space_tag_alpha,space_tag_beta", streamId);
+    assertEquals(200, orResponse.statusCode());
+    final List<String> orSpaceIds = parseJson(orResponse.body(), XyzFeatureCollection.class).getFeatures().stream()
+        .map(NakshaFeature::getId).toList();
+    assertEquals(2, orSpaceIds.size());
+    Assertions.assertTrue(orSpaceIds.containsAll(expectedSpaceIds));
+
+    final HttpResponse<String> andResponse =
+        getNakshaClient().get("hub/spaces?tags=space_tag_alpha+space_tag_shared", streamId);
+    assertEquals(200, andResponse.statusCode());
+    assertEquals(List.of("tc_240_space_1"), parseJson(andResponse.body(), XyzFeatureCollection.class)
+        .getFeatures().stream().map(NakshaFeature::getId).toList());
+
+    final HttpResponse<String> noMatchResponse =
+        getNakshaClient().get("hub/spaces?tags=space_tag_missing", streamId);
+    assertEquals(200, noMatchResponse.statusCode());
+    assertEquals(0, parseJson(noMatchResponse.body(), XyzFeatureCollection.class).getFeatures().size());
+
+    final HttpResponse<String> selectedResponse = getNakshaClient().get(
+        "hub/spaces?tags=space_tag_alpha,space_tag_beta&selection=p.selectionMarker&limit=1", streamId);
+    assertEquals(200, selectedResponse.statusCode());
+    final JsonNode selectedFeatures = new ObjectMapper().readTree(selectedResponse.body()).get("features");
+    assertEquals(1, selectedFeatures.size());
+    final JsonNode selectedProperties = selectedFeatures.get(0).get("properties");
+    Assertions.assertTrue(selectedProperties.has("selectionMarker"));
+    Assertions.assertFalse(selectedProperties.has("collection"));
   }
 
   @Test

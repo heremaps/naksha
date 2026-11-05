@@ -32,7 +32,7 @@ public class MaskingUtil {
   }
 
   public static void maskProperties(NakshaFeature feature, Set<String> lowercasedPropertiesToMask) {
-    maskProperties(feature.getProperties(), lowercasedPropertiesToMask);
+    maskProperties((Map<String, Object>) feature, lowercasedPropertiesToMask);
   }
 
   private static void maskProperties(Map<String, Object> propertiesAsMap, Set<String> propertiesToMaskLowercase) {
