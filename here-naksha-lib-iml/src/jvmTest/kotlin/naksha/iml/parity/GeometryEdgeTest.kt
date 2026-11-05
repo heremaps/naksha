@@ -13,8 +13,8 @@ import naksha.model.objects.XyzMembers
 import naksha.model.request.SuccessResponse
 import naksha.model.request.ops.Equals
 import naksha.model.request.ops.Intersects
-import naksha.iml.parity.P3.case
-import naksha.iml.parity.P3.describe
+import naksha.iml.parity.EdgeSupport.case
+import naksha.iml.parity.EdgeSupport.describe
 import naksha.iml.parity.Parity.diff
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.record
@@ -34,7 +34,7 @@ import org.junit.jupiter.api.TestInstance
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 10, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P3GeometryTest {
+class GeometryEdgeTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private lateinit var table: String
@@ -44,15 +44,15 @@ class P3GeometryTest {
   @BeforeAll
   fun setUp() {
     Parity.assumeEnabled()
-    table = P3.table(space) ?: error("seed ev-p3-geo first (scripts/seed-p3.py)")
+    table = EdgeSupport.table(space) ?: error("seed ev-p3-geo first (scripts/seed-p3.py)")
     val gcs = mapOf(
       "g-gc-mixed-db" to """{"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[48.1,0.1,3.5]},{"type":"LineString","coordinates":[[48.2,0.2],[48.3,0.3]]},{"type":"Polygon","coordinates":[[[48.4,0.4],[48.6,0.4],[48.6,0.6],[48.4,0.4]]]}]}""",
       "g-gc-nested-db" to """{"type":"GeometryCollection","geometries":[{"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[48.7,0.7]}]},{"type":"Point","coordinates":[48.8,0.8]}]}""",
       "g-gc-empty-db" to """{"type":"GeometryCollection","geometries":[]}"""
     )
-    P3.execute("DELETE FROM public.\"$table\" WHERE id = ANY(string_to_array(?, ','))", gcIds.joinToString(","))
+    EdgeSupport.execute("DELETE FROM public.\"$table\" WHERE id = ANY(string_to_array(?, ','))", gcIds.joinToString(","))
     for ((id, gj) in gcs) {
-      P3.execute(
+      EdgeSupport.execute(
         "INSERT INTO public.\"$table\" (id, version, next_version, operation, author, jsondata, geo) " +
           "SELECT ?, nextval('public.\"${table}_version_seq\"'), 9223372036854775807, 'I', 'ANONYMOUS', " +
           "jsonb_build_object('id', ?::text, 'type', 'Feature', 'properties', jsonb_build_object('name', ?::text, '@ns:com:here:xyz', jsonb_build_object('author', 'ANONYMOUS', 'createdAt', 1, 'updatedAt', 1))), " +
@@ -65,7 +65,7 @@ class P3GeometryTest {
 
   @AfterAll
   fun tearDown() {
-    if (::table.isInitialized) runCatching { P3.execute("DELETE FROM public.\"$table\" WHERE id = ANY(string_to_array(?, ','))", gcIds.joinToString(",")) }
+    if (::table.isInitialized) runCatching { EdgeSupport.execute("DELETE FROM public.\"$table\" WHERE id = ANY(string_to_array(?, ','))", gcIds.joinToString(",")) }
     if (::config.isInitialized) Naksha.removeStorage(config)
   }
 
@@ -77,7 +77,7 @@ class P3GeometryTest {
 
   @Test
   fun `per-feature geometry parity`() {
-    val ids = (P3.db { c -> c.createStatement().use { st -> st.executeQuery("SELECT id FROM public.\"$table\" WHERE next_version = 9223372036854775807 ORDER BY id").use { r -> generateSequence { if (r.next()) r.getString(1) else null }.toList() } } })
+    val ids = (EdgeSupport.db { c -> c.createStatement().use { st -> st.executeQuery("SELECT id FROM public.\"$table\" WHERE next_version = 9223372036854775807 ORDER BY id").use { r -> generateSequence { if (r.next()) r.getString(1) else null }.toList() } } })
     val perFeature = LinkedHashMap<String, Any?>()
     for (id in ids) {
       Naksha.cache.clear(storage)
@@ -182,7 +182,7 @@ class P3GeometryTest {
       val (_, decodeMs) = timed { tuple.decodeFeature(null) }
       val hub = timed { hubById(id) }
       o[id] = mapOf("libLoadMs" to ms, "tupleBytes" to tuple.featureBytes.size, "decodeMs" to decodeMs, "hubMs" to hub.second, "hubBodyBytes" to hub.first.body.length,
-        "dbGeoBytes" to P3.scalar("SELECT pg_column_size(geo) FROM public.\"$table\" WHERE id = ? AND next_version = 9223372036854775807", id))
+        "dbGeoBytes" to EdgeSupport.scalar("SELECT pg_column_size(geo) FROM public.\"$table\" WHERE id = ? AND next_version = 9223372036854775807", id))
     }
     observe("geo-large-cost", o)
     case("5 geometry", "materializing the 100k polygon and the 500k line",

@@ -33,28 +33,28 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Phase 5: acceptance tests for the Critical/High findings. Each test asserts the behaviour IML has (or an explicit failure where IML has
  * no equivalent), so each one **FAILS until its finding is fixed**. They run only with `IML_PARITY_STRICT=true`
- * (`scripts/p5-review.sh <log> true naksha.iml.parity.P5ExpectedBehaviourTest`) and are meant to be handed to the module's author as
+ * (`scripts/p5-review.sh <log> true naksha.iml.parity.ExpectedBehaviourTest`) and are meant to be handed to the module's author as
  * regression tests for the fixes.
  *
  * Fixture: one Hub space `ev-p5-v1-<rnd>` (versionsToKeep=1, 10 points p0…p9 with `n` = 0…9), deleted at the end, plus scratch schemas
- * ([P5.Scratch]). Read-only on the Phase 1–3 seed layers `ev-ext`, `ev-big`, `ev-v1`, `ev-p3-geo`.
+ * ([ReviewSupport.Scratch]). Read-only on the Phase 1–3 seed layers `ev-ext`, `ev-big`, `ev-v1`, `ev-p3-geo`.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 10, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P5ExpectedBehaviourTest {
-  private val rnd = P5.rnd()
+class ExpectedBehaviourTest {
+  private val rnd = ReviewSupport.rnd()
   private val v1 = "ev-p5-v1-$rnd"
-  private lateinit var scratch: P5.Scratch
+  private lateinit var scratch: ReviewSupport.Scratch
   private val configs = ArrayList<ImlConfig>()
 
   @BeforeAll
   fun setUp() {
     Parity.assumeEnabled()
-    assumeTrue(P5.strict, "Set IML_PARITY_STRICT=true to run tests that assert the fixed behaviour")
+    assumeTrue(ReviewSupport.strict, "Set IML_PARITY_STRICT=true to run tests that assert the fixed behaviour")
     NakshaContext.currentContext().withAppId("iml-eval-parity")
-    P3.recreateSpace(v1, 1)
-    P3.putFeatures(v1, (0 until 10).map { P3.point("p$it", 9.0 + it * 0.001, 51.0, mapOf("n" to it)) })
-    scratch = P5.Scratch("x")
+    EdgeSupport.recreateSpace(v1, 1)
+    EdgeSupport.putFeatures(v1, (0 until 10).map { EdgeSupport.point("p$it", 9.0 + it * 0.001, 51.0, mapOf("n" to it)) })
+    scratch = ReviewSupport.Scratch("x")
     scratch.addLayer("p5-lock", "t_lock", "ev-v1")
     scratch.addLayer("p5-free", "t_free", "ev-v1")
     scratch.addLayer("p5-write", "t_write", "ev-v1")
@@ -64,8 +64,8 @@ class P5ExpectedBehaviourTest {
   @AfterAll
   fun tearDown() {
     for (c in configs) runCatching { Naksha.removeStorage(c) }
-    if (!P5.strict || Parity.hubUrl.isNullOrBlank() || Parity.dbUrl.isNullOrBlank()) return
-    runCatching { P3.deleteSpace(v1) }
+    if (!ReviewSupport.strict || Parity.hubUrl.isNullOrBlank() || Parity.dbUrl.isNullOrBlank()) return
+    runCatching { EdgeSupport.deleteSpace(v1) }
     if (::scratch.isInitialized) scratch.close()
   }
 
@@ -78,7 +78,7 @@ class P5ExpectedBehaviourTest {
     val hub = hubOk("/spaces/ev-p3-geo/features/g-line-whole").json as Map<*, *>
     val (_, storage) = open("f1")
     val lib = Parity.libRead(storage, "ev-p3-geo") { queryMembers = naksha.model.request.ops.Equals("id", "g-line-whole") }.single()
-    assertNull(P5.coordinateDiff(coordinates(hub), coordinates(lib), 1e-7), "lib-iml geometry differs from the Hub")
+    assertNull(ReviewSupport.coordinateDiff(coordinates(hub), coordinates(lib), 1e-7), "lib-iml geometry differs from the Hub")
   }
 
   @Test
@@ -97,7 +97,7 @@ class P5ExpectedBehaviourTest {
       val r = s.executeRead(Parity.request(v1)) as SuccessResponse
       assertEquals(10, r.featureTupleList.size, "fixture")
       // The Hub updates every feature between selection and materialization (IML: one request = one consistent result).
-      P3.putFeatures(v1, (0 until 10).map { P3.point("p$it", 9.0 + it * 0.001, 51.0, mapOf("n" to it, "rev" to rnd)) })
+      EdgeSupport.putFeatures(v1, (0 until 10).map { EdgeSupport.point("p$it", 9.0 + it * 0.001, 51.0, mapOf("n" to it, "rev" to rnd)) })
       s.loadTuples(r.featureTupleList, 0, r.featureTupleList.size)
       assertEquals(10, r.features.filterNotNull().size, "features lost between selection and materialization")
     }
@@ -134,26 +134,26 @@ class P5ExpectedBehaviourTest {
       val n = storage.newReadSession().use { (it.executeRead(scratch.request("p5-free") { limit = 3 }) as SuccessResponse).features.size }
       assertEquals(3, n)
     } finally {
-      P3.execute("DELETE FROM \"${scratch.meta}\".space_meta WHERE id IN (?, ?)", a, b)
+      EdgeSupport.execute("DELETE FROM \"${scratch.meta}\".space_meta WHERE id IN (?, ?)", a, b)
     }
   }
 
   @Test
   fun `F18 - a stalled read does not block a read of another layer on the same storage`() {
     val (_, storage) = scratch.open("iml-eval-p5x-f18-$rnd")
-    val lock = P5.lock(scratch.sqlTable("t_lock"))
+    val lock = ReviewSupport.lock(scratch.sqlTable("t_lock"))
     try {
-      val stalled = P5.Probe("f18-stalled") {
+      val stalled = ReviewSupport.Probe("f18-stalled") {
         storage.newReadSession(SessionOptions(appId = "iml-eval-parity", lockTimeout = 30_000)).use { it.executeRead(scratch.request("p5-lock") { limit = 1 }); "ok" }
       }.start()
-      assertTrue(P5.waitFor(10_000) { P5.lockWaiters("t_lock").isNotEmpty() } >= 0, "fixture")
-      val other = P5.Probe("f18-other") {
+      assertTrue(ReviewSupport.waitFor(10_000) { ReviewSupport.lockWaiters("t_lock").isNotEmpty() } >= 0, "fixture")
+      val other = ReviewSupport.Probe("f18-other") {
         storage.newReadSession().use { (it.executeRead(scratch.request("p5-free") { limit = 1 }) as SuccessResponse).features.size.toString() }
       }.start().join(3_000)
       assertTrue(!other.running && other.outcome == "1", "a read of an unlocked layer waited for the stalled read (still running after 3 s)")
       stalled.running
     } finally {
-      P5.release(lock)
+      ReviewSupport.release(lock)
     }
   }
 
@@ -161,20 +161,20 @@ class P5ExpectedBehaviourTest {
   fun `F28 - a stalled read does not block Naksha useStorage of an unrelated storage`() {
     val (configA, storageA) = scratch.open("iml-eval-p5x-f28-$rnd")
     val other = ImlConfig("iml-eval-p5x-f28-other-$rnd", Parity.dbUrl!!).also { configs.add(it) }
-    val lock = P5.lock(scratch.sqlTable("t_lock"))
+    val lock = ReviewSupport.lock(scratch.sqlTable("t_lock"))
     try {
-      P5.Probe("f28-stalled") {
+      ReviewSupport.Probe("f28-stalled") {
         storageA.newReadSession(SessionOptions(appId = "iml-eval-parity", lockTimeout = 30_000)).use { it.executeRead(scratch.request("p5-lock") { limit = 1 }); "ok" }
       }.start()
-      assertTrue(P5.waitFor(10_000) { P5.lockWaiters("t_lock").isNotEmpty() } >= 0, "fixture")
-      P5.Probe("f28-session") { storageA.newReadSession().use { "ok" } }.start()
+      assertTrue(ReviewSupport.waitFor(10_000) { ReviewSupport.lockWaiters("t_lock").isNotEmpty() } >= 0, "fixture")
+      ReviewSupport.Probe("f28-session") { storageA.newReadSession().use { "ok" } }.start()
       Thread.sleep(300)
-      P5.Probe("f28-remove") { "${Naksha.removeStorage(configA) != null}" }.start()
+      ReviewSupport.Probe("f28-remove") { "${Naksha.removeStorage(configA) != null}" }.start()
       Thread.sleep(300)
-      val unrelated = P5.Probe("f28-unrelated") { Naksha.useStorage(other).id }.start().join(3_000)
+      val unrelated = ReviewSupport.Probe("f28-unrelated") { Naksha.useStorage(other).id }.start().join(3_000)
       assertTrue(!unrelated.running, "Naksha.useStorage of an unrelated storage was blocked for > 3 s")
     } finally {
-      P5.release(lock)
+      ReviewSupport.release(lock)
     }
   }
 
@@ -195,7 +195,7 @@ class P5ExpectedBehaviourTest {
   @Test
   fun `H-W2 - a descriptor update of a Hub-managed layer does not delete its history`() {
     val table = scratch.sqlTable("t_hist")
-    val before = (P3.scalar("SELECT count(*) FROM $table WHERE next_version <> 9223372036854775807") as Number).toLong()
+    val before = (EdgeSupport.scalar("SELECT count(*) FROM $table WHERE next_version <> 9223372036854775807") as Number).toLong()
     require(before > 0) { "fixture: history rows" }
     val (_, storage) = scratch.open("iml-eval-p5x-hw2-$rnd") { writeEnabled = true }
     val context = NakshaContext.currentContext()
@@ -213,7 +213,7 @@ class P5ExpectedBehaviourTest {
     } finally {
       context.su = previous
     }
-    val after = (P3.scalar("SELECT count(*) FROM $table WHERE next_version <> 9223372036854775807") as Number).toLong()
+    val after = (EdgeSupport.scalar("SELECT count(*) FROM $table WHERE next_version <> 9223372036854775807") as Number).toLong()
     assertEquals(before, after, "history rows deleted by a collection descriptor update")
   }
 
@@ -221,7 +221,7 @@ class P5ExpectedBehaviourTest {
   fun `F13-F22 - a layer whose table was dropped gives COLLECTION_NOT_FOUND, not a raw PSQLException`() {
     scratch.addLayer("p5-dropped", "t_dropped", "ev-v1")
     val (_, storage) = scratch.open("iml-eval-p5x-f22-$rnd")
-    P3.execute("DROP TABLE ${scratch.sqlTable("t_dropped")}")
+    EdgeSupport.execute("DROP TABLE ${scratch.sqlTable("t_dropped")}")
     try {
       val response = storage.newReadSession().use { it.executeRead(scratch.request("p5-dropped")) }
       val error = (response as? ErrorResponse)?.error?.code
@@ -229,9 +229,9 @@ class P5ExpectedBehaviourTest {
     } catch (e: NakshaException) {
       assertEquals(naksha.base.NakshaError.COLLECTION_NOT_FOUND, e.error.code)
     } catch (e: Throwable) {
-      fail<Unit>("raw ${P3.describe(e)}")
+      fail<Unit>("raw ${EdgeSupport.describe(e)}")
     } finally {
-      P3.execute("DELETE FROM \"${scratch.meta}\".space_meta WHERE id = 'p5-dropped'")
+      EdgeSupport.execute("DELETE FROM \"${scratch.meta}\".space_meta WHERE id = 'p5-dropped'")
     }
   }
 
@@ -240,21 +240,21 @@ class P5ExpectedBehaviourTest {
     val (_, storage) = scratch.open("iml-eval-p5x-a7-$rnd")
     val app = "p5x-kill-$rnd"
     var thrown: Throwable? = null
-    val lock = P5.lock(scratch.sqlTable("t_lock"))
+    val lock = ReviewSupport.lock(scratch.sqlTable("t_lock"))
     try {
       val t = Thread {
         NakshaContext.currentContext().withAppId("iml-eval-parity")
         try { storage.newReadSession(SessionOptions(appId = "iml-eval-parity", appName = app, lockTimeout = 30_000)).use { it.executeRead(scratch.request("p5-lock")) } }
         catch (e: Throwable) { thrown = e }
       }.apply { start() }
-      P5.waitFor(10_000) { P5.lockWaiters("t_lock").any { it.second == app } }
-      P5.lockWaiters("t_lock").filter { it.second == app }.forEach { P5.terminate(it.first) }
+      ReviewSupport.waitFor(10_000) { ReviewSupport.lockWaiters("t_lock").any { it.second == app } }
+      ReviewSupport.lockWaiters("t_lock").filter { it.second == app }.forEach { ReviewSupport.terminate(it.first) }
       t.join(30_000)
     } finally {
-      P5.release(lock)
+      ReviewSupport.release(lock)
     }
     val e = checkNotNull(thrown) { "fixture: the read must fail" }
-    assertTrue(P5.sqlStates(e).contains("57P01"), "original error lost: ${P5.chain(e)}")
+    assertTrue(ReviewSupport.sqlStates(e).contains("57P01"), "original error lost: ${ReviewSupport.chain(e)}")
   }
 
   @Test
@@ -267,7 +267,7 @@ class P5ExpectedBehaviourTest {
         storage.newReadSession(SessionOptions(appId = "iml-eval-parity")).use { s ->
           "ok ${(s.executeRead(Parity.request(v1)) as SuccessResponse).features.filterNotNull().size}"
         }
-      } catch (e: Throwable) { P3.describe(e) }
+      } catch (e: Throwable) { EdgeSupport.describe(e) }
     }.apply { start() }
     t.join(60_000)
     assertEquals("ok 10", outcome)

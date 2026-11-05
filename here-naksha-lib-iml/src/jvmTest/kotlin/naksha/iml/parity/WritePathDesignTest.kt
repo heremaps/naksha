@@ -3,8 +3,8 @@ package naksha.iml.parity
 import naksha.iml.ImlConfig
 import naksha.iml.ImlStorage
 import naksha.iml.ImlWriteSession
-import naksha.iml.parity.P3.case
-import naksha.iml.parity.P3.describe
+import naksha.iml.parity.EdgeSupport.case
+import naksha.iml.parity.EdgeSupport.describe
 import naksha.iml.parity.Parity.observe
 import naksha.model.Naksha
 import naksha.model.NakshaContext
@@ -39,7 +39,7 @@ import org.junit.jupiter.api.TestInstance
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 10, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P4WritePathTest {
+class WritePathDesignTest {
   private val rnd = (1..5).map { "abcdefghijklmnopqrstuvwxyz0123456789".random() }.joinToString("")
   private val a = "ev-p4-wa-$rnd" // history, low versions
   private val b = "ev-p4-wb-$rnd" // history, ~100k versions (simulated)
@@ -51,21 +51,21 @@ class P4WritePathTest {
   @BeforeAll
   fun setUp() {
     Parity.assumeEnabled()
-    P3.recreateSpace(a, 100)
-    P3.recreateSpace(b, 100)
-    P3.recreateSpace(c, 1)
-    P3.putFeatures(a, listOf(P3.point("a1", 8.0, 50.0, mapOf("n" to 1))))
-    P3.putFeatures(a, listOf(P3.point("a1", 8.0, 50.0, mapOf("n" to 2))))
-    P3.putFeatures(b, listOf(P3.point("b1", 8.1, 50.0, mapOf("n" to 1))))
-    P3.scalar("SELECT setval(?::regclass, 99960, true)", "public.\"${P3.table(b)}_version_seq\"")
-    P3.putFeatures(b, listOf(P3.point("b1", 8.1, 50.0, mapOf("n" to 2))))
-    P3.putFeatures(b, listOf(P3.point("b1", 8.1, 50.0, mapOf("n" to 3))))
-    P3.putFeatures(c, listOf(P3.point("c1", 8.2, 50.0, mapOf("n" to 1))))
-    P3.putFeatures(c, listOf(P3.point("c1", 8.2, 50.0, mapOf("n" to 2))))
+    EdgeSupport.recreateSpace(a, 100)
+    EdgeSupport.recreateSpace(b, 100)
+    EdgeSupport.recreateSpace(c, 1)
+    EdgeSupport.putFeatures(a, listOf(EdgeSupport.point("a1", 8.0, 50.0, mapOf("n" to 1))))
+    EdgeSupport.putFeatures(a, listOf(EdgeSupport.point("a1", 8.0, 50.0, mapOf("n" to 2))))
+    EdgeSupport.putFeatures(b, listOf(EdgeSupport.point("b1", 8.1, 50.0, mapOf("n" to 1))))
+    EdgeSupport.scalar("SELECT setval(?::regclass, 99960, true)", "public.\"${EdgeSupport.table(b)}_version_seq\"")
+    EdgeSupport.putFeatures(b, listOf(EdgeSupport.point("b1", 8.1, 50.0, mapOf("n" to 2))))
+    EdgeSupport.putFeatures(b, listOf(EdgeSupport.point("b1", 8.1, 50.0, mapOf("n" to 3))))
+    EdgeSupport.putFeatures(c, listOf(EdgeSupport.point("c1", 8.2, 50.0, mapOf("n" to 1))))
+    EdgeSupport.putFeatures(c, listOf(EdgeSupport.point("c1", 8.2, 50.0, mapOf("n" to 2))))
     for ((schema, spaces) in listOf(m1 to listOf(a, b), m2 to listOf(c))) {
-      P3.execute("CREATE SCHEMA \"$schema\"")
-      P3.execute("CREATE TABLE \"$schema\".space_meta (LIKE xyz_config.space_meta INCLUDING ALL)")
-      for (s in spaces) P3.execute("INSERT INTO \"$schema\".space_meta SELECT * FROM xyz_config.space_meta WHERE id = ?", s)
+      EdgeSupport.execute("CREATE SCHEMA \"$schema\"")
+      EdgeSupport.execute("CREATE TABLE \"$schema\".space_meta (LIKE xyz_config.space_meta INCLUDING ALL)")
+      for (s in spaces) EdgeSupport.execute("INSERT INTO \"$schema\".space_meta SELECT * FROM xyz_config.space_meta WHERE id = ?", s)
     }
   }
 
@@ -73,8 +73,8 @@ class P4WritePathTest {
   fun tearDown() {
     for (config in configs) runCatching { Naksha.removeStorage(config) }
     if (Parity.hubUrl.isNullOrBlank() || Parity.dbUrl.isNullOrBlank()) return
-    for (s in listOf(a, b, c)) runCatching { P3.deleteSpace(s) }
-    for (schema in listOf(m1, m2)) runCatching { P3.execute("DROP SCHEMA IF EXISTS \"$schema\" CASCADE") }
+    for (s in listOf(a, b, c)) runCatching { EdgeSupport.deleteSpace(s) }
+    for (schema in listOf(m1, m2)) runCatching { EdgeSupport.execute("DROP SCHEMA IF EXISTS \"$schema\" CASCADE") }
   }
 
   private fun open(metadataSchema: String): ImlStorage {
@@ -86,18 +86,18 @@ class P4WritePathTest {
     return storage
   }
 
-  private fun partitions(space: String): List<String> = P3.db { conn ->
+  private fun partitions(space: String): List<String> = EdgeSupport.db { conn ->
     conn.prepareStatement(
       "SELECT c.relname || ' ' || pg_get_expr(c.relpartbound, c.oid) FROM pg_inherits i JOIN pg_class c ON c.oid = i.inhrelid " +
         "JOIN pg_class p ON p.oid = i.inhparent WHERE p.relname = ? ORDER BY 1"
     ).use { st ->
-      st.setString(1, P3.table(space))
-      st.executeQuery().use { rs -> generateSequence { if (rs.next()) rs.getString(1).replace(P3.table(space)!!, "<t>") else null }.toList() }
+      st.setString(1, EdgeSupport.table(space))
+      st.executeQuery().use { rs -> generateSequence { if (rs.next()) rs.getString(1).replace(EdgeSupport.table(space)!!, "<t>") else null }.toList() }
     }
   }
 
-  private fun rows(space: String, id: String): List<String> = P3.db { conn ->
-    conn.prepareStatement("SELECT version, next_version, operation, jsondata->'properties'->>'n', jsondata->'properties'->>'by', ST_AsText(geo) FROM public.\"${P3.table(space)}\" WHERE id = ? ORDER BY version, next_version").use { st ->
+  private fun rows(space: String, id: String): List<String> = EdgeSupport.db { conn ->
+    conn.prepareStatement("SELECT version, next_version, operation, jsondata->'properties'->>'n', jsondata->'properties'->>'by', ST_AsText(geo) FROM public.\"${EdgeSupport.table(space)}\" WHERE id = ? ORDER BY version, next_version").use { st ->
       st.setString(1, id)
       st.executeQuery().use { rs ->
         generateSequence {
@@ -110,10 +110,10 @@ class P4WritePathTest {
     }
   }
 
-  private fun hubSeq(space: String): Long = P3.scalar("SELECT last_value FROM public.\"${P3.table(space)}_version_seq\"") as Long
+  private fun hubSeq(space: String): Long = EdgeSupport.scalar("SELECT last_value FROM public.\"${EdgeSupport.table(space)}_version_seq\"") as Long
 
   private fun hubVersions(space: String, id: String, ref: String? = null, withNs: Boolean = false): String {
-    val r = P3.hub("GET", "/spaces/$space/features/${P3.pathId(id)}", query = if (ref == null) emptyList() else listOf("version" to ref))
+    val r = EdgeSupport.hub("GET", "/spaces/$space/features/${EdgeSupport.pathId(id)}", query = if (ref == null) emptyList() else listOf("version" to ref))
     if (r.status != 200) return "${r.status} ${r.body.take(160)}"
     val list = (r.json as? Map<*, *>)?.let { m -> if (m["type"] == "FeatureCollection") m["features"] as List<*> else listOf(m) } ?: emptyList<Any>()
     return list.joinToString(", ") { f ->
@@ -123,9 +123,9 @@ class P4WritePathTest {
     }
   }
 
-  private fun hubPutRaw(space: String, id: String, lon: Double, n: Int) = P3.hub(
+  private fun hubPutRaw(space: String, id: String, lon: Double, n: Int) = EdgeSupport.hub(
     "PUT", "/spaces/$space/features",
-    naksha.base.Platform.toJSON(mapOf("type" to "FeatureCollection", "features" to listOf(P3.point(id, lon, 50.0, mapOf("n" to n))))), "application/geo+json"
+    naksha.base.Platform.toJSON(mapOf("type" to "FeatureCollection", "features" to listOf(EdgeSupport.point(id, lon, 50.0, mapOf("n" to n))))), "application/geo+json"
   )
 
   /** Reads [id] through the writer, sets `properties.by = "lib-iml"`, upserts it and commits. Returns the allocated source version or the error. */
@@ -173,7 +173,7 @@ class P4WritePathTest {
       "rowsAfterHub" to rows(a, "a1"), "hubHead a1" to hubVersions(a, "a1", withNs = true),
       // a2 was written after the lib-iml update of a1. Which a1 does the Hub return at a2's version?
       "hub a1 at a2's version" to Regex("version=(\\d+)").find(hubANew)?.groupValues?.get(1)?.let { "version=$it: " + hubVersions(a, "a1", it) },
-      "hub changesets" to P3.hub("GET", "/spaces/$a/changesets", query = listOf("startVersion" to "0", "endVersion" to "100000")).let { r ->
+      "hub changesets" to EdgeSupport.hub("GET", "/spaces/$a/changesets", query = listOf("startVersion" to "0", "endVersion" to "100000")).let { r ->
         "${r.status} versions=${Regex("\"(\\d+)\":\\{\"").findAll(r.body).map { it.groupValues[1] }.toList()}"
       }
     )
@@ -187,13 +187,13 @@ class P4WritePathTest {
     val (vB, outB) = libUpdate(s1, b, "b1")
     val rowsAfterLib = rows(b, "b1")
     val seqB1 = hubSeq(b)
-    val libJson = P3.scalar("SELECT jsondata->'properties'->'@ns:com:here:xyz' FROM public.\"${P3.table(b)}\" WHERE id = 'b1' AND next_version = 9223372036854775807")?.toString()
+    val libJson = EdgeSupport.scalar("SELECT jsondata->'properties'->'@ns:com:here:xyz' FROM public.\"${EdgeSupport.table(b)}\" WHERE id = 'b1' AND next_version = 9223372036854775807")?.toString()
     val hubPut = hubPutRaw(b, "b1", 8.1, 4)
     val hubPutVersion = if (hubPut.status != 200) "${hubPut.status} ${hubPut.body.take(300)}" else
       (((((hubPut.json as Map<*, *>)["features"] as List<*>)[0] as Map<*, *>)["properties"] as Map<*, *>)["@ns:com:here:xyz"] as Map<*, *>)["version"]
     // A second Hub attempt with conflictDetection=false explicitly, and a PATCH, to see whether the failure depends on the write mode.
     val hubRetry = if (hubPut.status == 200) null else hubPutRaw(b, "b1", 8.1, 5)
-    val hubPatch = if (hubPut.status == 200) null else P3.hub("PATCH", "/spaces/$b/features/b1", naksha.base.Platform.toJSON(mapOf("type" to "Feature", "properties" to mapOf("n" to 6))), "application/geo+json")
+    val hubPatch = if (hubPut.status == 200) null else EdgeSupport.hub("PATCH", "/spaces/$b/features/b1", naksha.base.Platform.toJSON(mapOf("type" to "Feature", "properties" to mapOf("n" to 6))), "application/geo+json")
     val libHead = s1.newReadSession().use { r ->
       (r.executeRead(ReadFeatures().apply { catalogId = "public"; collectionId = b; featureIds.add("b1") }) as SuccessResponse).features.filterNotNull()
         .map { "v=${(it.properties.xyz.getRaw("version") as Number).toLong() ushr 2} n=${it.properties.getRaw("n")}" }
@@ -216,7 +216,7 @@ class P4WritePathTest {
     // 3. Storage m2 registers only C (versionsToKeep = 1).
     val s2 = open(m2)
     val seqC0 = hubSeq(c)
-    fun bboxC() = P3.hub("GET", "/spaces/$c/bbox", query = listOf("west" to "8", "south" to "49", "east" to "9", "north" to "51")).let { r -> "${r.status} ids=${Regex("\"id\"\\s*:\\s*\"([^\"]+)\"").findAll(r.body).map { it.groupValues[1] }.toList()}" }
+    fun bboxC() = EdgeSupport.hub("GET", "/spaces/$c/bbox", query = listOf("west" to "8", "south" to "49", "east" to "9", "north" to "51")).let { r -> "${r.status} ids=${Regex("\"id\"\\s*:\\s*\"([^\"]+)\"").findAll(r.body).map { it.groupValues[1] }.toList()}" }
     val bboxBefore = bboxC()
     val (vC, outC) = libUpdate(s2, c, "c1")
     val rowsCAfterLib = rows(c, "c1")
@@ -227,7 +227,7 @@ class P4WritePathTest {
       "libVersion" to vC, "libOutcome" to outC, "collectionStoreHistory" to s2.newReadSession().use { r -> r.getCollectionById(r.getCatalogById("public")!!, c)?.storeHistory?.toString() },
       "hubSeqBefore" to seqC0, "hubSeqAfterLib" to seqC1, "rowsAfterLib" to rowsCAfterLib, "hubHeadAfterLib" to hubHeadCBeforeHubWrite,
       "hubBboxBeforeLib" to bboxBefore, "hubBboxAfterLib" to bboxC(),
-      "hubIterateAfterLib" to P3.hub("GET", "/spaces/$c/iterate").let { r -> "${r.status} ids=${Regex("\"id\"\\s*:\\s*\"([^\"]+)\"").findAll(r.body).map { it.groupValues[1] }.toList()}" },
+      "hubIterateAfterLib" to EdgeSupport.hub("GET", "/spaces/$c/iterate").let { r -> "${r.status} ids=${Regex("\"id\"\\s*:\\s*\"([^\"]+)\"").findAll(r.body).map { it.groupValues[1] }.toList()}" },
       "hubPut" to "${hubPutC.status} ${hubPutC.body.take(200)}", "hubSeqAfterHubPut" to hubSeq(c), "rowsAfterHub" to rows(c, "c1"),
       "hubHead" to hubVersions(c, "c1"), "hubAllVersions" to hubVersions(c, "c1", "*")
     )
@@ -236,7 +236,7 @@ class P4WritePathTest {
       "lib version $vC, rows after lib $rowsCAfterLib; Hub PUT ${hubPutC.status}; rows after Hub ${rows(c, "c1")}", "High (write path)")
 
     // 4. What the write path created, and where.
-    fun relations(schema: String) = P3.db { conn ->
+    fun relations(schema: String) = EdgeSupport.db { conn ->
       conn.prepareStatement("SELECT c.relname || ':' || c.relkind::text FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = ? AND c.relkind IN ('r','S','p') ORDER BY 1").use { st ->
         st.setString(1, schema)
         st.executeQuery().use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() }
@@ -244,11 +244,11 @@ class P4WritePathTest {
     }
     o["4 control objects"] = mapOf(
       m1 to relations(m1), m2 to relations(m2),
-      "iml_version_seq m1" to P3.scalar("SELECT last_value FROM \"$m1\".iml_version_seq"),
-      "iml_transactions m1" to P3.scalar("SELECT count(*) FROM \"$m1\".iml_transactions"),
-      "xyz_config untouched" to (P3.scalar("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'xyz_config' AND c.relname LIKE 'iml_%'") as Long == 0L)
+      "iml_version_seq m1" to EdgeSupport.scalar("SELECT last_value FROM \"$m1\".iml_version_seq"),
+      "iml_transactions m1" to EdgeSupport.scalar("SELECT count(*) FROM \"$m1\".iml_transactions"),
+      "xyz_config untouched" to (EdgeSupport.scalar("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'xyz_config' AND c.relname LIKE 'iml_%'") as Long == 0L)
     )
     observe("p4-write-coexistence", o)
-    assertEquals(0L, P3.scalar("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'xyz_config' AND c.relname LIKE 'iml_%'"))
+    assertEquals(0L, EdgeSupport.scalar("SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'xyz_config' AND c.relname LIKE 'iml_%'"))
   }
 }

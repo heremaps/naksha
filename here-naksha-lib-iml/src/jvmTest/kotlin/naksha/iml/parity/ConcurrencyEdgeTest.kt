@@ -8,7 +8,7 @@ import naksha.model.request.OrderBy
 import naksha.model.request.SuccessResponse
 import naksha.model.request.ops.Gt
 import naksha.model.request.query.SortOrder
-import naksha.iml.parity.P3.case
+import naksha.iml.parity.EdgeSupport.case
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.request
 import org.junit.jupiter.api.AfterAll
@@ -26,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 10, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P3ConcurrencyTest {
+class ConcurrencyEdgeTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val v1 = "ev-p3-conc-v1"
@@ -36,11 +36,11 @@ class P3ConcurrencyTest {
   @BeforeAll
   fun setUp() {
     Parity.assumeEnabled()
-    P3.recreateSpace(v1, 1)
-    P3.recreateSpace(hist, 100)
-    P3.putFeatures(v1, P3.grid("c", n, 70.0, 10.0))
-    P3.putFeatures(hist, P3.grid("c", n, 70.0, 10.0))
-    // Storage opened after the spaces exist (the metadata cache is filled at init, see P3MetadataCacheTest).
+    EdgeSupport.recreateSpace(v1, 1)
+    EdgeSupport.recreateSpace(hist, 100)
+    EdgeSupport.putFeatures(v1, EdgeSupport.grid("c", n, 70.0, 10.0))
+    EdgeSupport.putFeatures(hist, EdgeSupport.grid("c", n, 70.0, 10.0))
+    // Storage opened after the spaces exist (the metadata cache is filled at init, see LifecycleEdgeTest).
     val (c, s) = Parity.open("iml-eval-p3-concurrency")
     config = c
     storage = s
@@ -49,12 +49,12 @@ class P3ConcurrencyTest {
   @AfterAll
   fun tearDown() {
     if (::config.isInitialized) Naksha.removeStorage(config)
-    P3.deleteSpace(v1)
-    P3.deleteSpace(hist)
+    EdgeSupport.deleteSpace(v1)
+    EdgeSupport.deleteSpace(hist)
   }
 
   private fun reseed(space: String) {
-    P3.putFeatures(space, P3.grid("c", n, 70.0, 10.0) { mapOf("n" to it, "name" to "c $it", "rev" to 0) })
+    EdgeSupport.putFeatures(space, EdgeSupport.grid("c", n, 70.0, 10.0) { mapOf("n" to it, "name" to "c $it", "rev" to 0) })
     Naksha.cache.clear(storage)
   }
 
@@ -67,8 +67,8 @@ class P3ConcurrencyTest {
       val selected = response.featureTupleList.size
       val preloaded = response.featureTupleList.count { it?.tuple != null }
       // 100 updates and 50 deletes between selection and materialization.
-      P3.putFeatures(space, (0 until 100).map { P3.point("c%05d".format(it), 70.0 + (it % 100) * 0.001, 10.0, mapOf("n" to it, "name" to "updated", "rev" to 1)) })
-      P3.deleteFeatures(space, (100 until 150).map { "c%05d".format(it) })
+      EdgeSupport.putFeatures(space, (0 until 100).map { EdgeSupport.point("c%05d".format(it), 70.0 + (it % 100) * 0.001, 10.0, mapOf("n" to it, "name" to "updated", "rev" to 1)) })
+      EdgeSupport.deleteFeatures(space, (100 until 150).map { "c%05d".format(it) })
       val features = response.features
       val nonNull = features.filterNotNull()
       val nulls = features.size - nonNull.size
@@ -118,8 +118,8 @@ class P3ConcurrencyTest {
       val f = (s.executeRead(request(hist) { queryMembers = naksha.model.request.ops.Equals("id", id) }) as SuccessResponse).features.single()!!
       (f.properties.xyz.getRaw("nextVersion") as Number).toLong() to (f.properties.xyz.getRaw("version") as Number).toLong()
     }
-    P3.putFeatures(hist, listOf(P3.point(id, 70.007, 10.0, mapOf("n" to 7, "name" to "after", "rev" to 2))))
-    val dbNext = P3.scalar("SELECT next_version FROM public.\"${P3.table(hist)}\" WHERE id = ? AND version = ?", id, oldVersion ushr 2) as Long
+    EdgeSupport.putFeatures(hist, listOf(EdgeSupport.point(id, 70.007, 10.0, mapOf("n" to 7, "name" to "after", "rev" to 2))))
+    val dbNext = EdgeSupport.scalar("SELECT next_version FROM public.\"${EdgeSupport.table(hist)}\" WHERE id = ? AND version = ?", id, oldVersion ushr 2) as Long
     // Snapshot read at the old version: the selection finds the old row, the tuple comes from the cache filled by the HEAD read.
     val cachedNv = storage.newReadSession().use { s ->
       val f = (s.executeRead(request(hist) {
@@ -152,9 +152,9 @@ class P3ConcurrencyTest {
         storage.newReadSession(naksha.model.SessionOptions(appId = "iml-eval-parity")).use { s ->
           val r = s.executeRead(request(v1) { limit = 10 }) as SuccessResponse
           val selected = r.featureTupleList.size
-          try { "selection ok ($selected), materialization ok (${r.features.filterNotNull().size})" } catch (e: Throwable) { "selection ok ($selected), materialization: ${P3.describe(e)}" }
+          try { "selection ok ($selected), materialization ok (${r.features.filterNotNull().size})" } catch (e: Throwable) { "selection ok ($selected), materialization: ${EdgeSupport.describe(e)}" }
         }
-      } catch (e: Throwable) { "selection: ${P3.describe(e)}" }
+      } catch (e: Throwable) { "selection: ${EdgeSupport.describe(e)}" }
     }
     Naksha.cache.clear(storage)
     t.start(); t.join(60_000)
@@ -176,9 +176,9 @@ class P3ConcurrencyTest {
       var rev = 10
       while (!stop.get()) {
         rev++
-        val batch = (0 until 50).map { k -> val i = (rev * 37 + k * 19) % n; P3.point("c%05d".format(i), 70.0 + (i % 100) * 0.001, 10.0 + (i / 100) * 0.001, mapOf("n" to i, "name" to "c $i", "rev" to rev)) }
+        val batch = (0 until 50).map { k -> val i = (rev * 37 + k * 19) % n; EdgeSupport.point("c%05d".format(i), 70.0 + (i % 100) * 0.001, 10.0 + (i / 100) * 0.001, mapOf("n" to i, "name" to "c $i", "rev" to rev)) }
         for (space in listOf(v1, hist)) {
-          val r = P3.putFeatures(space, batch)
+          val r = EdgeSupport.putFeatures(space, batch)
           synchronized(writeMs) { writeMs.add(r.millis) }
         }
         writes.addAndGet(2)
@@ -207,7 +207,7 @@ class P3ConcurrencyTest {
             }
           } catch (e: Throwable) {
             errors++
-            results["$space error"] = P3.describe(e)
+            results["$space error"] = EdgeSupport.describe(e)
           }
         }
         results[space] = mapOf("rounds" to rounds, "roundsWithMissing" to short, "missingTotal" to nulls, "duplicates" to dupes, "errors" to errors)

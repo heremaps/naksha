@@ -34,7 +34,7 @@ import org.junit.jupiter.api.TestInstance
  * whether lib-iml throws or returns an `ErrorResponse`, and which `NakshaError` code it uses.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class P2ErrorParityTest {
+class ErrorParityTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val results = LinkedHashMap<String, Map<String, String>>()

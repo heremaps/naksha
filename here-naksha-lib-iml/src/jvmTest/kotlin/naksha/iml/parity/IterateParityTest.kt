@@ -33,7 +33,7 @@ import org.junit.jupiter.api.TestInstance
  * Uses `ev-big` (120 000 points, versionsToKeep=1, scripts/seed-p2.py) and `ev-hist`.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class P2IterateParityTest {
+class IterateParityTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val big = 120_000

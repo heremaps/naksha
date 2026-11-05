@@ -45,7 +45,7 @@ import org.junit.jupiter.api.TestInstance
  * Every case maps the hub query to the closest lib-iml request a translating client would build, and records the outcome.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class P2SearchParityTest {
+class SearchParityTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val results = LinkedHashMap<String, String>()

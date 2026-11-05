@@ -29,7 +29,7 @@ import java.util.UUID
  * The scratch schema is created and dropped by the test; the hub's own tables are only read.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class P2CompositeBranchParityTest {
+class CompositeBranchParityTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val xyz = "@ns:com:here:xyz"

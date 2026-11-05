@@ -7,7 +7,7 @@ import naksha.model.Naksha
 import naksha.model.objects.XyzMembers
 import naksha.model.request.SuccessResponse
 import naksha.model.request.ops.Intersects
-import naksha.iml.parity.P3.case
+import naksha.iml.parity.EdgeSupport.case
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.request
 import org.junit.jupiter.api.AfterAll
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 30, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P3ThroughputTest {
+class ThroughputEdgeTest {
   private val space = "ev-1m"
   private val configs = ArrayList<ImlConfig>()
   private val boxes = (0 until 64).map { k -> val w = -170.0 + (k % 16) * 20.0; val s = -70.0 + (k / 16) * 30.0; listOf(w, s, w + 10.0, s + 5.0) }
@@ -155,7 +155,7 @@ class P3ThroughputTest {
       o["hub x$threads"] = run(threads) { { box -> hubRead(box) } }
     }
     // Connections opened per read.
-    val connections = P3.countingConnections { driver ->
+    val connections = EdgeSupport.countingConnections { driver ->
       Naksha.cache.clear(shared)
       val before = driver.connects.get()
       shared.newReadSession().use { s ->

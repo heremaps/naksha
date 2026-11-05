@@ -3,7 +3,7 @@ package naksha.iml.parity
 import naksha.iml.ImlConfig
 import naksha.iml.ImlStorage
 import naksha.iml.ImlTuple
-import naksha.iml.parity.P3.case
+import naksha.iml.parity.EdgeSupport.case
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.request
 import naksha.model.Naksha
@@ -32,7 +32,7 @@ import java.sql.DriverManager
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 20, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P4ReadCostTest {
+class ReadCostDesignTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val space = "ev-big"
@@ -119,7 +119,7 @@ class P4ReadCostTest {
     do {
       val q = arrayListOf("limit" to "10000")
       if (handle != null) q.add("handle" to handle)
-      val r = P3.hub("GET", "/spaces/$space/iterate", query = q)
+      val r = EdgeSupport.hub("GET", "/spaces/$space/iterate", query = q)
       check(r.status == 200) { "iterate ${r.status}" }
       n += count.findAll(r.body).count()
       handle = token.find(r.body)?.groupValues?.get(1)

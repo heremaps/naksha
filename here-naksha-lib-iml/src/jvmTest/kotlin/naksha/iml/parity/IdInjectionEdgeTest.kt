@@ -26,8 +26,8 @@ import naksha.model.request.query.DoubleOp
 import naksha.model.request.query.PQuery
 import naksha.model.request.query.Property
 import naksha.model.request.query.SortOrder
-import naksha.iml.parity.P3.case
-import naksha.iml.parity.P3.describe
+import naksha.iml.parity.EdgeSupport.case
+import naksha.iml.parity.EdgeSupport.describe
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.request
 import naksha.iml.parity.Parity.timed
@@ -44,7 +44,7 @@ import org.junit.jupiter.api.TestInstance
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 10, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P3IdInjectionTest {
+class IdInjectionEdgeTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val scratch = "p3inj_" + System.nanoTime().toString(36)
@@ -62,12 +62,12 @@ class P3IdInjectionTest {
   fun tearDown() {
     for (c in configs) runCatching { Naksha.removeStorage(c) }
     if (::config.isInitialized) Naksha.removeStorage(config)
-    runCatching { P3.execute("DROP SCHEMA IF EXISTS \"$scratch\" CASCADE") }
+    runCatching { EdgeSupport.execute("DROP SCHEMA IF EXISTS \"$scratch\" CASCADE") }
   }
 
-  private fun headIds(space: String): List<String> = P3.db { c ->
+  private fun headIds(space: String): List<String> = EdgeSupport.db { c ->
     c.createStatement().use { st ->
-      st.executeQuery("SELECT id FROM public.\"${P3.table(space)}\" WHERE next_version = 9223372036854775807 ORDER BY i").use { r -> generateSequence { if (r.next()) r.getString(1) else null }.toList() }
+      st.executeQuery("SELECT id FROM public.\"${EdgeSupport.table(space)}\" WHERE next_version = 9223372036854775807 ORDER BY i").use { r -> generateSequence { if (r.next()) r.getString(1) else null }.toList() }
     }
   }
 
@@ -89,7 +89,7 @@ class P3IdInjectionTest {
       val lib = Parity.libRead(storage, "ev-p3-ids") { queryMembers = Equals(StandardMembers.Id, id) }
       val libOk = lib.size == 1 && lib[0]["id"] == id
       if (libOk) libExact++
-      val byPath = P3.hub("GET", "/spaces/ev-p3-ids/features/${P3.pathId(id)}")
+      val byPath = EdgeSupport.hub("GET", "/spaces/ev-p3-ids/features/${EdgeSupport.pathId(id)}")
       val byQuery = Parity.hub("/spaces/ev-p3-ids/features", listOf("id" to id))
       val hubPathOk = byPath.status == 200 && (byPath.json as? Map<*, *>)?.get("id") == id
       val hubQueryOk = byQuery.status == 200 && byQuery.features.map { it["id"] } == listOf(id)
@@ -127,7 +127,7 @@ class P3IdInjectionTest {
       storage.newReadSession().use { s -> (s.executeRead(request("ev-p3-ids") { orderBy = OrderBy("id", SortOrder.ASCENDING); limit = 5 }) as SuccessResponse).features.mapNotNull { it?.id }.map { show(it) } }
     } catch (e: Throwable) { describe(e) }
     rows["hub /iterate first 5 (order by i)"] = Parity.hubOk("/spaces/ev-p3-ids/iterate", listOf("limit" to "5")).features.map { show(it["id"] as String) }
-    rows["db collation"] = P3.scalar("SELECT datcollate::text FROM pg_database WHERE datname = current_database()")
+    rows["db collation"] = EdgeSupport.scalar("SELECT datcollate::text FROM pg_database WHERE datname = current_database()")
     observe("ids-edge-cases", rows)
     case("6 ids", "${ids.size} stored edge-case ids (numeric-looking, quotes, %, _, unicode NFC/NFD, control chars, 256…3 000 chars)",
       "Hub: GET /features?id= exact for $hubExact/${ids.size}",
@@ -147,7 +147,7 @@ class P3IdInjectionTest {
   @Test
   fun `sql injection probes`() {
     val o = LinkedHashMap<String, Any?>()
-    val before = P3.scalar("SELECT count(*) FROM public.\"${P3.table("ev-p3-inj")}\"")
+    val before = EdgeSupport.scalar("SELECT count(*) FROM public.\"${EdgeSupport.table("ev-p3-inj")}\"")
     // IDs and author
     o["Equals(id, ' OR '1'='1) on ev-p3-inj"] = lib("ev-p3-inj") { queryMembers = Equals(StandardMembers.Id, "' OR '1'='1") }
     o["Equals(id, ' OR '1'='1) on ev-p3-ids"] = lib("ev-p3-ids") { queryMembers = Equals(StandardMembers.Id, "' OR '1'='1") }
@@ -180,7 +180,7 @@ class P3IdInjectionTest {
     o["hub p.x') OR ('1'='1=6"] = Parity.hub("/spaces/ev-p3-inj/search", raw = "p.x%27)%20OR%20(%271%27%3D%271=6").let { "${it.status} ${it.error ?: Parity.ids(it.features)}" }
     o["hub tags=' or '1'='1"] = Parity.hub("/spaces/ev-p3-inj/search", listOf("tags" to "' or '1'='1")).let { "${it.status} ${it.error ?: Parity.ids(it.features)}" }
     o["hub id=' OR '1'='1"] = Parity.hub("/spaces/ev-p3-inj/features", listOf("id" to "' OR '1'='1")).let { "${it.status} ${it.error ?: Parity.ids(it.features)}" }
-    o["rowsBefore/After"] = "$before/${P3.scalar("SELECT count(*) FROM public.\"${P3.table("ev-p3-inj")}\"")}"
+    o["rowsBefore/After"] = "$before/${EdgeSupport.scalar("SELECT count(*) FROM public.\"${EdgeSupport.table("ev-p3-inj")}\"")}"
     observe("injection-probes", o)
     val leaked = o.filterKeys { !it.startsWith("hub") && it != "rowsBefore/After" }.filterValues { v -> v.toString().contains("canary") && !v.toString().contains("inj-") }.keys -
       setOf("IsAnyOf(id, x'); DROP TABLE t; --, canary)")
@@ -204,15 +204,15 @@ class P3IdInjectionTest {
       "Hub SQL search: p.a'b=1 → ${o["hub p.a'b=1"]}; p.x') OR ('1'='1=6 → ${o["hub p.x') OR ('1'='1=6"]}",
       "PropertyFilter (client side): ${o["PQuery(properties.\"a'b\" = 1)"]} / ${o["PQuery(properties.\"x') OR ('1'='1\" = 6)"]}; queryMembers: ${o["queryMembers Equals(\"properties.a'b\")"]}",
       "OK: lib never puts a property path into SQL")
-    assertEquals(before, P3.scalar("SELECT count(*) FROM public.\"${P3.table("ev-p3-inj")}\""))
+    assertEquals(before, EdgeSupport.scalar("SELECT count(*) FROM public.\"${EdgeSupport.table("ev-p3-inj")}\""))
   }
 
   @Test
   fun `injection through metadata - table names and custom member paths`() {
-    P3.execute("CREATE SCHEMA \"$scratch\"")
-    P3.execute("CREATE TABLE \"$scratch\".canary (x int)")
-    P3.execute("CREATE TABLE \"$scratch\".space_meta (id text NOT NULL, schem text NOT NULL, h_id text NOT NULL, meta jsonb NOT NULL DEFAULT '{}'::jsonb, PRIMARY KEY(id,schem))")
-    val injTable = P3.table("ev-p3-inj")!!
+    EdgeSupport.execute("CREATE SCHEMA \"$scratch\"")
+    EdgeSupport.execute("CREATE TABLE \"$scratch\".canary (x int)")
+    EdgeSupport.execute("CREATE TABLE \"$scratch\".space_meta (id text NOT NULL, schem text NOT NULL, h_id text NOT NULL, meta jsonb NOT NULL DEFAULT '{}'::jsonb, PRIMARY KEY(id,schem))")
+    val injTable = EdgeSupport.table("ev-p3-inj")!!
     val collection = NakshaCollection("custom", "public").apply {
       members = MemberList().apply {
         addAll(XyzMembers.ALL)
@@ -221,8 +221,8 @@ class P3IdInjectionTest {
       }
     }
     val meta = Platform.toJSON(mapOf("nakshaCollection" to Platform.fromJSON(Platform.toJSON(collection))))
-    P3.execute("INSERT INTO \"$scratch\".space_meta VALUES ('custom', 'public', ?, ?::jsonb)", injTable, meta)
-    P3.execute("INSERT INTO \"$scratch\".space_meta VALUES ('evil', 'public', ?, '{}')", "x\"; DROP TABLE \"$scratch\".canary; --")
+    EdgeSupport.execute("INSERT INTO \"$scratch\".space_meta VALUES ('custom', 'public', ?, ?::jsonb)", injTable, meta)
+    EdgeSupport.execute("INSERT INTO \"$scratch\".space_meta VALUES ('evil', 'public', ?, '{}')", "x\"; DROP TABLE \"$scratch\".canary; --")
     val o = LinkedHashMap<String, Any?>()
     val (c, s) = Parity.open("iml-eval-p3-inj-meta") { metadataSchema = scratch }
     configs += c
@@ -232,7 +232,7 @@ class P3IdInjectionTest {
     o["custom member path with quotes: Equals(cm_quote, deep)"] = read("custom") { queryMembers = Equals("cm_quote", "deep") }
     o["custom member path with injection text: Equals(cm_inj, 6)"] = read("custom") { queryMembers = Equals("cm_inj", 6) }
     o["layer whose h_id is an injection string"] = read("evil") {}
-    o["canaryAfter"] = P3.scalar("SELECT to_regclass(?)::text", "\"$scratch\".canary")
+    o["canaryAfter"] = EdgeSupport.scalar("SELECT to_regclass(?)::text", "\"$scratch\".canary")
     observe("injection-metadata", o)
     case("7 injection", "space_meta h_id = 'x\"; DROP TABLE …; --' and custom member paths with quotes (scratch metadata schema)",
       "Hub: table names are generated hashes; no member paths",

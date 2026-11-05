@@ -8,8 +8,8 @@ import naksha.model.request.query.AnyOp
 import naksha.model.request.query.DoubleOp
 import naksha.model.request.query.PQuery
 import naksha.model.request.query.Property
-import naksha.iml.parity.P3.case
-import naksha.iml.parity.P3.describe
+import naksha.iml.parity.EdgeSupport.case
+import naksha.iml.parity.EdgeSupport.describe
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.request
 import naksha.iml.parity.Parity.timed
@@ -27,7 +27,7 @@ import org.junit.jupiter.api.TestInstance
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 30, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P3LargeLayerTest {
+class LargeLayerEdgeTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val space = "ev-1m"
@@ -50,7 +50,7 @@ class P3LargeLayerTest {
 
   private fun search(storage: ImlStorage, build: naksha.model.request.ReadFeatures.() -> Unit): Run {
     Naksha.cache.clear(storage)
-    val heap = P3.HeapSampler()
+    val heap = EdgeSupport.HeapSampler()
     var count = -1
     val (outcome, ms) = timed {
       try {
@@ -70,7 +70,7 @@ class P3LargeLayerTest {
   @Test
   fun `property search on 1M rows`() {
     val o = LinkedHashMap<String, Any?>()
-    o["dbCount"] = P3.scalar("SELECT count(*) FROM public.\"${P3.table(space)}\"")
+    o["dbCount"] = EdgeSupport.scalar("SELECT count(*) FROM public.\"${EdgeSupport.table(space)}\"")
     val (sel, selMs) = timed { storage.newReadSession().use { s -> (s.executeRead(request(space)) as SuccessResponse).featureTupleList.size } }
     o["selectionOnly(all)"] = "$sel tuple numbers in $selMs ms"
     val last = search(storage) { query.properties = PQuery(Property("properties", "n"), DoubleOp.EQ, 999_999) }
@@ -116,7 +116,7 @@ class P3LargeLayerTest {
   fun `full read of 1M rows - lib vs Hub iterate`() {
     val o = LinkedHashMap<String, Any?>()
     Naksha.cache.clear(storage)
-    val heap = P3.HeapSampler()
+    val heap = EdgeSupport.HeapSampler()
     var selectMs = 0L
     val (count, ms) = timed {
       try {
@@ -133,7 +133,7 @@ class P3LargeLayerTest {
     val (hub, hubMs) = timed { Parity.hubIterateAll(space, 10_000) }
     o["hubIterate(limit=10000)"] = "${hub.first.size} features, ${hub.second} pages, $hubMs ms"
     // Keyset paging (stateless) keeps the heap bounded.
-    val heap2 = P3.HeapSampler()
+    val heap2 = EdgeSupport.HeapSampler()
     var pages = 0
     var total = 0
     val (_, keysetMs) = timed {

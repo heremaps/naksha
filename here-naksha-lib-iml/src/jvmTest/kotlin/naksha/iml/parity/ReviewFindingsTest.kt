@@ -9,7 +9,7 @@ import naksha.base.Version
 import naksha.iml.ImlConfig
 import naksha.iml.ImlStorage
 import naksha.iml.ImlTuple
-import naksha.iml.parity.P5.row
+import naksha.iml.parity.ReviewSupport.row
 import naksha.iml.parity.Parity.observe
 import naksha.model.Naksha
 import naksha.model.NakshaContext
@@ -33,21 +33,21 @@ import java.sql.DriverManager
  * Phase 5 (code review): evidence for findings that phases 1–4 did not cover, and checks of proposed fixes.
  *
  * Characterization tests: they record today's behaviour (`reports/review/<scenario>.json`, `REVIEW|` rows) and assert only their fixture.
- * Everything runs on scratch schemas ([P5.Scratch]) or read-only on the Phase 1–3 seed layers; no Hub-owned object is locked, dropped or written.
+ * Everything runs on scratch schemas ([ReviewSupport.Scratch]) or read-only on the Phase 1–3 seed layers; no Hub-owned object is locked, dropped or written.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 10, unit = java.util.concurrent.TimeUnit.MINUTES)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class P5ReviewTest {
-  private lateinit var scratch: P5.Scratch
-  private val rnd = P5.rnd()
+class ReviewFindingsTest {
+  private lateinit var scratch: ReviewSupport.Scratch
+  private val rnd = ReviewSupport.rnd()
   private val extraConfigs = ArrayList<ImlConfig>()
 
   @BeforeAll
   fun setUp() {
     Parity.assumeEnabled()
     NakshaContext.currentContext().withAppId("iml-eval-parity")
-    scratch = P5.Scratch("r")
+    scratch = ReviewSupport.Scratch("r")
     scratch.addLayer("p5-lock", "t_lock", "ev-v1")
     scratch.addLayer("p5-free", "t_free", "ev-hist")
     scratch.addLayer("p5-hist", "t_hist", "ev-hist")
@@ -75,27 +75,27 @@ class P5ReviewTest {
     val (configA, storageA) = scratch.open("iml-eval-p5-stall-$rnd") { jdbcUrl = Parity.dbUrl!! + "&ApplicationName=p5-url-$rnd" }
     val (configB, _) = scratch.open("iml-eval-p5-bystander-$rnd")
     val other = ImlConfig("iml-eval-p5-other-$rnd", Parity.dbUrl!!).also { extraConfigs.add(it) }
-    val probes = ArrayList<P5.Probe>()
-    val lock = P5.lock(scratch.sqlTable("t_lock"))
+    val probes = ArrayList<ReviewSupport.Probe>()
+    val lock = ReviewSupport.lock(scratch.sqlTable("t_lock"))
     try {
-      val reader = P5.Probe("reader") {
+      val reader = ReviewSupport.Probe("reader") {
         storageA.newReadSession(opts("p5-opt-$rnd")).use { s ->
           val r = s.executeRead(scratch.request("p5-lock") { limit = 5 }) as SuccessResponse
           val n = r.featureTupleList.size
-          "selection ok ($n); materialization: " + try { "ok ${r.features.filterNotNull().size}" } catch (e: Throwable) { P3.describe(e) }
+          "selection ok ($n); materialization: " + try { "ok ${r.features.filterNotNull().size}" } catch (e: Throwable) { EdgeSupport.describe(e) }
         }
       }.start()
-      val waitMs = P5.waitFor(10_000) { P5.lockWaiters("t_lock").isNotEmpty() }
+      val waitMs = ReviewSupport.waitFor(10_000) { ReviewSupport.lockWaiters("t_lock").isNotEmpty() }
       o["readerBlockedOnLockAfterMs"] = waitMs
-      o["blockedBackendApplicationName"] = P5.lockWaiters("t_lock").map { it.second }
+      o["blockedBackendApplicationName"] = ReviewSupport.lockWaiters("t_lock").map { it.second }
       o["urlApplicationName"] = "p5-url-$rnd"
       o["sessionOptionAppName"] = "p5-opt-$rnd"
-      val second = P5.Probe("newReadSession") { storageA.newReadSession(opts("p5-second-$rnd")).use { "session opened" } }.start()
+      val second = ReviewSupport.Probe("newReadSession") { storageA.newReadSession(opts("p5-second-$rnd")).use { "session opened" } }.start()
       Thread.sleep(300)
-      val remove = P5.Probe("removeStorage") { "removed=${Naksha.removeStorage(configA) != null}" }.start()
+      val remove = ReviewSupport.Probe("removeStorage") { "removed=${Naksha.removeStorage(configA) != null}" }.start()
       Thread.sleep(300)
-      val unrelated = P5.Probe("useStorage(other)") { "registered ${Naksha.useStorage(other).id}" }.start()
-      val bystander = P5.Probe("useStorage(already registered)") { "fast path ${Naksha.useStorage(configB).id}" }.start()
+      val unrelated = ReviewSupport.Probe("useStorage(other)") { "registered ${Naksha.useStorage(other).id}" }.start()
+      val bystander = ReviewSupport.Probe("useStorage(already registered)") { "fast path ${Naksha.useStorage(configB).id}" }.start()
       probes += listOf(reader, second, remove, unrelated, bystander)
       Thread.sleep(5_000)
       o["at5s"] = linkedMapOf(
@@ -104,7 +104,7 @@ class P5ReviewTest {
       )
       o["lockHeldMs"] = 5_600 + waitMs
     } finally {
-      P5.release(lock)
+      ReviewSupport.release(lock)
     }
     val released = System.currentTimeMillis()
     probes.forEach { it.join(60_000) }
@@ -133,7 +133,7 @@ class P5ReviewTest {
     val (_, storage) = scratch.open("iml-eval-p5-kill-$rnd")
     val app = "p5-kill-$rnd"
     var thrown: Throwable? = null
-    val lock = P5.lock(scratch.sqlTable("t_lock"))
+    val lock = ReviewSupport.lock(scratch.sqlTable("t_lock"))
     try {
       val t = Thread {
         NakshaContext.currentContext().withAppId("iml-eval-parity")
@@ -141,35 +141,35 @@ class P5ReviewTest {
           storage.newReadSession(opts(app)).use { it.executeRead(scratch.request("p5-lock") { limit = 5 }) }
         } catch (e: Throwable) { thrown = e }
       }.apply { start() }
-      P5.waitFor(10_000) { P5.lockWaiters("t_lock").any { it.second == app } }
-      o["terminated"] = P5.lockWaiters("t_lock").filter { it.second == app }.map { P5.terminate(it.first) }
+      ReviewSupport.waitFor(10_000) { ReviewSupport.lockWaiters("t_lock").any { it.second == app } }
+      o["terminated"] = ReviewSupport.lockWaiters("t_lock").filter { it.second == app }.map { ReviewSupport.terminate(it.first) }
       t.join(30_000)
     } finally {
-      P5.release(lock)
+      ReviewSupport.release(lock)
     }
-    o["libChain"] = thrown?.let { P5.chain(it) } ?: "no exception"
+    o["libChain"] = thrown?.let { ReviewSupport.chain(it) } ?: "no exception"
     // The same statement on a plain JDBC connection, to see which error the driver reports first.
     val rawApp = "p5-raw-$rnd"
     val raw = LinkedHashMap<String, Any?>()
-    val lock2 = P5.lock(scratch.sqlTable("t_lock"))
+    val lock2 = ReviewSupport.lock(scratch.sqlTable("t_lock"))
     try {
       val c = DriverManager.getConnection(Parity.dbUrl!! + "&ApplicationName=$rawApp")
       c.autoCommit = false
       val t = Thread {
         try { c.createStatement().use { it.executeQuery("SELECT id FROM ${scratch.sqlTable("t_lock")} LIMIT 1").close() }; raw["query"] = "ok" }
-        catch (e: Throwable) { raw["query"] = P5.chain(e) }
-        try { c.rollback(); raw["rollback"] = "ok" } catch (e: Throwable) { raw["rollback"] = P5.chain(e) }
+        catch (e: Throwable) { raw["query"] = ReviewSupport.chain(e) }
+        try { c.rollback(); raw["rollback"] = "ok" } catch (e: Throwable) { raw["rollback"] = ReviewSupport.chain(e) }
         runCatching { c.close() }
       }.apply { start() }
-      P5.waitFor(10_000) { P5.lockWaiters("t_lock").any { it.second == rawApp } }
-      P5.lockWaiters("t_lock").filter { it.second == rawApp }.forEach { P5.terminate(it.first) }
+      ReviewSupport.waitFor(10_000) { ReviewSupport.lockWaiters("t_lock").any { it.second == rawApp } }
+      ReviewSupport.lockWaiters("t_lock").filter { it.second == rawApp }.forEach { ReviewSupport.terminate(it.first) }
       t.join(30_000)
     } finally {
-      P5.release(lock2)
+      ReviewSupport.release(lock2)
     }
     o["rawJdbc"] = raw
     observe("p5-masked-error", o)
-    val states = thrown?.let { P5.sqlStates(it) } ?: emptySet()
+    val states = thrown?.let { ReviewSupport.sqlStates(it) } ?: emptySet()
     row("A7 (new, part of F13)", "pg_terminate_backend while a lib-iml read waits; same on a raw JDBC connection",
       "the caller sees the original error (raw JDBC: ${raw["query"]})",
       "lib-iml throws ${o["libChain"]}",
@@ -188,10 +188,10 @@ class P5ReviewTest {
     val o = LinkedHashMap<String, Any?>()
     val table = scratch.sqlTable("t_hist")
     fun counts() = linkedMapOf(
-      "rows" to P3.scalar("SELECT count(*) FROM $table"),
-      "historyRows" to P3.scalar("SELECT count(*) FROM $table WHERE next_version <> 9223372036854775807"),
-      "indexes" to P3.db { c -> c.prepareStatement("SELECT indexname FROM pg_indexes WHERE schemaname = ? AND tablename = 't_hist' ORDER BY 1").use { st -> st.setString(1, scratch.data); st.executeQuery().use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() } } },
-      "spaceMetaKeys" to P3.scalar("SELECT string_agg(k, ',') FROM \"${scratch.meta}\".space_meta, jsonb_object_keys(meta) k WHERE id = 'p5-hist'")
+      "rows" to EdgeSupport.scalar("SELECT count(*) FROM $table"),
+      "historyRows" to EdgeSupport.scalar("SELECT count(*) FROM $table WHERE next_version <> 9223372036854775807"),
+      "indexes" to EdgeSupport.db { c -> c.prepareStatement("SELECT indexname FROM pg_indexes WHERE schemaname = ? AND tablename = 't_hist' ORDER BY 1").use { st -> st.setString(1, scratch.data); st.executeQuery().use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() } } },
+      "spaceMetaKeys" to EdgeSupport.scalar("SELECT string_agg(k, ',') FROM \"${scratch.meta}\".space_meta, jsonb_object_keys(meta) k WHERE id = 'p5-hist'")
     )
     o["before"] = counts()
     val (_, storage) = scratch.open("iml-eval-p5-purge-$rnd") { writeEnabled = true }
@@ -208,7 +208,7 @@ class P5ReviewTest {
         w.commit()
         "committed"
       }
-    } catch (e: Throwable) { P3.describe(e) } finally { context.su = previous }
+    } catch (e: Throwable) { EdgeSupport.describe(e) } finally { context.su = previous }
     o["after"] = counts()
     observe("p5-collection-update-purge", o)
     @Suppress("UNCHECKED_CAST") val before = o["before"] as Map<String, Any?>
@@ -229,7 +229,7 @@ class P5ReviewTest {
     for (write in listOf(false, true)) {
       val (_, storage) = scratch.open("iml-eval-p5-conn-$write-$rnd") { writeEnabled = write }
       val m = LinkedHashMap<String, Any?>()
-      P3.countingConnections { d ->
+      EdgeSupport.countingConnections { d ->
         var before = d.connects.get()
         val session = storage.newReadSession(opts("p5-conn"))
         m["newReadSession"] = d.connects.get() - before
@@ -275,8 +275,8 @@ class P5ReviewTest {
     val o = LinkedHashMap<String, Any?>()
     val perLayer = LinkedHashMap<String, Any?>()
     for (space in listOf("ev-hist", "ev-v1", "ev-p3-geo")) {
-      val table = checkNotNull(P3.table(space))
-      val ids = P3.db { c -> c.createStatement().use { st -> st.executeQuery("SELECT id FROM public.\"$table\" WHERE next_version = 9223372036854775807 AND geo IS NOT NULL ORDER BY id").use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() } } }
+      val table = checkNotNull(EdgeSupport.table(space))
+      val ids = EdgeSupport.db { c -> c.createStatement().use { st -> st.executeQuery("SELECT id FROM public.\"$table\" WHERE next_version = 9223372036854775807 AND geo IS NOT NULL ORDER BY id").use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() } } }
       var currentOk = 0
       var fixedOk = 0
       var skipped = 0
@@ -284,12 +284,12 @@ class P5ReviewTest {
       val fixedFails = ArrayList<String>()
       for (id in ids) {
         val text = try {
-          P3.db { c -> c.prepareStatement("SELECT ST_AsGeoJSON(geo, 15, 0) FROM public.\"$table\" WHERE id = ? AND next_version = 9223372036854775807").use { st -> st.setString(1, id); st.executeQuery().use { rs -> rs.next(); rs.getString(1) } } }
+          EdgeSupport.db { c -> c.prepareStatement("SELECT ST_AsGeoJSON(geo, 15, 0) FROM public.\"$table\" WHERE id = ? AND next_version = 9223372036854775807").use { st -> st.setString(1, id); st.executeQuery().use { rs -> rs.next(); rs.getString(1) } } }
         } catch (e: Throwable) { skipped++; continue } // nested GeometryCollection: ST_AsGeoJSON itself fails (XX000, Phase 3)
         val reference = Platform.fromJSON(text)
         // 1e-7: TWKB keeps 7 decimals (F20), so a correct decode differs by at most 5e-8.
-        val current = runCatching { P5.coordinateDiff(reference, throughTuple(id, text, false), 1e-7) }.getOrElse { "error ${P3.describe(it)}" }
-        val fixed = runCatching { P5.coordinateDiff(reference, throughTuple(id, text, true), 1e-7) }.getOrElse { "error ${P3.describe(it)}" }
+        val current = runCatching { ReviewSupport.coordinateDiff(reference, throughTuple(id, text, false), 1e-7) }.getOrElse { "error ${EdgeSupport.describe(it)}" }
+        val fixed = runCatching { ReviewSupport.coordinateDiff(reference, throughTuple(id, text, true), 1e-7) }.getOrElse { "error ${EdgeSupport.describe(it)}" }
         if (current == null) currentOk++ else currentFails += "$id: $current"
         if (fixed == null) fixedOk++ else fixedFails += "$id: $fixed"
       }
@@ -304,13 +304,13 @@ class P5ReviewTest {
       s.loadTuples(r.featureTupleList, 0, r.featureTupleList.size)
       r.features.filterNotNull().associate { it.id to Platform.fromJSON(Platform.toJSON(it.getRaw(NakshaFeature.GEOMETRY))) }
     }
-    val table = checkNotNull(P3.table("ev-hist"))
+    val table = checkNotNull(EdgeSupport.table("ev-hist"))
     var same = 0
     val notSame = ArrayList<String>()
     for ((id, g) in libGeometries) {
       if (g == null) continue
-      val text = P3.db { c -> c.prepareStatement("SELECT ST_AsGeoJSON(geo, 15, 0) FROM public.\"$table\" WHERE id = ? AND next_version = 9223372036854775807").use { st -> st.setString(1, id); st.executeQuery().use { rs -> rs.next(); rs.getString(1) } } }
-      val d = P5.coordinateDiff(throughTuple(id, text, false), g, 0.0)
+      val text = EdgeSupport.db { c -> c.prepareStatement("SELECT ST_AsGeoJSON(geo, 15, 0) FROM public.\"$table\" WHERE id = ? AND next_version = 9223372036854775807").use { st -> st.setString(1, id); st.executeQuery().use { rs -> rs.next(); rs.getString(1) } } }
+      val d = ReviewSupport.coordinateDiff(throughTuple(id, text, false), g, 0.0)
       if (d == null) same++ else notSame += "$id: $d"
     }
     o["replicaFaithful"] = linkedMapOf("ev-hist features" to libGeometries.size, "identicalToReplica" to same, "differences" to notSame.take(5))
@@ -327,15 +327,15 @@ class P5ReviewTest {
   @Order(6)
   fun `F2 fix check - hide operations as tombstones vs the Hub's extension context`() {
     val o = LinkedHashMap<String, Any?>()
-    val table = checkNotNull(P3.table("ev-ext"))
-    fun ids(where: String): List<String> = P3.db { c -> c.createStatement().use { st -> st.executeQuery("SELECT id FROM public.\"$table\" WHERE $where ORDER BY id").use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() } } }
+    val table = checkNotNull(EdgeSupport.table("ev-ext"))
+    fun ids(where: String): List<String> = EdgeSupport.db { c -> c.createStatement().use { st -> st.executeQuery("SELECT id FROM public.\"$table\" WHERE $where ORDER BY id").use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() } } }
     val current = ids("next_version = 9223372036854775807 AND operation != 'D'") // ImlHistory.kt:58 today
     val fixed = ids("next_version = 9223372036854775807 AND operation NOT IN ('D','H','J')")
-    val operations = P3.db { c -> c.createStatement().use { st -> st.executeQuery("SELECT operation, count(*) FROM public.\"$table\" WHERE next_version = 9223372036854775807 GROUP BY 1 ORDER BY 1").use { rs -> generateSequence { if (rs.next()) "${rs.getString(1)}=${rs.getLong(2)}" else null }.toList() } } }
+    val operations = EdgeSupport.db { c -> c.createStatement().use { st -> st.executeQuery("SELECT operation, count(*) FROM public.\"$table\" WHERE next_version = 9223372036854775807 GROUP BY 1 ORDER BY 1").use { rs -> generateSequence { if (rs.next()) "${rs.getString(1)}=${rs.getLong(2)}" else null }.toList() } } }
     val (ext, _) = Parity.hubIterateAll("ev-ext", 1000, listOf("context" to "extension"))
     val extLive = ext.filter { ((it["properties"] as Map<*, *>)["@ns:com:here:xyz"] as Map<*, *>)["deleted"] != true }.map { it["id"] as String }.sorted()
     val (composite, _) = Parity.hubIterateAll("ev-ext", 1000)
-    val meta = P3.scalar("SELECT meta::text FROM xyz_config.space_meta WHERE id = 'ev-ext'")
+    val meta = EdgeSupport.scalar("SELECT meta::text FROM xyz_config.space_meta WHERE id = 'ev-ext'")
     o["headOperations"] = operations
     o["libToday"] = current
     o["libWithFix"] = fixed

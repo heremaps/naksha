@@ -41,7 +41,7 @@ import kotlin.math.exp
  * Assertions pin what was observed (characterization); every scenario writes its raw diff via [Parity.record].
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class P2FeatureReadParityTest {
+class FeatureReadParityTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
 

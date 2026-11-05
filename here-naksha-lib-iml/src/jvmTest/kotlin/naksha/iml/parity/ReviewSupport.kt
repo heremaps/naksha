@@ -11,7 +11,7 @@ import java.sql.DriverManager
 import java.sql.SQLException
 
 /**
- * Phase 5 (code review) helpers on top of [Parity] and [P3].
+ * Phase 5 (code review) helpers on top of [Parity] and [EdgeSupport].
  *
  * Scratch fixtures: a data schema and a metadata schema owned by one test class (`imlp5<tag><rnd>`), holding plain copies
  * (`CREATE TABLE … AS SELECT`) of Hub layer tables and a `space_meta` with only the scratch rows. Locking, dropping or writing
@@ -19,7 +19,7 @@ import java.sql.SQLException
  *
  * Output: `REVIEW|finding|case|expected|observed|verdict` lines on stdout, and rows appended to `<IML_PARITY_OUT>/p5-cases.tsv`.
  */
-object P5 {
+object ReviewSupport {
   private val outDir: File? = System.getenv("IML_PARITY_OUT")?.takeIf { it.isNotBlank() }?.let { File(it) }
   val strict: Boolean = System.getenv("IML_PARITY_STRICT") == "true"
 
@@ -42,9 +42,9 @@ object P5 {
     private val configs = ArrayList<ImlConfig>()
 
     init {
-      P3.execute("CREATE SCHEMA \"$data\"")
-      P3.execute("CREATE SCHEMA \"$meta\"")
-      P3.execute("CREATE TABLE \"$meta\".space_meta (LIKE xyz_config.space_meta INCLUDING ALL)")
+      EdgeSupport.execute("CREATE SCHEMA \"$data\"")
+      EdgeSupport.execute("CREATE SCHEMA \"$meta\"")
+      EdgeSupport.execute("CREATE TABLE \"$meta\".space_meta (LIKE xyz_config.space_meta INCLUDING ALL)")
     }
 
     fun sqlTable(table: String) = "\"$data\".\"$table\""
@@ -52,11 +52,11 @@ object P5 {
     /** Copies the rows of a Hub layer's table into a plain scratch table and registers it like the Hub would (no `nakshaCollection`). */
     fun addLayer(id: String, table: String, fromHubSpace: String?, metaJson: String = "{}"): String {
       if (fromHubSpace != null) {
-        val hubTable = checkNotNull(P3.table(fromHubSpace)) { "no space_meta row for $fromHubSpace" }
-        val exists = P3.scalar("SELECT to_regclass(?)", "${sqlTable(table)}") != null
-        if (!exists) P3.execute("CREATE TABLE ${sqlTable(table)} AS SELECT * FROM public.\"$hubTable\"")
+        val hubTable = checkNotNull(EdgeSupport.table(fromHubSpace)) { "no space_meta row for $fromHubSpace" }
+        val exists = EdgeSupport.scalar("SELECT to_regclass(?)", "${sqlTable(table)}") != null
+        if (!exists) EdgeSupport.execute("CREATE TABLE ${sqlTable(table)} AS SELECT * FROM public.\"$hubTable\"")
       }
-      P3.execute("INSERT INTO \"$meta\".space_meta (id, schem, h_id, meta) VALUES (?, ?, ?, ?::jsonb)", id, data, table, metaJson)
+      EdgeSupport.execute("INSERT INTO \"$meta\".space_meta (id, schem, h_id, meta) VALUES (?, ?, ?, ?::jsonb)", id, data, table, metaJson)
       return table
     }
 
@@ -78,8 +78,8 @@ object P5 {
 
     override fun close() {
       for (c in configs) runCatching { Naksha.removeStorage(c) }
-      runCatching { P3.execute("DROP SCHEMA IF EXISTS \"$data\" CASCADE") }
-      runCatching { P3.execute("DROP SCHEMA IF EXISTS \"$meta\" CASCADE") }
+      runCatching { EdgeSupport.execute("DROP SCHEMA IF EXISTS \"$data\" CASCADE") }
+      runCatching { EdgeSupport.execute("DROP SCHEMA IF EXISTS \"$meta\" CASCADE") }
     }
   }
 
@@ -97,14 +97,14 @@ object P5 {
   }
 
   /** Backends waiting on a heavyweight lock whose query reads [tableName]: (pid, application_name). */
-  fun lockWaiters(tableName: String): List<Pair<Int, String>> = P3.db { c ->
+  fun lockWaiters(tableName: String): List<Pair<Int, String>> = EdgeSupport.db { c ->
     c.prepareStatement("SELECT pid, application_name FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND query LIKE ? AND pid <> pg_backend_pid()").use { st ->
       st.setString(1, "%$tableName%")
       st.executeQuery().use { rs -> generateSequence { if (rs.next()) rs.getInt(1) to rs.getString(2) else null }.toList() }
     }
   }
 
-  fun terminate(pid: Int): Boolean = P3.scalar("SELECT pg_terminate_backend(?)", pid) == true
+  fun terminate(pid: Int): Boolean = EdgeSupport.scalar("SELECT pg_terminate_backend(?)", pid) == true
 
   fun waitFor(timeoutMs: Long, probe: () -> Boolean): Long {
     val start = System.currentTimeMillis()
@@ -123,7 +123,7 @@ object P5 {
     val thread = Thread({
       naksha.model.NakshaContext.currentContext().withAppId("iml-eval-parity")
       startedAt = System.currentTimeMillis()
-      outcome = try { block() } catch (e: Throwable) { P3.describe(e) }
+      outcome = try { block() } catch (e: Throwable) { EdgeSupport.describe(e) }
       elapsedMs = System.currentTimeMillis() - startedAt
     }, "p5-$name").apply { isDaemon = true }
     fun start(): Probe { thread.start(); return this }

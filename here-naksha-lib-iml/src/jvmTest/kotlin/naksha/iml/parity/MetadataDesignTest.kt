@@ -3,7 +3,7 @@ package naksha.iml.parity
 import naksha.base.Platform
 import naksha.iml.ImlConfig
 import naksha.iml.ImlStorage
-import naksha.iml.parity.P3.case
+import naksha.iml.parity.EdgeSupport.case
 import naksha.iml.parity.Parity.observe
 import naksha.model.Naksha
 import org.junit.jupiter.api.AfterAll
@@ -23,7 +23,7 @@ import org.junit.jupiter.api.TestInstance
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 5, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P4MetadataTest {
+class MetadataDesignTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
 
@@ -49,7 +49,7 @@ class P4MetadataTest {
         val hub = Parity.hubOk("/spaces/$space").json as Map<*, *>
         val collection = checkNotNull(session.getCollectionById(catalog, space))
         val described = Platform.fromJSON(Platform.toJSON(collection)) as Map<*, *>
-        val meta = P3.scalar("SELECT meta::text FROM xyz_config.space_meta WHERE id = ?", space)
+        val meta = EdgeSupport.scalar("SELECT meta::text FROM xyz_config.space_meta WHERE id = ?", space)
         val row = linkedMapOf<String, Any?>(
           "hub.versionsToKeep" to hub["versionsToKeep"],
           "hub.extends" to hub["extends"],
@@ -73,7 +73,7 @@ class P4MetadataTest {
         )
       }
     }
-    o["xyz_config tables"] = P3.db { conn ->
+    o["xyz_config tables"] = EdgeSupport.db { conn ->
       conn.createStatement().use { st ->
         st.executeQuery("SELECT c.relname FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'xyz_config' AND c.relkind IN ('r','p') ORDER BY 1").use { rs ->
           generateSequence { if (rs.next()) rs.getString(1) else null }.toList()

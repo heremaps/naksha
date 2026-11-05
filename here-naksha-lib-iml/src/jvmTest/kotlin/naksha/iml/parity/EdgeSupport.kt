@@ -26,7 +26,7 @@ import java.util.logging.Logger
  * Raw observations go through [Parity.observe] / [Parity.record] to `<IML_PARITY_OUT>/<scenario>.json`.
  * Everything is local only: [Parity.assumeEnabled] validates the hub and DB URLs.
  */
-object P3 {
+object EdgeSupport {
   private val outDir: File? = System.getenv("IML_PARITY_OUT")?.takeIf { it.isNotBlank() }?.let { File(it) }
   private val http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build()
 

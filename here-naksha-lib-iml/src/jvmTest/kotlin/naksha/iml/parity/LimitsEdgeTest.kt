@@ -13,8 +13,8 @@ import naksha.model.request.ReadHandle
 import naksha.model.request.ResultFilter
 import naksha.model.request.SuccessResponse
 import naksha.model.request.ops.Equals
-import naksha.iml.parity.P3.case
-import naksha.iml.parity.P3.describe
+import naksha.iml.parity.EdgeSupport.case
+import naksha.iml.parity.EdgeSupport.describe
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.request
 import naksha.iml.parity.Parity.timed
@@ -31,7 +31,7 @@ import org.junit.jupiter.api.TestInstance
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 10, unit = java.util.concurrent.TimeUnit.MINUTES)
-class P3LimitsTest {
+class LimitsEdgeTest {
   private val configs = ArrayList<ImlConfig>()
 
   @BeforeAll
@@ -59,7 +59,7 @@ class P3LimitsTest {
       // A selective result filter: only n >= 119000 qualifies, which is beyond the first 1 000 candidates.
       val filtered = session.executeRead(request("ev-big") {
         limit = 10
-        resultFilters.add(this@P3LimitsTest.resultFilter { ft -> ft.takeIf { ((ft.feature?.properties?.get("n") as Number?)?.toInt() ?: -1) >= 119_000 } })
+        resultFilters.add(this@LimitsEdgeTest.resultFilter { ft -> ft.takeIf { ((ft.feature?.properties?.get("n") as Number?)?.toInt() ?: -1) >= 119_000 } })
       }) as SuccessResponse
       o["resultFilter n>=119000 limit=10"] = "${filtered.features.size} features, keys=${filtered.keys.toList()}"
       o["hub /iterate?limit=1000"] = Parity.hubOk("/spaces/ev-big/iterate", listOf("limit" to "1000")).let { "${it.features.size} features, nextPageToken=${it.field("nextPageToken") != null}" }
@@ -76,7 +76,7 @@ class P3LimitsTest {
   fun `JDBC connections per read - plain, filtered and paged`() {
     val s = open("iml-eval-p3-conns")
     val o = LinkedHashMap<String, Any?>()
-    P3.countingConnections { driver ->
+    EdgeSupport.countingConnections { driver ->
       fun count(name: String, build: naksha.model.request.ReadFeatures.() -> Unit) {
         Naksha.cache.clear(s)
         val before = driver.connects.get()

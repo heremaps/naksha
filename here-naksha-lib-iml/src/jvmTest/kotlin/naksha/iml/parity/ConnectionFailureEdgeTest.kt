@@ -5,8 +5,8 @@ import naksha.iml.ImlStorage
 import naksha.model.Naksha
 import naksha.model.SessionOptions
 import naksha.model.request.SuccessResponse
-import naksha.iml.parity.P3.case
-import naksha.iml.parity.P3.describe
+import naksha.iml.parity.EdgeSupport.case
+import naksha.iml.parity.EdgeSupport.describe
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.request
 import org.junit.jupiter.api.AfterAll
@@ -25,7 +25,7 @@ import org.junit.jupiter.api.TestMethodOrder
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @org.junit.jupiter.api.Timeout(value = 10, unit = java.util.concurrent.TimeUnit.MINUTES)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class P3ConnectionFailureTest {
+class ConnectionFailureEdgeTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
   private val app = "p3-kill"
@@ -40,7 +40,7 @@ class P3ConnectionFailureTest {
 
   @AfterAll
   fun tearDown() {
-    runCatching { P3.docker("unpause", "imleval-postgres") }
+    runCatching { EdgeSupport.docker("unpause", "imleval-postgres") }
     if (::config.isInitialized) runCatching { Naksha.removeStorage(config) }
   }
 
@@ -50,7 +50,7 @@ class P3ConnectionFailureTest {
 
   // Lazy materialization (response.features → TupleCache) opens its own session with default options, so its backend does not carry
   // the caller's application name; match lib-iml's exact-load statement text as well (ImlReadSession.loadExact).
-  private fun killLib(): Int = (P3.scalar(
+  private fun killLib(): Int = (EdgeSupport.scalar(
     "SELECT count(pg_terminate_backend(pid)) FROM pg_stat_activity WHERE (application_name = ? OR query LIKE 'SELECT id, i, version, next_version, operation, author, jsondata%') " +
       "AND pid <> pg_backend_pid()", app) as Number).toInt()
 
@@ -123,7 +123,7 @@ class P3ConnectionFailureTest {
       }
       t1.start()
       Thread.sleep(1_500) // materializing
-      val pause = P3.docker("pause", "imleval-postgres")
+      val pause = EdgeSupport.docker("pause", "imleval-postgres")
       val pausedAt = System.currentTimeMillis()
       val t2 = Thread {
         naksha.model.NakshaContext.currentContext().withAppId("iml-eval-parity")
@@ -136,7 +136,7 @@ class P3ConnectionFailureTest {
       }
       t2.start()
       Thread.sleep(12_000)
-      val unpause = P3.docker("unpause", "imleval-postgres")
+      val unpause = EdgeSupport.docker("unpause", "imleval-postgres")
       val unpausedAfter = System.currentTimeMillis() - pausedAt
       t1.join(180_000)
       t2.join(180_000)
@@ -163,15 +163,15 @@ class P3ConnectionFailureTest {
     Naksha.cache.clear(storage)
     val session = storage.newReadSession(options())
     val lazy = session.executeRead(request("ev-hist")) as SuccessResponse
-    val restart = P3.docker("restart", "imleval-postgres")
+    val restart = EdgeSupport.docker("restart", "imleval-postgres")
     o["dockerRestart"] = restart.first
     // Immediately after restart returns the server may still be starting.
     o["materializeImmediately"] = try { "ok ${lazy.features.filterNotNull().size} of ${lazy.featureTupleList.size}" } catch (e: Throwable) { describe(e) }
-    o["dbUpAfterMs"] = P3.waitFor(120_000, "postgres") { P3.dbUp() }
+    o["dbUpAfterMs"] = EdgeSupport.waitFor(120_000, "postgres") { EdgeSupport.dbUp() }
     o["sameSessionNewRead"] = try { "ok ${(session.executeRead(request("ev-hist")) as SuccessResponse).features.filterNotNull().size}" } catch (e: Throwable) { describe(e) }
     o["sameStorageNewSession"] = try { storage.newReadSession(options()).use { s -> "ok ${(s.executeRead(request("ev-big") { limit = 10 }) as SuccessResponse).features.filterNotNull().size}" } } catch (e: Throwable) { describe(e) }
     session.close()
-    o["hubUpAfterMs"] = P3.waitFor(180_000, "hub") { P3.hubUp() }
+    o["hubUpAfterMs"] = EdgeSupport.waitFor(180_000, "hub") { EdgeSupport.hubUp() }
     o["hubFirstRead"] = Parity.hub("/spaces/ev-hist/iterate", listOf("limit" to "5")).toString()
     var hubOkAfter = -1L
     val start = System.currentTimeMillis()

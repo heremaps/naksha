@@ -35,7 +35,7 @@ import org.junit.jupiter.api.TestInstance
  * lib-iml bounds are packed manual versions: `Version.manual(n, Action.VERSION).number`.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class P2VersionParityTest {
+class VersionParityTest {
   private lateinit var config: ImlConfig
   private lateinit var storage: ImlStorage
 

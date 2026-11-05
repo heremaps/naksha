@@ -2,8 +2,8 @@ package naksha.iml.parity
 
 import naksha.base.Platform
 import naksha.iml.ImlTuple
-import naksha.iml.parity.P3.hub
-import naksha.iml.parity.P3.pathId
+import naksha.iml.parity.EdgeSupport.hub
+import naksha.iml.parity.EdgeSupport.pathId
 import naksha.iml.parity.Parity.diff
 import naksha.iml.parity.Parity.observe
 import naksha.iml.parity.Parity.record
@@ -38,7 +38,7 @@ import java.util.UUID
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @TestMethodOrder(MethodOrderer.OrderAnnotation::class)
-class P6BranchReadSpikeTest {
+class BranchReadSpikeTest {
   private val rnd = UUID.randomUUID().toString().replace("-", "").take(6)
   private val sid = "ev-p6-$rnd"
   private val bigSid = "ev-p6big-$rnd"
@@ -83,7 +83,7 @@ class P6BranchReadSpikeTest {
   @AfterAll
   fun tearDown() {
     for (space in created.reversed()) {
-      val root = runCatching { P3.table(space) }.getOrNull()
+      val root = runCatching { EdgeSupport.table(space) }.getOrNull()
       for (b in listOf("bb", "ba", "p6probe")) runCatching { hub("DELETE", "/spaces/$space/branches/$b") }
       runCatching { hub("DELETE", "/spaces/$space") }
       if (root != null) dropBranchTables(root)
@@ -94,7 +94,7 @@ class P6BranchReadSpikeTest {
   // Fixture helpers (Hub REST)
 
   private fun createSpace(id: String, versionsToKeep: Int) {
-    P3.recreateSpace(id, versionsToKeep)
+    EdgeSupport.recreateSpace(id, versionsToKeep)
     created += id
   }
 
@@ -106,7 +106,7 @@ class P6BranchReadSpikeTest {
   private fun poly(id: String, ring: List<List<Double>>, name: String) = feature(id, mapOf("type" to "Polygon", "coordinates" to listOf(ring)), name)
 
   private fun put(space: String, features: List<Map<String, Any?>>, ref: String? = null) {
-    val r = P3.putFeatures(space, features, if (ref == null) emptyList() else listOf("versionRef" to ref))
+    val r = EdgeSupport.putFeatures(space, features, if (ref == null) emptyList() else listOf("versionRef" to ref))
     log["put ${features.map { it["id"] }}${ref?.let { "@$it" } ?: ""}"] = r.features.map { (it["properties"] as Map<*, *>)[xyz].let { n -> (n as Map<*, *>)["version"] } }
   }
 
@@ -123,7 +123,7 @@ class P6BranchReadSpikeTest {
   }
 
   private fun dropBranchTables(root: String) {
-    P3.db { c ->
+    EdgeSupport.db { c ->
       val tables = c.prepareStatement("SELECT tablename FROM pg_tables WHERE schemaname = 'public' AND tablename ~ ?").use { st ->
         st.setString(1, "^" + root + "_[0-9]+_[0-9]+_[0-9]+$")
         st.executeQuery().use { rs -> generateSequence { if (rs.next()) rs.getString(1) else null }.toList() }
@@ -209,9 +209,9 @@ class P6BranchReadSpikeTest {
   @Test
   @Order(1)
   fun `branch path from pg_tables equals the Hub's branch path`() {
-    val root = checkNotNull(P3.table(sid))
+    val root = checkNotNull(EdgeSupport.table(sid))
     val out = LinkedHashMap<String, Any?>()
-    P3.db { c ->
+    EdgeSupport.db { c ->
       for (b in listOf("ba", "bb")) {
         val admin = adminBranch(sid, b)
         val nodeId = (admin["nodeId"] as Number).toInt()
@@ -229,10 +229,10 @@ class P6BranchReadSpikeTest {
   @Test
   @Order(2)
   fun `single-statement composed read equals the Hub for every ref of a nested branch`() {
-    val root = checkNotNull(P3.table(sid))
+    val root = checkNotNull(EdgeSupport.table(sid))
     val results = LinkedHashMap<String, String>()
     val hubErrors = LinkedHashMap<String, String>()
-    P3.db { c ->
+    EdgeSupport.db { c ->
       val main = resolvePath(c, "public", root, 0)
       val ba = resolvePath(c, "public", root, (adminBranch(sid, "ba")["nodeId"] as Number).toInt())
       val bb = resolvePath(c, "public", root, (adminBranch(sid, "bb")["nodeId"] as Number).toInt())
@@ -271,9 +271,9 @@ class P6BranchReadSpikeTest {
   @Test
   @Order(3)
   fun `keyset paging over (level, i) through a nested branch has no gaps or repeats`() {
-    val root = checkNotNull(P3.table(sid))
+    val root = checkNotNull(EdgeSupport.table(sid))
     val out = LinkedHashMap<String, Any?>()
-    P3.db { c ->
+    EdgeSupport.db { c ->
       val bb = resolvePath(c, "public", root, (adminBranch(sid, "bb")["nodeId"] as Number).toInt())
       val all = read(c, bb, null).map { it["id"] as String }
       val paged = ArrayList<String>()
@@ -309,19 +309,19 @@ class P6BranchReadSpikeTest {
   @Order(4)
   fun `a branch on a versionsToKeep=1 layer`() {
     createSpace(v1Sid, 1)
-    P3.putFeatures(v1Sid, listOf(pt("v1", 1.0, 1.0, "v1 main"), pt("v2", 2.0, 2.0, "v2 main"), pt("v3", 3.0, 3.0, "v3 main")))
+    EdgeSupport.putFeatures(v1Sid, listOf(pt("v1", 1.0, 1.0, "v1 main"), pt("v2", 2.0, 2.0, "v2 main"), pt("v3", 3.0, 3.0, "v3 main")))
     val r = hub("POST", "/spaces/$v1Sid/branches", Platform.toJSON(mapOf("id" to "p6probe", "baseRef" to "main:HEAD")))
     val out = linkedMapOf<String, Any?>("createStatus" to r.status, "createBody" to r.body.take(300))
     if (r.status == 200) {
-      out["branchInsert"] = P3.hub("PUT", "/spaces/$v1Sid/features", Platform.toJSON(mapOf("type" to "FeatureCollection", "features" to listOf(pt("vb", 4.0, 4.0, "vb branch")))), "application/geo+json", listOf("versionRef" to "p6probe")).status
+      out["branchInsert"] = EdgeSupport.hub("PUT", "/spaces/$v1Sid/features", Platform.toJSON(mapOf("type" to "FeatureCollection", "features" to listOf(pt("vb", 4.0, 4.0, "vb branch")))), "application/geo+json", listOf("versionRef" to "p6probe")).status
       out["branchDeleteInherited"] = hub("DELETE", "/spaces/$v1Sid/features/v3", query = listOf("versionRef" to "p6probe")).status
       // main changes after the branch point
-      P3.putFeatures(v1Sid, listOf(pt("v1", 1.5, 1.5, "v1 main after branch")))
+      EdgeSupport.putFeatures(v1Sid, listOf(pt("v1", 1.5, 1.5, "v1 main after branch")))
       out["mainDelete"] = hub("DELETE", "/spaces/$v1Sid/features/v2").status
       val hubBranch = Parity.hubOk("/spaces/$v1Sid/iterate", listOf("limit" to "100", "versionRef" to "p6probe")).features
       out["hubBranch"] = hubBranch.map { "${it["id"]}:${((it["properties"] as Map<*, *>)["name"])}" }.sorted()
-      val root = checkNotNull(P3.table(v1Sid))
-      P3.db { c ->
+      val root = checkNotNull(EdgeSupport.table(v1Sid))
+      EdgeSupport.db { c ->
         val levels = resolvePath(c, "public", root, (adminBranch(v1Sid, "p6probe")["nodeId"] as Number).toInt())
         out["branchTableRows"] = c.createStatement().use { st ->
           st.executeQuery("SELECT id, version, next_version, operation FROM public.\"${levels.last().table}\" ORDER BY i").use { rs ->
@@ -346,15 +346,15 @@ class P6BranchReadSpikeTest {
     createSpace(bigSid, 100)
     val n = 120_000
     for (chunk in (0 until n).chunked(10_000)) {
-      P3.putFeatures(bigSid, chunk.map { pt("g%06d".format(it), 8.0 + (it % 400) * 0.001, 50.0 + (it / 400) * 0.001, "g $it") })
+      EdgeSupport.putFeatures(bigSid, chunk.map { pt("g%06d".format(it), 8.0 + (it % 400) * 0.001, 50.0 + (it / 400) * 0.001, "g $it") })
     }
     branch(bigSid, "bx", "main:HEAD")
-    P3.putFeatures(bigSid, (0 until 100).map { pt("g%06d".format(it * 997), 9.0, 51.0, "updated in bx") }, listOf("versionRef" to "bx"))
+    EdgeSupport.putFeatures(bigSid, (0 until 100).map { pt("g%06d".format(it * 997), 9.0, 51.0, "updated in bx") }, listOf("versionRef" to "bx"))
     for (k in 0 until 10) delete(bigSid, "g%06d".format(k * 7919 + 3), "bx")
-    P3.putFeatures(bigSid, (0 until 10).map { pt("bx%02d".format(it), 9.5, 51.5, "bx only") }, listOf("versionRef" to "bx"))
-    val root = checkNotNull(P3.table(bigSid))
+    EdgeSupport.putFeatures(bigSid, (0 until 10).map { pt("bx%02d".format(it), 9.5, 51.5, "bx only") }, listOf("versionRef" to "bx"))
+    val root = checkNotNull(EdgeSupport.table(bigSid))
     val out = LinkedHashMap<String, Any?>()
-    P3.db { c ->
+    EdgeSupport.db { c ->
       val levels = resolvePath(c, "public", root, (adminBranch(bigSid, "bx")["nodeId"] as Number).toInt())
       val sql = composedSql("public", levels, null, "TRUE", false)
       fun spikeStrings(): Pair<Int, Long> = Parity.timed {
