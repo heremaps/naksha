@@ -21,9 +21,10 @@ package com.here.naksha.app.service.http.tasks.processor;
 import com.here.naksha.lib.core.util.PropertyPathUtil;
 import java.util.Map;
 import java.util.Set;
+import naksha.base.Platform;
 import naksha.model.objects.NakshaFeature;
 
-public final class PropertySelectionPostProcessor implements FeaturePostProcessor<NakshaFeature> {
+public final class PropertySelectionPostProcessor<T extends NakshaFeature> implements FeaturePostProcessor<T> {
 
   private final Set<String> propPaths;
 
@@ -32,10 +33,12 @@ public final class PropertySelectionPostProcessor implements FeaturePostProcesso
   }
 
   @Override
-  public NakshaFeature postProcess(NakshaFeature feature) {
-    Map<String, Object> tgtMap = PropertyPathUtil.extractPropertyMapFromFeature(feature, propPaths);
-    NakshaFeature newF = new NakshaFeature();
-    newF.putAll(tgtMap);
-    return newF;
+  public T postProcess(T feature) {
+    final Map<String, Object> targetMap = PropertyPathUtil.extractPropertyMapFromFeature(feature, propPaths);
+    @SuppressWarnings("unchecked")
+    final Class<T> type = (Class<T>) feature.getClass();
+    final T selected = Platform.javaProxy(Platform.newMap(), type);
+    selected.putAll(targetMap);
+    return selected;
   }
 }

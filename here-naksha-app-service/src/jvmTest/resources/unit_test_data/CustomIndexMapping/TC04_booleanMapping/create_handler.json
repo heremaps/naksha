@@ -1,0 +1,10 @@
+{
+  "id": "boolean_mapping_handler",
+  "type": "EventHandler",
+  "title": "Boolean mapping Handler",
+  "description": "Boolean member mapping test",
+  "className": "com.here.naksha.lib.handlers.DefaultStorageHandler",
+  "properties": {
+    "storageId": "${dataDb.storageId}"
+  }
+}

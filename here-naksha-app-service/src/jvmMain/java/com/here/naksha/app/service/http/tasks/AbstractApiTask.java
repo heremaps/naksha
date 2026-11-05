@@ -19,6 +19,7 @@
 package com.here.naksha.app.service.http.tasks;
 
 import static com.here.naksha.common.http.apis.ApiParamsConst.DEF_ADMIN_FEATURE_LIMIT;
+import static com.here.naksha.common.http.apis.ApiParamsConst.LIMIT;
 import static java.util.Collections.emptyList;
 import static java.util.Objects.requireNonNull;
 import static naksha.base.JvmBoxingUtil.box;
@@ -27,7 +28,12 @@ import static naksha.model.util.ResultHelper.readFeatureFromResponse;
 
 import com.here.naksha.app.service.http.HttpResponseType;
 import com.here.naksha.app.service.http.NakshaHttpVerticle;
+import com.here.naksha.app.service.http.apis.ApiParams;
+import com.here.naksha.app.service.http.ops.PropertySelectionUtil;
+import com.here.naksha.app.service.http.ops.TagQueryUtil;
 import com.here.naksha.app.service.http.tasks.processor.FeaturePostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.PropertySelectionPostProcessor;
+import com.here.naksha.app.service.http.tasks.processor.SequentialPostProcessor;
 import com.here.naksha.app.service.models.IterateHandle;
 import com.here.naksha.lib.core.AbstractTask;
 import com.here.naksha.lib.core.INaksha;
@@ -41,10 +47,10 @@ import java.util.List;
 import java.util.Map;
 import naksha.base.AnyObject;
 import naksha.base.FromJsonOptions;
-import naksha.base.Platform;
 import naksha.base.Action;
 import naksha.model.NakshaContext;
 import naksha.base.NakshaError;
+import naksha.base.Platform;
 import naksha.model.SessionOptions;
 import naksha.model.XyzFeatureCollection;
 import naksha.model.objects.NakshaFeature;
@@ -54,6 +60,8 @@ import naksha.model.request.ReadFeatures;
 import naksha.model.request.Response;
 import naksha.model.request.SuccessResponse;
 import naksha.model.request.WriteRequest;
+import naksha.model.request.ops.Op;
+import com.here.naksha.lib.core.models.payload.events.QueryParameterList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -106,6 +114,25 @@ public abstract class AbstractApiTask<T extends XyzResponse>
 
   protected XyzResponse handleNoElements(@NotNull NoElementsStrategy noElementsStrategy) {
     return verticle.sendErrorResponse(routingContext, noElementsStrategy.nakshaError);
+  }
+
+  protected <F extends NakshaFeature> @NotNull XyzResponse executeAdminListRequest(
+      @NotNull String collection,
+      @NotNull Class<F> type,
+      @Nullable FeaturePostProcessor<F> masking) {
+    final QueryParameterList queryParams = ApiParams.queryParamsFromRequest(routingContext);
+    int limit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_ADMIN_FEATURE_LIMIT);
+    limit = (limit < 0 || limit > DEF_ADMIN_FEATURE_LIMIT) ? DEF_ADMIN_FEATURE_LIMIT : limit;
+    final var propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
+    final FeaturePostProcessor<F> postProcessor = SequentialPostProcessor.combine(
+        masking, propPaths == null ? null : new PropertySelectionPostProcessor<>(propPaths));
+    final Op tagOp = TagQueryUtil.tagOpFromParams(queryParams);
+    final ReadFeatures request = new ReadFeatures().withCollectionId(collection);
+    request.setQueryMembers(tagOp);
+    request.setLimit(limit);
+    request.setCatalogId(naksha().getAdminMapId());
+    final Response response = executeReadRequestFromSpaceStorage(request);
+    return transformResponseToXyzCollectionResponse(response, type, 0, limit, null, postProcessor);
   }
 
   protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzFeatureResponse(
@@ -214,11 +241,8 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       final List<NakshaFeature> insertedFeatures = featureMap.get(Action.CREATE);
       final List<NakshaFeature> updatedFeatures = featureMap.get(Action.UPDATE);
       final List<NakshaFeature> deletedFeatures = featureMap.get(Action.DELETE);
-      // extract violations if available
-      List<NakshaFeature> violations = null;
-      if (successResponse instanceof ContextXyzFeatureResponse cr) {
-        violations = cr.getViolations();
-      }
+      // extract violations if available, and post-process them the same way as features
+      final List<NakshaFeature> violations = postProcessedViolations(successResponse, postProcessor);
       if (featureMap.isEmpty() && (violations == null || violations.isEmpty())) {
         if (isDeleteOperation) {
           logger.info("No data found, returning empty collection");
@@ -287,6 +311,27 @@ public abstract class AbstractApiTask<T extends XyzResponse>
   protected <P extends AnyObject> @NotNull P parseRequestBodyAs(final Class<P> type) {
     final String bodyJson = routingContext.body().asString();
     return requireNonNull(box(Platform.fromJSON(bodyJson, FromJsonOptions.DEFAULT), type));
+  }
+
+  /**
+   * Extracts violations from a {@link ContextXyzFeatureResponse} and applies the given post-processor to each one.
+   * Returns {@code null} if the response carries no violations.
+   */
+  private static @Nullable List<NakshaFeature> postProcessedViolations(
+      SuccessResponse response,
+      @Nullable FeaturePostProcessor<NakshaFeature> postProcessor) {
+    if (!(response instanceof ContextXyzFeatureResponse cr)) {
+      return null;
+    }
+    final List<NakshaFeature> rawViolations = cr.getViolations();
+    if (rawViolations == null || postProcessor == null) {
+      return rawViolations;
+    }
+    final List<NakshaFeature> violations = new ArrayList<>();
+    for (NakshaFeature violation : rawViolations) {
+      violations.add(postProcessor.postProcess(violation));
+    }
+    return violations;
   }
 
   /**

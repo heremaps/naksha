@@ -86,3 +86,6 @@
       --targetMapId "targetmapid" \
       --targetCollectionId "targetcolid"
     ```
+## Streaming (POC)
+
+The `provider`, `config`, `stream` and `sync` commands are described in the [README](../README.md#streaming-poc).

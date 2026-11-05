@@ -1,0 +1,13 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "id": "inactive",
+      "type": "Feature",
+      "properties": {
+        "active": false,
+        "score": 20
+      }
+    }
+  ]
+}

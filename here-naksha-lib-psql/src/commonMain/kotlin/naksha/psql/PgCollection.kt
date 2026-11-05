@@ -10,6 +10,7 @@ import naksha.model.objects.Index
 import naksha.model.objects.IndexList
 import naksha.model.objects.Member
 import naksha.model.objects.MemberList
+import naksha.model.objects.MemberType
 import naksha.model.objects.MemberType.MemberType_C.BYTE_ARRAY
 import naksha.model.objects.MemberType.MemberType_C.INT64
 import naksha.model.objects.MemberType.MemberType_C.SPATIAL
@@ -374,9 +375,27 @@ open class PgCollection internal constructor(
      *
      * Actually all other values can be changes, with only some having an impact to this object.
      * @param newHead the new _HEAD_ state to be verified.
-     * @throws NakshaException with error [ILLEGAL_STATE] if the columns or indices in the given `newHead` have been changed.
+     * @throws NakshaException with error [CONFLICT][NakshaError.CONFLICT] if any of these values in the given `newHead` have been changed.
      */
     fun verifyNewHeadState(newHead: NakshaCollection) {
-        // TODO: Implement me!
+        val candidate = PgCollection(catalog, newHead)
+        fun immutable(unchanged: Boolean, field: String) {
+            if (!unchanged) throw NakshaException(NakshaError.CONFLICT, "The '$field' of the existing collection '$id' must not be changed")
+        }
+        immutable(candidate.id == id, "id")
+        immutable(candidate.shift == shift, "shift")
+        immutable(candidate.partitions == partitions, "partitions")
+        immutable(candidate.storageClass == storageClass, "storageClass")
+        immutable(candidate.columns.contentEquals(columns) && memberKeys(newHead) == memberKeys(head), "members")
+        immutable(indexKeys(candidate.headIndices) == indexKeys(headIndices)
+            && indexKeys(candidate.historyIndices) == indexKeys(historyIndices), "indices")
     }
+
+    // Columns do not know the JSON path from which a member is materialized.
+    private fun memberKeys(collection: NakshaCollection): Set<Triple<String, MemberType, List<Any?>>> =
+        collection.useMembers().filterNotNull().map { member -> Triple(member.name, member.dataType, member.path.toList()) }.toSet()
+
+    private fun indexKeys(indices: Array<PgIndex>): Set<String> = indices.map { index ->
+        "${index.name}(${index.on.joinToString { it.name }})${index.includes.joinToString { it.name }}:${index.unique}:${index.partial}"
+    }.toSet()
 }

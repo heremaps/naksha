@@ -1,0 +1,39 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "first",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13,
+          52
+        ]
+      },
+      "properties": {
+        "score": 10,
+        "labels": [
+          "blue"
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "match",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          13,
+          52
+        ]
+      },
+      "properties": {
+        "score": 51,
+        "labels": [
+          "red"
+        ]
+      }
+    }
+  ]
+}

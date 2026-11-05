@@ -20,6 +20,10 @@ plugins {
     id("jacoco")
 }
 
+val internalMavenRepoUrl = providers.gradleProperty("internalMavenRepoUrl")
+    .orNull
+    ?.takeIf { it.isNotBlank() }
+
 //configurations.implementation {
 //    exclude(module = "commons-logging")
 //}
@@ -214,8 +218,12 @@ allprojects {
     version = getRequiredPropertyFromRootProject("version")
 
     repositories {
-        maven("https://repo.osgeo.org/repository/release/")
-        mavenCentral()
+        if (internalMavenRepoUrl != null) {
+            maven(internalMavenRepoUrl)
+        } else {
+            maven("https://repo.osgeo.org/repository/release/")
+            mavenCentral()
+        }
         mavenLocal()
     }
 

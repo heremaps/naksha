@@ -20,7 +20,14 @@ group = rootProject.group
 version = rootProject.version
 
 repositories {
-    maven("https://repo.osgeo.org/repository/release/")
-    mavenCentral()
+    val internalMavenRepoUrl = providers.gradleProperty("internalMavenRepoUrl")
+        .orNull
+        ?.takeIf { it.isNotBlank() }
+    if (internalMavenRepoUrl != null) {
+        maven(internalMavenRepoUrl)
+    } else {
+        maven("https://repo.osgeo.org/repository/release/")
+        mavenCentral()
+    }
     mavenLocal()
 }

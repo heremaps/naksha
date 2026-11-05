@@ -5,7 +5,6 @@ import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.AMPE
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.COMMA;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.END;
 import static com.here.naksha.lib.core.models.payload.events.QueryDelimiter.PLUS;
-import static naksha.model.TagNormalizer.normalizeTag;
 
 import com.here.naksha.lib.core.models.payload.events.QueryDelimiter;
 import com.here.naksha.lib.core.models.payload.events.QueryParameter;
@@ -15,6 +14,9 @@ import java.util.List;
 import java.util.Set;
 import naksha.base.NakshaError;
 import naksha.base.NakshaException;
+import naksha.model.request.RequestQuery;
+import naksha.model.request.ops.Op;
+import naksha.model.request.ops.QueryConverter;
 import naksha.model.request.query.ITagQuery;
 import naksha.model.request.query.TagAnd;
 import naksha.model.request.query.TagExists;
@@ -51,6 +53,16 @@ public class TagQueryUtil {
       return rootTagOrQuery.get(0);
     }
     return rootTagOrQuery;
+  }
+
+  public static @Nullable Op tagOpFromParams(final @Nullable QueryParameterList queryParams) {
+    final ITagQuery tagQuery = tagQueryFromParams(queryParams);
+    if (tagQuery == null) {
+      return null;
+    }
+    final RequestQuery requestQuery = new RequestQuery();
+    requestQuery.setTags(tagQuery);
+    return QueryConverter.PgQueryConverter_C.convert(requestQuery);
   }
 
   private static void processParams(
@@ -159,6 +171,6 @@ public class TagQueryUtil {
   }
 
   private static TagExists tagExists(String tag) {
-    return new TagExists(normalizeTag(tag));
+    return new TagExists(tag);
   }
 }

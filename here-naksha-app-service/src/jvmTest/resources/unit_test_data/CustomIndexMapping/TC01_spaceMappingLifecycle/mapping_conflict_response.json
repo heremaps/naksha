@@ -1,0 +1,5 @@
+{
+  "type": "ErrorResponse",
+  "error": "Conflict",
+  "errorMessage": "customIndexMapping cannot be changed"
+}

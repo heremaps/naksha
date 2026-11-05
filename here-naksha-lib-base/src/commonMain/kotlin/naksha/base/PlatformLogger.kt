@@ -63,4 +63,10 @@ interface PlatformLogger {
      * final message to log or _null_ to suppress logging for some other reason.
      */
     fun atError(msgFn: () -> String?)
+
+    /**
+     * Logs statistics (e.g. `StorageReqStats`) used by monitoring dashboards, independent of [PlatformUtil.ENABLE_INFO].
+     * On JVM it is logged at INFO level, on JS (PLV8) it is a no-op.
+     */
+    fun stats(msg: String, vararg args: Any?)
 }

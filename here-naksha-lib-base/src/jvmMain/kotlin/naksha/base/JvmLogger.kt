@@ -50,4 +50,8 @@ class JvmLogger : PlatformLogger {
         }
     }
 
+    override fun stats(msg: String, vararg args: Any?) {
+        if (logger.isInfoEnabled) logger.info(msg, *args)
+    }
+
 }

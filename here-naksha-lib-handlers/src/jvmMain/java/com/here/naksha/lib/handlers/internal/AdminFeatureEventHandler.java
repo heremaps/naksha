@@ -21,6 +21,9 @@ package com.here.naksha.lib.handlers.internal;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.NOT_IMPLEMENTED;
 import static com.here.naksha.lib.handlers.AbstractEventHandler.EventProcessingStrategy.PROCESS;
 import static com.here.naksha.lib.handlers.internal.IntValidationUtil.SUCCESSFUL_VALIDATION;
+import static naksha.model.util.RequestHelper.readFeaturesByIdRequest;
+
+import java.util.function.Function;
 
 import com.here.naksha.lib.core.IEvent;
 import com.here.naksha.lib.core.INaksha;
@@ -29,7 +32,10 @@ import com.here.naksha.lib.handlers.util.RequestTypesUtil;
 import naksha.model.IStorage;
 import naksha.model.NakshaContext;
 import naksha.model.SessionOptions;
+import naksha.model.objects.NakshaCollection;
 import naksha.model.objects.NakshaFeature;
+import naksha.model.request.ReadFeatures;
+import naksha.model.util.ResultHelper;
 import naksha.model.request.ErrorResponse;
 import naksha.model.request.ReadRequest;
 import naksha.model.request.Request;
@@ -39,6 +45,7 @@ import naksha.model.request.Write;
 import naksha.model.request.WriteOp;
 import naksha.model.request.WriteRequest;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,6 +123,31 @@ abstract class AdminFeatureEventHandler<FEATURE extends NakshaFeature> extends A
     } else {
       return validateNonDeleteInstruction(write);
     }
+  }
+
+  /**
+   * Validates the custom index mappings of the collection definition of a Space or Handler. Every write must have valid
+   * mappings, an update must not change the mappings of the saved configuration.
+   * @param write the write of the configuration.
+   * @param current the collection definition of the written configuration.
+   * @param collectionOf returns the collection definition of the saved configuration.
+   */
+  protected @NotNull Response collectionMappingValidation(
+      @NotNull Write write, @Nullable NakshaCollection current, @NotNull Function<FEATURE, NakshaCollection> collectionOf) {
+    final Response validation = IntValidationUtil.collectionMappingValidation(current);
+    if (validation instanceof ErrorResponse || !WriteOp.UPDATE.equals(write.getOp())) {
+      return validation;
+    }
+    final ReadFeatures readSaved = readFeaturesByIdRequest(nakshaHub().getAdminMapId(), write.getCollectionId(), write.getId());
+    final Response result = nakshaHub().getAdminStorage()
+        .useReadSession(SessionOptions.from(NakshaContext.currentContext()), reader -> reader.executeRead(readSaved));
+    if (!(result instanceof SuccessResponse)) {
+      return result;
+    }
+    final FEATURE saved = ResultHelper.readFeatureFromResponse((SuccessResponse) result, featureClass);
+    return saved == null
+        ? SUCCESSFUL_VALIDATION
+        : IntValidationUtil.collectionMappingUpdateValidation(collectionOf.apply(saved), current);
   }
 
   protected abstract @NotNull Response validateDeleteInstruction(Write write);

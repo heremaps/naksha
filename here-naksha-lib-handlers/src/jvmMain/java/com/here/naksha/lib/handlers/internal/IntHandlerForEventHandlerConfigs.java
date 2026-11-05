@@ -93,7 +93,7 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     if (classNameValidation instanceof ErrorResponse) {
       return classNameValidation;
     }
-    return specificHandlerValidation(eventHandler);
+    return specificHandlerValidation(write, eventHandler);
   }
 
   private Response validateClassName(String className) {
@@ -106,10 +106,17 @@ public class IntHandlerForEventHandlerConfigs extends AdminFeatureEventHandler<E
     return SUCCESSFUL_VALIDATION;
   }
 
-  private Response specificHandlerValidation(EventHandlerConfig eventHandler) {
+  private Response specificHandlerValidation(Write write, EventHandlerConfig eventHandler) {
     final String className = eventHandler.getClassName();
     if (DefaultStorageHandler.class.getName().equals(className)) {
-      return storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      final Response storageValidation = storageValidation(eventHandler, DefaultStorageHandlerProperties.STORAGE_ID);
+      if (!(storageValidation instanceof SuccessResponse)) {
+        return storageValidation;
+      }
+      final DefaultStorageHandlerProperties properties =
+          javaProxy(eventHandler.getProperties(), DefaultStorageHandlerProperties.class);
+      return collectionMappingValidation(write, properties.getCollection(),
+          saved -> javaProxy(saved.getProperties(), DefaultStorageHandlerProperties.class).getCollection());
     } else if (DefaultViewHandler.class.getName().equals(className)) {
       return viewHandlerPropertiesValidation(eventHandler);
     } else if (TagFilterHandler.class.getName().equals(className)) {

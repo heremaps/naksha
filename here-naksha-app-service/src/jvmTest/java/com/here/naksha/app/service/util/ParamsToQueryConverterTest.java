@@ -115,6 +115,23 @@ class ParamsToQueryConverterTest {
   private static Stream<Arguments> simpleTagsSample() {
     return Stream.of(
         tagQuerySpec("tags=x", tq -> assertTagExistsWithName(tq, "x"), "only 'x'"),
+        tagQuerySpec("tags=One", tq -> assertTagExistsWithName(tq, "One"), "preserve capitalized tag"),
+        tagQuerySpec(
+            "tags=One+Two",
+            tq -> {
+              TagAnd tagAnd = assertTagAnd(tq);
+              assertTagExistsWithName(tagAnd.get(0), "One");
+              assertTagExistsWithName(tagAnd.get(1), "Two");
+            },
+            "preserve capitalized tags in AND search"),
+        tagQuerySpec(
+            "tags=One,Two",
+            tq -> {
+              TagOr tagOr = assertTagOr(tq);
+              assertTagExistsWithName(tagOr.get(0), "One");
+              assertTagExistsWithName(tagOr.get(1), "Two");
+            },
+            "preserve capitalized tags in OR search"),
         tagQuerySpec(
             "tags=this,that",
             tq -> {

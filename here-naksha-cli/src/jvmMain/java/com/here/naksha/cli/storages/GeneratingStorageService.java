@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-final class GeneratingStorageService {
+public final class GeneratingStorageService {
     private final AtomicInteger tileIndex = new AtomicInteger(0);
 
     @NotNull
@@ -37,7 +37,7 @@ final class GeneratingStorageService {
     }
 
     @NotNull
-    List<NakshaFeature> generateFeatures(
+    public List<NakshaFeature> generateFeatures(
         int numOfFeaturesToGenerate,
         List<String> tileIds,
         String idsPrefix,

@@ -682,11 +682,11 @@ public class QueryParameterDecoder {
         if (c == 'f' || c == 'F') {
           c = sb.charAt(1);
           if (c == 'a' || c == 'A') {
-            c = sb.charAt(1);
+            c = sb.charAt(2);
             if (c == 'l' || c == 'L') {
-              c = sb.charAt(1);
+              c = sb.charAt(3);
               if (c == 's' || c == 'S') {
-                c = sb.charAt(1);
+                c = sb.charAt(4);
                 if (c == 'e' || c == 'E') {
                   return Boolean.FALSE;
                 }
