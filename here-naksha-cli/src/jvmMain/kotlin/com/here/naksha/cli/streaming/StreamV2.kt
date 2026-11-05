@@ -288,7 +288,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
         TODO("Not yet implemented")
     }
 
-    override fun getRecoveryRequest(timeoutMillis: Long): StreamRequest {
+    override fun getRecoveryRequest(): StreamRequest {
         TODO("Not yet implemented")
     }
 }

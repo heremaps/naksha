@@ -45,7 +45,7 @@ class StreamReadSessionV2(
     override val mayWrite: Boolean
         get() = false
 
-    override fun write(chunk: StreamChunk): Boolean {
+    override fun write(chunk: StreamChunk) {
         throw UnsupportedOperationException("Write is not supported in StreamReadSessionV2")
     }
 
