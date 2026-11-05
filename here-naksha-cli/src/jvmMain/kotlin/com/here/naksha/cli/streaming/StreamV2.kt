@@ -88,6 +88,9 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM (
 
     private var _headPlan: PgPlan? = null
 
+    /**
+     * Prepare the SQL statement only once per stream, and reuse it for each chunk.
+     */
     private fun headPlan(): PgPlan =
         _headPlan ?: v2Session.connection.prepare(buildChunkSql(), arrayOf("int8")).also { _headPlan = it }
 
