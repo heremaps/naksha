@@ -1,7 +1,6 @@
 package naksha.psql
 
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
+import naksha.base.Id
 import naksha.model.Naksha
 import naksha.base.NakshaError
 import naksha.model.objects.NakshaCollection
@@ -22,7 +21,6 @@ import naksha.model.request.ReadFeatures
 import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import kotlin.test.*
-import kotlin.time.Clock
 
 class CollectionTests : PgTestBase(collection = null, catalogId = "") {
 
@@ -83,13 +81,13 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         storage.adminConnection().use { conn ->
             val columns = mutableListOf<String>()
             conn.execute(
-                sql = "SELECT column_name FROM information_schema.columns WHERE table_name = $1",
-                args = arrayOf(collection.id)
+                sql = "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
+                args = arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
             ).use { cursor ->
                 while (cursor.next()) columns.add(cursor["column_name"])
                 assertEquals(XyzMembers.ALL.size + 1, columns.size)
                 // Note: We will not find TN in the database, because `lib-psql` stores `fn` and `version` instead.
-                assertTrue(XyzMembers.ALL.all { column -> if (column eq XyzTn) true else columns.contains(column.name) })
+                assertTrue(XyzMembers.ALL.all { column -> if (column eq XyzTn) true else columns.contains(column.id.columnName()) })
             }
         }
     }
@@ -102,30 +100,105 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
                 Write().createCollection(collection)
             )
         )
-        val currentYear = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).year
+        collectionTableNames(collection)
         checkIndicesCreatedForTable(collection.id)
-        // fix1 removed the META/DELETED tables: metadata is materialized as member columns and
-        // tombstones remain in HEAD. Optional indices still belong on every history year partition.
-        checkIndicesCreatedForTable("${collection.id}\$hst\$$currentYear")
-        checkIndicesCreatedForTable("${collection.id}\$hst\$${currentYear + 1}")
     }
 
     private fun checkIndicesCreatedForTable(tableName: String) {
+        val root = Id(tableName).collectionName()
         storage.adminConnection().use { conn ->
             conn.execute(
-                sql = "SELECT indexname FROM pg_indexes WHERE tablename = $1;",
-                args = arrayOf(tableName)
+                sql = "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
+                args = arrayOf(Id(catalog.id).catalogName(), root)
             ).use { cursor ->
                 val existingIndices = mutableListOf<String>()
                 while (cursor.next()) existingIndices.add(cursor["indexname"])
-                XyzIndices.ALL.forEach { index ->
-                    val expectedName = "${tableName}\$ci_${index.name}"
-                    check(expectedName in existingIndices) {
-                        "Index $expectedName not found; existing indices: $existingIndices"
-                    }
+                for (index in XyzIndices.ALL) {
+                    val expectedName = index.id.indexName(root)
+                    assertTrue(expectedName in existingIndices,
+                        "Index $expectedName not found; existing indices: $existingIndices")
                 }
             }
         }
+        assertIndexInheritance(tableName)
+    }
+
+    /** Verifies every root index has a valid, ready native descendant on every table in the partition tree. @since 3.0 */
+    private fun assertIndexInheritance(collectionId: String) {
+        val schema = Id(catalog.id).catalogName()
+        val root = Id(collectionId).collectionName()
+        storage.adminConnection().use { conn ->
+            conn.execute("""
+                WITH RECURSIVE root_indices AS (
+                    SELECT i.indexrelid, i.indisvalid, i.indisready
+                    FROM pg_catalog.pg_index i
+                    WHERE i.indrelid = pg_catalog.to_regclass($1)
+                ), index_tree AS (
+                    SELECT indexrelid AS root_index, indexrelid FROM root_indices
+                    UNION ALL
+                    SELECT t.root_index, h.inhrelid
+                    FROM index_tree t JOIN pg_catalog.pg_inherits h ON h.inhparent = t.indexrelid
+                    WHERE NOT h.inhdetachpending
+                )
+                SELECT NOT EXISTS (
+                    SELECT 1 FROM root_indices r
+                    CROSS JOIN pg_catalog.pg_partition_tree(pg_catalog.to_regclass($1)) p
+                    WHERE NOT r.indisvalid OR NOT r.indisready OR NOT EXISTS (
+                        SELECT 1 FROM index_tree t
+                        JOIN pg_catalog.pg_index i ON i.indexrelid = t.indexrelid
+                        WHERE t.root_index = r.indexrelid AND i.indrelid = p.relid
+                            AND i.indisvalid AND i.indisready
+                    )
+                ) AND (SELECT count(*) FROM root_indices) >= 4 AS ok
+            """.trimIndent(), arrayOf("${PgUtil.quoteIdent(schema)}.${PgUtil.quoteIdent(root)}")).use { cursor ->
+                assertTrue(cursor.fetch()["ok"], "Missing or invalid inherited index on $schema.$root")
+            }
+        }
+    }
+
+    /** Returns the root and all native descendants, verifying HEAD and finite-range naming/topology. @since 3.0 */
+    private fun collectionTableNames(collection: NakshaCollection): List<String> {
+        val schema = Id(catalog.id).catalogName()
+        val root = Id(collection.id).collectionName()
+        val names = mutableListOf<String>()
+        val children = mutableListOf<String>()
+        var leaves = 0
+        storage.adminConnection().use { conn ->
+            conn.execute("""
+                SELECT c.relname, p.level, p.isleaf
+                FROM pg_catalog.pg_partition_tree(pg_catalog.to_regclass($1)) p
+                JOIN pg_catalog.pg_class c ON c.oid = p.relid
+                JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = $2 ORDER BY p.level, c.relname
+            """.trimIndent(), arrayOf("${PgUtil.quoteIdent(schema)}.${PgUtil.quoteIdent(root)}", schema)).use { cursor ->
+                while (cursor.next()) {
+                    val name: String = cursor["relname"]
+                    names.add(name)
+                    if (cursor.get<Int>("level") == 1) children.add(name)
+                    if (cursor.get<Boolean>("isleaf")) leaves++
+                }
+            }
+        }
+        assertTrue(root in names, "Missing collection root $schema.$root")
+        assertTrue("$root\$head" in children, "Missing HEAD partition on $schema.$root")
+        if (collection.storeHistory == StoreMode.OFF) {
+            assertEquals(listOf("$root\$head"), children, "History-OFF must have only HEAD")
+        } else {
+            assertTrue(children.size >= 5, "Expected HEAD and at least four finite ranges: $children")
+        }
+        for (child in children) {
+            if (child == "$root\$head") continue
+            val range = assertNotNull(child.removePrefix("$root$").toLongOrNull(), "Invalid finite range name: $child")
+            assertEquals(historyTableName(root, range shl collection.shift, collection.shift), child)
+        }
+        val partitions = maxOf(1, collection.partitions)
+        assertEquals(children.size * partitions, leaves, "Missing performance partitions: $names")
+        for (child in children) {
+            if (partitions == 1) continue
+            for (partition in 0 until partitions) assertTrue("$child$$partition" in names)
+        }
+        assertEquals(1 + children.size + if (partitions > 1) leaves else 0, names.size)
+        return names
     }
 
     @Test
@@ -141,16 +214,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
                 Write().createCollection(collection)
             )
         )
-        val hstTableName = "$collectionName\$hst"
-        storage.adminConnection().use { conn ->
-            conn.execute(
-                sql = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)",
-                args = arrayOf(hstTableName)
-            ).use { cursor ->
-                // Check that hst table was not created
-                assertFalse(cursor.fetch()["exists"])
-            }
-        }
+        collectionTableNames(collection)
 
         // Check that creating, updating and deleting features still work
         var feature = NakshaFeature()
@@ -218,10 +282,10 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         collection = createCollectionResponse.features[0]!!.proxy(NakshaCollection::class)
 
         // Proof that del table was not created
-        val delTableName = "$collectionId\$del"
+        val delTableName = "${Id(collectionId).collectionName()}\$del"
         storage.adminConnection().use { conn ->
-            val SQL = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)"
-            conn.execute(SQL, arrayOf(delTableName)).use { cursor ->
+            val SQL = "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_schema = $1 AND table_name = $2)"
+            conn.execute(SQL, arrayOf(Id(catalog.id).catalogName(), delTableName)).use { cursor ->
                 assertFalse(cursor.fetch()["exists"])
             }
         }
@@ -396,14 +460,14 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(catalog.id, collection.id)
+                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             // Note: `lib-psql` does split `tn` into `fn` and `version` columns, so we have one more column than members!
             assertEquals(
                 XyzMembers.ALL.size + 1, columns.size,
                 "Expected to find ${XyzMembers.ALL+1} columns, found: ${columns.size}, being: $columns"
             )
-            assertTrue(XyzMembers.ALL.all { XyzMembers.XyzTn eq it || it.name in columns })
+            assertTrue(XyzMembers.ALL.all { XyzMembers.XyzTn eq it || it.id.columnName() in columns })
 
             checkIndicesCreatedForTable(collection.id)
         }
@@ -412,7 +476,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     /**
      * When [NakshaCollection.members] is explicitly an **empty list** together with an explicitly
      * empty [NakshaCollection.indices] list, the collection must be created with all standard head
-     * columns (full schema) and only the intrinsic indices (`$c_pkey`, `$c_id`, `$i_version`) — no
+     * columns (full schema) and only the intrinsic indices (`$pkey`, `$unique`, `$id`, `$version`) — no
      * default optional indices. (An empty members list opts out of the XYZ backward-compat default,
      * so an explicit index list is required; here it is empty.)
      */
@@ -429,7 +493,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(catalog.id, collection.id)
+                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             val expectedColumns = expectedHeadColumnNames(collection)
             assertEquals(
@@ -442,10 +506,12 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(catalog.id, collection.id)
+                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             assertNoOptionalIndices(indexNames, collection.id)
+            assertEquals(4, indexNames.size, "Expected only intrinsic indices: $indexNames")
         }
+        assertIndexInheritance(collection.id)
     }
 
     /**
@@ -466,32 +532,33 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             val columns = mutableListOf<String>()
             conn.execute(
                 "SELECT column_name FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2",
-                arrayOf(catalog.id, collection.id)
+                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
             ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             val expectedColumns = expectedHeadColumnNames(collection) // mandatory head columns + score
             assertEquals(expectedColumns.size, columns.size,
                 "Expected ${expectedColumns.size} columns (head + 1 custom), got: $columns")
             assertTrue(expectedColumns.all { it in columns })
-            val customColName = PgMemberHelper.pgColumnName("score")
+            val customColName = Id("score").columnName()
             assertTrue(customColName in columns, "Custom column '$customColName' not found in: $columns")
 
             // Indices: only the declared custom index must be present (no optional/default indices).
             val indexNames = mutableListOf<String>()
             conn.execute(
                 "SELECT indexname FROM pg_indexes WHERE schemaname = $1 AND tablename = $2",
-                arrayOf(catalog.id, collection.id)
+                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName())
             ).use { cursor -> while (cursor.next()) indexNames.add(cursor["indexname"]) }
             assertNoOptionalIndices(indexNames, collection.id)
             // Custom index must be present.
-            val customIndexId = "${collection.id}\$ci_idx_score"
+            val customIndexId = Id("idx_score").indexName(Id(collection.id).collectionName())
             assertTrue(customIndexId in indexNames,
                 "Custom index '$customIndexId' not found in: $indexNames")
+            assertEquals(5, indexNames.size, "Expected intrinsic indices plus idx_score: $indexNames")
         }
+        assertIndexInheritance(collection.id)
     }
 
     /**
-     * When a custom [MemberType.TAG_LIST] member is declared with a [IndexType.TAG_LIST] index, the collection
-     * must materialize the member as a `jsonb` column and create a GIN index over it.
+     * When a custom [MemberType.TAG_LIST] member is indexed, the collection must materialize it as a text[] column and create a GIN index over it.
      */
     @Test
     fun membersSet_shouldCreateJsonbColumnAndGinIndex() {
@@ -502,25 +569,26 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
         storage.adminConnection().use { conn ->
-            // Column: materialized as jsonb.
+            // Column: materialized as text[].
             var dataType: String? = null
             conn.execute(
                 "SELECT data_type FROM information_schema.columns WHERE table_schema = $1 AND table_name = $2 AND column_name = $3",
-                arrayOf(catalog.id, collection.id, PgMemberHelper.pgColumnName("labels"))
+                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName(), Id("labels").columnName())
             ).use { cursor -> if (cursor.next()) dataType = cursor["data_type"] }
             assertEquals("ARRAY", dataType, "TAG_LIST member 'labels' must be materialized as a text[] array")
 
-            // Index: GIN index over the jsonb column.
-            val customIndexId = "${collection.id}\$ci_idx_labels"
+            // Index: GIN index over the array column.
+            val customIndexId = Id("idx_labels").indexName(Id(collection.id).collectionName())
             var indexDef: String? = null
             conn.execute(
                 "SELECT indexdef FROM pg_indexes WHERE schemaname = $1 AND tablename = $2 AND indexname = $3",
-                arrayOf(catalog.id, collection.id, customIndexId)
+                arrayOf(Id(catalog.id).catalogName(), Id(collection.id).collectionName(), customIndexId)
             ).use { cursor -> if (cursor.next()) indexDef = cursor["indexdef"] }
             assertNotNull(indexDef, "SET index '$customIndexId' not found")
             assertTrue(indexDef!!.contains("USING gin", ignoreCase = true),
                 "SET index must be a GIN index, got: $indexDef")
         }
+        assertIndexInheritance(collection.id)
     }
 
     /**
@@ -558,18 +626,17 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
         executeWrite(WriteRequest().add(Write().createCollection(collection)))
 
         val expected = expectedOrderedColumnNames(collection)
-        for (tableName in listOf(collection.id, "${collection.id}\$hst")) {
+        for (tableName in collectionTableNames(collection)) {
             val columns = mutableListOf<String>()
             storage.adminConnection().use { conn ->
                 conn.execute(
                     "SELECT column_name FROM information_schema.columns WHERE table_schema = \$1 AND table_name = \$2 ORDER BY ordinal_position",
-                    arrayOf(catalog.id, tableName)
+                    arrayOf(Id(catalog.id).catalogName(), tableName)
                 ).use { cursor -> while (cursor.next()) columns.add(cursor["column_name"]) }
             }
             assertTrue(columns.isNotEmpty(), "No columns found for table '$tableName'")
-            val actual = columns.filter { it in expected.toSet() }
-            assertEquals(expected, actual,
-                "Column order mismatch in '$tableName'.\nExpected: $expected\nActual  : $actual\nFull list: $columns")
+            assertEquals(expected, columns,
+                "Column order mismatch in '$tableName'.\nExpected: $expected\nActual: $columns")
         }
     }
 
@@ -592,16 +659,19 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
     /** Asserts no optional/default indices (XYZ + pn/pt/gv) were auto-created; only declared ones are materialized. */
     private fun assertNoOptionalIndices(indexNames: List<String>, collectionId: String) {
         val standardSpecial = listOf(StandardIndices.PublishNumber, StandardIndices.PublishTime, StandardIndices.GlobalVersion)
+        val root = Id(collectionId).collectionName()
         for (idx in XyzIndices.ALL + standardSpecial) {
-            val forms = listOf(idx.name, "$collectionId\$i_${idx.name}", "$collectionId\$ci_${idx.name}")
-            assertTrue(forms.none { it in indexNames }, "Unexpected optional index '${idx.name}', found: $indexNames")
+            assertFalse(idx.id.indexName(root) in indexNames, "Unexpected optional index '${idx.name}', found: $indexNames")
+        }
+        for (suffix in listOf("pkey", "unique", "id", "version")) {
+            assertTrue("$root$$suffix" in indexNames, "Missing intrinsic index $suffix: $indexNames")
         }
     }
 
     private fun expectedHeadColumnNames(collection: NakshaCollection): Set<String> =
         expectedOrderedColumnNames(collection).toSet()
 
-    /** Physical columns in DDL order, mirroring PgCollection.generateColumns: _fn/_version/_nv then sorted members. */
+    /** Physical columns in DDL order, mirroring PgCollection.generateColumns: fn/version/nv then sorted members. */
     private fun expectedOrderedColumnNames(collection: NakshaCollection): List<String> {
         val members = collection.validatedMembers
         if (!members.isSortedByIndex()) members.verify()
@@ -610,7 +680,7 @@ class CollectionTests : PgTestBase(collection = null, catalogId = "") {
             if (member == null) continue
             val name = member.name
             if (name == StandardMembers.Tn.name || name == StandardMembers.NextVersion.name) continue
-            names.add(PgMemberHelper.pgColumnName(name))
+            names.add(member.id.columnName())
         }
         return names
     }

@@ -1,6 +1,7 @@
 package naksha.psql
 
 import naksha.base.AnyList
+import naksha.base.Action
 import naksha.geo.SpGeometry
 import naksha.jbon.BookType
 import naksha.jbon.HeapBook
@@ -300,12 +301,15 @@ internal class PgRows() {
     /**
      * Read the given row into a tuple, requires that a [collection] is assigned.
      * @param row the row number.
+     * @param featureId selector identity for key-only tombstones, whose textual identifier is not stored.
      * @return the [Tuple] extracted from the row or `null`, if either no [collection] set, the row number is outside the result-set, or something else failed.
      * @since 3.0
      */
-    fun getTuple(row: Int): Tuple? {
+    fun getTuple(row: Int, featureId: String? = null): Tuple? {
         if (row !in 0..< size) return null
         val collection = this.collection ?: return null
+        val emptyTombstone = getAny(row, FeatureBytes.name) == null &&
+            getLong(row, PgColumn.VersionColumn)?.let { Action.fromVersion(it) } == Action.DELETE
         // Rebuild the members-book in the same canonical member order as Tuple.encodeFeature
         // (collection.useMembers()) so the blob's positional member references resolve; the
         // tuple-number is reconstructed from the split `_fn`/`_version` columns.
@@ -317,6 +321,7 @@ internal class PgRows() {
             val name = member.name
             if (name == FeatureBytes.name) {
                 val value = getAny(row, name)
+                if (emptyTombstone) continue
                 if (value !is ByteArray) throw NakshaException(ILLEGAL_STATE, "The feature root is no byte-array")
                 featureBytes = value
                 continue
@@ -337,7 +342,7 @@ internal class PgRows() {
                 Id.name -> {
                     val stored = getAny(row, name)
                     val fn = getLong(row, PgColumn.FnColumn)
-                    membersBook.put(name, stored ?: if (fn != null && fn >= 0L) fn.toString() else null)
+                    membersBook.put(name, stored ?: if (fn != null && fn >= 0L) fn.toString() else if (emptyTombstone) featureId else null)
                 }
                 else -> {
                     val pg_value = getAny(row, name)
@@ -346,7 +351,12 @@ internal class PgRows() {
                 }
             }
         }
-        if (featureBytes == null) throw NakshaException(ILLEGAL_STATE, "Missing mandatory member '${FeatureBytes.name}'!")
+        if (featureBytes == null) {
+            if (!emptyTombstone) {
+                throw NakshaException(ILLEGAL_STATE, "Missing mandatory member '${FeatureBytes.name}'!")
+            }
+            featureBytes = byteArrayOf()
+        }
         return Tuple(featureBytes = featureBytes, membersBook = membersBook)
     }
 
@@ -414,14 +424,14 @@ internal class PgRows() {
         // The members-book keeps the tuple-number as a single `_tn` entry; the table splits it into the
         // `_fn` and `_version` columns, so populate those from the tuple-number.
         val tn = tuple.tupleNumber
+        val emptyTombstone = tuple.action == Action.DELETE && tuple.featureBytes.isEmpty()
         getColumn(PgColumn.FnColumn.name)?.let { it[row] = tn.featureNumber }
         getColumn(PgColumn.VersionColumn.name)?.let { it[row] = tn.version }
         getColumn(PgColumn.NextVersionColumn.name)?.let { it[row] = tuple.nextVersion }
-        // `_id` is materialized only when it is not derivable from the feature-number: fn < 0 => hashed
-        // id, fn >= 0 => id equals fn so `_id` stays NULL (a CHECK enforces both cases).
-        getColumn(Id.name)?.let { it[row] = if (tn.featureNumber < 0L) membersBook[Id.name] else null }
+        // Numeric identities are derived from fn; empty tombstones retain no non-key identity.
+        getColumn(Id.name)?.let { it[row] = if (tn.featureNumber < 0L && !emptyTombstone) membersBook[Id.name] else null }
         val featureColumn = getColumn(FeatureBytes.name) ?: return
-        featureColumn[row] = tuple.featureBytes
+        featureColumn[row] = if (emptyTombstone) null else tuple.featureBytes
     }
 
     /**

@@ -134,7 +134,7 @@ class UpdateFeatureTest : PgTestBase(collection = null, catalogId = "") {
         assertEquals("some_value", updatedTuple.decodeFeature(null)?.properties["new_attr"])
         assertEquals(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == 0L) null else it } ?: createdTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == 0L) null else it })
         assertNotEquals(updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt), updatedTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt))
-        assertNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt)?.let { if (it == 0L) null else it })
+        assertNotNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzCreatedAt))
         assertNotNull(createdTuple.getLong(naksha.model.objects.XyzMembers.XyzUpdatedAt))
         assertEquals(createdTuple.getInt(naksha.model.objects.XyzMembers.XyzHereTile), updatedTuple.getInt(naksha.model.objects.XyzMembers.XyzHereTile))
         assertEquals(Action.UPDATE, updatedTuple.tupleNumber.action)

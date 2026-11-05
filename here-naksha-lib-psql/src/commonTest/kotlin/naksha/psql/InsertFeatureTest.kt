@@ -335,6 +335,6 @@ class InsertFeatureTest : PgTestBase() {
 
         // Then
         assertIs<ErrorResponse>(insertDuplicateResponse)
-        assertEquals(NakshaError.CONFLICT, insertDuplicateResponse.error.code)
+        assertEquals(NakshaError.FEATURE_EXISTS, insertDuplicateResponse.error.code)
     }
 }

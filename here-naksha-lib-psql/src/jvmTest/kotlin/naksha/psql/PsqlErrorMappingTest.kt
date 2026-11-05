@@ -66,6 +66,6 @@ class PsqlErrorMappingTest : PgTestBase() {
 
         // Then
         assertIs<ErrorResponse>(resp)
-        assertEquals(NakshaError.CONFLICT, resp.error.code)
+        assertEquals(NakshaError.FEATURE_EXISTS, resp.error.code)
     }
 }

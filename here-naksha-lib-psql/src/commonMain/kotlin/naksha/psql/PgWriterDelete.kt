@@ -11,10 +11,7 @@ import naksha.model.NewTuple
 /**
  * Execute a [DELETE][naksha.model.request.WriteOp.DELETE] or PURGE through [PgDatabase].
  *
- * The writer only resolves the target features (and, for atomic deletes, their expected states) and
- * assigns the returned final states; all SQL, locking, tombstoning, archival and conflict handling
- * live in [PgDatabase]. Non-atomic deletes are keyed by feature id, atomic deletes by their expected
- * GUID, and PURGE removes only existing DELETE HEAD states.
+ * The writer resolves target features and expected states and assigns returned final states; SQL, locking, tombstoning, archival and conflict handling live in [PgDatabase]. Contiguous atomic/non-atomic runs preserve ID lock order. PURGE removes only existing DELETE HEAD states.
  * @since 3.0
  * @see [PgWriter]
  */
@@ -27,7 +24,7 @@ internal class PgWriterDelete(
   private val purge: Boolean = false
 ) {
   /**
-   * Persist the selected deletes or purges and assign their returned states in input order.
+   * Persist the selected deletes or purges in ID order and assign their returned states.
    * @since 3.0
    */
   fun execute(conn: PgConnection) {
@@ -41,35 +38,45 @@ internal class PgWriterDelete(
     if (purge) {
       val featureIds = ArrayList<Id>(end - start)
       for (i in start ..< end) featureIds.add(pgWrites[i].id)
-      database.rows_purge(conn, pgCollection, version, featureIds)
+      val results = database.rows_purge(conn, pgCollection, version, featureIds)
+      for (i in results.indices) {
+        // PURGE returns unchanged live HEADs too; only a returned tombstone was actually purged.
+        pgWrites[start + i].changed = results[i]?.tupleNumber?.isTombstone == true
+      }
     } else {
       val databaseNumber = session.storage.id.number
       val catalogNumber = pgCollection.catalogId.intValue
       val collectionNumber = pgCollection.id.intValue
-      val nonAtomic = ArrayList<Id>()
-      val atomic = ArrayList<Guid>()
-      for (i in start ..< end) {
-        val pgWrite = pgWrites[i]
-        val requireVersion = pgWrite.requireVersion
-        if (requireVersion == null) {
-          nonAtomic.add(pgWrite.id)
+      var s = start
+      while (s < end) {
+        val isAtomic = pgWrites[s].requireVersion != null
+        var e = s + 1
+        while (e < end && (pgWrites[e].requireVersion != null) == isAtomic) e++
+        val results: List<NewTuple>
+        if (isAtomic) {
+          val guids = ArrayList<Guid>(e - s)
+          for (i in s until e) {
+            val write = pgWrites[i]
+            guids.add(Guid(write.id.text, TupleNumber(databaseNumber, catalogNumber, collectionNumber, write.id.number, write.requireVersion!!)))
+          }
+          results = database.rows_delete_by_guid_with_result(conn, pgCollection, version, guids)
         } else {
-          atomic.add(Guid(pgWrite.id.text, TupleNumber(databaseNumber, catalogNumber, collectionNumber, pgWrite.id.number, requireVersion)))
+          val ids = ArrayList<Id>(e - s)
+          for (i in s until e) ids.add(pgWrites[i].id)
+          results = database.rows_delete_by_id_with_result(conn, pgCollection, version, ids)
         }
-      }
-      val results = ArrayList<NewTuple>(end - start)
-      if (nonAtomic.isNotEmpty()) results.addAll(database.rows_delete_by_id_with_result(conn, pgCollection, version, nonAtomic))
-      if (atomic.isNotEmpty()) results.addAll(database.rows_delete_by_guid_with_result(conn, pgCollection, version, atomic))
-      val byFn = HashMap<Long, NewTuple>()
-      for (result in results) byFn[result.tuple.tupleNumber.featureNumber] = result
-      for (i in start ..< end) {
-        val pgWrite = pgWrites[i]
-        val result = byFn[pgWrite.id.number]
-        if (result != null) {
-          pgWrite.tuple = result.tuple
-          pgWrite.tupleNumber = result.tuple.tupleNumber
-          pgWrite.action = Action.DELETE
+        val byFn = HashMap<Long, NewTuple>(results.size)
+        for (result in results) byFn[result.tuple.tupleNumber.featureNumber] = result
+        for (i in s until e) {
+          val write = pgWrites[i]
+          val result = byFn[write.id.number] ?: continue
+          val tuple = result.tuple
+          write.changed = result.previousTupleNumber != null
+          write.tuple = tuple
+          write.tupleNumber = tuple.tupleNumber
+          write.action = Action.DELETE
         }
+        s = e
       }
     }
     val elapsed = Platform.currentNanos() - started

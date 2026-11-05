@@ -2,9 +2,7 @@ package naksha.psql
 
 import naksha.base.JvmMap
 import naksha.base.Platform
-import naksha.base.PlatformUtil
-import naksha.model.Naksha.NakshaCompanion.featureNumber
-import naksha.model.Naksha.NakshaCompanion.partitionNumber
+import naksha.base.Id
 import naksha.model.NakshaContext
 import naksha.model.objects.NakshaCollection
 import naksha.model.objects.NakshaFeature
@@ -14,19 +12,17 @@ import naksha.model.request.Write
 import naksha.model.request.WriteRequest
 import naksha.psql.Plv8PerfTest.FeatureSource.*
 import naksha.model.RandomFeatures.RandomFeatures_C.randomFeatures
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.GIST_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.HERE_TILE_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.ID_IDX
-import naksha.model.objects.NakshaCollection.NakshaCollection_C.TAGS_IDX
 import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.Executors
-import kotlin.random.Random
+import java.util.concurrent.TimeUnit
+import kotlin.math.ceil
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 @Suppress("HasPlatformType", "MayBeConstant")
 class Plv8PerfTest : PgTestBase(
@@ -65,7 +61,7 @@ class Plv8PerfTest : PgTestBase(
         // Prepare
         val batchRequests = mutableListOf<WriteRequest>()
         for (i in 1..numberOfBatches) {
-            val featuresInBatch = generateFeatures(featureSource, FEATURES_PER_BATCH)
+            val featuresInBatch = generateFeatures(featureSource, FEATURES_PER_BATCH, "insert_$i")
             val writeFeaturesReq = WriteRequest().apply {
                 featuresInBatch.forEach { featureToCreate ->
                     add(Write().createFeature(collection, featureToCreate))
@@ -85,7 +81,8 @@ class Plv8PerfTest : PgTestBase(
         // Prepare
         val batchRequests = mutableListOf<WriteRequest>()
         for (i in 1..numberOfBatches) {
-            val featuresInBatch = generateFeatures(featureSource, FEATURES_PER_BATCH)
+            val featuresInBatch = generateFeatures(featureSource, FEATURES_PER_BATCH, "upsert_$i")
+            seedFeatures(featuresInBatch)
 
             val writeFeaturesReq = WriteRequest().apply {
                 featuresInBatch.forEach { featureToCreate ->
@@ -103,12 +100,9 @@ class Plv8PerfTest : PgTestBase(
     @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldInsertGroupedByPartition() {
-        val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
-
         // Prepare
-        val allFeatures = generateFeatures(featureSource, FEATURES_PER_BATCH * numberOfBatches)
-        val groupedFeatures =
-            allFeatures.groupBy { "${partitionNumber(featureNumber(it.id)) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
+        val allFeatures = generateFeatures(featureSource, FEATURES_PER_BATCH * numberOfBatches, "grouped_insert")
+        val groupedFeatures = groupByPartition(allFeatures)
 
         val batchRequests = mutableListOf<WriteRequest>()
         for (requestFeatures in groupedFeatures.values) {
@@ -121,29 +115,20 @@ class Plv8PerfTest : PgTestBase(
         }
 
         // Execute
-        println("Starting $numberOfBatches batches, $FEATURES_PER_BATCH features each, on $concurrency threads.")
+        println("Starting ${batchRequests.size} partition-grouped batches, ${allFeatures.size} total features, on $concurrency threads.")
         executeParallel(concurrency, batchRequests)
     }
-
-// TODO: Fix the test, as it does not group correctly!
-//    fun groupByPartition(features: List<NakshaFeature>): Map<Int, List<NakshaFeature>> {
-//        val group = mutableMapOf<Int, List<NakshaFeature>>()
-//    }
 
     @DisabledIfEnvironmentVariable(named = "NAKSHA_SUPPRESS_PERF_TEST", matches = "true")
     @Test
     fun shouldUpsertGroupedByPartition() {
-        val numberOfBatchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
-
         // Prepare
-        val allFeatures = generateFeatures(featureSource, FEATURES_PER_BATCH * numberOfBatches)
-        allFeatures[0].id = "A7l9RsIxWZCp2I6i3wXo" // fn=-6293233423437375615, pn=22401
-        allFeatures[1].id = "A6ixOLtAZF8IhKez25zY" // fn=-318328739946057960, pn=44824
-        val groupedFeatures =
-            allFeatures.groupBy { "${partitionNumber(featureNumber(it.id)) % NUM_OF_PARTITIONS}_${Random.nextInt(0, numberOfBatchesPerPartition)}" }
+        val allFeatures = generateFeatures(featureSource, FEATURES_PER_BATCH * numberOfBatches, "grouped_upsert")
+        val groupedFeatures = groupByPartition(allFeatures)
 
         val batchRequests = mutableListOf<WriteRequest>()
         for (requestFeatures in groupedFeatures.values) {
+            seedFeatures(requestFeatures)
             val writeFeaturesReq = WriteRequest().apply {
                 requestFeatures.forEach { featureToCreate ->
                     add(Write().upsertFeature(collection, featureToCreate, atomic = false))
@@ -153,55 +138,80 @@ class Plv8PerfTest : PgTestBase(
         }
 
         // Execute
-        println("Starting $numberOfBatches batches, $FEATURES_PER_BATCH features each, on $concurrency threads.")
+        println("Starting ${batchRequests.size} partition-grouped batches, ${allFeatures.size} total features, on $concurrency threads.")
         executeParallel(concurrency, batchRequests)
     }
 
-    private fun generateFeatures(source: FeatureSource, numberOfFeatures: Int): List<NakshaFeature> {
-        return when (source) {
+    private fun generateFeatures(source: FeatureSource, numberOfFeatures: Int, idPrefix: String): List<NakshaFeature> {
+        val features = when (source) {
             GENERATED_RANDOM -> randomFeatures(count = numberOfFeatures)
             JSON_TOPOLOGY -> List(numberOfFeatures) { featureCopy(topologyFeatureTemplate) }
             JSON_TOPOLOGY_SMALL -> List(numberOfFeatures) { featureCopy(smallTopologyFeatureTemplate) }
         }
+        for (i in features.indices) features[i].id = "${idPrefix}_$i"
+        return features
+    }
+
+    private fun groupByPartition(features: List<NakshaFeature>): Map<Pair<Int, Int>, List<NakshaFeature>> {
+        val batchesPerPartition = numberOfBatches / NUM_OF_PARTITIONS
+        val partitionSizes = IntArray(NUM_OF_PARTITIONS)
+        return features.groupBy {
+            val partition = Id(it.id).partitionIndex(NUM_OF_PARTITIONS)
+            partition to (partitionSizes[partition]++ % batchesPerPartition)
+        }
+    }
+
+    private fun seedFeatures(features: List<NakshaFeature>) {
+        val seedRequest = WriteRequest()
+        for (feature in features) seedRequest.add(Write().createFeature(collection, featureCopy(feature)))
+        // executeWrite opens a separate session and commits before the timed UPSERT run.
+        executeWrite(seedRequest)
     }
 
     private fun executeParallel(concurrency: Int, batchRequests: List<WriteRequest>) {
         val stats = Collections.synchronizedList(mutableListOf<Stats>())
-        val threadPool = Executors.newFixedThreadPool(concurrency)
         val context = NakshaContext.currentContext()
+        val threadPool = Executors.newFixedThreadPool(concurrency)
         val start = System.nanoTime()
-        val tasks = batchRequests.map { batchRequest ->
-            threadPool.submit {
-                context.attachToCurrentThread()
-                val innerStart = System.currentTimeMillis()
-                val response = executeWrite(batchRequest)
-                assertIs<SuccessResponse>(response)
-                val innerEnd = System.currentTimeMillis()
-                stats.add(Stats(Thread.currentThread().name, innerEnd - innerStart, batchRequest.writes.size))
+        val end: Long
+        try {
+            val tasks = batchRequests.map { batchRequest ->
+                threadPool.submit {
+                    context.attachToCurrentThread()
+                    val innerStart = System.nanoTime()
+                    val response = executeWrite(batchRequest)
+                    assertIs<SuccessResponse>(response)
+                    val innerEnd = System.nanoTime()
+                    stats.add(Stats(Thread.currentThread().name, (innerEnd - innerStart) / 1e6, batchRequest.writes.size))
+                }
             }
+            tasks.forEach { it.get() }
+            end = System.nanoTime()
+        } finally {
+            threadPool.shutdownNow()
+            assertTrue(threadPool.awaitTermination(1, TimeUnit.MINUTES), "Performance workers did not terminate")
         }
-        tasks.forEach { it.get() }
-        val end = System.nanoTime()
-        threadPool.shutdown()
         val totalMs = stats.sumOf { it.timeMs }
         val totalSeconds = (end.toDouble() - start.toDouble()) / 1e9
         val numberOfBatches = batchRequests.count()
         val totalFeatures = stats.sumOf { it.featuresCount }
+        val batchLatencies = stats.map { it.timeMs }.sorted()
+        val medianMs = (batchLatencies[(numberOfBatches - 1) / 2] + batchLatencies[numberOfBatches / 2]) / 2
+        val p95Ms = batchLatencies[ceil(numberOfBatches * 0.95).toInt() - 1]
         println("Total features: $totalFeatures, total runtime in seconds: $totalSeconds")
         println("Average batch execution (ms): ${totalMs / numberOfBatches} ")
+        println("Median batch execution (ms): $medianMs, p95 batch execution (ms): $p95Ms")
         println("Features/s : ${totalFeatures / totalSeconds} ")
     }
 
     private fun featureCopy(feature: NakshaFeature): NakshaFeature {
         // Deep copy: a shallow copy shares `properties`, which encode mutates (writes xyz.uuid).
-        val copyF = feature.copy<NakshaFeature>(recursive = true)
-        copyF.id = PlatformUtil.randomString(20)
-        return copyF
+        return feature.copy<NakshaFeature>(recursive = true)
     }
 
     data class Stats(
         val threadName: String,
-        val timeMs: Long,
+        val timeMs: Double,
         val featuresCount: Int
     )
 

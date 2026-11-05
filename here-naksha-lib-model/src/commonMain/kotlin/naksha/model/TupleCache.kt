@@ -208,6 +208,8 @@ class TupleCache internal constructor() {
                 }
             }
         }
+        // Also covers custom caches and storage implementations assigning the public tuple field.
+        for (i in from until end) featureTuples[i]?.onTupleLoaded()
         return featureTuples
     }
 

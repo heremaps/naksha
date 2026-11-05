@@ -38,6 +38,28 @@ import naksha.psql.PgType.Companion.NULL
 internal class PgQueryWhereBuilder(private val request: ReadFeatures, private val collection: PgCollection) {
   companion object {
     /**
+     * Only a mandatory positive single-value next-version lookup selects a predecessor rather than a snapshot. OR, NOT and multi-value membership retain snapshot lifetime constraints.
+     * @since 3.0
+     */
+    internal fun isExactNextVersionLookup(rawOp: Op?): Boolean {
+      if (rawOp == null) return false
+      val op = Op.detect(rawOp)
+      if (op is And) {
+        for (child in op.children) {
+          if (isExactNextVersionLookup(child)) return true
+        }
+        return false
+      }
+      if (op.at != naksha.model.objects.StandardMembers.NextVersion.name) return false
+      val value = when (op) {
+        is Equals -> op.value
+        is IsAnyOf -> if (op.items.size == 1) op.items[0] else null
+        else -> null
+      }
+      return value is Number && value.toLong() > 0L
+    }
+
+    /**
      * Decodes the stored ordinal for logical comparisons without a stored SQL function.
      * @since 3.0
      */
@@ -268,6 +290,13 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
       if (negate) where.append(at).append(" IS NOT NULL ") else where.append(at).append(" IS NULL ")
     } else {
       val placeholder = placeholderForArg(value, at)
+      if (!negate && memberName == IdMember.name && value is String) {
+        // Keep the text check: equal hashes must not make different identifiers match.
+        val ordinal = placeholderForArg(Id(value).featureNumberToOrdinal, PgType.INT64)
+        where.append('(').append(FnColumn.ident).append('=').append(ordinal).append(" AND ")
+          .append(at).append('=').append(placeholder).append(") ")
+        return
+      }
       if (negate)
         where.append(at).append("!=").append(placeholder).append(' ')
       else
@@ -331,6 +360,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     val fn_array = LongArray(items.size)
     var fn_end = 0
     val id_array = arrayOfNulls<String>(items.size)
+    val id_ordinals = LongArray(items.size)
     var id_end = 0
     for (item in items) {
       // We simply ignore invalid types.
@@ -339,6 +369,7 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
       if (numeric >= 0L) {
         fn_array[fn_end++] = Id.featureNumberToOrdinal(numeric)
       } else {
+        if (!negate) id_ordinals[id_end] = Id(item).featureNumberToOrdinal
         id_array[id_end++] = item
       }
     }
@@ -355,7 +386,12 @@ internal class PgQueryWhereBuilder(private val request: ReadFeatures, private va
     if (id_end > 0) {
       val placeholder = if (id_array.size == id_end) placeholderForArg(id_array, PgType.STRING_ARRAY)
       else placeholderForArg(id_array.copyOf(id_end), PgType.STRING_ARRAY)
+      if (!negate) {
+        val ordinals = placeholderForArg(id_ordinals.copyOf(id_end), PgType.INT64_ARRAY)
+        where.append('(').append(FnColumn.ident).append("=ANY(").append(ordinals).append(") AND ")
+      }
       where.append(memberColumn(IdMember.name)).append("=ANY(").append(placeholder).append(")")
+      if (!negate) where.append(')')
     }
     if (hasBoth) where.append(") ") else where.append(' ')
   }

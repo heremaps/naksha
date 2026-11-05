@@ -253,7 +253,7 @@ open class Write : AnyObject() {
      * - [UPDATE][naksha.model.request.WriteOp.UPDATE]: Requires that the current _HEAD_ state is `CREATE` or `UPDATE` **and** exists in this version; otherwise causes a [CONFLICT][NakshaError.CONFLICT] error. If being `null`, only requires that _HEAD_ exists, and is not in state `DELETED`.
      * - [UPSERT][naksha.model.request.WriteOp.UPSERT]: Tries to perform `CREATE`; if that fails, executes an `UPDATE`, in that case the meaning of version is the same as if a normal `UPDATE` would have been requested directl. This operation is more like _"try create, if exists, do update"_.
      * - [DELETE][naksha.model.request.WriteOp.DELETE]: If `null`, always succeed. If a specific version is given, succeeds only if the feature does not exist _(including existence in `DELETE` state)_ or exists in the given version. If the feature exists in `CREATE` or `UPDATE` state, but does not match the given version, fails with [CONFLICT][NakshaError.CONFLICT] error.
-     * - [PURGE][naksha.model.request.WriteOp.PURGE]: Always succeed if the feature does not exist in _HEAD_. Succeeds as well if the feature is in `DELETE` state and version is `null`. If given, fails with with [CONFLICT][NakshaError.CONFLICT] error when the _HEAD_ state is `DELETE`, but not in the given version. If the feature exists in `CREATE` or `UPDATE` state, always fails with [FEATURE_EXISTS][NakshaError.FEATURE_EXISTS].
+     * - [PURGE][naksha.model.request.WriteOp.PURGE]: The version is ignored. Only `DELETE` HEAD states are purged; live states remain unchanged. There is no atomic/expected-version variant.
      *
      * ### Note
      * This property must be set explicitly, it is not read automatically from the [feature]. If not being set explicitly, then the operation is treated as "not-atomic" _(see above)_.
@@ -329,6 +329,8 @@ open class Write : AnyObject() {
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.CREATE
         this.feature = catalog
+        this.atomic = false
+        this.version = null
         return this
     }
 
@@ -347,7 +349,8 @@ open class Write : AnyObject() {
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.UPDATE
         this.feature = catalog
-        if (atomic) { this.atomic = true; this.version = catalog.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) catalog.tupleNumber?.version else null
         return this
     }
 
@@ -366,7 +369,8 @@ open class Write : AnyObject() {
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = catalog
-        if (atomic) { this.atomic = true; this.version = catalog.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) catalog.tupleNumber?.version else null
         return this
     }
 
@@ -387,7 +391,8 @@ open class Write : AnyObject() {
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = catalog
-        if (atomic) { this.atomic = true; this.version = catalog.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) catalog.tupleNumber?.version else null
         return this
     }
 
@@ -410,6 +415,7 @@ open class Write : AnyObject() {
         this.collectionId = CATALOGS_COL_ID
         this.op = WriteOp.DELETE
         withId(id)
+        this.atomic = requireVersion != null
         this.version = if (requireVersion != null) requireVersion.number else null
         return this
     }
@@ -424,6 +430,8 @@ open class Write : AnyObject() {
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.CREATE
         this.feature = collection
+        this.atomic = false
+        this.version = null
         return this
     }
 
@@ -438,7 +446,8 @@ open class Write : AnyObject() {
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPDATE
         this.feature = collection
-        if (atomic) { this.atomic = true; this.version = collection.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) collection.tupleNumber?.version else null
         return this
     }
 
@@ -453,7 +462,8 @@ open class Write : AnyObject() {
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.UPSERT
         this.feature = collection
-        if (atomic) { this.atomic = true; this.version = collection.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) collection.tupleNumber?.version else null
         return this
     }
 
@@ -468,7 +478,8 @@ open class Write : AnyObject() {
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.DELETE
         this.feature = collection
-        if (atomic) { this.atomic = true; this.version = collection.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) collection.tupleNumber?.version else null
         return this
     }
 
@@ -489,6 +500,7 @@ open class Write : AnyObject() {
         this.collectionId = COLLECTIONS_COL_ID
         this.op = WriteOp.DELETE
         this.id = Id(collectionId)
+        this.atomic = requireVersion != null
         this.version = requireVersion?.number
         return this
     }
@@ -505,6 +517,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.CREATE
         this.feature = feature
+        this.atomic = false
+        this.version = null
         return this
     }
 
@@ -526,6 +540,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collectionId)
         this.op = WriteOp.CREATE
         this.feature = feature
+        this.atomic = false
+        this.version = null
         return this
     }
 
@@ -541,7 +557,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.UPDATE
         this.feature = feature
-        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) feature.tupleNumber?.version else null
         return this
     }
 
@@ -563,7 +580,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collectionId)
         this.op = WriteOp.UPDATE
         this.feature = feature
-        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) feature.tupleNumber?.version else null
         return this
     }
 
@@ -579,7 +597,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.UPSERT
         this.feature = feature
-        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) feature.tupleNumber?.version else null
         return this
     }
 
@@ -601,6 +620,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collectionId)
         this.op = WriteOp.UPSERT
         this.feature = feature
+        this.atomic = requireVersion != null
+        this.version = requireVersion?.number
         return this
     }
 
@@ -616,7 +637,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.DELETE
         this.feature = feature
-        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
+        this.atomic = atomic
+        this.version = if (atomic) feature.tupleNumber?.version else null
         return this
     }
 
@@ -634,6 +656,7 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.DELETE
         this.id = Id(id)
+        this.atomic = requireVersion != null
         this.version = requireVersion?.number
         return this
     }
@@ -657,6 +680,7 @@ open class Write : AnyObject() {
         this.collectionId = Id(collectionId)
         this.op = WriteOp.DELETE
         this.id = Id(id)
+        this.atomic = requireVersion != null
         this.version = requireVersion?.number
         return this
     }
@@ -665,7 +689,7 @@ open class Write : AnyObject() {
      * Purge a Naksha feature.
      * @param collection the collection from which to purge the feature.
      * @param feature the feature to purge.
-     * @param atomic if _true_, copies the version found in the [uuid][XyzNs.uuid] of the feature into [version].
+     * @param atomic ignored; PURGE has no atomic/expected-version variant.
      * @since 3.0
      */
     fun purgeFeature(collection: NakshaCollection, feature: NakshaFeature, atomic: Boolean): Write {
@@ -673,7 +697,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.PURGE
         this.feature = feature
-        if (atomic) { this.atomic = true; this.version = feature.tupleNumber?.version } else this.version = null
+        this.atomic = false
+        this.version = null
         return this
     }
 
@@ -681,7 +706,7 @@ open class Write : AnyObject() {
      * Purge a feature by id.
      * @param collection the collection from which to purge the feature.
      * @param id the identifier of the feature to purge.
-     * @param requireVersion the required [requireVersion]; if any.
+     * @param requireVersion ignored; PURGE has no atomic/expected-version variant.
      * @return this.
      * @since 3.0
      */
@@ -692,7 +717,8 @@ open class Write : AnyObject() {
         this.collectionId = Id(collection.id)
         this.op = WriteOp.PURGE
         this.id = Id(id)
-        this.version = requireVersion?.number
+        this.atomic = false
+        this.version = null
         return this
     }
 

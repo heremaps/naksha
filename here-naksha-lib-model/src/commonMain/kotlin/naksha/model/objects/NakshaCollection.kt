@@ -369,6 +369,9 @@ open class NakshaCollection() : NakshaFeature() {
     open fun addMember(value: Member): NakshaCollection {
         value.id // Validate the logical name, including descriptors loaded through the underlying map.
         var list = this.members
+        if (list != null && list.size >= MemberList.MAX_MEMBERS) {
+            throw illegalArg("Cannot add more than ${MemberList.MAX_MEMBERS} members to a collection")
+        }
         if (list == null) {
             list = MemberList()
             list.add(value)
