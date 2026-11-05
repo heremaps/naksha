@@ -97,10 +97,13 @@ SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
         */
 
 
-    private var txnPlan: PgPlan? = null
+    private var _txnPlan: PgPlan? = null
 
+    /**
+     * Prepare the SQL statement only once per stream, and reuse it for each chunk.
+     */
     private fun txnPlan(): PgPlan =
-        txnPlan ?: v2Session.connection.prepare(buildTxnSql(), arrayOf("int8")).also { txnPlan = it }
+        _txnPlan ?: v2Session.connection.prepare(buildTxnSql(), arrayOf("int8")).also { _txnPlan = it }
 
     // Runs once per stream
     private fun buildTxnSql(): String {
@@ -129,7 +132,7 @@ SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
 
     private fun StringBuilder.appendNextTxn(head: String, suffix: String): StringBuilder =
         append("(SELECT ").appendTxn(null).append(" AS t FROM ").append(head).append(suffix)
-            .append(" WHERE ").appendTxn(null).append(">\$1 ORDER BY t ASC LIMIT 1)")
+            .append(" WHERE ").appendTxn(null).append($$">$1 ORDER BY t ASC LIMIT 1)")
 
     private fun StringBuilder.appendSelect(head: String, suffix: String, alias: String): StringBuilder =
         append("SELECT ").append("jsondata, ST_AsEWKB(geo) AS geo FROM ")
@@ -224,7 +227,7 @@ SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
     }
 
     override fun close() {
-        txnPlan?.close()
+        _txnPlan?.close()
     }
 
     override fun closeForRecovery(): StreamRequest {
