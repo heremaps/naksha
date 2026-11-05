@@ -23,6 +23,8 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
          */
         const val VERSION_COLUMN_SQL = "i"
         private const val LEGACY_DATUM_FACTOR = 100_000_000_000L
+        private const val DATE_BITS_MASK = -1L shl 32    // year|month|day bits of a V3 version
+        private const val SEQ_30_MAX = 0x3FFF_FFFFL      // Version.SEQ_30_MASK is private
 
         /** Converts legacy `yyyyMMdd * 10^11 + seq` txn into the V3 [Version] format. */
         fun legacyTxnToV3Version(legacy: Long): Version {
@@ -92,7 +94,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM (
     // Runs once per stream
     private fun buildChunkSql(): String {
         val head = "${request.catalogId}.${request.collectionId}"
-        val sb = StringBuilder(512) // enough for all 3 tables with real names and real version
+        val sb = StringBuilder(512) // enough for all tables with real names and real version
         sb.append("SELECT jsondata, ST_AsEWKB(geo) AS geo FROM (")
         sb.appendChunkSelect(head, "")
         if (request.queryHistory) sb.append(" UNION ALL ").appendChunkSelect(head, "_hst", !request.queryDeleted)
@@ -148,7 +150,7 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
     // Runs once per stream
     private fun buildTxnSql(): String {
         val head = "${request.catalogId}.${request.collectionId}"
-        val sb = StringBuilder(1536) // enough for all 3 tables with real names and real txn version
+        val sb = StringBuilder(1536) // enough for all tables with real names and real txn version
         sb.append("WITH next_txn AS (")
         sb.appendNextTxn(head, "")
         if (request.queryHistory) sb.append(" UNION ALL ").appendNextTxn(head, "_hst", !request.queryDeleted)
@@ -193,33 +195,32 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
             txnPlan().execute(arrayOf(nextVersionToRead))
 
         val tuples = ArrayList<StreamTuple>()
-        var txn : Long? = null
-        var txnAsVersion : Version? = null
+        if (request.ignoreTransactions) tuples.ensureCapacity(request.chunkSize)
+        var txn = Long.MIN_VALUE
+        var txnVersion = 0L
+        var lastSeq = -1L
         try {
             while (cursor.next()) {
                 val jsonData : JvmMap = cursor["jsondata"]
                 val geoData : ByteArray = cursor["geo"]
                 val feature = jsonData.proxy(NakshaFeature::class)
-                val xyz = feature.properties.xyz
+                val xyz = (jsonData["properties"] as JvmMap)["@ns:com:here:xyz"] as JvmMap // to avoid proxy creations when using feature.properties.xyz
                 val uuid = xyz["uuid"] as String
                 val featureSeq = parseLong(uuid, uuid.lastIndexOf(':') + 1, uuid.length, 10)
+                lastSeq = featureSeq
                 val rowTxn = xyz["txn"] as Long
-                val rowVersion =
-                    if (rowTxn == txn) txnAsVersion!!
-                    else legacyTxnToV3Version(rowTxn).also { txn = rowTxn; txnAsVersion = it }
-                val action = xyz.action
+                if (rowTxn != txn) {
+                    txn = rowTxn
+                    txnVersion = legacyTxnToV3Version(rowTxn).number
+                }
+                require(featureSeq in 0..SEQ_30_MAX) { "seq out of 30-bit range: $featureSeq" }
+                val action = Action.fromString(xyz["action"] as String)
                 feature.geometry = GeoUtil.fromEWKB(geoData)
                 val id = Id(feature.id)
                 val streamTuple = StreamTuple(
                     id = id,
                     feature = feature.platformObject(),
-                    version = Version.auto(
-                        rowVersion.year,
-                        rowVersion.month,
-                        rowVersion.day,
-                        featureSeq,
-                        action
-                        ).number,
+                    version = (txnVersion and DATE_BITS_MASK) or (featureSeq shl 2) or action.longValue
                 )
                 tuples.add(streamTuple)
             }
@@ -231,15 +232,18 @@ SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
                 StreamChunk(this, tuples.toTypedArray())
             else StreamTransaction(stream = this,
                 id = null,
-                version = txnAsVersion!!.number,
+                version = txnVersion,
                 features = tuples.toTypedArray(),
                 transaction = null)
         _chunks.add(chunk)
         nextVersionToRead =
             if (request.ignoreTransactions)
-                chunk.tuples.maxOfOrNull { it.version }?.let { ((it ushr 2) and Version.SEQ_MAX) + 1 } ?: nextVersionToRead
+                if (lastSeq >= 0)
+                    lastSeq + 1
+                else
+                    nextVersionToRead
             else
-                txn ?: throw IllegalStateException("Transaction ID not found")
+                if (txn == Long.MIN_VALUE) throw IllegalStateException("Transaction ID not found") else txn
         return chunk
     }
 
