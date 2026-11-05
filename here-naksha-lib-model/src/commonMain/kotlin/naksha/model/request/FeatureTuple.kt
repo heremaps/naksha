@@ -68,6 +68,13 @@ open class FeatureTuple(
     @JvmField var source: Any? = null
 
     /**
+     * Called by tuple loaders after assigning [tuple], before returning the loaded reference. Overrides may apply response-local metadata without modifying the shared cached tuple. Direct field assignments must invoke this hook explicitly when that behavior is needed.
+     * @since 3.0
+     */
+    open fun onTupleLoaded() {
+    }
+
+    /**
      * Returns the feature-id, if available.
      * @return the feature-id, if available.
      * @since 3.0

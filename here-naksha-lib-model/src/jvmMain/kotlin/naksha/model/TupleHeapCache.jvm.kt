@@ -32,6 +32,7 @@ actual class TupleHeapCache : ITupleCache {
             loaded++
             featureTuple.tuple = cached
             featureTuple.source = this
+            featureTuple.onTupleLoaded()
         }
         return loaded
     }

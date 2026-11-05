@@ -16,6 +16,7 @@ import naksha.model.objects.StandardMembers.StandardMembers_C.NEXT_VERSION
 import naksha.model.objects.StandardMembers.StandardMembers_C.NextVersion
 import naksha.model.objects.StandardMembers.StandardMembers_C.VERSION
 import naksha.model.request.*
+import naksha.model.request.ops.QueryConverter
 import naksha.model.request.query.SortOrder
 import kotlin.math.max
 import kotlin.math.min
@@ -148,9 +149,8 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
       q_versions = ""
     } else if (req.versions == 1) {
       // We should query HISTORY, but only need the latest single state close to version.
-      // If the caller already filters on the next-version member (a "read-by-next-tns" query), the
-      // implicit `nv = HEAD` trim would contradict it, so we leave `nv` unconstrained.
-      val filtersNextVersion = customClause?.columns?.containsKey(NextVersion.name) == true
+      // Only a mandatory exact next-version lookup selects a predecessor. Broad/OR predicates remain snapshot queries, so mentioning nv cannot remove the per-feature lifetime constraint.
+      val filtersNextVersion = PgQueryWhereBuilder.isExactNextVersionLookup(req.queryMembers ?: QueryConverter.convert(req.query))
       if (!filtersNextVersion) {
         if (WHERE.isNotEmpty()) WHERE.append("AND ")
 
@@ -205,11 +205,11 @@ class PgQueryBuilder(val session: PgSession, val readRequest: ReadRequest) {
     }
 
     // The final SQL query.
-    // We only need `fn` and `version`; the additional columns are only used for sorting.
+    // History references retain successor metadata without loading payload columns.
     val SQL = """WITH
 query AS (SELECT ${selectCols.joinToString()} FROM ${pgCollection.qualifiedName}${if (WHERE.isEmpty()) "" else " WHERE $WHERE"})
 $q_ranked$q_deleted$q_versions
-SELECT $FN, $VERSION FROM ${if (q_versions.isNotEmpty()) "q_versions" else "query"}
+SELECT $FN, $VERSION${if (req.queryHistory) ", $NEXT_VERSION" else ""} FROM ${if (q_versions.isNotEmpty()) "q_versions" else "query"}
 ${if (order_by_string.isNotEmpty()) " ORDER BY $order_by_string" else ""}
 ${if (REQ_LIMIT < Int.MAX_VALUE) " LIMIT $REQ_LIMIT" else ""}"""
      return PgQuery(

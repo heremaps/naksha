@@ -149,6 +149,9 @@ internal data class PgWrite(val original: Write, val i: Int) {
      */
     var tupleNumber: TupleNumber? = null
 
+    /** Whether a DELETE or PURGE actually changed its locked HEAD state. @since 3.0 */
+    var changed: Boolean = false
+
     /**
      * If this modified a catalog, the [PgCatalog] wrapper around the [tuple].
      *

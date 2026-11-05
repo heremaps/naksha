@@ -6,8 +6,6 @@ import naksha.base.NakshaException
 import naksha.base.Platform
 import naksha.base.Platform.PlatformCompanion.logger
 import naksha.base.TupleNumber
-import naksha.base.catalogNotFound
-import naksha.base.collectionNotFound
 import naksha.base.illegalArg
 import naksha.model.NewTuple
 
@@ -51,11 +49,15 @@ internal class PgWriterUpdate(
     } catch (e: NakshaException) {
       // A missing HEAD for a metadata modification is a missing catalog/collection, not a missing feature.
       val first = pgWrites[start]
-      if (e.error.code == NakshaError.FEATURE_NOT_FOUND && first.isCollectionModification) {
-        throw collectionNotFound("Collection '${first.id.text}' does not exist in catalog '${first.dbCatalog.id.text}'")
-      }
-      if (e.error.code == NakshaError.FEATURE_NOT_FOUND && first.isCatalogModification) {
-        throw catalogNotFound("Catalog '${first.id.text}' does not exist")
+      val error = e.error
+      if (error.code == NakshaError.FEATURE_NOT_FOUND) {
+        if (first.isCollectionModification) {
+          error.code = NakshaError.COLLECTION_NOT_FOUND
+          error.msg = "Collection '${error.id}' does not exist in catalog '${error.catalog}'"
+        } else if (first.isCatalogModification) {
+          error.code = NakshaError.CATALOG_NOT_FOUND
+          error.msg = "Catalog '${error.id}' does not exist"
+        }
       }
       throw e
     }

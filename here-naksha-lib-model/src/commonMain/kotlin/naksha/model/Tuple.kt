@@ -1013,12 +1013,25 @@ data class Tuple @JvmOverloads constructor(
 
     /**
      * Decode this [Tuple] into an object.
+     *
+     * Empty tombstones expose only key-derived identity, never payload from an older state. Numeric identifiers are recovered from the feature-number; hashed identifiers use selector-supplied text if present, otherwise raw `id` is explicitly `null`. Typed [NakshaFeature.id] access then fails rather than inventing an identifier. XYZ GUIDs use an empty ID component when text is unavailable; their tuple-number still identifies the exact state. [id] continues to reject unavailable textual identifiers.
      * @param globalBook The global book to use to decode the [Tuple]. Need to be loaded from the storage, if [globalBookTn] is not `null`.
      * @return the decoded [AnyObject].
      * @since 3.0
      * @throws NakshaException if any error occurs.
      */
     fun decodeObject(globalBook: IBook?): AnyObject {
+        if (featureBytes.isEmpty() && isTombstone) {
+            val text = getString(StandardMembers.Id) ?: tupleNumber.featureNumber.takeIf { it >= 0L }?.toString()
+            return object : NakshaFeature() {
+                override var id: String
+                    get() = getRaw(ID_KEY) as? String ?: throw illegalState("The empty tombstone does not encode the textual identifier")
+                    set(value) { setRaw(ID_KEY, value) }
+            }.apply {
+                setRaw(NakshaFeature.ID_KEY, text)
+                tupleNumber = this@Tuple.tupleNumber
+            }
+        }
         val rawBytes = if (isGzipped(featureBytes)) gzipInflate(featureBytes) else featureBytes
         val decoder = JbDecoder2(globalBook, membersBook)
         decoder.mapBytes(rawBytes)
@@ -1061,7 +1074,8 @@ data class Tuple @JvmOverloads constructor(
      * @throws NakshaException if any error occurs.
      */
     fun decodeFeature(globalBook: IBook?): NakshaFeature {
-        val feature = decodeObject(globalBook).proxy(NakshaFeature::class)
+        val raw = decodeObject(globalBook)
+        val feature = if (raw is NakshaFeature) raw else raw.proxy(NakshaFeature::class)
         // The blob stores the tuple-number (the `uuid` slot) as a [TupleNumber], but the legacy
         // `xyz.uuid`/`xyz.nuuid` are stringified [Guid]s and `xyz.action` is derived from the
         // tuple-number's action bits, none of which are stored in the blob. Materialize them so
@@ -1069,10 +1083,11 @@ data class Tuple @JvmOverloads constructor(
         val xyz = feature.properties?.xyz
         if (xyz != null) {
             val tn = tupleNumber
-            if (xyz.uuid == null) xyz.setRaw(XyzNs.UUID, Guid(id.text, tn).toString())
+            val idText = if (featureBytes.isEmpty() && isTombstone) feature.getRaw(NakshaFeature.ID_KEY) as? String ?: "" else id.text
+            if (xyz.uuid == null) xyz.setRaw(XyzNs.UUID, Guid(idText, tn).toString())
             val nextTn = nextTupleNumber
-            if (nextTn != null) xyz.setRaw(XyzNs.NUUID, Guid(id.text, nextTn).toString())
-            else if (tn.action == Action.DELETE) xyz.setRaw(XyzNs.NUUID, Guid(id.text, tn).toString())
+            if (nextTn != null) xyz.setRaw(XyzNs.NUUID, Guid(idText, nextTn).toString())
+            else if (tn.action == Action.DELETE) xyz.setRaw(XyzNs.NUUID, Guid(idText, tn).toString())
             xyz.setRaw(XyzNs.ACTION, tn.action.toString())
         }
         return feature

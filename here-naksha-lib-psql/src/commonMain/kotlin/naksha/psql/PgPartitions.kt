@@ -4,6 +4,7 @@ import naksha.base.Id
 import naksha.base.Id.IdCompanion.ADMIN_CATALOG_QUOTED
 import naksha.base.illegalArg
 import naksha.base.illegalState
+import naksha.base.collectionNotFound
 import naksha.psql.PgUtil.PgUtilCompanion.quoteIdent
 
 /**
@@ -74,6 +75,69 @@ VALUES ($1, $2, $3, $4, $5::text::oid, $6, $7, $8, $9)
     val config = registered(conn, schema, table)
       ?: throw illegalArg("Unregistered partition root $schema.$table")
     maintainLocked(conn, schema, table, version, root, config)
+  }
+
+  /**
+   * Tests physical existence under the caller's collection guard without consulting potentially tombstoned metadata.
+   * @since 3.0
+   */
+  fun exists(conn: PgConnection, schema: String, table: String): Boolean = oid(conn, schema, table) != null
+
+  /**
+   * Checks only the HEAD and finite range needed by a write, not the maintainer's full integrity contract. The caller must hold a shared collection guard until transaction completion, or roll back the probe's subtransaction before taking an exclusive guard for maintenance. No DDL or lock upgrade occurs here.
+   * @since 3.0
+   */
+  fun covered(conn: PgConnection, schema: String, table: String, version: Long): Boolean {
+    transaction(conn)
+    if (version < 0 || version >= HEAD) throw illegalArg("Coverage requires a finite version in 0..HEAD-1")
+    val root = oid(conn, schema, table) ?: throw collectionNotFound("Partition root $schema.$table is missing")
+    val config = registered(conn, schema, table) ?: throw illegalState("Unregistered partition root $schema.$table")
+    if (root != config.root) throw illegalState("Registered root $schema.$table has been replaced")
+    // The shared collection guard excludes cooperative DDL; ONLY avoids walking retained history.
+    conn.execute("LOCK TABLE ONLY ${quoteIdent(schema)}.${quoteIdent(table)} IN ACCESS SHARE MODE").close()
+    if (oid(conn, schema, table) != root) throw illegalState("Partition root $schema.$table changed while acquiring its lock")
+    val number = version shr config.shift
+    val start = number shl config.shift
+    val end = minOf(start + (1L shl config.shift), HEAD)
+    val leaves = ArrayList<String>(config.partitions)
+    for (slot in 0 until config.partitions) {
+      val low = if (slot == 0) "MINVALUE" else "'${Id.partitionIndexMin(slot, config.partitions)}'"
+      val high = if (slot == config.partitions - 1) "MAXVALUE" else "'${Id.partitionIndexMin(slot + 1, config.partitions)}'"
+      leaves.add("($slot, ${PgUtil.quoteLiteral("FOR VALUES FROM ($low) TO ($high)")})")
+    }
+    return check(conn, """
+WITH expected AS (
+  SELECT $2::text || suffix AS name, bound FROM (VALUES
+    ('${'$'}head', 'DEFAULT'),
+    ('${'$'}' || $3::text, $4::text)
+  ) ranges(suffix, bound)
+), candidates AS MATERIALIZED (
+  SELECT c.oid, c.relname, c.relpartbound, c.relkind, e.bound FROM expected e
+  JOIN pg_catalog.pg_namespace n ON n.nspname = $1
+  JOIN pg_catalog.pg_class c ON c.relnamespace = n.oid AND c.relname = e.name
+  JOIN pg_catalog.pg_inherits i ON i.inhrelid = c.oid AND i.inhparent = $5::text::oid AND NOT i.inhdetachpending
+  WHERE c.relispartition
+), children AS MATERIALIZED (
+  SELECT c.oid, c.relname FROM candidates c
+  WHERE pg_catalog.pg_get_expr(c.relpartbound, c.oid) = c.bound
+    AND c.relkind = CASE WHEN $6::int = 1 THEN 'r'::pg_catalog."char" ELSE 'p'::pg_catalog."char" END
+    AND ($6::int = 1 OR pg_catalog.pg_get_partkeydef(c.oid) = 'RANGE (fn)')
+), leaf_candidates AS MATERIALIZED (
+  SELECT c.oid AS parent, leaf.oid, leaf.relname, leaf.relpartbound
+  FROM children c JOIN pg_catalog.pg_inherits i ON i.inhparent = c.oid AND NOT i.inhdetachpending
+  JOIN pg_catalog.pg_class leaf ON leaf.oid = i.inhrelid
+  JOIN pg_catalog.pg_namespace n ON n.oid = leaf.relnamespace
+  WHERE n.nspname = $1 AND leaf.relkind = 'r' AND leaf.relispartition
+)
+SELECT (SELECT count(*) FROM children) = 2 AND ($6::int = 1 OR NOT EXISTS (
+  SELECT 1 FROM children c CROSS JOIN (VALUES ${leaves.joinToString(",")}) expected_leaf(slot, bound)
+  WHERE NOT EXISTS (
+    SELECT 1 FROM leaf_candidates leaf
+    WHERE leaf.parent = c.oid AND leaf.relname = c.relname || '${'$'}' || slot::text
+      AND pg_catalog.pg_get_expr(leaf.relpartbound, leaf.oid) = expected_leaf.bound
+  )
+)) AS ok
+""", arrayOf(schema, table, number.toString(), "FOR VALUES FROM ('$start') TO ('$end')", root.toString(), config.partitions))
   }
 
   /**
@@ -209,15 +273,30 @@ SELECT EXISTS (
   }
 
   /**
-   * Takes a shared catalog guard followed by an exclusive collection advisory lock. Returns false on a nonblocking conflict; roll back the attempt's subtransaction to release any catalog guard already acquired.
+   * Takes a shared catalog guard followed by a shared write guard or exclusive maintenance/drop guard. Returns false on a nonblocking conflict; roll back the attempt's subtransaction to release any catalog guard already acquired. Upgrades retained from earlier requests are nonblocking to avoid upgrade deadlocks.
    * @since 3.0
    */
-  fun lockCollection(conn: PgConnection, schema: String, table: String, tryOnly: Boolean = false): Boolean {
+  fun lockCollection(conn: PgConnection, schema: String, table: String, tryOnly: Boolean = false, shared: Boolean = false): Boolean {
     transaction(conn)
     name(schema, 63)
     name(table, 29)
     if (!lockCatalog(conn, schema, shared = true, tryOnly = tryOnly)) return false
-    val function = if (tryOnly) "pg_try_advisory_xact_lock" else "pg_advisory_xact_lock"
+    if (!shared && !tryOnly) {
+      val upgrading = conn.execute("""
+SELECT EXISTS (
+  SELECT 1 FROM pg_catalog.pg_locks
+  WHERE pid = pg_catalog.pg_backend_pid() AND locktype = 'advisory' AND mode = 'ShareLock' AND granted
+    AND objsubid = 1
+    AND classid::bigint = ((pg_catalog.hashtextextended(pg_catalog.format('naksha:partman:%I.%I', $1::text, $2::text), 0) >> 32) & 4294967295)
+    AND objid::bigint = (pg_catalog.hashtextextended(pg_catalog.format('naksha:partman:%I.%I', $1::text, $2::text), 0) & 4294967295)
+) AS upgrading
+""", arrayOf(schema, table)).fetch().use { cursor -> cursor.get<Boolean>("upgrading") }
+      if (upgrading) {
+        if (!lockCollection(conn, schema, table, tryOnly = true)) throw illegalState("Collection lock upgrade is busy; retry the transaction with exclusive work first")
+        return true
+      }
+    }
+    val function = "pg_${if (tryOnly) "try_" else ""}advisory_xact_lock${if (shared) "_shared" else ""}"
     val sql = "SELECT pg_catalog.$function(pg_catalog.hashtextextended(pg_catalog.format('naksha:partman:%I.%I', $1::text, $2::text), 0)) AS locked"
     val args = arrayOf<Any?>(schema, table)
     if (tryOnly) return conn.execute(sql, args).fetch().use { cursor -> cursor.get<Boolean>("locked") }

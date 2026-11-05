@@ -270,6 +270,7 @@ open class PgSession(
     }
 
     private var executionCount: Int = 0
+    private val mutatedFeatures = HashSet<Triple<Id, Id, Id>>()
 
     override fun executeRead(request: ReadRequest): Response {
         val readFeatures = when (request) {
@@ -311,10 +312,24 @@ open class PgSession(
     override fun executeWrite(request: WriteRequest): Response {
         val startMillis = Platform.currentMillis()
         var status = "NOK"
+        val lock = _connLock.acquire()
         try {
+            val identities = HashSet<Triple<Id, Id, Id>>()
+            for (write in request.writes) {
+                if (write == null) continue
+                val catalog = write.catalogId ?: throw illegalArg("The given write does not have a catalog-id")
+                val collection = write.collectionId ?: throw illegalArg("The given write does not have a collection-id")
+                val id = write.id
+                val identity = Triple(catalog, collection, id)
+                if (!identities.add(identity) || identity in mutatedFeatures) {
+                    throw conflict("Feature '$catalog/$collection/$id' can only be mutated once per transaction version")
+                }
+            }
             val writer = PgWriter(this, executionCount++ != 0)
             val response = writer.execute(request.writes)
             if (response is SuccessResponse) {
+                // Failed requests roll back to their savepoint and must not reserve any identities.
+                mutatedFeatures.addAll(writer.mutatedFeatures)
                 response.filterResults(*request.resultFilters.filterNotNull().toTypedArray())
                 status = "OK"
             }
@@ -340,6 +355,7 @@ open class PgSession(
             }
             return ErrorResponse(nakshaException.error)
         } finally {
+            lock.close()
             logStorageReqStats(request, status, Platform.currentMillis() - startMillis)
         }
     }
@@ -384,9 +400,10 @@ open class PgSession(
      * Reset the session into the initial state.
      */
     private fun clearTxAndCloseConnection() {
-        executionCount = 0
-        tx = null
         _connLock.acquire().use {
+            executionCount = 0
+            mutatedFeatures.clear()
+            tx = null
             val conn = _conn.get()
             if (conn != null) try {
                 conn.close()
@@ -609,6 +626,7 @@ JOIN lookup ON (lookup.$FN, lookup.$VERSION) = (t.$FN, t.$VERSION)"""
             val tuple = byTupleNumber[featureTuple.tupleNumber] ?: Naksha.cache[featureTuple.tupleNumber]
             if (tuple != null) {
                 featureTuple.tuple = tuple
+                featureTuple.onTupleLoaded()
                 found++
             }
         }

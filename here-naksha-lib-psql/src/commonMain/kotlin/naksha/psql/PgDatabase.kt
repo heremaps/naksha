@@ -771,7 +771,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    *
    * For each feature, an existing DELETE HEAD is archived by changing its `nv` when [storeHistory] is enabled, otherwise replaced in place. A live CREATE/UPDATE HEAD is an
    * error. New states are inserted through the root with `nv = Version.HEAD.number` and CREATE
-   * action. Returns the supplied tuple states in input order.
+   * action. Re-creation requires a strictly newer transaction version than the DELETE HEAD. Returns the supplied tuple states in input order.
    *
    * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
    * uniqueness, and sorted inputs into the deterministic locking order. The entire batch is validated before SQL. The caller must provision finite history partition coverage for incoming versions before archiving tombstones; no maintenance locks are acquired here. No commit/rollback here.
@@ -799,7 +799,7 @@ SELECT basics.*, procs.* FROM basics, procs;
       val conflictCode = when {
         catalogNumber == Id.ADMIN_CATALOG_ID.intValue && collectionNumber == Id.CATALOGS_COL_ID.intValue -> NakshaError.CATALOG_EXISTS
         collectionNumber == Id.COLLECTIONS_COL_ID.intValue -> NakshaError.COLLECTION_EXISTS
-        else -> NakshaError.CONFLICT
+        else -> NakshaError.FEATURE_EXISTS
       }
       for (incoming in tuples) {
         val tuple = incoming.tuple
@@ -844,12 +844,14 @@ SELECT basics.*, procs.* FROM basics, procs;
             var actualVersion: Long? = null
             try {
               val fn = Id.featureNumberToOrdinal(tuple.tupleNumber.featureNumber).toString()
+              lockFeature(conn, target, fn)
               while (true) {
                 actualVersion = null
                 actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
                   if (cursor.next()) cursor.get<String>("version").toLong() else null
                 }
                 if (actualVersion != null && Action.fromVersion(actualVersion) == Action.DELETE) {
+                  checkSuccessor(schema, table, tuple.id.text, tuple.version, actualVersion, null)
                   if (!storeHistory) {
                     for (column in rows.columns) column.values[0] = null
                     rows.setRow(0, tuple)
@@ -859,7 +861,7 @@ SELECT basics.*, procs.* FROM basics, procs;
                     result.add(tuple)
                     break
                   }
-                  conn.execute("UPDATE $target SET nv = $2::text::bigint WHERE fn = $1::text::bigint AND nv = $head", arrayOf(fn, tuple.version.toString())).close()
+                  archiveHead(conn, target, fn, tuple.version, columns)
                   actualVersion = null
                 }
                 if (actualVersion == null) {
@@ -914,7 +916,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * The input states carry the CREATE action; the UPDATE branch stores and returns them with the
    * UPDATE action bit set, while the INSERT branch keeps CREATE. With [storeHistory] enabled a
    * replaced HEAD is archived by changing its `nv` to the new version; otherwise it is replaced in
-   * place.
+   * place. Replacing any HEAD requires a strictly newer transaction version, ignoring action bits; otherwise a structured conflict is thrown. The complete input batch is validated before SQL.
    *
    * Returns, per input, a [NewTuple] whose `previousTupleNumber` is set when UPDATE was performed
    * and `null` when INSERT was performed (including re-creation after a DELETE HEAD), in input order.
@@ -947,6 +949,7 @@ SELECT basics.*, procs.* FROM basics, procs;
         val reason = when {
           prev != null && (prev.databaseNumber != databaseNumber || prev.catalogNumber != catalogNumber || prev.collectionNumber != collectionNumber || prev.featureNumber != tn.featureNumber) -> "Upsert predecessor does not belong to the target feature"
           tn.databaseNumber != databaseNumber || tn.catalogNumber != catalogNumber || tn.collectionNumber != collectionNumber -> "Upserted tuple does not belong to the target collection"
+          tn.action != Action.CREATE -> "Row upsert requires CREATE action"
           tuple.nextVersion != head -> "Row upsert requires a HEAD state"
           tuple.featureBytes.isEmpty() -> "Row upsert requires a fully encoded tuple"
           tn.version < 0L || tn.version >= head -> "Row upsert requires a finite version"
@@ -968,11 +971,11 @@ SELECT basics.*, procs.* FROM basics, procs;
       rows.size = 1
       val target = "${quoteIdent(schema.catalogName())}.${quoteIdent(table.collectionName())}"
       val source = "SELECT ${rows.decodedColumns()} FROM UNNEST(${rows.placeholders()}) AS t(${rows.aliases()})"
-      val hasCc = rows.getColumn(ChangeCount.name) != null
-      val select = "SELECT version::text AS version${if (hasCc) ", ${quoteIdent(ChangeCount.name)}::text AS cc" else ""} FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
-      val insert = "INSERT INTO $target (${rows.aliases()}) $source RETURNING version::text AS version"
+      val ccColumn = rows.getColumn(ChangeCount.name)?.pgColumn
+      val hasCc = ccColumn != null
+      val select = "SELECT version::text AS version${if (ccColumn != null) ", ${ccColumn.ident}::text AS cc" else ""} FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
+      val insert = "INSERT INTO $target (${rows.aliases()}) $source ON CONFLICT (fn, nv) DO NOTHING RETURNING version::text AS version"
       val update = "WITH new_row AS ($source) UPDATE $target AS current_row SET (${rows.aliases()}) = (SELECT ${rows.aliases()} FROM new_row) FROM new_row WHERE current_row.fn = new_row.fn AND current_row.nv = $head RETURNING current_row.version::text AS version"
-      val archive = "UPDATE $target SET nv = $2::text::bigint WHERE fn = $1::text::bigint AND nv = $head"
       val insertPlan = conn.prepare(insert, rows.typeNames())
       val updatePlan = if (storeHistory) null else conn.prepare(update, rows.typeNames())
       try {
@@ -983,71 +986,80 @@ SELECT basics.*, procs.* FROM basics, procs;
           var oldCc: Long? = null
           try {
             val fn = Id.featureNumberToOrdinal(tuple.tupleNumber.featureNumber).toString()
-            actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
-              if (cursor.next()) {
-                if (hasCc) oldCc = (cursor.column("cc") as? String)?.toLongOrNull()
-                cursor.get<String>("version").toLong()
-              } else null
-            }
-            val live = actualVersion != null && Action.fromVersion(actualVersion) != Action.DELETE
-            if (!live) {
-              val createVersion = (tuple.version and -4L) or 0L
+            lockFeature(conn, target, fn)
+            while (true) {
+              oldCc = null
+              actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
+                if (cursor.next()) {
+                  if (hasCc) oldCc = (cursor.column("cc") as? String)?.toLongOrNull()
+                  cursor.get<String>("version").toLong()
+                } else null
+              }
+              if (actualVersion != null) checkSuccessor(schema, table, tuple.id.text, tuple.version, actualVersion, prev?.version)
+              val live = actualVersion != null && Action.fromVersion(actualVersion) != Action.DELETE
+              if (!live) {
+                val createVersion = tuple.version
+                for (column in rows.columns) column.values[0] = null
+                rows.setRow(0, tuple)
+                if (actualVersion == null) {
+                  // A concurrent inserter may win after our absent-HEAD read. Reclassify without aborting the transaction.
+                  val inserted = insertPlan.execute(rows.values()).use { cursor -> cursor.next() }
+                  if (!inserted) continue
+                } else if (storeHistory) {
+                  archiveHead(conn, target, fn, createVersion, columns)
+                  insertPlan.execute(rows.values()).use { cursor ->
+                    if (!cursor.next()) throw illegalState("Re-creation after an archived DELETE HEAD failed")
+                  }
+                } else {
+                  updatePlan!!.execute(rows.values()).use { cursor ->
+                    if (!cursor.next()) throw illegalState("Locked DELETE HEAD disappeared during replacement")
+                  }
+                }
+                result.add(NewTuple(tuple, null))
+                break
+              }
+              if (prev != null && (prev.version and -4L) != (actualVersion and -4L)) {
+                throw NakshaException(NakshaError(
+                  code = NakshaError.CONFLICT,
+                  msg = "Atomic upsert failed, the HEAD version does not match the expected predecessor",
+                  id = tuple.id.text,
+                  collection = table.text,
+                  catalog = schema.text,
+                  database = id.text
+                ).apply { this.expectedVersion = prev.version; this.actualVersion = actualVersion })
+              }
+              val updateVersion = (tuple.version and -4L) or 1L
+              if (hasCc && (oldCc ?: 0L) >= Int.MAX_VALUE.toLong()) {
+                throw illegalState("Change count overflows int32")
+              }
+              val newCc = if (hasCc) ((oldCc ?: 0L) + 1L).toInt() else null
               for (column in rows.columns) column.values[0] = null
               rows.setRow(0, tuple)
-              rows.setColumn(PgColumn.PgColumn_C.VersionColumn.name, 0, createVersion)
-              if (actualVersion == null) {
+              rows.setColumn(PgColumn.PgColumn_C.VersionColumn.name, 0, updateVersion)
+              if (newCc != null) rows.setColumn(ChangeCount.name, 0, newCc)
+              if (storeHistory) {
+                archiveHead(conn, target, fn, updateVersion, columns)
                 insertPlan.execute(rows.values()).use { cursor ->
-                  if (!cursor.next()) throw illegalState("Insert during upsert failed to store a HEAD state")
-                }
-              } else if (storeHistory) {
-                conn.execute(archive, arrayOf(fn, createVersion.toString())).close()
-                insertPlan.execute(rows.values()).use { cursor ->
-                  if (!cursor.next()) throw illegalState("Re-creation after an archived DELETE HEAD failed")
+                  if (!cursor.next()) throw illegalState("Re-insertion after an archived HEAD failed during upsert")
                 }
               } else {
                 updatePlan!!.execute(rows.values()).use { cursor ->
-                  if (!cursor.next()) throw illegalState("Locked DELETE HEAD disappeared during replacement")
+                  if (!cursor.next()) throw illegalState("Locked HEAD disappeared during upsert update")
                 }
               }
-              result.add(NewTuple(tuple, null))
-              continue
+              val updatedBook = HeapBook.copyOf(tuple.membersBook)
+              updatedBook.put(TN, TupleNumber.copy(tuple.tupleNumber, version = updateVersion))
+              if (newCc != null) updatedBook.put(ChangeCount.name, newCc)
+              result.add(NewTuple(Tuple(tuple.featureBytes, updatedBook), TupleNumber.copy(tuple.tupleNumber, version = actualVersion)))
+              break
             }
-            if (prev != null && (prev.version and -4L) != (actualVersion and -4L)) {
-              throw NakshaException(NakshaError(
-                code = NakshaError.CONFLICT,
-                msg = "Atomic upsert failed, the HEAD version does not match the expected predecessor",
-                id = tuple.id.text,
-                collection = table.text,
-                catalog = schema.text,
-                database = id.text
-              ).apply { this.expectedVersion = prev.version; this.actualVersion = actualVersion })
-            }
-            val updateVersion = (tuple.version and -4L) or 1L
-            val newCc = if (hasCc) ((oldCc ?: 0L) + 1L).toInt() else null
-            for (column in rows.columns) column.values[0] = null
-            rows.setRow(0, tuple)
-            rows.setColumn(PgColumn.PgColumn_C.VersionColumn.name, 0, updateVersion)
-            if (newCc != null) rows.setColumn(ChangeCount.name, 0, newCc)
-            if (storeHistory) {
-              conn.execute(archive, arrayOf(fn, updateVersion.toString())).close()
-              insertPlan.execute(rows.values()).use { cursor ->
-                if (!cursor.next()) throw illegalState("Re-insertion after an archived HEAD failed during upsert")
-              }
-            } else {
-              updatePlan!!.execute(rows.values()).use { cursor ->
-                if (!cursor.next()) throw illegalState("Locked HEAD disappeared during upsert update")
-              }
-            }
-            val updatedBook = HeapBook.copyOf(tuple.membersBook)
-            updatedBook.put(TN, TupleNumber.copy(tuple.tupleNumber, version = updateVersion))
-            if (newCc != null) updatedBook.put(ChangeCount.name, newCc)
-            result.add(NewTuple(Tuple(tuple.featureBytes, updatedBook), TupleNumber.copy(tuple.tupleNumber, version = actualVersion)))
           } catch (e: NakshaException) {
             val error = e.error
             if (error.database == null) error.database = id.text
             if (error.catalog == null) error.catalog = schema.text
             if (error.collection == null) error.collection = table.text
             if (error.id == null) error.id = tuple.id.text
+            if (error.expectedVersion == null) error.expectedVersion = prev?.version
             if (error.actualVersion == null && actualVersion != null) error.actualVersion = actualVersion
             throw e
           }
@@ -1070,7 +1082,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * Replace existing live HEAD states. An input [NewTuple] with a non-null predecessor requests an
    * atomic UPDATE conditioned on the predecessor's version (low two action bits masked); `null`
    * selects an unconditional UPDATE. A missing HEAD, a DELETE HEAD, or a mismatching predecessor
-   * is a structured error. The input states carry the UPDATE action and are stored unchanged.
+   * is a structured error. A successor must have a strictly newer transaction version, ignoring action bits. The input states carry the UPDATE action and are stored unchanged.
    *
    * With [storeHistory] enabled the old HEAD is archived by changing its `nv`; otherwise the HEAD
    * row is updated in place. Returns, per input, a [NewTuple] whose `previousTupleNumber` is the
@@ -1129,7 +1141,6 @@ SELECT basics.*, procs.* FROM basics, procs;
       val select = "SELECT version::text AS version FROM $target WHERE fn = $1::text::bigint AND nv = $head FOR UPDATE"
       val insert = "INSERT INTO $target (${rows.aliases()}) $source RETURNING version::text AS version"
       val update = "WITH new_row AS ($source) UPDATE $target AS current_row SET (${rows.aliases()}) = (SELECT ${rows.aliases()} FROM new_row) FROM new_row WHERE current_row.fn = new_row.fn AND current_row.nv = $head RETURNING current_row.version::text AS version"
-      val archive = "UPDATE $target SET nv = $2::text::bigint WHERE fn = $1::text::bigint AND nv = $head"
       val insertPlan = if (storeHistory) conn.prepare(insert, rows.typeNames()) else null
       val updatePlan = if (storeHistory) null else conn.prepare(update, rows.typeNames())
       try {
@@ -1139,6 +1150,7 @@ SELECT basics.*, procs.* FROM basics, procs;
           var actualVersion: Long? = null
           try {
             val fn = Id.featureNumberToOrdinal(tuple.tupleNumber.featureNumber).toString()
+            lockFeature(conn, target, fn)
             actualVersion = conn.execute(select, arrayOf(fn)).use { cursor ->
               if (cursor.next()) cursor.get<String>("version").toLong() else null
             }
@@ -1162,10 +1174,11 @@ SELECT basics.*, procs.* FROM basics, procs;
                 database = id.text
               ).apply { this.expectedVersion = prev.version; this.actualVersion = actualVersion })
             }
+            checkSuccessor(schema, table, tuple.id.text, tuple.version, actualVersion, prev?.version)
             for (column in rows.columns) column.values[0] = null
             rows.setRow(0, tuple)
             if (storeHistory) {
-              conn.execute(archive, arrayOf(fn, tuple.version.toString())).close()
+              archiveHead(conn, target, fn, tuple.version, columns)
               insertPlan!!.execute(rows.values()).use { cursor ->
                 if (!cursor.next()) throw illegalState("Re-insertion after an archived HEAD failed during update")
               }
@@ -1204,7 +1217,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * exactly the input order. Only HEAD states in DELETE action are purged: with [storeHistory]
    * enabled the tombstone is archived by changing its `nv` to [version], otherwise it is removed.
    * A live CREATE/UPDATE HEAD is left untouched and its current HEAD GUID is returned; a feature
-   * with no HEAD yields `null`. This is a positional contract: `result[i]` describes
+   * with no HEAD yields `null`. Purging a tombstone requires a strictly newer transaction version, including when history is disabled. This is a positional contract: `result[i]` describes
    * `featureIds[i]` and the list size equals `featureIds.size`.
    *
     * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
@@ -1228,15 +1241,16 @@ SELECT basics.*, procs.* FROM basics, procs;
          val result = ArrayList<Guid?>(featureIds.size)
          for (fid in featureIds) {
            val fnOrd = Id.featureNumberToOrdinal(fid.number).toString()
-           val locked = lockHead(plans, conn, fnOrd)
+           val locked = lockHead(plans, conn, fnOrd, fid.text)
            if (locked == null) {
              result.add(null)
              continue
            }
            val tuple = locked.first
            val guid = Guid(tuple.id.text, tuple.tupleNumber)
-           if (Action.fromVersion(tuple.tupleNumber.version) == Action.DELETE) {
-             if (collection.storeHistory) DeletePlans.archive(conn, plans.target, head, fnOrd, version)
+            if (Action.fromVersion(tuple.tupleNumber.version) == Action.DELETE) {
+              checkSuccessor(collection.catalogId, collection.id, fid.text, version, tuple.version, null)
+              if (collection.storeHistory) archiveHead(conn, plans.target, fnOrd, version, collection.columns)
              else DeletePlans.deleteRow(conn, plans.target, head, fnOrd)
            }
            result.add(guid)
@@ -1259,7 +1273,7 @@ SELECT basics.*, procs.* FROM basics, procs;
    * omitted from the result; an already-deleted HEAD is returned as its existing GUID without being
    * rewritten. The generated tombstone has DELETE action and `nv = Version.HEAD.number`; with
    * [storeHistory] enabled the prior live state is archived. By default the old payload is retained
-   * in the tombstone; [emptyTombstone] makes every non-key column SQL NULL.
+   * in the tombstone; [emptyTombstone] makes every non-key column SQL NULL. A new tombstone requires a strictly newer transaction version than its live predecessor.
    *
     * Results preserve input order with missing features omitted. Preconditions: the caller has opened
     * a savepoint, validated transaction-wide feature uniqueness, and sorted inputs into the
@@ -1441,10 +1455,10 @@ SELECT basics.*, procs.* FROM basics, procs;
    * supplied predecessor the existing HEAD must be live (CREATE/UPDATE); with a predecessor it must
    * be exactly that HEAD state (action-sensitive comparison). A missing or mismatching HEAD is an
    * error; an existing unrelated tombstone is never reported as a successful creation. With
-   * [storeHistory] enabled the replaced live state is archived.
+   * [storeHistory] enabled the replaced live state is archived. The explicit state must have a strictly newer transaction version than HEAD; its version is never rewritten. The complete input batch is validated before SQL.
    *
     * Preconditions: the caller has opened a savepoint, validated transaction-wide feature
-    * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
+     * uniqueness, and sorted inputs into the deterministic locking order. No commit/rollback here.
     * @param conn the caller-owned mutable connection; it is not closed by this method.
     * @param collection the target collection; its catalog id, collection id, columns and store-history flag are used.
     * @param version the caller's transaction version for the tombstone and any archival.
@@ -1459,6 +1473,27 @@ SELECT basics.*, procs.* FROM basics, procs;
      try {
        if (conn.autoCommit) throw illegalState("Row delete requires a caller-owned transaction")
        val head = Version.HEAD.number
+       val databaseNumber = id.number
+       val catalogNumber = collection.catalogId.intValue
+       val collectionNumber = collection.id.intValue
+       for (incoming in tuples) {
+         val tuple = incoming.tuple
+         val tn = tuple.tupleNumber
+         val prev = incoming.previousTupleNumber
+         val reason = when {
+           prev != null && (prev.databaseNumber != databaseNumber || prev.catalogNumber != catalogNumber || prev.collectionNumber != collectionNumber || prev.featureNumber != tn.featureNumber) -> "Delete predecessor does not belong to the target feature"
+           tn.databaseNumber != databaseNumber || tn.catalogNumber != catalogNumber || tn.collectionNumber != collectionNumber -> "Deleted tuple does not belong to the target collection"
+           tn.action != Action.DELETE -> "Explicit row delete requires DELETE action"
+           tuple.nextVersion != head -> "Explicit row delete requires a HEAD state"
+           tuple.featureBytes.isEmpty() -> "Explicit row delete requires a fully encoded tuple"
+           tn.version < 0L || tn.version >= head -> "Explicit row delete requires a finite version"
+           else -> null
+         }
+         if (reason != null) throw NakshaException(NakshaError(
+           code = NakshaError.ILLEGAL_ARGUMENT, msg = reason, id = tuple.id.text,
+           collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
+         ))
+       }
        val plans = DeletePlans.prepare(conn, collection, id.number)
        try {
          val result = ArrayList<NewTuple>(tuples.size)
@@ -1467,7 +1502,7 @@ SELECT basics.*, procs.* FROM basics, procs;
            val expected = incoming.previousTupleNumber
            val errorId = tombstone.id.text
            val fnOrd = Id.featureNumberToOrdinal(tombstone.tupleNumber.featureNumber).toString()
-           val locked = lockHead(plans, conn, fnOrd)
+           val locked = lockHead(plans, conn, fnOrd, errorId)
            if (locked == null) {
              throw NakshaException(NakshaError(
                code = NakshaError.FEATURE_NOT_FOUND,
@@ -1492,10 +1527,11 @@ SELECT basics.*, procs.* FROM basics, procs;
                id = errorId, collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
              ).apply { this.expectedVersion = expected.version; this.actualVersion = actual })
            }
-           for (column in plans.rows.columns) column.values[0] = null
+            checkSuccessor(collection.catalogId, collection.id, errorId, tombstone.version, actual, expected?.version)
+            for (column in plans.rows.columns) column.values[0] = null
            plans.rows.setRow(0, tombstone)
            if (collection.storeHistory) {
-             DeletePlans.archive(conn, plans.target, head, fnOrd, tombstone.tupleNumber.version)
+              archiveHead(conn, plans.target, fnOrd, tombstone.tupleNumber.version, collection.columns)
              plans.insertPlan.execute(plans.rows.values()).use { if (!it.next()) throw illegalState("Inserting the explicit tombstone failed") }
            } else {
              plans.inPlacePlan.execute(plans.rows.values()).use { if (!it.next()) throw illegalState("Locked HEAD disappeared during explicit delete") }
@@ -1515,7 +1551,37 @@ SELECT basics.*, procs.* FROM basics, procs;
      }
    }
 
-   /** The final state of a single-head delete; `state` is `null` only when no HEAD existed. */
+  /**
+   * Serialize a feature even when HEAD is absent or physically replaced. Callers supply deterministic feature order. The subsequent HEAD read must be a separate statement for a fresh READ COMMITTED snapshot after waiting.
+   *
+   * Transaction resource constraint: callers must cap the total distinct target/feature keys selected across all requests in an open transaction, including absent/no-op selections. Each key retains one shared lock-manager entry until transaction end (or rollback of its acquiring savepoint); request batch limits alone do not bound this. Choose the cap and concurrent transaction limit against the cluster's shared lock budget, reserving room for relation/catalog locks and other sessions. max_locks_per_transaction sizes the shared pool, not a per-transaction limit. No cap is enforced at this row boundary. Hash striping alone is unsafe: stripe order would differ from the caller's deterministic feature order and could introduce deadlocks.
+   * @since 3.0
+   */
+  private fun lockFeature(conn: PgConnection, target: String, fnOrd: String) {
+    conn.execute("SELECT pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(pg_catalog.format('naksha:feature:%s:%s', $1::text, $2::text), 0))",
+      arrayOf(target, fnOrd)).close()
+  }
+
+  /** Reject equal transaction versions as well as inverted history; action bits do not establish temporal order. @since 3.0 */
+  private fun checkSuccessor(schema: Id, table: Id, featureId: String, successor: Long, actual: Long, expected: Long?) {
+    if (successor >= 0L && successor < Version.HEAD.number && (successor and -4L) > (actual and -4L)) return
+    throw NakshaException(NakshaError(
+      code = NakshaError.CONFLICT, msg = "The successor transaction version must be newer than HEAD",
+      id = featureId, collection = table.text, catalog = schema.text, database = id.text
+    ).apply { expectedVersion = expected; actualVersion = actual })
+  }
+
+  /** Route the exact stored state through the root, avoiding inherited HEAD checks during partition-key updates. The caller already holds its row lock. @since 3.0 */
+  private fun archiveHead(conn: PgConnection, target: String, fnOrd: String, toVersion: Long, columns: Array<PgColumn>) {
+    val names = columns.joinToString(", ") { it.ident }
+    val values = columns.joinToString(", ") {
+      if (it.columnName == "nv") "$2::text::bigint" else it.ident
+    }
+    conn.execute("WITH old_head AS (DELETE FROM $target WHERE fn = $1::text::bigint AND nv = ${Version.HEAD.number} RETURNING *) INSERT INTO $target ($names) SELECT $values FROM old_head",
+      arrayOf(fnOrd, toVersion.toString())).close()
+  }
+
+    /** The final state of a single-head delete; `state` is `null` only when no HEAD existed. */
    private data class DeleteOutcome(val state: Tuple?, val predecessor: TupleNumber?)
 
    /**
@@ -1529,7 +1595,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      plans: DeletePlans, conn: PgConnection, collection: PgCollection, head: Long,
      fnOrd: String, version: Long, expected: Long?, emptyTombstone: Boolean, errorId: String
    ): DeleteOutcome {
-     val locked = lockHead(plans, conn, fnOrd)
+     val locked = lockHead(plans, conn, fnOrd, errorId)
      if (locked == null) {
        if (expected == null) return DeleteOutcome(null, null)
        throw NakshaException(NakshaError(
@@ -1550,13 +1616,22 @@ SELECT basics.*, procs.* FROM basics, procs;
          id = errorId, collection = collection.id.text, catalog = collection.catalogId.text, database = id.text
        ).apply { this.expectedVersion = expected; this.actualVersion = actual })
      }
-     val newVersion = (version and -4L) or 2L
-     val tombstone = buildTombstone(tuple, tuple.tupleNumber, newVersion)
+      val newVersion = (version and -4L) or 2L
+      checkSuccessor(collection.catalogId, collection.id, errorId, newVersion, actual, expected)
+     val tombstone = try {
+       buildTombstone(tuple, tuple.tupleNumber, newVersion)
+     } catch (e: NakshaException) {
+       val error = e.error
+       if (error.id == null) error.id = errorId
+       if (error.expectedVersion == null) error.expectedVersion = expected
+       if (error.actualVersion == null) error.actualVersion = actual
+       throw e
+     }
      for (column in plans.rows.columns) column.values[0] = null
      plans.rows.setRow(0, tombstone)
      if (emptyTombstone) nullPayloadColumns(plans.rows)
      if (collection.storeHistory) {
-       DeletePlans.archive(conn, plans.target, head, fnOrd, newVersion)
+        archiveHead(conn, plans.target, fnOrd, newVersion, collection.columns)
        plans.insertPlan.execute(plans.rows.values()).use { if (!it.next()) throw illegalState("Inserting the tombstone failed") }
      } else {
        plans.inPlacePlan.execute(plans.rows.values()).use { if (!it.next()) throw illegalState("Locked HEAD disappeared during delete") }
@@ -1569,11 +1644,12 @@ SELECT basics.*, procs.* FROM basics, procs;
     * tuple and its version, or `null` when no HEAD row exists.
     * @since 3.0
     */
-   private fun lockHead(plans: DeletePlans, conn: PgConnection, fnOrd: String): Pair<Tuple, Long>? {
-     plans.rows.size = 0
+    private fun lockHead(plans: DeletePlans, conn: PgConnection, fnOrd: String, featureId: String): Pair<Tuple, Long>? {
+      lockFeature(conn, plans.target, fnOrd)
+      plans.rows.size = 0
      conn.execute(plans.select, arrayOf(fnOrd)).fetch().use { plans.rows.readAll(it) }
      if (plans.rows.size == 0) return null
-     val tuple = plans.rows.getTuple(0) ?: throw illegalState("Failed to decode the HEAD state")
+     val tuple = plans.rows.getTuple(0, featureId) ?: throw illegalState("Failed to decode the HEAD state")
      return Pair(tuple, tuple.tupleNumber.version)
    }
 
@@ -1587,12 +1663,16 @@ SELECT basics.*, procs.* FROM basics, procs;
      val newBook = HeapBook.copyOf(oldBook)
      newBook.put(TN, TupleNumber.copy(oldTn, version = newVersion))
      val oldCc = oldBook[ChangeCount.name]
-     if (oldCc != null) newBook.put(ChangeCount.name, (oldCc as? Int ?: 0) + 1)
+     if (oldCc != null) {
+       val cc = oldCc as? Int ?: 0
+       if (cc == Int.MAX_VALUE) throw illegalState("Change count overflows int32")
+       newBook.put(ChangeCount.name, cc + 1)
+     }
      return Tuple(old.featureBytes, newBook)
    }
 
    /**
-    * Null every bound transport column that is not a mandatory key (fn, version, nv or id), producing
+    * Null every bound transport column that is not a mandatory key (fn, version or nv), producing
     * an empty tombstone.
     * @since 3.0
     */
@@ -1600,7 +1680,7 @@ SELECT basics.*, procs.* FROM basics, procs;
      for (column in rows.columns) {
        val pgc = column.pgColumn
        val isKey = pgc === PgColumn.PgColumn_C.FnColumn || pgc === PgColumn.PgColumn_C.VersionColumn ||
-         pgc === PgColumn.PgColumn_C.NextVersionColumn || pgc.member.name == "id"
+         pgc === PgColumn.PgColumn_C.NextVersionColumn
        if (!isKey) column.values[0] = null
      }
    }
@@ -1639,11 +1719,6 @@ SELECT basics.*, procs.* FROM basics, procs;
             rows.typeNames()
           )
          return DeletePlans(rows, target, select, insertPlan, inPlacePlan)
-       }
-
-       /** Archive a HEAD by moving its `nv` from HEAD to [toVersion]. @since 3.0 */
-       fun archive(conn: PgConnection, target: String, head: Long, fnOrd: String, toVersion: Long) {
-         conn.execute("UPDATE $target SET nv = \$2::text::bigint WHERE fn = \$1::text::bigint AND nv = $head", arrayOf(fnOrd, toVersion.toString())).close()
        }
 
        /** Remove a HEAD row entirely. @since 3.0 */

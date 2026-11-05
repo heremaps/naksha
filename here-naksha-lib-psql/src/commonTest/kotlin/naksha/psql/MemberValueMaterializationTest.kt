@@ -100,7 +100,7 @@ class MemberValueMaterializationTest : PgTestBase(collection = null, catalogId =
     @Test
     fun shouldMaterializeTypedMemberOnInsert() {
         // Given: a collection with a numeric member on properties.score
-        val collection = NakshaCollection("member_typed_materialization_test", catalog.id).apply {
+        val collection = NakshaCollection("member_typed_mat_test", catalog.id).apply {
             addMember(Member("score", MemberType.INT64, JsonPath("properties", "score")))
             indices = IndexList()
         }
