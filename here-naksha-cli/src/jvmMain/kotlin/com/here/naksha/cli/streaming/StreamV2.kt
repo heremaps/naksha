@@ -64,37 +64,77 @@ class StreamV2(private val v2Session: StreamReadSessionV2, request: StreamReques
         TODO("Not yet implemented")
     }
 
-    private fun queryHeadSql(request: StreamRequest, startingVersion: Long): String {
-        val whereClause = StringBuilder(" WHERE $VERSION_COLUMN_SQL >= $startingVersion")
-        if (request.version < Version.HEAD.number) {
-            whereClause.append(" AND $VERSION_COLUMN_SQL <= ${request.version}")
-        }
-        return "SELECT jsondata, ST_AsEWKB(geo) as geo FROM ${request.catalogId}.${request.collectionId}$whereClause ORDER BY $VERSION_COLUMN_SQL ASC LIMIT ${request.chunkSize};"
+    private fun StringBuilder.appendNotDeleted(alias: String?): StringBuilder {
+        append(" AND (")
+        if (alias != null) append(alias).append('.')
+        return append("jsondata->'properties'->'@ns:com:here:xyz'->>'action') IS DISTINCT FROM 'DELETE'")
     }
 
-        /*
+/*
+SELECT jsondata, ST_AsEWKB(geo) AS geo FROM (
+ (SELECT jsondata, geo, i FROM schema.col WHERE i>=$1 ORDER BY i ASC LIMIT 1000)
+ UNION ALL
+ (SELECT jsondata, geo, i FROM schema.col_hst WHERE i>=$1
+   AND (jsondata->'properties'->'@ns:com:here:xyz'->>'action') IS DISTINCT FROM 'DELETE'
+   ORDER BY i ASC LIMIT 1000)
+) u ORDER BY i ASC LIMIT 1000
+
+-- request.version < HEAD: each branch also gets "AND i<=<version>"
+-- queryHistory=true,  queryDeleted=true : col_hst branch without the action filter
+-- queryHistory=false, queryDeleted=true : col_del branch instead of col_hst, no action filter
+*/
+
+    private var _headPlan: PgPlan? = null
+
+    private fun headPlan(): PgPlan =
+        _headPlan ?: v2Session.connection.prepare(buildChunkSql(), arrayOf("int8")).also { _headPlan = it }
+
+    // Runs once per stream
+    private fun buildChunkSql(): String {
+        val head = "${request.catalogId}.${request.collectionId}"
+        val sb = StringBuilder(512) // enough for all 3 tables with real names and real version
+        sb.append("SELECT jsondata, ST_AsEWKB(geo) AS geo FROM (")
+        sb.appendChunkSelect(head, "")
+        if (request.queryHistory) sb.append(" UNION ALL ").appendChunkSelect(head, "_hst", !request.queryDeleted)
+        // Only query del table if we query deleted but not history. If we query history, deleted features are already included in hst tables.
+        else if (request.queryDeleted) sb.append(" UNION ALL ").appendChunkSelect(head, "_del")
+        sb.append(") u ORDER BY ").append(VERSION_COLUMN_SQL).append(" ASC LIMIT ").append(request.chunkSize)
+        return sb.toString()
+    }
+
+    private fun StringBuilder.appendChunkSelect(head: String, suffix: String, skipDeleted: Boolean = false): StringBuilder {
+        append("(SELECT jsondata, geo, ").append(VERSION_COLUMN_SQL)
+            .append(" FROM ").append(head).append(suffix)
+            .append(" WHERE ").append(VERSION_COLUMN_SQL).append($$">=$1")
+        if (request.version < Version.HEAD.number) {
+            append(" AND ").append(VERSION_COLUMN_SQL).append("<=").append(request.version)
+        }
+        if (skipDeleted) appendNotDeleted(null)
+        return append(" ORDER BY ").append(VERSION_COLUMN_SQL).append(" ASC LIMIT ").append(request.chunkSize).append(')')
+    }
+
+/*
 WITH next_txn AS (
- (SELECT (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint AS t FROM schema.head WHERE (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint>2026101600000004335
- ORDER BY t ASC LIMIT 1)
+  (SELECT (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint AS t FROM schema.col
+    WHERE (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint>$1
+    ORDER BY t ASC LIMIT 1)
+  UNION ALL
+  (SELECT (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint AS t FROM schema.col_hst
+    WHERE (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint>$1
+    AND (jsondata->'properties'->'@ns:com:here:xyz'->>'action') IS DISTINCT FROM 'DELETE'
+    ORDER BY t ASC LIMIT 1)
+  ),
+min_txn AS (SELECT MIN(t) AS txn FROM next_txn)
+SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col head, min_txn n
+  WHERE (head.jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint=n.txn
 UNION ALL
- (SELECT (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint AS t FROM schema.del WHERE (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint>2026101600000004335
- ORDER BY t ASC LIMIT 1)
-UNION ALL
- (SELECT (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint AS t FROM schema.hst WHERE (jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint>2026101600000004335
- ORDER BY t ASC LIMIT 1)
-),
-min_txn AS (
- SELECT MIN(t) AS txn FROM next_txn
-)
-SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.head head, min_txn n
- WHERE (head.jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint=n.txn
-UNION ALL
-SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.del del, min_txn n
- WHERE (del.jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint=n.txn
-UNION ALL
-SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
- WHERE (hst.jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint=n.txn;
-        */
+SELECT jsondata, ST_AsEWKB(geo) AS geo FROM schema.col_hst hst, min_txn n
+  WHERE (hst.jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint=n.txn
+  AND (hst.jsondata->'properties'->'@ns:com:here:xyz'->>'action') IS DISTINCT FROM 'DELETE'
+
+-- queryHistory=true,  queryDeleted=true : col_hst branches without the action filter
+-- queryHistory=false, queryDeleted=true : col_del / del branches instead of col_hst / hst, no action filter
+*/
 
 
     private var _txnPlan: PgPlan? = null
@@ -111,17 +151,15 @@ SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
         val sb = StringBuilder(1536) // enough for all 3 tables with real names and real txn version
         sb.append("WITH next_txn AS (")
         sb.appendNextTxn(head, "")
-        if (request.queryDeleted) sb.append(" UNION ALL ").appendNextTxn(head, "_del")
-        if (request.queryHistory) sb.append(" UNION ALL ").appendNextTxn(head, "_hst")
+        if (request.queryHistory) sb.append(" UNION ALL ").appendNextTxn(head, "_hst", !request.queryDeleted)
+        // Only query del table if we query deleted but not history. If we query history, deleted features are already included in hst tables.
+        else if (request.queryDeleted) sb.append(" UNION ALL ").appendNextTxn(head, "_del")
         sb.append("), min_txn AS (SELECT MIN(t) AS txn FROM next_txn) ")
-        sb.appendSelect(head, "", "head")
-        if (request.queryDeleted) sb.append(" UNION ALL ").appendSelect(head, "_del", "del")
-        if (request.queryHistory) sb.append(" UNION ALL ").appendSelect(head, "_hst", "hst")
+        sb.appendTxnSelect(head, "", "head")
+        if (request.queryHistory) sb.append(" UNION ALL ").appendTxnSelect(head, "_hst", "hst", !request.queryDeleted)
+        // Only query del table if we query deleted but not history. If we query history, deleted features are already included in hst tables.
+        else if (request.queryDeleted) sb.append(" UNION ALL ").appendTxnSelect(head, "_del", "del")
         return sb.toString()
-        //TODO DELETE states are also in hst
-        //val notDeleted = if (request.queryDeleted) "" else
-        //            " AND NOT EXISTS (SELECT 1 FROM $del d WHERE d.jsondata->>'id' = hst.jsondata->>'id')"
-        //        sb.append(notDeleted)
     }
 
     private fun StringBuilder.appendTxn(alias: String?): StringBuilder {
@@ -130,23 +168,29 @@ SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
         return append("jsondata->'properties'->'@ns:com:here:xyz'->'txn')::bigint")
     }
 
-    private fun StringBuilder.appendNextTxn(head: String, suffix: String): StringBuilder =
+    private fun StringBuilder.appendNextTxn(head: String, suffix: String, skipDeleted: Boolean = false): StringBuilder {
         append("(SELECT ").appendTxn(null).append(" AS t FROM ").append(head).append(suffix)
-            .append(" WHERE ").appendTxn(null).append($$">$1 ORDER BY t ASC LIMIT 1)")
+            .append(" WHERE ").appendTxn(null).append($$">$1")
+        if (skipDeleted) appendNotDeleted(null)
+        return append(" ORDER BY t ASC LIMIT 1)")
+    }
 
-    private fun StringBuilder.appendSelect(head: String, suffix: String, alias: String): StringBuilder =
-        append("SELECT ").append("jsondata, ST_AsEWKB(geo) AS geo FROM ")
+    private fun StringBuilder.appendTxnSelect(head: String, suffix: String, alias: String, skipDeleted: Boolean = false): StringBuilder {
+        append("SELECT jsondata, ST_AsEWKB(geo) AS geo FROM ")
             .append(head).append(suffix).append(' ').append(alias).append(", min_txn n WHERE ")
             .appendTxn(alias).append("=n.txn")
+        if (skipDeleted) appendNotDeleted(alias)
+        return this
+    }
 
     override fun next(): StreamChunk {
         if (!hasNext()) {
             throw NoSuchElementException("No more chunks available")
         }
-        val cursor = if (!request.ignoreTransactions)
-            txnPlan().execute(arrayOf(nextVersionToRead))
+        val cursor = if (request.ignoreTransactions)
+            headPlan().execute(arrayOf(nextVersionToRead))
         else
-            v2Session.connection.execute(queryHeadSql(request, nextVersionToRead))
+            txnPlan().execute(arrayOf(nextVersionToRead))
 
         val tuples = ArrayList<StreamTuple>()
         var txn : Long? = null
@@ -159,8 +203,10 @@ SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
                 val xyz = feature.properties.xyz
                 val uuid = xyz["uuid"] as String
                 val featureSeq = parseLong(uuid, uuid.lastIndexOf(':') + 1, uuid.length, 10)
-                txn = checkNotNull(txn ?: xyz["txn"]) as Long //we cannot get txn from xyz because the underlying code is strictly V3 compatible.
-                txnAsVersion = txnAsVersion ?: legacyTxnToV3Version(txn)
+                val rowTxn = xyz["txn"] as Long
+                val rowVersion =
+                    if (rowTxn == txn) txnAsVersion!!
+                    else legacyTxnToV3Version(rowTxn).also { txn = rowTxn; txnAsVersion = it }
                 val action = xyz.action
                 feature.geometry = GeoUtil.fromEWKB(geoData)
                 val id = Id(feature.id)
@@ -168,9 +214,9 @@ SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
                     id = id,
                     feature = feature.platformObject(),
                     version = Version.auto(
-                        txnAsVersion.year,
-                        txnAsVersion.month,
-                        txnAsVersion.day,
+                        rowVersion.year,
+                        rowVersion.month,
+                        rowVersion.day,
                         featureSeq,
                         action
                         ).number,
@@ -228,6 +274,7 @@ SELECT jsondata, ST_AsEWKB(geo) as geo FROM schema.hst hst, min_txn n
 
     override fun close() {
         _txnPlan?.close()
+        _headPlan?.close()
     }
 
     override fun closeForRecovery(): StreamRequest {
