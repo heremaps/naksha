@@ -72,7 +72,7 @@ public class HttpStorageValidation {
           || cbConfig.getSlowCallRateThreshold() == null
           || cbConfig.getWaitDurationInOpenStateMs() == null
           || cbConfig.getPermittedNumberOfCallsInHalfOpenState() == null) {
-        throw new IllegalArgumentException("circuitBreaker configuration is iconcomplete");
+        throw new IllegalArgumentException("circuitBreaker configuration is incomplete");
       }
       if (cbConfig.getSlidingWindowSize() <= 0) {
         throw new IllegalArgumentException("circuitBreaker.slidingWindowSize must be > 0");

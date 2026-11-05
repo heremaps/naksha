@@ -125,14 +125,10 @@ public class HttpStorageReadSession implements IReadSession {
   }
 
   private @NotNull Response executeReadRequest(@NotNull ReadFeaturesProxyWrapper readRequest) {
-    switch (httpInterface) {
-      case ffwAdapter:
-        return FfwInterfaceReadExecute.execute(context, readRequest, requestSender);
-      case dataHubConnector:
-        return ConnectorInterfaceReadExecute.execute(context, readRequest, requestSender);
-      default:
-        throw new IllegalStateException("Unsupported HTTP interface: " + httpInterface);
-    }
+    return switch (httpInterface) {
+      case ffwAdapter -> FfwInterfaceReadExecute.execute(context, readRequest, requestSender);
+      case dataHubConnector -> ConnectorInterfaceReadExecute.execute(context, readRequest, requestSender);
+    };
   }
 
   @Override
