@@ -121,7 +121,7 @@ public abstract class AbstractApiTask<T extends XyzResponse>
       @NotNull Class<F> type,
       @Nullable FeaturePostProcessor<F> masking) {
     final QueryParameterList queryParams = ApiParams.queryParamsFromRequest(routingContext);
-    long limit = ApiParams.extractQueryParamAsLong(queryParams, LIMIT, false, DEF_ADMIN_FEATURE_LIMIT);
+    int limit = ApiParams.extractQueryParamAsInt(queryParams, LIMIT, false, DEF_ADMIN_FEATURE_LIMIT);
     limit = (limit < 0 || limit > DEF_ADMIN_FEATURE_LIMIT) ? DEF_ADMIN_FEATURE_LIMIT : limit;
     final var propPaths = PropertySelectionUtil.buildPropPathSetFromQueryParams(queryParams);
     final FeaturePostProcessor<F> postProcessor = SequentialPostProcessor.combine(
@@ -129,10 +129,10 @@ public abstract class AbstractApiTask<T extends XyzResponse>
     final Op tagOp = TagQueryUtil.tagOpFromParams(queryParams);
     final ReadFeatures request = new ReadFeatures().withCollectionId(collection);
     request.setQueryMembers(tagOp);
-    request.setLimit((int) limit);
+    request.setLimit(limit);
     request.setCatalogId(naksha().getAdminMapId());
     final Response response = executeReadRequestFromSpaceStorage(request);
-    return transformResponseToXyzCollectionResponse(response, type, 0, (int) limit, null, postProcessor);
+    return transformResponseToXyzCollectionResponse(response, type, 0, limit, null, postProcessor);
   }
 
   protected <F extends NakshaFeature> @NotNull XyzResponse transformResponseToXyzFeatureResponse(

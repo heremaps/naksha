@@ -33,10 +33,12 @@ public final class PropertySelectionPostProcessor<T extends NakshaFeature> imple
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public T postProcess(T feature) {
     final Map<String, Object> targetMap = PropertyPathUtil.extractPropertyMapFromFeature(feature, propPaths);
+    @SuppressWarnings("unchecked")
     final Class<T> type = (Class<T>) feature.getClass();
-    return Platform.javaProxy(Platform.fromJSON(Platform.toJSON(targetMap)), type);
+    final T selected = Platform.javaProxy(Platform.newMap(), type);
+    selected.putAll(targetMap);
+    return selected;
   }
 }
