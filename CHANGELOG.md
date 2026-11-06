@@ -1,3 +1,6 @@
+## Naksha_2.2.28
+- Fixed the HTTP storage circuit-breaker configuration property name to `circuitBreakerConfig`.
+
 ## Naksha_2.2.27
 - Added tag filtering, property selection, and limit support to the storage, handler, and space LIST APIs.
 
