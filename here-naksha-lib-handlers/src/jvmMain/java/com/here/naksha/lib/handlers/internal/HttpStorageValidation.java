@@ -1,6 +1,7 @@
 package com.here.naksha.lib.handlers.internal;
 
 import com.here.naksha.storage.http.HttpStorageProperties;
+import com.here.naksha.lib.circuitbreaker.models.CircuitBreakerProps;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -45,12 +46,66 @@ public class HttpStorageValidation {
     boolean isSocketTimeoutValid = isBetween(
         httpStorageProperties.getSocketTimeout(), MIN_HTTP_SOCKET_TIMEOUT_SEC, MAX_HTTP_SOCKET_TIMEOUT_SEC);
     boolean isUrlValid = isUrlValid(httpStorageProperties.getUrl());
+
+    Response cbValidationResult = validateCircuitBreakerConfig(httpStorageProperties);
+    if (cbValidationResult instanceof ErrorResponse) {
+      return cbValidationResult;
+    }
+
     if (isConnectionTimeoutValid && isSocketTimeoutValid && isUrlValid) {
       return new SuccessResponse();
     }
     String errorMsg =
         getErrorMsg(httpStorageProperties, isConnectionTimeoutValid, isSocketTimeoutValid, isUrlValid);
     return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, errorMsg);
+  }
+
+  private static Response validateCircuitBreakerConfig(HttpStorageProperties httpStorageProperties) {
+    try {
+      final CircuitBreakerProps cbConfig = httpStorageProperties.getCircuitBreakerConfig();
+      if (cbConfig == null) {
+        return new SuccessResponse();
+      }
+      if (cbConfig.getSlidingWindowSize() == null
+          || cbConfig.getMinimumNumberOfCalls() == null
+          || cbConfig.getSlowCallDurationThresholdMs() == null
+          || cbConfig.getSlowCallRateThreshold() == null
+          || cbConfig.getWaitDurationInOpenStateMs() == null
+          || cbConfig.getPermittedNumberOfCallsInHalfOpenState() == null) {
+        throw new IllegalArgumentException("circuitBreaker configuration is incomplete");
+      }
+      if (cbConfig.getSlidingWindowSize() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.slidingWindowSize must be > 0");
+      }
+      if (cbConfig.getMinimumNumberOfCalls() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.minimumNumberOfCalls must be > 0");
+      }
+      if (cbConfig.getMinimumNumberOfCalls() > cbConfig.getSlidingWindowSize()) {
+        throw new IllegalArgumentException("circuitBreaker.minimumNumberOfCalls must be <= slidingWindowSize");
+      }
+      if (cbConfig.getSlowCallDurationThresholdMs() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.slowCallDurationThresholdMs must be > 0");
+      }
+      if (cbConfig.getSlowCallRateThreshold() <= 0 || cbConfig.getSlowCallRateThreshold() > 100) {
+        throw new IllegalArgumentException("circuitBreaker.slowCallRateThreshold must be in range 1..100");
+      }
+      if (cbConfig.getWaitDurationInOpenStateMs() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.waitDurationInOpenStateMs must be > 0");
+      }
+      if (cbConfig.getPermittedNumberOfCallsInHalfOpenState() <= 0) {
+        throw new IllegalArgumentException("circuitBreaker.permittedNumberOfCallsInHalfOpenState must be > 0");
+      }
+
+      long socketTimeoutMs = httpStorageProperties.getSocketTimeout() * 1000L;
+      if (cbConfig.getSlowCallDurationThresholdMs() >= socketTimeoutMs) {
+        throw new IllegalArgumentException(
+            "circuitBreaker.slowCallDurationThresholdMs must be lower than socketTimeout in milliseconds");
+      }
+
+      return new SuccessResponse();
+    } catch (IllegalArgumentException e) {
+      return new ErrorResponse(NakshaError.ILLEGAL_ARGUMENT, e.getMessage());
+    }
   }
 
   @NotNull

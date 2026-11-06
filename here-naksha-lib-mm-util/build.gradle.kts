@@ -10,7 +10,6 @@ kotlin {
         jvmMain {
             dependencies {
                 api(project(":here-naksha-lib-model"))
-                api(project(":here-naksha-lib-handlers"))
             }
         }
         jvmTest {
