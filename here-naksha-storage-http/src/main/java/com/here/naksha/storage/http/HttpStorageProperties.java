@@ -48,7 +48,7 @@ public class HttpStorageProperties extends XyzProperties {
   private static final String HEADERS = "headers";
 
   private static final String HTTP_INTERFACE = "httpInterface";
-  private static final String CIRCUIT_BREAKER = "circuitBreaker";
+  private static final String CIRCUIT_BREAKER = "circuitBreakerConfig";
   private static final HttpInterface DEFAULT_XYZ_PROTOCOL = HttpInterface.ffwAdapter;
 
   /**
